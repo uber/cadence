@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
@@ -563,23 +564,23 @@ func (t *crossClusterSourceTask) getRequestForRecordChildWorkflowCompletion(
 	taskInfo *persistence.CrossClusterTaskInfo,
 	mutableState execution.MutableState,
 ) (*types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes, processingState, error) {
-	initiatedEventID := taskInfo.ScheduleID
 
 	verified, err := t.VerifyLastWriteVersion(mutableState, taskInfo)
 	if err != nil || !verified {
 		return nil, t.processingState, err
 	}
 
+	executionInfo := mutableState.GetExecutionInfo()
 	completionEvent, err := mutableState.GetCompletionEvent(ctx)
 	if err != nil {
 		return nil, t.processingState, err
 	}
 
 	attributes := &types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
-		TargetDomainID:   taskInfo.TargetDomainID,
-		TargetWorkflowID: taskInfo.TargetWorkflowID,
-		TargetRunID:      taskInfo.TargetRunID,
-		InitiatedEventID: initiatedEventID,
+		TargetDomainID:   executionInfo.ParentDomainID,
+		TargetWorkflowID: executionInfo.ParentWorkflowID,
+		TargetRunID:      executionInfo.ParentRunID,
+		InitiatedEventID: executionInfo.InitiatedID,
 		CompletionEvent:  completionEvent,
 	}
 
@@ -693,14 +694,23 @@ func (t *crossClusterSourceTask) isValidLocked() bool {
 		t.logger.Error("Failed to load domain entry", tag.Error(err))
 		return true
 	}
-	targetEntry, err := domainCache.GetDomainByID(t.Info.(*persistence.CrossClusterTaskInfo).TargetDomainID)
-	if err != nil {
-		return true
+
+	var targetEntry *cache.DomainCacheEntry
+	// for record workflow completion and apply parent policy, target workflow infomation is not
+	// persisted with the task, so skip this test for target workflow since the check is best effort
+	if t.GetTaskType() != persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete &&
+		t.GetTaskType() != persistence.CrossClusterTaskTypeApplyParentPolicy {
+		targetEntry, err = domainCache.GetDomainByID(t.Info.(*persistence.CrossClusterTaskInfo).TargetDomainID)
+		if err != nil {
+			return true
+		}
 	}
 
 	// pending active state is treated as valid
-	if sourceEntry.GetReplicationConfig().ActiveClusterName != t.shard.GetClusterMetadata().GetCurrentClusterName() ||
-		targetEntry.GetReplicationConfig().ActiveClusterName != t.targetCluster {
+	sourceInvalid := sourceEntry.GetReplicationConfig().ActiveClusterName != t.shard.GetClusterMetadata().GetCurrentClusterName()
+	targetInvalid := targetEntry != nil && targetEntry.GetReplicationConfig().ActiveClusterName != t.targetCluster
+
+	if sourceInvalid || targetInvalid {
 		t.processingState = processingStateInvalidated
 		return false
 	}

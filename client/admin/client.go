@@ -374,6 +374,21 @@ func (c *clientImpl) GetCrossClusterTasks(
 	return client.GetCrossClusterTasks(ctx, request, opts...)
 }
 
+func (c *clientImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	client, err := c.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+}
+
 func (c *clientImpl) GetDynamicConfig(
 	ctx context.Context,
 	request *types.GetDynamicConfigRequest,

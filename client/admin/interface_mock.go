@@ -451,6 +451,26 @@ func (mr *MockClientMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockClient)(nil).GetCrossClusterTasks), varargs...)
 }
 
+// RespondCrossClusterTasksCompleted mocks base method
+func (m *MockClient) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest, arg2 ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", varargs...)
+	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted
+func (mr *MockClientMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockClient)(nil).RespondCrossClusterTasksCompleted), varargs...)
+}
+
 // GetDynamicConfig mocks base method
 func (m *MockClient) GetDynamicConfig(arg0 context.Context, arg1 *types.GetDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error) {
 	m.ctrl.T.Helper()

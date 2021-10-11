@@ -576,7 +576,7 @@ type (
 		Version             int64
 	}
 
-	// RecordChildCompletionTask identifies a task completing a child execution
+	// RecordWorkflowExecutionCompleteTask identifies a task completing a child execution
 	RecordWorkflowExecutionCompleteTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64

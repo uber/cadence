@@ -138,6 +138,11 @@ func (g grpcClient) GetCrossClusterTasks(ctx context.Context, request *types.Get
 	return proto.ToAdminGetCrossClusterTasksResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) RespondCrossClusterTasksCompleted(ctx context.Context, request *types.RespondCrossClusterTasksCompletedRequest, opts ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := g.c.RespondCrossClusterTasksCompleted(ctx, proto.FromAdminRespondCrossClusterTasksCompletedRequest(request), opts...)
+	return proto.ToAdminRespondCrossClusterTasksCompletedResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest, opts ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error) {
 	response, err := g.c.GetDynamicConfig(ctx, proto.FromGetDynamicConfigRequest(request), opts...)
 	return proto.ToGetDynamicConfigResponse(response), proto.ToError(err)
