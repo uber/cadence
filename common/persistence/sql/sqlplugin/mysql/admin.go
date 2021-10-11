@@ -70,7 +70,7 @@ func (mdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := mdb.driver.GetForSchemaQuery(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
+	err := mdb.driver.GetForSchemaQuery(sqlplugin.DbAllShards, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -95,7 +95,7 @@ func (mdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error 
 // ListTables returns a list of tables in this database
 func (mdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := mdb.driver.SelectForSchemaQuery(sqlplugin.DbDefaultShard, &tables, fmt.Sprintf(listTablesQuery, database))
+	err := mdb.driver.SelectForSchemaQuery(sqlplugin.DbAllShards, &tables, fmt.Sprintf(listTablesQuery, database))
 	return tables, err
 }
 

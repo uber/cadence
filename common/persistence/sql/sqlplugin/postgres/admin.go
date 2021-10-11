@@ -76,7 +76,7 @@ func (pdb *db) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := pdb.driver.GetForSchemaQuery(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
+	err := pdb.driver.GetForSchemaQuery(sqlplugin.DbAllShards, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
@@ -101,7 +101,7 @@ func (pdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error 
 // ListTables returns a list of tables in this database
 func (pdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := pdb.driver.SelectForSchemaQuery(sqlplugin.DbDefaultShard, &tables, listTablesQuery)
+	err := pdb.driver.SelectForSchemaQuery(sqlplugin.DbAllShards, &tables, listTablesQuery)
 	return tables, err
 }
 

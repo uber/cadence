@@ -24,6 +24,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"reflect"
 
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/multierr"
@@ -138,15 +139,41 @@ func (s *sharded) ExecDDL(dbShardID int, query string, args ...interface{}) (sql
 }
 
 func (s *sharded) SelectForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
+	if dbShardID == sqlplugin.DbShardUndefined {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to SelectForSchemaQuery, there must be a bug", dbShardID)
+	}
+	if dbShardID == sqlplugin.DbAllShards {
+		var prevDest interface{}
+		for idx, db := range s.dbs {
+			err := db.Select(dest, query, args...)
+			if err != nil {
+				return err
+			}
+			if prevDest != nil && !reflect.DeepEqual(prevDest, dest) {
+				return fmt.Errorf("SelectForSchemaQuery fails for multiple database, value(%v) of shard(%v) is not the same as the value(%v) or shard(%v)", dest, idx, prevDest, idx-1)
+			}
+			prevDest = dest
+		}
 	}
 	return s.dbs[dbShardID].Select(dest, query, args...)
 }
 
 func (s *sharded) GetForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
+	if dbShardID == sqlplugin.DbShardUndefined {
 		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Get, there must be a bug", dbShardID)
+	}
+	if dbShardID == sqlplugin.DbAllShards {
+		var prevDest interface{}
+		for idx, db := range s.dbs {
+			err := db.Get(dest, query, args...)
+			if err != nil {
+				return err
+			}
+			if prevDest != nil && !reflect.DeepEqual(prevDest, dest) {
+				return fmt.Errorf("GetForSchemaQuery fails for multiple database, value(%v) of shard(%v) is not the same as the value(%v) or shard(%v)", dest, idx, prevDest, idx-1)
+			}
+			prevDest = dest
+		}
 	}
 	return s.dbs[dbShardID].Get(dest, query, args...)
 }
