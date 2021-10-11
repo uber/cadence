@@ -517,7 +517,7 @@ func (c *Config) fillDefaults() {
 		if currentCluster.RPCTransport != "grpc" {
 			c.PublicClient.HostPort = currentCluster.RPCAddress
 		} else {
-			// public client cannot use gRPC because GoSDK hasn't supported it. we need to fallback to Thrift 
+			// public client cannot use gRPC because GoSDK hasn't supported it. we need to fallback to Thrift
 			// TODO: remove this fallback after GoSDK supporting gRPC
 			thriftPort := c.Services["frontend"].RPC.Port // use the Thrift port from RPC config
 			hostPort := strings.Split(currentCluster.RPCAddress, ":")
