@@ -252,6 +252,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		if err != nil {
 			return nil, err
 		}
+		numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 		// DO NOT REPLY TO PARENT
 		// since event replication should be done by active cluster
@@ -270,7 +271,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			visibilityMemo,
 			executionInfo.TaskList,
 			isCron,
-			domainEntry.IsGlobalDomain(),
+			numClusters,
 			searchAttr,
 		)
 	}
@@ -470,6 +471,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	if err != nil {
 		return err
 	}
+	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 	if isRecordStart {
 		return t.recordWorkflowStarted(
@@ -484,7 +486,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			transferTask.GetTaskID(),
 			executionInfo.TaskList,
 			isCron,
-			domainEntry.IsGlobalDomain(),
+			numClusters,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -502,7 +504,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		executionInfo.TaskList,
 		visibilityMemo,
 		isCron,
-		domainEntry.IsGlobalDomain(),
+		numClusters,
 		searchAttr,
 	)
 

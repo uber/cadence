@@ -31,12 +31,12 @@ import (
 
 const (
 	templateCreateWorkflowExecutionStarted = `INSERT IGNORE INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, num_clusters) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateCreateWorkflowExecutionClosed = `REPLACE INTO executions_visibility (` +
-		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding, is_cron) ` +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`domain_id, workflow_id, run_id, start_time, execution_time, workflow_type_name, close_time, close_status, history_length, memo, encoding, is_cron, num_clusters) ` +
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// RunID condition is needed for correct pagination
 	templateConditions = ` AND domain_id = ?
@@ -92,7 +92,8 @@ func (mdb *db) InsertIntoVisibility(ctx context.Context, row *sqlplugin.Visibili
 		row.WorkflowTypeName,
 		row.Memo,
 		row.Encoding,
-		row.IsCron)
+		row.IsCron,
+		row.NumClusters)
 }
 
 // ReplaceIntoVisibility replaces an existing row if it exist or creates a new row in visibility table

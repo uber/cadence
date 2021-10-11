@@ -43,8 +43,8 @@
         "IsCron": {
           "type": "boolean"
         },
-        "IsGlobal": {
-          "type": "boolean"
+        "NumClusters": {
+          "type": "long"
         },
         "KafkaKey": {
           "type": "keyword"

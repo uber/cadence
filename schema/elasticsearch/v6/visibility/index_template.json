@@ -49,8 +49,8 @@
         "IsCron": {
           "type": "boolean"
         },
-        "IsGlobal": {
-          "type": "boolean"
+        "NumClusters": {
+          "type": "long"
         },
         "Attr": {
           "properties": {

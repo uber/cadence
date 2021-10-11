@@ -38,7 +38,7 @@ const (
 	BinaryChecksums = "BinaryChecksums"
 	TaskList        = "TaskList"
 	IsCron          = "IsCron"
-	IsGlobal        = "IsGlobal"
+	NumClusters     = "NumClusters"
 
 	CustomStringField    = "CustomStringField"
 	CustomKeywordField   = "CustomKeywordField"
@@ -95,7 +95,7 @@ var systemIndexedKeys = map[string]interface{}{
 	HistoryLength: shared.IndexedValueTypeInt,
 	TaskList:      shared.IndexedValueTypeKeyword,
 	IsCron:        shared.IndexedValueTypeBool,
-	IsGlobal:      shared.IndexedValueTypeBool,
+	NumClusters:   shared.IndexedValueTypeInt,
 }
 
 // IsSystemIndexedKey return true is key is system added

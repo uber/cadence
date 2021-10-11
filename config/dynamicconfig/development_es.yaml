@@ -17,7 +17,7 @@ frontend.validSearchAttributes:
       HistoryLength: 2
       TaskList: 1
       IsCron: 1
-      IsGlobal: 1
+      NumClusters: 2
       CustomStringField: 0
       CustomKeywordField: 1
       CustomIntField: 2

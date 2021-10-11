@@ -1503,7 +1503,7 @@ func createRecordWorkflowExecutionStartedRequest(
 	startEvent *types.HistoryEvent,
 	transferTask Task,
 	mutableState execution.MutableState,
-	isGlobal bool,
+	numClusters int16,
 ) *persistence.RecordWorkflowExecutionStartedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1527,7 +1527,7 @@ func createRecordWorkflowExecutionStartedRequest(
 		TaskID:             taskInfo.TaskID,
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
-		IsGlobal:           isGlobal,
+		NumClusters:        numClusters,
 	}
 }
 
@@ -1638,7 +1638,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 	startEvent *types.HistoryEvent,
 	transferTask Task,
 	mutableState execution.MutableState,
-	isGlobal bool,
+	numClusters bool,
 ) *persistence.UpsertWorkflowExecutionRequest {
 
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
@@ -1664,6 +1664,6 @@ func createUpsertWorkflowSearchAttributesRequest(
 		TaskID:             taskInfo.TaskID,
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
-		IsGlobal:           isGlobal,
+		NumClusters:        numClusters,
 	}
 }

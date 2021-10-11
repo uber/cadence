@@ -307,7 +307,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	workflowCloseStatus := persistence.ToInternalWorkflowExecutionCloseStatus(executionInfo.CloseStatus)
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
 	isCron := len(executionInfo.CronSchedule) > 0
-	isGlobal := domainEntry.IsGlobalDomain()
+	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
@@ -370,7 +370,7 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		visibilityMemo,
 		executionInfo.TaskList,
 		isCron,
-		isGlobal,
+		numClusters,
 		searchAttr,
 	); err != nil {
 		fmt.Println(err)
@@ -856,7 +856,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
-	isGlobal := domainEntry.IsGlobalDomain()
+	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -875,7 +875,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			task.GetTaskID(),
 			executionInfo.TaskList,
 			isCron,
-			isGlobal,
+			numClusters,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -893,7 +893,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		executionInfo.TaskList,
 		visibilityMemo,
 		isCron,
-		isGlobal,
+		numClusters,
 		searchAttr,
 	)
 }

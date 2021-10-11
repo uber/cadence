@@ -104,7 +104,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
 		request.IsCron,
-		request.IsGlobal,
+		request.NumClusters,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -130,7 +130,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.TaskList,
 		request.Memo.GetEncoding(),
 		request.IsCron,
-		request.IsGlobal,
+		request.NumClusters,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -153,7 +153,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.Memo.Data,
 		request.Memo.GetEncoding(),
 		request.IsCron,
-		request.IsGlobal,
+		request.NumClusters,
 		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
@@ -718,7 +718,7 @@ func getVisibilityMessage(
 	memo []byte,
 	encoding common.EncodingType,
 	isCron bool,
-	isGlobal bool,
+	NumClusters int16,
 	searchAttributes map[string][]byte,
 ) *indexer.Message {
 
@@ -729,7 +729,7 @@ func getVisibilityMessage(
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.IsGlobal:      {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isGlobal)},
+		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr((int64)(NumClusters))},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
@@ -765,7 +765,7 @@ func getVisibilityMessageForCloseExecution(
 	taskList string,
 	encoding common.EncodingType,
 	isCron bool,
-	isGlobal bool,
+	NumClusters int16,
 	searchAttributes map[string][]byte,
 ) *indexer.Message {
 
@@ -779,7 +779,7 @@ func getVisibilityMessageForCloseExecution(
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.IsGlobal:      {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isGlobal)},
+		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr((int64)(NumClusters))},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}

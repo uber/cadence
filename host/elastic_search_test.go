@@ -194,7 +194,7 @@ func (s *ElasticSearchIntegrationSuite) TestListCronWorkflows() {
 func (s *ElasticSearchIntegrationSuite) TestIsGlobalSearchAttribute() {
 	we := s.startWorkflow("local", true)
 	// global domains are disabled for this integration test, so we can only test the false case
-	query := fmt.Sprintf(`IsGlobal = "false"`)
+	query := fmt.Sprintf(`NumClusters = "1"`)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, true)
 }
 

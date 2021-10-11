@@ -76,7 +76,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		Memo:             request.Memo.Data,
 		Encoding:         string(request.Memo.GetEncoding()),
 		IsCron:           request.IsCron,
-		IsGlobal:         request.IsGlobal,
+		NumClusters:      request.NumClusters,
 	})
 
 	if err != nil {
@@ -103,7 +103,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		Memo:             request.Memo.Data,
 		Encoding:         string(request.Memo.GetEncoding()),
 		IsCron:           request.IsCron,
-		IsGlobal:         request.IsGlobal,
+		NumClusters:      request.NumClusters,
 	})
 	if err != nil {
 		return convertCommonErrors(s.db, "RecordWorkflowExecutionClosed", "", err)
@@ -324,7 +324,7 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 		StartTime:     row.StartTime,
 		ExecutionTime: row.ExecutionTime,
 		IsCron:        row.IsCron,
-		IsGlobal:      row.IsGlobal,
+		NumClusters:   row.NumClusters,
 		Memo:          p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
 	}
 	if row.CloseStatus != nil {

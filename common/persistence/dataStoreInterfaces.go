@@ -639,7 +639,7 @@ type (
 		Memo             *DataBlob
 		TaskList         string
 		IsCron           bool
-		IsGlobal         bool
+		NumClusters      int16
 		SearchAttributes map[string]interface{}
 	}
 
@@ -694,7 +694,7 @@ type (
 		Memo               *DataBlob
 		TaskList           string
 		IsCron             bool
-		IsGlobal           bool
+		NumClusters        int16
 		SearchAttributes   map[string][]byte
 	}
 
@@ -715,7 +715,7 @@ type (
 		HistoryLength      int64
 		RetentionSeconds   time.Duration
 		IsCron             bool
-		IsGlobal           bool
+		NumClusters        int16
 	}
 
 	// InternalUpsertWorkflowExecutionRequest is request to UpsertWorkflowExecution
@@ -731,7 +731,7 @@ type (
 		Memo               *DataBlob
 		TaskList           string
 		IsCron             bool
-		IsGlobal           bool
+		NumClusters        int16
 		SearchAttributes   map[string][]byte
 	}
 

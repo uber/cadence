@@ -37,7 +37,7 @@ const (
 	Encoding      = "Encoding"
 	TaskList      = "TaskList"
 	IsCron        = "IsCron"
-	IsGlobal      = "IsGlobal"
+	NumClusters   = "NumClusters"
 
 	KafkaKey = "KafkaKey"
 )
