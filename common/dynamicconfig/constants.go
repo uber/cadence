@@ -123,7 +123,7 @@ const (
 	// Allowed filters: N/A
 	EnableReadFromVisibilityArchival
 	// EnableDomainNotActiveAutoForwarding decides requests form which domain will be forwarded to active cluster if domain is not active in current cluster.
-	// Only when "selected-api-forwarding" or "all-domain-apis-forwarding-with-fallback" is the policy in ClusterRedirectionPolicy(in static config).
+	// Only when "selected-api-forwarding" or "all-domain-apis-forwarding" is the policy in ClusterRedirectionPolicy(in static config).
 	// If the policy is "noop"(default) this flag is not doing anything.
 	// KeyName: system.enableDomainNotActiveAutoForwarding
 	// Value type: Bool

@@ -46,7 +46,7 @@ const (
 	// please also reference selectedAPIsForwardingRedirectionPolicyAPIAllowlist
 	DCRedirectionPolicySelectedAPIsForwarding = "selected-apis-forwarding"
 	// DCRedirectionPolicyAllDomainAPIsForwarding means forwarding all the worker and non-worker APIs based domain
-	DCRedirectionPolicyAllDomainAPIsForwarding = "all-domain-apis-forwarding-with-fallback"
+	DCRedirectionPolicyAllDomainAPIsForwarding = "all-domain-apis-forwarding"
 )
 
 type (

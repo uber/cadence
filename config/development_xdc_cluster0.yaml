@@ -74,7 +74,7 @@ clusterGroupMetadata:
   primaryClusterName: "cluster0"
   currentClusterName: "cluster0"
   clusterRedirectionPolicy:
-    policy: "all-domain-apis-forwarding-with-fallback" # if network communication overhead between clusters is high, consider use "selected-apis-forwarding" instead, but workflow/activity workers need to be connected to each cluster to keep high availability
+    policy: "all-domain-apis-forwarding" # if network communication overhead between clusters is high, consider use "selected-apis-forwarding" instead, but workflow/activity workers need to be connected to each cluster to keep high availability
   clusterGroup:
     cluster0:
       enabled: true

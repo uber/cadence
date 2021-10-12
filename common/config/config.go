@@ -338,11 +338,11 @@ type (
 	// When using XDC (global domain) feature to failover a domain from one cluster to another one, client may call the passive cluster to start /signal workflows etc.
 	// To have a seamless failover experience, cluster should use this forwarding option to forward those APIs to the active cluster.
 	ClusterRedirectionPolicy struct {
-		// Support "noop", "selected-apis-forwarding" and "all-domain-apis-forwarding-with-fallback", default (when empty) is "noop"
+		// Support "noop", "selected-apis-forwarding" and "all-domain-apis-forwarding", default (when empty) is "noop"
 		//
 		// 1) "noop" will not do any forwarding.
 		//
-		// 2) "all-domain-apis-forwarding-with-fallback" will forward all domain specific APIs(worker and non worker) if the current active domain is
+		// 2) "all-domain-apis-forwarding" will forward all domain specific APIs(worker and non worker) if the current active domain is
 		// the same as "allDomainApisForwardingTargetCluster"( or "allDomainApisForwardingTargetCluster" is empty), otherwise it fallbacks to "selected-apis-forwarding". 
 		//
 		// 3) "selected-apis-forwarding" will forward all non-worker APIs including
@@ -354,19 +354,19 @@ type (
 		// 6. QueryWorkflow
 		// 7. ResetWorkflow
 		//
-		// Both "selected-apis-forwarding" and "all-domain-apis-forwarding-with-fallback" can work with EnableDomainNotActiveAutoForwarding dynamicconfig to select certain domains using the policy.
+		// Both "selected-apis-forwarding" and "all-domain-apis-forwarding" can work with EnableDomainNotActiveAutoForwarding dynamicconfig to select certain domains using the policy.
 		//
-		// Usage recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding-with-fallback" or "selected-apis-forwarding" should be used to ensure seamless domain failover(high availability)
+		// Usage recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding" or "selected-apis-forwarding" should be used to ensure seamless domain failover(high availability)
 		// Depending on the cost of cross cluster calls :
 		//
 		// 1) If the network communication overhead is high(e.g., clusters are in remote datacenters of different region), then should use "selected-apis-forwarding".
 		// But you must ensure a different set of workers with the same workflow & activity code are connected to each Cadence cluster.
 		// 
-		// 2) If the network communication overhead is low (e.g. in the same datacenter, mostly for cluster migration usage), then you can use "all-domain-apis-forwarding-with-fallback". Then only one set of
+		// 2) If the network communication overhead is low (e.g. in the same datacenter, mostly for cluster migration usage), then you can use "all-domain-apis-forwarding". Then only one set of
 		// workflow & activity worker connected of one of the Cadence cluster is enough as all domain APIs are forwarded. See more details in documentation of cluster migration section.
 		// Usually "allDomainApisForwardingTargetCluster" should be empty(default value) except for very rare cases: you have more than two clusters and some are in a remote region but some are in local region.    
 		Policy string `yaml:"policy"`
-		// A supplement for "all-domain-apis-forwarding-with-fallback" policy. It decides how the policy fallback to  "selected-apis-forwarding" policy.
+		// A supplement for "all-domain-apis-forwarding" policy. It decides how the policy fallback to  "selected-apis-forwarding" policy.
 		// If this is not empty, and current domain is not active in the value of allDomainApisForwardingTargetCluster, then the policy will fallback to "selected-apis-forwarding" policy.
 		// Default is empty, meaning that all requests will not fallback.
 		AllDomainApisForwardingTargetCluster string `yaml:"allDomainApisForwardingTargetCluster"`
