@@ -253,6 +253,7 @@ type Config struct {
 	// MaxDecisionStartToCloseSeconds is the StartToCloseSeconds for decision
 	MaxDecisionStartToCloseSeconds dynamicconfig.IntPropertyFnWithDomainFilter
 	DecisionRetryCriticalAttempts  dynamicconfig.IntPropertyFn
+	DecisionRetryMaxAttempts       dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// The following is used by the new RPC replication stack
 	ReplicationTaskFetcherParallelism                  dynamicconfig.IntPropertyFn
@@ -512,6 +513,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StickyTTL:                         dc.GetDurationPropertyFilteredByDomain(dynamicconfig.StickyTTL, time.Hour*24*365),
 		DecisionHeartbeatTimeout:          dc.GetDurationPropertyFilteredByDomain(dynamicconfig.DecisionHeartbeatTimeout, time.Minute*30),
 		DecisionRetryCriticalAttempts:     dc.GetIntProperty(dynamicconfig.DecisionRetryCriticalAttempts, 10), // about 30m
+		DecisionRetryMaxAttempts:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.DecisionRetryMaxAttempts, 1000),
 
 		ReplicationTaskFetcherParallelism:                  dc.GetIntProperty(dynamicconfig.ReplicationTaskFetcherParallelism, 1),
 		ReplicationTaskFetcherAggregationInterval:          dc.GetDurationProperty(dynamicconfig.ReplicationTaskFetcherAggregationInterval, 2*time.Second),

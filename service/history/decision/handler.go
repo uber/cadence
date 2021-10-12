@@ -480,7 +480,8 @@ Update_History_Loop:
 				tag.WorkflowID(token.WorkflowID),
 				tag.WorkflowRunID(token.RunID),
 				tag.WorkflowDomainID(domainID))
-			msBuilder, err = failDecisionHelper(ctx, wfContext, scheduleID, startedID, failCause, []byte(failMessage), request)
+			msBuilder, err = handler.failDecisionHelper(
+				ctx, wfContext, scheduleID, startedID, failCause, []byte(failMessage), request, domainEntry)
 			if err != nil {
 				return nil, err
 			}
@@ -600,6 +601,11 @@ Update_History_Loop:
 		}
 
 		resp = &types.HistoryRespondDecisionTaskCompletedResponse{}
+		if !msBuilder.IsWorkflowExecutionRunning() {
+			// Workflow has been completed/terminated, so there is no need to dispatch more activity/decision tasks.
+			return resp, nil
+		}
+
 		activitiesToDispatchLocally := make(map[string]*types.ActivityLocalDispatchInfo)
 		for _, dr := range decisionResults {
 			if dr.activityDispatchInfo != nil {
@@ -816,7 +822,7 @@ func (handler *handlerImpl) handleBufferedQueries(
 	}
 }
 
-func failDecisionHelper(
+func (handler *handlerImpl) failDecisionHelper(
 	ctx context.Context,
 	wfContext execution.Context,
 	scheduleID int64,
@@ -824,6 +830,7 @@ func failDecisionHelper(
 	cause types.DecisionTaskFailedCause,
 	details []byte,
 	request *types.RespondDecisionTaskCompletedRequest,
+	domainEntry *cache.DomainCacheEntry,
 ) (execution.MutableState, error) {
 
 	// Clear any updates we have accumulated so far
@@ -839,6 +846,30 @@ func failDecisionHelper(
 		scheduleID, startedID, cause, details, request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0,
 	); err != nil {
 		return nil, err
+	}
+
+	domainName := domainEntry.GetInfo().Name
+	maxAttempts := handler.config.DecisionRetryMaxAttempts(domainName)
+	if maxAttempts > 0 && mutableState.GetExecutionInfo().DecisionAttempt > int64(maxAttempts) {
+		message := fmt.Sprintf(
+			"Decision attempt exceeds limit. Last decision failure cause and details: %v - %v",
+			cause,
+			details)
+		executionInfo := mutableState.GetExecutionInfo()
+		handler.logger.Error(message,
+			tag.WorkflowDomainID(executionInfo.DomainID),
+			tag.WorkflowID(executionInfo.WorkflowID),
+			tag.WorkflowRunID(executionInfo.RunID))
+		handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DecisionRetriesExceededCounter)
+
+		if _, err := mutableState.AddWorkflowExecutionTerminatedEvent(
+			mutableState.GetNextEventID(),
+			common.FailureReasonDecisionAttemptsExceedsLimit,
+			[]byte(message),
+			execution.IdentityHistoryService,
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	// Return new builder back to the caller for further updates

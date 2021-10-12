@@ -95,6 +95,8 @@ const (
 	FailureReasonSizeExceedsLimit = "HISTORY_EXCEEDS_LIMIT"
 	// FailureReasonTransactionSizeExceedsLimit is the failureReason for when transaction cannot be committed because it exceeds size limit
 	FailureReasonTransactionSizeExceedsLimit = "TRANSACTION_SIZE_EXCEEDS_LIMIT"
+	// FailureReasonDecisionAttemptsExceedsLimit is reason to fail workflow when decision attempts fail too many times
+	FailureReasonDecisionAttemptsExceedsLimit = "DECISION_ATTEMPTS_EXCEEDS_LIMIT"
 )
 
 var (

@@ -1447,6 +1447,12 @@ const (
 	// Default value: 10
 	// Allowed filters: N/A
 	DecisionRetryCriticalAttempts
+	// DecisionRetryMaxAttempts is the max limit for decision retry attempts. 0 indicates infinite number of attempts.
+	// KeyName: history.decisionRetryMaxAttempts
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	DecisionRetryMaxAttempts
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	// KeyName: history.DropStuckTaskByDomain
 	// Value type: Bool
@@ -2272,6 +2278,7 @@ var Keys = map[Key]string{
 	StickyTTL:                                          "history.stickyTTL",
 	DecisionHeartbeatTimeout:                           "history.decisionHeartbeatTimeout",
 	DecisionRetryCriticalAttempts:                      "history.decisionRetryCriticalAttempts",
+	DecisionRetryMaxAttempts:                           "history.decisionRetryMaxAttempts",
 	ParentClosePolicyThreshold:                         "history.parentClosePolicyThreshold",
 	NumParentClosePolicySystemWorkflows:                "history.numParentClosePolicySystemWorkflows",
 	ReplicationTaskFetcherParallelism:                  "history.ReplicationTaskFetcherParallelism",
