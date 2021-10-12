@@ -30,11 +30,9 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/log/tag"
-
-	"github.com/uber/cadence/common/metrics"
-
 	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -64,6 +62,9 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context, fixList []entity.Executio
 	logger := workflow.GetLogger(ctx)
 	signalCh := workflow.GetSignalChannel(ctx, reconciliation.CheckDataCorruptionWorkflowSignalName)
 	signalCount := 0
+	maxReceivedSignalNumber := workflow.SideEffect(ctx, func(ctx workflow.Context) interface{} {
+		return maxSignalNumber
+	})
 
 	for {
 		selector := workflow.NewSelector(ctx)
@@ -117,7 +118,13 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context, fixList []entity.Executio
 
 		fixList = []entity.Execution{}
 		workflow.GetMetricsScope(ctx)
-		if signalCount > maxSignalNumber {
+		var maxSignalCount int
+		if err := maxReceivedSignalNumber.Get(&maxSignalCount); err != nil {
+			logger.Error("failed to get max supported signal number")
+			return err
+		}
+
+		if signalCount > maxSignalCount {
 			var fixExecution entity.Execution
 			for signalCh.ReceiveAsync(&fixExecution) {
 				fixList = append(fixList, fixExecution)
@@ -234,13 +241,11 @@ func (s *Scanner) StartDataCorruptionWorkflowWorker() error {
 		BackgroundActivityContext:              ctx,
 	}
 
-	if err := worker.New(
+	err := worker.New(
 		s.context.resource.GetSDKClient(),
 		c.SystemLocalDomainName,
 		reconciliation.CheckDataCorruptionWorkflowTaskList,
 		workerOpts,
-	).Start(); err != nil {
-		return err
-	}
-	return nil
+	).Start()
+	return err
 }

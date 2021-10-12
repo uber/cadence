@@ -21,7 +21,7 @@
 package config
 
 type (
-	// TLS describe TLS configuration 
+	// TLS describe TLS configuration
 	TLS struct {
 		Enabled bool `yaml:"enabled"`
 
