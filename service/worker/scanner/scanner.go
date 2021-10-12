@@ -176,7 +176,7 @@ func (s *Scanner) startShardScanner(
 	ctx context.Context,
 	config *shardscanner.ScannerConfig,
 ) (context.Context, []string) {
-	workerTaskListNames := []string{}
+	var workerTaskListNames []string
 	if config.DynamicParams.ScannerEnabled() {
 		ctx = shardscanner.NewScannerContext(
 			ctx,

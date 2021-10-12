@@ -45,6 +45,8 @@ type (
 		MasterClusterName string `yaml:"masterClusterName"`
 		// CurrentClusterName is the name of the cluster of current deployment
 		CurrentClusterName string `yaml:"currentClusterName"`
+		// ClusterRedirectionPolicy contains the cluster redirection policy for global domains
+		ClusterRedirectionPolicy *ClusterRedirectionPolicy `yaml:"clusterRedirectionPolicy"`
 		// ClusterGroup contains information for each cluster within the replication group
 		// Key is the clusterName
 		ClusterGroup map[string]ClusterInformation `yaml:"clusterGroup"`
@@ -146,7 +148,7 @@ func (m *ClusterGroupMetadata) Validate() error {
 // FillDefaults populates default values for unspecified fields
 func (m *ClusterGroupMetadata) FillDefaults() {
 	if m == nil {
-		return
+		log.Fatal("ClusterGroupMetadata cannot be empty")
 	}
 
 	// TODO: remove this after 0.23 and mention a breaking change in config.

@@ -87,3 +87,12 @@ func (m *inboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Re
 	)
 	return h.Handle(ctx, req, resw)
 }
+
+type overrideCallerMiddleware struct {
+	caller string
+}
+
+func (m *overrideCallerMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	request.Caller = m.caller
+	return out.Call(ctx, request)
+}

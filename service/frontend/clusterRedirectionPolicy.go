@@ -24,9 +24,6 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/yarpc"
-
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -38,40 +35,45 @@ const (
 	DCRedirectionPolicyDefault = ""
 	// DCRedirectionPolicyNoop means no redirection
 	DCRedirectionPolicyNoop = "noop"
-	// DCRedirectionPolicySelectedAPIsForwarding means forwarding the following APIs based domain
+	// DCRedirectionPolicySelectedAPIsForwarding means forwarding the following non-worker APIs based domain
 	// 1. StartWorkflowExecution
 	// 2. SignalWithStartWorkflowExecution
 	// 3. SignalWorkflowExecution
 	// 4. RequestCancelWorkflowExecution
 	// 5. TerminateWorkflowExecution
 	// 6. QueryWorkflow
-	// please also reference selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs
+	// 7. ResetWorkflow
+	// please also reference selectedAPIsForwardingRedirectionPolicyAPIAllowlist
 	DCRedirectionPolicySelectedAPIsForwarding = "selected-apis-forwarding"
+	// DCRedirectionPolicyAllDomainAPIsForwarding means forwarding all the worker and non-worker APIs based domain
+	DCRedirectionPolicyAllDomainAPIsForwarding = "all-domain-apis-forwarding"
 )
 
 type (
-	// DCRedirectionPolicy is a DC redirection policy interface
-	DCRedirectionPolicy interface {
+	// ClusterRedirectionPolicy is a DC redirection policy interface
+	ClusterRedirectionPolicy interface {
 		WithDomainIDRedirect(ctx context.Context, domainID string, apiName string, call func(string) error) error
 		WithDomainNameRedirect(ctx context.Context, domainName string, apiName string, call func(string) error) error
 	}
 
-	// NoopRedirectionPolicy is DC redirection policy which does nothing
-	NoopRedirectionPolicy struct {
+	// noopRedirectionPolicy is DC redirection policy which does nothing
+	noopRedirectionPolicy struct {
 		currentClusterName string
 	}
 
-	// SelectedAPIsForwardingRedirectionPolicy is a DC redirection policy
-	// which (based on domain) forwards selected APIs calls to active cluster
-	SelectedAPIsForwardingRedirectionPolicy struct {
+	// selectedOrAllAPIsForwardingRedirectionPolicy is a DC redirection policy
+	// which (based on domain) forwards selected APIs calls or all domain APIs to active cluster
+	selectedOrAllAPIsForwardingRedirectionPolicy struct {
 		currentClusterName string
 		config             *Config
 		domainCache        cache.DomainCache
+		allDomainAPIs      bool
+		targetCluster      string
 	}
 )
 
-// selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs contains a list of APIs which can be redirected
-var selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs = map[string]struct{}{
+// selectedAPIsForwardingRedirectionPolicyAPIAllowlist contains a list of non-worker APIs which can be redirected
+var selectedAPIsForwardingRedirectionPolicyAPIAllowlist = map[string]struct{}{
 	"StartWorkflowExecution":           {},
 	"SignalWithStartWorkflowExecution": {},
 	"SignalWorkflowExecution":          {},
@@ -83,49 +85,54 @@ var selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs = map[string]struct{}
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
 func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config,
-	domainCache cache.DomainCache, policy config.DCRedirectionPolicy) DCRedirectionPolicy {
+	domainCache cache.DomainCache, policy config.ClusterRedirectionPolicy) ClusterRedirectionPolicy {
 	switch policy.Policy {
 	case DCRedirectionPolicyDefault:
 		// default policy, noop
-		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
+		return newNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicyNoop:
-		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
+		return newNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicySelectedAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return NewSelectedAPIsForwardingPolicy(currentClusterName, config, domainCache)
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false, "")
+	case DCRedirectionPolicyAllDomainAPIsForwarding:
+		currentClusterName := clusterMetadata.GetCurrentClusterName()
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true, policy.AllDomainApisForwardingTargetCluster)
 	default:
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
 	}
 }
 
-// NewNoopRedirectionPolicy is DC redirection policy which does nothing
-func NewNoopRedirectionPolicy(currentClusterName string) *NoopRedirectionPolicy {
-	return &NoopRedirectionPolicy{
+// newNoopRedirectionPolicy is DC redirection policy which does nothing
+func newNoopRedirectionPolicy(currentClusterName string) *noopRedirectionPolicy {
+	return &noopRedirectionPolicy{
 		currentClusterName: currentClusterName,
 	}
 }
 
 // WithDomainIDRedirect redirect the API call based on domain ID
-func (policy *NoopRedirectionPolicy) WithDomainIDRedirect(ctx context.Context, domainID string, apiName string, call func(string) error) error {
+func (policy *noopRedirectionPolicy) WithDomainIDRedirect(ctx context.Context, domainID string, apiName string, call func(string) error) error {
 	return call(policy.currentClusterName)
 }
 
 // WithDomainNameRedirect redirect the API call based on domain name
-func (policy *NoopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context, domainName string, apiName string, call func(string) error) error {
+func (policy *noopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context, domainName string, apiName string, call func(string) error) error {
 	return call(policy.currentClusterName)
 }
 
-// NewSelectedAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
-func NewSelectedAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache) *SelectedAPIsForwardingRedirectionPolicy {
-	return &SelectedAPIsForwardingRedirectionPolicy{
+// newSelectedOrAllAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
+func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool, targetCluster string) *selectedOrAllAPIsForwardingRedirectionPolicy {
+	return &selectedOrAllAPIsForwardingRedirectionPolicy{
 		currentClusterName: currentClusterName,
 		config:             config,
 		domainCache:        domainCache,
+		allDomainAPIs:      allDoaminAPIs,
+		targetCluster:      targetCluster,
 	}
 }
 
 // WithDomainIDRedirect redirect the API call based on domain ID
-func (policy *SelectedAPIsForwardingRedirectionPolicy) WithDomainIDRedirect(ctx context.Context, domainID string, apiName string, call func(string) error) error {
+func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainIDRedirect(ctx context.Context, domainID string, apiName string, call func(string) error) error {
 	domainEntry, err := policy.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return err
@@ -134,7 +141,7 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) WithDomainIDRedirect(ctx 
 }
 
 // WithDomainNameRedirect redirect the API call based on domain name
-func (policy *SelectedAPIsForwardingRedirectionPolicy) WithDomainNameRedirect(ctx context.Context, domainName string, apiName string, call func(string) error) error {
+func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) WithDomainNameRedirect(ctx context.Context, domainName string, apiName string, call func(string) error) error {
 	domainEntry, err := policy.domainCache.GetDomain(domainName)
 	if err != nil {
 		return err
@@ -142,7 +149,7 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) WithDomainNameRedirect(ct
 	return policy.withRedirect(ctx, domainEntry, apiName, call)
 }
 
-func (policy *SelectedAPIsForwardingRedirectionPolicy) withRedirect(ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string, call func(string) error) error {
+func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) withRedirect(ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string, call func(string) error) error {
 	targetDC, enableDomainNotActiveForwarding := policy.getTargetClusterAndIsDomainNotActiveAutoForwarding(ctx, domainEntry, apiName)
 
 	err := call(targetDC)
@@ -154,7 +161,7 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) withRedirect(ctx context.
 	return call(targetDC)
 }
 
-func (policy *SelectedAPIsForwardingRedirectionPolicy) isDomainNotActiveError(err error) (string, bool) {
+func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) isDomainNotActiveError(err error) (string, bool) {
 	domainNotActiveErr, ok := err.(*types.DomainNotActiveError)
 	if !ok {
 		return "", false
@@ -162,7 +169,8 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) isDomainNotActiveError(er
 	return domainNotActiveErr.ActiveCluster, true
 }
 
-func (policy *SelectedAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDomainNotActiveAutoForwarding(ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string) (string, bool) {
+// return two values: the target cluster name, and whether or not forwarding to the active cluster
+func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDomainNotActiveAutoForwarding(ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string) (string, bool) {
 	if !domainEntry.IsGlobalDomain() {
 		return policy.currentClusterName, false
 	}
@@ -172,18 +180,28 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDoma
 		return policy.currentClusterName, false
 	}
 
-	call := yarpc.CallFromContext(ctx)
-	enforceDCRedirection := call.Header(common.EnforceDCRedirection)
-	if !policy.config.EnableDomainNotActiveAutoForwarding(domainEntry.GetInfo().Name) && enforceDCRedirection != "true" {
-		// do not do dc redirection if auto-forwarding dynamic config and EnforceDCRedirection context flag is not enabled
+	if !policy.config.EnableDomainNotActiveAutoForwarding(domainEntry.GetInfo().Name) {
+		// do not do dc redirection if auto-forwarding dynamicconfig is not enabled
 		return policy.currentClusterName, false
 	}
 
-	_, ok := selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs[apiName]
+	currentActiveCluster := domainEntry.GetReplicationConfig().ActiveClusterName
+	if policy.allDomainAPIs {
+		if policy.targetCluster == "" {
+			return currentActiveCluster, true
+		} else {
+			if policy.targetCluster == currentActiveCluster {
+				return currentActiveCluster, true
+			}
+			// fallback to selectedAPIsForwardingRedirectionPolicy if targetCluster is not empty and not the same as currentActiveCluster
+		}
+	}
+
+	_, ok := selectedAPIsForwardingRedirectionPolicyAPIAllowlist[apiName]
 	if !ok {
 		// do not do dc redirection if API is not whitelisted
 		return policy.currentClusterName, false
 	}
 
-	return domainEntry.GetReplicationConfig().ActiveClusterName, true
+	return currentActiveCluster, true
 }

@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 
@@ -56,23 +55,17 @@ const (
 	matchingCaller = "matching-service-client"
 )
 
-const (
-	clientKeyDispatcher = "client-key-dispatcher"
-)
-
 type (
 	// Factory can be used to create RPC clients for cadence services
 	Factory interface {
 		NewHistoryClient() (history.Client, error)
 		NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
-		NewFrontendClient() (frontend.Client, error)
 
 		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error)
 		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
-		NewFrontendClientWithTimeout(timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 
-		NewAdminClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, largeTimeout time.Duration, dispatcher *yarpc.Dispatcher) (admin.Client, error)
-		NewFrontendClientWithTimeoutAndDispatcher(rpcName string, timeout time.Duration, longPollTimeout time.Duration, dispatcher *yarpc.Dispatcher) (frontend.Client, error)
+		NewAdminClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, largeTimeout time.Duration) (admin.Client, error)
+		NewFrontendClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
 	}
 
 	// DomainIDToNameFunc maps a domainID to domain name. Returns error when mapping is not possible.
@@ -116,10 +109,6 @@ func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
 
 func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	return cf.NewMatchingClientWithTimeout(domainIDToName, matching.DefaultTimeout, matching.DefaultLongPollTimeout)
-}
-
-func (cf *rpcClientFactory) NewFrontendClient() (frontend.Client, error) {
-	return cf.NewFrontendClientWithTimeout(frontend.DefaultTimeout, frontend.DefaultLongPollTimeout)
 }
 
 func (cf *rpcClientFactory) createKeyResolver(serviceName string) (func(key string) (string, error), error) {
@@ -240,51 +229,19 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 }
 
-func (cf *rpcClientFactory) NewFrontendClientWithTimeout(
-	timeout time.Duration,
-	longPollTimeout time.Duration,
-) (frontend.Client, error) {
-	keyResolver, err := cf.createKeyResolver(service.Frontend)
-	if err != nil {
-		return nil, err
-	}
-
-	clientProvider := func(clientKey string) (interface{}, error) {
-		if cf.enableGRPCOutbound {
-			return cf.newFrontendGRPCClient(clientKey)
-		}
-		return cf.newFrontendThriftClient(clientKey)
-	}
-
-	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
-		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
-	}
-	if cf.metricsClient != nil {
-		client = frontend.NewMetricClient(client, cf.metricsClient)
-	}
-	return client, nil
-}
-
-func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
-	rpcName string,
+func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
+	config transport.ClientConfig,
 	timeout time.Duration,
 	largeTimeout time.Duration,
-	dispatcher *yarpc.Dispatcher,
 ) (admin.Client, error) {
-	keyResolver := func(key string) (string, error) {
-		return clientKeyDispatcher, nil
+	var client admin.Client
+	if isGRPCOutbound(config) {
+		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
+	} else {
+		client = admin.NewThriftClient(adminserviceclient.New(config))
 	}
 
-	clientProvider := func(clientKey string) (interface{}, error) {
-		config := dispatcher.ClientConfig(rpcName)
-		if isGRPCOutbound(config) {
-			return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config)), nil
-		}
-		return admin.NewThriftClient(adminserviceclient.New(config)), nil
-	}
-
-	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
+	client = admin.NewClient(timeout, largeTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
 		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
@@ -294,30 +251,24 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndDispatcher(
 	return client, nil
 }
 
-func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndDispatcher(
-	rpcName string,
+func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
+	config transport.ClientConfig,
 	timeout time.Duration,
 	longPollTimeout time.Duration,
-	dispatcher *yarpc.Dispatcher,
 ) (frontend.Client, error) {
-	keyResolver := func(key string) (string, error) {
-		return clientKeyDispatcher, nil
+	var client frontend.Client
+	if isGRPCOutbound(config) {
+		client = frontend.NewGRPCClient(
+			apiv1.NewDomainAPIYARPCClient(config),
+			apiv1.NewWorkflowAPIYARPCClient(config),
+			apiv1.NewWorkerAPIYARPCClient(config),
+			apiv1.NewVisibilityAPIYARPCClient(config),
+		)
+	} else {
+		client = frontend.NewThriftClient(workflowserviceclient.New(config))
 	}
 
-	clientProvider := func(clientKey string) (interface{}, error) {
-		config := dispatcher.ClientConfig(rpcName)
-		if isGRPCOutbound(config) {
-			return frontend.NewGRPCClient(
-				apiv1.NewDomainAPIYARPCClient(config),
-				apiv1.NewWorkflowAPIYARPCClient(config),
-				apiv1.NewWorkerAPIYARPCClient(config),
-				apiv1.NewVisibilityAPIYARPCClient(config),
-			), nil
-		}
-		return frontend.NewThriftClient(workflowserviceclient.New(config)), nil
-	}
-
-	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	client = frontend.NewClient(timeout, longPollTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
 		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}

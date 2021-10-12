@@ -228,9 +228,9 @@ clusterGroupMetadata:
             rpcAddress: {{ default .Env.SECONDARY_FRONTEND_SERVICE "cadence-secondary" }}:{{ default .Env.FRONTEND_PORT "7833" }}
             rpcTransport: "grpc"
             authorizationProvider:
-                enable: { { default .Env.ENABLE_OAUTH "false" } }
+                enable: {{ default .Env.ENABLE_OAUTH "false" }}
                 type: "OAuthAuthorization"
-                privateKey: { { default .Env.OAUTH_PRIVATE_KEY "" } }
+                privateKey: {{ default .Env.OAUTH_PRIVATE_KEY "" }}
         {{- end }}
 
 

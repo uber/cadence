@@ -149,6 +149,10 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Fatalf("error creating rpc factory params: %v", err)
 	}
+	rpcParams.OutboundsBuilder = rpc.CombineOutbounds(
+		rpcParams.OutboundsBuilder,
+		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
+	)
 	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
 	dispatcher := params.RPCFactory.GetDispatcher()
 
@@ -162,7 +166,7 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
-	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
+	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
@@ -174,8 +178,6 @@ func (s *server) startService() common.Daemon {
 		clusterGroupMetadata.CurrentClusterName,
 		clusterGroupMetadata.ClusterGroup,
 	)
-
-	params.DispatcherProvider = rpc.NewDispatcherProvider(params.Logger, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger))
 
 	advancedVisMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,

@@ -136,7 +136,7 @@ func Iterator(
 
 }
 
-// FixerIterator provides iterator for concrete execution fixer.
+// FixerIterator provides iterator for timers fixer.
 func FixerIterator(
 	ctx context.Context,
 	client blobstore.Client,
@@ -146,7 +146,7 @@ func FixerIterator(
 	return store.NewBlobstoreIterator(ctx, client, keys, &entity.Timer{})
 }
 
-// FixerManager provides invariant manager for concrete execution fixer.
+// FixerManager provides invariant manager for timers fixer.
 func FixerManager(
 	_ context.Context,
 	pr persistence.Retryer,
