@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
@@ -119,6 +121,36 @@ func TestPublicClientOutbound(t *testing.T) {
 	assert.NotNil(t, outbounds[OutboundPublicClient].Unary)
 }
 
+func TestCrossDCOutbounds(t *testing.T) {
+	grpc := &grpc.Transport{}
+	tchannel := &tchannel.Transport{}
+
+	clusterGroup := map[string]config.ClusterInformation{
+		"cluster-A": {Enabled: true, RPCName: "cadence-frontend", RPCTransport: "invalid"},
+	}
+	_, err := NewCrossDCOutbounds(clusterGroup, &fakePeerChooserFactory{}).Build(grpc, tchannel)
+	assert.EqualError(t, err, "unknown cross DC transport type: invalid")
+
+	clusterGroup = map[string]config.ClusterInformation{
+		"cluster-A": {Enabled: true, RPCName: "cadence-frontend", RPCTransport: "grpc", AuthorizationProvider: config.AuthorizationProvider{Enable: true, PrivateKey: "invalid path"}},
+	}
+	_, err = NewCrossDCOutbounds(clusterGroup, &fakePeerChooserFactory{}).Build(grpc, tchannel)
+	assert.EqualError(t, err, "create AuthProvider: invalid private key path invalid path")
+
+	clusterGroup = map[string]config.ClusterInformation{
+		"cluster-A": {Enabled: true, RPCName: "cadence-frontend", RPCAddress: "address-A", RPCTransport: "grpc", AuthorizationProvider: config.AuthorizationProvider{Enable: true, PrivateKey: tempFile(t, "key")}},
+		"cluster-B": {Enabled: true, RPCName: "cadence-frontend", RPCAddress: "address-B", RPCTransport: "tchannel"},
+		"cluster-C": {Enabled: false},
+	}
+	outbounds, err := NewCrossDCOutbounds(clusterGroup, &fakePeerChooserFactory{}).Build(grpc, tchannel)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(outbounds))
+	assert.Equal(t, "cadence-frontend", outbounds["cluster-A"].ServiceName)
+	assert.Equal(t, "cadence-frontend", outbounds["cluster-B"].ServiceName)
+	assert.NotNil(t, outbounds["cluster-A"].Unary)
+	assert.NotNil(t, outbounds["cluster-B"].Unary)
+}
+
 func tempFile(t *testing.T, content string) string {
 	f, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
@@ -139,4 +171,10 @@ type fakeOutboundBuilder struct {
 
 func (b fakeOutboundBuilder) Build(*grpc.Transport, *tchannel.Transport) (yarpc.Outbounds, error) {
 	return b.outbounds, b.err
+}
+
+type fakePeerChooserFactory struct{}
+
+func (f fakePeerChooserFactory) CreatePeerChooser(transport peer.Transport, address string) (peer.Chooser, error) {
+	return direct.New(direct.Configuration{}, transport)
 }

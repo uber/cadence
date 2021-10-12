@@ -30,6 +30,7 @@ import (
 	"go.uber.org/multierr"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
@@ -37,6 +38,8 @@ import (
 const (
 	// OutboundPublicClient is the name of configured public client outbound
 	OutboundPublicClient = "public-client"
+
+	crossDCCaller = "cadence-xdc-client"
 )
 
 // OutboundsBuilder allows defining outbounds for the dispatcher
@@ -105,4 +108,58 @@ func (b publicClientOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transp
 			Unary:       middleware.ApplyUnaryOutbound(tchannel.NewSingleOutbound(b.address), b.authMiddleware),
 		},
 	}, nil
+}
+
+type crossDCOutbounds struct {
+	clusterGroup map[string]config.ClusterInformation
+	pcf          PeerChooserFactory
+}
+
+func NewCrossDCOutbounds(clusterGroup map[string]config.ClusterInformation, pcf PeerChooserFactory) OutboundsBuilder {
+	return crossDCOutbounds{clusterGroup, pcf}
+}
+
+func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport *tchannel.Transport) (yarpc.Outbounds, error) {
+	outbounds := yarpc.Outbounds{}
+	for clusterName, clusterInfo := range b.clusterGroup {
+		if !clusterInfo.Enabled {
+			continue
+		}
+
+		var outbound transport.UnaryOutbound
+		switch clusterInfo.RPCTransport {
+		case tchannel.TransportName:
+			peerChooser, err := b.pcf.CreatePeerChooser(tchannelTransport, clusterInfo.RPCAddress)
+			if err != nil {
+				return nil, err
+			}
+			outbound = tchannelTransport.NewOutbound(peerChooser)
+		case grpc.TransportName:
+			peerChooser, err := b.pcf.CreatePeerChooser(grpcTransport, clusterInfo.RPCAddress)
+			if err != nil {
+				return nil, err
+			}
+			outbound = grpcTransport.NewOutbound(peerChooser)
+		default:
+			return nil, fmt.Errorf("unknown cross DC transport type: %s", clusterInfo.RPCTransport)
+		}
+
+		var authMiddleware middleware.UnaryOutbound
+		if clusterInfo.AuthorizationProvider.Enable {
+			authProvider, err := authorization.GetAuthProviderClient(clusterInfo.AuthorizationProvider.PrivateKey)
+			if err != nil {
+				return nil, fmt.Errorf("create AuthProvider: %v", err)
+			}
+			authMiddleware = &authOutboundMiddleware{authProvider}
+		}
+
+		outbounds[clusterName] = transport.Outbounds{
+			ServiceName: clusterInfo.RPCName,
+			Unary: middleware.ApplyUnaryOutbound(outbound, yarpc.UnaryOutboundMiddleware(
+				authMiddleware,
+				&overrideCallerMiddleware{crossDCCaller},
+			)),
+		}
+	}
+	return outbounds, nil
 }

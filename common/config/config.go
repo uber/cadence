@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -48,8 +49,8 @@ type (
 		ClusterGroupMetadata *ClusterGroupMetadata `yaml:"clusterGroupMetadata"`
 		// Deprecated: please use ClusterGroupMetadata
 		ClusterMetadata *ClusterGroupMetadata `yaml:"clusterMetadata"`
-		// DCRedirectionPolicy contains the frontend datacenter redirection policy
-		DCRedirectionPolicy DCRedirectionPolicy `yaml:"dcRedirectionPolicy"`
+		// Deprecated: please use ClusterRedirectionPolicy under ClusterGroupMetadata
+		DCRedirectionPolicy *ClusterRedirectionPolicy `yaml:"dcRedirectionPolicy"`
 		// Services is a map of service name to service config items
 		Services map[string]Service `yaml:"services"`
 		// Kafka is the config for connecting to kafka
@@ -122,7 +123,7 @@ type (
 
 	// RPC contains the rpc config items
 	RPC struct {
-		// Port is the port  on which the channel will bind to
+		// Port is the port  on which the Thrift TChannel will bind to
 		Port int `yaml:"port"`
 		// GRPCPort is the port on which the grpc listener will bind to
 		GRPCPort int `yaml:"grpcPort"`
@@ -317,20 +318,60 @@ type (
 
 	// Logger contains the config items for logger
 	Logger struct {
-		// Stdout is true if the output needs to goto standard out
+		// Stdout is true then the output needs to goto standard out
+		// By default this is false and output will go to standard error
 		Stdout bool `yaml:"stdout"`
 		// Level is the desired log level
 		Level string `yaml:"level"`
 		// OutputFile is the path to the log output file
+		// Stdout must be false, otherwise Stdout will take precedence
 		OutputFile string `yaml:"outputFile"`
-		// levelKey is the desired log level, defaults to "level"
+		// LevelKey is the desired log level, defaults to "level"
 		LevelKey string `yaml:"levelKey"`
+		// Encoding decides the format, supports "console" and "json".
+		// "json" will print the log in JSON format(better for machine), while "console" will print in plain-text format(more human friendly)
+		// Default is "json"
+		Encoding string `yaml:"encoding"`
 	}
 
-	// DCRedirectionPolicy contains the frontend datacenter redirection policy
-	DCRedirectionPolicy struct {
+	// ClusterRedirectionPolicy contains the frontend datacenter redirection policy
+	// When using XDC (global domain) feature to failover a domain from one cluster to another one, client may call the passive cluster to start /signal workflows etc.
+	// To have a seamless failover experience, cluster should use this forwarding option to forward those APIs to the active cluster.
+	ClusterRedirectionPolicy struct {
+		// Support "noop", "selected-apis-forwarding" and "all-domain-apis-forwarding", default (when empty) is "noop"
+		//
+		// 1) "noop" will not do any forwarding.
+		//
+		// 2) "all-domain-apis-forwarding" will forward all domain specific APIs(worker and non worker) if the current active domain is
+		// the same as "allDomainApisForwardingTargetCluster"( or "allDomainApisForwardingTargetCluster" is empty), otherwise it fallbacks to "selected-apis-forwarding". 
+		//
+		// 3) "selected-apis-forwarding" will forward all non-worker APIs including
+		// 1. StartWorkflowExecution
+		// 2. SignalWithStartWorkflowExecution
+		// 3. SignalWorkflowExecution
+		// 4. RequestCancelWorkflowExecution
+		// 5. TerminateWorkflowExecution
+		// 6. QueryWorkflow
+		// 7. ResetWorkflow
+		//
+		// Both "selected-apis-forwarding" and "all-domain-apis-forwarding" can work with EnableDomainNotActiveAutoForwarding dynamicconfig to select certain domains using the policy.
+		//
+		// Usage recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding" or "selected-apis-forwarding" should be used to ensure seamless domain failover(high availability)
+		// Depending on the cost of cross cluster calls :
+		//
+		// 1) If the network communication overhead is high(e.g., clusters are in remote datacenters of different region), then should use "selected-apis-forwarding".
+		// But you must ensure a different set of workers with the same workflow & activity code are connected to each Cadence cluster.
+		// 
+		// 2) If the network communication overhead is low (e.g. in the same datacenter, mostly for cluster migration usage), then you can use "all-domain-apis-forwarding". Then only one set of
+		// workflow & activity worker connected of one of the Cadence cluster is enough as all domain APIs are forwarded. See more details in documentation of cluster migration section.
+		// Usually "allDomainApisForwardingTargetCluster" should be empty(default value) except for very rare cases: you have more than two clusters and some are in a remote region but some are in local region.    
 		Policy string `yaml:"policy"`
-		ToDC   string `yaml:"toDC"`
+		// A supplement for "all-domain-apis-forwarding" policy. It decides how the policy fallback to  "selected-apis-forwarding" policy.
+		// If this is not empty, and current domain is not active in the value of allDomainApisForwardingTargetCluster, then the policy will fallback to "selected-apis-forwarding" policy.
+		// Default is empty, meaning that all requests will not fallback.
+		AllDomainApisForwardingTargetCluster string `yaml:"allDomainApisForwardingTargetCluster"`
+		// Not being used, but we have to keep it so that config loading is not broken
+		ToDC string `yaml:"toDC"`
 	}
 
 	// Metrics contains the config items for metrics subsystem
@@ -340,6 +381,12 @@ type (
 		// Statsd is the configuration for statsd reporter
 		Statsd *Statsd `yaml:"statsd"`
 		// Prometheus is the configuration for prometheus reporter
+		// Some documentation below because the tally library is missing it:
+		// In this configuration, default timerType is "histogram", alternatively "summary" is also supported.
+		// In some cases, summary is better. Choose it wisely.
+		// For histogram, default buckets are defined in https://github.com/uber/cadence/blob/master/common/metrics/tally/prometheus/buckets.go#L34
+		// For summary, default objectives are defined in https://github.com/uber-go/tally/blob/137973e539cd3589f904c23d0b3a28c579fd0ae4/prometheus/reporter.go#L70
+		// You can customize the buckets/objectives if the default is not good enough.
 		Prometheus *prometheus.Configuration `yaml:"prometheus"`
 		// Tags is the set of key-value pairs to be reported
 		// as part of every metric
@@ -489,7 +536,7 @@ func (c *Config) validate() error {
 func (c *Config) fillDefaults() {
 	c.Persistence.FillDefaults()
 
-	// TODO: remove this after 0.23 and mention a breaking change in config.
+	// TODO: remove this at the point when we decided to make some breaking changes in config.
 	if c.ClusterGroupMetadata == nil && c.ClusterMetadata != nil {
 		c.ClusterGroupMetadata = c.ClusterMetadata
 		log.Println("[WARN] clusterMetadata config is deprecated. Please replace it with clusterGroupMetadata.")
@@ -500,7 +547,24 @@ func (c *Config) fillDefaults() {
 	// filling publicClient with current cluster's RPC address if empty
 	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
 		name := c.ClusterGroupMetadata.CurrentClusterName
-		c.PublicClient.HostPort = c.ClusterGroupMetadata.ClusterGroup[name].RPCAddress
+		currentCluster := c.ClusterGroupMetadata.ClusterGroup[name]
+		if currentCluster.RPCTransport != "grpc" {
+			c.PublicClient.HostPort = currentCluster.RPCAddress
+		} else {
+			// public client cannot use gRPC because GoSDK hasn't supported it. we need to fallback to Thrift
+			// TODO: remove this fallback after GoSDK supporting gRPC
+			thriftPort := c.Services["frontend"].RPC.Port // use the Thrift port from RPC config
+			host, _, err := net.SplitHostPort(currentCluster.RPCAddress)
+			if err != nil {
+				log.Fatalf("RPCAddress is invalid for cluster %v", name)
+			}
+			c.PublicClient.HostPort = fmt.Sprintf("%v:%v", host, thriftPort)
+		}
+	}
+
+	if c.ClusterGroupMetadata.ClusterRedirectionPolicy == nil && c.DCRedirectionPolicy != nil {
+		log.Println("[WARN] dcRedirectionPolicy config is deprecated. Please replace it with clusterRedirectionPolicy.")
+		c.ClusterGroupMetadata.ClusterRedirectionPolicy = c.DCRedirectionPolicy
 	}
 }
 
