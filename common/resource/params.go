@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/rpc"
 )
 
 type (
@@ -62,7 +61,6 @@ type (
 		ESClient            es.GenericClient
 		ESConfig            *config.ElasticSearchConfig
 		DynamicConfig       dynamicconfig.Client
-		DispatcherProvider  rpc.DispatcherProvider
 		DCRedirectionPolicy config.DCRedirectionPolicy
 		PublicClient        workflowserviceclient.Interface
 		ArchivalMetadata    archiver.ArchivalMetadata
