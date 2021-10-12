@@ -642,7 +642,9 @@ func (handler *handlerImpl) createRecordDecisionTaskStartedResponse(
 	// before it was started.
 	response.ScheduledEventID = decision.ScheduleID
 	response.StartedEventID = decision.StartedID
-	response.StickyExecutionEnabled = msBuilder.IsStickyTaskListEnabled()
+	// if we call IsStickyTaskListEnabled then it's possible that the decision is a
+	// sticky decision but due to TTL check, the field becomes false
+	response.StickyExecutionEnabled = msBuilder.GetExecutionInfo().StickyTaskList != ""
 	response.NextEventID = msBuilder.GetNextEventID()
 	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{

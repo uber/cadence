@@ -124,6 +124,7 @@ type (
 		GetChildExecutionInitiatedEvent(context.Context, int64) (*types.HistoryEvent, error)
 		GetCompletionEvent(context.Context) (*types.HistoryEvent, error)
 		GetDecisionInfo(int64) (*DecisionInfo, bool)
+		GetDecisionScheduleToStartTimeout() time.Duration
 		GetDomainEntry() *cache.DomainCacheEntry
 		GetStartEvent(context.Context) (*types.HistoryEvent, error)
 		GetCurrentBranchToken() ([]byte, error)

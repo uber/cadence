@@ -268,12 +268,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateDecisionScheduleTasks(
 		Version:    decision.Version,
 	})
 
-	if r.mutableState.IsStickyTaskListEnabled() {
+	if scheduleToStartTimeout := r.mutableState.GetDecisionScheduleToStartTimeout(); scheduleToStartTimeout != 0 {
 		scheduledTime := time.Unix(0, decision.ScheduledTimestamp)
-		scheduleToStartTimeout := time.Duration(
-			r.mutableState.GetExecutionInfo().StickyScheduleToStartTimeout,
-		) * time.Second
-
 		r.mutableState.AddTimerTasks(&persistence.DecisionTimeoutTask{
 			// TaskID is set by shard
 			VisibilityTimestamp: scheduledTime.Add(scheduleToStartTimeout),
