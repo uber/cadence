@@ -122,10 +122,12 @@ const (
 	// Default value: the value in static config: common.Config.Archival.Visibility.EnableRead
 	// Allowed filters: N/A
 	EnableReadFromVisibilityArchival
-	// EnableDomainNotActiveAutoForwarding is whether enabling DC auto forwarding to active cluster for signal / start / signal with start API if domain is not active
+	// EnableDomainNotActiveAutoForwarding decides requests form which domain will be forwarded to active cluster if domain is not active in current cluster.
+	// Only when "selected-api-forwarding" or "all-domain-apis-forwarding" is the policy in ClusterRedirectionPolicy(in static config).
+	// If the policy is "noop"(default) this flag is not doing anything.
 	// KeyName: system.enableDomainNotActiveAutoForwarding
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: TRUE (meaning all domains)
 	// Allowed filters: DomainName
 	EnableDomainNotActiveAutoForwarding
 	// EnableGracefulFailover is whether enabling graceful failover
