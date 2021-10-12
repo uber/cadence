@@ -110,6 +110,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "MatchingService",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "MatchingService",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -122,7 +126,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) AddActivityTask(
@@ -131,17 +136,22 @@ func (c client) AddActivityTask(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result matching.MatchingService_AddActivityTask_Result
 	args := matching.MatchingService_AddActivityTask_Helper.Args(_AddRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_AddActivityTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = matching.MatchingService_AddActivityTask_Helper.UnwrapResponse(&result)
@@ -154,17 +164,22 @@ func (c client) AddDecisionTask(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result matching.MatchingService_AddDecisionTask_Result
 	args := matching.MatchingService_AddDecisionTask_Helper.Args(_AddRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_AddDecisionTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = matching.MatchingService_AddDecisionTask_Helper.UnwrapResponse(&result)
@@ -177,17 +192,22 @@ func (c client) CancelOutstandingPoll(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result matching.MatchingService_CancelOutstandingPoll_Result
 	args := matching.MatchingService_CancelOutstandingPoll_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_CancelOutstandingPoll_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = matching.MatchingService_CancelOutstandingPoll_Helper.UnwrapResponse(&result)
@@ -200,17 +220,22 @@ func (c client) DescribeTaskList(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeTaskListResponse, err error) {
 
+	var result matching.MatchingService_DescribeTaskList_Result
 	args := matching.MatchingService_DescribeTaskList_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_DescribeTaskList_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = matching.MatchingService_DescribeTaskList_Helper.UnwrapResponse(&result)
@@ -223,17 +248,22 @@ func (c client) GetTaskListsByDomain(
 	opts ...yarpc.CallOption,
 ) (success *shared.GetTaskListsByDomainResponse, err error) {
 
+	var result matching.MatchingService_GetTaskListsByDomain_Result
 	args := matching.MatchingService_GetTaskListsByDomain_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_GetTaskListsByDomain_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = matching.MatchingService_GetTaskListsByDomain_Helper.UnwrapResponse(&result)
@@ -246,17 +276,22 @@ func (c client) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListTaskListPartitionsResponse, err error) {
 
+	var result matching.MatchingService_ListTaskListPartitions_Result
 	args := matching.MatchingService_ListTaskListPartitions_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_ListTaskListPartitions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = matching.MatchingService_ListTaskListPartitions_Helper.UnwrapResponse(&result)
@@ -269,17 +304,22 @@ func (c client) PollForActivityTask(
 	opts ...yarpc.CallOption,
 ) (success *shared.PollForActivityTaskResponse, err error) {
 
+	var result matching.MatchingService_PollForActivityTask_Result
 	args := matching.MatchingService_PollForActivityTask_Helper.Args(_PollRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_PollForActivityTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = matching.MatchingService_PollForActivityTask_Helper.UnwrapResponse(&result)
@@ -292,17 +332,22 @@ func (c client) PollForDecisionTask(
 	opts ...yarpc.CallOption,
 ) (success *matching.PollForDecisionTaskResponse, err error) {
 
+	var result matching.MatchingService_PollForDecisionTask_Result
 	args := matching.MatchingService_PollForDecisionTask_Helper.Args(_PollRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_PollForDecisionTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = matching.MatchingService_PollForDecisionTask_Helper.UnwrapResponse(&result)
@@ -315,17 +360,22 @@ func (c client) QueryWorkflow(
 	opts ...yarpc.CallOption,
 ) (success *shared.QueryWorkflowResponse, err error) {
 
+	var result matching.MatchingService_QueryWorkflow_Result
 	args := matching.MatchingService_QueryWorkflow_Helper.Args(_QueryRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_QueryWorkflow_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = matching.MatchingService_QueryWorkflow_Helper.UnwrapResponse(&result)
@@ -338,17 +388,22 @@ func (c client) RespondQueryTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result matching.MatchingService_RespondQueryTaskCompleted_Result
 	args := matching.MatchingService_RespondQueryTaskCompleted_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result matching.MatchingService_RespondQueryTaskCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = matching.MatchingService_RespondQueryTaskCompleted_Helper.UnwrapResponse(&result)

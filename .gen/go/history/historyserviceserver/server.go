@@ -28,6 +28,7 @@ package historyserviceserver
 import (
 	context "context"
 
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -266,8 +267,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "CloseShard",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.CloseShard),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.CloseShard),
+					NoWire: closeshard_NoWireHandler{impl},
 				},
 				Signature:    "CloseShard(Request *shared.CloseShardRequest)",
 				ThriftModule: history.ThriftModule,
@@ -277,8 +279,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeHistoryHost",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeHistoryHost),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeHistoryHost),
+					NoWire: describehistoryhost_NoWireHandler{impl},
 				},
 				Signature:    "DescribeHistoryHost(Request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse)",
 				ThriftModule: history.ThriftModule,
@@ -288,8 +291,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeMutableState),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeMutableState),
+					NoWire: describemutablestate_NoWireHandler{impl},
 				},
 				Signature:    "DescribeMutableState(Request *history.DescribeMutableStateRequest) (*history.DescribeMutableStateResponse)",
 				ThriftModule: history.ThriftModule,
@@ -299,8 +303,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeQueue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeQueue),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeQueue),
+					NoWire: describequeue_NoWireHandler{impl},
 				},
 				Signature:    "DescribeQueue(Request *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse)",
 				ThriftModule: history.ThriftModule,
@@ -310,8 +315,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeWorkflowExecution),
+					NoWire: describeworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "DescribeWorkflowExecution(DescribeRequest *history.DescribeWorkflowExecutionRequest) (*shared.DescribeWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
@@ -321,8 +327,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetCrossClusterTasks",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetCrossClusterTasks),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetCrossClusterTasks),
+					NoWire: getcrossclustertasks_NoWireHandler{impl},
 				},
 				Signature:    "GetCrossClusterTasks(Request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse)",
 				ThriftModule: history.ThriftModule,
@@ -332,8 +339,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetDLQReplicationMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetDLQReplicationMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetDLQReplicationMessages),
+					NoWire: getdlqreplicationmessages_NoWireHandler{impl},
 				},
 				Signature:    "GetDLQReplicationMessages(Request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse)",
 				ThriftModule: history.ThriftModule,
@@ -343,8 +351,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetFailoverInfo",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetFailoverInfo),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetFailoverInfo),
+					NoWire: getfailoverinfo_NoWireHandler{impl},
 				},
 				Signature:    "GetFailoverInfo(Request *history.GetFailoverInfoRequest) (*history.GetFailoverInfoResponse)",
 				ThriftModule: history.ThriftModule,
@@ -354,8 +363,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetMutableState),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetMutableState),
+					NoWire: getmutablestate_NoWireHandler{impl},
 				},
 				Signature:    "GetMutableState(GetRequest *history.GetMutableStateRequest) (*history.GetMutableStateResponse)",
 				ThriftModule: history.ThriftModule,
@@ -365,8 +375,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetReplicationMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetReplicationMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetReplicationMessages),
+					NoWire: getreplicationmessages_NoWireHandler{impl},
 				},
 				Signature:    "GetReplicationMessages(Request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse)",
 				ThriftModule: history.ThriftModule,
@@ -376,8 +387,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "MergeDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.MergeDLQMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.MergeDLQMessages),
+					NoWire: mergedlqmessages_NoWireHandler{impl},
 				},
 				Signature:    "MergeDLQMessages(Request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse)",
 				ThriftModule: history.ThriftModule,
@@ -387,8 +399,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "NotifyFailoverMarkers",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.NotifyFailoverMarkers),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.NotifyFailoverMarkers),
+					NoWire: notifyfailovermarkers_NoWireHandler{impl},
 				},
 				Signature:    "NotifyFailoverMarkers(Request *history.NotifyFailoverMarkersRequest)",
 				ThriftModule: history.ThriftModule,
@@ -398,8 +411,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "PollMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.PollMutableState),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.PollMutableState),
+					NoWire: pollmutablestate_NoWireHandler{impl},
 				},
 				Signature:    "PollMutableState(PollRequest *history.PollMutableStateRequest) (*history.PollMutableStateResponse)",
 				ThriftModule: history.ThriftModule,
@@ -409,8 +423,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "PurgeDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.PurgeDLQMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.PurgeDLQMessages),
+					NoWire: purgedlqmessages_NoWireHandler{impl},
 				},
 				Signature:    "PurgeDLQMessages(Request *replicator.PurgeDLQMessagesRequest)",
 				ThriftModule: history.ThriftModule,
@@ -420,8 +435,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "QueryWorkflow",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.QueryWorkflow),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.QueryWorkflow),
+					NoWire: queryworkflow_NoWireHandler{impl},
 				},
 				Signature:    "QueryWorkflow(QueryRequest *history.QueryWorkflowRequest) (*history.QueryWorkflowResponse)",
 				ThriftModule: history.ThriftModule,
@@ -431,8 +447,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ReadDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReadDLQMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ReadDLQMessages),
+					NoWire: readdlqmessages_NoWireHandler{impl},
 				},
 				Signature:    "ReadDLQMessages(Request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse)",
 				ThriftModule: history.ThriftModule,
@@ -442,8 +459,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ReapplyEvents",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReapplyEvents),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ReapplyEvents),
+					NoWire: reapplyevents_NoWireHandler{impl},
 				},
 				Signature:    "ReapplyEvents(ReapplyEventsRequest *history.ReapplyEventsRequest)",
 				ThriftModule: history.ThriftModule,
@@ -453,8 +471,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RecordActivityTaskHeartbeat",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RecordActivityTaskHeartbeat),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RecordActivityTaskHeartbeat),
+					NoWire: recordactivitytaskheartbeat_NoWireHandler{impl},
 				},
 				Signature:    "RecordActivityTaskHeartbeat(HeartbeatRequest *history.RecordActivityTaskHeartbeatRequest) (*shared.RecordActivityTaskHeartbeatResponse)",
 				ThriftModule: history.ThriftModule,
@@ -464,8 +483,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RecordActivityTaskStarted",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RecordActivityTaskStarted),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RecordActivityTaskStarted),
+					NoWire: recordactivitytaskstarted_NoWireHandler{impl},
 				},
 				Signature:    "RecordActivityTaskStarted(AddRequest *history.RecordActivityTaskStartedRequest) (*history.RecordActivityTaskStartedResponse)",
 				ThriftModule: history.ThriftModule,
@@ -475,8 +495,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RecordChildExecutionCompleted",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RecordChildExecutionCompleted),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RecordChildExecutionCompleted),
+					NoWire: recordchildexecutioncompleted_NoWireHandler{impl},
 				},
 				Signature:    "RecordChildExecutionCompleted(CompletionRequest *history.RecordChildExecutionCompletedRequest)",
 				ThriftModule: history.ThriftModule,
@@ -486,8 +507,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RecordDecisionTaskStarted",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RecordDecisionTaskStarted),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RecordDecisionTaskStarted),
+					NoWire: recorddecisiontaskstarted_NoWireHandler{impl},
 				},
 				Signature:    "RecordDecisionTaskStarted(AddRequest *history.RecordDecisionTaskStartedRequest) (*history.RecordDecisionTaskStartedResponse)",
 				ThriftModule: history.ThriftModule,
@@ -497,8 +519,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RefreshWorkflowTasks",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RefreshWorkflowTasks),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RefreshWorkflowTasks),
+					NoWire: refreshworkflowtasks_NoWireHandler{impl},
 				},
 				Signature:    "RefreshWorkflowTasks(Request *history.RefreshWorkflowTasksRequest)",
 				ThriftModule: history.ThriftModule,
@@ -508,8 +531,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RemoveSignalMutableState",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RemoveSignalMutableState),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RemoveSignalMutableState),
+					NoWire: removesignalmutablestate_NoWireHandler{impl},
 				},
 				Signature:    "RemoveSignalMutableState(RemoveRequest *history.RemoveSignalMutableStateRequest)",
 				ThriftModule: history.ThriftModule,
@@ -519,8 +543,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RemoveTask",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RemoveTask),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RemoveTask),
+					NoWire: removetask_NoWireHandler{impl},
 				},
 				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest)",
 				ThriftModule: history.ThriftModule,
@@ -530,8 +555,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ReplicateEventsV2",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReplicateEventsV2),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ReplicateEventsV2),
+					NoWire: replicateeventsv2_NoWireHandler{impl},
 				},
 				Signature:    "ReplicateEventsV2(ReplicateV2Request *history.ReplicateEventsV2Request)",
 				ThriftModule: history.ThriftModule,
@@ -541,8 +567,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RequestCancelWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RequestCancelWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RequestCancelWorkflowExecution),
+					NoWire: requestcancelworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "RequestCancelWorkflowExecution(CancelRequest *history.RequestCancelWorkflowExecutionRequest)",
 				ThriftModule: history.ThriftModule,
@@ -552,8 +579,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ResetQueue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResetQueue),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ResetQueue),
+					NoWire: resetqueue_NoWireHandler{impl},
 				},
 				Signature:    "ResetQueue(Request *shared.ResetQueueRequest)",
 				ThriftModule: history.ThriftModule,
@@ -563,8 +591,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ResetStickyTaskList",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResetStickyTaskList),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ResetStickyTaskList),
+					NoWire: resetstickytasklist_NoWireHandler{impl},
 				},
 				Signature:    "ResetStickyTaskList(ResetRequest *history.ResetStickyTaskListRequest) (*history.ResetStickyTaskListResponse)",
 				ThriftModule: history.ThriftModule,
@@ -574,8 +603,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ResetWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResetWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ResetWorkflowExecution),
+					NoWire: resetworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "ResetWorkflowExecution(ResetRequest *history.ResetWorkflowExecutionRequest) (*shared.ResetWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
@@ -585,8 +615,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RespondActivityTaskCanceled",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RespondActivityTaskCanceled),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondActivityTaskCanceled),
+					NoWire: respondactivitytaskcanceled_NoWireHandler{impl},
 				},
 				Signature:    "RespondActivityTaskCanceled(CanceledRequest *history.RespondActivityTaskCanceledRequest)",
 				ThriftModule: history.ThriftModule,
@@ -596,8 +627,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RespondActivityTaskCompleted",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RespondActivityTaskCompleted),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondActivityTaskCompleted),
+					NoWire: respondactivitytaskcompleted_NoWireHandler{impl},
 				},
 				Signature:    "RespondActivityTaskCompleted(CompleteRequest *history.RespondActivityTaskCompletedRequest)",
 				ThriftModule: history.ThriftModule,
@@ -607,8 +639,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RespondActivityTaskFailed",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RespondActivityTaskFailed),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondActivityTaskFailed),
+					NoWire: respondactivitytaskfailed_NoWireHandler{impl},
 				},
 				Signature:    "RespondActivityTaskFailed(FailRequest *history.RespondActivityTaskFailedRequest)",
 				ThriftModule: history.ThriftModule,
@@ -618,8 +651,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RespondCrossClusterTasksCompleted",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RespondCrossClusterTasksCompleted),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondCrossClusterTasksCompleted),
+					NoWire: respondcrossclustertaskscompleted_NoWireHandler{impl},
 				},
 				Signature:    "RespondCrossClusterTasksCompleted(Request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse)",
 				ThriftModule: history.ThriftModule,
@@ -629,8 +663,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RespondDecisionTaskCompleted",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondDecisionTaskCompleted),
+					NoWire: responddecisiontaskcompleted_NoWireHandler{impl},
 				},
 				Signature:    "RespondDecisionTaskCompleted(CompleteRequest *history.RespondDecisionTaskCompletedRequest) (*history.RespondDecisionTaskCompletedResponse)",
 				ThriftModule: history.ThriftModule,
@@ -640,8 +675,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RespondDecisionTaskFailed",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RespondDecisionTaskFailed),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondDecisionTaskFailed),
+					NoWire: responddecisiontaskfailed_NoWireHandler{impl},
 				},
 				Signature:    "RespondDecisionTaskFailed(FailedRequest *history.RespondDecisionTaskFailedRequest)",
 				ThriftModule: history.ThriftModule,
@@ -651,8 +687,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ScheduleDecisionTask",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ScheduleDecisionTask),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ScheduleDecisionTask),
+					NoWire: scheduledecisiontask_NoWireHandler{impl},
 				},
 				Signature:    "ScheduleDecisionTask(ScheduleRequest *history.ScheduleDecisionTaskRequest)",
 				ThriftModule: history.ThriftModule,
@@ -662,8 +699,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "SignalWithStartWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SignalWithStartWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SignalWithStartWorkflowExecution),
+					NoWire: signalwithstartworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "SignalWithStartWorkflowExecution(SignalWithStartRequest *history.SignalWithStartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
@@ -673,8 +711,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "SignalWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SignalWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SignalWorkflowExecution),
+					NoWire: signalworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "SignalWorkflowExecution(SignalRequest *history.SignalWorkflowExecutionRequest)",
 				ThriftModule: history.ThriftModule,
@@ -684,8 +723,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "StartWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.StartWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.StartWorkflowExecution),
+					NoWire: startworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "StartWorkflowExecution(StartRequest *history.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
@@ -695,8 +735,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "SyncActivity",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SyncActivity),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SyncActivity),
+					NoWire: syncactivity_NoWireHandler{impl},
 				},
 				Signature:    "SyncActivity(SyncActivityRequest *history.SyncActivityRequest)",
 				ThriftModule: history.ThriftModule,
@@ -706,8 +747,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "SyncShardStatus",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.SyncShardStatus),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.SyncShardStatus),
+					NoWire: syncshardstatus_NoWireHandler{impl},
 				},
 				Signature:    "SyncShardStatus(SyncShardStatusRequest *history.SyncShardStatusRequest)",
 				ThriftModule: history.ThriftModule,
@@ -717,8 +759,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "TerminateWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.TerminateWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.TerminateWorkflowExecution),
+					NoWire: terminateworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "TerminateWorkflowExecution(TerminateRequest *history.TerminateWorkflowExecutionRequest)",
 				ThriftModule: history.ThriftModule,
@@ -1995,4 +2038,1558 @@ func (h handler) TerminateWorkflowExecution(ctx context.Context, body wire.Value
 	}
 
 	return response, err
+}
+
+type closeshard_NoWireHandler struct{ impl Interface }
+
+func (h closeshard_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_CloseShard_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'CloseShard': %w", err)
+	}
+
+	appErr := h.impl.CloseShard(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_CloseShard_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describehistoryhost_NoWireHandler struct{ impl Interface }
+
+func (h describehistoryhost_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_DescribeHistoryHost_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'DescribeHistoryHost': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeHistoryHost(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeHistoryHost_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describemutablestate_NoWireHandler struct{ impl Interface }
+
+func (h describemutablestate_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_DescribeMutableState_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'DescribeMutableState': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeMutableState(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeMutableState_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describequeue_NoWireHandler struct{ impl Interface }
+
+func (h describequeue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_DescribeQueue_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'DescribeQueue': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeQueue(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeQueue_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describeworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h describeworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_DescribeWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'DescribeWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeWorkflowExecution(ctx, args.DescribeRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_DescribeWorkflowExecution_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getcrossclustertasks_NoWireHandler struct{ impl Interface }
+
+func (h getcrossclustertasks_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_GetCrossClusterTasks_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'GetCrossClusterTasks': %w", err)
+	}
+
+	success, appErr := h.impl.GetCrossClusterTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetCrossClusterTasks_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getdlqreplicationmessages_NoWireHandler struct{ impl Interface }
+
+func (h getdlqreplicationmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_GetDLQReplicationMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'GetDLQReplicationMessages': %w", err)
+	}
+
+	success, appErr := h.impl.GetDLQReplicationMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetDLQReplicationMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getfailoverinfo_NoWireHandler struct{ impl Interface }
+
+func (h getfailoverinfo_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_GetFailoverInfo_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'GetFailoverInfo': %w", err)
+	}
+
+	success, appErr := h.impl.GetFailoverInfo(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetFailoverInfo_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getmutablestate_NoWireHandler struct{ impl Interface }
+
+func (h getmutablestate_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_GetMutableState_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'GetMutableState': %w", err)
+	}
+
+	success, appErr := h.impl.GetMutableState(ctx, args.GetRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetMutableState_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getreplicationmessages_NoWireHandler struct{ impl Interface }
+
+func (h getreplicationmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_GetReplicationMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'GetReplicationMessages': %w", err)
+	}
+
+	success, appErr := h.impl.GetReplicationMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_GetReplicationMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type mergedlqmessages_NoWireHandler struct{ impl Interface }
+
+func (h mergedlqmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_MergeDLQMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'MergeDLQMessages': %w", err)
+	}
+
+	success, appErr := h.impl.MergeDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_MergeDLQMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type notifyfailovermarkers_NoWireHandler struct{ impl Interface }
+
+func (h notifyfailovermarkers_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_NotifyFailoverMarkers_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'NotifyFailoverMarkers': %w", err)
+	}
+
+	appErr := h.impl.NotifyFailoverMarkers(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_NotifyFailoverMarkers_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type pollmutablestate_NoWireHandler struct{ impl Interface }
+
+func (h pollmutablestate_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_PollMutableState_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'PollMutableState': %w", err)
+	}
+
+	success, appErr := h.impl.PollMutableState(ctx, args.PollRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_PollMutableState_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type purgedlqmessages_NoWireHandler struct{ impl Interface }
+
+func (h purgedlqmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_PurgeDLQMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'PurgeDLQMessages': %w", err)
+	}
+
+	appErr := h.impl.PurgeDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_PurgeDLQMessages_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type queryworkflow_NoWireHandler struct{ impl Interface }
+
+func (h queryworkflow_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_QueryWorkflow_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'QueryWorkflow': %w", err)
+	}
+
+	success, appErr := h.impl.QueryWorkflow(ctx, args.QueryRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_QueryWorkflow_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type readdlqmessages_NoWireHandler struct{ impl Interface }
+
+func (h readdlqmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ReadDLQMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ReadDLQMessages': %w", err)
+	}
+
+	success, appErr := h.impl.ReadDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ReadDLQMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type reapplyevents_NoWireHandler struct{ impl Interface }
+
+func (h reapplyevents_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ReapplyEvents_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ReapplyEvents': %w", err)
+	}
+
+	appErr := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ReapplyEvents_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type recordactivitytaskheartbeat_NoWireHandler struct{ impl Interface }
+
+func (h recordactivitytaskheartbeat_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RecordActivityTaskHeartbeat_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RecordActivityTaskHeartbeat': %w", err)
+	}
+
+	success, appErr := h.impl.RecordActivityTaskHeartbeat(ctx, args.HeartbeatRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordActivityTaskHeartbeat_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type recordactivitytaskstarted_NoWireHandler struct{ impl Interface }
+
+func (h recordactivitytaskstarted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RecordActivityTaskStarted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RecordActivityTaskStarted': %w", err)
+	}
+
+	success, appErr := h.impl.RecordActivityTaskStarted(ctx, args.AddRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordActivityTaskStarted_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type recordchildexecutioncompleted_NoWireHandler struct{ impl Interface }
+
+func (h recordchildexecutioncompleted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RecordChildExecutionCompleted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RecordChildExecutionCompleted': %w", err)
+	}
+
+	appErr := h.impl.RecordChildExecutionCompleted(ctx, args.CompletionRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordChildExecutionCompleted_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type recorddecisiontaskstarted_NoWireHandler struct{ impl Interface }
+
+func (h recorddecisiontaskstarted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RecordDecisionTaskStarted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RecordDecisionTaskStarted': %w", err)
+	}
+
+	success, appErr := h.impl.RecordDecisionTaskStarted(ctx, args.AddRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RecordDecisionTaskStarted_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type refreshworkflowtasks_NoWireHandler struct{ impl Interface }
+
+func (h refreshworkflowtasks_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RefreshWorkflowTasks_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RefreshWorkflowTasks': %w", err)
+	}
+
+	appErr := h.impl.RefreshWorkflowTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RefreshWorkflowTasks_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type removesignalmutablestate_NoWireHandler struct{ impl Interface }
+
+func (h removesignalmutablestate_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RemoveSignalMutableState_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RemoveSignalMutableState': %w", err)
+	}
+
+	appErr := h.impl.RemoveSignalMutableState(ctx, args.RemoveRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RemoveSignalMutableState_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type removetask_NoWireHandler struct{ impl Interface }
+
+func (h removetask_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RemoveTask_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RemoveTask': %w", err)
+	}
+
+	appErr := h.impl.RemoveTask(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RemoveTask_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type replicateeventsv2_NoWireHandler struct{ impl Interface }
+
+func (h replicateeventsv2_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ReplicateEventsV2_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ReplicateEventsV2': %w", err)
+	}
+
+	appErr := h.impl.ReplicateEventsV2(ctx, args.ReplicateV2Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ReplicateEventsV2_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type requestcancelworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h requestcancelworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RequestCancelWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RequestCancelWorkflowExecution': %w", err)
+	}
+
+	appErr := h.impl.RequestCancelWorkflowExecution(ctx, args.CancelRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RequestCancelWorkflowExecution_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type resetqueue_NoWireHandler struct{ impl Interface }
+
+func (h resetqueue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ResetQueue_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ResetQueue': %w", err)
+	}
+
+	appErr := h.impl.ResetQueue(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ResetQueue_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type resetstickytasklist_NoWireHandler struct{ impl Interface }
+
+func (h resetstickytasklist_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ResetStickyTaskList_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ResetStickyTaskList': %w", err)
+	}
+
+	success, appErr := h.impl.ResetStickyTaskList(ctx, args.ResetRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ResetStickyTaskList_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type resetworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h resetworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ResetWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ResetWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.ResetWorkflowExecution(ctx, args.ResetRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ResetWorkflowExecution_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type respondactivitytaskcanceled_NoWireHandler struct{ impl Interface }
+
+func (h respondactivitytaskcanceled_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RespondActivityTaskCanceled_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RespondActivityTaskCanceled': %w", err)
+	}
+
+	appErr := h.impl.RespondActivityTaskCanceled(ctx, args.CanceledRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondActivityTaskCanceled_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type respondactivitytaskcompleted_NoWireHandler struct{ impl Interface }
+
+func (h respondactivitytaskcompleted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RespondActivityTaskCompleted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RespondActivityTaskCompleted': %w", err)
+	}
+
+	appErr := h.impl.RespondActivityTaskCompleted(ctx, args.CompleteRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondActivityTaskCompleted_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type respondactivitytaskfailed_NoWireHandler struct{ impl Interface }
+
+func (h respondactivitytaskfailed_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RespondActivityTaskFailed_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RespondActivityTaskFailed': %w", err)
+	}
+
+	appErr := h.impl.RespondActivityTaskFailed(ctx, args.FailRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondActivityTaskFailed_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type respondcrossclustertaskscompleted_NoWireHandler struct{ impl Interface }
+
+func (h respondcrossclustertaskscompleted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RespondCrossClusterTasksCompleted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RespondCrossClusterTasksCompleted': %w", err)
+	}
+
+	success, appErr := h.impl.RespondCrossClusterTasksCompleted(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondCrossClusterTasksCompleted_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type responddecisiontaskcompleted_NoWireHandler struct{ impl Interface }
+
+func (h responddecisiontaskcompleted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RespondDecisionTaskCompleted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RespondDecisionTaskCompleted': %w", err)
+	}
+
+	success, appErr := h.impl.RespondDecisionTaskCompleted(ctx, args.CompleteRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondDecisionTaskCompleted_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type responddecisiontaskfailed_NoWireHandler struct{ impl Interface }
+
+func (h responddecisiontaskfailed_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RespondDecisionTaskFailed_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RespondDecisionTaskFailed': %w", err)
+	}
+
+	appErr := h.impl.RespondDecisionTaskFailed(ctx, args.FailedRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type scheduledecisiontask_NoWireHandler struct{ impl Interface }
+
+func (h scheduledecisiontask_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_ScheduleDecisionTask_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'ScheduleDecisionTask': %w", err)
+	}
+
+	appErr := h.impl.ScheduleDecisionTask(ctx, args.ScheduleRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_ScheduleDecisionTask_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type signalwithstartworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h signalwithstartworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_SignalWithStartWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'SignalWithStartWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.SignalWithStartWorkflowExecution(ctx, args.SignalWithStartRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_SignalWithStartWorkflowExecution_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type signalworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h signalworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_SignalWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'SignalWorkflowExecution': %w", err)
+	}
+
+	appErr := h.impl.SignalWorkflowExecution(ctx, args.SignalRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_SignalWorkflowExecution_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type startworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h startworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_StartWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'StartWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.StartWorkflowExecution(ctx, args.StartRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_StartWorkflowExecution_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type syncactivity_NoWireHandler struct{ impl Interface }
+
+func (h syncactivity_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_SyncActivity_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'SyncActivity': %w", err)
+	}
+
+	appErr := h.impl.SyncActivity(ctx, args.SyncActivityRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_SyncActivity_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type syncshardstatus_NoWireHandler struct{ impl Interface }
+
+func (h syncshardstatus_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_SyncShardStatus_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'SyncShardStatus': %w", err)
+	}
+
+	appErr := h.impl.SyncShardStatus(ctx, args.SyncShardStatusRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_SyncShardStatus_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type terminateworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h terminateworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_TerminateWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'TerminateWorkflowExecution': %w", err)
+	}
+
+	appErr := h.impl.TerminateWorkflowExecution(ctx, args.TerminateRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_TerminateWorkflowExecution_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }
