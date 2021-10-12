@@ -28,12 +28,12 @@ import (
 
 // This section defines the special dbShardID, they must all below 0
 const (
+	// this means the query need to execute in one shard but the shard should be fixed/static, e.g. for domain, queue storage are single shard
+	DbDefaultShard = 0
 	// this is should never being used to query anything
 	DbShardUndefined = -1
 	// this means the query needs to execute in all dbShards, e.g. used for executing queries for schemas,
 	DbAllShards = -2
-	// this means the query need to execute in one shard but the shard should be fixed/static, e.g. for domain, queue storage are single shard
-	DbDefaultShard = -3
 )
 
 // GetDBShardIDFromHistoryShardID maps  historyShardID to a DBShardID

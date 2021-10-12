@@ -28,6 +28,7 @@ import (
 
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/resource"
@@ -51,6 +52,21 @@ func NewTestContext(
 ) *TestContext {
 	resource := resource.NewTest(ctrl, metrics.History)
 	eventsCache := events.NewMockCache(ctrl)
+	if shardInfo.TransferProcessingQueueStates == nil {
+		shardInfo.TransferProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+		}
+	}
+	if shardInfo.TimerProcessingQueueStates == nil {
+		shardInfo.TimerProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+		}
+	}
+	if shardInfo.CrossClusterProcessingQueueStates == nil {
+		shardInfo.CrossClusterProcessingQueueStates = &types.ProcessingQueueStates{
+			StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+		}
+	}
 	shard := &contextImpl{
 		Resource:                  resource,
 		shardID:                   shardInfo.ShardID,

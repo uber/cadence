@@ -485,6 +485,11 @@ func ShardTimerAcks(shardTimerAcks interface{}) Tag {
 	return newObjectTag("shard-timer-acks", shardTimerAcks)
 }
 
+// ShardCrossClusterAcks returns tag for ShardCrossClusterAcks
+func ShardCrossClusterAcks(shardCrossClusterAcks interface{}) Tag {
+	return newObjectTag("shard-cross-cluster-acks", shardCrossClusterAcks)
+}
+
 // task queue processor
 
 // QueueLevel returns tag for QueueLevel

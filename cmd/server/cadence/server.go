@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
@@ -70,9 +69,6 @@ func newServer(service string, cfg *config.Config) common.Daemon {
 
 // Start starts the server
 func (s *server) Start() {
-	if _, ok := s.cfg.Services[s.name]; !ok {
-		log.Fatalf("`%v` service missing config", s)
-	}
 	s.daemon = s.startService()
 }
 
@@ -97,6 +93,11 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
+	svcCfg, err := s.cfg.GetServiceConfig(s.name)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	params := resource.Params{}
 	params.Name = service.FullName(s.name)
 
@@ -142,11 +143,21 @@ func (s *server) startService() common.Daemon {
 		dynamicconfig.ClusterNameFilter(clusterGroupMetadata.CurrentClusterName),
 	)
 
-	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
-	params.RPCFactory = rpc.NewFactory(params.Name, svcCfg.RPC, params.Logger, rpc.NewGRPCPorts(s.cfg))
+
+	rpcParams, err := rpc.NewParams(params.Name, s.cfg)
+	if err != nil {
+		log.Fatalf("error creating rpc factory params: %v", err)
+	}
+	rpcParams.OutboundsBuilder = rpc.CombineOutbounds(
+		rpcParams.OutboundsBuilder,
+		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
+	)
+	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
+	dispatcher := params.RPCFactory.GetDispatcher()
+
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
-		params.RPCFactory.GetDispatcher(),
+		dispatcher,
 		params.Name,
 		params.Logger,
 	)
@@ -167,12 +178,6 @@ func (s *server) startService() common.Daemon {
 		clusterGroupMetadata.CurrentClusterName,
 		clusterGroupMetadata.ClusterGroup,
 	)
-
-	if len(s.cfg.PublicClient.HostPort) == 0 {
-		log.Fatalf("need to provide an endpoint config for PublicClient")
-	}
-
-	params.DispatcherProvider = rpc.NewDispatcherProvider(params.Logger, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger))
 
 	advancedVisMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
@@ -208,22 +213,7 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	var options *rpc.DispatcherOptions
-	if s.cfg.Authorization.OAuthAuthorizer.Enable {
-		clusterName := s.cfg.ClusterGroupMetadata.CurrentClusterName
-		authProvider, err := authorization.GetAuthProviderClient(s.cfg.ClusterGroupMetadata.ClusterGroup[clusterName].AuthorizationProvider.PrivateKey)
-		if err != nil {
-			log.Fatalf("failed to create AuthProvider: %v", err.Error())
-		}
-		options = &rpc.DispatcherOptions{
-			AuthProvider: authProvider,
-		}
-	}
-	dispatcher, err := params.DispatcherProvider.GetTChannel(service.Frontend, s.cfg.PublicClient.HostPort, options)
-	if err != nil {
-		log.Fatalf("failed to construct dispatcher: %v", err)
-	}
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(service.Frontend))
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(rpc.OutboundPublicClient))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,

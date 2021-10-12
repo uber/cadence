@@ -23,6 +23,8 @@ package execution
 import (
 	"time"
 
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -106,13 +108,17 @@ func emitSessionUpdateStats(
 	countScope.RecordTimer(metrics.DeleteRequestCancelInfoCount, time.Duration(stats.DeleteRequestCancelInfoCount))
 	countScope.RecordTimer(metrics.TransferTasksCount, time.Duration(stats.TransferTasksCount))
 	countScope.RecordTimer(metrics.TimerTasksCount, time.Duration(stats.TimerTasksCount))
+	countScope.RecordTimer(metrics.CrossClusterTasksCount, time.Duration(stats.CrossClusterTaskCount))
 	countScope.RecordTimer(metrics.ReplicationTasksCount, time.Duration(stats.ReplicationTasksCount))
 }
 
 func emitWorkflowCompletionStats(
 	metricsClient metrics.Client,
+	logger log.Logger,
 	domainName string,
 	workflowType string,
+	workflowID string,
+	runID string,
 	taskList string,
 	event *types.HistoryEvent,
 ) {
@@ -137,7 +143,17 @@ func emitWorkflowCompletionStats(
 		scope.IncCounter(metrics.WorkflowFailedCount)
 	case types.EventTypeWorkflowExecutionTimedOut:
 		scope.IncCounter(metrics.WorkflowTimeoutCount)
+		logger.Info("workflow execution timed out",
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowDomainName(domainName),
+		)
 	case types.EventTypeWorkflowExecutionTerminated:
 		scope.IncCounter(metrics.WorkflowTerminateCount)
+		logger.Info("workflow terminated",
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowDomainName(domainName),
+		)
 	}
 }

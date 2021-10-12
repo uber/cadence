@@ -1418,7 +1418,7 @@ func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 func (s *workflowHandlerSuite) TestContextMetricsTags() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
-	tag := metrics.ThriftTransportTag()
+	tag := metrics.TransportTag("grpc")
 	ctx := metrics.TagContext(context.Background(), tag)
 	wh.CountWorkflowExecutions(ctx, nil)
 

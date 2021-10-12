@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -49,9 +50,8 @@ type (
 	crossClusterTaskKey = transferTaskKey
 
 	crossClusterQueueProcessorBase struct {
-		sync.Mutex // TODO: rename this to outstandingTaskCount lock
-
 		*processorBase
+
 		targetCluster   string
 		taskInitializer task.Initializer
 
@@ -59,12 +59,15 @@ type (
 		backoffTimer   map[int]*time.Timer
 		shouldProcess  map[int]bool
 
-		outstandingTaskCount int // maybe use atomic.Value?
-		ackLevel             int64
+		ackLevel int64
+
+		// map from taskID -> task.CrossClusterTask
+		// ordered by insertion time
+		readyForPollTasks collection.OrderedMap
 
 		notifyCh         chan struct{}
 		processCh        chan struct{}
-		failoverNotifyCh chan struct{}
+		failoverNotifyCh chan map[string]struct{}
 	}
 )
 
@@ -76,8 +79,7 @@ func newCrossClusterQueueProcessorBase(
 	taskExecutor task.Executor,
 	logger log.Logger,
 ) *crossClusterQueueProcessorBase {
-	config := shard.GetConfig()
-	options := newCrossClusterQueueProcessorOptions(config)
+	options := newCrossClusterQueueProcessorOptions(shard.GetConfig())
 
 	logger = logger.WithTags(tag.ClusterName(clusterName))
 
@@ -144,9 +146,11 @@ func newCrossClusterQueueProcessorBaseHelper(
 		backoffTimer:  make(map[int]*time.Timer),
 		shouldProcess: make(map[int]bool),
 
+		readyForPollTasks: collection.NewConcurrentOrderedMap(),
+
 		notifyCh:         make(chan struct{}, 1),
 		processCh:        make(chan struct{}, 1),
-		failoverNotifyCh: make(chan struct{}, 1),
+		failoverNotifyCh: make(chan map[string]struct{}, 10),
 	}
 	base.taskInitializer = func(taskInfo task.Info) task.Task {
 		return task.NewCrossClusterSourceTask(
@@ -159,6 +163,9 @@ func newCrossClusterQueueProcessorBaseHelper(
 			task.InitializeLoggerForTask(shard.GetShardID(), taskInfo, logger),
 			func(t task.Task) {
 				_, _ = base.submitTask(t)
+			},
+			func(t task.CrossClusterTask) {
+				base.readyForPollTasks.Put(t.GetTaskID(), t)
 			},
 			shard.GetConfig().TaskCriticalRetryCount,
 		)
@@ -263,34 +270,24 @@ processorPumpLoop:
 					// if redispatcher still has a large number of tasks
 					// this only happens when system is under very high load
 					// we should backoff here instead of keeping submitting tasks to task processor
-					c.resetBackoffTimer()
-				}
-				// re-enqueue the event to see if we need keep re-dispatching or load new tasks from persistence
-				select {
-				case c.processCh <- struct{}{}:
-				default:
+					c.backoffAllQueueCollections()
 				}
 				continue processorPumpLoop
 			}
 
-			c.Lock()
-			pendingTaskCount := c.outstandingTaskCount
-			c.Unlock()
-			if pendingTaskCount > c.options.MaxPendingTaskSize() {
-				c.resetBackoffTimer()
-
-				select {
-				case c.processCh <- struct{}{}:
-				default:
-				}
+			numReadyForPoll := c.readyForPollTasks.Len()
+			c.metricsScope.RecordTimer(metrics.CrossClusterTaskPendingTimer, time.Duration(numReadyForPoll))
+			if numReadyForPoll > c.options.MaxPendingTaskSize() {
+				c.logger.Warn("too many outstanding ready for poll tasks in cross cluster queue.")
+				c.backoffAllQueueCollections()
 				continue processorPumpLoop
 			}
 
 			c.processQueueCollections()
 		case notification := <-c.actionNotifyCh:
 			c.handleActionNotification(notification)
-		case <-c.failoverNotifyCh:
-			c.validateOutstandingTasks()
+		case domains := <-c.failoverNotifyCh:
+			c.validateOutstandingTasks(domains)
 		}
 	}
 }
@@ -354,64 +351,56 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRequest {
 
 	batchSize := c.shard.GetConfig().CrossClusterTaskFetchBatchSize(c.shard.GetShardID())
-	var result []*types.CrossClusterTaskRequest
-	for _, queueTask := range c.getTasks() {
-		crossClusterTask, ok := queueTask.(task.CrossClusterTask)
+	tasks := make([]task.CrossClusterTask, 0, batchSize)
+	iter := c.readyForPollTasks.Iter()
+	for entry := range iter.Entries() {
+		crossClusterTask, ok := entry.Value.(task.CrossClusterTask)
 		if !ok {
 			panic("received non cross cluster task")
 		}
-		if crossClusterTask.IsReadyForPoll() {
-			request, err := crossClusterTask.GetCrossClusterRequest()
-			if err != nil {
-				if !crossClusterTask.IsValid() {
-					if _, err := c.submitTask(crossClusterTask); err != nil {
-						break
-					}
-				}
-				c.logger.Error("Failed to get cross cluster request", tag.Error(err))
-			}
-			if request != nil {
-				// if request is nil, nothing need to be done for the task,
-				// task already acked in GetCrossClusterRequest()
-				result = append(result, request)
-				if len(result) >= batchSize {
+
+		tasks = append(tasks, crossClusterTask)
+		if len(tasks) >= batchSize {
+			break
+		}
+	}
+	iter.Close()
+
+	var result []*types.CrossClusterTaskRequest
+	for _, task := range tasks {
+		request, err := task.GetCrossClusterRequest()
+		if err != nil {
+			if !task.IsValid() {
+				c.readyForPollTasks.Remove(task.GetTaskID())
+				if _, err := c.submitTask(task); err != nil {
 					break
 				}
 			}
+			c.logger.Error("Failed to get cross cluster request", tag.Error(err))
+		} else if request != nil {
+			result = append(result, request)
+		} else {
+			// if request is nil, nothing need to be done for the task,
+			// task already acked in GetCrossClusterRequest()
+			c.readyForPollTasks.Remove(task.GetTaskID())
 		}
 	}
 	return result
 }
 
-func (c *crossClusterQueueProcessorBase) getTask(key task.Key) (task.Task, error) {
-	for _, collection := range c.processingQueueCollections {
-		if task, err := collection.GetTask(key); err == nil {
-			return task, nil
-		}
-	}
-	return nil, errTaskNotFound
-}
-
-func (c *crossClusterQueueProcessorBase) getTasks() []task.Task {
-	var outstandingTask []task.Task
-	for _, collection := range c.processingQueueCollections {
-		outstandingTask = append(outstandingTask, collection.GetTasks()...)
-	}
-	return outstandingTask
-}
-
-func (c *crossClusterQueueProcessorBase) updateTask(
+func (c *crossClusterQueueProcessorBase) recordResponse(
 	response *types.CrossClusterTaskResponse,
 ) error {
 
-	queueTask, err := c.getTask(newCrossClusterTaskKey(response.GetTaskID()))
-	// TODO: if task not found, should not return error, it's expected
-	if err != nil {
-		return err
+	taskID := response.GetTaskID()
+	queueTask, ok := c.readyForPollTasks.Get(taskID)
+	if !ok {
+		// if task not found, should not return error, it's expected for duplicated response
+		return nil
 	}
 	crossClusterTask, ok := queueTask.(task.CrossClusterTask)
 	if !ok {
-		panic("Received non cross cluster task.")
+		panic("Encountered non cross cluster task.")
 	}
 
 	if err := crossClusterTask.RecordResponse(response); err != nil {
@@ -426,20 +415,9 @@ func (c *crossClusterQueueProcessorBase) updateTask(
 
 	// if the task fails to submit to main queue, it will use redispatch queue
 	// note the only possible error here is shutdown
-	_, err = c.submitTask(crossClusterTask)
+	c.readyForPollTasks.Remove(taskID)
+	_, err := c.submitTask(crossClusterTask)
 	return err
-}
-
-func (c *crossClusterQueueProcessorBase) addOutstandingTaskCountLocked(count int) {
-	c.outstandingTaskCount += count
-}
-
-// TODO: this will be called in cross cluster task Acked function.
-func (c *crossClusterQueueProcessorBase) removeOutstandingTaskCount(count int) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.outstandingTaskCount -= count
 }
 
 func (c *crossClusterQueueProcessorBase) notifyAllQueueCollections() {
@@ -466,13 +444,13 @@ func (c *crossClusterQueueProcessorBase) readyForProcess(level int) {
 	}
 }
 
-func (c *crossClusterQueueProcessorBase) resetBackoffTimer() {
+func (c *crossClusterQueueProcessorBase) backoffAllQueueCollections() {
 	c.processingLock.Lock()
 	defer c.processingLock.Unlock()
 
 	for _, queueCollection := range c.processingQueueCollections {
 		level := queueCollection.Level()
-		c.setupBackoffTimer(level)
+		c.setupBackoffTimerLocked(level)
 	}
 }
 
@@ -480,12 +458,15 @@ func (c *crossClusterQueueProcessorBase) setupBackoffTimer(level int) {
 	c.processingLock.Lock()
 	defer c.processingLock.Unlock()
 
+	c.setupBackoffTimerLocked(level)
+}
+
+func (c *crossClusterQueueProcessorBase) setupBackoffTimerLocked(level int) {
 	c.metricsScope.IncCounter(metrics.ProcessingQueueThrottledCounter)
 	c.logger.Info("Throttled processing queue", tag.QueueLevel(level))
 
 	if _, ok := c.backoffTimer[level]; ok {
 		// there's an existing backoff timer, no-op
-		// this case should not happen
 		return
 	}
 
@@ -518,22 +499,28 @@ func (c *crossClusterQueueProcessorBase) setupBackoffTimer(level int) {
 func (c *crossClusterQueueProcessorBase) handleActionNotification(notification actionNotification) {
 	switch notification.action.ActionType {
 	case ActionTypeGetTasks:
-		tasks := c.pollTasks()
 		notification.resultNotificationCh <- actionResultNotification{
 			result: &ActionResult{
 				ActionType: ActionTypeGetTasks,
 				GetTasksResult: &GetTasksResult{
-					TaskRequests: tasks,
+					TaskRequests: c.pollTasks(),
 				},
 			},
 		}
 	case ActionTypeUpdateTask:
 		actionAttr := notification.action.UpdateTaskAttributes
-		var err error
-		for _, task := range actionAttr.TaskResponses {
-			if err = c.updateTask(task); err != nil {
-				// TODO: log the error and keep updating the rest of the tasks
-				break
+		for _, response := range actionAttr.TaskResponses {
+			if err := c.recordResponse(response); err != nil {
+				select {
+				case <-c.shutdownCh:
+					// return if error is due to shutdown
+					return
+				default:
+				}
+
+				// we ignore all other errors here (error indicating the response itself is invalid)
+				// logging is already done in the updateTask method. task is sill available
+				// for polling and will be dispatched again to target cluster.
 			}
 		}
 		notification.resultNotificationCh <- actionResultNotification{
@@ -541,7 +528,7 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 				ActionType:       ActionTypeUpdateTask,
 				UpdateTaskResult: &UpdateTasksResult{},
 			},
-			err: err,
+			err: nil,
 		}
 	default:
 		c.processorBase.handleActionNotification(notification, func() {
@@ -587,7 +574,7 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 		if err := c.rateLimiter.Wait(ctx); err != nil {
 			cancel()
 			if level != defaultProcessingQueueLevel {
-				c.setupBackoffTimer(level)
+				c.setupBackoffTimerLocked(level)
 			} else {
 				c.readyForProcess(level)
 			}
@@ -602,24 +589,28 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 			continue
 		}
 
-		c.Lock()
-		if c.outstandingTaskCount > c.options.MaxPendingTaskSize() {
-			c.logger.Warn("too many outstanding tasks in cross cluster queue.")
-			c.Unlock()
-			return
-		}
-		c.addOutstandingTaskCountLocked(len(taskInfos))
-		c.Unlock()
-
 		tasks := make(map[task.Key]task.Task)
 		newTaskID := readLevel.(transferTaskKey).taskID
 		for _, taskInfo := range taskInfos {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
 				continue
 			}
-			task := c.taskInitializer(taskInfo)
-			tasks[newCrossClusterTaskKey(taskInfo.GetTaskID())] = task
-			newTaskID = task.GetTaskID()
+			taskID := taskInfo.GetTaskID()
+			task := c.taskInitializer(taskInfo).(task.CrossClusterTask)
+			tasks[newCrossClusterTaskKey(taskID)] = task
+			if task.IsReadyForPoll() {
+				c.readyForPollTasks.Put(taskID, task)
+			} else {
+				// currently all tasks will be ready for poll after loaded,
+				// so this path will never be executed
+				// but logically this case is possbile
+				if _, err := c.submitTask(task); err != nil {
+					// queue shutting down, return
+					return
+				}
+			}
+
+			newTaskID = taskID
 		}
 
 		var newReadLevel task.Key
@@ -645,26 +636,59 @@ func (c *crossClusterQueueProcessorBase) notifyNewTask() {
 	}
 }
 
-func (c *crossClusterQueueProcessorBase) notifyDomainFailover() {
-	select {
-	case c.failoverNotifyCh <- struct{}{}:
-	default:
-	}
+func (c *crossClusterQueueProcessorBase) notifyDomainFailover(
+	domains map[string]struct{},
+) {
+	c.failoverNotifyCh <- domains
 }
 
-// validateOutstandingTasks will be triggered when the cluster received a domain fail over event
-// TODO: this function should only check tasks that are not yet submitted to the taskProcessor
-// (or in the redispatch queue), i.e. the task should currently be available for poll
-// otherwise, we may end up submitting the task twice
-func (c *crossClusterQueueProcessorBase) validateOutstandingTasks() {
-	tasks := c.getTasks()
-	for _, t := range tasks {
-		if crossClusterTask, ok := t.(task.CrossClusterTask); ok && !crossClusterTask.IsValid() {
-			_, err := c.submitTask(t)
-			if err != nil {
-				// the queue is shutting down
-				return
+// validateOutstandingTasks will be triggered when the cluster received a domain failover event
+func (c *crossClusterQueueProcessorBase) validateOutstandingTasks(
+	failoverDomains map[string]struct{},
+) {
+	if failoverDomains == nil {
+		failoverDomains = make(map[string]struct{})
+	}
+
+DrainFailoverChLoop:
+	for {
+		select {
+		case domains := <-c.failoverNotifyCh:
+			for domain := range domains {
+				failoverDomains[domain] = struct{}{}
 			}
+		default:
+			break DrainFailoverChLoop
+		}
+	}
+
+	var invalidTasks []task.CrossClusterTask
+	iter := c.readyForPollTasks.Iter()
+	for entry := range iter.Entries() {
+		crossClusterTask, ok := entry.Value.(task.CrossClusterTask)
+		if !ok {
+			panic("Encountered non cross cluster task.")
+		}
+
+		_, sourceDomainFailover := failoverDomains[crossClusterTask.GetDomainID()]
+		_, targetDomainFailover := failoverDomains[crossClusterTask.GetInfo().(*persistence.CrossClusterTaskInfo).TargetDomainID]
+		if !sourceDomainFailover && !targetDomainFailover {
+			continue
+		}
+
+		if !crossClusterTask.IsValid() {
+			// note we can't modify the ordered map before iter is closed, otherwise it will cause a deadlock
+			invalidTasks = append(invalidTasks, crossClusterTask)
+		}
+	}
+	iter.Close()
+
+	for _, invalidTask := range invalidTasks {
+		c.readyForPollTasks.Remove(invalidTask.GetTaskID())
+		_, err := c.submitTask(invalidTask)
+		if err != nil {
+			// the queue is shutting down
+			return
 		}
 	}
 }
@@ -680,38 +704,24 @@ func newCrossClusterTaskKey(
 func newCrossClusterQueueProcessorOptions(
 	config *config.Config,
 ) *queueProcessorOptions {
-	options := &queueProcessorOptions{
+	return &queueProcessorOptions{
 		BatchSize:                            config.CrossClusterTaskBatchSize,
 		DeleteBatchSize:                      config.CrossClusterTaskDeleteBatchSize,
-		MaxPollRPS:                           config.CrossClusterProcessorMaxPollRPS,
-		MaxPollInterval:                      config.CrossClusterProcessorMaxPollInterval,
-		MaxPollIntervalJitterCoefficient:     config.CrossClusterProcessorMaxPollIntervalJitterCoefficient,
-		UpdateAckInterval:                    config.CrossClusterProcessorUpdateAckInterval,
-		UpdateAckIntervalJitterCoefficient:   config.CrossClusterProcessorUpdateAckIntervalJitterCoefficient,
+		MaxPollRPS:                           config.CrossClusterSourceProcessorMaxPollRPS,
+		MaxPollInterval:                      config.CrossClusterSourceProcessorMaxPollInterval,
+		MaxPollIntervalJitterCoefficient:     config.CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient,
+		UpdateAckInterval:                    config.CrossClusterSourceProcessorUpdateAckInterval,
+		UpdateAckIntervalJitterCoefficient:   config.CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient,
+		RedispatchInterval:                   config.ActiveTaskRedispatchInterval,
 		RedispatchIntervalJitterCoefficient:  config.TaskRedispatchIntervalJitterCoefficient,
-		MaxRedispatchQueueSize:               config.CrossClusterProcessorMaxRedispatchQueueSize,
-		SplitQueueInterval:                   config.CrossClusterProcessorSplitQueueInterval,
-		SplitQueueIntervalJitterCoefficient:  config.CrossClusterProcessorSplitQueueIntervalJitterCoefficient,
+		MaxRedispatchQueueSize:               config.CrossClusterSourceProcessorMaxRedispatchQueueSize,
 		PollBackoffInterval:                  config.QueueProcessorPollBackoffInterval,
 		PollBackoffIntervalJitterCoefficient: config.QueueProcessorPollBackoffIntervalJitterCoefficient,
-		EnableValidator:                      config.CrossClusterProcessorEnableValidator,
-		ValidationInterval:                   config.CrossClusterProcessorValidationInterval,
+		EnableValidator:                      dynamicconfig.GetBoolPropertyFn(false),
+		EnableSplit:                          dynamicconfig.GetBoolPropertyFn(false),
+		EnablePersistQueueStates:             dynamicconfig.GetBoolPropertyFn(true),
+		EnableLoadQueueStates:                dynamicconfig.GetBoolPropertyFn(true),
+		MaxPendingTaskSize:                   config.CrossClusterSourceProcessorMaxPendingTaskSize,
+		MetricScope:                          metrics.CrossClusterQueueProcessorScope,
 	}
-
-	options.EnableSplit = dynamicconfig.GetBoolPropertyFn(false)
-	options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
-	options.EnableRandomSplitByDomainID = config.QueueProcessorEnableRandomSplitByDomainID
-	options.RandomSplitProbability = config.QueueProcessorRandomSplitProbability
-	options.EnablePendingTaskSplitByDomainID = config.QueueProcessorEnablePendingTaskSplitByDomainID
-	options.PendingTaskSplitThreshold = config.QueueProcessorPendingTaskSplitThreshold
-	options.EnableStuckTaskSplitByDomainID = config.QueueProcessorEnableStuckTaskSplitByDomainID
-	options.StuckTaskSplitThreshold = config.QueueProcessorStuckTaskSplitThreshold
-	options.SplitLookAheadDurationByDomainID = config.QueueProcessorSplitLookAheadDurationByDomainID
-
-	options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-	options.EnableLoadQueueStates = dynamicconfig.GetBoolPropertyFn(true)
-
-	options.MetricScope = metrics.CrossClusterQueueProcessorScope
-	options.RedispatchInterval = config.ActiveTaskRedispatchInterval
-	return options
 }

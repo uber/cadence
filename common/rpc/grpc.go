@@ -29,7 +29,13 @@ import (
 	"github.com/uber/cadence/common/service"
 )
 
-type GRPCPorts map[string]int
+type (
+	HostAddressMapper interface {
+		GetGRPCAddress(service, hostAddress string) (string, error)
+	}
+
+	GRPCPorts map[string]int
+)
 
 func NewGRPCPorts(c *config.Config) GRPCPorts {
 	grpcPorts := map[string]int{}

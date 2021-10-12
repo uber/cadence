@@ -94,7 +94,6 @@ type (
 		logger                        log.Logger
 		clusterMetadata               cluster.Metadata
 		persistenceConfig             config.Persistence
-		dispatcherProvider            rpc.DispatcherProvider
 		messagingClient               messaging.Client
 		domainManager                 persistence.DomainManager
 		historyV2Mgr                  persistence.HistoryManager
@@ -129,7 +128,6 @@ type (
 	CadenceParams struct {
 		ClusterMetadata               cluster.Metadata
 		PersistenceConfig             config.Persistence
-		DispatcherProvider            rpc.DispatcherProvider
 		MessagingClient               messaging.Client
 		DomainManager                 persistence.DomainManager
 		HistoryV2Mgr                  persistence.HistoryManager
@@ -161,7 +159,6 @@ func NewCadence(params *CadenceParams) Cadence {
 		logger:                        params.Logger,
 		clusterMetadata:               params.ClusterMetadata,
 		persistenceConfig:             params.PersistenceConfig,
-		dispatcherProvider:            params.DispatcherProvider,
 		messagingClient:               params.MessagingClient,
 		domainManager:                 params.DomainManager,
 		historyV2Mgr:                  params.HistoryV2Mgr,
@@ -398,11 +395,10 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Frontend)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(service.Frontend, c.FrontendAddress(), c.logger)
+	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendAddress())
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
-	params.DispatcherProvider = c.dispatcherProvider
 	params.MessagingClient = c.messagingClient
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
@@ -465,26 +461,22 @@ func (c *cadenceImpl) startHistory(
 		params.ThrottledLogger = c.logger
 		params.UpdateLoggerWithServiceName(service.History)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
-		params.RPCFactory = newRPCFactoryImpl(service.History, hostport, c.logger)
+		params.RPCFactory = c.newRPCFactory(service.History, hostport)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
 		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
-		params.DispatcherProvider = c.dispatcherProvider
 		params.MessagingClient = c.messagingClient
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 		integrationClient := newIntegrationConfigClient(dynamicconfig.NewNopClient())
 		c.overrideHistoryDynamicConfig(integrationClient)
 		params.DynamicConfig = integrationClient
-		dispatcher, err := params.DispatcherProvider.GetTChannel(service.Frontend, c.FrontendAddress(), nil)
-		if err != nil {
-			c.logger.Fatal("Failed to get dispatcher for history", tag.Error(err))
-		}
-		params.PublicClient = cwsc.New(dispatcher.ClientConfig(service.Frontend))
+		params.PublicClient = cwsc.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
 		params.ArchivalMetadata = c.archiverMetadata
 		params.ArchiverProvider = c.archiverProvider
 		params.ESConfig = c.esConfig
 		params.ESClient = c.esClient
 
+		var err error
 		params.PersistenceConfig, err = copyPersistenceConfig(c.persistenceConfig)
 		if err != nil {
 			c.logger.Fatal("Failed to copy persistence config for history", tag.Error(err))
@@ -535,11 +527,10 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Matching)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(service.Matching, c.MatchingServiceAddress(), c.logger)
+	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceAddress())
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
-	params.DispatcherProvider = c.dispatcherProvider
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
@@ -578,11 +569,10 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Worker)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
-	params.RPCFactory = newRPCFactoryImpl(service.Worker, c.WorkerServiceAddress(), c.logger)
+	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceAddress())
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
-	params.DispatcherProvider = c.dispatcherProvider
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
 	params.ArchivalMetadata = c.archiverMetadata
@@ -593,11 +583,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	if err != nil {
 		c.logger.Fatal("Failed to copy persistence config for worker", tag.Error(err))
 	}
-	dispatcher, err := params.DispatcherProvider.GetTChannel(service.Frontend, c.FrontendAddress(), nil)
-	if err != nil {
-		c.logger.Fatal("Failed to get dispatcher for worker", tag.Error(err))
-	}
-	params.PublicClient = cwsc.New(dispatcher.ClientConfig(service.Frontend))
+	params.PublicClient = cwsc.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
 	service := NewService(params)
 	service.Start()
 
@@ -791,70 +777,42 @@ func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitialize
 	}
 }
 
-type rpcFactoryImpl struct {
-	ch          *tchannel.ChannelTransport
-	grpc        *grpc.Transport
-	serviceName string
-	hostPort    string
-	logger      log.Logger
-
-	sync.Mutex
-	dispatcher *yarpc.Dispatcher
-}
-
-func newRPCFactoryImpl(sName string, hostPort string, logger log.Logger) common.RPCFactory {
-	return &rpcFactoryImpl{
-		serviceName: sName,
-		hostPort:    hostPort,
-		logger:      logger,
-	}
-}
-
-func (c *rpcFactoryImpl) GetDispatcher() *yarpc.Dispatcher {
-	c.Lock()
-	defer c.Unlock()
-
-	if c.dispatcher != nil {
-		return c.dispatcher
-	}
-
-	c.dispatcher = c.createDispatcher()
-	return c.dispatcher
-}
-
-func (c *rpcFactoryImpl) createDispatcher() *yarpc.Dispatcher {
-	// Setup dispatcher for onebox
-	inbounds := yarpc.Inbounds{}
-	var err error
-	c.ch, err = tchannel.NewChannelTransport(
-		tchannel.ServiceName(c.serviceName), tchannel.ListenAddr(c.hostPort))
-	if err != nil {
-		c.logger.Fatal("Failed to create transport channel", tag.Error(err))
-	}
-	inbounds = append(inbounds, c.ch.NewInbound())
-
-	grpcHostPort, err := c.ReplaceGRPCPort("", c.hostPort)
+func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string) common.RPCFactory {
+	grpcPortResolver := grpcPortResolver{}
+	grpcHostPort, err := grpcPortResolver.GetGRPCAddress("", tchannelHostPort)
 	if err != nil {
 		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
 	}
-	c.grpc = grpc.NewTransport()
-	listener, err := net.Listen("tcp", grpcHostPort)
-	if err != nil {
-		c.logger.Fatal("Failed to listen for GRPC request", tag.Error(err))
-	}
-	inbounds = append(inbounds, c.grpc.NewInbound(listener))
 
-	return yarpc.NewDispatcher(yarpc.Config{
-		Name:     c.serviceName,
-		Inbounds: inbounds,
-		// For integration tests to generate client out of the same outbound.
-		Outbounds: yarpc.Outbounds{
-			c.serviceName: {Unary: c.ch.NewSingleOutbound(c.hostPort)},
-		},
+	return rpc.NewFactory(c.logger, rpc.Params{
+		ServiceName:       serviceName,
+		TChannelAddress:   tchannelHostPort,
+		GRPCAddress:       grpcHostPort,
+		HostAddressMapper: &grpcPortResolver,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &versionMiddleware{},
 		},
+		// For integration tests to generate client out of the same outbound.
+		OutboundsBuilder: rpc.CombineOutbounds(
+			&singleTChannelOutbound{serviceName, serviceName, tchannelHostPort},
+			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendAddress()},
+			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger))),
 	})
+}
+
+type singleTChannelOutbound struct {
+	outboundName string
+	serviceName  string
+	address      string
+}
+
+func (b singleTChannelOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+	return yarpc.Outbounds{
+		b.outboundName: {
+			ServiceName: b.serviceName,
+			Unary:       tchannel.NewSingleOutbound(b.address),
+		},
+	}, nil
 }
 
 type versionMiddleware struct {
@@ -868,42 +826,11 @@ func (vm *versionMiddleware) Handle(ctx context.Context, req *transport.Request,
 	return h.Handle(ctx, req, resw)
 }
 
-func (c *rpcFactoryImpl) CreateDispatcherForOutbound(
-	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
-	// Setup dispatcher(outbound) for onebox
-	d := yarpc.NewDispatcher(yarpc.Config{
-		Name: callerName,
-		Outbounds: yarpc.Outbounds{
-			serviceName: {Unary: c.ch.NewSingleOutbound(hostName)},
-		},
-	})
-	if err := d.Start(); err != nil {
-		c.logger.Error("Failed to create outbound transport channel", tag.Error(err))
-		return nil, err
-	}
-	return d, nil
-}
-
-func (c *rpcFactoryImpl) CreateGRPCDispatcherForOutbound(
-	callerName, serviceName, hostName string) (*yarpc.Dispatcher, error) {
-
-	// Setup dispatcher(outbound) for onebox
-	d := yarpc.NewDispatcher(yarpc.Config{
-		Name: callerName,
-		Outbounds: yarpc.Outbounds{
-			serviceName: {Unary: c.grpc.NewSingleOutbound(hostName)},
-		},
-	})
-	if err := d.Start(); err != nil {
-		c.logger.Error("Failed to create outbound GRPC", tag.Error(err))
-		return nil, err
-	}
-	return d, nil
-}
-
 const grpcPortOffset = 10
 
-func (c *rpcFactoryImpl) ReplaceGRPCPort(_, hostPort string) (string, error) {
+type grpcPortResolver struct{}
+
+func (p *grpcPortResolver) GetGRPCAddress(_, hostPort string) (string, error) {
 	host, port, err := net.SplitHostPort(hostPort)
 	if err != nil {
 		return "", err
