@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -122,7 +123,7 @@ type (
 
 	// RPC contains the rpc config items
 	RPC struct {
-		// Port is the port  on which the channel will bind to
+		// Port is the port  on which the Thrift TChannel will bind to
 		Port int `yaml:"port"`
 		// GRPCPort is the port on which the grpc listener will bind to
 		GRPCPort int `yaml:"grpcPort"`
@@ -501,7 +502,7 @@ func (c *Config) validate() error {
 func (c *Config) fillDefaults() {
 	c.Persistence.FillDefaults()
 
-	// TODO: remove this after 0.23 and mention a breaking change in config.
+	// TODO: remove this at the point when we decided to make some breaking changes in config.
 	if c.ClusterGroupMetadata == nil && c.ClusterMetadata != nil {
 		c.ClusterGroupMetadata = c.ClusterMetadata
 		log.Println("[WARN] clusterMetadata config is deprecated. Please replace it with clusterGroupMetadata.")
@@ -512,7 +513,19 @@ func (c *Config) fillDefaults() {
 	// filling publicClient with current cluster's RPC address if empty
 	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
 		name := c.ClusterGroupMetadata.CurrentClusterName
-		c.PublicClient.HostPort = c.ClusterGroupMetadata.ClusterGroup[name].RPCAddress
+		currentCluster := c.ClusterGroupMetadata.ClusterGroup[name]
+		if currentCluster.RPCTransport != "grpc" {
+			c.PublicClient.HostPort = currentCluster.RPCAddress
+		} else {
+			// public client cannot use gRPC because GoSDK hasn't supported it. we need to fallback to Thrift
+			// TODO: remove this fallback after GoSDK supporting gRPC
+			thriftPort := c.Services["frontend"].RPC.Port // use the Thrift port from RPC config
+			host, _, err := net.SplitHostPort(currentCluster.RPCAddress)
+			if err != nil {
+				log.Fatalf("RPCAddress is invalid for cluster %v", name)
+			}
+			c.PublicClient.HostPort = fmt.Sprintf("%v:%v", host, thriftPort)
+		}
 	}
 }
 
