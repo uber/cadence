@@ -371,7 +371,7 @@ type (
 		// Default is empty, meaning that all requests will not fallback.
 		AllDomainApisForwardingTargetCluster string `yaml:"allDomainApisForwardingTargetCluster"`
 		// Not being used, but we have to keep it so that config loading is not broken
-		ToDD string `yaml:"toDC"`
+		ToDC string `yaml:"toDC"`
 	}
 
 	// Metrics contains the config items for metrics subsystem
