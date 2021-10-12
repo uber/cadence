@@ -319,17 +319,18 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		ShardID:    s.mockShard.GetShardID(),
 	}
 	jsArray, err := json.Marshal(fixExecution)
 	s.NoError(err)
 	s.mockFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, request *types.SignalWithStartWorkflowExecutionRequest) {
 			s.Equal(common.SystemLocalDomainName, request.GetDomain())
-			s.Equal(reconciliation.ExecutionFixerWorkflowID, request.GetWorkflowID())
-			s.Equal(reconciliation.ExecutionFixerWorkflowType, request.GetWorkflowType().GetName())
-			s.Equal(reconciliation.ExecutionFixerWorkflowTaskList, request.GetTaskList().GetName())
+			s.Equal(reconciliation.CheckDataCorruptionWorkflowID, request.GetWorkflowID())
+			s.Equal(reconciliation.CheckDataCorruptionWorkflowType, request.GetWorkflowType().GetName())
+			s.Equal(reconciliation.CheckDataCorruptionWorkflowTaskList, request.GetTaskList().GetName())
 			s.Equal(types.WorkflowIDReusePolicyAllowDuplicate.String(), request.GetWorkflowIDReusePolicy().String())
-			s.Equal(reconciliation.ExecutionFixerWorkflowSignalName, request.GetSignalName())
+			s.Equal(reconciliation.CheckDataCorruptionWorkflowSignalName, request.GetSignalName())
 			s.Equal(jsArray, request.GetSignalInput())
 		}).Return(&types.StartWorkflowExecutionResponse{}, nil)
 	s.clusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(100)).Return("active")

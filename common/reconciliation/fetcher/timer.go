@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/common/reconciliation/entity"
 )
 
-// ConcreteExecutionIterator is used to retrieve Concrete executions.
+// TimerIterator is used to retrieve Concrete executions.
 func TimerIterator(
 	ctx context.Context,
 	retryer persistence.Retryer,

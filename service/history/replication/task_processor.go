@@ -583,6 +583,7 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		ShardID:    p.shard.GetShardID(),
 	}
 	fixExecutionInput, err := json.Marshal(fixExecution)
 	if err != nil {
@@ -591,15 +592,15 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 	// Assume the workflow is corrupted, rely on invariant to validate it
 	_, err = client.SignalWithStartWorkflowExecution(context.Background(), &types.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
-		WorkflowID:                          reconciliation.ExecutionFixerWorkflowID,
-		WorkflowType:                        &types.WorkflowType{Name: reconciliation.ExecutionFixerWorkflowType},
-		TaskList:                            &types.TaskList{Name: reconciliation.ExecutionFixerWorkflowTaskList},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTimeout),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTaskTimeoutInSeconds),
+		WorkflowID:                          reconciliation.CheckDataCorruptionWorkflowID,
+		WorkflowType:                        &types.WorkflowType{Name: reconciliation.CheckDataCorruptionWorkflowType},
+		TaskList:                            &types.TaskList{Name: reconciliation.CheckDataCorruptionWorkflowTaskList},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.CheckDataCorruptionWorkflowTimeoutInSeconds),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.CheckDataCorruptionWorkflowTaskTimeoutInSeconds),
 		Identity:                            "cadence-history-replication",
 		RequestID:                           uuid.New(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
-		SignalName:                          reconciliation.ExecutionFixerWorkflowSignalName,
+		SignalName:                          reconciliation.CheckDataCorruptionWorkflowSignalName,
 		SignalInput:                         fixExecutionInput,
 	})
 	return err
