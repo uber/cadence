@@ -61,8 +61,27 @@ var (
 		SignalInput:       Payload1,
 		Control:           Control,
 	}
-	CrossClusterSignalExecutionResponseAttributes = types.CrossClusterSignalExecutionResponseAttributes{}
-	CrossClusterTaskRequestStartChildExecution    = types.CrossClusterTaskRequest{
+	CrossClusterSignalExecutionResponseAttributes                     = types.CrossClusterSignalExecutionResponseAttributes{}
+	CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes = types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   DomainID,
+		TargetWorkflowID: WorkflowID,
+		TargetRunID:      RunID,
+		InitiatedEventID: EventID1,
+		CompletionEvent:  &HistoryEvent_ChildWorkflowExecutionCompleted,
+	}
+	CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes = types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+	CrossClusterApplyParentClosePolicyRequestAttributes                = types.CrossClusterApplyParentClosePolicyRequestAttributes{
+		ApplyParentClosePolicyAttributes: []*types.ApplyParentClosePolicyAttributes{
+			{
+				ChildDomainID:     DomainID,
+				ChildWorkflowID:   WorkflowID,
+				ChildRunID:        RunID,
+				ParentClosePolicy: &ParentClosePolicy,
+			},
+		},
+	}
+	CrossClusterApplyParentClosePolicyResponseAttributes = types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	CrossClusterTaskRequestStartChildExecution           = types.CrossClusterTaskRequest{
 		TaskInfo:                      generateCrossClusterTaskInfo(types.CrossClusterTaskTypeStartChildExecution),
 		StartChildExecutionAttributes: &CrossClusterStartChildExecutionRequestAttributes,
 	}
@@ -73,6 +92,14 @@ var (
 	CrossClusterTaskRequestSignalExecution = types.CrossClusterTaskRequest{
 		TaskInfo:                  generateCrossClusterTaskInfo(types.CrossClusterTaskTypeSignalExecution),
 		SignalExecutionAttributes: &CrossClusterSignalExecutionRequestAttributes,
+	}
+	CrossClusterTaskRequestRecordChildExecutionComplete = types.CrossClusterTaskRequest{
+		TaskInfo: generateCrossClusterTaskInfo(types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete),
+		RecordChildWorkflowExecutionCompleteAttributes: &CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes,
+	}
+	CrossClusterTaskRequestApplyParentClosePolicy = types.CrossClusterTaskRequest{
+		TaskInfo:                         generateCrossClusterTaskInfo(types.CrossClusterTaskTypeApplyParentPolicy),
+		ApplyParentClosePolicyAttributes: &CrossClusterApplyParentClosePolicyRequestAttributes,
 	}
 	CrossClusterTaskResponseStartChildExecution = types.CrossClusterTaskResponse{
 		TaskID:                        TaskID,
@@ -92,18 +119,33 @@ var (
 		TaskState:   3,
 		FailedCause: types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr(),
 	}
+	CrossClusterTaskResponseRecordChildExecutionComplete = types.CrossClusterTaskResponse{
+		TaskID:    TaskID,
+		TaskType:  types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr(),
+		TaskState: 1,
+		RecordChildWorkflowExecutionCompleteAttributes: &CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes,
+	}
+	CrossClusterTaskResponseApplyParentClosePolicy = types.CrossClusterTaskResponse{
+		TaskID:                           TaskID,
+		TaskType:                         types.CrossClusterTaskTypeApplyParentPolicy.Ptr(),
+		TaskState:                        1,
+		ApplyParentClosePolicyAttributes: &CrossClusterApplyParentClosePolicyResponseAttributes,
+	}
 	CrossClusterTaskRequestArray = []*types.CrossClusterTaskRequest{
 		&CrossClusterTaskRequestStartChildExecution,
 		&CrossClusterTaskRequestCancelExecution,
 		&CrossClusterTaskRequestSignalExecution,
+		&CrossClusterTaskRequestRecordChildExecutionComplete,
+		&CrossClusterTaskRequestApplyParentClosePolicy,
 	}
 	CrossClusterTaskResponseArray = []*types.CrossClusterTaskResponse{
 		&CrossClusterTaskResponseStartChildExecution,
 		&CrossClusterTaskResponseCancelExecution,
 		&CrossClusterTaskResponseSignalExecution,
+		&CrossClusterTaskResponseRecordChildExecutionComplete,
+		&CrossClusterTaskResponseApplyParentClosePolicy,
 	}
 	CrossClusterTaskRequestMap = map[int32][]*types.CrossClusterTaskRequest{
-		ShardID:     nil,
 		ShardID + 1: {},
 		ShardID + 2: CrossClusterTaskRequestArray,
 	}

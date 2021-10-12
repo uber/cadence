@@ -319,7 +319,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		var taskList string
 		var scheduleID int64
 		var targetCluster string
-		var targetDomainID string
+		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
 		var targetWorkflowID string
 		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
