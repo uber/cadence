@@ -395,7 +395,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Frontend)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
-	params.RPCFactory = newRPCFactory(service.Frontend, c.FrontendAddress(), c.FrontendAddress(), c.logger, c.clusterMetadata)
+	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendAddress())
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -461,7 +461,7 @@ func (c *cadenceImpl) startHistory(
 		params.ThrottledLogger = c.logger
 		params.UpdateLoggerWithServiceName(service.History)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
-		params.RPCFactory = newRPCFactory(service.History, hostport, c.FrontendAddress(), c.logger, c.clusterMetadata)
+		params.RPCFactory = c.newRPCFactory(service.History, hostport)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
 		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
@@ -527,7 +527,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Matching)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
-	params.RPCFactory = newRPCFactory(service.Matching, c.MatchingServiceAddress(), c.FrontendAddress(), c.logger, c.clusterMetadata)
+	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceAddress())
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -569,7 +569,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.ThrottledLogger = c.logger
 	params.UpdateLoggerWithServiceName(service.Worker)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
-	params.RPCFactory = newRPCFactory(service.Worker, c.WorkerServiceAddress(), c.FrontendAddress(), c.logger, c.clusterMetadata)
+	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceAddress())
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
 	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -777,14 +777,14 @@ func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitialize
 	}
 }
 
-func newRPCFactory(serviceName string, tchannelHostPort string, frontendAddress string, logger log.Logger, cluster cluster.Metadata) common.RPCFactory {
+func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string) common.RPCFactory {
 	grpcPortResolver := grpcPortResolver{}
 	grpcHostPort, err := grpcPortResolver.GetGRPCAddress("", tchannelHostPort)
 	if err != nil {
-		logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
 	}
 
-	return rpc.NewFactory(logger, rpc.Params{
+	return rpc.NewFactory(c.logger, rpc.Params{
 		ServiceName:       serviceName,
 		TChannelAddress:   tchannelHostPort,
 		GRPCAddress:       grpcHostPort,
@@ -795,8 +795,8 @@ func newRPCFactory(serviceName string, tchannelHostPort string, frontendAddress 
 		// For integration tests to generate client out of the same outbound.
 		OutboundsBuilder: rpc.CombineOutbounds(
 			&singleTChannelOutbound{serviceName, serviceName, tchannelHostPort},
-			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, frontendAddress},
-			rpc.NewCrossDCOutbounds(cluster.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, logger))),
+			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendAddress()},
+			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger))),
 	})
 }
 
