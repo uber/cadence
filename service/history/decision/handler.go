@@ -480,8 +480,8 @@ Update_History_Loop:
 				tag.WorkflowID(token.WorkflowID),
 				tag.WorkflowRunID(token.RunID),
 				tag.WorkflowDomainID(domainID))
-			msBuilder, err = handler.failDecisionHelper(ctx, wfContext, scheduleID, startedID, failCause,
-				[]byte(failMessage), request, domainEntry)
+			msBuilder, err = handler.failDecisionHelper(
+				ctx, wfContext, scheduleID, startedID, failCause, []byte(failMessage), request, domainEntry)
 			if err != nil {
 				return nil, err
 			}
@@ -851,12 +851,16 @@ func (handler *handlerImpl) failDecisionHelper(
 	domainName := domainEntry.GetInfo().Name
 	maxAttempts := handler.config.DecisionRetryMaxAttempts(domainName)
 	if maxAttempts > 0 && mutableState.GetExecutionInfo().DecisionAttempt > int64(maxAttempts) {
-		message := "Decision attempt exceeds limit"
+		message := fmt.Sprintf(
+			"Decision attempt exceeds limit. Last decision failure cause and details: %v - %v",
+			cause,
+			details)
 		executionInfo := mutableState.GetExecutionInfo()
 		handler.logger.Error(message,
 			tag.WorkflowDomainID(executionInfo.DomainID),
 			tag.WorkflowID(executionInfo.WorkflowID),
 			tag.WorkflowRunID(executionInfo.RunID))
+		handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DecisionRetriesExceededCounter)
 
 		if _, err := mutableState.AddWorkflowExecutionTerminatedEvent(
 			mutableState.GetNextEventID(),
