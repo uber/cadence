@@ -1723,6 +1723,12 @@ const (
 	// Default value: archiver.MaxArchivalIterationTimeout()
 	// Allowed filters: N/A
 	WorkerTimeLimitPerArchivalIteration
+	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
+	// KeyName: worker.AllowArchivingIncompleteHistory
+	// Value type: Bool
+	// Default value: FALSE
+	// Allowed filters: N/A
+	AllowArchivingIncompleteHistory
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	// KeyName: worker.throttledLogRPS
 	// Value type: Int
@@ -2326,6 +2332,7 @@ var Keys = map[Key]string{
 	WorkerArchiverConcurrency:                                "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:                              "worker.ArchivalsPerIteration",
 	WorkerTimeLimitPerArchivalIteration:                      "worker.TimeLimitPerArchivalIteration",
+	AllowArchivingIncompleteHistory:                          "worker.AllowArchivingIncompleteHistory",
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
 	ScannerGetOrphanTasksPageSize:                            "worker.scannerGetOrphanTasksPageSize",

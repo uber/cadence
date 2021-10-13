@@ -123,9 +123,10 @@ func NewConfig(params *resource.Params) *Config {
 	)
 	config := &Config{
 		ArchiverConfig: &archiver.Config{
-			ArchiverConcurrency:           dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
-			ArchivalsPerIteration:         dc.GetIntProperty(dynamicconfig.WorkerArchivalsPerIteration, 1000),
-			TimeLimitPerArchivalIteration: dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
+			ArchiverConcurrency:             dc.GetIntProperty(dynamicconfig.WorkerArchiverConcurrency, 50),
+			ArchivalsPerIteration:           dc.GetIntProperty(dynamicconfig.WorkerArchivalsPerIteration, 1000),
+			TimeLimitPerArchivalIteration:   dc.GetDurationProperty(dynamicconfig.WorkerTimeLimitPerArchivalIteration, archiver.MaxArchivalIterationTimeout()),
+			AllowArchivingIncompleteHistory: dc.GetBoolProperty(dynamicconfig.AllowArchivingIncompleteHistory, false),
 		},
 		ScannerCfg: &scanner.Config{
 			ScannerPersistenceMaxQPS: dc.GetIntProperty(dynamicconfig.ScannerPersistenceMaxQPS, 5),

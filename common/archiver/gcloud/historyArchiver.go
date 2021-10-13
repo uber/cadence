@@ -83,7 +83,11 @@ func NewHistoryArchiver(
 	return nil, err
 }
 
-func newHistoryArchiver(container *archiver.HistoryBootstrapContainer, historyIterator archiver.HistoryIterator, storage connector.Client) archiver.HistoryArchiver {
+func newHistoryArchiver(
+	container *archiver.HistoryBootstrapContainer,
+	historyIterator archiver.HistoryIterator,
+	storage connector.Client,
+) archiver.HistoryArchiver {
 	return &historyArchiver{
 		container:       container,
 		gcloudStorage:   storage,
@@ -161,9 +165,11 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 			return err
 		}
 
-		if historyMutated(request, historyBlob.Body, *historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
-			return archiver.ErrHistoryMutated
+		if archiver.IsHistoryMutated(request, historyBlob.Body, *historyBlob.Header.IsLast, logger) {
+			if !featureCatalog.ArchiveIncompleteHistory() {
+				return archiver.ErrHistoryMutated
+			}
+
 		}
 
 		encodedHistoryPart, err := encode(historyBlob.Body)
@@ -320,21 +326,6 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), persistence.IsTransientError)
 	}
 	return historyBlob, nil
-}
-
-func historyMutated(request *archiver.ArchiveHistoryRequest, historyBatches []*types.History, isLast bool) bool {
-	lastBatch := historyBatches[len(historyBatches)-1].Events
-	lastEvent := lastBatch[len(lastBatch)-1]
-	lastFailoverVersion := lastEvent.GetVersion()
-	if lastFailoverVersion > request.CloseFailoverVersion {
-		return true
-	}
-
-	if !isLast {
-		return false
-	}
-	lastEventID := lastEvent.GetEventID()
-	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
 
 func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*int64, *int, *int, error) {

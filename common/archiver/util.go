@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
@@ -149,4 +150,27 @@ func ConvertSearchAttrToBytes(searchAttrStr map[string]string) map[string][]byte
 		searchAttr[k] = []byte(v)
 	}
 	return searchAttr
+}
+
+func IsHistoryMutated(request *ArchiveHistoryRequest, historyBatches []*types.History, isLast bool, logger log.Logger) (mutated bool) {
+	lastBatch := historyBatches[len(historyBatches)-1].Events
+	lastEvent := lastBatch[len(lastBatch)-1]
+	lastFailoverVersion := lastEvent.GetVersion()
+	defer func() {
+		if mutated {
+			logger.Warn(ArchiveNonRetriableErrorMsg+":history is mutated when during archival",
+				tag.ArchivalArchiveFailReason(ErrReasonHistoryMutated),
+				tag.FailoverVersion(lastFailoverVersion),
+				tag.TokenLastEventID(lastEvent.GetEventID()))
+		}
+	}()
+	if lastFailoverVersion > request.CloseFailoverVersion {
+		return true
+	}
+
+	if !isLast {
+		return false
+	}
+	lastEventID := lastEvent.GetEventID()
+	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }
