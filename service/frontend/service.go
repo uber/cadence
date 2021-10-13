@@ -304,20 +304,19 @@ func (s *Service) Stop() {
 
 	// initiate graceful shutdown:
 	// 1. Fail rpc health check, this will cause client side load balancer to stop forwarding requests to this node
-	// 2. wait for failure detection time
+	// 2. wait for 10 seconds for failure detection time
 	// 3. stop taking new requests by returning InternalServiceError
-	// 4. Wait for a second
+	// 4. Wait for X second to drain traffic
 	// 5. Stop everything forcefully and return
 
-	requestDrainTime := common.MinDuration(time.Second, s.config.ShutdownDrainDuration())
-	failureDetectionTime := common.MaxDuration(0, s.config.ShutdownDrainDuration()-requestDrainTime)
+	requestDrainTime := common.MaxDuration(time.Second, s.config.ShutdownDrainDuration())
+	failureDetectionTime := 10 * time.Second
 
 	s.GetLogger().Info("ShutdownHandler: Updating rpc health status to ShuttingDown")
 	s.handler.UpdateHealthStatus(HealthStatusShuttingDown)
 
 	s.GetLogger().Info("ShutdownHandler: Waiting for others to discover I am unhealthy")
 	time.Sleep(failureDetectionTime)
-
 	s.handler.Stop()
 	s.adminHandler.Stop()
 

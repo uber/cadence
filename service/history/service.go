@@ -123,7 +123,6 @@ func (s *Service) Stop() {
 	// 7. force stop the whole world and return
 
 	const gossipPropagationDelay = 400 * time.Millisecond
-	const shardOwnershipTransferDelay = 5 * time.Second
 	const gracePeriod = 2 * time.Second
 
 	remainingTime := s.config.ShutdownDrainDuration()
