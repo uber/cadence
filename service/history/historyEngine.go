@@ -174,6 +174,7 @@ func NewEngineWithShardContext(
 			shard.GetConfig().NumArchiveSystemWorkflows,
 			shard.GetConfig().ArchiveRequestRPS,
 			shard.GetService().GetArchiverProvider(),
+			config.AllowArchivingIncompleteHistory,
 		),
 		workflowResetter: reset.NewWorkflowResetter(
 			shard,

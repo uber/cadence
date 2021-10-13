@@ -199,8 +199,9 @@ type Config struct {
 	NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
 
 	// Archival settings
-	NumArchiveSystemWorkflows dynamicconfig.IntPropertyFn
-	ArchiveRequestRPS         dynamicconfig.IntPropertyFn
+	NumArchiveSystemWorkflows       dynamicconfig.IntPropertyFn
+	ArchiveRequestRPS               dynamicconfig.IntPropertyFn
+	AllowArchivingIncompleteHistory dynamicconfig.BoolPropertyFn
 
 	// Size limit related settings
 	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
@@ -442,9 +443,10 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
 
-		NumArchiveSystemWorkflows: dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
-		ArchiveRequestRPS:         dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
-
+		NumArchiveSystemWorkflows:       dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
+		ArchiveRequestRPS:               dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
+		AllowArchivingIncompleteHistory: dc.GetBoolProperty(dynamicconfig.AllowArchivingIncompleteHistory, false),
+		
 		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
 		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 512*1024),
 		HistorySizeLimitError:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError, 200*1024*1024),
