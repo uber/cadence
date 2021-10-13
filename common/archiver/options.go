@@ -56,7 +56,9 @@ type (
 // GetFeatureCatalog applies all the ArchiveOptions to the catalog and returns the catalog.
 // It should be called inside the Archive method.
 func GetFeatureCatalog(opts ...ArchiveOption) *ArchiveFeatureCatalog {
-	catalog := &ArchiveFeatureCatalog{}
+	catalog := &ArchiveFeatureCatalog{
+		ArchiveIncompleteHistory: dynamicconfig.GetBoolPropertyFn(false),
+	}
 	for _, opt := range opts {
 		opt(catalog)
 	}
