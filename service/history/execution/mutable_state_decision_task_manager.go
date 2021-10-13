@@ -279,17 +279,21 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 		return nil, m.msb.createInternalServerError(opTag)
 	}
 
+	var event *types.HistoryEvent
 	// stickyness will be cleared in ReplicateDecisionTaskTimedOutEvent
-	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
-		scheduleEventID,
-		0,
-		types.TimeoutTypeScheduleToStart,
-		"",
-		"",
-		common.EmptyVersion,
-		"",
-		types.DecisionTaskTimedOutCauseTimeout,
-	)
+	// Avoid creating new history events when decisions are continuously timing out
+	if m.msb.executionInfo.DecisionAttempt == 0 {
+		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
+			scheduleEventID,
+			0,
+			types.TimeoutTypeScheduleToStart,
+			"",
+			"",
+			common.EmptyVersion,
+			"",
+			types.DecisionTaskTimedOutCauseTimeout,
+		)
+	}
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err

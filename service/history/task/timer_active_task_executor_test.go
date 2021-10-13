@@ -810,6 +810,42 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_Normal
 	s.NoError(err)
 }
 
+func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_TransientDecision() {
+	s.mockShard.GetConfig().NormalDecisionScheduleToStartMaxAttempts = dynamicconfig.GetIntPropertyFilteredByDomain(1)
+
+	workflowExecution, mutableState, err := test.StartWorkflow(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	decisionAttempt := int64(1)
+	mutableState.GetExecutionInfo().DecisionAttempt = decisionAttempt // fake a transient decision
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+
+	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeDecisionTimeout,
+		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
+		VisibilityTimestamp: s.now,
+		EventID:             di.ScheduleID,
+		ScheduleAttempt:     decisionAttempt,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, di.ScheduleID, di.Version)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.UpdateWorkflowExecutionRequest) bool {
+		return req.UpdateWorkflowMutation.ExecutionInfo.DecisionAttempt == 2 &&
+			req.UpdateWorkflowMutation.ExecutionInfo.DecisionScheduleID == 2 &&
+			req.UpdateWorkflowMutation.ExecutionInfo.NextEventID == 2 && // transient decision
+			len(req.UpdateWorkflowMutation.TimerTasks) == 0 // since the max attempt is 1 at the beginning of the test
+	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
+	s.NoError(err)
+}
+
 func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_StickyDecision() {
 
 	workflowExecution, mutableState, _, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
