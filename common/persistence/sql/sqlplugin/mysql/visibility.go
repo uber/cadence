@@ -117,7 +117,8 @@ func (mdb *db) ReplaceIntoVisibility(ctx context.Context, row *sqlplugin.Visibil
 			*row.HistoryLength,
 			row.Memo,
 			row.Encoding,
-			row.IsCron)
+			row.IsCron,
+			row.NumClusters)
 	default:
 		return nil, errCloseParams
 	}

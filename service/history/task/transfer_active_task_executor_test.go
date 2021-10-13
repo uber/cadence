@@ -1389,7 +1389,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
-			s.domainName, startEvent, transferTask, mutableState, true),
+			s.domainName, startEvent, transferTask, mutableState, 2),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1420,7 +1420,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		"UpsertWorkflowExecution",
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
-			s.domainName, startEvent, transferTask, mutableState, true),
+			s.domainName, startEvent, transferTask, mutableState, 2),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1638,7 +1638,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 	startEvent *types.HistoryEvent,
 	transferTask Task,
 	mutableState execution.MutableState,
-	numClusters bool,
+	numClusters int16,
 ) *persistence.UpsertWorkflowExecutionRequest {
 
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
