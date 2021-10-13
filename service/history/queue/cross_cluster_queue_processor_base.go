@@ -366,7 +366,7 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 	}
 	iter.Close()
 
-	var result []*types.CrossClusterTaskRequest
+	result := []*types.CrossClusterTaskRequest{}
 	for _, task := range tasks {
 		request, err := task.GetCrossClusterRequest()
 		if err != nil {
@@ -375,8 +375,9 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 				if _, err := c.submitTask(task); err != nil {
 					break
 				}
+			} else {
+				c.logger.Error("Failed to get cross cluster request", tag.Error(err))
 			}
-			c.logger.Error("Failed to get cross cluster request", tag.Error(err))
 		} else if request != nil {
 			result = append(result, request)
 		} else {

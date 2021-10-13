@@ -544,9 +544,9 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 				return nil, t.processingState, domainErr
 			}
 
-			attributes.AppyParentClosePolicyAttributes = append(
-				attributes.AppyParentClosePolicyAttributes,
-				&types.AppyParentClosePolicyAttributes{
+			attributes.ApplyParentClosePolicyAttributes = append(
+				attributes.ApplyParentClosePolicyAttributes,
+				&types.ApplyParentClosePolicyAttributes{
 					ChildDomainID:     domainID,
 					ChildWorkflowID:   childInfo.StartedWorkflowID,
 					ChildRunID:        childInfo.StartedRunID,

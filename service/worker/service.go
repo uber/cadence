@@ -193,6 +193,7 @@ func (s *Service) Start() {
 
 	s.ensureDomainExists(common.SystemLocalDomainName)
 	s.startScanner()
+	s.startFixerWorkflowWorker()
 	if s.config.IndexerCfg != nil {
 		s.startIndexer()
 	}
@@ -271,6 +272,16 @@ func (s *Service) startScanner() {
 	}
 	if err := scanner.New(s.Resource, params).Start(); err != nil {
 		s.GetLogger().Fatal("error starting scanner", tag.Error(err))
+	}
+}
+
+func (s *Service) startFixerWorkflowWorker() {
+	params := &scanner.BootstrapParams{
+		Config:     *s.config.ScannerCfg,
+		TallyScope: s.params.MetricScope,
+	}
+	if err := scanner.NewDataCorruptionWorkflowWorker(s.Resource, params).StartDataCorruptionWorkflowWorker(); err != nil {
+		s.GetLogger().Fatal("error starting fixer workflow worker", tag.Error(err))
 	}
 }
 

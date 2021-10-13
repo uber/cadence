@@ -240,7 +240,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
-	for _, childAttrs := range attributes.AppyParentClosePolicyAttributes {
+	for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
 		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
 		if err != nil {
 			return nil, err

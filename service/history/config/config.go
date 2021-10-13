@@ -253,6 +253,7 @@ type Config struct {
 	// MaxDecisionStartToCloseSeconds is the StartToCloseSeconds for decision
 	MaxDecisionStartToCloseSeconds           dynamicconfig.IntPropertyFnWithDomainFilter
 	DecisionRetryCriticalAttempts            dynamicconfig.IntPropertyFn
+	DecisionRetryMaxAttempts                 dynamicconfig.IntPropertyFnWithDomainFilter
 	NormalDecisionScheduleToStartMaxAttempts dynamicconfig.IntPropertyFnWithDomainFilter
 	NormalDecisionScheduleToStartTimeout     dynamicconfig.DurationPropertyFnWithDomainFilter
 
@@ -514,6 +515,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StickyTTL:                                dc.GetDurationPropertyFilteredByDomain(dynamicconfig.StickyTTL, time.Hour*24*365),
 		DecisionHeartbeatTimeout:                 dc.GetDurationPropertyFilteredByDomain(dynamicconfig.DecisionHeartbeatTimeout, time.Minute*30),
 		DecisionRetryCriticalAttempts:            dc.GetIntProperty(dynamicconfig.DecisionRetryCriticalAttempts, 10), // about 30m
+		DecisionRetryMaxAttempts:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.DecisionRetryMaxAttempts, 1000),
 		NormalDecisionScheduleToStartMaxAttempts: dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 0),
 		NormalDecisionScheduleToStartTimeout:     dc.GetDurationPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartTimeout, time.Minute*5),
 

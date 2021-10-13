@@ -55,10 +55,6 @@ const (
 	matchingCaller = "matching-service-client"
 )
 
-const (
-	clientKeyDispatcher = "client-key-dispatcher"
-)
-
 type (
 	// Factory can be used to create RPC clients for cadence services
 	Factory interface {
@@ -238,18 +234,14 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	timeout time.Duration,
 	largeTimeout time.Duration,
 ) (admin.Client, error) {
-	keyResolver := func(key string) (string, error) {
-		return clientKeyDispatcher, nil
+	var client admin.Client
+	if isGRPCOutbound(config) {
+		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
+	} else {
+		client = admin.NewThriftClient(adminserviceclient.New(config))
 	}
 
-	clientProvider := func(clientKey string) (interface{}, error) {
-		if isGRPCOutbound(config) {
-			return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config)), nil
-		}
-		return admin.NewThriftClient(adminserviceclient.New(config)), nil
-	}
-
-	client := admin.NewClient(timeout, largeTimeout, common.NewClientCache(keyResolver, clientProvider))
+	client = admin.NewClient(timeout, largeTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
 		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
@@ -264,23 +256,19 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 	timeout time.Duration,
 	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
-	keyResolver := func(key string) (string, error) {
-		return clientKeyDispatcher, nil
+	var client frontend.Client
+	if isGRPCOutbound(config) {
+		client = frontend.NewGRPCClient(
+			apiv1.NewDomainAPIYARPCClient(config),
+			apiv1.NewWorkflowAPIYARPCClient(config),
+			apiv1.NewWorkerAPIYARPCClient(config),
+			apiv1.NewVisibilityAPIYARPCClient(config),
+		)
+	} else {
+		client = frontend.NewThriftClient(workflowserviceclient.New(config))
 	}
 
-	clientProvider := func(clientKey string) (interface{}, error) {
-		if isGRPCOutbound(config) {
-			return frontend.NewGRPCClient(
-				apiv1.NewDomainAPIYARPCClient(config),
-				apiv1.NewWorkflowAPIYARPCClient(config),
-				apiv1.NewWorkerAPIYARPCClient(config),
-				apiv1.NewVisibilityAPIYARPCClient(config),
-			), nil
-		}
-		return frontend.NewThriftClient(workflowserviceclient.New(config)), nil
-	}
-
-	client := frontend.NewClient(timeout, longPollTimeout, common.NewClientCache(keyResolver, clientProvider))
+	client = frontend.NewClient(timeout, longPollTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
 		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
