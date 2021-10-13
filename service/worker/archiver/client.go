@@ -89,12 +89,13 @@ type (
 	}
 
 	client struct {
-		metricsScope     metrics.Scope
-		logger           log.Logger
-		cadenceClient    cclient.Client
-		numWorkflows     dynamicconfig.IntPropertyFn
-		rateLimiter      quotas.Limiter
-		archiverProvider provider.ArchiverProvider
+		metricsScope               metrics.Scope
+		logger                     log.Logger
+		cadenceClient              cclient.Client
+		numWorkflows               dynamicconfig.IntPropertyFn
+		rateLimiter                quotas.Limiter
+		archiverProvider           provider.ArchiverProvider
+		archivingIncompleteHistory dynamicconfig.BoolPropertyFn
 	}
 
 	// ArchivalTarget is either history or visibility
@@ -122,6 +123,7 @@ func NewClient(
 	numWorkflows dynamicconfig.IntPropertyFn,
 	requestRPS dynamicconfig.IntPropertyFn,
 	archiverProvider provider.ArchiverProvider,
+	archivingIncompleteHistory dynamicconfig.BoolPropertyFn,
 ) Client {
 	return &client{
 		metricsScope:  metricsClient.Scope(metrics.ArchiverClientScope),
@@ -133,7 +135,8 @@ func NewClient(
 				return float64(requestRPS())
 			},
 		),
-		archiverProvider: archiverProvider,
+		archiverProvider:           archiverProvider,
+		archivingIncompleteHistory: archivingIncompleteHistory,
 	}
 }
 
@@ -208,6 +211,7 @@ func (c *client) archiveHistoryInline(ctx context.Context, request *ClientReques
 		return
 	}
 
+	allowArchivingIncompleteHistoryOpt := carchiver.GetArchivingIncompleteHistoryOption(c.archivingIncompleteHistory)
 	err = historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ArchiveRequest.ShardID,
 		DomainID:             request.ArchiveRequest.DomainID,
@@ -217,7 +221,7 @@ func (c *client) archiveHistoryInline(ctx context.Context, request *ClientReques
 		BranchToken:          request.ArchiveRequest.BranchToken,
 		NextEventID:          request.ArchiveRequest.NextEventID,
 		CloseFailoverVersion: request.ArchiveRequest.CloseFailoverVersion,
-	})
+	}, allowArchivingIncompleteHistoryOpt)
 }
 
 func (c *client) archiveVisibilityInline(ctx context.Context, request *ClientRequest, logger log.Logger, errCh chan error) {

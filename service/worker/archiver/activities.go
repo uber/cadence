@@ -73,6 +73,8 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		logger.Error(carchiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason("failed to get history archiver"), tag.Error(err))
 		return errUploadNonRetriable
 	}
+
+	allowArchivingIncompleteHistoryOpt := carchiver.GetArchivingIncompleteHistoryOption(container.Config.AllowArchivingIncompleteHistory)
 	err = historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
 		DomainID:             request.DomainID,
@@ -82,7 +84,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		BranchToken:          request.BranchToken,
 		NextEventID:          request.NextEventID,
 		CloseFailoverVersion: request.CloseFailoverVersion,
-	}, carchiver.GetHeartbeatArchiveOption(), carchiver.GetNonRetriableErrorOption(errUploadNonRetriable))
+	}, carchiver.GetHeartbeatArchiveOption(), carchiver.GetNonRetriableErrorOption(errUploadNonRetriable), allowArchivingIncompleteHistoryOpt)
 	if err == nil {
 		return nil
 	}

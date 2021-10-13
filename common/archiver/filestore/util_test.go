@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/util"
 )
@@ -192,106 +191,6 @@ func (s *UtilSuite) TestExtractCloseFailoverVersion() {
 			s.NoError(err)
 			s.Equal(tc.expectedVersion, version)
 		}
-	}
-}
-
-func (s *UtilSuite) TestHistoryMutated() {
-	testCases := []struct {
-		historyBatches []*types.History
-		request        *archiver.ArchiveHistoryRequest
-		isLast         bool
-		isMutated      bool
-	}{
-		{
-			historyBatches: []*types.History{
-				{
-					Events: []*types.HistoryEvent{
-						{
-							Version: 15,
-						},
-					},
-				},
-			},
-			request: &archiver.ArchiveHistoryRequest{
-				CloseFailoverVersion: 3,
-			},
-			isMutated: true,
-		},
-		{
-			historyBatches: []*types.History{
-				{
-					Events: []*types.HistoryEvent{
-						{
-							EventID: 33,
-							Version: 10,
-						},
-					},
-				},
-				{
-					Events: []*types.HistoryEvent{
-						{
-							EventID: 49,
-							Version: 10,
-						},
-						{
-							EventID: 50,
-							Version: 10,
-						},
-					},
-				},
-			},
-			request: &archiver.ArchiveHistoryRequest{
-				CloseFailoverVersion: 10,
-				NextEventID:          34,
-			},
-			isLast:    true,
-			isMutated: true,
-		},
-		{
-			historyBatches: []*types.History{
-				{
-					Events: []*types.HistoryEvent{
-						{
-							Version: 9,
-						},
-					},
-				},
-			},
-			request: &archiver.ArchiveHistoryRequest{
-				CloseFailoverVersion: 10,
-			},
-			isLast:    true,
-			isMutated: true,
-		},
-		{
-			historyBatches: []*types.History{
-				{
-					Events: []*types.HistoryEvent{
-						{
-							EventID: 20,
-							Version: 10,
-						},
-					},
-				},
-				{
-					Events: []*types.HistoryEvent{
-						{
-							EventID: 33,
-							Version: 10,
-						},
-					},
-				},
-			},
-			request: &archiver.ArchiveHistoryRequest{
-				CloseFailoverVersion: 10,
-				NextEventID:          34,
-			},
-			isLast:    true,
-			isMutated: false,
-		},
-	}
-	for _, tc := range testCases {
-		s.Equal(tc.isMutated, historyMutated(tc.request, tc.historyBatches, tc.isLast))
 	}
 }
 
