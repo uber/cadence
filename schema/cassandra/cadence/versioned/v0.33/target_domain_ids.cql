@@ -1,0 +1,1 @@
+ALTER TYPE transfer_task ADD target_domain_ids list<uuid>;

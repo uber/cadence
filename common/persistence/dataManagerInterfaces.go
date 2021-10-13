@@ -378,6 +378,7 @@ type (
 		VisibilityTimestamp     time.Time
 		TaskID                  int64
 		TargetDomainID          string
+		TargetDomainIDs         []string // used for ApplyParentPolicy request
 		TargetWorkflowID        string
 		TargetRunID             string
 		TargetChildWorkflowOnly bool
@@ -386,7 +387,6 @@ type (
 		ScheduleID              int64
 		Version                 int64
 		RecordVisibility        bool
-		TargetDomainIDs         []string // used for ApplyParentPolicy request
 	}
 
 	// CrossClusterTaskInfo describes a cross-cluster task

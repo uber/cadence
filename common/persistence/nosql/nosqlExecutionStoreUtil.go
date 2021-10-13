@@ -371,6 +371,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 				VisibilityTimestamp:     task.GetVisibilityTimestamp(),
 				TaskID:                  task.GetTaskID(),
 				TargetDomainID:          targetDomainID,
+				TargetDomainIDs:         targetDomainIDs,
 				TargetWorkflowID:        targetWorkflowID,
 				TargetRunID:             targetRunID,
 				TargetChildWorkflowOnly: targetChildWorkflowOnly,
@@ -378,7 +379,6 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 				ScheduleID:              scheduleID,
 				RecordVisibility:        recordVisibility,
 				Version:                 task.GetVersion(),
-				TargetDomainIDs:         targetDomainIDs,
 			},
 			TargetCluster: targetCluster,
 		}

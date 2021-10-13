@@ -652,7 +652,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterTaskFromTransferTask
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) GenerateFromApplyParentCloseCrossClusterTask(
+func (r *mutableStateTaskGeneratorImpl) generateFromApplyParentCloseCrossClusterTask(
 	task *persistence.CrossClusterTaskInfo,
 	generateTransferTask bool,
 ) error {
@@ -729,7 +729,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 	// ApplyParentClosePolicy is different than the others because it doesn't have a single
 	// target domain, workflow or run id.
 	if task.GetTaskType() == persistence.CrossClusterTaskTypeApplyParentPolicy {
-		return r.GenerateFromApplyParentCloseCrossClusterTask(task, generateTransferTask)
+		return r.generateFromApplyParentCloseCrossClusterTask(task, generateTransferTask)
 	}
 
 	if !generateTransferTask {
@@ -817,7 +817,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				},
 			}
 		}
-	// persistence.CrossClusterTaskTypeApplyParentPolicy is handled by GenerateFromApplyParentCloseCrossClusterTask above
+	// persistence.CrossClusterTaskTypeApplyParentPolicy is handled by generateFromApplyParentCloseCrossClusterTask above
 	default:
 		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)
 	}

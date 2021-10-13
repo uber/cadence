@@ -90,10 +90,10 @@ const (
 		`visibility_ts: ?, ` +
 		`task_id: ?, ` +
 		`target_domain_id: ?, ` +
+		`target_domain_ids: ?,` +
 		`target_workflow_id: ?, ` +
 		`target_run_id: ?, ` +
 		`target_child_workflow_only: ?, ` +
-		`domain_list: ?,` +
 		`task_list: ?, ` +
 		`type: ?, ` +
 		`schedule_id: ?, ` +
