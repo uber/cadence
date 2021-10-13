@@ -263,6 +263,7 @@ type (
 		RunID                   UUID
 		TaskType                int16
 		TargetDomainID          UUID
+		TargetDomainIDs         []string
 		TargetWorkflowID        string
 		TargetRunID             UUID
 		TaskList                string
@@ -270,7 +271,6 @@ type (
 		ScheduleID              int64
 		Version                 int64
 		VisibilityTimestamp     time.Time
-		TargetDomainIDs         []string
 	}
 
 	// CrossClusterTask blob in a serialization agnostic format
