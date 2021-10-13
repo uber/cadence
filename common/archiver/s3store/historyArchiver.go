@@ -178,7 +178,7 @@ func (h *historyArchiver) Archive(
 		}
 
 		if archiver.IsHistoryMutated(request, historyBlob.Body, *historyBlob.Header.IsLast, logger) {
-			if !featureCatalog.ArchiveIncompleteHistory {
+			if !featureCatalog.ArchiveIncompleteHistory() {
 				return archiver.ErrHistoryMutated
 			}
 		}

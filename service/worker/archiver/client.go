@@ -95,7 +95,7 @@ type (
 		numWorkflows               dynamicconfig.IntPropertyFn
 		rateLimiter                quotas.Limiter
 		archiverProvider           provider.ArchiverProvider
-		archivingIncompleteHistory bool
+		archivingIncompleteHistory dynamicconfig.BoolPropertyFn
 	}
 
 	// ArchivalTarget is either history or visibility
@@ -123,7 +123,7 @@ func NewClient(
 	numWorkflows dynamicconfig.IntPropertyFn,
 	requestRPS dynamicconfig.IntPropertyFn,
 	archiverProvider provider.ArchiverProvider,
-	archivingIncompleteHistory bool,
+	archivingIncompleteHistory dynamicconfig.BoolPropertyFn,
 ) Client {
 	return &client{
 		metricsScope:  metricsClient.Scope(metrics.ArchiverClientScope),

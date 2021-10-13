@@ -75,7 +75,7 @@ func uploadHistoryActivity(ctx context.Context, request ArchiveRequest) (err err
 		return errUploadNonRetriable
 	}
 
-	allowArchivingIncompleteHistoryOpt := carchiver.GetArchivingIncompleteHistoryOption(container.Config.AllowArchivingIncompleteHistory())
+	allowArchivingIncompleteHistoryOpt := carchiver.GetArchivingIncompleteHistoryOption(container.Config.AllowArchivingIncompleteHistory)
 	err = historyArchiver.Archive(ctx, URI, &carchiver.ArchiveHistoryRequest{
 		ShardID:              request.ShardID,
 		DomainID:             request.DomainID,

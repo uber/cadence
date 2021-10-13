@@ -166,7 +166,7 @@ func (h *historyArchiver) Archive(ctx context.Context, URI archiver.URI, request
 		}
 
 		if archiver.IsHistoryMutated(request, historyBlob.Body, *historyBlob.Header.IsLast, logger) {
-			if !featureCatalog.ArchiveIncompleteHistory {
+			if !featureCatalog.ArchiveIncompleteHistory() {
 				return archiver.ErrHistoryMutated
 			}
 

@@ -71,7 +71,7 @@ func (s *clientSuite) SetupTest() {
 		dynamicconfig.GetIntPropertyFn(1000),
 		dynamicconfig.GetIntPropertyFn(1000),
 		s.archiverProvider,
-		false,
+		dynamicconfig.GetBoolPropertyFn(false),
 	).(*client)
 	s.client.cadenceClient = s.cadenceClient
 }
