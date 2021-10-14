@@ -126,7 +126,8 @@ func registerTLSConfig(cfg *config.SQL) error {
 
 	// TODO: create a way to set MinVersion and CipherSuites via cfg.
 	tlsConfig := &tls.Config{
-		ServerName: host,
+		ServerName:         host,
+		InsecureSkipVerify: !cfg.TLS.EnableHostVerification,
 	}
 
 	if cfg.TLS.CaFile != "" {
