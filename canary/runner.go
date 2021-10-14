@@ -25,9 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	apiv1 "go.uber.org/cadence/.gen/proto/api/v1"
+	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -56,17 +57,10 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 		cfg.Cadence.HostNameAndPort = CadenceLocalHostPort
 	}
 
-	ch, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName(CanaryServiceName),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create transport channel: %v", err)
-	}
-
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: CanaryServiceName,
 		Outbounds: yarpc.Outbounds{
-			cfg.Cadence.ServiceName: {Unary: ch.NewSingleOutbound(cfg.Cadence.HostNameAndPort)},
+			cfg.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.HostNameAndPort)},
 		},
 	})
 
@@ -75,10 +69,16 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 		return nil, fmt.Errorf("failed to create outbound transport channel: %v", err)
 	}
 
+	clientConfig := dispatcher.ClientConfig(cfg.Cadence.ServiceName)
 	runtimeContext := NewRuntimeContext(
 		logger,
 		metricsScope,
-		workflowserviceclient.New(dispatcher.ClientConfig(cfg.Cadence.ServiceName)),
+		compatibility.NewThrift2ProtoAdapter(
+			apiv1.NewDomainAPIYARPCClient(clientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+			apiv1.NewWorkerAPIYARPCClient(clientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+		),
 	)
 
 	return &canaryRunner{
