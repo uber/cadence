@@ -62,6 +62,7 @@ type (
 		taskFetcher   Fetcher
 		options       *CrossClusterTaskProcessorOptions
 		retryPolicy   backoff.RetryPolicy
+		throttleRetry *backoff.ThrottleRetry
 		logger        log.Logger
 		metricsScope  metrics.Scope
 
@@ -153,6 +154,15 @@ func newCrossClusterTaskProcessor(
 		shutdownCh: make(chan struct{}),
 
 		pendingTasks: make(map[int64]future.Future),
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(retryPolicy),
+			backoff.WithRetryableError(func(err error) bool {
+				if common.IsServiceBusyError(err) {
+					return false
+				}
+				return common.IsServiceTransientError(err)
+			}),
+		),
 	}
 }
 
@@ -418,27 +428,18 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 	defer sw.Stop()
 
 	var response *types.RespondCrossClusterTasksCompletedResponse
-	err := backoff.Retry(
-		func() error {
-			ctx, cancel := context.WithTimeout(context.Background(), respondCrossClusterTaskTimeout)
-			defer cancel()
-
-			var err error
-			response, err = p.shard.GetService().GetHistoryRawClient().RespondCrossClusterTasksCompleted(ctx, request)
-			if err != nil {
-				p.logger.Error("Failed to respond cross cluster tasks completed", tag.Error(err))
-				p.metricsScope.IncCounter(metrics.CrossClusterTaskRespondFailures)
-			}
-			return err
-		},
-		p.retryPolicy,
-		func(err error) bool {
-			if common.IsServiceBusyError(err) {
-				return false
-			}
-			return common.IsServiceTransientError(err)
-		},
-	)
+	op := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), respondCrossClusterTaskTimeout)
+		defer cancel()
+		var err error
+		response, err = p.shard.GetService().GetHistoryRawClient().RespondCrossClusterTasksCompleted(ctx, request)
+		if err != nil {
+			p.logger.Error("Failed to respond cross cluster tasks completed", tag.Error(err))
+			p.metricsScope.IncCounter(metrics.CrossClusterTaskRespondFailures)
+		}
+		return err
+	}
+	err := p.throttleRetry.Do(context.Background(), op)
 
 	return response, err
 }

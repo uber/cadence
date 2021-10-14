@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -167,8 +168,12 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task, shutdownCh chan struc
 
 		return task.RetryErr(err)
 	}
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(p.options.RetryPolicy),
+		backoff.WithRetryableError(isRetryable),
+	)
 
-	if err := backoff.Retry(op, p.options.RetryPolicy, isRetryable); err != nil {
+	if err := throttleRetry.Do(context.Background(), op); err != nil {
 		// non-retryable error or exhausted all retries or worker shutdown
 		task.Nack()
 		return

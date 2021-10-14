@@ -1440,7 +1440,11 @@ func requestCancelExternalExecutionWithRetry(
 		return historyClient.RequestCancelWorkflowExecution(requestCancelCtx, request)
 	}
 
-	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(taskRetryPolicy),
+		backoff.WithRetryableError(common.IsServiceTransientError),
+	)
+	err := throttleRetry.Do(context.Background(), op)
 	if _, ok := err.(*types.CancellationAlreadyRequestedError); ok {
 		// err is CancellationAlreadyRequestedError
 		// this could happen if target workflow cancellation is already requested
@@ -1486,7 +1490,11 @@ func signalExternalExecutionWithRetry(
 		return historyClient.SignalWorkflowExecution(signalCtx, request)
 	}
 
-	return backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(taskRetryPolicy),
+		backoff.WithRetryableError(common.IsServiceTransientError),
+	)
+	return throttleRetry.Do(context.Background(), op)
 }
 
 func removeSignalMutableStateWithRetry(
@@ -1511,7 +1519,11 @@ func removeSignalMutableStateWithRetry(
 		return historyClient.RemoveSignalMutableState(ctx, removeSignalRequest)
 	}
 
-	err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(taskRetryPolicy),
+		backoff.WithRetryableError(common.IsServiceTransientError),
+	)
+	err := throttleRetry.Do(context.Background(), op)
 	if err != nil && common.IsEntityNotExistsError(err) {
 		// it's safe to discard entity not exists error here
 		// as there's nothing to remove.
@@ -1580,7 +1592,11 @@ func startWorkflowWithRetry(
 		return err
 	}
 
-	if err := backoff.Retry(op, taskRetryPolicy, common.IsServiceTransientError); err != nil {
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(taskRetryPolicy),
+		backoff.WithRetryableError(common.IsServiceTransientError),
+	)
+	if err := throttleRetry.Do(context.Background(), op); err != nil {
 		return "", err
 	}
 	return response.GetRunID(), nil

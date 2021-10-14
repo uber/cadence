@@ -884,13 +884,11 @@ func (e *matchingEngineImpl) recordDecisionTaskStarted(
 		resp, err = e.historyService.RecordDecisionTaskStarted(ctx, request)
 		return err
 	}
-	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
-		switch err.(type) {
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
-			return false
-		}
-		return true
-	})
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(historyServiceOperationRetryPolicy),
+		backoff.WithRetryableError(isMatchingRetryableError),
+	)
+	err := throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -913,13 +911,11 @@ func (e *matchingEngineImpl) recordActivityTaskStarted(
 		resp, err = e.historyService.RecordActivityTaskStarted(ctx, request)
 		return err
 	}
-	err := backoff.Retry(op, historyServiceOperationRetryPolicy, func(err error) bool {
-		switch err.(type) {
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
-			return false
-		}
-		return true
-	})
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(historyServiceOperationRetryPolicy),
+		backoff.WithRetryableError(isMatchingRetryableError),
+	)
+	err := throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -970,4 +966,12 @@ func (m *lockableQueryTaskMap) delete(key string) {
 	m.Lock()
 	defer m.Unlock()
 	delete(m.queryTaskMap, key)
+}
+
+func isMatchingRetryableError(err error) bool {
+	switch err.(type) {
+	case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.EventAlreadyStartedError:
+		return false
+	}
+	return true
 }
