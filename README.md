@@ -81,6 +81,7 @@ The easiest way to get the schema tool is via homebrew.
 
 `brew install cadence-workflow` also includes `cadence-sql-tool` and `cadence-cassandra-tool`. 
  * The schema files are located at `/usr/local/etc/cadence/schema/`.
+ * To upgrade, make sure you remove the old ElasticSearch schema first: `mv /usr/local/etc/cadence/schema/elasticsearch /usr/local/etc/cadence/schema/elasticsearch.old && brew upgrade cadence-workflow`. Otherwise ElasticSearch schemas may not be able to get updated.
  * Follow the [instructions](https://github.com/uber/cadence/discussions/4457) if you need to install older versions of schema tools via homebrew. 
  However, easier way is to use new versions of schema tools with old versions of schemas. 
  All you need is to check out the older version of schemas from this repo. Run `git checkout v0.21.3` to get the v0.21.3 schemas in [the schema folder](/schema). 
