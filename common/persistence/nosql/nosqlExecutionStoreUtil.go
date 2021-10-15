@@ -320,6 +320,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		var scheduleID int64
 		var targetCluster string
 		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
+		targetDomainIDs := []string{}
 		var targetWorkflowID string
 		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
@@ -348,11 +349,12 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
-		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
 			targetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
 
-		case p.CrossClusterTaskTypeApplyParentPolicy:
+		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
+			targetDomainIDs = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
 
 		default:
 			return nil, &types.InternalServiceError{
@@ -369,6 +371,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 				VisibilityTimestamp:     task.GetVisibilityTimestamp(),
 				TaskID:                  task.GetTaskID(),
 				TargetDomainID:          targetDomainID,
+				TargetDomainIDs:         targetDomainIDs,
 				TargetWorkflowID:        targetWorkflowID,
 				TargetRunID:             targetRunID,
 				TargetChildWorkflowOnly: targetChildWorkflowOnly,
@@ -425,10 +428,11 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 ) ([]*nosqlplugin.TransferTask, error) {
 	var tasks []*nosqlplugin.TransferTask
 
-	targetDomainID := domainID
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
+		targetDomainID := domainID
+		targetDomainIDs := []string{}
 		targetWorkflowID := p.TransferTaskTransferTargetWorkflowID
 		targetRunID := p.TransferTaskTransferTargetRunID
 		targetChildWorkflowOnly := false
@@ -471,11 +475,25 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 			targetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
 			scheduleID = task.(*p.StartChildExecutionTask).InitiatedID
 
+		case p.TransferTaskTypeRecordChildExecutionCompleted:
+			targetDomainID = task.(*p.RecordChildExecutionCompletedTask).TargetDomainID
+			targetWorkflowID = task.(*p.RecordChildExecutionCompletedTask).TargetWorkflowID
+			targetRunID = task.(*p.RecordChildExecutionCompletedTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
+			scheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID
+
+		case p.TransferTaskTypeApplyParentClosePolicy:
+			targetDomainIDs = task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs
+
 		case p.TransferTaskTypeCloseExecution,
 			p.TransferTaskTypeRecordWorkflowStarted,
 			p.TransferTaskTypeResetWorkflow,
-			p.TransferTaskTypeUpsertWorkflowSearchAttributes:
+			p.TransferTaskTypeUpsertWorkflowSearchAttributes,
+			p.TransferTaskTypeRecordWorkflowClosed:
 			// No explicit property needs to be set
+
 		default:
 			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown transfer type: %v", task.GetType()),
@@ -489,6 +507,7 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 			VisibilityTimestamp:     task.GetVisibilityTimestamp(),
 			TaskID:                  task.GetTaskID(),
 			TargetDomainID:          targetDomainID,
+			TargetDomainIDs:         targetDomainIDs,
 			TargetWorkflowID:        targetWorkflowID,
 			TargetRunID:             targetRunID,
 			TargetChildWorkflowOnly: targetChildWorkflowOnly,

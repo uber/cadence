@@ -205,8 +205,8 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateCrossClusterTaskFromTransfe
 			},
 			expectError: false,
 			expectedCrossClusterTask: &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
-				TargetCluster:                       targetCluster,
-				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{},
+				TargetCluster:                     targetCluster,
+				RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{},
 			},
 		},
 	}
@@ -297,21 +297,21 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+				TaskType:         persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted,
 				TargetDomainID:   constants.TestRemoteTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				TargetRunID:      constants.TestRunID,
 				ScheduleID:       int64(123),
 			},
 			generatedTask: &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
-				TargetCluster:                       cluster.TestAlternativeClusterName,
-				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{},
+				TargetCluster:                     cluster.TestAlternativeClusterName,
+				RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{},
 			},
 		},
 		{
 			sourceActive: false,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+				TaskType:         persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted,
 				TargetDomainID:   constants.TestRemoteTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				TargetRunID:      constants.TestRunID,
@@ -322,7 +322,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+				TaskType:         persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted,
 				TargetDomainID:   constants.TestTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				TargetRunID:      constants.TestRunID,
@@ -333,7 +333,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TaskType:         persistence.CrossClusterTaskTypeApplyParentClosePolicy,
 				TargetDomainID:   constants.TestRemoteTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				TargetRunID:      constants.TestRunID,
@@ -347,7 +347,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: false,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TaskType:         persistence.CrossClusterTaskTypeApplyParentClosePolicy,
 				TargetDomainID:   constants.TestRemoteTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				TargetRunID:      constants.TestRunID,
@@ -358,7 +358,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:         persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TaskType:         persistence.CrossClusterTaskTypeApplyParentClosePolicy,
 				TargetDomainID:   constants.TestTargetDomainID,
 				TargetWorkflowID: constants.TestWorkflowID,
 				TargetRunID:      constants.TestRunID,

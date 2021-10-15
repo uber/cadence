@@ -476,7 +476,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParentCro
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
-				s.Equal(persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+				s.Equal(persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted, crossClusterTasks[0].GetType())
 				return true
 			})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 		},
@@ -704,7 +704,7 @@ func (s *transferActiveTaskExecutorSuite) expectCrossClusterApplyParentPolicyCal
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
 		crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 		s.Len(crossClusterTasks, 1)
-		s.Equal(persistence.CrossClusterTaskTypeApplyParentPolicy, crossClusterTasks[0].GetType())
+		s.Equal(persistence.CrossClusterTaskTypeApplyParentClosePolicy, crossClusterTasks[0].GetType())
 		return true
 	})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(common.EmptyVersion)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()

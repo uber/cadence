@@ -632,7 +632,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterTaskFromTransferTask
 	case persistence.TransferTaskTypeCloseExecution:
 		crossClusterTask = &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
 			TargetCluster: targetCluster,
-			RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
+			RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
 				// TaskID is set by shard context
 				Version: task.Version,
 			},
@@ -726,7 +726,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				StartChildExecutionTask: *startChildExecutionTask,
 			}
 		}
-	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+	case persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted:
 		if generateTransferTask {
 			// We don't have a separate transfer task for record child completion or
 			// apply parent close policy. They are both created through close exuection task.
@@ -740,13 +740,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 		} else {
 			newTask = &persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask{
 				TargetCluster: targetCluster,
-				RecordWorkflowExecutionCompleteTask: persistence.RecordWorkflowExecutionCompleteTask{
+				RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
 					// TaskID is set by shard context
 					Version: task.Version,
 				},
 			}
 		}
-	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+	case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
 		if generateTransferTask {
 			// Creating close exeuction task due to the same reason above.
 			// TODO: dedup this request if we also created one through record child complete

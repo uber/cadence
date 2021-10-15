@@ -805,11 +805,14 @@ func createCrossClusterTasks(
 			info.TargetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
-		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
 
-		case p.CrossClusterTaskTypeApplyParentPolicy:
+		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
+			for _, targetDomainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
+				info.TargetDomainIDs = append(info.TargetDomainIDs, serialization.MustParseUUID(targetDomainID))
+			}
 
 		default:
 			return &types.InternalServiceError{
@@ -912,15 +915,29 @@ func createTransferTasks(
 			info.TargetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
 			info.ScheduleID = task.(*p.StartChildExecutionTask).InitiatedID
 
+		case p.TransferTaskTypeRecordChildExecutionCompleted:
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.RecordChildExecutionCompletedTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.RecordChildExecutionCompletedTask).TargetWorkflowID
+			if targetRunID := task.(*p.RecordChildExecutionCompletedTask).TargetRunID; targetRunID == "" {
+				info.TargetRunID = serialization.MustParseUUID(targetRunID)
+			}
+			info.ScheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID
+
+		case p.TransferTaskTypeApplyParentClosePolicy:
+			for _, targetDomainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
+				info.TargetDomainIDs = append(info.TargetDomainIDs, serialization.MustParseUUID(targetDomainID))
+			}
+
 		case p.TransferTaskTypeCloseExecution,
 			p.TransferTaskTypeRecordWorkflowStarted,
 			p.TransferTaskTypeResetWorkflow,
-			p.TransferTaskTypeUpsertWorkflowSearchAttributes:
+			p.TransferTaskTypeUpsertWorkflowSearchAttributes,
+			p.TransferTaskTypeRecordWorkflowClosed:
 			// No explicit property needs to be set
 
 		default:
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("createTransferTasks failed. Unknow transfer type: %v", task.GetType()),
+				Message: fmt.Sprintf("createTransferTasks failed. Unknown transfer type: %v", task.GetType()),
 			}
 		}
 
