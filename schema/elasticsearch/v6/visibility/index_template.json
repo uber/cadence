@@ -50,7 +50,7 @@
           "type": "boolean"
         },
         "NumClusters": {
-          "type": "long"
+          "type": "integer"
         },
         "Attr": {
           "properties": {

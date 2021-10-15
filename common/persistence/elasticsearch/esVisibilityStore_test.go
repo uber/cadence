@@ -208,6 +208,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.CloseTimestamp.UnixNano(), fields[es.CloseTime].GetIntData())
 		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
+		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
+		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		return true
 	})).Return(nil).Once()
 

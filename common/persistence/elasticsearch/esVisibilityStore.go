@@ -729,7 +729,7 @@ func getVisibilityMessage(
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr((int64)(NumClusters))},
+		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
@@ -779,7 +779,7 @@ func getVisibilityMessageForCloseExecution(
 		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr((int64)(NumClusters))},
+		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
 	}
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
