@@ -1784,6 +1784,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	e.executionInfo.WorkflowTypeName = event.WorkflowType.GetName()
 	e.executionInfo.WorkflowTimeout = event.GetExecutionStartToCloseTimeoutSeconds()
 	e.executionInfo.DecisionStartToCloseTimeout = event.GetTaskStartToCloseTimeoutSeconds()
+	e.executionInfo.StartTimestamp = e.unixNanoToTime(startEvent.GetTimestamp())
 
 	if err := e.UpdateWorkflowStateCloseStatus(
 		persistence.WorkflowStateCreated,
