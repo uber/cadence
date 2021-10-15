@@ -1779,14 +1779,15 @@ func (s *TestBase) Publish(
 	retryPolicy.SetBackoffCoefficient(1.5)
 	retryPolicy.SetMaximumAttempts(5)
 
-	return backoff.Retry(
-		func() error {
-			return s.DomainReplicationQueueMgr.EnqueueMessage(ctx, messagePayload)
-		},
-		retryPolicy,
-		func(e error) bool {
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(func(e error) bool {
 			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
-		})
+		}),
+	)
+	return throttleRetry.Do(ctx, func() error {
+		return s.DomainReplicationQueueMgr.EnqueueMessage(ctx, messagePayload)
+	})
 }
 
 func isMessageIDConflictError(err error) bool {
@@ -1831,14 +1832,15 @@ func (s *TestBase) PublishToDomainDLQ(
 	retryPolicy.SetBackoffCoefficient(1.5)
 	retryPolicy.SetMaximumAttempts(5)
 
-	return backoff.Retry(
-		func() error {
-			return s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
-		},
-		retryPolicy,
-		func(e error) bool {
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(func(e error) bool {
 			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
-		})
+		}),
+	)
+	return throttleRetry.Do(ctx, func() error {
+		return s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
+	})
 }
 
 // GetMessagesFromDomainDLQ is a utility method to get messages from the domain DLQ

@@ -59,8 +59,10 @@ type (
 const testForkRunID = "11220000-0000-f000-f000-000000000000"
 
 var (
-	historyTestRetryPolicy = createHistoryTestRetryPolicy()
-	thriftEncoder          = codec.NewThriftRWEncoder()
+	throttleRetry = backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(createHistoryTestRetryPolicy()),
+		backoff.WithRetryableError(isConditionFail))
+	thriftEncoder = codec.NewThriftRWEncoder()
 )
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
@@ -761,7 +763,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 		return err
 	}
 
-	if err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail); err != nil {
+	if err := throttleRetry.Do(ctx, op); err != nil {
 		return err
 	}
 	res, err := s.readWithError(ctx, branchToken, minNodeID, math.MaxInt64)
@@ -867,13 +869,12 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 		return err
 	}
 
-	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
-	if err != nil {
+	if err := throttleRetry.Do(ctx, op); err != nil {
 		return err
 	}
 	s.True(resp.Size > 0)
 
-	return err
+	return nil
 }
 
 // persistence helper
@@ -895,6 +896,6 @@ func (s *HistoryV2PersistenceSuite) fork(ctx context.Context, forkBranch []byte,
 		return err
 	}
 
-	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
+	err := throttleRetry.Do(ctx, op)
 	return bi, err
 }

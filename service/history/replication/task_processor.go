@@ -386,27 +386,28 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 
 func (p *taskProcessorImpl) processSingleTask(replicationTask *types.ReplicationTask) error {
 	retryTransientError := func() error {
-		return backoff.Retry(
-			func() error {
-				select {
-				case <-p.done:
-					// if the processor is stopping, skip the task
-					// the ack level will not update and the new shard owner will retry the task.
-					return nil
-				default:
-					return p.processTaskOnce(replicationTask)
-				}
-			},
-			p.taskRetryPolicy,
-			isTransientRetryableError)
+		throttleRetry := backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(p.taskRetryPolicy),
+			backoff.WithRetryableError(isTransientRetryableError),
+		)
+		return throttleRetry.Do(context.Background(), func() error {
+			select {
+			case <-p.done:
+				// if the processor is stopping, skip the task
+				// the ack level will not update and the new shard owner will retry the task.
+				return nil
+			default:
+				return p.processTaskOnce(replicationTask)
+			}
+		})
 	}
 
 	//Handle service busy error
-	err := backoff.Retry(
-		retryTransientError,
-		common.CreateReplicationServiceBusyRetryPolicy(),
-		common.IsServiceBusyError,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreateReplicationServiceBusyRetryPolicy()),
+		backoff.WithRetryableError(common.IsServiceBusyError),
 	)
+	err := throttleRetry.Do(context.Background(), retryTransientError)
 
 	switch {
 	case err == nil:
@@ -490,15 +491,19 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *types.Repli
 		metrics.ReplicationDLQMaxLevelGauge,
 		float64(request.TaskInfo.GetTaskID()),
 	)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(p.dlqRetryPolicy),
+		backoff.WithRetryableError(p.shouldRetryDLQ),
+	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
-	return backoff.Retry(func() error {
+	return throttleRetry.Do(context.Background(), func() error {
 		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.Background(), request)
 		if err != nil {
 			p.logger.Error("Failed to put replication task to DLQ.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationTaskFetcherScope, metrics.ReplicationDLQFailed)
 		}
 		return err
-	}, p.dlqRetryPolicy, p.shouldRetryDLQ)
+	})
 }
 
 func (p *taskProcessorImpl) generateDLQRequest(

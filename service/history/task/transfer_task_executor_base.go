@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -57,6 +58,7 @@ type (
 		matchingClient matching.Client
 		visibilityMgr  persistence.VisibilityManager
 		config         *config.Config
+		throttleRetry  *backoff.ThrottleRetry
 	}
 )
 
@@ -76,6 +78,10 @@ func newTransferTaskExecutorBase(
 		matchingClient: shard.GetService().GetMatchingClient(),
 		visibilityMgr:  shard.GetService().GetVisibilityManager(),
 		config:         config,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(taskRetryPolicy),
+			backoff.WithRetryableError(common.IsServiceTransientError),
+		),
 	}
 }
 
