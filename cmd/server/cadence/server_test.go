@@ -70,7 +70,7 @@ func (s *ServerSuite) TestServerStartup() {
 	if err != nil {
 		log.Fatal("Config file corrupted.", err)
 	}
-	
+
 	if os.Getenv("CASSANDRA_SEEDS") == "cassandra" {
 		// replace local host to docker network
 		// this env variable value is set by buildkite's docker-compose

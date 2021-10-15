@@ -321,7 +321,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		var targetCluster string
 		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
 		var targetWorkflowID string
-		targetDomainIDs := []string{}
+		targetDomainIDs := map[string]struct{}{}
 		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false

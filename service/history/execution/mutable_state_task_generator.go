@@ -89,7 +89,7 @@ type (
 		GenerateCrossClusterApplyParentClosePolicyTask(
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
-			targetDomainIDs []string,
+			targetDomainIDs map[string]struct{},
 		) error
 		GenerateFromCrossClusterTask(
 			crossClusterTask *persistence.CrossClusterTaskInfo,
@@ -561,7 +561,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks() error {
 func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterApplyParentClosePolicyTask(
 	task *persistence.TransferTaskInfo,
 	targetCluster string,
-	targetDomainIDs []string,
+	targetDomainIDs map[string]struct{},
 ) error {
 	if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
 		// this should not happen
@@ -657,7 +657,7 @@ func (r *mutableStateTaskGeneratorImpl) generateFromApplyParentCloseCrossCluster
 	generateTransferTask bool,
 ) error {
 	if !generateTransferTask {
-		for _, domainID := range task.TargetDomainIDs {
+		for domainID := range task.TargetDomainIDs {
 			targetDomainEntry, err := r.domainCache.GetDomainByID(domainID)
 			if err != nil {
 				return err
@@ -689,15 +689,19 @@ func (r *mutableStateTaskGeneratorImpl) generateFromApplyParentCloseCrossCluster
 		return nil
 	}
 
-	clusterMap := map[string][]string{}
+	clusterMap := map[string]map[string]struct{}{}
 
-	for _, domainID := range task.TargetDomainIDs {
+	for domainID := range task.TargetDomainIDs {
 		targetDomainEntry, err := r.domainCache.GetDomainByID(domainID)
 		if err != nil {
 			return err
 		}
 		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
-		clusterMap[targetCluster] = append(clusterMap[targetCluster], domainID)
+
+		if _, ok := clusterMap[targetCluster]; !ok {
+			clusterMap[targetCluster] = map[string]struct{}{}
+		}
+		clusterMap[targetCluster][domainID] = struct{}{}
 	}
 	for cluster, targetDomainIDs := range clusterMap {
 		r.mutableState.AddCrossClusterTasks(&persistence.CrossClusterApplyParentClosePolicyTask{

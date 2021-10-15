@@ -334,13 +334,13 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
 				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+				TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: struct{}{}},
 				ScheduleID:      int64(123),
 			},
 			generatedTask: &persistence.CrossClusterApplyParentClosePolicyTask{
 				TargetCluster: cluster.TestAlternativeClusterName,
 				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-					TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+					TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: struct{}{}},
 				},
 			},
 		},
@@ -348,7 +348,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 			sourceActive: false,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
 				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainIDs: []string{constants.TestRemoteTargetDomainID},
+				TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: struct{}{}},
 				ScheduleID:      int64(123),
 			},
 			generatedTask: &persistence.CloseExecutionTask{},
@@ -357,7 +357,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
 				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainIDs: []string{constants.TestTargetDomainID},
+				TargetDomainIDs: map[string]struct{}{constants.TestTargetDomainID: struct{}{}},
 				ScheduleID:      int64(123),
 			},
 			generatedTask: &persistence.CloseExecutionTask{},
@@ -366,16 +366,17 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		{
 			sourceActive: true,
 			crossClusterTask: &persistence.CrossClusterTaskInfo{
-				TaskType:        persistence.CrossClusterTaskTypeApplyParentPolicy,
-				TargetDomainIDs: []string{constants.TestTargetDomainID, constants.TestRemoteTargetDomainID},
-				ScheduleID:      int64(123),
+				TaskType: persistence.CrossClusterTaskTypeApplyParentPolicy,
+				TargetDomainIDs: map[string]struct{}{
+					constants.TestTargetDomainID:       {},
+					constants.TestRemoteTargetDomainID: {},
+				},
+				ScheduleID: int64(123),
 			},
 			generatedTask: &persistence.CloseExecutionTask{},
 		},
 	}
 
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
 	for _, tc := range testCases {
 		if tc.sourceActive {
 			tc.crossClusterTask.DomainID = constants.TestDomainID
@@ -388,7 +389,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		shouldAddTransferTasks := !tc.sourceActive
 		if !shouldAddTransferTasks {
 			if tc.crossClusterTask.TaskType == persistence.CrossClusterTaskTypeApplyParentPolicy {
-				for _, domainID := range tc.crossClusterTask.TargetDomainIDs {
+				for domainID := range tc.crossClusterTask.TargetDomainIDs {
 					shouldAddTransferTasks = shouldAddTransferTasks || domainID == constants.TestTargetDomainID
 				}
 			} else {

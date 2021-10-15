@@ -491,7 +491,12 @@ func parseTransferTaskInfo(
 		case "target_domain_id":
 			info.TargetDomainID = v.(gocql.UUID).String()
 		case "target_domain_ids":
-			info.TargetDomainIDs = v.([]string)
+			targetDomainIDs := make(map[string]struct{})
+			dList := mustConvertToSlice(result["target_domain_ids"])
+			for _, v := range dList {
+				targetDomainIDs[v.(gocql.UUID).String()] = struct{}{}
+			}
+			info.TargetDomainIDs = targetDomainIDs
 		case "target_workflow_id":
 			info.TargetWorkflowID = v.(string)
 		case "target_run_id":

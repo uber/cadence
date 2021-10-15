@@ -1698,7 +1698,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 	childInfos map[int64]*persistence.ChildExecutionInfo,
 ) ([]generatorF, map[int64]string, bool, error) {
 	sameClusterChildDomainIDs := make(map[int64]string) // child init eventID -> child domainID
-	remoteClusters := make(map[string][]string)
+	remoteClusters := make(map[string]map[string]struct{})
 	parentClosePolicyWorkerEnabled := t.shard.GetConfig().EnableParentClosePolicyWorker()
 	if parentClosePolicyWorkerEnabled && len(childInfos) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
 		return nil, nil, true, nil
@@ -1720,7 +1720,10 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 		}
 		targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry)
 		if isCrossCluster {
-			remoteClusters[targetCluster] = append(remoteClusters[targetCluster], childInfo.DomainName)
+			if _, ok := remoteClusters[targetCluster]; !ok {
+				remoteClusters[targetCluster] = map[string]struct{}{}
+			}
+			remoteClusters[targetCluster][targetDomainEntry.GetInfo().ID] = struct{}{}
 		} else {
 			sameClusterChildDomainIDs[initiatedID] = targetDomainEntry.GetInfo().ID
 		}
