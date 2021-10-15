@@ -54,6 +54,9 @@ By default, it will load [the configuration in `config/canary/development.yaml`]
 Run `./cadence-canary -h` for details to understand the start options of how to change the loading directory if needed. 
 This will only start the workers. 
 
+In production, it's recommended to monitor the result of this canary. You can use [the workflow success metric](https://github.com/uber/cadence/blob/9336ed963ca1b5e0df7206312aa5236433e04fd9/service/history/execution/context_util.go#L138) 
+emitted by cadence history service `workflow_success`.  
+
 Configurations
 ----------------------
 Canary workers configuration contains two parts:
@@ -61,11 +64,11 @@ Canary workers configuration contains two parts:
 ```yaml 
 canary:
   domains: ["cadence-canary"] # it will start workers on all those domains(also try to register if not exists) 
-  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"] # it will exclude the three test cases
+  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility", "workflow.archival.history"] # it will exclude the three test cases. If archival is not enabled, you should exclude "workflow.archival.visibility" and"workflow.archival.history". If advanced visibility is not enabled, you should exclude "workflow.searchAttributes" and "workflow.batch". Otherwise canary will fail on those test cases.  
   cron: 
-    cronSchedule: #the schedule of cron canary, default to "@every 30s"
-    cronExecutionTimeout: #the timeout of each run of the cron execution, default to 18 minutes
-    startJobTimeout: #the timeout of each run of the sanity test suite, default to 9 minutes
+    cronSchedule: "@every 30s" #the schedule of cron canary, default to "@every 30s"
+    cronExecutionTimeout: 18m #the timeout of each run of the cron execution, default to 18 minutes
+    startJobTimeout: 9m #the timeout of each run of the sanity test suite, default to 9 minutes
 ``` 
 An exception here is `HistoryArchival` and `VisibilityArchival` test cases will always use `canary-archival-domain` domain. 
 
