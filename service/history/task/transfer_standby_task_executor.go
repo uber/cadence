@@ -248,6 +248,12 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			return nil, err
 		}
 
+		domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+		if err != nil {
+			return nil, err
+		}
+		numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
+
 		// DO NOT REPLY TO PARENT
 		// since event replication should be done by active cluster
 		return nil, t.recordWorkflowClosed(
@@ -265,6 +271,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			visibilityMemo,
 			executionInfo.TaskList,
 			isCron,
+			numClusters,
 			searchAttr,
 		)
 	}
@@ -460,6 +467,12 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
 
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+	if err != nil {
+		return err
+	}
+	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
+
 	if isRecordStart {
 		return t.recordWorkflowStarted(
 			ctx,
@@ -473,6 +486,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			transferTask.GetTaskID(),
 			executionInfo.TaskList,
 			isCron,
+			numClusters,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -490,6 +504,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		executionInfo.TaskList,
 		visibilityMemo,
 		isCron,
+		numClusters,
 		searchAttr,
 	)
 

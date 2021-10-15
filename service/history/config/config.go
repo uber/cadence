@@ -497,7 +497,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		NumArchiveSystemWorkflows:       dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
 		ArchiveRequestRPS:               dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
 		AllowArchivingIncompleteHistory: dc.GetBoolProperty(dynamicconfig.AllowArchivingIncompleteHistory, false),
-		
+
 		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
 		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 512*1024),
 		HistorySizeLimitError:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError, 200*1024*1024),
