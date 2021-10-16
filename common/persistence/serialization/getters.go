@@ -1436,6 +1436,18 @@ func (t *TransferTaskInfo) GetTargetDomainID() (o []byte) {
 	return
 }
 
+// GetTargetDomainIDs internal sql blob getter
+func (t *TransferTaskInfo) GetTargetDomainIDs() (o map[string]struct{}) {
+	if t != nil {
+		targetDomainIDs := make(map[string]struct{})
+		for _, domainID := range t.TargetDomainIDs {
+			targetDomainIDs[domainID.String()] = struct{}{}
+		}
+		return targetDomainIDs
+	}
+	return
+}
+
 // GetTargetWorkflowID internal sql blob getter
 func (t *TransferTaskInfo) GetTargetWorkflowID() (o string) {
 	if t != nil {

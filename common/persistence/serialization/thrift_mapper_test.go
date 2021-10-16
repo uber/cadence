@@ -438,6 +438,7 @@ func TestTransferTaskInfo(t *testing.T) {
 		RunID:                   UUID(uuid.New()),
 		TaskType:                int16(rand.Intn(1000)),
 		TargetDomainID:          UUID(uuid.New()),
+		TargetDomainIDs:         []UUID{UUID(uuid.New()), UUID(uuid.New())},
 		TargetWorkflowID:        "TargetWorkflowID",
 		TargetRunID:             UUID(uuid.New()),
 		TaskList:                "TaskList",
