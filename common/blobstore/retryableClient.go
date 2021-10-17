@@ -30,8 +30,8 @@ import (
 
 type (
 	retryableClient struct {
-		client Client
-		policy backoff.RetryPolicy
+		client        Client
+		throttleRetry *backoff.ThrottleRetry
 	}
 )
 
@@ -39,7 +39,10 @@ type (
 func NewRetryableClient(client Client, policy backoff.RetryPolicy) Client {
 	return &retryableClient{
 		client: client,
-		policy: policy,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(policy),
+			backoff.WithRetryableError(client.IsRetryableError),
+		),
 	}
 }
 
@@ -50,7 +53,7 @@ func (c *retryableClient) Put(ctx context.Context, req *PutRequest) (*PutRespons
 		resp, err = c.client.Put(ctx, req)
 		return err
 	}
-	err = backoff.Retry(op, c.policy, c.client.IsRetryableError)
+	err = c.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +67,7 @@ func (c *retryableClient) Get(ctx context.Context, req *GetRequest) (*GetRespons
 		resp, err = c.client.Get(ctx, req)
 		return err
 	}
-	err = backoff.Retry(op, c.policy, c.client.IsRetryableError)
+	err = c.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +81,7 @@ func (c *retryableClient) Exists(ctx context.Context, req *ExistsRequest) (*Exis
 		resp, err = c.client.Exists(ctx, req)
 		return err
 	}
-	err = backoff.Retry(op, c.policy, c.client.IsRetryableError)
+	err = c.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +95,7 @@ func (c *retryableClient) Delete(ctx context.Context, req *DeleteRequest) (*Dele
 		resp, err = c.client.Delete(ctx, req)
 		return err
 	}
-	err = backoff.Retry(op, c.policy, c.client.IsRetryableError)
+	err = c.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, err
 	}

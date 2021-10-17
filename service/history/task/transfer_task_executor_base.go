@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/client/matching"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -57,6 +58,7 @@ type (
 		matchingClient matching.Client
 		visibilityMgr  persistence.VisibilityManager
 		config         *config.Config
+		throttleRetry  *backoff.ThrottleRetry
 	}
 )
 
@@ -76,6 +78,10 @@ func newTransferTaskExecutorBase(
 		matchingClient: shard.GetService().GetMatchingClient(),
 		visibilityMgr:  shard.GetService().GetVisibilityManager(),
 		config:         config,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(taskRetryPolicy),
+			backoff.WithRetryableError(common.IsServiceTransientError),
+		),
 	}
 }
 
@@ -143,6 +149,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	taskID int64,
 	taskList string,
 	isCron bool,
+	numClusters int16,
 	visibilityMemo *types.Memo,
 	searchAttributes map[string][]byte,
 ) error {
@@ -177,6 +184,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		Memo:               visibilityMemo,
 		TaskList:           taskList,
 		IsCron:             isCron,
+		NumClusters:        numClusters,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -196,6 +204,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	taskList string,
 	visibilityMemo *types.Memo,
 	isCron bool,
+	numClusters int16,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -222,6 +231,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		Memo:               visibilityMemo,
 		TaskList:           taskList,
 		IsCron:             isCron,
+		NumClusters:        numClusters,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -243,6 +253,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	visibilityMemo *types.Memo,
 	taskList string,
 	isCron bool,
+	numClusters int16,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -292,6 +303,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
 			IsCron:             isCron,
+			NumClusters:        numClusters,
 		}); err != nil {
 			return err
 		}

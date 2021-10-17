@@ -810,8 +810,8 @@ func createCrossClusterTasks(
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
-			for _, targetDomainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
-				info.TargetDomainIDs = append(info.TargetDomainIDs, serialization.MustParseUUID(targetDomainID))
+			for domainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
+				info.TargetDomainIDs = append(info.TargetDomainIDs, serialization.MustParseUUID(domainID))
 			}
 
 		default:
@@ -924,7 +924,7 @@ func createTransferTasks(
 			info.ScheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID
 
 		case p.TransferTaskTypeApplyParentClosePolicy:
-			for _, targetDomainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
+			for targetDomainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
 				info.TargetDomainIDs = append(info.TargetDomainIDs, serialization.MustParseUUID(targetDomainID))
 			}
 

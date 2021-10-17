@@ -42,6 +42,7 @@ Cadence CLI can be used to operate workflows, tasklist, domain and even the clus
 
 You can use the following ways to install Cadence CLI:
 * Use brew to install CLI: `brew install cadence-workflow`
+  * Follow the [instructions](https://github.com/uber/cadence/discussions/4457) if you need to install older versions of CLI via homebrew. Usually this is only needed when you are running a server of a too old version.
 * Use docker image for CLI: `docker run --rm ubercadence/cli:<releaseVersion>`  or `docker run --rm ubercadence/cli:master ` . Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
 * Build the CLI binary yourself, check out the repo and run `make cadence` to build all tools. See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command.
 * Build the CLI image yourself, see [instructions](docker/README.md#diy-building-an-image-for-any-tag-or-branch)
@@ -80,6 +81,11 @@ The easiest way to get the schema tool is via homebrew.
 
 `brew install cadence-workflow` also includes `cadence-sql-tool` and `cadence-cassandra-tool`. 
  * The schema files are located at `/usr/local/etc/cadence/schema/`.
+ * To upgrade, make sure you remove the old ElasticSearch schema first: `mv /usr/local/etc/cadence/schema/elasticsearch /usr/local/etc/cadence/schema/elasticsearch.old && brew upgrade cadence-workflow`. Otherwise ElasticSearch schemas may not be able to get updated.
+ * Follow the [instructions](https://github.com/uber/cadence/discussions/4457) if you need to install older versions of schema tools via homebrew. 
+ However, easier way is to use new versions of schema tools with old versions of schemas. 
+ All you need is to check out the older version of schemas from this repo. Run `git checkout v0.21.3` to get the v0.21.3 schemas in [the schema folder](/schema). 
+ 
     
 ## License
 

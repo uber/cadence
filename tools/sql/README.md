@@ -13,6 +13,10 @@ SQL_USER=$USERNAME SQL_PASSWORD=$PASSWD make install-schema-mysql
 
 ### Get the SQL Schema tool
 * Use brew to install CLI: `brew install cadence-workflow` which includes `cadence-sql-tool`
+  * The schema files are located at `/usr/local/etc/cadence/schema/`.
+  * Follow the [instructions](https://github.com/uber/cadence/discussions/4457) if you need to install older versions of schema tools via homebrew. 
+ However, easier way is to use new versions of schema tools with old versions of schemas. 
+ All you need is to check out the older version of schemas from this repo. Run `git checkout v0.21.3` to get the v0.21.3 schemas in [the schema folder](/schema).
 * Or build yourself, with `make cadence-sql-tool`. See [CONTRIBUTING](/CONTRIBUTING.md) for prerequisite of make command.
 
 > Note: The binaries can also be found in the `ubercadence/server` docker images

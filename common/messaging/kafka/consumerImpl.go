@@ -64,6 +64,7 @@ type (
 
 		metricsClient metrics.Client
 		logger        log.Logger
+		throttleRetry *backoff.ThrottleRetry
 	}
 
 	messageImpl struct {
@@ -157,6 +158,10 @@ func newConsumerHandlerImpl(
 
 		metricsClient: metricsClient,
 		logger:        logger,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(common.CreateDlqPublishRetryPolicy()),
+			backoff.WithRetryableError(func(_ error) bool { return true }),
+		),
 	}
 }
 
@@ -193,7 +198,7 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 			cancel()
 			return err
 		}
-		err := backoff.Retry(op, common.CreateDlqPublishRetryPolicy(), nil)
+		err := h.throttleRetry.Do(context.Background(), op)
 		if err != nil {
 			h.metricsClient.IncCounter(metrics.MessagingClientConsumerScope, metrics.KafkaConsumerMessageNackDlqErr)
 			h.logger.Error("Fail to publish message to DLQ when nacking message, please take action!!",
