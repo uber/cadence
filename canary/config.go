@@ -40,6 +40,8 @@ const (
 	EnvKeyEnvironment = "CADENCE_CANARY_ENVIRONMENT"
 	// EnvKeyAvailabilityZone is the environment variable key for AZ
 	EnvKeyAvailabilityZone = "CADENCE_CANARY_AVAILABILITY_ZONE"
+	// EnvKeyMode is the environment variable key for Mode
+	EnvKeyMode = "CADENCE_CANARY_MODE"
 )
 
 const (

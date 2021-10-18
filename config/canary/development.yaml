@@ -4,5 +4,5 @@ canary:
 
 cadence:
   service: "cadence-frontend"
-  host: "127.0.0.1:7833"
-  #thost: "127.0.0.1:7933" # repalce host with thost if using Thrift for compatibility
+  #host: "127.0.0.1:7833"
+  thost: "127.0.0.1:7933" # repalce host with thost if using Thrift for compatibility
