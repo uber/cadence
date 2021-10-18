@@ -263,6 +263,7 @@ type (
 		RunID                   UUID
 		TaskType                int16
 		TargetDomainID          UUID
+		TargetDomainIDs         []UUID
 		TargetWorkflowID        string
 		TargetRunID             UUID
 		TaskList                string

@@ -386,27 +386,28 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 
 func (p *taskProcessorImpl) processSingleTask(replicationTask *types.ReplicationTask) error {
 	retryTransientError := func() error {
-		return backoff.Retry(
-			func() error {
-				select {
-				case <-p.done:
-					// if the processor is stopping, skip the task
-					// the ack level will not update and the new shard owner will retry the task.
-					return nil
-				default:
-					return p.processTaskOnce(replicationTask)
-				}
-			},
-			p.taskRetryPolicy,
-			isTransientRetryableError)
+		throttleRetry := backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(p.taskRetryPolicy),
+			backoff.WithRetryableError(isTransientRetryableError),
+		)
+		return throttleRetry.Do(context.Background(), func() error {
+			select {
+			case <-p.done:
+				// if the processor is stopping, skip the task
+				// the ack level will not update and the new shard owner will retry the task.
+				return nil
+			default:
+				return p.processTaskOnce(replicationTask)
+			}
+		})
 	}
 
 	//Handle service busy error
-	err := backoff.Retry(
-		retryTransientError,
-		common.CreateReplicationServiceBusyRetryPolicy(),
-		common.IsServiceBusyError,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreateReplicationServiceBusyRetryPolicy()),
+		backoff.WithRetryableError(common.IsServiceBusyError),
 	)
+	err := throttleRetry.Do(context.Background(), retryTransientError)
 
 	switch {
 	case err == nil:
@@ -490,15 +491,19 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *types.Repli
 		metrics.ReplicationDLQMaxLevelGauge,
 		float64(request.TaskInfo.GetTaskID()),
 	)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(p.dlqRetryPolicy),
+		backoff.WithRetryableError(p.shouldRetryDLQ),
+	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
-	return backoff.Retry(func() error {
+	return throttleRetry.Do(context.Background(), func() error {
 		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.Background(), request)
 		if err != nil {
 			p.logger.Error("Failed to put replication task to DLQ.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationTaskFetcherScope, metrics.ReplicationDLQFailed)
 		}
 		return err
-	}, p.dlqRetryPolicy, p.shouldRetryDLQ)
+	})
 }
 
 func (p *taskProcessorImpl) generateDLQRequest(
@@ -583,6 +588,7 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		ShardID:    p.shard.GetShardID(),
 	}
 	fixExecutionInput, err := json.Marshal(fixExecution)
 	if err != nil {
@@ -591,15 +597,15 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 	// Assume the workflow is corrupted, rely on invariant to validate it
 	_, err = client.SignalWithStartWorkflowExecution(context.Background(), &types.SignalWithStartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
-		WorkflowID:                          reconciliation.ExecutionFixerWorkflowID,
-		WorkflowType:                        &types.WorkflowType{Name: reconciliation.ExecutionFixerWorkflowType},
-		TaskList:                            &types.TaskList{Name: reconciliation.ExecutionFixerWorkflowTaskList},
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTimeout),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.ExecutionFixerWorkflowTaskTimeoutInSeconds),
+		WorkflowID:                          reconciliation.CheckDataCorruptionWorkflowID,
+		WorkflowType:                        &types.WorkflowType{Name: reconciliation.CheckDataCorruptionWorkflowType},
+		TaskList:                            &types.TaskList{Name: reconciliation.CheckDataCorruptionWorkflowTaskList},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.CheckDataCorruptionWorkflowTimeoutInSeconds),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.CheckDataCorruptionWorkflowTaskTimeoutInSeconds),
 		Identity:                            "cadence-history-replication",
 		RequestID:                           uuid.New(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
-		SignalName:                          reconciliation.ExecutionFixerWorkflowSignalName,
+		SignalName:                          reconciliation.CheckDataCorruptionWorkflowSignalName,
 		SignalInput:                         fixExecutionInput,
 	})
 	return err

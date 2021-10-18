@@ -319,8 +319,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		var taskList string
 		var scheduleID int64
 		var targetCluster string
-		var targetDomainID string
+		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
 		var targetWorkflowID string
+		targetDomainIDs := map[string]struct{}{}
 		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false
@@ -353,6 +354,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 
 		case p.CrossClusterTaskTypeApplyParentPolicy:
 			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
+			targetDomainIDs = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
 
 		default:
 			return nil, &types.InternalServiceError{
@@ -369,6 +371,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 				VisibilityTimestamp:     task.GetVisibilityTimestamp(),
 				TaskID:                  task.GetTaskID(),
 				TargetDomainID:          targetDomainID,
+				TargetDomainIDs:         targetDomainIDs,
 				TargetWorkflowID:        targetWorkflowID,
 				TargetRunID:             targetRunID,
 				TargetChildWorkflowOnly: targetChildWorkflowOnly,

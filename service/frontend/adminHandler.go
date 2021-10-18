@@ -103,6 +103,7 @@ type (
 		domainFailoverWatcher domain.FailoverWatcher
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
+		throttleRetry         *backoff.ThrottleRetry
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -155,6 +156,10 @@ func NewAdminHandler(
 		),
 		eventSerializer: persistence.NewPayloadSerializer(),
 		esClient:        params.ESClient,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(adminServiceRetryPolicy),
+			backoff.WithRetryableError(common.IsServiceTransientError),
+		),
 	}
 }
 
@@ -829,7 +834,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	default:
 		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
-	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
+	err = adh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -881,7 +886,7 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	default:
 		return &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
-	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
+	err = adh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -936,7 +941,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 	default:
 		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
-	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
+	err = adh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}

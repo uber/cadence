@@ -340,7 +340,11 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsBackgroundTransientError)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+		backoff.WithRetryableError(persistence.IsBackgroundTransientError),
+	)
+	err := throttleRetry.Do(context.Background(), op)
 	if err != nil {
 		return nil, false, err
 	}
@@ -366,7 +370,7 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 	}
 	iter.Close()
 
-	var result []*types.CrossClusterTaskRequest
+	result := []*types.CrossClusterTaskRequest{}
 	for _, task := range tasks {
 		request, err := task.GetCrossClusterRequest()
 		if err != nil {
@@ -375,8 +379,9 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 				if _, err := c.submitTask(task); err != nil {
 					break
 				}
+			} else {
+				c.logger.Error("Failed to get cross cluster request", tag.Error(err))
 			}
-			c.logger.Error("Failed to get cross cluster request", tag.Error(err))
 		} else if request != nil {
 			result = append(result, request)
 		} else {

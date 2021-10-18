@@ -234,6 +234,17 @@ func TestCrossClusterTaskRequestMap(t *testing.T) {
 	for _, item := range []map[int32][]*types.CrossClusterTaskRequest{nil, {}, testdata.CrossClusterTaskRequestMap} {
 		assert.Equal(t, item, ToCrossClusterTaskRequestMap(FromCrossClusterTaskRequestMap(item)))
 	}
+	assert.Equal(
+		t,
+		map[int32][]*types.CrossClusterTaskRequest{
+			0: {},
+		},
+		ToCrossClusterTaskRequestMap(FromCrossClusterTaskRequestMap(
+			map[int32][]*types.CrossClusterTaskRequest{
+				0: nil,
+			},
+		)),
+	)
 }
 
 func TestGetTaskFailedCauseMap(t *testing.T) {

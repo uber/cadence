@@ -29,7 +29,6 @@ import (
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
-	"go.uber.org/yarpc"
 	"golang.org/x/time/rate"
 
 	"github.com/uber/cadence/client/frontend"
@@ -348,9 +347,6 @@ func startTaskProcessor(
 			}
 			var err error
 			requestID := uuid.New().String()
-			yarpcCallOptions := []yarpc.CallOption{
-				yarpc.WithHeader(common.EnforceDCRedirection, "true"),
-			}
 
 			switch batchParams.BatchType {
 			case BatchTypeTerminate:
@@ -365,7 +361,7 @@ func startTaskProcessor(
 							},
 							Reason:   batchParams.Reason,
 							Identity: BatchWFTypeName,
-						}, yarpcCallOptions...)
+						})
 					})
 			case BatchTypeCancel:
 				err = processTask(ctx, limiter, task, batchParams, client,
@@ -379,7 +375,7 @@ func startTaskProcessor(
 							},
 							Identity:  BatchWFTypeName,
 							RequestID: requestID,
-						}, yarpcCallOptions...)
+						})
 					})
 			case BatchTypeSignal:
 				err = processTask(ctx, limiter, task, batchParams, client, common.BoolPtr(false),
@@ -394,7 +390,7 @@ func startTaskProcessor(
 							RequestID:  requestID,
 							SignalName: batchParams.SignalParams.SignalName,
 							Input:      []byte(batchParams.SignalParams.Input),
-						}, yarpcCallOptions...)
+						})
 					})
 			}
 			if err != nil {

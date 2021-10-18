@@ -44,7 +44,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/rpc"
 )
 
 type (
@@ -95,7 +94,6 @@ type (
 		messagingClient        messaging.Client
 		blobstoreClient        blobstore.Client
 		dynamicCollection      *dynamicconfig.Collection
-		dispatcherProvider     rpc.DispatcherProvider
 		archivalMetadata       archiver.ArchivalMetadata
 		archiverProvider       provider.ArchiverProvider
 		serializer             persistence.PayloadSerializer
@@ -122,7 +120,6 @@ func NewService(params *resource.Params) Service {
 		metricsClient:         params.MetricsClient,
 		messagingClient:       params.MessagingClient,
 		blobstoreClient:       params.BlobstoreClient,
-		dispatcherProvider:    params.DispatcherProvider,
 		dynamicCollection: dynamicconfig.NewCollection(
 			params.DynamicConfig,
 			params.Logger,
@@ -187,7 +184,7 @@ func (h *serviceImpl) Start() {
 
 	h.clientBean, err = client.NewClientBean(
 		client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards, h.logger),
-		h.dispatcherProvider,
+		h.rpcFactory.GetDispatcher(),
 		h.clusterMetadata,
 	)
 	if err != nil {

@@ -220,6 +220,7 @@ type (
 		Encoding      string
 		TaskList      string
 		IsCron        bool
+		NumClusters   int16
 		Attr          map[string]interface{}
 	}
 )

@@ -162,6 +162,13 @@ func TestInvalidMultipleDatabaseConfig_nonEmptySQLConnAddr(t *testing.T) {
 func TestConfigFallbacks(t *testing.T) {
 	metadata := validClusterGroupMetadata()
 	cfg := &Config{
+		Services: map[string]Service{
+			"frontend": {
+				RPC: RPC{
+					Port: 7900,
+				},
+			},
+		},
 		ClusterGroupMetadata: metadata,
 		Persistence: Persistence{
 			DefaultStore:    "default",
@@ -191,7 +198,7 @@ func TestConfigFallbacks(t *testing.T) {
 	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].Cassandra, "cassandra config should remain after update")
 	assert.NotEmpty(t, cfg.Persistence.DataStores["cass"].NoSQL, "nosql config should contain cassandra config / not be empty")
 	assert.NotZero(t, cfg.Persistence.DataStores["default"].SQL.NumShards, "num shards should be nonzero")
-	assert.Equal(t, metadata.ClusterGroup[metadata.CurrentClusterName].RPCAddress, cfg.PublicClient.HostPort)
+	assert.Equal(t, "localhost:7900", cfg.PublicClient.HostPort)
 }
 
 func TestConfigErrorInAuthorizationConfig(t *testing.T) {
@@ -204,6 +211,7 @@ func TestConfigErrorInAuthorizationConfig(t *testing.T) {
 				Enable: true,
 			},
 		},
+		ClusterGroupMetadata: &ClusterGroupMetadata{},
 	}
 
 	err := cfg.ValidateAndFillDefaults()

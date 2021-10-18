@@ -616,6 +616,7 @@ func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
+		NumClusters:      source.NumClusters,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {

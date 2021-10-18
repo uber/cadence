@@ -28,16 +28,12 @@ import (
 	"sync/atomic"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/grpc"
-	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
-	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/rpc"
 )
 
 type (
@@ -63,7 +59,7 @@ type (
 )
 
 // NewClientBean provides a collection of clients
-func NewClientBean(factory Factory, dispatcherProvider rpc.DispatcherProvider, clusterMetadata cluster.Metadata) (Bean, error) {
+func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadata cluster.Metadata) (Bean, error) {
 
 	historyClient, err := factory.NewHistoryClient()
 	if err != nil {
@@ -77,31 +73,7 @@ func NewClientBean(factory Factory, dispatcherProvider rpc.DispatcherProvider, c
 			continue
 		}
 
-		var dispatcherOptions *rpc.DispatcherOptions
-		if info.AuthorizationProvider.Enable {
-			authProvider, err := authorization.GetAuthProviderClient(info.AuthorizationProvider.PrivateKey)
-			if err != nil {
-				return nil, err
-			}
-			dispatcherOptions = &rpc.DispatcherOptions{
-				AuthProvider: authProvider,
-			}
-		}
-
-		var dispatcher *yarpc.Dispatcher
-		var err error
-		switch info.RPCTransport {
-		case tchannel.TransportName:
-			dispatcher, err = dispatcherProvider.GetTChannel(info.RPCName, info.RPCAddress, dispatcherOptions)
-		case grpc.TransportName:
-			dispatcher, err = dispatcherProvider.GetGRPC(info.RPCName, info.RPCAddress, dispatcherOptions)
-		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		clientConfig := dispatcher.ClientConfig(info.RPCName)
+		clientConfig := dispatcher.ClientConfig(clusterName)
 
 		adminClient, err := factory.NewAdminClientWithTimeoutAndConfig(
 			clientConfig,

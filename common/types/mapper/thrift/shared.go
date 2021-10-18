@@ -7306,16 +7306,184 @@ func ToCrossClusterSignalExecutionResponseAttributes(t *shared.CrossClusterSigna
 	return &types.CrossClusterSignalExecutionResponseAttributes{}
 }
 
+// FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes converts internal
+// CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes type to thrift
+func FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(
+	t *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes,
+) *shared.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   &t.TargetDomainID,
+		TargetWorkflowID: &t.TargetWorkflowID,
+		TargetRunID:      &t.TargetRunID,
+		InitiatedEventID: &t.InitiatedEventID,
+		CompletionEvent:  FromHistoryEvent(t.CompletionEvent),
+	}
+}
+
+// ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes converts thrift
+// CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes type to internal
+func ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(
+	t *shared.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes,
+) *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   t.GetTargetDomainID(),
+		TargetWorkflowID: t.GetTargetWorkflowID(),
+		TargetRunID:      t.GetTargetRunID(),
+		InitiatedEventID: t.GetInitiatedEventID(),
+		CompletionEvent:  ToHistoryEvent(t.CompletionEvent),
+	}
+}
+
+// FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts internal
+// CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to thrift
+func FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(
+	t *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes,
+) *shared.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+}
+
+// ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts thrift
+// CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to internal
+func ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(
+	t *shared.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes,
+) *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+}
+
+// FromApplyParentClosePolicyAttributes converts internal
+// ApplyParentClosePolicyAttributes types to thrift
+func FromApplyParentClosePolicyAttributes(
+	t *types.ApplyParentClosePolicyAttributes,
+) *shared.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.ApplyParentClosePolicyAttributes{
+		ChildDomainID:     &t.ChildDomainID,
+		ChildWorkflowID:   &t.ChildWorkflowID,
+		ChildRunID:        &t.ChildRunID,
+		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// ToApplyParentClosePolicyAttributes converts thrift
+// ApplyParentClosePolicyAttributes types to internal
+func ToApplyParentClosePolicyAttributes(
+	t *shared.ApplyParentClosePolicyAttributes,
+) *types.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.ApplyParentClosePolicyAttributes{
+		ChildDomainID:     t.GetChildDomainID(),
+		ChildWorkflowID:   t.GetChildWorkflowID(),
+		ChildRunID:        t.GetChildRunID(),
+		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// FromApplyParentClosePolicyAttributesArray converts thrift
+// ApplyParentClosePolicyAttributesArray types to internal
+func FromApplyParentClosePolicyAttributesArray(
+	t []*types.ApplyParentClosePolicyAttributes,
+) []*shared.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.ApplyParentClosePolicyAttributes, len(t))
+	for i := range t {
+		v[i] = FromApplyParentClosePolicyAttributes(t[i])
+	}
+	return v
+}
+
+// ToApplyParentClosePolicyAttributesArray converts internal
+// ApplyParentClosePolicyAttributesArray types to thrift
+func ToApplyParentClosePolicyAttributesArray(
+	t []*shared.ApplyParentClosePolicyAttributes,
+) []*types.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.ApplyParentClosePolicyAttributes, len(t))
+	for i := range t {
+		v[i] = ToApplyParentClosePolicyAttributes(t[i])
+	}
+	return v
+}
+
+// FromCrossClusterApplyParentClosePolicyRequestAttributes converts internal
+// CrossClusterApplyParentClosePolicyRequestAttributes types to thrift
+func FromCrossClusterApplyParentClosePolicyRequestAttributes(
+	t *types.CrossClusterApplyParentClosePolicyRequestAttributes,
+) *shared.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterApplyParentClosePolicyRequestAttributes{
+		ApplyParentClosePolicyAttributes: FromApplyParentClosePolicyAttributesArray(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// ToCrossClusterApplyParentClosePolicyRequestAttributes converts thrift
+// CrossClusterApplyParentClosePolicyRequestAttributes types to internal
+func ToCrossClusterApplyParentClosePolicyRequestAttributes(
+	t *shared.CrossClusterApplyParentClosePolicyRequestAttributes,
+) *types.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterApplyParentClosePolicyRequestAttributes{
+		ApplyParentClosePolicyAttributes: ToApplyParentClosePolicyAttributesArray(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// FromCrossClusterApplyParentClosePolicyResponseAttributes converts internal
+// CrossClusterApplyParentClosePolicyResponseAttributes type to thrift
+func FromCrossClusterApplyParentClosePolicyResponseAttributes(
+	t *types.CrossClusterApplyParentClosePolicyResponseAttributes,
+) *shared.CrossClusterApplyParentClosePolicyResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+
+// ToCrossClusterApplyParentClosePolicyResponseAttributes converts thrift
+// CrossClusterApplyParentClosePolicyResponseAttributes type to internal
+func ToCrossClusterApplyParentClosePolicyResponseAttributes(
+	t *shared.CrossClusterApplyParentClosePolicyResponseAttributes,
+) *types.CrossClusterApplyParentClosePolicyResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+
 // FromCrossClusterTaskRequest converts internal CrossClusterTaskRequest type to thrift
 func FromCrossClusterTaskRequest(t *types.CrossClusterTaskRequest) *shared.CrossClusterTaskRequest {
 	if t == nil {
 		return nil
 	}
 	return &shared.CrossClusterTaskRequest{
-		TaskInfo:                      FromCrossClusterTaskInfo(t.TaskInfo),
-		StartChildExecutionAttributes: FromCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
-		CancelExecutionAttributes:     FromCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
-		SignalExecutionAttributes:     FromCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		TaskInfo:                                       FromCrossClusterTaskInfo(t.TaskInfo),
+		StartChildExecutionAttributes:                  FromCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
+		CancelExecutionAttributes:                      FromCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
+		SignalExecutionAttributes:                      FromCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               FromCrossClusterApplyParentClosePolicyRequestAttributes(t.ApplyParentClosePolicyAttributes),
 	}
 }
 
@@ -7325,10 +7493,12 @@ func ToCrossClusterTaskRequest(t *shared.CrossClusterTaskRequest) *types.CrossCl
 		return nil
 	}
 	return &types.CrossClusterTaskRequest{
-		TaskInfo:                      ToCrossClusterTaskInfo(t.TaskInfo),
-		StartChildExecutionAttributes: ToCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
-		CancelExecutionAttributes:     ToCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
-		SignalExecutionAttributes:     ToCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		TaskInfo:                                       ToCrossClusterTaskInfo(t.TaskInfo),
+		StartChildExecutionAttributes:                  ToCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
+		CancelExecutionAttributes:                      ToCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
+		SignalExecutionAttributes:                      ToCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               ToCrossClusterApplyParentClosePolicyRequestAttributes(t.ApplyParentClosePolicyAttributes),
 	}
 }
 
@@ -7345,6 +7515,8 @@ func FromCrossClusterTaskResponse(t *types.CrossClusterTaskResponse) *shared.Cro
 		StartChildExecutionAttributes: FromCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
 		CancelExecutionAttributes:     FromCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),
 		SignalExecutionAttributes:     FromCrossClusterSignalExecutionResponseAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               FromCrossClusterApplyParentClosePolicyResponseAttributes(t.ApplyParentClosePolicyAttributes),
 	}
 }
 
@@ -7361,6 +7533,8 @@ func ToCrossClusterTaskResponse(t *shared.CrossClusterTaskResponse) *types.Cross
 		StartChildExecutionAttributes: ToCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
 		CancelExecutionAttributes:     ToCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),
 		SignalExecutionAttributes:     ToCrossClusterSignalExecutionResponseAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               ToCrossClusterApplyParentClosePolicyResponseAttributes(t.ApplyParentClosePolicyAttributes),
 	}
 }
 

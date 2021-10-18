@@ -176,7 +176,7 @@ func (s *Scanner) startShardScanner(
 	ctx context.Context,
 	config *shardscanner.ScannerConfig,
 ) (context.Context, []string) {
-	workerTaskListNames := []string{}
+	var workerTaskListNames []string
 	if config.DynamicParams.ScannerEnabled() {
 		ctx = shardscanner.NewScannerContext(
 			ctx,
@@ -234,10 +234,12 @@ func (s *Scanner) startWorkflowWithRetry(
 	policy := backoff.NewExponentialRetryPolicy(time.Second)
 	policy.SetMaximumInterval(time.Minute)
 	policy.SetExpirationInterval(backoff.NoInterval)
-	err := backoff.Retry(func() error {
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(policy),
+		backoff.WithRetryableError(func(_ error) bool { return true }),
+	)
+	err := throttleRetry.Do(context.Background(), func() error {
 		return s.startWorkflow(sdkClient, options, workflowType, workflowArg)
-	}, policy, func(err error) bool {
-		return true
 	})
 	if err != nil {
 		res.GetLogger().Fatal("unable to start scanner", tag.WorkflowType(workflowType), tag.Error(err))

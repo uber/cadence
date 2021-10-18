@@ -64,9 +64,10 @@ type (
 
 	// Config for ClientWorker
 	Config struct {
-		ArchiverConcurrency           dynamicconfig.IntPropertyFn
-		ArchivalsPerIteration         dynamicconfig.IntPropertyFn
-		TimeLimitPerArchivalIteration dynamicconfig.DurationPropertyFn
+		ArchiverConcurrency             dynamicconfig.IntPropertyFn
+		ArchivalsPerIteration           dynamicconfig.IntPropertyFn
+		TimeLimitPerArchivalIteration   dynamicconfig.DurationPropertyFn
+		AllowArchivingIncompleteHistory dynamicconfig.BoolPropertyFn
 	}
 
 	contextKey int
