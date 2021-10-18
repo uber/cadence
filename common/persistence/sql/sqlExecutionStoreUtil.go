@@ -820,7 +820,7 @@ func createCrossClusterTasks(
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
-			for domainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {
+			for domainID := range task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs {
 				info.TargetDomainIDs = append(info.TargetDomainIDs, serialization.MustParseUUID(domainID))
 			}
 

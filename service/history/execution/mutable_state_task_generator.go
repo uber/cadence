@@ -185,20 +185,24 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		if err != nil {
 			return err
 		}
-		recordChildCompletionTask := &persistence.RecordChildExecutionCompletedTask{
-			TargetDomainID:   executionInfo.ParentDomainID,
-			TargetWorkflowID: executionInfo.ParentWorkflowID,
-			TargetRunID:      executionInfo.ParentRunID,
-			InitiatedID:      executionInfo.InitiatedID,
-			Version:          closeEvent.GetVersion(),
-		}
-		if !isActive {
-			crossClusterTasks = append(crossClusterTasks, &persistence.CrossClusterRecordChildExecutionCompleteTask{
-				TargetCluster:                     parentTargetCluster,
-				RecordChildExecutionCompletedTask: *recordChildCompletionTask,
-			})
-		} else {
-			transferTasks = append(transferTasks, recordChildCompletionTask)
+
+		if parentTargetCluster != "" {
+			recordChildCompletionTask := &persistence.RecordChildExecutionCompletedTask{
+				TargetDomainID:   executionInfo.ParentDomainID,
+				TargetWorkflowID: executionInfo.ParentWorkflowID,
+				TargetRunID:      executionInfo.ParentRunID,
+				InitiatedID:      executionInfo.InitiatedID,
+				Version:          closeEvent.GetVersion(),
+			}
+
+			if !isActive {
+				crossClusterTasks = append(crossClusterTasks, &persistence.CrossClusterRecordChildExecutionCompleteTask{
+					TargetCluster:                     parentTargetCluster,
+					RecordChildExecutionCompletedTask: *recordChildCompletionTask,
+				})
+			} else {
+				transferTasks = append(transferTasks, recordChildCompletionTask)
+			}
 		}
 
 		// 2. check if child domains are cross cluster
