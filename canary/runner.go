@@ -94,7 +94,7 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 			workflowserviceclient.New(dispatcher.ClientConfig(cfg.Cadence.ServiceName)),
 		)
 	} else {
-		return nil, fmt.Errorf("must specify either gRPC hostport(host) or Thrift hostport (thost) in the config")
+		return nil, fmt.Errorf("must specify either gRPC address(address) or Thrift address (host) in the config")
 	}
 
 	if err := dispatcher.Start(); err != nil {
