@@ -85,7 +85,7 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 		dispatcher = yarpc.NewDispatcher(yarpc.Config{
 			Name: CanaryServiceName,
 			Outbounds: yarpc.Outbounds{
-				cfg.Cadence.ServiceName: {Unary: tch.NewSingleOutbound(cfg.Cadence.HostNameAndPort)},
+				cfg.Cadence.ServiceName: {Unary: tch.NewSingleOutbound(cfg.Cadence.ThriftHostNameAndPort)},
 			},
 		})
 		runtimeContext = NewRuntimeContext(
