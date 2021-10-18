@@ -529,7 +529,14 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 	}
 
 	attributes := &types.CrossClusterApplyParentClosePolicyRequestAttributes{}
-	children := mutableState.GetPendingChildExecutionInfos()
+	children, err := filterPendingChildExecutions(
+		taskInfo.TargetDomainIDs,
+		mutableState.GetPendingChildExecutionInfos(),
+		t.GetShard().GetDomainCache(),
+	)
+	if err != nil {
+		return nil, t.processingState, err
+	}
 	for _, childInfo := range children {
 		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
 		if err != nil {

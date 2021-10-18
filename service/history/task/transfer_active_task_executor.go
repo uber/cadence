@@ -390,10 +390,18 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			return err
 		}
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and use here as a back-up to save latency
+			parentInfo := &types.ParentExecutionInfo{
+				DomainUUID: parentDomainID,
+				Domain:     targetDomainEntry.GetInfo().Name,
+				Execution: &types.WorkflowExecution{
+					WorkflowID: parentWorkflowID,
+					RunID:      parentRunID,
+				},
+				InitiatedID: initiatedID,
+			}
 			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+					return taskGenerator.GenerateFromCloseExecutionTask(task, targetCluster, parentInfo, nil)
 				})
 			replyToParentWorkflow = false
 		}
@@ -1429,7 +1437,7 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
 		task,
 		[]generatorF{
 			func(taskGenerator execution.MutableStateTaskGenerator) error {
-				return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+				return taskGenerator.GenerateFromTransferTask(task, targetCluster)
 			},
 		},
 	)
@@ -1791,7 +1799,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 			generators = append(
 				generators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster, targetDomainIDs)
+					return taskGenerator.GenerateFromCloseExecutionTask(task, remoteCluster, nil, targetDomainIDs)
 				})
 		}
 		return generators, sameClusterChildDomainIDs, false, nil

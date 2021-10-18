@@ -793,7 +793,9 @@ func createCrossClusterTasks(
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterCancelExecutionTask).TargetCluster
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterCancelExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
-			info.TargetRunID = serialization.MustParseUUID(task.(*p.CrossClusterCancelExecutionTask).TargetRunID)
+			if targetRunID := task.(*p.CrossClusterCancelExecutionTask).TargetRunID; targetRunID != "" {
+				info.TargetRunID = serialization.MustParseUUID(targetRunID)
+			}
 			info.TargetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
 
@@ -801,12 +803,20 @@ func createCrossClusterTasks(
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterSignalExecutionTask).TargetCluster
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterSignalExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
-			info.TargetRunID = serialization.MustParseUUID(task.(*p.CrossClusterSignalExecutionTask).TargetRunID)
+			if targetRunID := task.(*p.CrossClusterSignalExecutionTask).TargetRunID; targetRunID != "" {
+				info.TargetRunID = serialization.MustParseUUID(targetRunID)
+			}
 			info.TargetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
 		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
-			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetCluster
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetWorkflowID
+			if targetRunID := task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetRunID; targetRunID != "" {
+				info.TargetRunID = serialization.MustParseUUID(targetRunID)
+			}
+			info.ScheduleID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).InitiatedID
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
@@ -895,8 +905,8 @@ func createTransferTasks(
 		case p.TransferTaskTypeCancelExecution:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = task.(*p.CancelExecutionTask).TargetWorkflowID
-			if task.(*p.CancelExecutionTask).TargetRunID != "" {
-				info.TargetRunID = serialization.MustParseUUID(task.(*p.CancelExecutionTask).TargetRunID)
+			if targetRunID := task.(*p.CancelExecutionTask).TargetRunID; targetRunID != "" {
+				info.TargetRunID = serialization.MustParseUUID(targetRunID)
 			}
 			info.TargetChildWorkflowOnly = task.(*p.CancelExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = task.(*p.CancelExecutionTask).InitiatedID
@@ -904,8 +914,8 @@ func createTransferTasks(
 		case p.TransferTaskTypeSignalExecution:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetDomainID)
 			info.TargetWorkflowID = task.(*p.SignalExecutionTask).TargetWorkflowID
-			if task.(*p.SignalExecutionTask).TargetRunID != "" {
-				info.TargetRunID = serialization.MustParseUUID(task.(*p.SignalExecutionTask).TargetRunID)
+			if targetRunID := task.(*p.SignalExecutionTask).TargetRunID; targetRunID != "" {
+				info.TargetRunID = serialization.MustParseUUID(targetRunID)
 			}
 			info.TargetChildWorkflowOnly = task.(*p.SignalExecutionTask).TargetChildWorkflowOnly
 			info.ScheduleID = task.(*p.SignalExecutionTask).InitiatedID
@@ -918,7 +928,7 @@ func createTransferTasks(
 		case p.TransferTaskTypeRecordChildExecutionCompleted:
 			info.TargetDomainID = serialization.MustParseUUID(task.(*p.RecordChildExecutionCompletedTask).TargetDomainID)
 			info.TargetWorkflowID = task.(*p.RecordChildExecutionCompletedTask).TargetWorkflowID
-			if targetRunID := task.(*p.RecordChildExecutionCompletedTask).TargetRunID; targetRunID == "" {
+			if targetRunID := task.(*p.RecordChildExecutionCompletedTask).TargetRunID; targetRunID != "" {
 				info.TargetRunID = serialization.MustParseUUID(targetRunID)
 			}
 			info.ScheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID

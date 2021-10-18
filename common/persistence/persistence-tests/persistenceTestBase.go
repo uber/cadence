@@ -1005,7 +1005,7 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 			*p.RecordWorkflowStartedTask, *p.ResetWorkflowTask, *p.UpsertWorkflowSearchAttributesTask:
 			transferTasks = append(transferTasks, t)
 		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask,
-			*p.CrossClusterRecordChildWorkflowExecutionCompleteTask, *p.CrossClusterApplyParentClosePolicyTask:
+			*p.CrossClusterRecordChildExecutionCompleteTask, *p.CrossClusterApplyParentClosePolicyTask:
 			crossClusterTasks = append(crossClusterTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)

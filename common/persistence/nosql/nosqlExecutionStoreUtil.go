@@ -338,6 +338,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
 
@@ -346,11 +349,21 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
 		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
-			targetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
+			targetCluster = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+			}
+			scheduleID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).InitiatedID
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster

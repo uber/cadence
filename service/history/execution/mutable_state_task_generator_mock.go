@@ -241,32 +241,32 @@ func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateWorkflowResetTasks(
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateWorkflowResetTasks", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateWorkflowResetTasks))
 }
 
-// GenerateCrossClusterTaskFromTransferTask mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateCrossClusterTaskFromTransferTask(transferTask *persistence.TransferTaskInfo, targetCluster string) error {
+// GenerateFromTransferTask mocks base method
+func (m *MockMutableStateTaskGenerator) GenerateFromTransferTask(transferTask *persistence.TransferTaskInfo, targetCluster string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateCrossClusterTaskFromTransferTask", transferTask, targetCluster)
+	ret := m.ctrl.Call(m, "GenerateFromTransferTask", transferTask, targetCluster)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// GenerateCrossClusterTaskFromTransferTask indicates an expected call of GenerateCrossClusterTaskFromTransferTask
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateCrossClusterTaskFromTransferTask(transferTask, targetCluster interface{}) *gomock.Call {
+// GenerateFromTransferTask indicates an expected call of GenerateFromTransferTask
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateFromTransferTask(transferTask, targetCluster interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCrossClusterTaskFromTransferTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateCrossClusterTaskFromTransferTask), transferTask, targetCluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateFromTransferTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateFromTransferTask), transferTask, targetCluster)
 }
 
-// GenerateCrossClusterApplyParentClosePolicyTask mocks base method
-func (m *MockMutableStateTaskGenerator) GenerateCrossClusterApplyParentClosePolicyTask(transferTask *persistence.TransferTaskInfo, targetCluster string, targetDomainIDs map[string]struct{}) error {
+// GenerateFromCloseExecutionTask mocks base method
+func (m *MockMutableStateTaskGenerator) GenerateFromCloseExecutionTask(transferTask *persistence.TransferTaskInfo, targetCluster string, parentInfo *types.ParentExecutionInfo, childDomainIDs map[string]struct{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GenerateCrossClusterApplyParentClosePolicyTask", transferTask, targetCluster)
+	ret := m.ctrl.Call(m, "GenerateFromCloseExecutionTask", transferTask, targetCluster, parentInfo, childDomainIDs)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// GenerateCrossClusterApplyParentClosePolicyTask indicates an expected call of GenerateCrossClusterApplyParentClosePolicyTask
-func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateCrossClusterApplyParentClosePolicyTask(transferTask, targetCluster string, targetDomainIDs map[string]struct{}) *gomock.Call {
+// GenerateFromCloseExecutionTask indicates an expected call of GenerateFromCloseExecutionTask
+func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateFromCloseExecutionTask(transferTask, targetCluster, parentInfo, childDomainIDs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCrossClusterApplyParentClosePolicyTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateCrossClusterApplyParentClosePolicyTask), transferTask, targetCluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateFromCloseExecutionTask", reflect.TypeOf((*MockMutableStateTaskGenerator)(nil).GenerateFromCloseExecutionTask), transferTask, targetCluster, parentInfo, childDomainIDs)
 }
 
 // GenerateFromCrossClusterTask mocks base method
