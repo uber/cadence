@@ -9,3 +9,4 @@ canary:
 cadence:
   service: "cadence-frontend"
   host: "host.docker.internal:7833" # see https://docs.docker.com/desktop/mac/networking/
+  #thost: "127.0.0.1:7933" # repalce host with thost if using Thrift for compatibility
