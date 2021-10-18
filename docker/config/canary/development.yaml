@@ -4,8 +4,8 @@ log:
 
 canary:
   domains: ["cadence-canary"]
-  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"]
+  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.history", "workflow.archival.visibility"]
 
 cadence:
   service: "cadence-frontend"
-  host: "host.docker.internal:7933" # see https://docs.docker.com/desktop/mac/networking/
+  host: "host.docker.internal:7833" # see https://docs.docker.com/desktop/mac/networking/

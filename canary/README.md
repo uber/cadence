@@ -14,9 +14,9 @@ For local server env you can run it through:
 - Docker: Instructions for running Cadence server through docker can be found in `docker/README.md`. Either `docker-compose-es-v7.yml` or `docker-compose-es.yml` can be used to start the server.
 - Build from source: Please check [CONTRIBUTING](/CONTRIBUTING.md) for how to build and run Cadence server from source. Please also make sure Kafka and ElasticSearch are running before starting the server with `./cadence-server --zone es start`. If ElasticSearch v7 is used, change the value for `--zone` flag to `es_v7`.
 
-### Start canary
+### Start canary worker
 
-:warning: NOTE: By default, starting this canary worker will not automatically start a canary test. Next two sections will cover how to start and configure it.
+:warning: NOTE: By default, starting this canary worker will **NOT** start any canary tests. See Configuration section for how to start the tests.
 
 Different ways of start the canary workers:
 
@@ -55,7 +55,7 @@ Run `./cadence-canary -h` for details to understand the start options of how to 
 This will only start the workers. 
 
 In production, it's recommended to monitor the result of this canary. You can use [the workflow success metric](https://github.com/uber/cadence/blob/9336ed963ca1b5e0df7206312aa5236433e04fd9/service/history/execution/context_util.go#L138) 
-emitted by cadence history service `workflow_success`.  
+emitted by cadence history service `workflow_success`. To monitor all the canary test cases, use `workflowType` of `workflow.sanity`. 
 
 Configurations
 ----------------------
@@ -76,15 +76,15 @@ An exception here is `HistoryArchival` and `VisibilityArchival` test cases will 
 ```yaml
 cadence:
   service: "cadence-frontend" # frontend service name
-  host: "127.0.0.1:7933" # frontend address
+  host: "127.0.0.1:7833" # frontend address
 ```
 - **Metrics**: metrics configuration. Similar to server metric emitter, only M3/Statsd/Prometheus is supported. 
 - **Log**: logging configuration.  Similar to server logging configuration. 
 
-Canary Test Cases
+Canary Test Cases & Starter
 ----------------------
 
-#### Cron Canary: periodically running Sanity test suite 
+#### Cron Canary (periodically running the Sanity/starter suite) 
 
 The Cron workflow is not a test case. It's a top-level workflow to kick off the Sanity suite(described below) periodically.  
 To start the cron canary:
@@ -103,7 +103,7 @@ It can be [improved](https://github.com/uber/cadence/issues/4469) in the future.
 
 The workflowID is fixed: `"cadence.canary.cron"`   
 
-#### Test case starter & Sanity suite 
+#### Sanity suite (Starter for all test cases) 
 The sanity workflow is test suite workflow. It will kick off a bunch of childWorkflows for all the test to verify that Cadence server is operating correctly. 
 
 An error result of the sanity workflow indicates at least one of the test case fails.
@@ -112,30 +112,43 @@ You can start the sanity workflow as one-off run:
 ```
 cadence --do <the domain you configured> workflow start --tl canary-task-queue --et 1200 --wt workflow.sanity -i 0
 ``` 
-Note:
-* tasklist(tl) is fixed to `canary-task-queue`
-* execution timeout(et) is recommended to 20 minutes(`1200` seconds) but you can adjust it 
-* the only required input is the scheduled unix timestamp, and `0` will uses the workflow starting time
 
-Or using a cron job(e.g. every minute):
-```
-cadence --do <the domain you configured> workflow start --tl canary-task-queue --et 1200 --wt workflow.sanity -i 0 --cron "* * * * *"
-```
+Or using the Cron Canary mentioned above to manage it. 
 
-This is [the list of the test cases](./sanity.go) that it will start all supported test cases by default if no excludes are configured. 
-You can find [the workflow names of the tests cases in this file](./const.go) if you want to manually start certain test cases.  
-For example, manually start an `Echo` test case:
-```
-cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.echo
-```
 
-Once you start the test cases, you can observe the progress:
+Then observe the progress:
 ```
 cadence --do cadence-canary workflow ob -w <...workflowID form the start command output>
 ```
 
+NOTE 1:
+* tasklist(tl) is fixed to `canary-task-queue`
+* execution timeout(et) is recommended to 20 minutes(`1200` seconds) but you can adjust it 
+* the only required input is the scheduled unix timestamp, and `0` will uses the workflow starting time
+ 
+
+NOTE 2: This is the workflow that you should monitor for alerting. 
+You can use [the workflow success metric](https://github.com/uber/cadence/blob/9336ed963ca1b5e0df7206312aa5236433e04fd9/service/history/execution/context_util.go#L138) 
+emitted by cadence history service `workflow_success`. To monitor all the canary test cases use `workflowType` of `workflow.sanity`. 
+ 
+
+NOTE 3: This is [the list of the test cases](./sanity.go) that it will start all supported test cases by default if no excludes are configured. 
+You can find [the workflow names of the tests cases in this file](./const.go) if you want to manually start certain test cases.  
+
+
 #### Echo
 Echo workflow tests the very basic workflow functionality. It executes an activity to return some output and verifies it as the workflow result. 
+
+To manually start an `Echo` test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.echo
+```
+Then observe the progress:
+```
+cadence --do cadence-canary workflow ob -w <...workflowID form the start command output>
+```
+
+You can use these command for all other test cases listed below. 
 
 #### Signal
 Signal workflow tests the signal feature. 
