@@ -79,8 +79,8 @@ An exception here is `HistoryArchival` and `VisibilityArchival` test cases will 
 ```yaml
 cadence:
   service: "cadence-frontend" # frontend service name
-  host: "127.0.0.1:7833" # frontend address
-  #thost: "127.0.0.1:7933" # repalce host with thost if using Thrift for compatibility
+  address: "127.0.0.1:7833" # frontend address
+  #host: "127.0.0.1:7933" # replace address with host if using Thrift for compatibility
 ```
 - **Metrics**: metrics configuration. Similar to server metric emitter, only M3/Statsd/Prometheus is supported. 
 - **Log**: logging configuration.  Similar to server logging configuration. 

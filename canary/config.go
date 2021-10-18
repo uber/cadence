@@ -78,10 +78,10 @@ type (
 	// Cadence contains the configuration for cadence service
 	Cadence struct {
 		ServiceName string `yaml:"service"`
-		// gRPC host name and port
-		HostNameAndPort string `yaml:"host"`
 		// support Thrift for backward compatibility. It will be ignored if host (gRPC) is used.
-		ThriftHostNameAndPort string `yaml:"thost"`
+		ThriftHostNameAndPort string `yaml:"host"`
+		// gRPC host name and port
+		GRPCHostNameAndPort string `yaml:"address"`
 	}
 )
 

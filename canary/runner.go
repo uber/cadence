@@ -57,11 +57,11 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 
 	var dispatcher *yarpc.Dispatcher
 	var runtimeContext *RuntimeContext
-	if cfg.Cadence.HostNameAndPort != "" {
+	if cfg.Cadence.GRPCHostNameAndPort != "" {
 		dispatcher = yarpc.NewDispatcher(yarpc.Config{
 			Name: CanaryServiceName,
 			Outbounds: yarpc.Outbounds{
-				cfg.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.HostNameAndPort)},
+				cfg.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.GRPCHostNameAndPort)},
 			},
 		})
 		clientConfig := dispatcher.ClientConfig(cfg.Cadence.ServiceName)
