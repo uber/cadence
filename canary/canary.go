@@ -28,6 +28,8 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common"
 )
 
 type (
@@ -41,6 +43,7 @@ type (
 		canaryDomain   string
 		archivalClient cadenceClient
 		systemClient   cadenceClient
+		batcherClient  cadenceClient
 		runtime        *RuntimeContext
 		canaryConfig   *Canary
 	}
@@ -62,12 +65,14 @@ const (
 func newCanary(domain string, rc *RuntimeContext, canaryConfig *Canary) Runnable {
 	canaryClient := newCadenceClient(domain, rc)
 	archivalClient := newCadenceClient(archivalDomain, rc)
-	systemClient := newCadenceClient(systemDomain, rc)
+	systemClient := newCadenceClient(common.SystemLocalDomainName, rc)
+	batcherClient := newCadenceClient(common.BatcherLocalDomainName, rc)
 	return &canaryImpl{
 		canaryClient:   canaryClient,
 		canaryDomain:   domain,
 		archivalClient: archivalClient,
 		systemClient:   systemClient,
+		batcherClient:  batcherClient,
 		runtime:        rc,
 		canaryConfig:   canaryConfig,
 	}
@@ -154,6 +159,7 @@ func (c *canaryImpl) newActivityContext() context.Context {
 	ctx := context.WithValue(context.Background(), ctxKeyActivityRuntime, &activityContext{cadence: c.canaryClient})
 	ctx = context.WithValue(ctx, ctxKeyActivityArchivalRuntime, &activityContext{cadence: c.archivalClient})
 	ctx = context.WithValue(ctx, ctxKeyActivitySystemClient, &activityContext{cadence: c.systemClient})
+	ctx = context.WithValue(ctx, ctxKeyActivityBatcherClient, &activityContext{cadence: c.batcherClient})
 	ctx = context.WithValue(ctx, ctxKeyConfig, c.canaryConfig)
 	return overrideWorkerOptions(ctx)
 }
