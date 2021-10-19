@@ -285,7 +285,7 @@ func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
 
 		default:
 			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
+				Message: fmt.Sprintf("Unknown replication type: %v", task.GetType()),
 			}
 		}
 
@@ -338,6 +338,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
 
@@ -346,6 +349,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
