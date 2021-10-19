@@ -29,8 +29,6 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
-
-	"github.com/uber/cadence/service/worker/batcher"
 )
 
 func init() {
@@ -43,6 +41,11 @@ func init() {
 }
 
 const (
+	// TODO: to get rid of them:
+	//  after batch job has an API, we should use the API: https://github.com/uber/cadence/issues/2225
+	sysBatchWFTypeName        = "cadence-sys-batch-workflow"
+	systemBatcherTaskListName = "cadence-sys-batcher-tasklist"
+
 	// there are two level, so totally 5*5 + 5 == 30 descendants
 	// default batch RPS is 50, so it will takes ~1 seconds to terminate all
 	numChildrenPerLevel = 5
@@ -176,14 +179,14 @@ func startBatchWorkflow(ctx context.Context, domain, startTime string) error {
 	options := client.StartWorkflowOptions{
 		ExecutionStartToCloseTimeout:    childWorkflowTimeout,
 		DecisionTaskStartToCloseTimeout: decisionTaskTimeout,
-		TaskList:                        batcher.BatcherTaskListName,
+		TaskList:                        systemBatcherTaskListName,
 		SearchAttributes: map[string]interface{}{
 			"CustomDomain": domain,
 			"Operator":     "admin",
 		},
 	}
 
-	run, err := sdkClient.ExecuteWorkflow(ctx, options, batcher.BatchWFTypeName, params)
+	run, err := sdkClient.ExecuteWorkflow(ctx, options, sysBatchWFTypeName, params)
 	if err != nil {
 		return err
 	}
