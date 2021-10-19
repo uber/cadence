@@ -26,10 +26,6 @@ Different ways of start the bench workers:
 
 #### 1. Use docker image `ubercadence/cadence-bench:master`
 
-For now, this image has no release versions for simplified the release process. Always use `master` tag for the image. 
-
-Similar to server/CLI images, the bench image will be built and published automatically by Github on every commit onto the `master` branch. 
-
 You can [pre-built docker-compose file](../docker/docker-compose-bench.yml) to run against local server
 In the `docker/` directory, run:
 ```
@@ -39,7 +35,9 @@ You can modify [the bench worker config](../docker/config/bench/development.yaml
 
 Or may run it with Kubernetes, for [example](https://github.com/longquanzheng/cadence-lab/blob/master/eks/bench-deployment.yaml). 
 
-  
+
+NOTE: Similar to server/CLI images, the `master` image will be built and published automatically by Github on every commit onto the `master` branch.
+To use a different image than `master` tag.  See [docker hub](https://hub.docker.com/repository/docker/ubercadence/cadence-bench) for all the images.     
 
 #### 2.  Build & Run the binary 
 
