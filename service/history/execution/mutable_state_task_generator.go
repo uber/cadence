@@ -89,6 +89,7 @@ type (
 		GenerateCrossClusterApplyParentClosePolicyTask(
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
+			targetDomainIDs map[string]struct{},
 		) error
 		GenerateFromCrossClusterTask(
 			crossClusterTask *persistence.CrossClusterTaskInfo,
@@ -560,6 +561,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks() error {
 func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterApplyParentClosePolicyTask(
 	task *persistence.TransferTaskInfo,
 	targetCluster string,
+	targetDomainIDs map[string]struct{},
 ) error {
 	if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
 		// this should not happen
@@ -569,6 +571,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterApplyParentClosePoli
 	crossClusterTask := &persistence.CrossClusterApplyParentClosePolicyTask{
 		TargetCluster: targetCluster,
 		ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+			TargetDomainIDs: targetDomainIDs,
 			// TaskID is set by shard context
 			// Domain, workflow and run ids will be collected from mutableState
 			// when processing the apply parent policy tasks.
@@ -649,6 +652,72 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterTaskFromTransferTask
 	return nil
 }
 
+func (r *mutableStateTaskGeneratorImpl) generateFromApplyParentCloseCrossClusterTask(
+	task *persistence.CrossClusterTaskInfo,
+	generateTransferTask bool,
+) error {
+	if !generateTransferTask {
+		for domainID := range task.TargetDomainIDs {
+			targetDomainEntry, err := r.domainCache.GetDomainByID(domainID)
+			if err != nil {
+				return err
+			}
+			targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
+			if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
+				// TODO: in this case, we should only create a transfer task for ApplyParentClosePolicy
+				// Ideally CloseExecutionTask should be split into 3:
+				//   - closeExecution (same as today)
+				//   - recordChildCompletion (subset of closeExecution)
+				//   - applyParentClosePolicy (subset of closeExecution)
+				// later 2 tasks will help us avoid repeating the same steps
+				generateTransferTask = true
+				break
+			}
+		}
+	}
+
+	// if source no longer active or if some of the domains failed over to the current
+	// cluster, we will generate a transfer task to call processCloseExecution again
+	// domain list will be split based on their cluster being remote or active.
+	// closeExucution should be split into 3 functions as mentioned above to be more efficient
+	if generateTransferTask {
+		r.mutableState.AddTransferTasks(&persistence.CloseExecutionTask{
+			// TaskID is set by shard context
+			Version:             task.Version,
+			VisibilityTimestamp: task.VisibilityTimestamp,
+		})
+		return nil
+	}
+
+	clusterMap := map[string]map[string]struct{}{}
+
+	for domainID := range task.TargetDomainIDs {
+		targetDomainEntry, err := r.domainCache.GetDomainByID(domainID)
+		if err != nil {
+			return err
+		}
+		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
+
+		if _, ok := clusterMap[targetCluster]; !ok {
+			clusterMap[targetCluster] = map[string]struct{}{}
+		}
+		clusterMap[targetCluster][domainID] = struct{}{}
+	}
+	for cluster, targetDomainIDs := range clusterMap {
+		r.mutableState.AddCrossClusterTasks(&persistence.CrossClusterApplyParentClosePolicyTask{
+			TargetCluster: cluster,
+			ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+				TargetDomainIDs: targetDomainIDs,
+				// TaskID is set by shard context
+				Version:             task.Version,
+				VisibilityTimestamp: task.VisibilityTimestamp,
+			},
+		})
+	}
+
+	return nil
+}
+
 func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 	task *persistence.CrossClusterTaskInfo,
 ) error {
@@ -659,6 +728,12 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 	if !sourceDomainEntry.IsDomainActive() && !sourceDomainEntry.IsDomainPendingActive() {
 		// domain is passive, generate (passive) transfer task
 		generateTransferTask = true
+	}
+
+	// ApplyParentClosePolicy is different than the others because it doesn't have a single
+	// target domain, workflow or run id.
+	if task.GetTaskType() == persistence.CrossClusterTaskTypeApplyParentPolicy {
+		return r.generateFromApplyParentCloseCrossClusterTask(task, generateTransferTask)
 	}
 
 	if !generateTransferTask {
@@ -746,23 +821,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 				},
 			}
 		}
-	case persistence.CrossClusterTaskTypeApplyParentPolicy:
-		if generateTransferTask {
-			// Creating close exeuction task due to the same reason above.
-			// TODO: dedup this request if we also created one through record child complete
-			newTask = &persistence.CloseExecutionTask{
-				// TaskID is set by shard context
-				Version: task.Version,
-			}
-		} else {
-			newTask = &persistence.CrossClusterApplyParentClosePolicyTask{
-				TargetCluster: targetCluster,
-				ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-					// TaskID is set by shard context
-					Version: task.Version,
-				},
-			}
-		}
+	// persistence.CrossClusterTaskTypeApplyParentPolicy is handled by generateFromApplyParentCloseCrossClusterTask above
 	default:
 		return fmt.Errorf("unable to convert cross-cluster task of type %v", task.TaskType)
 	}

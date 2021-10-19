@@ -285,7 +285,7 @@ func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
 
 		default:
 			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
+				Message: fmt.Sprintf("Unknown replication type: %v", task.GetType()),
 			}
 		}
 
@@ -321,6 +321,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		var targetCluster string
 		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
 		var targetWorkflowID string
+		targetDomainIDs := map[string]struct{}{}
 		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false
@@ -337,6 +338,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
 
@@ -345,6 +349,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
@@ -353,6 +360,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 
 		case p.CrossClusterTaskTypeApplyParentPolicy:
 			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
+			targetDomainIDs = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
 
 		default:
 			return nil, &types.InternalServiceError{
@@ -369,6 +377,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 				VisibilityTimestamp:     task.GetVisibilityTimestamp(),
 				TaskID:                  task.GetTaskID(),
 				TargetDomainID:          targetDomainID,
+				TargetDomainIDs:         targetDomainIDs,
 				TargetWorkflowID:        targetWorkflowID,
 				TargetRunID:             targetRunID,
 				TargetChildWorkflowOnly: targetChildWorkflowOnly,

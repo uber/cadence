@@ -86,6 +86,7 @@ type (
 		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
 		ResetQueue(context.Context, *types.ResetQueueRequest) error
 		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
+		RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error)
 		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
 		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
 		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
@@ -1032,6 +1033,29 @@ func (adh *adminHandlerImpl) GetCrossClusterTasks(
 	}
 
 	resp, err = adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
+}
+
+func (adh *adminHandlerImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+) (resp *types.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(ctx, metrics.AdminRespondCrossClusterTasksCompletedScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if request.TargetCluster == "" {
+		return nil, adh.error(errClusterNameNotSet, scope)
+	}
+
+	resp, err = adh.GetHistoryClient().RespondCrossClusterTasksCompleted(ctx, request)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}

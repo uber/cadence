@@ -141,6 +141,11 @@ func (g adminGRPCHandler) GetCrossClusterTasks(ctx context.Context, request *adm
 	return proto.FromAdminGetCrossClusterTasksResponse(response), proto.FromError(err)
 }
 
+func (g adminGRPCHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *adminv1.RespondCrossClusterTasksCompletedRequest) (*adminv1.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := g.h.RespondCrossClusterTasksCompleted(ctx, proto.ToAdminRespondCrossClusterTasksCompletedRequest(request))
+	return proto.FromAdminRespondCrossClusterTasksCompletedResponse(response), proto.FromError(err)
+}
+
 func (g adminGRPCHandler) GetDynamicConfig(ctx context.Context, request *adminv1.GetDynamicConfigRequest) (*adminv1.GetDynamicConfigResponse, error) {
 	response, err := g.h.GetDynamicConfig(ctx, proto.ToGetDynamicConfigRequest(request))
 	return proto.FromGetDynamicConfigResponse(response), proto.FromError(err)

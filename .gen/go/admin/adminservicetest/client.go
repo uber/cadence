@@ -776,6 +776,39 @@ func (mr *_MockClientRecorder) ResetQueue(
 	return mr.mock.ctrl.RecordCall(mr.mock, "ResetQueue", args...)
 }
 
+// RespondCrossClusterTasksCompleted responds to a RespondCrossClusterTasksCompleted call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), ...).Return(...)
+// 	... := client.RespondCrossClusterTasksCompleted(...)
+func (m *MockClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	_Request *shared.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", args...)
+	success, _ = ret[i].(*shared.RespondCrossClusterTasksCompletedResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RespondCrossClusterTasksCompleted(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RespondCrossClusterTasksCompleted", args...)
+}
+
 // RestoreDynamicConfig responds to a RestoreDynamicConfig call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

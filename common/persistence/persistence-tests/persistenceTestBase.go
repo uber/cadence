@@ -23,6 +23,7 @@ package persistencetests
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -1003,12 +1004,13 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask,
 			*p.RecordWorkflowStartedTask, *p.ResetWorkflowTask, *p.UpsertWorkflowSearchAttributesTask:
 			transferTasks = append(transferTasks, t)
-		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask:
+		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask,
+			*p.CrossClusterRecordChildWorkflowExecutionCompleteTask, *p.CrossClusterApplyParentClosePolicyTask:
 			crossClusterTasks = append(crossClusterTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)
 		default:
-			panic("Unknown transfer task type.")
+			panic(fmt.Sprintf("Unknown transfer task type. %v", t))
 		}
 	}
 	for _, decisionScheduleID := range decisionScheduleIDs {

@@ -374,6 +374,21 @@ func (mr *MockAdminHandlerMockRecorder) GetCrossClusterTasks(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockAdminHandler)(nil).GetCrossClusterTasks), arg0, arg1)
 }
 
+// RespondCrossClusterTasksCompleted mocks base method
+func (m *MockAdminHandler) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", arg0, arg1)
+	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted
+func (mr *MockAdminHandlerMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockAdminHandler)(nil).RespondCrossClusterTasksCompleted), arg0, arg1)
+}
+
 // GetDynamicConfig mocks base method
 func (m *MockAdminHandler) GetDynamicConfig(arg0 context.Context, arg1 *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error) {
 	m.ctrl.T.Helper()
