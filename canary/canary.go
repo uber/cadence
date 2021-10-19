@@ -83,12 +83,10 @@ func (c *canaryImpl) Run(mode string) error {
 
 	if err = c.createDomain(); err != nil {
 		log.Error("createDomain failed", zap.Error(err))
-		return err
 	}
 
 	if err = c.createArchivalDomain(); err != nil {
 		log.Error("createArchivalDomain failed", zap.Error(err))
-		return err
 	}
 
 	if mode == ModeAll || mode == ModeCronCanary {
