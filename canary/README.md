@@ -157,39 +157,107 @@ You can use these command for all other test cases listed below.
 ### Signal
 Signal workflow tests the signal feature. 
 
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.signal -i 0
+```
+
 ### Visibility
 Visibility workflow tests the basic visibility feature. No advanced visibility needed, but advanced visibility should also support it. 
+
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.visibility -i 0
+```
 
 ### SearchAttributes
 SearchAttributes workflow tests the advanced visibility feature. Make sure advanced visibility feature is configured on the server. Otherwise, it should be excluded from the sanity test suite/case. 
 
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.searchAttributes -i 0
+```
+
 ### ConcurrentExec
 ConcurrentExec workflow tests executing activities concurrently. 
+
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.concurrent-execution -i 0
+```
 
 ### Query
 Query workflow tests the Query feature. 
 
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.query -i 0
+```
+
 ### Timeout
 Timeout workflow make sure the activity timeout is enforced. 
+
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.timeout -i 0
+```
 
 ### LocalActivity
 LocalActivity workflow tests the local activity feature. 
 
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.localactivity -i 0
+```
+
 ### Cancellation
 Cancellation workflowt tests cancellation feature. 
+
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.cancellation -i 0
+```
 
 ### Retry
 Retry workflow tests activity retry policy. 
 
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.retry -i 0
+```
+
 ### Reset
 Reset workflow tests reset feature. 
 
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.reset -i 0
+```
+
 ### HistoryArchival
 HistoryArchival tests history archival feature. Make sure history archival feature is configured on the server. Otherwise, it should be excluded from the sanity test suite/case. 
+
 This test case always uses `canary-archival-domain` domain.
+
+To manually start one run of this test case:
+```
+cadence --do canary-archival-domain workflow start --tl canary-task-queue --et 10 --wt workflow.timeout -i 0
+```
  
 ### VisibilityArchival
 VisibilityArchival tests visibility archival feature. Make sure visibility feature is configured on the server. Otherwise, it should be excluded from the sanity test suite/case.
 
+This test case always uses `canary-archival-domain` domain.
+
+To manually start one run of this test case:
+```
+cadence --do canary-archival-domain workflow start --tl canary-task-queue --et 10 --wt workflow.timeout -i 0
+```
+
 ### Batch  
 Batch workflow tests the batch job feature. Make sure advanced visibility feature is configured on the server. Otherwise, it should be excluded from the sanity test suite/case.
+
+To manually start one run of this test case:
+```
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.batch -i 0
+```
