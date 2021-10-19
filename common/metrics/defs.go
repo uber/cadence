@@ -1950,6 +1950,7 @@ const (
 	MultipleCompletionDecisionsCounter
 	FailedDecisionsCounter
 	DecisionAttemptTimer
+	DecisionRetriesExceededCounter
 	StaleMutableStateCounter
 	DataInconsistentCounter
 	TimerResurrectionCounter
@@ -2479,6 +2480,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		MultipleCompletionDecisionsCounter:                {metricName: "multiple_completion_decisions", metricType: Counter},
 		FailedDecisionsCounter:                            {metricName: "failed_decisions", metricType: Counter},
 		DecisionAttemptTimer:                              {metricName: "decision_attempt", metricType: Timer},
+		DecisionRetriesExceededCounter:                    {metricName: "decision_retries_exceeded", metricType: Counter},
 		StaleMutableStateCounter:                          {metricName: "stale_mutable_state", metricType: Counter},
 		DataInconsistentCounter:                           {metricName: "data_inconsistent", metricType: Counter},
 		TimerResurrectionCounter:                          {metricName: "timer_resurrection", metricType: Counter},

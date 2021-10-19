@@ -707,7 +707,8 @@ func (t *crossClusterSourceTask) isValidLocked() bool {
 	}
 
 	// pending active state is treated as valid
-	sourceInvalid := sourceEntry.GetReplicationConfig().ActiveClusterName != t.shard.GetClusterMetadata().GetCurrentClusterName()
+	sourceInvalid := sourceEntry.GetReplicationConfig().ActiveClusterName !=
+		t.shard.GetClusterMetadata().GetCurrentClusterName()
 	targetInvalid := targetEntry != nil && targetEntry.GetReplicationConfig().ActiveClusterName != t.targetCluster
 
 	if sourceInvalid || targetInvalid {

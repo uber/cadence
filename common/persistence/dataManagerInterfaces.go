@@ -378,6 +378,7 @@ type (
 		VisibilityTimestamp     time.Time
 		TaskID                  int64
 		TargetDomainID          string
+		TargetDomainIDs         map[string]struct{} // used for ApplyParentPolicy request
 		TargetWorkflowID        string
 		TargetRunID             string
 		TargetChildWorkflowOnly bool
@@ -585,6 +586,7 @@ type (
 
 	// ApplyParentClosePolicyTask identifies a task for applying parent close policy
 	ApplyParentClosePolicyTask struct {
+		TargetDomainIDs     map[string]struct{}
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
@@ -2636,6 +2638,11 @@ func (t *TransferTaskInfo) GetRunID() string {
 	return t.RunID
 }
 
+// GetTargetDomainIDs returns the targetDomainIDs for applyParentPolicy
+func (t *TransferTaskInfo) GetTargetDomainIDs() map[string]struct{} {
+	return t.TargetDomainIDs
+}
+
 // GetDomainID returns the domain ID for transfer task
 func (t *TransferTaskInfo) GetDomainID() string {
 	return t.DomainID
@@ -2643,10 +2650,7 @@ func (t *TransferTaskInfo) GetDomainID() string {
 
 // String returns a string representation for transfer task
 func (t *TransferTaskInfo) String() string {
-	return fmt.Sprintf(
-		"{DomainID: %v, WorkflowID: %v, RunID: %v, TaskID: %v, TargetDomainID: %v, TargetWorkflowID %v, TargetRunID: %v, TargetChildWorkflowOnly: %v, TaskList: %v, TaskType: %v, ScheduleID: %v, Version: %v.}",
-		t.DomainID, t.WorkflowID, t.RunID, t.TaskID, t.TargetDomainID, t.TargetWorkflowID, t.TargetRunID, t.TargetChildWorkflowOnly, t.TaskList, t.TaskType, t.ScheduleID, t.Version,
-	)
+	return fmt.Sprintf("%#v", t)
 }
 
 // GetTaskID returns the task ID for replication task

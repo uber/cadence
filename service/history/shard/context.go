@@ -1555,7 +1555,11 @@ func acquireShard(
 		return shardItem.GetShardManager().CreateShard(context.Background(), &persistence.CreateShardRequest{ShardInfo: shardInfo})
 	}
 
-	err := backoff.Retry(getShard, retryPolicy, retryPredicate)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(retryPredicate),
+	)
+	err := throttleRetry.Do(context.Background(), getShard)
 	if err != nil {
 		shardItem.logger.Error("Fail to acquire shard.", tag.ShardID(shardItem.shardID), tag.Error(err))
 		return nil, err

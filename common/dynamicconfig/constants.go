@@ -59,66 +59,66 @@ const (
 	// EnableGlobalDomain is key for enable global domain
 	// KeyName: system.enableGlobalDomain
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableGlobalDomain
 	// EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility
 	// KeyName: system.enableVisibilitySampling
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableVisibilitySampling
 	// EnableReadFromClosedExecutionV2 is key for enable read from cadence_visibility.closed_executions_v2
 	// KeyName: system.enableReadFromClosedExecutionV2
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableReadFromClosedExecutionV2
-	// AdvancedVisibilityWritingMode is key for how to write to advanced visibility
+	// AdvancedVisibilityWritingMode is key for how to write to advanced visibility. The most useful option is "dual", which can be used for seamless migration from db visibility to advanced visibility, usually using with EnableReadVisibilityFromES
 	// KeyName: system.advancedVisibilityWritingMode
-	// Value type: String
-	// Default value: based on whether or not advanced visibility persistence is configured (common.GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist))
+	// Value type: String enum: "on"(means writing to advancedVisibility only, "off" (means writing to db visibility only), or "dual" (means writing to both)
+	// Default value: "on" if advanced visibility persistence is configured, otherwise "off" (see common.GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist))
 	// Allowed filters: N/A
 	AdvancedVisibilityWritingMode
+	// EnableReadVisibilityFromES is key for enable read from elastic search or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility
+	// KeyName: system.enableReadVisibilityFromES
+	// Value type: Bool
+	// Default value: true if advanced visibility persistence is configured, otherwise false
+	// Allowed filters: DomainName
+	EnableReadVisibilityFromES
 	// EmitShardDiffLog is whether emit the shard diff log
 	// KeyName: history.emitShardDiffLog
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EmitShardDiffLog
-	// EnableReadVisibilityFromES is key for enable read from elastic search
-	// KeyName: system.enableReadVisibilityFromES
-	// Value type: Bool
-	// Default value: based on whether or not advanced visibility persistence is configured(isAdvancedVisExistInConfig)
-	// Allowed filters: DomainName
-	EnableReadVisibilityFromES
 	// DisableListVisibilityByFilter is config to disable list open/close workflow using filter
 	// KeyName: frontend.disableListVisibilityByFilter
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	DisableListVisibilityByFilter
-	// HistoryArchivalStatus is key for the status of history archival
+	// HistoryArchivalStatus is key for the status of history archival to override the value from static config.
 	// KeyName: system.historyArchivalStatus
-	// Value type: enabled or disabled
+	// Value type: string enum: "enabled" or "disabled"
 	// Default value: the value in static config: common.Config.Archival.History.Status
 	// Allowed filters: N/A
 	HistoryArchivalStatus
 	// EnableReadFromHistoryArchival is key for enabling reading history from archival store
 	// KeyName: system.enableReadFromHistoryArchival
-	// Value type: enabled or disabled
+	// Value type: string enum: "enabled" or "disabled"
 	// Default value: the value in static config: common.Config.Archival.History.EnableRead
 	// Allowed filters: N/A
 	EnableReadFromHistoryArchival
-	// VisibilityArchivalStatus is key for the status of visibility archival
+	// VisibilityArchivalStatus is key for the status of visibility archival to override the value from static config.
 	// KeyName: system.visibilityArchivalStatus
-	// Value type: enabled or disabled
+	// Value type: string enum: "enabled" or "disabled"
 	// Default value: the value in static config: common.Config.Archival.Visibility.Status
 	// Allowed filters: N/A
 	VisibilityArchivalStatus
-	// EnableReadFromVisibilityArchival is key for enabling reading visibility from archival store
+	// EnableReadFromVisibilityArchival is key for enabling reading visibility from archival store to override the value from static config.
 	// KeyName: system.enableReadFromVisibilityArchival
-	// Value type: enabled or disabled
+	// Value type: string enum: "enabled" or "disabled"
 	// Default value: the value in static config: common.Config.Archival.Visibility.EnableRead
 	// Allowed filters: N/A
 	EnableReadFromVisibilityArchival
@@ -127,19 +127,19 @@ const (
 	// If the policy is "noop"(default) this flag is not doing anything.
 	// KeyName: system.enableDomainNotActiveAutoForwarding
 	// Value type: Bool
-	// Default value: TRUE (meaning all domains)
+	// Default value: true (meaning all domains are allowed to use the policy specified in static config)
 	// Allowed filters: DomainName
 	EnableDomainNotActiveAutoForwarding
 	// EnableGracefulFailover is whether enabling graceful failover
 	// KeyName: system.enableGracefulFailover
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableGracefulFailover
 	// TransactionSizeLimit is the largest allowed transaction size to persistence
 	// KeyName: system.transactionSizeLimit
 	// Value type: Int
-	// Default value: 14 * 1024 * 1024 (common.DefaultTransactionSizeLimit)
+	// Default value: 14680064 (from common.DefaultTransactionSizeLimit : 14 * 1024 * 1024)
 	// Allowed filters: N/A
 	TransactionSizeLimit
 	// PersistenceErrorInjectionRate is rate for injecting random error in persistence
@@ -151,13 +151,13 @@ const (
 	// MaxRetentionDays is the maximum allowed retention days for domain
 	// KeyName: system.maxRetentionDays
 	// Value type: Int
-	// Default value: 30(domain.DefaultMaxWorkflowRetentionInDays)
+	// Default value: 30 (see domain.DefaultMaxWorkflowRetentionInDays)
 	// Allowed filters: N/A
 	MaxRetentionDays
 	// MinRetentionDays is the minimal allowed retention days for domain
 	// KeyName: system.minRetentionDays
 	// Value type: Int
-	// Default value: domain.MinRetentionDays
+	// Default value: 1 (see domain.MinRetentionDays)
 	// Allowed filters: N/A
 	MinRetentionDays
 	// MaxDecisionStartToCloseSeconds is the maximum allowed value for decision start to close timeout in seconds
@@ -169,16 +169,16 @@ const (
 	// DisallowQuery is the key to disallow query for a domain
 	// KeyName: system.disallowQuery
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	DisallowQuery
 	// EnableDebugMode is for enabling debugging components, logs and metrics
 	// KeyName: system.enableDebugMode
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableDebugMode
-	// RequiredDomainDataKeys is the key for the list of data keys required in domain registeration
+	// RequiredDomainDataKeys is the key for the list of data keys required in domain registration
 	// KeyName: system.requiredDomainDataKeys
 	// Value type: Map
 	// Default value: nil
@@ -187,49 +187,49 @@ const (
 	// EnableGRPCOutbound is the key for enabling outbound GRPC traffic
 	// KeyName: system.enableGRPCOutbound
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	EnableGRPCOutbound
 	// GRPCMaxSizeInByte is the key for config GRPC response size
 	// KeyName: system.grpcMaxSizeInByte
 	// Value type: Int
-	// Default value: 4*1024*1024
+	// Default value: 4194304 (4*1024*1024)
 	// Allowed filters: N/A
 	GRPCMaxSizeInByte
 	// BlobSizeLimitError is the per event blob size limit
 	// KeyName: limit.blobSize.error
 	// Value type: Int
-	// Default value: 2*1024*1024
+	// Default value: 2097152 (2*1024*1024)
 	// Allowed filters: DomainName
 	BlobSizeLimitError
 	// BlobSizeLimitWarn is the per event blob size limit for warning
 	// KeyName: limit.blobSize.warn
 	// Value type: Int
-	// Default value: 256*1024
+	// Default value: 262144 (256*1024)
 	// Allowed filters: DomainName
 	BlobSizeLimitWarn
 	// HistorySizeLimitError is the per workflow execution history size limit
 	// KeyName: limit.historySize.error
 	// Value type: Int
-	// Default value: 200*1024*1024
+	// Default value: 209715200 (200*1024*1024)
 	// Allowed filters: DomainName
 	HistorySizeLimitError
 	// HistorySizeLimitWarn is the per workflow execution history size limit for warning
 	// KeyName: limit.historySize.warn
 	// Value type: Int
-	// Default value: 50*1024*1024
+	// Default value: 52428800 (50*1024*1024)
 	// Allowed filters: DomainName
 	HistorySizeLimitWarn
 	// HistoryCountLimitError is the per workflow execution history event count limit
 	// KeyName: limit.historyCount.error
 	// Value type: Int
-	// Default value: 200*1024
+	// Default value: 204800 (200*1024)
 	// Allowed filters: DomainName
 	HistoryCountLimitError
 	// HistoryCountLimitWarn is the per workflow execution history event count limit for warning
 	// KeyName: limit.historyCount.warn
 	// Value type: Int
-	// Default value: 50*1024
+	// Default value: 51200 (50*1024)
 	// Allowed filters: DomainName
 	HistoryCountLimitWarn
 	// DomainNameMaxLength is the length limit for domain name
@@ -241,67 +241,67 @@ const (
 	// IdentityMaxLength is the length limit for identity
 	// KeyName: limit.identityLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 ( see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	IdentityMaxLength
 	// WorkflowIDMaxLength is the length limit for workflowID
 	// KeyName: limit.workflowIDLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	WorkflowIDMaxLength
 	// SignalNameMaxLength is the length limit for signal name
 	// KeyName: limit.signalNameLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	SignalNameMaxLength
 	// WorkflowTypeMaxLength is the length limit for workflow type
 	// KeyName: limit.workflowTypeLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	WorkflowTypeMaxLength
 	// RequestIDMaxLength is the length limit for requestID
 	// KeyName: limit.requestIDLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	RequestIDMaxLength
 	// TaskListNameMaxLength is the length limit for task list name
 	// KeyName: limit.taskListNameLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	TaskListNameMaxLength
 	// ActivityIDMaxLength is the length limit for activityID
 	// KeyName: limit.activityIDLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	ActivityIDMaxLength
 	// ActivityTypeMaxLength is the length limit for activity type
 	// KeyName: limit.activityTypeLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	ActivityTypeMaxLength
 	// MarkerNameMaxLength is the length limit for marker name
 	// KeyName: limit.markerNameLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	MarkerNameMaxLength
 	// TimerIDMaxLength is the length limit for timerID
 	// KeyName: limit.timerIDLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthErrorLimit (1000)
+	// Default value: 1000 (see common.DefaultIDLengthErrorLimit)
 	// Allowed filters: DomainName
 	TimerIDMaxLength
 	// MaxIDLengthWarnLimit is the warn length limit for various IDs, including: Domain, TaskList, WorkflowID, ActivityID, TimerID, WorkflowType, ActivityType, SignalName, MarkerName, ErrorReason/FailureReason/CancelCause, Identity, RequestID
 	// KeyName: limit.maxIDWarnLength
 	// Value type: Int
-	// Default value: common.DefaultIDLengthWarnLimit (128)
+	// Default value: 128 (see common.DefaultIDLengthWarnLimit)
 	// Allowed filters: N/A
 	MaxIDLengthWarnLimit
 	// AdminErrorInjectionRate is the rate for injecting random error in admin client
@@ -334,9 +334,8 @@ const (
 	// FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows
 	// KeyName: frontend.visibilityListMaxQPS
 	// Value type: Int
-	// Default value: 1
-	// Allowed filters: DomainName
 	// Default value: 10
+	// Allowed filters: DomainName
 	FrontendVisibilityListMaxQPS
 	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
 	// KeyName: frontend.esVisibilityListMaxQPS
@@ -353,7 +352,7 @@ const (
 	// FrontendHistoryMaxPageSize is default max size for GetWorkflowExecutionHistory in one page
 	// KeyName: frontend.historyMaxPageSize
 	// Value type: Int
-	// Default value: common.GetHistoryMaxPageSize
+	// Default value: 1000 (see common.GetHistoryMaxPageSize)
 	// Allowed filters: DomainName
 	FrontendHistoryMaxPageSize
 	// FrontendRPS is workflow rate limit per second
@@ -401,31 +400,31 @@ const (
 	// EnableClientVersionCheck is enables client version check for frontend
 	// KeyName: frontend.enableClientVersionCheck
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableClientVersionCheck
 	// FrontendMaxBadBinaries is the max number of bad binaries in domain config
 	// KeyName: frontend.maxBadBinaries
 	// Value type: Int
-	// Default value: domain.MaxBadBinaries
+	// Default value: 10 (see domain.MaxBadBinaries)
 	// Allowed filters: DomainName
 	FrontendMaxBadBinaries
 	// FrontendFailoverCoolDown is duration between two domain failvoers
 	// KeyName: frontend.failoverCoolDown
 	// Value type: Duration
-	// Default value: time.Minute
+	// Default value: 1m (one minute, see domain.FailoverCoolDown)
 	// Allowed filters: DomainName
 	FrontendFailoverCoolDown
-	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+	// ValidSearchAttributes is legal indexed keys that can be used in list APIs. When overriding, ensure to include the existing default attributes of the current release
 	// KeyName: frontend.validSearchAttributes
 	// Value type: Map
-	// Default value: definition.GetDefaultIndexedKeys()
+	// Default value: the default attributes of this release version, see definition.GetDefaultIndexedKeys()
 	// Allowed filters: N/A
 	ValidSearchAttributes
 	// SendRawWorkflowHistory is whether to enable raw history retrieving
 	// KeyName: frontend.sendRawWorkflowHistory
 	// Value type: Bool
-	// Default value: sendRawWorkflowHistory
+	// Default value: false
 	// Allowed filters: DomainName
 	SendRawWorkflowHistory
 	// SearchAttributesNumberOfKeysLimit is the limit of number of keys
@@ -437,13 +436,13 @@ const (
 	// SearchAttributesSizeOfValueLimit is the size limit of each value
 	// KeyName: frontend.searchAttributesSizeOfValueLimit
 	// Value type: Int
-	// Default value: 2*1024
+	// Default value: 2048 (2*1024)
 	// Allowed filters: DomainName
 	SearchAttributesSizeOfValueLimit
 	// SearchAttributesTotalSizeLimit is the size limit of the whole map
 	// KeyName: frontend.searchAttributesTotalSizeLimit
 	// Value type: Int
-	// Default value: 40*1024
+	// Default value: 40960 (40*1024)
 	// Allowed filters: DomainName
 	SearchAttributesTotalSizeLimit
 	// VisibilityArchivalQueryMaxPageSize is the maximum page size for a visibility archival query
@@ -455,7 +454,7 @@ const (
 	// DomainFailoverRefreshInterval is the domain failover refresh timer
 	// KeyName: frontend.domainFailoverRefreshInterval
 	// Value type: Duration
-	// Default value: 10*time.Second
+	// Default value: 10s (10*time.Second)
 	// Allowed filters: N/A
 	DomainFailoverRefreshInterval
 	// DomainFailoverRefreshTimerJitterCoefficient is the jitter for domain failover refresh timer jitter
@@ -524,25 +523,25 @@ const (
 	// MatchingEnableSyncMatch is to enable sync match
 	// KeyName: matching.enableSyncMatch
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: DomainName,TasklistName,TasklistType
 	MatchingEnableSyncMatch
 	// MatchingUpdateAckInterval is the interval for update ack
 	// KeyName: matching.updateAckInterval
 	// Value type: Duration
-	// Default value: 1*time.Minute
+	// Default value: 1m (1*time.Minute)
 	// Allowed filters: DomainName,TasklistName,TasklistType
 	MatchingUpdateAckInterval
 	// MatchingIdleTasklistCheckInterval is the IdleTasklistCheckInterval
 	// KeyName: matching.idleTasklistCheckInterval
 	// Value type: Duration
-	// Default value: 5*time.Minute
+	// Default value: 5m (5*time.Minute)
 	// Allowed filters: DomainName,TasklistName,TasklistType
 	MatchingIdleTasklistCheckInterval
 	// MaxTasklistIdleTime is the max time tasklist being idle
 	// KeyName: matching.maxTasklistIdleTime
 	// Value type: Duration
-	// Default value: 5*time.Minute
+	// Default value: 5m (5*time.Minute)
 	// Allowed filters: DomainName,TasklistName,TasklistType
 	MaxTasklistIdleTime
 	// MatchingOutstandingTaskAppendsThreshold is the threshold for outstanding task appends
@@ -620,7 +619,7 @@ const (
 	// MatchingEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID
 	// KeyName: matching.enableTaskInfoLogByDomainID
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
 
@@ -659,7 +658,7 @@ const (
 	// HistoryLongPollExpirationInterval is the long poll expiration interval in the history service
 	// KeyName: history.longPollExpirationInterval
 	// Value type: Duration
-	// Default value: time.Second*20
+	// Default value: 20s( time.Second*20)
 	// Allowed filters: DomainName
 	HistoryLongPollExpirationInterval
 	// HistoryCacheInitialSize is initial size of history cache
@@ -677,7 +676,7 @@ const (
 	// HistoryCacheTTL is TTL of history cache
 	// KeyName: history.cacheTTL
 	// Value type: Duration
-	// Default value: time.Hour
+	// Default value: 1h (time.Hour)
 	// Allowed filters: N/A
 	HistoryCacheTTL
 	// HistoryShutdownDrainDuration is the duration of traffic drain during shutdown
@@ -707,13 +706,13 @@ const (
 	// EventsCacheTTL is TTL of events cache
 	// KeyName: history.eventsCacheTTL
 	// Value type: Duration
-	// Default value: time.Hour
+	// Default value: 1h (time.Hour)
 	// Allowed filters: N/A
 	EventsCacheTTL
 	// EventsCacheGlobalEnable is enables global cache over all history shards
 	// KeyName: history.eventsCacheGlobalEnable
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EventsCacheGlobalEnable
 	// EventsCacheGlobalInitialCount is initial count of global events cache
@@ -731,7 +730,7 @@ const (
 	// AcquireShardInterval is interval that timer used to acquire shard
 	// KeyName: history.acquireShardInterval
 	// Value type: Duration
-	// Default value: time.Minute
+	// Default value: 1m (time.Minute)
 	// Allowed filters: N/A
 	AcquireShardInterval
 	// AcquireShardConcurrency is number of goroutines that can be used to acquire shards in the shard controller.
@@ -743,19 +742,19 @@ const (
 	// StandbyClusterDelay is the artificial delay added to standby cluster's view of active cluster's time
 	// KeyName: history.standbyClusterDelay
 	// Value type: Duration
-	// Default value: 5*time.Minute
+	// Default value: 5m (5*time.Minute)
 	// Allowed filters: N/A
 	StandbyClusterDelay
 	// StandbyTaskMissingEventsResendDelay is the amount of time standby cluster's will wait (if events are missing)before calling remote for missing events
 	// KeyName: history.standbyTaskMissingEventsResendDelay
 	// Value type: Duration
-	// Default value: 15*time.Minute
+	// Default value: 15m (15*time.Minute)
 	// Allowed filters: N/A
 	StandbyTaskMissingEventsResendDelay
 	// StandbyTaskMissingEventsDiscardDelay is the amount of time standby cluster's will wait (if events are missing)before discarding the task
 	// KeyName: history.standbyTaskMissingEventsDiscardDelay
 	// Value type: Duration
-	// Default value: 25*time.Minute
+	// Default value: 25m (25*time.Minute)
 	// Allowed filters: N/A
 	StandbyTaskMissingEventsDiscardDelay
 	// TaskProcessRPS is the task processing rate per second for each domain
@@ -766,8 +765,8 @@ const (
 	TaskProcessRPS
 	// TaskSchedulerType is the task scheduler type for priority task processor
 	// KeyName: history.taskSchedulerType
-	// Value type: Int
-	// Default value: int(task.SchedulerTypeWRR)
+	// Value type: Int enum(1 for SchedulerTypeFIFO, 2 for SchedulerTypeWRR(weighted round robin scheduler implementation))
+	// Default value: 2 (task.SchedulerTypeWRR)
 	// Allowed filters: N/A
 	TaskSchedulerType
 	// TaskSchedulerWorkerCount is the number of workers per host in task scheduler
@@ -803,7 +802,7 @@ const (
 	// TaskSchedulerRoundRobinWeights is the priority weight for weighted round robin task scheduler
 	// KeyName: history.taskSchedulerRoundRobinWeight
 	// Value type: Map
-	// Default value: common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight)
+	// Default value: please see common.ConvertIntMapToDynamicConfigMapProperty(DefaultTaskPriorityWeight) in code base
 	// Allowed filters: N/A
 	TaskSchedulerRoundRobinWeights
 	// TaskCriticalRetryCount is the critical retry count for background tasks
@@ -818,13 +817,13 @@ const (
 	// ActiveTaskRedispatchInterval is the active task redispatch interval
 	// KeyName: history.activeTaskRedispatchInterval
 	// Value type: Duration
-	// Default value: 5*time.Second
+	// Default value: 5s (5*time.Second)
 	// Allowed filters: N/A
 	ActiveTaskRedispatchInterval
 	// StandbyTaskRedispatchInterval is the standby task redispatch interval
 	// KeyName: history.standbyTaskRedispatchInterval
 	// Value type: Duration
-	// Default value: 30*time.Second
+	// Default value: 30s (30*time.Second)
 	// Allowed filters: N/A
 	StandbyTaskRedispatchInterval
 	// TaskRedispatchIntervalJitterCoefficient is the task redispatch interval jitter coefficient
@@ -836,20 +835,20 @@ const (
 	// StandbyTaskReReplicationContextTimeout is the context timeout for standby task re-replication
 	// KeyName: history.standbyTaskReReplicationContextTimeout
 	// Value type: Duration
-	// Default value: 3*time.Minute
+	// Default value: 3m (3*time.Minute)
 	// Allowed filters: DomainID
 	StandbyTaskReReplicationContextTimeout
 	// ResurrectionCheckMinDelay is the minimal timer processing delay before scanning history to see
 	// if there's a resurrected timer/activity
 	// KeyName: history.resurrectionCheckMinDelay
 	// Value type: Duration
-	// Default value: 24*time.Hour
+	// Default value: 24h (24*time.Hour)
 	// Allowed filters: DomainName
 	ResurrectionCheckMinDelay
 	// QueueProcessorEnableSplit is indicates whether processing queue split policy should be enabled
 	// KeyName: history.queueProcessorEnableSplit
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	QueueProcessorEnableSplit
 	// QueueProcessorSplitMaxLevel is the max processing queue level
@@ -861,7 +860,7 @@ const (
 	// QueueProcessorEnableRandomSplitByDomainID is indicates whether random queue split policy should be enabled for a domain
 	// KeyName: history.queueProcessorEnableRandomSplitByDomainID
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainID
 	QueueProcessorEnableRandomSplitByDomainID
 	// QueueProcessorRandomSplitProbability is the probability for a domain to be split to a new processing queue
@@ -873,37 +872,37 @@ const (
 	// QueueProcessorEnablePendingTaskSplitByDomainID is indicates whether pending task split policy should be enabled
 	// KeyName: history.queueProcessorEnablePendingTaskSplitByDomainID
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainID
 	QueueProcessorEnablePendingTaskSplitByDomainID
 	// QueueProcessorPendingTaskSplitThreshold is the threshold for the number of pending tasks per domain
 	// KeyName: history.queueProcessorPendingTaskSplitThreshold
 	// Value type: Map
-	// Default value: common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold)
+	// Default value: see common.ConvertIntMapToDynamicConfigMapProperty(DefaultPendingTaskSplitThreshold) in code base
 	// Allowed filters: N/A
 	QueueProcessorPendingTaskSplitThreshold
 	// QueueProcessorEnableStuckTaskSplitByDomainID is indicates whether stuck task split policy should be enabled
 	// KeyName: history.queueProcessorEnableStuckTaskSplitByDomainID
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainID
 	QueueProcessorEnableStuckTaskSplitByDomainID
 	// QueueProcessorStuckTaskSplitThreshold is the threshold for the number of attempts of a task
 	// KeyName: history.queueProcessorStuckTaskSplitThreshold
 	// Value type: Map
-	// Default value: common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold)
+	// Default value: see common.ConvertIntMapToDynamicConfigMapProperty(DefaultStuckTaskSplitThreshold) in code base
 	// Allowed filters: N/A
 	QueueProcessorStuckTaskSplitThreshold
 	// QueueProcessorSplitLookAheadDurationByDomainID is the look ahead duration when spliting a domain to a new processing queue
 	// KeyName: history.queueProcessorSplitLookAheadDurationByDomainID
 	// Value type: Duration
-	// Default value: 20*time.Minute
+	// Default value: 20m (20*time.Minute)
 	// Allowed filters: DomainID
 	QueueProcessorSplitLookAheadDurationByDomainID
 	// QueueProcessorPollBackoffInterval is the backoff duration when queue processor is throttled
 	// KeyName: history.queueProcessorPollBackoffInterval
 	// Value type: Duration
-	// Default value: 5*time.Second
+	// Default value: 5s (5*time.Second)
 	// Allowed filters: N/A
 	QueueProcessorPollBackoffInterval
 	// QueueProcessorPollBackoffIntervalJitterCoefficient is backoff interval jitter coefficient
@@ -915,13 +914,13 @@ const (
 	// QueueProcessorEnablePersistQueueStates is indicates whether processing queue states should be persisted
 	// KeyName: history.queueProcessorEnablePersistQueueStates
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	QueueProcessorEnablePersistQueueStates
 	// QueueProcessorEnableLoadQueueStates is indicates whether processing queue states should be loaded
 	// KeyName: history.queueProcessorEnableLoadQueueStates
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	QueueProcessorEnableLoadQueueStates
 
@@ -952,7 +951,7 @@ const (
 	// TimerProcessorUpdateAckInterval is update interval for timer processor
 	// KeyName: history.timerProcessorUpdateAckInterval
 	// Value type: Duration
-	// Default value: 30*time.Second
+	// Default value: 30s (30*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorUpdateAckInterval
 	// TimerProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
@@ -964,7 +963,7 @@ const (
 	// TimerProcessorCompleteTimerInterval is complete timer interval for timer processor
 	// KeyName: history.timerProcessorCompleteTimerInterval
 	// Value type: Duration
-	// Default value: 60*time.Second
+	// Default value: 60s (60*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorCompleteTimerInterval
 	// TimerProcessorFailoverMaxPollRPS is max poll rate per second for timer processor
@@ -982,7 +981,7 @@ const (
 	// TimerProcessorMaxPollInterval is max poll interval for timer processor
 	// KeyName: history.timerProcessorMaxPollInterval
 	// Value type: Duration
-	// Default value: 5*time.Minute
+	// Default value: 5m (5*time.Minute)
 	// Allowed filters: N/A
 	TimerProcessorMaxPollInterval
 	// TimerProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
@@ -994,7 +993,7 @@ const (
 	// TimerProcessorSplitQueueInterval is the split processing queue interval for timer processor
 	// KeyName: history.timerProcessorSplitQueueInterval
 	// Value type: Duration
-	// Default value: 1*time.Minute
+	// Default value: 1m (1*time.Minute)
 	// Allowed filters: N/A
 	TimerProcessorSplitQueueInterval
 	// TimerProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
@@ -1012,7 +1011,7 @@ const (
 	// TimerProcessorMaxTimeShift is the max shift timer processor can have
 	// KeyName: history.timerProcessorMaxTimeShift
 	// Value type: Duration
-	// Default value: 1*time.Second
+	// Default value: 1s (1*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorMaxTimeShift
 	// TimerProcessorHistoryArchivalSizeLimit is the max history size for inline archival
@@ -1024,7 +1023,7 @@ const (
 	// TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival
 	// KeyName: history.timerProcessorArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 1*time.Second
+	// Default value: 1s (1*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorArchivalTimeLimit
 
@@ -1061,7 +1060,7 @@ const (
 	// TransferProcessorMaxPollInterval is max poll interval for transferQueueProcessor
 	// KeyName: history.transferProcessorMaxPollInterval
 	// Value type: Duration
-	// Default value: 1*time.Minute
+	// Default value: 1m (1*time.Minute)
 	// Allowed filters: N/A
 	TransferProcessorMaxPollInterval
 	// TransferProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
@@ -1073,7 +1072,7 @@ const (
 	// TransferProcessorSplitQueueInterval is the split processing queue interval for transferQueueProcessor
 	// KeyName: history.transferProcessorSplitQueueInterval
 	// Value type: Duration
-	// Default value: 1*time.Minute
+	// Default value: 1m (1*time.Minute)
 	// Allowed filters: N/A
 	TransferProcessorSplitQueueInterval
 	// TransferProcessorSplitQueueIntervalJitterCoefficient is the split processing queue interval jitter coefficient
@@ -1085,7 +1084,7 @@ const (
 	// TransferProcessorUpdateAckInterval is update interval for transferQueueProcessor
 	// KeyName: history.transferProcessorUpdateAckInterval
 	// Value type: Duration
-	// Default value: 30*time.Second
+	// Default value: 30s (30*time.Second)
 	// Allowed filters: N/A
 	TransferProcessorUpdateAckInterval
 	// TransferProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
@@ -1097,7 +1096,7 @@ const (
 	// TransferProcessorCompleteTransferInterval is complete timer interval for transferQueueProcessor
 	// KeyName: history.transferProcessorCompleteTransferInterval
 	// Value type: Duration
-	// Default value: 60*time.Second
+	// Default value: 60s (60*time.Second)
 	// Allowed filters: N/A
 	TransferProcessorCompleteTransferInterval
 	// TransferProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for transferQueueProcessor
@@ -1109,19 +1108,19 @@ const (
 	// TransferProcessorEnableValidator is whether validator should be enabled for transferQueueProcessor
 	// KeyName: history.transferProcessorEnableValidator
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	TransferProcessorEnableValidator
 	// TransferProcessorValidationInterval is interval for performing transfer queue validation
 	// KeyName: history.transferProcessorValidationInterval
 	// Value type: Duration
-	// Default value: 30*time.Second
+	// Default value: 30s (30*time.Second)
 	// Allowed filters: N/A
 	TransferProcessorValidationInterval
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	// KeyName: history.transferProcessorVisibilityArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 200*time.Millisecond
+	// Default value: 200ms (200*time.Millisecond)
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
 
@@ -1158,7 +1157,7 @@ const (
 	// CrossClusterSourceProcessorMaxPollInterval is max poll interval for crossClusterQueueProcessor
 	// KeyName: history.crossClusterProcessorMaxPollInterval
 	// Value type: Duration
-	// Default value: 1*time.Minute
+	// Default value: 1m (1*time.Minute)
 	// Allowed filters: N/A
 	CrossClusterSourceProcessorMaxPollInterval
 	// CrossClusterSourceProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
@@ -1170,7 +1169,7 @@ const (
 	// CrossClusterSourceProcessorUpdateAckInterval is update interval for crossClusterQueueProcessor
 	// KeyName: history.crossClusterProcessorUpdateAckInterval
 	// Value type: Duration
-	// Default value: 30*time.Second
+	// Default value: 30s (30*time.Second)
 	// Allowed filters: N/A
 	CrossClusterSourceProcessorUpdateAckInterval
 	// CrossClusterSourceProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
@@ -1209,14 +1208,14 @@ const (
 	// CrossClusterTargetProcessorTaskWaitInterval is the duration for waiting a cross-cluster task response before responding to source
 	// KeyName: history.crossClusterTargetProcessorTaskWaitInterval
 	// Value type: Duration
-	// Default value: 3*time.Second
+	// Default value: 3s (3*time.Second)
 	// Allowed filters: N/A
 	CrossClusterTargetProcessorTaskWaitInterval
 	// CrossClusterTargetProcessorServiceBusyBackoffInterval is the backoff duration for cross cluster task processor when getting
 	// a service busy error when calling source cluster
 	// KeyName: history.crossClusterTargetProcessorServiceBusyBackoffInterval
 	// Value type: Duration
-	// Default value: 5*time.Second
+	// Default value: 5s (5*time.Second)
 	// Allowed filters: N/A
 	CrossClusterTargetProcessorServiceBusyBackoffInterval
 	// CrossClusterTargetProcessorJitterCoefficient is the jitter coefficient used in cross cluster task processor
@@ -1236,21 +1235,21 @@ const (
 	// CrossClusterFetcherAggregationInterval determines how frequently the fetch requests are sent
 	// KeyName: history.crossClusterFetcherAggregationInterval
 	// Value type: Duration
-	// Default value: 2*time.Second
+	// Default value: 2s (2*time.Second)
 	// Allowed filters: N/A
 	CrossClusterFetcherAggregationInterval
 	// CrossClusterFetcherServiceBusyBackoffInterval is the backoff duration for cross cluster task fetcher when getting
 	// a service busy error when calling source cluster
 	// KeyName: history.crossClusterFetcherServiceBusyBackoffInterval
 	// Value type: Duration
-	// Default value: 5*time.Second
+	// Default value: 5s (5*time.Second)
 	// Allowed filters: N/A
 	CrossClusterFetcherServiceBusyBackoffInterval
 	// CrossClusterFetcherServiceBusyBackoffInterval is the backoff duration for cross cluster task fetcher when getting
 	// a non-service busy error when calling source cluster
 	// KeyName: history.crossClusterFetcherErrorBackoffInterval
 	// Value type: Duration
-	// Default value: time.Second
+	// Default value: 1s (time.Second)
 	// Allowed filters: N/A
 	CrossClusterFetcherErrorBackoffInterval
 	// CrossClusterFetcherJitterCoefficient is the jitter coefficient used in cross cluster task fetcher
@@ -1293,7 +1292,7 @@ const (
 	// ReplicatorProcessorMaxPollInterval is max poll interval for ReplicatorProcessor
 	// KeyName: history.replicatorProcessorMaxPollInterval
 	// Value type: Duration
-	// Default value: 1*time.Minute
+	// Default value: 1m (1*time.Minute)
 	// Allowed filters: N/A
 	ReplicatorProcessorMaxPollInterval
 	// ReplicatorProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
@@ -1305,7 +1304,7 @@ const (
 	// ReplicatorProcessorUpdateAckInterval is update interval for ReplicatorProcessor
 	// KeyName: history.replicatorProcessorUpdateAckInterval
 	// Value type: Duration
-	// Default value: 5*time.Second
+	// Default value: 5s (5*time.Second)
 	// Allowed filters: N/A
 	ReplicatorProcessorUpdateAckInterval
 	// ReplicatorProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
@@ -1323,13 +1322,13 @@ const (
 	// ReplicatorProcessorEnablePriorityTaskProcessor is indicates whether priority task processor should be used for ReplicatorProcessor
 	// KeyName: history.replicatorProcessorEnablePriorityTaskProcessor
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	ReplicatorProcessorEnablePriorityTaskProcessor
 	// ReplicatorUpperLatency indicates the max allowed replication latency between clusters
 	// KeyName: history.replicatorUpperLatency
 	// Value type: Duration
-	// Default value: 40 * time.Second
+	// Default value: 40s (40 * time.Second)
 	// Allowed filters: N/A
 	ReplicatorUpperLatency
 
@@ -1360,13 +1359,13 @@ const (
 	// ShardUpdateMinInterval is the minimal time interval which the shard info can be updated
 	// KeyName: history.shardUpdateMinInterval
 	// Value type: Duration
-	// Default value: 5*time.Minute
+	// Default value: 5m (5*time.Minute)
 	// Allowed filters: N/A
 	ShardUpdateMinInterval
 	// ShardSyncMinInterval is the minimal time interval which the shard info should be sync to remote
 	// KeyName: history.shardSyncMinInterval
 	// Value type: Duration
-	// Default value: 5*time.Minute
+	// Default value: 5m (5*time.Minute)
 	// Allowed filters: N/A
 	ShardSyncMinInterval
 	// DefaultEventEncoding is the encoding type for history events
@@ -1390,7 +1389,7 @@ const (
 	// EnableAdminProtection is whether to enable admin checking
 	// KeyName: history.enableAdminProtection
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableAdminProtection
 	// AdminOperationToken is the token to pass admin checking
@@ -1408,7 +1407,7 @@ const (
 	// EnableParentClosePolicy is whether to  ParentClosePolicy
 	// KeyName: history.enableParentClosePolicy
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: DomainName
 	EnableParentClosePolicy
 	// ParentClosePolicyThreshold is decides that parent close policy will be processed by sys workers(if enabled) ifthe number of children greater than or equal to this threshold
@@ -1438,7 +1437,7 @@ const (
 	// DecisionHeartbeatTimeout is for decision heartbeat
 	// KeyName: history.decisionHeartbeatTimeout
 	// Value type: Duration
-	// Default value: time.Minute*30
+	// Default value: 30m (time.Minute*30)
 	// Allowed filters: DomainName
 	DecisionHeartbeatTimeout
 	// DecisionRetryCriticalAttempts is decision attempt threshold for logging and emiting metrics
@@ -1447,28 +1446,34 @@ const (
 	// Default value: 10
 	// Allowed filters: N/A
 	DecisionRetryCriticalAttempts
+	// DecisionRetryMaxAttempts is the max limit for decision retry attempts. 0 indicates infinite number of attempts.
+	// KeyName: history.decisionRetryMaxAttempts
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: DomainName
+	DecisionRetryMaxAttempts
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	// KeyName: history.DropStuckTaskByDomain
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainID
 	EnableDropStuckTaskByDomainID
 	// EnableConsistentQuery indicates if consistent query is enabled for the cluster
 	// KeyName: history.EnableConsistentQuery
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	EnableConsistentQuery
 	// EnableConsistentQueryByDomain indicates if consistent query is enabled for a domain
 	// KeyName: history.EnableConsistentQueryByDomain
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	EnableConsistentQueryByDomain
 	// EnableCrossClusterOperations indicates if cross cluster operations can be scheduled for a domain
 	// KeyName: history.enableCrossClusterOperations
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	EnableCrossClusterOperations
 	// MaxBufferedQueryCount indicates the maximum number of queries which can be buffered at a given time for a single workflow
@@ -1498,7 +1503,7 @@ const (
 	// NotifyFailoverMarkerInterval is determines the frequency to notify failover marker
 	// KeyName: history.NotifyFailoverMarkerInterval
 	// Value type: Duration
-	// Default value: 5*time.Second
+	// Default value: 5s (5*time.Second)
 	// Allowed filters: N/A
 	NotifyFailoverMarkerInterval
 	// NotifyFailoverMarkerTimerJitterCoefficient is the jitter for failover marker notifier timer
@@ -1510,7 +1515,7 @@ const (
 	// EnableActivityLocalDispatchByDomain is allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts
 	// KeyName: history.enableActivityLocalDispatchByDomain
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	EnableActivityLocalDispatchByDomain
 	// HistoryErrorInjectionRate is rate for injecting random error in history client
@@ -1522,13 +1527,13 @@ const (
 	// HistoryEnableTaskInfoLogByDomainID is enables info level logs for decision/activity task based on the request domainID
 	// KeyName: history.enableTaskInfoLogByDomainID
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainID
 	HistoryEnableTaskInfoLogByDomainID
 	// ActivityMaxScheduleToStartTimeoutForRetry is maximum value allowed when overwritting the schedule to start timeout for activities with retry policy
 	// KeyName: history.activityMaxScheduleToStartTimeoutForRetry
 	// Value type: Duration
-	// Default value: 30*time.Minute
+	// Default value: 30m (30*time.Minute)
 	// Allowed filters: DomainName
 	ActivityMaxScheduleToStartTimeoutForRetry
 
@@ -1543,7 +1548,7 @@ const (
 	// ReplicationTaskFetcherAggregationInterval determines how frequently the fetch requests are sent
 	// KeyName: history.ReplicationTaskFetcherAggregationInterval
 	// Value type: Duration
-	// Default value: 2 * time.Second
+	// Default value: 2s (2 * time.Second)
 	// Allowed filters: N/A
 	ReplicationTaskFetcherAggregationInterval
 	// ReplicationTaskFetcherTimerJitterCoefficient is the jitter for fetcher timer
@@ -1561,13 +1566,13 @@ const (
 	// ReplicationTaskFetcherServiceBusyWait is the wait time when fetcher encounters service busy error
 	// KeyName: history.ReplicationTaskFetcherServiceBusyWait
 	// Value type: Duration
-	// Default value: 60 * time.Second
+	// Default value: 60s (60 * time.Second)
 	// Allowed filters: N/A
 	ReplicationTaskFetcherServiceBusyWait
 	// ReplicationTaskProcessorErrorRetryWait is the initial retry wait when we see errors in applying replication tasks
 	// KeyName: history.ReplicationTaskProcessorErrorRetryWait
 	// Value type: Duration
-	// Default value: 50*time.Millisecond
+	// Default value: 50ms (50*time.Millisecond)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorRetryWait
 	// ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks
@@ -1579,31 +1584,31 @@ const (
 	// ReplicationTaskProcessorErrorSecondRetryWait is the initial retry wait for the second phase retry
 	// KeyName: history.ReplicationTaskProcessorErrorSecondRetryWait
 	// Value type: Duration
-	// Default value: 5 * time.Second
+	// Default value: 5s (5* time.Second)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorSecondRetryWait
 	// ReplicationTaskProcessorErrorSecondRetryMaxWait is the max wait time for the second phase retry
 	// KeyName: history.ReplicationTaskProcessorErrorSecondRetryMaxWait
 	// Value type: Duration
-	// Default value: 30 * 5 * time.Second
+	// Default value: 150s (30 * 5 * time.Second)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorSecondRetryMaxWait
 	// ReplicationTaskProcessorErrorSecondRetryExpiration is the expiration duration for the second phase retry
 	// KeyName: history.ReplicationTaskProcessorErrorSecondRetryExpiration
 	// Value type: Duration
-	// Default value: 5 * time.Minute
+	// Default value: 5m (5* time.Minute)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorSecondRetryExpiration
 	// ReplicationTaskProcessorNoTaskInitialWait is the wait time when not ask is returned
 	// KeyName: history.ReplicationTaskProcessorNoTaskInitialWait
 	// Value type: Duration
-	// Default value: 2 * time.Second
+	// Default value: 2s (2* time.Second)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorNoTaskInitialWait
 	// ReplicationTaskProcessorCleanupInterval determines how frequently the cleanup replication queue
 	// KeyName: history.ReplicationTaskProcessorCleanupInterval
 	// Value type: Duration
-	// Default value: 1 * time.Minute
+	// Default value: 1m (1* time.Minute)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorCleanupInterval
 	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
@@ -1621,7 +1626,7 @@ const (
 	// ReplicationTaskProcessorStartWait is the wait time before each task processing batch
 	// KeyName: history.ReplicationTaskProcessorStartWait
 	// Value type: Duration
-	// Default value: 5 * time.Second
+	// Default value: 5s (5* time.Second)
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorStartWait
 	// ReplicationTaskProcessorStartWaitJitterCoefficient is the jitter for batch start wait timer
@@ -1696,7 +1701,7 @@ const (
 	// WorkerESProcessorFlushInterval is flush interval for esProcessor
 	// KeyName: worker.ESProcessorFlushInterval
 	// Value type: Duration
-	// Default value: 1*time.Second
+	// Default value: 1s (1*time.Second)
 	// Allowed filters: N/A
 	WorkerESProcessorFlushInterval
 	// WorkerArchiverConcurrency is controls the number of coroutines handling archival work per archival workflow
@@ -1717,6 +1722,12 @@ const (
 	// Default value: archiver.MaxArchivalIterationTimeout()
 	// Allowed filters: N/A
 	WorkerTimeLimitPerArchivalIteration
+	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
+	// KeyName: worker.AllowArchivingIncompleteHistory
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	AllowArchivingIncompleteHistory
 	// WorkerThrottledLogRPS is the rate limit on number of log messages emitted per second for throttled logger
 	// KeyName: worker.throttledLogRPS
 	// Value type: Int
@@ -1745,7 +1756,7 @@ const (
 	// Only implemented for single SQL database. TODO https://github.com/uber/cadence/issues/4064 for supporting multiple/sharded SQL database and NoSQL
 	// KeyName: worker.enableCleaningOrphanTaskInTasklistScavenger
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	EnableCleaningOrphanTaskInTasklistScavenger
 	// ScannerMaxTasksProcessedPerTasklistJob is the number of tasks to process for a tasklist in each workflow run
@@ -1757,19 +1768,19 @@ const (
 	// TaskListScannerEnabled is indicates if task list scanner should be started as part of worker.Scanner
 	// KeyName: worker.taskListScannerEnabled
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	TaskListScannerEnabled
 	// HistoryScannerEnabled is indicates if history scanner should be started as part of worker.Scanner
 	// KeyName: worker.historyScannerEnabled
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	HistoryScannerEnabled
 	// ConcreteExecutionsScannerEnabled is indicates if executions scanner should be started as part of worker.Scanner
 	// KeyName: worker.executionsScannerEnabled
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerEnabled
 	// ConcreteExecutionsScannerConcurrency is indicates the concurrency of concrete execution scanner
@@ -1799,19 +1810,19 @@ const (
 	// ConcreteExecutionsScannerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
 	// KeyName: worker.executionsScannerInvariantCollectionMutableState
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionMutableState
 	// ConcreteExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run
 	// KeyName: worker.executionsScannerInvariantCollectionHistory
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	ConcreteExecutionsScannerInvariantCollectionHistory
 	// CurrentExecutionsScannerEnabled is indicates if current executions scanner should be started as part of worker.Scanner
 	// KeyName: worker.currentExecutionsScannerEnabled
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	CurrentExecutionsScannerEnabled
 	// CurrentExecutionsScannerConcurrency is indicates the concurrency of current executions scanner
@@ -1841,67 +1852,67 @@ const (
 	// CurrentExecutionsScannerInvariantCollectionHistory is indicates if history invariant checks should be run
 	// KeyName: worker.currentExecutionsScannerInvariantCollectionHistory
 	// Value type: Int
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	CurrentExecutionsScannerInvariantCollectionHistory
 	// CurrentExecutionsScannerInvariantCollectionMutableState is indicates if mutable state invariant checks should be run
 	// KeyName: worker.currentExecutionsInvariantCollectionMutableState
 	// Value type: Int
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	CurrentExecutionsScannerInvariantCollectionMutableState
 	// EnableBatcher is decides whether start batcher in our worker
 	// KeyName: worker.enableBatcher
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	EnableBatcher
 	// EnableParentClosePolicyWorker is decides whether or not enable system workers for processing parent close policy task
 	// KeyName: system.enableParentClosePolicyWorker
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	EnableParentClosePolicyWorker
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: DomainName
 	EnableStickyQuery
 	// EnableFailoverManager is indicates if failover manager is enabled
 	// KeyName: system.enableFailoverManager
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	EnableFailoverManager
 	// EnableWorkflowShadower indicates if workflow shadower is enabled
 	// KeyName: system.enableWorkflowShadower
 	// Value type: Bool
-	// Default value: TRUE
+	// Default value: true
 	// Allowed filters: N/A
 	EnableWorkflowShadower
 	// ConcreteExecutionFixerDomainAllow is which domains are allowed to be fixed by concrete fixer workflow
 	// KeyName: worker.concreteExecutionFixerDomainAllow
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	ConcreteExecutionFixerDomainAllow
 	// CurrentExecutionFixerDomainAllow is which domains are allowed to be fixed by current fixer workflow
 	// KeyName: worker.currentExecutionFixerDomainAllow
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	CurrentExecutionFixerDomainAllow
 	// TimersScannerEnabled is if timers scanner should be started as part of worker.Scanner
 	// KeyName: worker.timersScannerEnabled
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	TimersScannerEnabled
 	// TimersFixerEnabled is if timers fixer should be started as part of worker.Scanner
 	// KeyName: worker.timersFixerEnabled
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	TimersFixerEnabled
 	// TimersScannerConcurrency is the concurrency of timers scanner
@@ -1943,19 +1954,19 @@ const (
 	// TimersFixerDomainAllow is which domains are allowed to be fixed by timer fixer workflow
 	// KeyName: worker.timersFixerDomainAllow
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: DomainName
 	TimersFixerDomainAllow
 	// ConcreteExecutionFixerEnabled is if concrete execution fixer workflow is enabled
 	// KeyName: worker.concreteExecutionFixerEnabled
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	ConcreteExecutionFixerEnabled
 	// CurrentExecutionFixerEnabled is if current execution fixer workflow is enabled
 	// KeyName: worker.currentExecutionFixerEnabled
 	// Value type: Bool
-	// Default value: FALSE
+	// Default value: false
 	// Allowed filters: N/A
 	CurrentExecutionFixerEnabled
 
@@ -2272,6 +2283,7 @@ var Keys = map[Key]string{
 	StickyTTL:                                          "history.stickyTTL",
 	DecisionHeartbeatTimeout:                           "history.decisionHeartbeatTimeout",
 	DecisionRetryCriticalAttempts:                      "history.decisionRetryCriticalAttempts",
+	DecisionRetryMaxAttempts:                           "history.decisionRetryMaxAttempts",
 	ParentClosePolicyThreshold:                         "history.parentClosePolicyThreshold",
 	NumParentClosePolicySystemWorkflows:                "history.numParentClosePolicySystemWorkflows",
 	ReplicationTaskFetcherParallelism:                  "history.ReplicationTaskFetcherParallelism",
@@ -2319,6 +2331,7 @@ var Keys = map[Key]string{
 	WorkerArchiverConcurrency:                                "worker.ArchiverConcurrency",
 	WorkerArchivalsPerIteration:                              "worker.ArchivalsPerIteration",
 	WorkerTimeLimitPerArchivalIteration:                      "worker.TimeLimitPerArchivalIteration",
+	AllowArchivingIncompleteHistory:                          "worker.AllowArchivingIncompleteHistory",
 	WorkerThrottledLogRPS:                                    "worker.throttledLogRPS",
 	ScannerPersistenceMaxQPS:                                 "worker.scannerPersistenceMaxQPS",
 	ScannerGetOrphanTasksPageSize:                            "worker.scannerGetOrphanTasksPageSize",

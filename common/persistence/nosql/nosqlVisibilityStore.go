@@ -82,6 +82,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 			Memo:          request.Memo,
 			TaskList:      request.TaskList,
 			IsCron:        request.IsCron,
+			NumClusters:   request.NumClusters,
 		},
 	})
 	if err != nil {
@@ -113,6 +114,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 			Memo:          request.Memo,
 			TaskList:      request.TaskList,
 			IsCron:        request.IsCron,
+			NumClusters:   request.NumClusters,
 			//closed workflow attributes
 			Status:        &request.Status,
 			CloseTime:     request.CloseTimestamp,

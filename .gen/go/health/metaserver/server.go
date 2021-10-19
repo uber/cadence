@@ -28,6 +28,7 @@ package metaserver
 import (
 	context "context"
 
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -58,8 +59,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "health",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.Health),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.Health),
+					NoWire: health_NoWireHandler{impl},
 				},
 				Signature:    "Health() (*health.HealthStatus)",
 				ThriftModule: health.ThriftModule,
@@ -106,4 +108,41 @@ func (h handler) Health(ctx context.Context, body wire.Value) (thrift.Response, 
 	}
 
 	return response, err
+}
+
+type health_NoWireHandler struct{ impl Interface }
+
+func (h health_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args health.Meta_Health_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'Meta' procedure 'Health': %w", err)
+	}
+
+	success, appErr := h.impl.Health(ctx)
+
+	hadError := appErr != nil
+	result, err := health.Meta_Health_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }
