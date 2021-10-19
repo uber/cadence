@@ -2320,29 +2320,42 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 			},
 		},
 	}
-	crossClusterTasks2 := &p.CrossClusterCancelExecutionTask{
-		TargetCluster: remoteClusterName2,
-		CancelExecutionTask: p.CancelExecutionTask{
-			VisibilityTimestamp:     now,
-			TaskID:                  s.GetNextSequenceNumber(),
-			TargetDomainID:          uuid.New(),
-			TargetWorkflowID:        "target workflowID 3",
-			TargetRunID:             uuid.New(),
-			TargetChildWorkflowOnly: true,
-			InitiatedID:             6,
-			Version:                 123,
+	crossClusterTasks2 := []p.Task{
+		&p.CrossClusterCancelExecutionTask{
+			TargetCluster: remoteClusterName2,
+			CancelExecutionTask: p.CancelExecutionTask{
+				VisibilityTimestamp:     now,
+				TaskID:                  s.GetNextSequenceNumber(),
+				TargetDomainID:          uuid.New(),
+				TargetWorkflowID:        "target workflowID 3",
+				TargetRunID:             uuid.New(),
+				TargetChildWorkflowOnly: true,
+				InitiatedID:             6,
+				Version:                 123,
+			},
+		},
+		&p.CrossClusterRecordChildExecutionCompleteTask{
+			TargetCluster: remoteClusterName2,
+			RecordChildExecutionCompletedTask: p.RecordChildExecutionCompletedTask{
+				VisibilityTimestamp: now,
+				TaskID:              s.GetNextSequenceNumber(),
+				TargetDomainID:      uuid.New(),
+				TargetWorkflowID:    "target workflowID 4",
+				TargetRunID:         uuid.New(),
+				Version:             123,
+			},
+		},
+		&p.CrossClusterApplyParentClosePolicyTask{
+			TargetCluster: remoteClusterName2,
+			ApplyParentClosePolicyTask: p.ApplyParentClosePolicyTask{
+				VisibilityTimestamp: now,
+				TaskID:              s.GetNextSequenceNumber(),
+				TargetDomainIDs:     map[string]struct{}{uuid.New(): {}, uuid.New(): {}},
+				Version:             123,
+			},
 		},
 	}
-	crossClusterTasks3 := &p.CrossClusterApplyParentClosePolicyTask{
-		TargetCluster: remoteClusterName2,
-		ApplyParentClosePolicyTask: p.ApplyParentClosePolicyTask{
-			VisibilityTimestamp: now,
-			TaskID:              s.GetNextSequenceNumber(),
-			TargetDomainIDs:     map[string]struct{}{uuid.New(): {}, uuid.New(): {}},
-			Version:             123,
-		},
-	}
-	crossClusterTasks := append(crossClusterTasks1, crossClusterTasks2, crossClusterTasks3)
+	crossClusterTasks := append(crossClusterTasks1, crossClusterTasks2...)
 
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -2369,13 +2382,13 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 	// check created tasks for cluster 2
 	respTasks, err = s.GetCrossClusterTasks(ctx, remoteClusterName2, 0, 1, true)
 	s.NoError(err)
-	s.validateCrossClusterTasks([]p.Task{crossClusterTasks2, crossClusterTasks3}, respTasks)
+	s.validateCrossClusterTasks(crossClusterTasks2, respTasks)
 
-	// range delete tasks for cluster 1
-	err = s.CompleteCrossClusterTask(ctx, remoteClusterName2, respTasks[0].TaskID)
-	s.NoError(err)
-	err = s.CompleteCrossClusterTask(ctx, remoteClusterName2, respTasks[1].TaskID)
-	s.NoError(err)
+	// delete tasks for cluster 2
+	for idx := range respTasks {
+		err = s.CompleteCrossClusterTask(ctx, remoteClusterName2, respTasks[idx].TaskID)
+		s.NoError(err)
+	}
 	respTasks, err = s.GetCrossClusterTasks(ctx, remoteClusterName2, 0, 1, true)
 	s.NoError(err)
 	s.Empty(respTasks)
@@ -2390,20 +2403,29 @@ func (s *ExecutionManagerSuite) validateCrossClusterTasks(
 		s.Equal(tasks[index].GetTaskID(), loadedTaskInfo[index].GetTaskID())
 		s.Equal(tasks[index].GetType(), loadedTaskInfo[index].GetTaskType())
 		s.Equal(tasks[index].GetVersion(), loadedTaskInfo[index].GetVersion())
+		s.EqualTimesWithPrecision(tasks[index].GetVisibilityTimestamp(), loadedTaskInfo[index].GetVisibilityTimestamp(), time.Millisecond)
 		switch task := tasks[index].(type) {
 		case *p.CrossClusterStartChildExecutionTask:
 			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
+			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
 		case *p.CrossClusterSignalExecutionTask:
 			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
 			s.Equal(task.TargetChildWorkflowOnly, loadedTaskInfo[index].TargetChildWorkflowOnly)
+			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
 		case *p.CrossClusterCancelExecutionTask:
 			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
 			s.Equal(task.TargetChildWorkflowOnly, loadedTaskInfo[index].TargetChildWorkflowOnly)
+			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
+		case *p.CrossClusterRecordChildExecutionCompleteTask:
+			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
+			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
+			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
+			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
 		case *p.CrossClusterApplyParentClosePolicyTask:
 			s.Equal(task.TargetDomainIDs, loadedTaskInfo[index].GetTargetDomainIDs())
 		default:
@@ -2466,6 +2488,9 @@ func (s *ExecutionManagerSuite) TestTransferTasksComplete() {
 		&p.CancelExecutionTask{now, currentTransferID + 10004, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 444},
 		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
 		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
+		&p.RecordWorkflowClosedTask{now, currentTransferID + 10007, 777},
+		&p.RecordChildExecutionCompletedTask{now, currentTransferID + 10008, targetDomainID, targetWorkflowID, targetRunID, scheduleID, 888},
+		&p.ApplyParentClosePolicyTask{now, currentTransferID + 10009, map[string]struct{}{targetDomainID: {}}, 999},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -2490,30 +2515,16 @@ func (s *ExecutionManagerSuite) TestTransferTasksComplete() {
 	s.Equal(p.TransferTaskTypeCancelExecution, txTasks[3].TaskType)
 	s.Equal(p.TransferTaskTypeSignalExecution, txTasks[4].TaskType)
 	s.Equal(p.TransferTaskTypeStartChildExecution, txTasks[5].TaskType)
-	s.Equal(int64(111), txTasks[0].Version)
-	s.Equal(int64(222), txTasks[1].Version)
-	s.Equal(int64(333), txTasks[2].Version)
-	s.Equal(int64(444), txTasks[3].Version)
-	s.Equal(int64(555), txTasks[4].Version)
-	s.Equal(int64(666), txTasks[5].Version)
+	s.Equal(p.TransferTaskTypeRecordWorkflowClosed, txTasks[6].TaskType)
+	s.Equal(p.TransferTaskTypeRecordChildExecutionCompleted, txTasks[7].TaskType)
+	s.Equal(p.TransferTaskTypeApplyParentClosePolicy, txTasks[8].TaskType)
 
-	err2 = s.CompleteTransferTask(ctx, txTasks[0].TaskID)
-	s.NoError(err2)
-
-	err2 = s.CompleteTransferTask(ctx, txTasks[1].TaskID)
-	s.NoError(err2)
-
-	err2 = s.CompleteTransferTask(ctx, txTasks[2].TaskID)
-	s.NoError(err2)
-
-	err2 = s.CompleteTransferTask(ctx, txTasks[3].TaskID)
-	s.NoError(err2)
-
-	err2 = s.CompleteTransferTask(ctx, txTasks[4].TaskID)
-	s.NoError(err2)
-
-	err2 = s.CompleteTransferTask(ctx, txTasks[5].TaskID)
-	s.NoError(err2)
+	for idx := range txTasks {
+		// TODO: add a check similar to validateCrossClusterTasks
+		s.Equal(int64(111*(idx+1)), txTasks[idx].Version)
+		err := s.CompleteTransferTask(ctx, txTasks[idx].TaskID)
+		s.NoError(err)
+	}
 
 	txTasks, err2 = s.GetTransferTasks(ctx, 100, false)
 	s.NoError(err2)

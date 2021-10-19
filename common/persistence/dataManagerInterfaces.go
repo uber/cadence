@@ -580,8 +580,8 @@ type (
 		Version             int64
 	}
 
-	// RecordWorkflowClosed identifies a transfer task for writing visibility close execution record
-	RecordWorkflowClosed struct {
+	// RecordWorkflowClosedTask identifies a transfer task for writing visibility close execution record
+	RecordWorkflowClosedTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
@@ -2498,37 +2498,37 @@ func (u *StartChildExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
 }
 
 // GetType returns the type of the record workflow closed task
-func (u *RecordWorkflowClosed) GetType() int {
+func (u *RecordWorkflowClosedTask) GetType() int {
 	return TransferTaskTypeRecordWorkflowClosed
 }
 
 // GetVersion returns the version of the record workflow closed task
-func (u *RecordWorkflowClosed) GetVersion() int64 {
+func (u *RecordWorkflowClosedTask) GetVersion() int64 {
 	return u.Version
 }
 
 // SetVersion returns the version of the record workflow closed task
-func (u *RecordWorkflowClosed) SetVersion(version int64) {
+func (u *RecordWorkflowClosedTask) SetVersion(version int64) {
 	u.Version = version
 }
 
 // GetTaskID returns the sequence ID of the record workflow closed task
-func (u *RecordWorkflowClosed) GetTaskID() int64 {
+func (u *RecordWorkflowClosedTask) GetTaskID() int64 {
 	return u.TaskID
 }
 
 // SetTaskID sets the sequence ID of the record workflow closed task
-func (u *RecordWorkflowClosed) SetTaskID(id int64) {
+func (u *RecordWorkflowClosedTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
 // GetVisibilityTimestamp get the visibility timestamp
-func (u *RecordWorkflowClosed) GetVisibilityTimestamp() time.Time {
+func (u *RecordWorkflowClosedTask) GetVisibilityTimestamp() time.Time {
 	return u.VisibilityTimestamp
 }
 
 // SetVisibilityTimestamp set the visibility timestamp
-func (u *RecordWorkflowClosed) SetVisibilityTimestamp(timestamp time.Time) {
+func (u *RecordWorkflowClosedTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
 }
 

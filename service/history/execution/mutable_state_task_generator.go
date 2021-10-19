@@ -215,7 +215,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 
 		// 3. add record workflow closed task
 		if len(crossClusterTasks) != 0 {
-			transferTasks = append(transferTasks, &persistence.RecordWorkflowClosed{
+			transferTasks = append(transferTasks, &persistence.RecordWorkflowClosedTask{
 				Version: closeEvent.GetVersion(),
 			})
 		} else {

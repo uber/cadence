@@ -1001,11 +1001,24 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 	var replicationTasks []p.Task
 	for _, task := range txTasks {
 		switch t := task.(type) {
-		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask,
-			*p.RecordWorkflowStartedTask, *p.ResetWorkflowTask, *p.UpsertWorkflowSearchAttributesTask:
+		case *p.DecisionTask,
+			*p.ActivityTask,
+			*p.CloseExecutionTask,
+			*p.RecordWorkflowClosedTask,
+			*p.RecordChildExecutionCompletedTask,
+			*p.ApplyParentClosePolicyTask,
+			*p.CancelExecutionTask,
+			*p.StartChildExecutionTask,
+			*p.SignalExecutionTask,
+			*p.RecordWorkflowStartedTask,
+			*p.ResetWorkflowTask,
+			*p.UpsertWorkflowSearchAttributesTask:
 			transferTasks = append(transferTasks, t)
-		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask,
-			*p.CrossClusterRecordChildExecutionCompleteTask, *p.CrossClusterApplyParentClosePolicyTask:
+		case *p.CrossClusterStartChildExecutionTask,
+			*p.CrossClusterCancelExecutionTask,
+			*p.CrossClusterSignalExecutionTask,
+			*p.CrossClusterRecordChildExecutionCompleteTask,
+			*p.CrossClusterApplyParentClosePolicyTask:
 			crossClusterTasks = append(crossClusterTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)
