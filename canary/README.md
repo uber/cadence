@@ -145,7 +145,7 @@ Echo workflow tests the very basic workflow functionality. It executes an activi
 
 To manually start an `Echo` test case:
 ```
-cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.echo
+cadence --do <> workflow start --tl canary-task-queue --et 10 --wt workflow.echo -i 0
 ```
 Then observe the progress:
 ```
