@@ -25,10 +25,12 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	apiv1 "go.uber.org/cadence/.gen/proto/api/v1"
 	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -53,33 +55,52 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 		cfg.Cadence.ServiceName = CadenceServiceName
 	}
 
-	if cfg.Cadence.HostNameAndPort == "" {
-		cfg.Cadence.HostNameAndPort = CadenceLocalHostPort
+	var dispatcher *yarpc.Dispatcher
+	var runtimeContext *RuntimeContext
+	if cfg.Cadence.GRPCHostNameAndPort != "" {
+		dispatcher = yarpc.NewDispatcher(yarpc.Config{
+			Name: CanaryServiceName,
+			Outbounds: yarpc.Outbounds{
+				cfg.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.GRPCHostNameAndPort)},
+			},
+		})
+		clientConfig := dispatcher.ClientConfig(cfg.Cadence.ServiceName)
+		runtimeContext = NewRuntimeContext(
+			logger,
+			metricsScope,
+			compatibility.NewThrift2ProtoAdapter(
+				apiv1.NewDomainAPIYARPCClient(clientConfig),
+				apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+				apiv1.NewWorkerAPIYARPCClient(clientConfig),
+				apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+			),
+		)
+	} else if cfg.Cadence.ThriftHostNameAndPort != "" {
+		tch, err := tchannel.NewChannelTransport(
+			tchannel.ServiceName(CanaryServiceName),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create transport channel: %v", err)
+		}
+		dispatcher = yarpc.NewDispatcher(yarpc.Config{
+			Name: CanaryServiceName,
+			Outbounds: yarpc.Outbounds{
+				cfg.Cadence.ServiceName: {Unary: tch.NewSingleOutbound(cfg.Cadence.ThriftHostNameAndPort)},
+			},
+		})
+		runtimeContext = NewRuntimeContext(
+			logger,
+			metricsScope,
+			workflowserviceclient.New(dispatcher.ClientConfig(cfg.Cadence.ServiceName)),
+		)
+	} else {
+		return nil, fmt.Errorf("must specify either gRPC address(address) or Thrift address (host) in the config")
 	}
-
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: CanaryServiceName,
-		Outbounds: yarpc.Outbounds{
-			cfg.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.HostNameAndPort)},
-		},
-	})
 
 	if err := dispatcher.Start(); err != nil {
 		dispatcher.Stop()
 		return nil, fmt.Errorf("failed to create outbound transport channel: %v", err)
 	}
-
-	clientConfig := dispatcher.ClientConfig(cfg.Cadence.ServiceName)
-	runtimeContext := NewRuntimeContext(
-		logger,
-		metricsScope,
-		compatibility.NewThrift2ProtoAdapter(
-			apiv1.NewDomainAPIYARPCClient(clientConfig),
-			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
-			apiv1.NewWorkerAPIYARPCClient(clientConfig),
-			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
-		),
-	)
 
 	return &canaryRunner{
 		RuntimeContext: runtimeContext,
