@@ -22,7 +22,6 @@ package testing
 
 import (
 	"fmt"
-	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
