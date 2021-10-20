@@ -257,7 +257,11 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskTimedOutEvent
 	timeoutType types.TimeoutType,
 ) error {
 	incrementAttempt := true
-	// Do not increment decision attempt in the case of sticky timeout to prevent creating next decision as transient
+	// Do not increment decision attempt in the case of sticky scheduleToStart timeout to
+	// prevent creating next decision as transient
+	// Note: this is just best effort, stickiness can be cleared before the timer fires,
+	// and we can't tell is the decision that is having scheduleToStart timeout is sticky
+	// or not.
 	if timeoutType == types.TimeoutTypeScheduleToStart &&
 		m.msb.executionInfo.StickyTaskList != "" {
 		incrementAttempt = false
@@ -761,6 +765,8 @@ func (m *mutableStateDecisionTaskManagerImpl) GetDecisionInfo(
 func (m *mutableStateDecisionTaskManagerImpl) GetDecisionScheduleToStartTimeout() time.Duration {
 	// we should not call IsStickyTaskListEnabled which may be false
 	// if sticky TTL has expired
+	// NOTE: this function is called in the same mutable state transaction as the one generating the decision task
+	// we stickiness won't be cleared between creating the decision and getting the timeout
 	if m.msb.executionInfo.StickyTaskList != "" {
 		return time.Duration(
 			m.msb.executionInfo.StickyScheduleToStartTimeout,
