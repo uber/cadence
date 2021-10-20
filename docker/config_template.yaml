@@ -202,8 +202,6 @@ services:
 
 clusterGroupMetadata:
     enableGlobalDomain: {{ default .Env.ENABLE_GLOBAL_DOMAIN "true" }}
-    clusterRedirectionPolicy:
-        policy: {{ default .Env.CLUSTER_REDIRECT_POLICY "all-domain-apis-forwarding" }}
     failoverVersionIncrement: 10
     primaryClusterName: "primary"
     {{- if .Env.IS_NOT_PRIMARY }}
