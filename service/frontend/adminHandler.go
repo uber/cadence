@@ -86,6 +86,7 @@ type (
 		ResendReplicationTasks(context.Context, *types.ResendReplicationTasksRequest) error
 		ResetQueue(context.Context, *types.ResetQueueRequest) error
 		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
+		RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error)
 		GetDynamicConfig(context.Context, *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error)
 		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
 		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
@@ -103,6 +104,7 @@ type (
 		domainFailoverWatcher domain.FailoverWatcher
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
+		throttleRetry         *backoff.ThrottleRetry
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -155,6 +157,10 @@ func NewAdminHandler(
 		),
 		eventSerializer: persistence.NewPayloadSerializer(),
 		esClient:        params.ESClient,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(adminServiceRetryPolicy),
+			backoff.WithRetryableError(common.IsServiceTransientError),
+		),
 	}
 }
 
@@ -829,7 +835,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	default:
 		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
-	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
+	err = adh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -881,7 +887,7 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	default:
 		return &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
-	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
+	err = adh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -936,7 +942,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 	default:
 		return nil, &types.BadRequestError{Message: "The DLQ type is not supported."}
 	}
-	err = backoff.Retry(op, adminServiceRetryPolicy, common.IsServiceTransientError)
+	err = adh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -1027,6 +1033,29 @@ func (adh *adminHandlerImpl) GetCrossClusterTasks(
 	}
 
 	resp, err = adh.GetHistoryRawClient().GetCrossClusterTasks(ctx, request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
+}
+
+func (adh *adminHandlerImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+) (resp *types.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	defer log.CapturePanic(adh.GetLogger(), &err)
+	scope, sw := adh.startRequestProfile(ctx, metrics.AdminRespondCrossClusterTasksCompletedScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if request.TargetCluster == "" {
+		return nil, adh.error(errClusterNameNotSet, scope)
+	}
+
+	resp, err = adh.GetHistoryClient().RespondCrossClusterTasksCompleted(ctx, request)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}

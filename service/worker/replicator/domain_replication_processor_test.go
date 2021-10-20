@@ -83,7 +83,10 @@ func (s *domainReplicationSuite) SetupTest() {
 	)
 	retryPolicy := backoff.NewExponentialRetryPolicy(time.Nanosecond)
 	retryPolicy.SetMaximumAttempts(1)
-	s.replicationProcessor.retryPolicy = retryPolicy
+	s.replicationProcessor.throttleRetry = backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(isTransientRetryableError),
+	)
 }
 
 func (s *domainReplicationSuite) TearDownTest() {

@@ -113,20 +113,21 @@ CREATE TYPE replication_state (
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.
 CREATE TYPE transfer_task (
-  domain_id                  uuid,   -- The domain ID that this transfer task belongs to
-  workflow_id                text,   -- The workflow ID that this transfer task belongs to
-  run_id                     uuid,   -- The run ID that this transfer task belongs to
+  domain_id                  uuid,         -- The domain ID that this transfer task belongs to
+  workflow_id                text,         -- The workflow ID that this transfer task belongs to
+  run_id                     uuid,         -- The run ID that this transfer task belongs to
   task_id                    bigint,
-  visibility_ts              timestamp, -- The timestamp when the transfer task is generated
-  target_domain_id           uuid,   -- The external domain ID that this transfer task is doing work for.
-  target_workflow_id         text,   -- The external workflow ID that this transfer task is doing work for.
-  target_run_id              uuid,   -- The external run ID that this transfer task is doing work for.
-  target_child_workflow_only boolean, -- The whether target child workflow only.
+  visibility_ts              timestamp,    -- The timestamp when the transfer task is generated
+  target_domain_id           uuid,         -- The external domain ID that this transfer task is doing work for.
+  target_domain_ids          set<uuid>,    -- The external domain ID that this transfer task is doing work for.
+  target_workflow_id         text,         -- The external workflow ID that this transfer task is doing work for.
+  target_run_id              uuid,         -- The external run ID that this transfer task is doing work for.
+  target_child_workflow_only boolean,      -- The whether target child workflow only.
   task_list                  text,
-  type                       int,    -- enum TaskType For local: {Decision, Activity, CloseExecution, CancelExecution, StartChildExecution, SignalExecution, RecordWorkflowStarted, ResetWorkflow, UpsertWorkflowSearchAttributes}, or for crossCluster {StartChildExecution, CancelExecution, SignalExecution}
+  type                       int,          -- enum TaskType For local: {Decision, Activity, CloseExecution, CancelExecution, StartChildExecution, SignalExecution, RecordWorkflowStarted, ResetWorkflow, UpsertWorkflowSearchAttributes}, or for crossCluster {StartChildExecution, CancelExecution, SignalExecution}
   schedule_id                bigint,
-  version                    bigint, -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
-  record_visibility          boolean, -- indicates whether or not to create a visibility record
+  version                    bigint,       -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
+  record_visibility          boolean,      -- indicates whether or not to create a visibility record
 );
 
 CREATE TYPE replication_task (

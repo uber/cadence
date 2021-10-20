@@ -150,6 +150,11 @@ type Interface interface {
 		Request *shared.ResetQueueRequest,
 	) error
 
+	RespondCrossClusterTasksCompleted(
+		ctx context.Context,
+		Request *shared.RespondCrossClusterTasksCompletedRequest,
+	) (*shared.RespondCrossClusterTasksCompletedResponse, error)
+
 	RestoreDynamicConfig(
 		ctx context.Context,
 		Request *admin.RestoreDynamicConfigRequest,
@@ -437,6 +442,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RespondCrossClusterTasksCompleted",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondCrossClusterTasksCompleted),
+					NoWire: respondcrossclustertaskscompleted_NoWireHandler{impl},
+				},
+				Signature:    "RespondCrossClusterTasksCompleted(Request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RestoreDynamicConfig",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -462,7 +479,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 24)
+	procedures := make([]transport.Procedure, 0, 25)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1114,6 +1131,36 @@ func (h handler) ResetQueue(ctx context.Context, body wire.Value) (thrift.Respon
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_ResetQueue_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) RespondCrossClusterTasksCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_RespondCrossClusterTasksCompleted_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'RespondCrossClusterTasksCompleted': %w", err)
+	}
+
+	success, appErr := h.impl.RespondCrossClusterTasksCompleted(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RespondCrossClusterTasksCompleted_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -1989,6 +2036,43 @@ func (h resetqueue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_ResetQueue_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type respondcrossclustertaskscompleted_NoWireHandler struct{ impl Interface }
+
+func (h respondcrossclustertaskscompleted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_RespondCrossClusterTasksCompleted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'RespondCrossClusterTasksCompleted': %w", err)
+	}
+
+	success, appErr := h.impl.RespondCrossClusterTasksCompleted(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RespondCrossClusterTasksCompleted_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

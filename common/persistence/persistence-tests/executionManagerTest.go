@@ -2333,7 +2333,16 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 			Version:                 123,
 		},
 	}
-	crossClusterTasks := append(crossClusterTasks1, crossClusterTasks2)
+	crossClusterTasks3 := &p.CrossClusterApplyParentClosePolicyTask{
+		TargetCluster: remoteClusterName2,
+		ApplyParentClosePolicyTask: p.ApplyParentClosePolicyTask{
+			VisibilityTimestamp: now,
+			TaskID:              s.GetNextSequenceNumber(),
+			TargetDomainIDs:     map[string]struct{}{uuid.New(): {}, uuid.New(): {}},
+			Version:             123,
+		},
+	}
+	crossClusterTasks := append(crossClusterTasks1, crossClusterTasks2, crossClusterTasks3)
 
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{
@@ -2360,10 +2369,12 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 	// check created tasks for cluster 2
 	respTasks, err = s.GetCrossClusterTasks(ctx, remoteClusterName2, 0, 1, true)
 	s.NoError(err)
-	s.validateCrossClusterTasks([]p.Task{crossClusterTasks2}, respTasks)
+	s.validateCrossClusterTasks([]p.Task{crossClusterTasks2, crossClusterTasks3}, respTasks)
 
 	// range delete tasks for cluster 1
 	err = s.CompleteCrossClusterTask(ctx, remoteClusterName2, respTasks[0].TaskID)
+	s.NoError(err)
+	err = s.CompleteCrossClusterTask(ctx, remoteClusterName2, respTasks[1].TaskID)
 	s.NoError(err)
 	respTasks, err = s.GetCrossClusterTasks(ctx, remoteClusterName2, 0, 1, true)
 	s.NoError(err)
@@ -2393,6 +2404,8 @@ func (s *ExecutionManagerSuite) validateCrossClusterTasks(
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
 			s.Equal(task.TargetChildWorkflowOnly, loadedTaskInfo[index].TargetChildWorkflowOnly)
+		case *p.CrossClusterApplyParentClosePolicyTask:
+			s.Equal(task.TargetDomainIDs, loadedTaskInfo[index].GetTargetDomainIDs())
 		default:
 			s.FailNow("unknown cross cluster task type")
 		}

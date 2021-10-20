@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -232,6 +233,14 @@ func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 
 	var timers []*persistence.TimerTaskInfo
 
+	isRetryable := func(err error) bool {
+		return persistence.IsTransientError(err) || common.IsContextTimeoutError(err)
+	}
+
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(isRetryable),
+	)
 	var token []byte
 	isFirstIteration := true
 	for isFirstIteration || len(token) != 0 {
@@ -254,11 +263,7 @@ func (cl *dbLoadCloser) Load() []*persistence.TimerTaskInfo {
 			return err
 		}
 
-		isRetryable := func(err error) bool {
-			return persistence.IsTransientError(err) || common.IsContextTimeoutError(err)
-		}
-
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), isRetryable)
+		err = throttleRetry.Do(context.Background(), op)
 
 		if err != nil {
 			ErrorAndExit("cannot get timer tasks for shard", err)

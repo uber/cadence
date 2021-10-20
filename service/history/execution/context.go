@@ -933,11 +933,11 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(
-		op,
-		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		persistence.IsTransientError,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(persistence.IsTransientError),
 	)
+	err := throttleRetry.Do(ctx, op)
 	return int64(resp), err
 }
 
@@ -963,11 +963,11 @@ func (c *contextImpl) createWorkflowExecutionWithRetry(
 		return persistence.IsTransientError(err)
 	}
 
-	err := backoff.Retry(
-		op,
-		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		isRetryable,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(isRetryable),
 	)
+	err := throttleRetry.Do(ctx, op)
 	switch err.(type) {
 	case nil:
 		return resp, nil
@@ -1001,11 +1001,11 @@ func (c *contextImpl) getWorkflowExecutionWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(
-		op,
-		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		persistence.IsTransientError,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(persistence.IsTransientError),
 	)
+	err := throttleRetry.Do(ctx, op)
 	switch err.(type) {
 	case nil:
 		return resp, nil
@@ -1045,11 +1045,11 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		return persistence.IsTransientError(err)
 	}
 
-	err := backoff.Retry(
-		op,
-		common.CreatePersistenceRetryPolicyWithContext(ctx),
-		isRetryable,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(isRetryable),
 	)
+	err := throttleRetry.Do(ctx, op)
 	switch err.(type) {
 	case nil:
 		return resp, nil

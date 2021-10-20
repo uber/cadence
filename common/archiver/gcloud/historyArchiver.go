@@ -316,6 +316,10 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		historyBlob, err = historyIterator.Next()
 		return err
 	}
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(persistence.IsTransientError),
+	)
 	for err != nil {
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
@@ -323,7 +327,7 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		if !persistence.IsTransientError(err) {
 			return nil, err
 		}
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), persistence.IsTransientError)
+		err = throttleRetry.Do(ctx, op)
 	}
 	return historyBlob, nil
 }

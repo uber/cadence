@@ -393,6 +393,24 @@ func (c *metricClient) GetCrossClusterTasks(
 	return resp, err
 }
 
+func (c *metricClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	c.metricsClient.IncCounter(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
+
 func (c *metricClient) GetDynamicConfig(
 	ctx context.Context,
 	request *types.GetDynamicConfigRequest,

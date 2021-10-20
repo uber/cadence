@@ -84,6 +84,7 @@ type (
 		domainHandler             domain.Handler
 		visibilityQueryValidator  *validator.VisibilityQueryValidator
 		searchAttributesValidator *validator.SearchAttributesValidator
+		throttleRetry             *backoff.ThrottleRetry
 	}
 
 	getHistoryContinuationToken struct {
@@ -193,6 +194,10 @@ func NewWorkflowHandler(
 			config.SearchAttributesNumberOfKeysLimit,
 			config.SearchAttributesSizeOfValueLimit,
 			config.SearchAttributesTotalSizeLimit,
+		),
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(frontendServiceRetryPolicy),
+			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
 	}
 }
@@ -532,7 +537,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return err
 	}
 
-	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	err = wh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeActivity, pollRequest.TaskList, pollerID)
 		if err != nil {
@@ -637,7 +642,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return err
 	}
 
-	err = backoff.Retry(op, frontendServiceRetryPolicy, common.IsServiceTransientError)
+	err = wh.throttleRetry.Do(ctx, op)
 	if err != nil {
 		err = wh.cancelOutstandingPoll(ctx, err, domainID, persistence.TaskListTypeDecision, pollRequest.TaskList, pollerID)
 		if err != nil {

@@ -49,6 +49,7 @@ type (
 		logger         log.Logger
 		metricsClient  metrics.Client
 		config         *config.Config
+		throttleRetry  *backoff.ThrottleRetry
 	}
 )
 
@@ -67,6 +68,10 @@ func newTimerTaskExecutorBase(
 		logger:         logger,
 		metricsClient:  metricsClient,
 		config:         config,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(taskRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 	}
 }
 
@@ -228,7 +233,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }
 
 func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
@@ -243,7 +248,7 @@ func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }
 
 func (t *timerTaskExecutorBase) deleteWorkflowHistory(
@@ -263,7 +268,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowHistory(
 		})
 
 	}
-	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }
 
 func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
@@ -281,5 +286,5 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 		// TODO: expose GetVisibilityManager method on shardContext interface
 		return t.shard.GetService().GetVisibilityManager().DeleteWorkflowExecution(ctx, request) // delete from db
 	}
-	return backoff.Retry(op, taskRetryPolicy, persistence.IsTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }

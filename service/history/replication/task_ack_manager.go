@@ -78,6 +78,7 @@ type (
 		historyManager   persistence.HistoryManager
 		rateLimiter      *quotas.DynamicRateLimiter
 		retryPolicy      backoff.RetryPolicy
+		throttleRetry    *backoff.ThrottleRetry
 
 		lastTaskCreationTime atomic.Value
 		maxAllowedLatencyFn  dynamicconfig.DurationPropertyFn
@@ -107,12 +108,16 @@ func NewTaskAckManager(
 	retryPolicy.SetBackoffCoefficient(1)
 
 	return &taskAckManagerImpl{
-		shard:                shard,
-		executionCache:       executionCache,
-		executionManager:     shard.GetExecutionManager(),
-		historyManager:       shard.GetHistoryManager(),
-		rateLimiter:          rateLimiter,
-		retryPolicy:          retryPolicy,
+		shard:            shard,
+		executionCache:   executionCache,
+		executionManager: shard.GetExecutionManager(),
+		historyManager:   shard.GetHistoryManager(),
+		rateLimiter:      rateLimiter,
+		retryPolicy:      retryPolicy,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(retryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 		lastTaskCreationTime: atomic.Value{},
 		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
 		metricsClient:        shard.GetMetricsClient(),
@@ -183,7 +188,7 @@ TaskInfoLoop:
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
 			return err
 		}
-		err = backoff.Retry(op, t.retryPolicy, persistence.IsTransientError)
+		err = t.throttleRetry.Do(ctx, op)
 		switch err.(type) {
 		case nil:
 			// No action

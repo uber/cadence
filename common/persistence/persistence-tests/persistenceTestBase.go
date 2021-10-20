@@ -23,6 +23,7 @@ package persistencetests
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"sync/atomic"
@@ -1003,12 +1004,13 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 		case *p.DecisionTask, *p.ActivityTask, *p.CloseExecutionTask, *p.CancelExecutionTask, *p.StartChildExecutionTask, *p.SignalExecutionTask,
 			*p.RecordWorkflowStartedTask, *p.ResetWorkflowTask, *p.UpsertWorkflowSearchAttributesTask:
 			transferTasks = append(transferTasks, t)
-		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask:
+		case *p.CrossClusterStartChildExecutionTask, *p.CrossClusterCancelExecutionTask, *p.CrossClusterSignalExecutionTask,
+			*p.CrossClusterRecordChildWorkflowExecutionCompleteTask, *p.CrossClusterApplyParentClosePolicyTask:
 			crossClusterTasks = append(crossClusterTasks, t)
 		case *p.HistoryReplicationTask, *p.SyncActivityTask:
 			replicationTasks = append(replicationTasks, t)
 		default:
-			panic("Unknown transfer task type.")
+			panic(fmt.Sprintf("Unknown transfer task type. %v", t))
 		}
 	}
 	for _, decisionScheduleID := range decisionScheduleIDs {
@@ -1779,14 +1781,15 @@ func (s *TestBase) Publish(
 	retryPolicy.SetBackoffCoefficient(1.5)
 	retryPolicy.SetMaximumAttempts(5)
 
-	return backoff.Retry(
-		func() error {
-			return s.DomainReplicationQueueMgr.EnqueueMessage(ctx, messagePayload)
-		},
-		retryPolicy,
-		func(e error) bool {
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(func(e error) bool {
 			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
-		})
+		}),
+	)
+	return throttleRetry.Do(ctx, func() error {
+		return s.DomainReplicationQueueMgr.EnqueueMessage(ctx, messagePayload)
+	})
 }
 
 func isMessageIDConflictError(err error) bool {
@@ -1831,14 +1834,15 @@ func (s *TestBase) PublishToDomainDLQ(
 	retryPolicy.SetBackoffCoefficient(1.5)
 	retryPolicy.SetMaximumAttempts(5)
 
-	return backoff.Retry(
-		func() error {
-			return s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
-		},
-		retryPolicy,
-		func(e error) bool {
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(func(e error) bool {
 			return persistence.IsTransientError(e) || isMessageIDConflictError(e)
-		})
+		}),
+	)
+	return throttleRetry.Do(ctx, func() error {
+		return s.DomainReplicationQueueMgr.EnqueueMessageToDLQ(ctx, messagePayload)
+	})
 }
 
 // GetMessagesFromDomainDLQ is a utility method to get messages from the domain DLQ

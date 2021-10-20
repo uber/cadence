@@ -723,6 +723,52 @@ func ToAdminGetCrossClusterTasksResponse(t *adminv1.GetCrossClusterTasksResponse
 	}
 }
 
+// FromAdminRespondCrossClusterTasksCompletedRequest converts internal RespondCrossClusterTasksCompletedRequest type to thrift
+func FromAdminRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossClusterTasksCompletedRequest) *adminv1.RespondCrossClusterTasksCompletedRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.RespondCrossClusterTasksCompletedRequest{
+		ShardId:       t.ShardID,
+		TargetCluster: t.TargetCluster,
+		TaskResponses: FromCrossClusterTaskResponseArray(t.TaskResponses),
+		FetchNewTasks: t.FetchNewTasks,
+	}
+}
+
+// ToAdminRespondCrossClusterTasksCompletedRequest converts thrift RespondCrossClusterTasksCompletedRequest type to internal
+func ToAdminRespondCrossClusterTasksCompletedRequest(t *adminv1.RespondCrossClusterTasksCompletedRequest) *types.RespondCrossClusterTasksCompletedRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RespondCrossClusterTasksCompletedRequest{
+		ShardID:       t.ShardId,
+		TargetCluster: t.TargetCluster,
+		TaskResponses: ToCrossClusterTaskResponseArray(t.TaskResponses),
+		FetchNewTasks: t.FetchNewTasks,
+	}
+}
+
+// FromAdminRespondCrossClusterTasksCompletedResponse converts internal RespondCrossClusterTasksCompletedResponse type to thrift
+func FromAdminRespondCrossClusterTasksCompletedResponse(t *types.RespondCrossClusterTasksCompletedResponse) *adminv1.RespondCrossClusterTasksCompletedResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.RespondCrossClusterTasksCompletedResponse{
+		Tasks: FromCrossClusterTaskRequestArray(t.Tasks),
+	}
+}
+
+// ToAdminRespondCrossClusterTasksCompletedResponse converts thrift RespondCrossClusterTasksCompletedResponse type to internal
+func ToAdminRespondCrossClusterTasksCompletedResponse(t *adminv1.RespondCrossClusterTasksCompletedResponse) *types.RespondCrossClusterTasksCompletedResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RespondCrossClusterTasksCompletedResponse{
+		Tasks: ToCrossClusterTaskRequestArray(t.Tasks),
+	}
+}
+
 //FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to proto
 func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *adminv1.GetDynamicConfigRequest {
 	if t == nil {
