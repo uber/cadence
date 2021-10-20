@@ -301,7 +301,6 @@ func (r *workflowResetterImpl) persistToDB(
 		ctx,
 		resetWorkflowSnapshot,
 		resetHistorySize,
-		now,
 		persistence.CreateWorkflowModeContinueAsNew,
 		currentRunID,
 		currentLastWriteVersion,

@@ -74,18 +74,6 @@ func (mr *MockBeanMockRecorder) GetHistoryClient() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoryClient", reflect.TypeOf((*MockBean)(nil).GetHistoryClient))
 }
 
-// SetHistoryClient mocks base method
-func (m *MockBean) SetHistoryClient(client history.Client) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetHistoryClient", client)
-}
-
-// SetHistoryClient indicates an expected call of SetHistoryClient
-func (mr *MockBeanMockRecorder) SetHistoryClient(client interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHistoryClient", reflect.TypeOf((*MockBean)(nil).SetHistoryClient), client)
-}
-
 // GetMatchingClient mocks base method
 func (m *MockBean) GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	m.ctrl.T.Helper()
@@ -101,18 +89,6 @@ func (mr *MockBeanMockRecorder) GetMatchingClient(domainIDToName interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMatchingClient", reflect.TypeOf((*MockBean)(nil).GetMatchingClient), domainIDToName)
 }
 
-// SetMatchingClient mocks base method
-func (m *MockBean) SetMatchingClient(client matching.Client) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetMatchingClient", client)
-}
-
-// SetMatchingClient indicates an expected call of SetMatchingClient
-func (mr *MockBeanMockRecorder) SetMatchingClient(client interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetMatchingClient", reflect.TypeOf((*MockBean)(nil).SetMatchingClient), client)
-}
-
 // GetFrontendClient mocks base method
 func (m *MockBean) GetFrontendClient() frontend.Client {
 	m.ctrl.T.Helper()
@@ -125,18 +101,6 @@ func (m *MockBean) GetFrontendClient() frontend.Client {
 func (mr *MockBeanMockRecorder) GetFrontendClient() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFrontendClient", reflect.TypeOf((*MockBean)(nil).GetFrontendClient))
-}
-
-// SetFrontendClient mocks base method
-func (m *MockBean) SetFrontendClient(client frontend.Client) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetFrontendClient", client)
-}
-
-// SetFrontendClient indicates an expected call of SetFrontendClient
-func (mr *MockBeanMockRecorder) SetFrontendClient(client interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetFrontendClient", reflect.TypeOf((*MockBean)(nil).SetFrontendClient), client)
 }
 
 // GetRemoteAdminClient mocks base method
@@ -177,16 +141,4 @@ func (m *MockBean) GetRemoteFrontendClient(cluster string) frontend.Client {
 func (mr *MockBeanMockRecorder) GetRemoteFrontendClient(cluster interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRemoteFrontendClient", reflect.TypeOf((*MockBean)(nil).GetRemoteFrontendClient), cluster)
-}
-
-// SetRemoteFrontendClient mocks base method
-func (m *MockBean) SetRemoteFrontendClient(cluster string, client frontend.Client) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetRemoteFrontendClient", cluster, client)
-}
-
-// SetRemoteFrontendClient indicates an expected call of SetRemoteFrontendClient
-func (mr *MockBeanMockRecorder) SetRemoteFrontendClient(cluster, client interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRemoteFrontendClient", reflect.TypeOf((*MockBean)(nil).SetRemoteFrontendClient), cluster, client)
 }

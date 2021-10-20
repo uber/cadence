@@ -124,9 +124,10 @@ func buildCLI() *cli.App {
 			Usage: "start cadence canary worker or cron, or both",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "mode, m",
-					Value: canary.ModeWorker,
-					Usage: fmt.Sprintf("%v, %v or %v", canary.ModeWorker, canary.ModeCronCanary, canary.ModeAll),
+					Name:   "mode, m",
+					Value:  canary.ModeAll,
+					Usage:  fmt.Sprintf("%v, %v or %v", canary.ModeWorker, canary.ModeCronCanary, canary.ModeAll),
+					EnvVar: canary.EnvKeyMode,
 				},
 			},
 			Action: func(c *cli.Context) {

@@ -751,7 +751,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	if err != nil {
 		return err
 	}
-	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
+	if mutableState == nil {
 		return nil
 	}
 
@@ -763,6 +763,16 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	ok, err = verifyTaskVersion(t.shard, t.logger, task.DomainID, childInfo.Version, task.Version, task)
 	if err != nil || !ok {
 		return err
+	}
+
+	workflowRunning := mutableState.IsWorkflowExecutionRunning()
+	childStarted := childInfo.StartedID != common.EmptyEventID
+
+	if !workflowRunning && (!childStarted || childInfo.ParentClosePolicy != types.ParentClosePolicyAbandon) {
+		// three cases here:
+		// case 1: workflow not running, child started, close policy is not abandon
+		// case 2 & 3: workflow not running, child not started, close policy is or is not abandon
+		return nil
 	}
 
 	// Get target domain name
@@ -784,13 +794,11 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		targetDomainName = targetDomainEntry.GetInfo().Name
 	}
 
-	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
-	if err != nil {
-		return err
-	}
-
 	// ChildExecution already started, just create DecisionTask and complete transfer task
-	if childInfo.StartedID != common.EmptyEventID {
+	// if parent already closed, since child workflow started event already written to history,
+	// still schedule the decision if the parent close policy is Abandon.
+	// If parent close policy cancel, a decision will be scheduled when processing that close policy.
+	if childStarted {
 		// NOTE: do not access anything related mutable state after this lock release
 		// release the context lock since we no longer need mutable state builder and
 		// the rest of logic is making RPC call, which takes time.
@@ -803,6 +811,13 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 			})
+	}
+	// remaining 2 cases:
+	// workflow running, child not started, close policy is or is not abandon
+
+	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
+	if err != nil {
+		return err
 	}
 
 	attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
@@ -1398,6 +1413,8 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 		wfContext,
 		false,
 		func(ctx context.Context, mutableState execution.MutableState) error {
+			// TODO: we don't have to do this check here, as we hold the mutable state lock
+			// during the update and we already checked the workflow status after acquiring the lock.
 			if task.TaskType == persistence.TransferTaskTypeCloseExecution {
 				// IsWorkflowCompleted only returns true when the workflow is completed,
 				// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
@@ -1408,7 +1425,8 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 					// Returning nil to avoid infinite retry loop
 					return nil
 				}
-			} else if !mutableState.IsWorkflowExecutionRunning() {
+			} else if task.TaskType != persistence.TransferTaskTypeStartChildExecution &&
+				!mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 

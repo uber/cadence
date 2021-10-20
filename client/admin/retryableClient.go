@@ -330,6 +330,22 @@ func (c *retryableClient) GetCrossClusterTasks(
 	return resp, err
 }
 
+func (c *retryableClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	var resp *types.RespondCrossClusterTasksCompletedResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) GetDynamicConfig(
 	ctx context.Context,
 	request *types.GetDynamicConfigRequest,

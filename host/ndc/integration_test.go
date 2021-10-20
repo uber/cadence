@@ -2169,6 +2169,70 @@ func (s *NDCIntegrationTestSuite) TestAdminGetWorkflowExecutionRawHistoryV2() {
 	s.Equal(batchCount, 10)
 }
 
+func (s *NDCIntegrationTestSuite) TestWorkflowStartTime() {
+	s.setupRemoteFrontendClients()
+	workflowID := "ndc-workflow-start-time-test" + uuid.New()
+
+	workflowType := "start-time-test-workflow-type"
+	tasklist := "start-time-test-tasklist"
+
+	startTime := time.Now().Add(-time.Minute)
+	runID := uuid.New()
+
+	historyBatch := []*types.History{
+		{Events: []*types.HistoryEvent{
+			{
+				EventID:   1,
+				Timestamp: common.Int64Ptr(startTime.UnixNano()),
+				Version:   21,
+				EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
+				WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+					WorkflowType:                        &types.WorkflowType{Name: workflowType},
+					TaskList:                            &types.TaskList{Name: tasklist},
+					Input:                               nil,
+					ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1000),
+					TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1000),
+					FirstDecisionTaskBackoffSeconds:     common.Int32Ptr(100),
+				},
+			},
+		},
+		},
+	}
+
+	versionHistory := s.eventBatchesToVersionHistory(nil, historyBatch)
+	s.applyEvents(
+		workflowID,
+		runID,
+		workflowType,
+		tasklist,
+		versionHistory,
+		historyBatch,
+		s.active.GetHistoryClient(),
+	)
+
+	err := s.verifyEventHistory(workflowID, runID, historyBatch)
+	s.Require().NoError(err)
+
+	// we are replicating to the `active` cluster, check the comments in
+	// registerDomain() method below
+	descResp, err := s.active.GetFrontendClient().DescribeWorkflowExecution(
+		s.createContext(),
+		&types.DescribeWorkflowExecutionRequest{
+			Domain: s.domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+		},
+	)
+	s.NoError(err)
+	s.WithinDuration(
+		startTime,
+		time.Unix(0, descResp.WorkflowExecutionInfo.GetStartTime()),
+		time.Millisecond,
+	)
+}
+
 func (s *NDCIntegrationTestSuite) registerDomain() {
 	s.domainName = "test-simple-workflow-ndc-" + common.GenerateRandomString(5)
 	client1 := s.active.GetFrontendClient() // active

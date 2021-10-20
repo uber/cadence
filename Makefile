@@ -60,6 +60,12 @@ SPACE :=
 SPACE +=
 COMMA := ,
 
+# M1 macs may need to switch back to x86, until arm releases are available
+EMULATE_X86 =
+ifeq ($(shell uname -sm),Darwin arm64)
+EMULATE_X86 = arch -x86_64
+endif
+
 PROJECT_ROOT = github.com/uber/cadence
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
@@ -145,7 +151,7 @@ $(BIN)/copyright: cmd/tools/copyright/licensegen.go
 # changing BUF_VERSION will automatically download and use the specified version.
 BUF_VERSION = 0.36.0
 OS = $(shell uname -s)
-ARCH = $(shell uname -m)
+ARCH = $(shell $(EMULATE_X86) uname -m)
 BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-$(OS)-$(ARCH)
 # use BUF_VERSION_BIN as a bin prerequisite, not "buf", so the correct version will be used.
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
@@ -230,7 +236,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 	$(call ensure_idl_submodule)
 	@mkdir -p $(PROTO_OUT)
 	@echo "protoc..."
-	@$(foreach PROTO_DIR,$(PROTO_DIRS),$(BIN)/$(PROTOC_VERSION_BIN) \
+	@$(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
 		-I=$(PROTO_ROOT)/public \

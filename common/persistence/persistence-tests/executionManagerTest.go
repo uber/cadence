@@ -1136,6 +1136,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
 
+	now := time.Now()
 	testResetPoints := types.ResetPoints{
 		Points: []*types.ResetPointInfo{
 			{
@@ -1190,6 +1191,8 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 				LastFirstEventID:            common.FirstEventID,
 				NextEventID:                 rand.Int63(),
 				LastProcessedEvent:          int64(rand.Int31()),
+				LastUpdatedTimestamp:        now,
+				StartTimestamp:              now,
 				SignalCount:                 rand.Int31(),
 				DecisionVersion:             int64(rand.Int31()),
 				DecisionScheduleID:          decisionScheduleID,
@@ -1248,6 +1251,7 @@ func (s *ExecutionManagerSuite) TestGetWorkflow() {
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.NextEventID, info.NextEventID)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.LastProcessedEvent, info.LastProcessedEvent)
 	s.Equal(true, s.validateTimeRange(info.LastUpdatedTimestamp, time.Hour))
+	s.Equal(true, s.validateTimeRange(info.StartTimestamp, time.Hour))
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.DecisionVersion, info.DecisionVersion)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.DecisionScheduleID, info.DecisionScheduleID)
 	s.Equal(createReq.NewWorkflowSnapshot.ExecutionInfo.DecisionStartedID, info.DecisionStartedID)

@@ -40,11 +40,11 @@ const (
 	EnvKeyEnvironment = "CADENCE_CANARY_ENVIRONMENT"
 	// EnvKeyAvailabilityZone is the environment variable key for AZ
 	EnvKeyAvailabilityZone = "CADENCE_CANARY_AVAILABILITY_ZONE"
+	// EnvKeyMode is the environment variable key for Mode
+	EnvKeyMode = "CADENCE_CANARY_MODE"
 )
 
 const (
-	// CadenceLocalHostPort is the default address for cadence frontend service
-	CadenceLocalHostPort = "127.0.0.1:7933"
 	// CadenceServiceName is the default service name for cadence frontend
 	CadenceServiceName = "cadence-frontend"
 	// CanaryServiceName is the default service name for cadence canary
@@ -77,8 +77,11 @@ type (
 
 	// Cadence contains the configuration for cadence service
 	Cadence struct {
-		ServiceName     string `yaml:"service"`
-		HostNameAndPort string `yaml:"host"`
+		ServiceName string `yaml:"service"`
+		// support Thrift for backward compatibility. It will be ignored if host (gRPC) is used.
+		ThriftHostNameAndPort string `yaml:"host"`
+		// gRPC host name and port
+		GRPCHostNameAndPort string `yaml:"address"`
 	}
 )
 

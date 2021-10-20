@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence/serialization"
 
 	"github.com/uber/cadence/common"
@@ -1470,9 +1471,15 @@ func (m *sqlExecutionStore) createExecution(
 		return err
 	}
 
-	// TODO we should set the start time and last update time on business logic layer
-	executionInfo.StartTimestamp = time.Now()
-	executionInfo.LastUpdatedTimestamp = executionInfo.StartTimestamp
+	now := time.Now()
+	if executionInfo.StartTimestamp.IsZero() {
+		executionInfo.StartTimestamp = now
+		m.logger.Error("Workflow startTimestamp not set, fallback to now",
+			tag.WorkflowDomainID(executionInfo.DomainID),
+			tag.WorkflowID(executionInfo.WorkflowID),
+			tag.WorkflowRunID(executionInfo.RunID),
+		)
+	}
 
 	row, err := buildExecutionRow(
 		executionInfo,
@@ -1531,9 +1538,6 @@ func updateExecution(
 		executionInfo.CloseStatus); err != nil {
 		return err
 	}
-
-	// TODO we should set the last update time on business logic layer
-	executionInfo.LastUpdatedTimestamp = time.Now()
 
 	row, err := buildExecutionRow(
 		executionInfo,

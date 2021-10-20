@@ -518,6 +518,8 @@ const (
 	AdminClientResendReplicationTasksScope
 	// AdminClientGetCrossClusterTasksScope tracks RPC calls to Admin service
 	AdminClientGetCrossClusterTasksScope
+	// AdminClientRespondCrossClusterTasksCompletedScope tracks RPC calls to Admin service
+	AdminClientRespondCrossClusterTasksCompletedScope
 	// AdminClientGetDynamicConfigScope tracks RPC calls to admin service
 	AdminClientGetDynamicConfigScope
 	// AdminClientUpdateDynamicConfigScope tracks RPC calls to admin service
@@ -754,6 +756,8 @@ const (
 	AdminDescribeShardDistributionScope
 	// AdminGetCrossClusterTasksScope is the metric scope for admin.GetCrossClusterTasks
 	AdminGetCrossClusterTasksScope
+	// AdminRespondCrossClusterTasksCompletedScope is the metric scope for admin.AdminRespondCrossClusterTasksCompleted
+	AdminRespondCrossClusterTasksCompletedScope
 	// AdminGetDynamicConfigScope is the metric scope for admin.GetDynamicConfig
 	AdminGetDynamicConfigScope
 	// AdminUpdateDynamicConfigScope is the metric scope for admin.UpdateDynamicConfig
@@ -1391,6 +1395,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientGetCrossClusterTasksScope:                  {operation: "AdminClientGetCrossClusterTasks", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientRespondCrossClusterTasksCompletedScope:     {operation: "AdminClientRespondCrossClusterTasksCompleted", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientGetDynamicConfigScope:                      {operation: "AdminClientGetDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientUpdateDynamicConfigScope:                   {operation: "AdminClientUpdateDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientRestoreDynamicConfigScope:                  {operation: "AdminClientRestoreDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
@@ -1482,30 +1487,31 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// Frontend Scope Names
 	Frontend: {
 		// Admin API scope co-locates with with frontend
-		AdminRemoveTaskScope:                       {operation: "AdminRemoveTask"},
-		AdminCloseShardScope:                       {operation: "AdminCloseShard"},
-		AdminResetQueueScope:                       {operation: "AdminResetQueueScope"},
-		AdminDescribeQueueScope:                    {operation: "AdminDescribeQueueScope"},
-		AdminReadDLQMessagesScope:                  {operation: "AdminReadDLQMessages"},
-		AdminPurgeDLQMessagesScope:                 {operation: "AdminPurgeDLQMessages"},
-		AdminMergeDLQMessagesScope:                 {operation: "AdminMergeDLQMessages"},
-		AdminDescribeHistoryHostScope:              {operation: "DescribeHistoryHost"},
-		AdminDescribeShardDistributionScope:        {operation: "AdminShardList"},
-		AdminAddSearchAttributeScope:               {operation: "AddSearchAttribute"},
-		AdminDescribeWorkflowExecutionScope:        {operation: "DescribeWorkflowExecution"},
-		AdminGetWorkflowExecutionRawHistoryScope:   {operation: "GetWorkflowExecutionRawHistory"},
-		AdminGetWorkflowExecutionRawHistoryV2Scope: {operation: "GetWorkflowExecutionRawHistoryV2"},
-		AdminGetReplicationMessagesScope:           {operation: "GetReplicationMessages"},
-		AdminGetDomainReplicationMessagesScope:     {operation: "GetDomainReplicationMessages"},
-		AdminGetDLQReplicationMessagesScope:        {operation: "AdminGetDLQReplicationMessages"},
-		AdminReapplyEventsScope:                    {operation: "ReapplyEvents"},
-		AdminRefreshWorkflowTasksScope:             {operation: "RefreshWorkflowTasks"},
-		AdminResendReplicationTasksScope:           {operation: "ResendReplicationTasks"},
-		AdminGetCrossClusterTasksScope:             {operation: "AdminGetCrossClusterTasksScope"},
-		AdminGetDynamicConfigScope:                 {operation: "AdminGetDynamicConfigScope"},
-		AdminUpdateDynamicConfigScope:              {operation: "AdminUpdateDynamicConfigScope"},
-		AdminRestoreDynamicConfigScope:             {operation: "AdminRestoreDynamicConfigScope"},
-		AdminListDynamicConfigScope:                {operation: "AdminListDynamicConfigScope"},
+		AdminRemoveTaskScope:                        {operation: "AdminRemoveTask"},
+		AdminCloseShardScope:                        {operation: "AdminCloseShard"},
+		AdminResetQueueScope:                        {operation: "AdminResetQueue"},
+		AdminDescribeQueueScope:                     {operation: "AdminDescribeQueue"},
+		AdminReadDLQMessagesScope:                   {operation: "AdminReadDLQMessages"},
+		AdminPurgeDLQMessagesScope:                  {operation: "AdminPurgeDLQMessages"},
+		AdminMergeDLQMessagesScope:                  {operation: "AdminMergeDLQMessages"},
+		AdminDescribeHistoryHostScope:               {operation: "DescribeHistoryHost"},
+		AdminDescribeShardDistributionScope:         {operation: "AdminShardList"},
+		AdminAddSearchAttributeScope:                {operation: "AddSearchAttribute"},
+		AdminDescribeWorkflowExecutionScope:         {operation: "DescribeWorkflowExecution"},
+		AdminGetWorkflowExecutionRawHistoryScope:    {operation: "GetWorkflowExecutionRawHistory"},
+		AdminGetWorkflowExecutionRawHistoryV2Scope:  {operation: "GetWorkflowExecutionRawHistoryV2"},
+		AdminGetReplicationMessagesScope:            {operation: "GetReplicationMessages"},
+		AdminGetDomainReplicationMessagesScope:      {operation: "GetDomainReplicationMessages"},
+		AdminGetDLQReplicationMessagesScope:         {operation: "AdminGetDLQReplicationMessages"},
+		AdminReapplyEventsScope:                     {operation: "ReapplyEvents"},
+		AdminRefreshWorkflowTasksScope:              {operation: "RefreshWorkflowTasks"},
+		AdminResendReplicationTasksScope:            {operation: "ResendReplicationTasks"},
+		AdminGetCrossClusterTasksScope:              {operation: "AdminGetCrossClusterTasks"},
+		AdminRespondCrossClusterTasksCompletedScope: {operation: "AdminRespondCrossClusterTasksCompleted"},
+		AdminGetDynamicConfigScope:                  {operation: "AdminGetDynamicConfig"},
+		AdminUpdateDynamicConfigScope:               {operation: "AdminUpdateDynamicConfig"},
+		AdminRestoreDynamicConfigScope:              {operation: "AdminRestoreDynamicConfig"},
+		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
 
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},

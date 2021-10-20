@@ -310,6 +310,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	timerTasks []p.Task,
 ) (*p.CreateWorkflowExecutionResponse, error) {
 
+	now := time.Now()
 	versionHistory := p.NewVersionHistory(branchToken, []*p.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
 	})
@@ -331,6 +332,8 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 				LastFirstEventID:            common.FirstEventID,
 				NextEventID:                 nextEventID,
 				LastProcessedEvent:          lastProcessedEventID,
+				LastUpdatedTimestamp:        now,
+				StartTimestamp:              now,
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
@@ -381,6 +384,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 	parentDomainID string, parentExecution types.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
 	decisionScheduleID int64, timerTasks []p.Task) (*p.CreateWorkflowExecutionResponse, error) {
+	now := time.Now()
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
 	})
@@ -406,6 +410,8 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 				LastFirstEventID:            common.FirstEventID,
 				NextEventID:                 nextEventID,
 				LastProcessedEvent:          lastProcessedEventID,
+				LastUpdatedTimestamp:        now,
+				StartTimestamp:              now,
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
@@ -480,6 +486,7 @@ func (s *TestBase) ContinueAsNewExecution(
 	prevResetPoints *types.ResetPoints,
 ) error {
 
+	now := time.Now()
 	newdecisionTask := &p.DecisionTask{
 		TaskID:     s.GetNextSequenceNumber(),
 		DomainID:   updatedInfo.DomainID,
@@ -520,6 +527,8 @@ func (s *TestBase) ContinueAsNewExecution(
 				LastFirstEventID:            common.FirstEventID,
 				NextEventID:                 nextEventID,
 				LastProcessedEvent:          common.EmptyEventID,
+				LastUpdatedTimestamp:        now,
+				StartTimestamp:              now,
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,

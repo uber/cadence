@@ -98,6 +98,9 @@ service AdminAPI {
   // GetCrossClusterTasks return cross cluster tasks based on cluster name.
   rpc GetCrossClusterTasks(GetCrossClusterTasksRequest) returns (GetCrossClusterTasksResponse);
 
+  // RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks.
+  rpc RespondCrossClusterTasksCompleted(RespondCrossClusterTasksCompletedRequest) returns (RespondCrossClusterTasksCompletedResponse);
+
   // GetDynamicConfig returns values associated with a specified dynamic config parameter.
   rpc GetDynamicConfig(GetDynamicConfigRequest) returns (GetDynamicConfigResponse);
 
@@ -325,6 +328,17 @@ message GetCrossClusterTasksRequest {
 message GetCrossClusterTasksResponse {
   map<int32, shared.v1.CrossClusterTaskRequests> tasks_by_shard = 1;
   map<int32, shared.v1.GetTaskFailedCause> failed_cause_by_shard = 2;
+}
+
+message RespondCrossClusterTasksCompletedRequest {
+  int32 shard_id = 1;
+  string target_cluster = 2;
+  repeated shared.v1.CrossClusterTaskResponse task_responses = 3;
+  bool fetchNewTasks = 4;
+}
+
+message RespondCrossClusterTasksCompletedResponse {
+  shared.v1.CrossClusterTaskRequests tasks = 1;
 }
 
 /* If get_all is True, then all provided filters are ignored and all values associated with config_name

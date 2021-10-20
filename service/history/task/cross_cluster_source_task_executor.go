@@ -132,9 +132,10 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 		return err
 	}
 
-	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
-	if err != nil {
-		return err
+	if !mutableState.IsWorkflowExecutionRunning() &&
+		(childInfo.StartedID == common.EmptyEventID ||
+			childInfo.ParentClosePolicy != types.ParentClosePolicyAbandon) {
+		return nil
 	}
 
 	if task.ProcessingState() == processingStateInvalidated {
@@ -166,6 +167,11 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 			return errContinueExecution
 		}
 
+		initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
+		if err != nil {
+			return err
+		}
+
 		attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
 		now := t.shard.GetTimeSource().Now()
 		if failedCause != nil &&
@@ -175,7 +181,7 @@ func (t *crossClusterSourceTaskExecutor) executeStartChildExecutionTask(
 		}
 
 		childRunID := task.response.StartChildExecutionAttributes.GetRunID()
-		err := recordChildExecutionStarted(ctx, taskInfo, wfContext, attributes, childRunID, now)
+		err = recordChildExecutionStarted(ctx, taskInfo, wfContext, attributes, childRunID, now)
 		if err != nil {
 			return err
 		}
@@ -203,6 +209,10 @@ func (t *crossClusterSourceTaskExecutor) executeCancelExecutionTask(
 		return err
 	}
 	defer func() { release(retError) }()
+
+	if !mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
 
 	initiatedEventID := taskInfo.ScheduleID
 	requestCancelInfo, ok := mutableState.GetRequestCancelInfo(initiatedEventID)
@@ -279,6 +289,10 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 	}
 	defer func() { release(retError) }()
 
+	if mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
+
 	verified, err := task.VerifyLastWriteVersion(mutableState, taskInfo)
 	if err != nil || !verified {
 		return err
@@ -323,6 +337,10 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 		return err
 	}
 	defer func() { release(retError) }()
+
+	if mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
 
 	verified, err := task.VerifyLastWriteVersion(mutableState, taskInfo)
 	if err != nil || !verified {
@@ -369,6 +387,10 @@ func (t *crossClusterSourceTaskExecutor) executeSignalExecutionTask(
 		return err
 	}
 	defer func() { release(retError) }()
+
+	if !mutableState.IsWorkflowExecutionRunning() {
+		return nil
+	}
 
 	initiatedEventID := taskInfo.ScheduleID
 	signalInfo, ok := mutableState.GetSignalInfo(initiatedEventID)

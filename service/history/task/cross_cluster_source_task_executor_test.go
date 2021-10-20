@@ -909,7 +909,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 	)
 }
 
-func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_InitState_Duplication() {
+func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_InitState_Duplication_WorkflowOpen() {
 	s.testProcessStartChildExecution(
 		constants.TestDomainID,
 		processingStateResponseReported,
@@ -926,6 +926,40 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			childInfo *p.ChildExecutionInfo,
 		) {
 			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
+			mutableState.FlushBufferedEvents()
+
+			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
+			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+		},
+		func(task *crossClusterSourceTask) {
+			s.Equal(ctask.TaskStatePending, task.state)
+			s.Equal(processingStateResponseRecorded, task.processingState)
+		},
+	)
+}
+
+func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_InitState_Duplication_WorkflowClosed() {
+	s.testProcessStartChildExecution(
+		constants.TestDomainID,
+		processingStateResponseReported,
+		&types.CrossClusterTaskResponse{
+			TaskType:    types.CrossClusterTaskTypeStartChildExecution.Ptr(),
+			TaskState:   int16(processingStateInitialized),
+			FailedCause: types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
+		},
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+			lastEvent *types.HistoryEvent,
+			crossClusterTask Task,
+			childInfo *p.ChildExecutionInfo,
+		) {
+			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
+			di := test.AddDecisionTaskScheduledEvent(mutableState)
+			lastEvent = test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, mutableState.GetExecutionInfo().TaskList, "some random identity")
+			lastEvent = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, lastEvent.GetEventID(), nil, "some random identity")
+			lastEvent = test.AddCompleteWorkflowEvent(mutableState, lastEvent.EventID, nil)
 			mutableState.FlushBufferedEvents()
 
 			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
