@@ -124,9 +124,19 @@ func (s *IntegrationSuite) TestContinueAsNewWorkflow() {
 	}
 
 	for i := 0; i < 10; i++ {
-		_, err := poller.PollAndProcessDecisionTask(false, false)
+		descResp, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
+			Domain: s.domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: id,
+			},
+		})
+		s.NoError(err)
+		s.NotZero(descResp.WorkflowExecutionInfo.GetStartTime())
+
+		_, err = poller.PollAndProcessDecisionTask(false, false)
 		s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 		s.Nil(err, strconv.Itoa(i))
+
 	}
 
 	s.False(workflowComplete)

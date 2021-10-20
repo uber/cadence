@@ -198,7 +198,6 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		gomock.Any(),
 		resetSnapshot,
 		resetEventsSize,
-		gomock.Any(),
 		persistence.CreateWorkflowModeContinueAsNew,
 		s.currentRunID,
 		currentLastWriteVersion,

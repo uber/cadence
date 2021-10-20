@@ -172,6 +172,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	RespondCrossClusterTasksCompleted(
+		ctx context.Context,
+		Request *shared.RespondCrossClusterTasksCompletedRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RespondCrossClusterTasksCompletedResponse, error)
+
 	RestoreDynamicConfig(
 		ctx context.Context,
 		Request *admin.RestoreDynamicConfigRequest,
@@ -826,6 +832,34 @@ func (c client) ResetQueue(
 	}
 
 	err = admin.AdminService_ResetQueue_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	_Request *shared.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	var result admin.AdminService_RespondCrossClusterTasksCompleted_Result
+	args := admin.AdminService_RespondCrossClusterTasksCompleted_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_RespondCrossClusterTasksCompleted_Helper.UnwrapResponse(&result)
 	return
 }
 

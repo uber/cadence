@@ -567,6 +567,32 @@ func (c *errorInjectionClient) GetCrossClusterTasks(
 	return resp, clientErr
 }
 
+func (c *errorInjectionClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.RespondCrossClusterTasksCompletedResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationRespondCrossClusterTasksCompleted,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
 func (c *errorInjectionClient) GetDynamicConfig(
 	ctx context.Context,
 	request *types.GetDynamicConfigRequest,

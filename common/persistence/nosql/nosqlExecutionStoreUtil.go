@@ -285,7 +285,7 @@ func (d *nosqlExecutionStore) prepareReplicationTasksForWorkflowTxn(
 
 		default:
 			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("Unknow replication type: %v", task.GetType()),
+				Message: fmt.Sprintf("Unknown replication type: %v", task.GetType()),
 			}
 		}
 
@@ -338,6 +338,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterCancelExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
 
@@ -346,6 +349,9 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetDomainID = task.(*p.CrossClusterSignalExecutionTask).TargetDomainID
 			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
@@ -595,9 +601,6 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 		executionInfo.InitiatedID = emptyInitiatedID
 	}
 
-	// TODO we should set the last update time on business logic layer
-	executionInfo.LastUpdatedTimestamp = nowTimestamp
-
 	executionInfo.CompletionEvent = executionInfo.CompletionEvent.ToNilSafeDataBlob()
 	executionInfo.AutoResetPoints = executionInfo.AutoResetPoints.ToNilSafeDataBlob()
 	// TODO also need to set the start / current / last write version
@@ -631,9 +634,14 @@ func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionTxn(
 		executionInfo.InitiatedID = emptyInitiatedID
 	}
 
-	// TODO we should set the start time and last update time on business logic layer
-	executionInfo.StartTimestamp = nowTimestamp
-	executionInfo.LastUpdatedTimestamp = nowTimestamp
+	if executionInfo.StartTimestamp.IsZero() {
+		executionInfo.StartTimestamp = nowTimestamp
+		d.logger.Error("Workflow startTimestamp not set, fallback to now",
+			tag.WorkflowDomainID(executionInfo.DomainID),
+			tag.WorkflowID(executionInfo.WorkflowID),
+			tag.WorkflowRunID(executionInfo.RunID),
+		)
+	}
 	executionInfo.CompletionEvent = executionInfo.CompletionEvent.ToNilSafeDataBlob()
 	executionInfo.AutoResetPoints = executionInfo.AutoResetPoints.ToNilSafeDataBlob()
 	if versionHistories == nil {
