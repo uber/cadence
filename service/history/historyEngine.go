@@ -656,9 +656,8 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	wfContext := execution.NewContext(domainID, workflowExecution, e.shard, e.executionManager, e.logger)
 
-	now := e.timeSource.Now()
 	newWorkflow, newWorkflowEventsSeq, err := curMutableState.CloseTransactionAsSnapshot(
-		now,
+		e.timeSource.Now(),
 		execution.TransactionPolicyActive,
 	)
 	if err != nil {
@@ -686,7 +685,6 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		ctx,
 		newWorkflow,
 		historySize,
-		now,
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
@@ -753,7 +751,6 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			ctx,
 			newWorkflow,
 			historySize,
-			now,
 			createMode,
 			prevRunID,
 			t.LastWriteVersion,
