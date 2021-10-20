@@ -25,6 +25,7 @@ package cadence
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -54,11 +55,9 @@ func (s *ServerSuite) SetupTest() {
 
 /*
 TestServerStartup tests the startup logic for the binary. When this fails, you should be able to reproduce by running "cadence-server start"
+If you need to run locally, make sure Cassandra is up and schema is installed(run `make install-schema`)
 */
 func (s *ServerSuite) TestServerStartup() {
-	// If you want to test it locally, change it to false
-	runInBuildKite := true
-
 	env := "development"
 	zone := ""
 	rootDir := "../../../"
@@ -71,8 +70,10 @@ func (s *ServerSuite) TestServerStartup() {
 	if err != nil {
 		log.Fatal("Config file corrupted.", err)
 	}
-	// replace local host to docker network
-	if runInBuildKite {
+
+	if os.Getenv("CASSANDRA_SEEDS") == "cassandra" {
+		// replace local host to docker network
+		// this env variable value is set by buildkite's docker-compose
 		ds := cfg.Persistence.DataStores[cfg.Persistence.DefaultStore]
 		ds.NoSQL.Hosts = "cassandra"
 		cfg.Persistence.DataStores[cfg.Persistence.DefaultStore] = ds

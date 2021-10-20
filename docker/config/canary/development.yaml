@@ -4,8 +4,10 @@ log:
 
 canary:
   domains: ["cadence-canary"]
-  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"]
+  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.history", "workflow.archival.visibility"]
 
 cadence:
   service: "cadence-frontend"
-  host: "host.docker.internal:7933" # see https://docs.docker.com/desktop/mac/networking/
+  address: "host.docker.internal:7833" # address is for gRPC
+  #host: "host.docker.internal:7933" # for using thrift, replace address with host
+

@@ -28,6 +28,7 @@ package adminserviceserver
 import (
 	context "context"
 
+	stream "go.uber.org/thriftrw/protocol/stream"
 	wire "go.uber.org/thriftrw/wire"
 	transport "go.uber.org/yarpc/api/transport"
 	thrift "go.uber.org/yarpc/encoding/thrift"
@@ -149,6 +150,11 @@ type Interface interface {
 		Request *shared.ResetQueueRequest,
 	) error
 
+	RespondCrossClusterTasksCompleted(
+		ctx context.Context,
+		Request *shared.RespondCrossClusterTasksCompletedRequest,
+	) (*shared.RespondCrossClusterTasksCompletedResponse, error)
+
 	RestoreDynamicConfig(
 		ctx context.Context,
 		Request *admin.RestoreDynamicConfigRequest,
@@ -175,8 +181,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "AddSearchAttribute",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.AddSearchAttribute),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.AddSearchAttribute),
+					NoWire: addsearchattribute_NoWireHandler{impl},
 				},
 				Signature:    "AddSearchAttribute(Request *admin.AddSearchAttributeRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -186,8 +193,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "CloseShard",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.CloseShard),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.CloseShard),
+					NoWire: closeshard_NoWireHandler{impl},
 				},
 				Signature:    "CloseShard(Request *shared.CloseShardRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -197,8 +205,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeCluster",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeCluster),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeCluster),
+					NoWire: describecluster_NoWireHandler{impl},
 				},
 				Signature:    "DescribeCluster() (*admin.DescribeClusterResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -208,8 +217,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeHistoryHost",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeHistoryHost),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeHistoryHost),
+					NoWire: describehistoryhost_NoWireHandler{impl},
 				},
 				Signature:    "DescribeHistoryHost(Request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -219,8 +229,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeQueue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeQueue),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeQueue),
+					NoWire: describequeue_NoWireHandler{impl},
 				},
 				Signature:    "DescribeQueue(Request *shared.DescribeQueueRequest) (*shared.DescribeQueueResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -230,8 +241,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeShardDistribution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeShardDistribution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeShardDistribution),
+					NoWire: describesharddistribution_NoWireHandler{impl},
 				},
 				Signature:    "DescribeShardDistribution(Request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -241,8 +253,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "DescribeWorkflowExecution",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.DescribeWorkflowExecution),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DescribeWorkflowExecution),
+					NoWire: describeworkflowexecution_NoWireHandler{impl},
 				},
 				Signature:    "DescribeWorkflowExecution(Request *admin.DescribeWorkflowExecutionRequest) (*admin.DescribeWorkflowExecutionResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -252,8 +265,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetCrossClusterTasks",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetCrossClusterTasks),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetCrossClusterTasks),
+					NoWire: getcrossclustertasks_NoWireHandler{impl},
 				},
 				Signature:    "GetCrossClusterTasks(Request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -263,8 +277,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetDLQReplicationMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetDLQReplicationMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetDLQReplicationMessages),
+					NoWire: getdlqreplicationmessages_NoWireHandler{impl},
 				},
 				Signature:    "GetDLQReplicationMessages(Request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -274,8 +289,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetDomainReplicationMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetDomainReplicationMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetDomainReplicationMessages),
+					NoWire: getdomainreplicationmessages_NoWireHandler{impl},
 				},
 				Signature:    "GetDomainReplicationMessages(Request *replicator.GetDomainReplicationMessagesRequest) (*replicator.GetDomainReplicationMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -285,8 +301,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetDynamicConfig",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetDynamicConfig),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetDynamicConfig),
+					NoWire: getdynamicconfig_NoWireHandler{impl},
 				},
 				Signature:    "GetDynamicConfig(Request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -296,8 +313,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetReplicationMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetReplicationMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetReplicationMessages),
+					NoWire: getreplicationmessages_NoWireHandler{impl},
 				},
 				Signature:    "GetReplicationMessages(Request *replicator.GetReplicationMessagesRequest) (*replicator.GetReplicationMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -307,8 +325,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "GetWorkflowExecutionRawHistoryV2",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.GetWorkflowExecutionRawHistoryV2),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.GetWorkflowExecutionRawHistoryV2),
+					NoWire: getworkflowexecutionrawhistoryv2_NoWireHandler{impl},
 				},
 				Signature:    "GetWorkflowExecutionRawHistoryV2(GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request) (*admin.GetWorkflowExecutionRawHistoryV2Response)",
 				ThriftModule: admin.ThriftModule,
@@ -318,8 +337,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ListDynamicConfig",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ListDynamicConfig),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ListDynamicConfig),
+					NoWire: listdynamicconfig_NoWireHandler{impl},
 				},
 				Signature:    "ListDynamicConfig(Request *admin.ListDynamicConfigRequest) (*admin.ListDynamicConfigResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -329,8 +349,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "MergeDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.MergeDLQMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.MergeDLQMessages),
+					NoWire: mergedlqmessages_NoWireHandler{impl},
 				},
 				Signature:    "MergeDLQMessages(Request *replicator.MergeDLQMessagesRequest) (*replicator.MergeDLQMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -340,8 +361,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "PurgeDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.PurgeDLQMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.PurgeDLQMessages),
+					NoWire: purgedlqmessages_NoWireHandler{impl},
 				},
 				Signature:    "PurgeDLQMessages(Request *replicator.PurgeDLQMessagesRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -351,8 +373,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ReadDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReadDLQMessages),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ReadDLQMessages),
+					NoWire: readdlqmessages_NoWireHandler{impl},
 				},
 				Signature:    "ReadDLQMessages(Request *replicator.ReadDLQMessagesRequest) (*replicator.ReadDLQMessagesResponse)",
 				ThriftModule: admin.ThriftModule,
@@ -362,8 +385,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ReapplyEvents",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ReapplyEvents),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ReapplyEvents),
+					NoWire: reapplyevents_NoWireHandler{impl},
 				},
 				Signature:    "ReapplyEvents(ReapplyEventsRequest *shared.ReapplyEventsRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -373,8 +397,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RefreshWorkflowTasks",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RefreshWorkflowTasks),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RefreshWorkflowTasks),
+					NoWire: refreshworkflowtasks_NoWireHandler{impl},
 				},
 				Signature:    "RefreshWorkflowTasks(Request *shared.RefreshWorkflowTasksRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -384,8 +409,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RemoveTask",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RemoveTask),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RemoveTask),
+					NoWire: removetask_NoWireHandler{impl},
 				},
 				Signature:    "RemoveTask(Request *shared.RemoveTaskRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -395,8 +421,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ResendReplicationTasks",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResendReplicationTasks),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ResendReplicationTasks),
+					NoWire: resendreplicationtasks_NoWireHandler{impl},
 				},
 				Signature:    "ResendReplicationTasks(Request *admin.ResendReplicationTasksRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -406,10 +433,23 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "ResetQueue",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.ResetQueue),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.ResetQueue),
+					NoWire: resetqueue_NoWireHandler{impl},
 				},
 				Signature:    "ResetQueue(Request *shared.ResetQueueRequest)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "RespondCrossClusterTasksCompleted",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RespondCrossClusterTasksCompleted),
+					NoWire: respondcrossclustertaskscompleted_NoWireHandler{impl},
+				},
+				Signature:    "RespondCrossClusterTasksCompleted(Request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -417,8 +457,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "RestoreDynamicConfig",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.RestoreDynamicConfig),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RestoreDynamicConfig),
+					NoWire: restoredynamicconfig_NoWireHandler{impl},
 				},
 				Signature:    "RestoreDynamicConfig(Request *admin.RestoreDynamicConfigRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -428,8 +469,9 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 				Name: "UpdateDynamicConfig",
 				HandlerSpec: thrift.HandlerSpec{
 
-					Type:  transport.Unary,
-					Unary: thrift.UnaryHandler(h.UpdateDynamicConfig),
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.UpdateDynamicConfig),
+					NoWire: updatedynamicconfig_NoWireHandler{impl},
 				},
 				Signature:    "UpdateDynamicConfig(Request *admin.UpdateDynamicConfigRequest)",
 				ThriftModule: admin.ThriftModule,
@@ -437,7 +479,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 24)
+	procedures := make([]transport.Procedure, 0, 25)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1108,6 +1150,36 @@ func (h handler) ResetQueue(ctx context.Context, body wire.Value) (thrift.Respon
 	return response, err
 }
 
+func (h handler) RespondCrossClusterTasksCompleted(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_RespondCrossClusterTasksCompleted_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'RespondCrossClusterTasksCompleted': %w", err)
+	}
+
+	success, appErr := h.impl.RespondCrossClusterTasksCompleted(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RespondCrossClusterTasksCompleted_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
 func (h handler) RestoreDynamicConfig(ctx context.Context, body wire.Value) (thrift.Response, error) {
 	var args admin.AdminService_RestoreDynamicConfig_Args
 	if err := args.FromWire(body); err != nil {
@@ -1166,4 +1238,929 @@ func (h handler) UpdateDynamicConfig(ctx context.Context, body wire.Value) (thri
 	}
 
 	return response, err
+}
+
+type addsearchattribute_NoWireHandler struct{ impl Interface }
+
+func (h addsearchattribute_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_AddSearchAttribute_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'AddSearchAttribute': %w", err)
+	}
+
+	appErr := h.impl.AddSearchAttribute(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_AddSearchAttribute_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type closeshard_NoWireHandler struct{ impl Interface }
+
+func (h closeshard_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_CloseShard_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'CloseShard': %w", err)
+	}
+
+	appErr := h.impl.CloseShard(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_CloseShard_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describecluster_NoWireHandler struct{ impl Interface }
+
+func (h describecluster_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_DescribeCluster_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DescribeCluster': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeCluster(ctx)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeCluster_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describehistoryhost_NoWireHandler struct{ impl Interface }
+
+func (h describehistoryhost_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_DescribeHistoryHost_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DescribeHistoryHost': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeHistoryHost(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeHistoryHost_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describequeue_NoWireHandler struct{ impl Interface }
+
+func (h describequeue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_DescribeQueue_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DescribeQueue': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeQueue(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeQueue_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describesharddistribution_NoWireHandler struct{ impl Interface }
+
+func (h describesharddistribution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_DescribeShardDistribution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DescribeShardDistribution': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeShardDistribution(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeShardDistribution_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type describeworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h describeworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_DescribeWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DescribeWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.DescribeWorkflowExecution(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DescribeWorkflowExecution_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getcrossclustertasks_NoWireHandler struct{ impl Interface }
+
+func (h getcrossclustertasks_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_GetCrossClusterTasks_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'GetCrossClusterTasks': %w", err)
+	}
+
+	success, appErr := h.impl.GetCrossClusterTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetCrossClusterTasks_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getdlqreplicationmessages_NoWireHandler struct{ impl Interface }
+
+func (h getdlqreplicationmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_GetDLQReplicationMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'GetDLQReplicationMessages': %w", err)
+	}
+
+	success, appErr := h.impl.GetDLQReplicationMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetDLQReplicationMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getdomainreplicationmessages_NoWireHandler struct{ impl Interface }
+
+func (h getdomainreplicationmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_GetDomainReplicationMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'GetDomainReplicationMessages': %w", err)
+	}
+
+	success, appErr := h.impl.GetDomainReplicationMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetDomainReplicationMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getdynamicconfig_NoWireHandler struct{ impl Interface }
+
+func (h getdynamicconfig_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_GetDynamicConfig_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'GetDynamicConfig': %w", err)
+	}
+
+	success, appErr := h.impl.GetDynamicConfig(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetDynamicConfig_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getreplicationmessages_NoWireHandler struct{ impl Interface }
+
+func (h getreplicationmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_GetReplicationMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'GetReplicationMessages': %w", err)
+	}
+
+	success, appErr := h.impl.GetReplicationMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetReplicationMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type getworkflowexecutionrawhistoryv2_NoWireHandler struct{ impl Interface }
+
+func (h getworkflowexecutionrawhistoryv2_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_GetWorkflowExecutionRawHistoryV2_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'GetWorkflowExecutionRawHistoryV2': %w", err)
+	}
+
+	success, appErr := h.impl.GetWorkflowExecutionRawHistoryV2(ctx, args.GetRequest)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type listdynamicconfig_NoWireHandler struct{ impl Interface }
+
+func (h listdynamicconfig_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_ListDynamicConfig_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'ListDynamicConfig': %w", err)
+	}
+
+	success, appErr := h.impl.ListDynamicConfig(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_ListDynamicConfig_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type mergedlqmessages_NoWireHandler struct{ impl Interface }
+
+func (h mergedlqmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_MergeDLQMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'MergeDLQMessages': %w", err)
+	}
+
+	success, appErr := h.impl.MergeDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_MergeDLQMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type purgedlqmessages_NoWireHandler struct{ impl Interface }
+
+func (h purgedlqmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_PurgeDLQMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'PurgeDLQMessages': %w", err)
+	}
+
+	appErr := h.impl.PurgeDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_PurgeDLQMessages_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type readdlqmessages_NoWireHandler struct{ impl Interface }
+
+func (h readdlqmessages_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_ReadDLQMessages_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'ReadDLQMessages': %w", err)
+	}
+
+	success, appErr := h.impl.ReadDLQMessages(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_ReadDLQMessages_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type reapplyevents_NoWireHandler struct{ impl Interface }
+
+func (h reapplyevents_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_ReapplyEvents_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'ReapplyEvents': %w", err)
+	}
+
+	appErr := h.impl.ReapplyEvents(ctx, args.ReapplyEventsRequest)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_ReapplyEvents_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type refreshworkflowtasks_NoWireHandler struct{ impl Interface }
+
+func (h refreshworkflowtasks_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_RefreshWorkflowTasks_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'RefreshWorkflowTasks': %w", err)
+	}
+
+	appErr := h.impl.RefreshWorkflowTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RefreshWorkflowTasks_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type removetask_NoWireHandler struct{ impl Interface }
+
+func (h removetask_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_RemoveTask_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'RemoveTask': %w", err)
+	}
+
+	appErr := h.impl.RemoveTask(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RemoveTask_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type resendreplicationtasks_NoWireHandler struct{ impl Interface }
+
+func (h resendreplicationtasks_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_ResendReplicationTasks_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'ResendReplicationTasks': %w", err)
+	}
+
+	appErr := h.impl.ResendReplicationTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_ResendReplicationTasks_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type resetqueue_NoWireHandler struct{ impl Interface }
+
+func (h resetqueue_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_ResetQueue_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'ResetQueue': %w", err)
+	}
+
+	appErr := h.impl.ResetQueue(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_ResetQueue_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type respondcrossclustertaskscompleted_NoWireHandler struct{ impl Interface }
+
+func (h respondcrossclustertaskscompleted_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_RespondCrossClusterTasksCompleted_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'RespondCrossClusterTasksCompleted': %w", err)
+	}
+
+	success, appErr := h.impl.RespondCrossClusterTasksCompleted(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RespondCrossClusterTasksCompleted_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type restoredynamicconfig_NoWireHandler struct{ impl Interface }
+
+func (h restoredynamicconfig_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_RestoreDynamicConfig_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'RestoreDynamicConfig': %w", err)
+	}
+
+	appErr := h.impl.RestoreDynamicConfig(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_RestoreDynamicConfig_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type updatedynamicconfig_NoWireHandler struct{ impl Interface }
+
+func (h updatedynamicconfig_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_UpdateDynamicConfig_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'UpdateDynamicConfig': %w", err)
+	}
+
+	appErr := h.impl.UpdateDynamicConfig(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_UpdateDynamicConfig_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
 }

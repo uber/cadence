@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -55,15 +56,17 @@ type (
 	crossClusterTaskProcessors []*crossClusterTaskProcessor
 
 	crossClusterTaskProcessor struct {
-		shard         shard.Context
-		taskProcessor Processor
-		taskExecutor  Executor
-		redispatcher  Redispatcher
-		taskFetcher   Fetcher
-		options       *CrossClusterTaskProcessorOptions
-		retryPolicy   backoff.RetryPolicy
-		logger        log.Logger
-		metricsScope  metrics.Scope
+		shard             shard.Context
+		taskProcessor     Processor
+		taskExecutor      Executor
+		redispatcher      Redispatcher
+		sourceAdminClient admin.Client
+		taskFetcher       Fetcher
+		options           *CrossClusterTaskProcessorOptions
+		retryPolicy       backoff.RetryPolicy
+		throttleRetry     *backoff.ThrottleRetry
+		logger            log.Logger
+		metricsScope      metrics.Scope
 
 		status     int32
 		shutdownCh chan struct{}
@@ -114,13 +117,14 @@ func newCrossClusterTaskProcessor(
 	taskFetcher Fetcher,
 	options *CrossClusterTaskProcessorOptions,
 ) *crossClusterTaskProcessor {
+	sourceCluster := taskFetcher.GetSourceCluster()
 	logger := shard.GetLogger().WithTags(
 		tag.ComponentCrossClusterTaskProcessor,
-		tag.SourceCluster(taskFetcher.GetSourceCluster()),
+		tag.SourceCluster(sourceCluster),
 	)
 	metricsScope := shard.GetMetricsClient().Scope(
 		metrics.CrossClusterTaskProcessorScope,
-		metrics.ActiveClusterTag(taskFetcher.GetSourceCluster()),
+		metrics.ActiveClusterTag(sourceCluster),
 	)
 	retryPolicy := backoff.NewExponentialRetryPolicy(time.Millisecond * 100)
 	retryPolicy.SetMaximumInterval(time.Second)
@@ -144,15 +148,25 @@ func newCrossClusterTaskProcessor(
 			logger,
 			metricsScope,
 		),
-		options:      options,
-		retryPolicy:  retryPolicy,
-		logger:       logger,
-		metricsScope: metricsScope,
+		sourceAdminClient: shard.GetService().GetClientBean().GetRemoteAdminClient(sourceCluster),
+		options:           options,
+		retryPolicy:       retryPolicy,
+		logger:            logger,
+		metricsScope:      metricsScope,
 
 		status:     common.DaemonStatusInitialized,
 		shutdownCh: make(chan struct{}),
 
 		pendingTasks: make(map[int64]future.Future),
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(retryPolicy),
+			backoff.WithRetryableError(func(err error) bool {
+				if common.IsServiceBusyError(err) {
+					return false
+				}
+				return common.IsServiceTransientError(err)
+			}),
+		),
 	}
 }
 
@@ -418,27 +432,18 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 	defer sw.Stop()
 
 	var response *types.RespondCrossClusterTasksCompletedResponse
-	err := backoff.Retry(
-		func() error {
-			ctx, cancel := context.WithTimeout(context.Background(), respondCrossClusterTaskTimeout)
-			defer cancel()
-
-			var err error
-			response, err = p.shard.GetService().GetHistoryRawClient().RespondCrossClusterTasksCompleted(ctx, request)
-			if err != nil {
-				p.logger.Error("Failed to respond cross cluster tasks completed", tag.Error(err))
-				p.metricsScope.IncCounter(metrics.CrossClusterTaskRespondFailures)
-			}
-			return err
-		},
-		p.retryPolicy,
-		func(err error) bool {
-			if common.IsServiceBusyError(err) {
-				return false
-			}
-			return common.IsServiceTransientError(err)
-		},
-	)
+	op := func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), respondCrossClusterTaskTimeout)
+		defer cancel()
+		var err error
+		response, err = p.sourceAdminClient.RespondCrossClusterTasksCompleted(ctx, request)
+		if err != nil {
+			p.logger.Error("Failed to respond cross cluster tasks completed", tag.Error(err))
+			p.metricsScope.IncCounter(metrics.CrossClusterTaskRespondFailures)
+		}
+		return err
+	}
+	err := p.throttleRetry.Do(context.Background(), op)
 
 	return response, err
 }
@@ -455,9 +460,9 @@ func (p *crossClusterTaskProcessor) submitTask(
 		if p.hasShutdown() {
 			return err
 		}
+		p.logger.Error("Failed to submit task", tag.Error(err))
 	}
 
-	p.logger.Error("Failed to submit task", tag.Error(err))
 	if err != nil || !submitted {
 		p.redispatcher.AddTask(task)
 	}

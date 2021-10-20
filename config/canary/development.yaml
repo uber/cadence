@@ -1,7 +1,8 @@
 canary:
   domains: ["cadence-canary"]
-  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.visibility"]
+  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.history", "workflow.archival.visibility"]
 
 cadence:
   service: "cadence-frontend"
-  host: "127.0.0.1:7933"
+  address: "127.0.0.1:7833"
+  #host: "127.0.0.1:7933" # replace address with host if using Thrift for compatibility

@@ -62,6 +62,10 @@ func newDomainReplicationProcessor(
 	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
 	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
 	retryPolicy.SetExpirationInterval(replicationMaxRetry)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(isTransientRetryableError),
+	)
 
 	return &domainReplicationProcessor{
 		hostInfo:               hostInfo,
@@ -73,7 +77,7 @@ func newDomainReplicationProcessor(
 		remotePeer:             remotePeer,
 		taskExecutor:           taskExecutor,
 		metricsClient:          metricsClient,
-		retryPolicy:            retryPolicy,
+		throttleRetry:          throttleRetry,
 		lastProcessedMessageID: -1,
 		lastRetrievedMessageID: -1,
 		done:                   make(chan struct{}),
@@ -92,7 +96,7 @@ type (
 		remotePeer             admin.Client
 		taskExecutor           domain.ReplicationTaskExecutor
 		metricsClient          metrics.Client
-		retryPolicy            backoff.RetryPolicy
+		throttleRetry          *backoff.ThrottleRetry
 		lastProcessedMessageID int64
 		lastRetrievedMessageID int64
 		done                   chan struct{}
@@ -158,16 +162,16 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 
 	for taskIndex := range response.Messages.ReplicationTasks {
 		task := response.Messages.ReplicationTasks[taskIndex]
-		err := backoff.Retry(func() error {
+		err := p.throttleRetry.Do(context.Background(), func() error {
 			return p.handleDomainReplicationTask(task)
-		}, p.retryPolicy, isTransientRetryableError)
+		})
 
 		if err != nil {
 			p.logger.Error("Failed to apply domain replication tasks", tag.Error(err))
 
-			dlqErr := backoff.Retry(func() error {
+			dlqErr := p.throttleRetry.Do(context.Background(), func() error {
 				return p.putDomainReplicationTaskToDLQ(task)
-			}, p.retryPolicy, isTransientRetryableError)
+			})
 			if dlqErr != nil {
 				p.logger.Error("Failed to put replication tasks to DLQ", tag.Error(dlqErr))
 				p.metricsClient.IncCounter(metrics.DomainReplicationTaskScope, metrics.ReplicatorDLQFailures)

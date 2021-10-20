@@ -508,7 +508,11 @@ func (t *transferQueueProcessorBase) readTasks(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, persistence.IsBackgroundTransientError)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+		backoff.WithRetryableError(persistence.IsBackgroundTransientError),
+	)
+	err := throttleRetry.Do(context.Background(), op)
 	if err != nil {
 		return nil, false, err
 	}

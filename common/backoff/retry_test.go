@@ -21,6 +21,7 @@
 package backoff
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -62,7 +63,12 @@ func (s *RetrySuite) TestRetrySuccess() {
 	policy.SetMaximumInterval(5 * time.Millisecond)
 	policy.SetMaximumAttempts(10)
 
-	err := Retry(op, policy, nil)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(func(_ error) bool { return true }),
+	)
+
+	err := throttleRetry.Do(context.Background(), op)
 	s.NoError(err)
 	s.Equal(5, i)
 }
@@ -83,11 +89,16 @@ func (s *RetrySuite) TestRetryFailed() {
 	policy.SetMaximumInterval(5 * time.Millisecond)
 	policy.SetMaximumAttempts(5)
 
-	err := Retry(op, policy, nil)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(func(_ error) bool { return true }),
+	)
+
+	err := throttleRetry.Do(context.Background(), op)
 	s.Error(err)
 }
 
-func (s *RetrySuite) TestRetryFailed_ReturnPreviousError() {
+func (s *RetrySuite) TestRetryFailedReturnPreviousError() {
 	i := 0
 
 	the5thError := fmt.Errorf("this is the error of the 5th attempt(4th retry attempt)")
@@ -109,7 +120,12 @@ func (s *RetrySuite) TestRetryFailed_ReturnPreviousError() {
 	// so the total attempts is 5+1=6
 	policy.SetMaximumAttempts(5)
 
-	err := Retry(op, policy, nil)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(func(_ error) bool { return true }),
+	)
+
+	err := throttleRetry.Do(context.Background(), op)
 	s.Error(err)
 	s.Equal(6, i)
 	s.Equal(the5thError, err)
@@ -139,7 +155,12 @@ func (s *RetrySuite) TestIsRetryableSuccess() {
 	policy.SetMaximumInterval(5 * time.Millisecond)
 	policy.SetMaximumAttempts(10)
 
-	err := Retry(op, policy, isRetryable)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(isRetryable),
+	)
+
+	err := throttleRetry.Do(context.Background(), op)
 	s.NoError(err, "Retry count: %v", i)
 	s.Equal(5, i)
 }
@@ -160,9 +181,93 @@ func (s *RetrySuite) TestIsRetryableFailure() {
 	policy.SetMaximumInterval(5 * time.Millisecond)
 	policy.SetMaximumAttempts(10)
 
-	err := Retry(op, policy, IgnoreErrors([]error{&someError{}}))
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(IgnoreErrors([]error{&someError{}})),
+	)
+
+	err := throttleRetry.Do(context.Background(), op)
 	s.Error(err)
 	s.Equal(1, i)
+}
+
+func (s *RetrySuite) TestRetryExpired() {
+	i := 0
+	op := func() error {
+		i++
+		time.Sleep(time.Second)
+		return &someError{}
+	}
+
+	policy := NewExponentialRetryPolicy(10 * time.Millisecond)
+	policy.SetExpirationInterval(NoInterval)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(func(_ error) bool { return true }),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+	err := throttleRetry.Do(ctx, op)
+	s.Error(err)
+	s.Equal(&someError{}, err)
+	s.Equal(1, i)
+}
+
+func (s *RetrySuite) TestRetryExpiredReturnPreviousError() {
+	i := 0
+	prevErr := fmt.Errorf("previousError")
+	op := func() error {
+		i++
+		if i == 1 {
+			return prevErr
+		}
+		time.Sleep(time.Second)
+		return &someError{}
+	}
+
+	policy := NewExponentialRetryPolicy(10 * time.Millisecond)
+	policy.SetExpirationInterval(NoInterval)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(func(_ error) bool { return true }),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	err := throttleRetry.Do(ctx, op)
+	s.Error(err)
+	s.Equal(prevErr, err)
+	s.Equal(2, i)
+}
+
+func (s *RetrySuite) TestRetryThrottled() {
+	i := 0
+	throttleErr := fmt.Errorf("throttled")
+	op := func() error {
+		i++
+		if i == 1 {
+			return throttleErr
+		}
+		return nil
+	}
+
+	policy := NewExponentialRetryPolicy(time.Millisecond)
+	policy.SetExpirationInterval(NoInterval)
+	throttlePolicy := NewExponentialRetryPolicy(time.Second)
+	throttleRetry := NewThrottleRetry(
+		WithRetryPolicy(policy),
+		WithRetryableError(func(_ error) bool { return true }),
+		WithThrottlePolicy(throttlePolicy),
+		WithThrottleError(func(e error) bool { return e == throttleErr }),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	err := throttleRetry.Do(ctx, op)
+	s.Error(err)
+	s.Equal(throttleErr, err)
+	s.Equal(1, i) // Because retry expires before next retry
 }
 
 func (s *RetrySuite) TestConcurrentRetrier() {

@@ -584,12 +584,13 @@ func transferTaskInfoToThrift(info *TransferTaskInfo) *sqlblobs.TransferTaskInfo
 	if info == nil {
 		return nil
 	}
-	return &sqlblobs.TransferTaskInfo{
-		DomainID:                 info.DomainID,
-		WorkflowID:               &info.WorkflowID,
-		RunID:                    info.RunID,
-		TaskType:                 &info.TaskType,
-		TargetDomainID:           info.TargetDomainID,
+	thriftTaskInfo := &sqlblobs.TransferTaskInfo{
+		DomainID:       info.DomainID,
+		WorkflowID:     &info.WorkflowID,
+		RunID:          info.RunID,
+		TaskType:       &info.TaskType,
+		TargetDomainID: info.TargetDomainID,
+		// TargetDomainIDs will be assigned below
 		TargetWorkflowID:         &info.TargetWorkflowID,
 		TargetRunID:              info.TargetRunID,
 		TaskList:                 &info.TaskList,
@@ -598,18 +599,26 @@ func transferTaskInfoToThrift(info *TransferTaskInfo) *sqlblobs.TransferTaskInfo
 		Version:                  &info.Version,
 		VisibilityTimestampNanos: timeToUnixNanoPtr(info.VisibilityTimestamp),
 	}
+	if len(info.TargetDomainIDs) > 0 {
+		thriftTaskInfo.TargetDomainIDs = [][]byte{}
+		for _, domainID := range info.TargetDomainIDs {
+			thriftTaskInfo.TargetDomainIDs = append(thriftTaskInfo.TargetDomainIDs, domainID)
+		}
+	}
+	return thriftTaskInfo
 }
 
 func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskInfo {
 	if info == nil {
 		return nil
 	}
-	return &TransferTaskInfo{
-		DomainID:                info.DomainID,
-		WorkflowID:              info.GetWorkflowID(),
-		RunID:                   info.RunID,
-		TaskType:                info.GetTaskType(),
-		TargetDomainID:          info.TargetDomainID,
+	transferTaskInfo := &TransferTaskInfo{
+		DomainID:       info.DomainID,
+		WorkflowID:     info.GetWorkflowID(),
+		RunID:          info.RunID,
+		TaskType:       info.GetTaskType(),
+		TargetDomainID: info.TargetDomainID,
+		// TargetDomainIDs will be assigned below
 		TargetWorkflowID:        info.GetTargetWorkflowID(),
 		TargetRunID:             info.TargetRunID,
 		TaskList:                info.GetTaskList(),
@@ -618,6 +627,13 @@ func transferTaskInfoFromThrift(info *sqlblobs.TransferTaskInfo) *TransferTaskIn
 		Version:                 info.GetVersion(),
 		VisibilityTimestamp:     timeFromUnixNano(info.GetVisibilityTimestampNanos()),
 	}
+	if len(info.GetTargetDomainIDs()) > 0 {
+		transferTaskInfo.TargetDomainIDs = []UUID{}
+		for _, domainID := range info.GetTargetDomainIDs() {
+			transferTaskInfo.TargetDomainIDs = append(transferTaskInfo.TargetDomainIDs, domainID)
+		}
+	}
+	return transferTaskInfo
 }
 
 func crossClusterTaskInfoToThrift(info *CrossClusterTaskInfo) *sqlblobsCrossClusterTaskInfo {

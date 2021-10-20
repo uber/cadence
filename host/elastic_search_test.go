@@ -191,6 +191,13 @@ func (s *ElasticSearchIntegrationSuite) TestListCronWorkflows() {
 	s.testHelperForReadOnce(we2.GetRunID(), query, false, true)
 }
 
+func (s *ElasticSearchIntegrationSuite) TestIsGlobalSearchAttribute() {
+	we := s.startWorkflow("local", true)
+	// global domains are disabled for this integration test, so we can only test the false case
+	query := fmt.Sprintf(`NumClusters = "1"`)
+	s.testHelperForReadOnce(we.GetRunID(), query, false, true)
+}
+
 func (s *ElasticSearchIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	id := "es-integration-list-workflow-execution-time-test"
 	wt := "es-integration-list-workflow-execution-time-test-type"
@@ -673,9 +680,13 @@ func (s *ElasticSearchIntegrationSuite) testListWorkflowHelper(numOfWorkflows, p
 }
 
 func (s *ElasticSearchIntegrationSuite) testHelperForReadOnce(runID, query string, isScan bool, isAnyMatchOk bool) {
+	s.testHelperForReadOnceWithDomain(s.domainName, runID, query, isScan, isAnyMatchOk)
+}
+
+func (s *ElasticSearchIntegrationSuite) testHelperForReadOnceWithDomain(domainName string, runID, query string, isScan bool, isAnyMatchOk bool) {
 	var openExecution *types.WorkflowExecutionInfo
 	listRequest := &types.ListWorkflowExecutionsRequest{
-		Domain:   s.domainName,
+		Domain:   domainName,
 		PageSize: defaultTestValueOfESIndexMaxResultWindow,
 		Query:    query,
 	}
