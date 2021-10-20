@@ -51,6 +51,18 @@ Failback to cluster0:
 cadence --do sample samples-domain update --ac cluster0
 ```
 
+## Multiple region setup 
+In a multiple region setup, use another set of config instead. 
+
+```
+./cadence-server --zone cross_region_cluster0 start
+./cadence-server --zone cross_region_cluster1 start
+./cadence-server --zone cross_region_cluster2 start
+```
+Right now the only difference is at clusterGroupMetadata.clusterRedirectionPolicy. 
+In multiple region setup, network communication overhead between clusters is high so should use "selected-apis-forwarding". workflow/activity workers need to be connected to each cluster to keep high availability.
+
+
 Archiver
 --------
 
