@@ -769,16 +769,18 @@ func (r *mutableStateTaskGeneratorImpl) generateApplyParentCloseTasks(
 
 	if len(sameClusterDomainIDs) != 0 {
 		transferTasks = append(transferTasks, &persistence.ApplyParentClosePolicyTask{
-			TargetDomainIDs: sameClusterDomainIDs,
-			Version:         version,
+			VisibilityTimestamp: visibilityTimestamp,
+			TargetDomainIDs:     sameClusterDomainIDs,
+			Version:             version,
 		})
 	}
 	for remoteCluster, domainIDs := range remoteClusterDomainIDs {
 		crossClusterTasks = append(crossClusterTasks, &persistence.CrossClusterApplyParentClosePolicyTask{
 			TargetCluster: remoteCluster,
 			ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-				TargetDomainIDs: domainIDs,
-				Version:         version,
+				VisibilityTimestamp: visibilityTimestamp,
+				TargetDomainIDs:     domainIDs,
+				Version:             version,
 			},
 		})
 	}
