@@ -133,6 +133,88 @@ func (s *IntegrationSuite) TestStartWorkflowExecution() {
 	s.Nil(we2)
 }
 
+func (s *IntegrationSuite) TestStartWorkflowExecution_StartTimestampMatch() {
+	id := "integration-start-workflow-start-timestamp-test"
+	wt := "integration-start-workflow-start-timestamptest-type"
+	tl := "integration-start-workflow-start-timestamp-test-tasklist"
+	identity := "worker1"
+
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           uuid.New(),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
+		WorkflowType:                        &types.WorkflowType{Name: wt},
+		TaskList:                            &types.TaskList{Name: tl},
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            identity,
+	}
+
+	we0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	var historyStartTime time.Time
+	histResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+			RunID:      we0.GetRunID(),
+		},
+	})
+	s.NoError(err)
+
+	for _, event := range histResp.GetHistory().GetEvents() {
+		if event.GetEventType() == types.EventTypeWorkflowExecutionStarted {
+			historyStartTime = time.Unix(0, event.GetTimestamp())
+			break
+		}
+	}
+
+	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+			RunID:      we0.GetRunID(),
+		},
+	})
+	s.NoError(err)
+	s.WithinDuration(
+		historyStartTime,
+		time.Unix(0, descResp.GetWorkflowExecutionInfo().GetStartTime()),
+		time.Millisecond,
+	)
+
+	var listResp *types.ListOpenWorkflowExecutionsResponse
+	for i := 0; i != 20; i++ {
+		listResp, err = s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
+			Domain: s.domainName,
+			StartTimeFilter: &types.StartTimeFilter{
+				EarliestTime: common.Int64Ptr(historyStartTime.Add(-time.Minute).UnixNano()),
+				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
+			},
+			ExecutionFilter: &types.WorkflowExecutionFilter{
+				WorkflowID: id,
+				RunID:      we0.GetRunID(),
+			},
+		})
+		s.NoError(err)
+		if len(listResp.Executions) == 0 {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	if listResp == nil || len(listResp.Executions) == 0 {
+		s.Fail("unable to get workflow visibility records")
+	}
+
+	s.WithinDuration(
+		historyStartTime,
+		time.Unix(0, listResp.Executions[0].GetStartTime()),
+		time.Millisecond,
+	)
+}
+
 func (s *IntegrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
 	id := "integration-start-workflow-id-reuse-test"
 	wt := "integration-start-workflow-id-reuse-type"
