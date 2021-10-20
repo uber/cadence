@@ -92,9 +92,9 @@ func (t *crossClusterSourceTaskExecutor) Execute(
 		err = t.executeCancelExecutionTask(ctx, sourceTask)
 	case persistence.CrossClusterTaskTypeSignalExecution:
 		err = t.executeSignalExecutionTask(ctx, sourceTask)
-	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+	case persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted:
 		err = t.executeRecordChildWorkflowExecutionCompleteTask(ctx, sourceTask)
-	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+	case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
 		err = t.executeApplyParentClosePolicyTask(ctx, sourceTask)
 	default:
 		err = errUnknownCrossClusterTask

@@ -127,6 +127,21 @@ func GetTransferTaskMetricsScope(
 			return metrics.TransferActiveTaskUpsertWorkflowSearchAttributesScope
 		}
 		return metrics.TransferStandbyTaskUpsertWorkflowSearchAttributesScope
+	case persistence.TransferTaskTypeRecordWorkflowClosed:
+		if isActive {
+			return metrics.TransferActiveTaskRecordWorkflowClosedScope
+		}
+		return metrics.TransferStandbyTaskRecordWorkflowClosedScope
+	case persistence.TransferTaskTypeRecordChildExecutionCompleted:
+		if isActive {
+			return metrics.TransferActiveTaskRecordChildExecutionCompletedScope
+		}
+		return metrics.TransferStandbyTaskRecordChildExecutionCompletedScope
+	case persistence.TransferTaskTypeApplyParentClosePolicy:
+		if isActive {
+			return metrics.TransferActiveTaskApplyParentClosePolicyScope
+		}
+		return metrics.TransferStandbyTaskApplyParentClosePolicyScope
 	default:
 		if isActive {
 			return metrics.TransferActiveQueueProcessorScope
@@ -205,12 +220,12 @@ func getCrossClusterTaskMetricsScope(
 			return metrics.CrossClusterSourceTaskSignalExecutionScope
 		}
 		return metrics.CrossClusterTargetTaskSignalExecutionScope
-	case persistence.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+	case persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted:
 		if isSource {
 			return metrics.CrossClusterSourceTaskRecordChildWorkflowExecutionCompleteScope
 		}
 		return metrics.CrossClusterTargetTaskRecordChildWorkflowExecutionCompleteScope
-	case persistence.CrossClusterTaskTypeApplyParentPolicy:
+	case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
 		if isSource {
 			return metrics.CrossClusterSourceTaskApplyParentClosePolicyScope
 		}

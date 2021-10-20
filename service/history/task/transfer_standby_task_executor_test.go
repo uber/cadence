@@ -409,7 +409,14 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Success_NonFi
 }
 
 func (s *transferStandbyTaskExecutorSuite) TestProcessCloseExecution() {
+	s.testProcessCloseExecution(persistence.TransferTaskTypeCloseExecution)
+}
 
+func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowClosedTask() {
+	s.testProcessCloseExecution(persistence.TransferTaskTypeRecordWorkflowClosed)
+}
+
+func (s *transferStandbyTaskExecutorSuite) testProcessCloseExecution(taskType int) {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
 
@@ -424,7 +431,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCloseExecution() {
 		VisibilityTimestamp: now,
 		TaskID:              int64(59),
 		TaskList:            mutableState.GetExecutionInfo().TaskList,
-		TaskType:            persistence.TransferTaskTypeCloseExecution,
+		TaskType:            taskType,
 		ScheduleID:          event.GetEventID(),
 	})
 

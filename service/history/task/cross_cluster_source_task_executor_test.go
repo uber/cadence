@@ -255,7 +255,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteRecordChildCompleteExec
 							}
 							crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 							s.Len(crossClusterTasks, 1)
-							s.Equal(p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+							s.Equal(p.CrossClusterTaskTypeRecordChildExeuctionCompleted, crossClusterTasks[0].GetType())
 							return true
 						})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 				}
@@ -309,7 +309,7 @@ func (s *crossClusterSourceTaskExecutorSuite) testRecordChildComplete(
 			TargetRunID:      executionInfo.ParentRunID,
 			TaskID:           int64(59),
 			TaskList:         mutableState.GetExecutionInfo().TaskList,
-			TaskType:         p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete,
+			TaskType:         p.CrossClusterTaskTypeRecordChildExeuctionCompleted,
 			ScheduleID:       event.GetEventID(),
 		},
 		response,
@@ -360,7 +360,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
 								}
 								crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 								s.Len(crossClusterTasks, 1)
-								s.Equal(p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete, crossClusterTasks[0].GetType())
+								s.Equal(p.CrossClusterTaskTypeRecordChildExeuctionCompleted, crossClusterTasks[0].GetType())
 								return true
 							})).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
 					}
@@ -446,7 +446,7 @@ func (s *crossClusterSourceTaskExecutorSuite) testApplyParentClosePolicy(
 			TargetDomainIDs: map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
 			TaskID:          int64(59),
 			TaskList:        mutableState.GetExecutionInfo().TaskList,
-			TaskType:        p.CrossClusterTaskTypeApplyParentPolicy,
+			TaskType:        p.CrossClusterTaskTypeApplyParentClosePolicy,
 			ScheduleID:      event.GetEventID(),
 		},
 		response,

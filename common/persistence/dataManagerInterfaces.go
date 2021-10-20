@@ -152,6 +152,9 @@ const (
 	TransferTaskTypeRecordWorkflowStarted
 	TransferTaskTypeResetWorkflow
 	TransferTaskTypeUpsertWorkflowSearchAttributes
+	TransferTaskTypeRecordWorkflowClosed
+	TransferTaskTypeRecordChildExecutionCompleted
+	TransferTaskTypeApplyParentClosePolicy
 )
 
 // Types of cross-cluster tasks
@@ -159,8 +162,8 @@ const (
 	CrossClusterTaskTypeStartChildExecution = iota + 1
 	CrossClusterTaskTypeCancelExecution
 	CrossClusterTaskTypeSignalExecution
-	CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
-	CrossClusterTaskTypeApplyParentPolicy
+	CrossClusterTaskTypeRecordChildExeuctionCompleted
+	CrossClusterTaskTypeApplyParentClosePolicy
 )
 
 // Types of replication tasks
@@ -577,18 +580,29 @@ type (
 		Version             int64
 	}
 
-	// RecordWorkflowExecutionCompleteTask identifies a task completing a child execution
-	RecordWorkflowExecutionCompleteTask struct {
+	// RecordWorkflowClosedTask identifies a transfer task for writing visibility close execution record
+	RecordWorkflowClosedTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
 		Version             int64
 	}
 
-	// ApplyParentClosePolicyTask identifies a task for applying parent close policy
-	ApplyParentClosePolicyTask struct {
-		TargetDomainIDs     map[string]struct{}
+	// RecordChildExecutionCompletedTask identifies a task for recording the competion of a child workflow
+	RecordChildExecutionCompletedTask struct {
 		VisibilityTimestamp time.Time
 		TaskID              int64
+		TargetDomainID      string
+		TargetWorkflowID    string
+		TargetRunID         string
+		InitiatedID         int64
+		Version             int64
+	}
+
+	// ApplyParentClosePolicyTask identifies a task for applying parent close policy
+	ApplyParentClosePolicyTask struct {
+		VisibilityTimestamp time.Time
+		TaskID              int64
+		TargetDomainIDs     map[string]struct{}
 		Version             int64
 	}
 
@@ -613,9 +627,9 @@ type (
 		TargetCluster string
 	}
 
-	// CrossClusterRecordChildWorkflowExecutionCompleteTask is the cross-cluster version of RecordChildCompletionTask
-	CrossClusterRecordChildWorkflowExecutionCompleteTask struct {
-		RecordWorkflowExecutionCompleteTask
+	// CrossClusterRecordChildExecutionCompletedTask is the cross-cluster version of RecordChildExecutionCompletedTask
+	CrossClusterRecordChildExecutionCompletedTask struct {
+		RecordChildExecutionCompletedTask
 
 		TargetCluster string
 	}
@@ -2343,39 +2357,44 @@ func (u *SignalExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
 }
 
-// GetType returns the type of the signal transfer task
-func (u *RecordWorkflowExecutionCompleteTask) GetType() int {
-	return TransferTaskTypeCloseExecution
+// GetType returns the type of the record child execution completed task
+func (u *RecordChildExecutionCompletedTask) GetType() int {
+	return TransferTaskTypeRecordChildExecutionCompleted
 }
 
 // GetVersion returns the version of the signal transfer task
-func (u *RecordWorkflowExecutionCompleteTask) GetVersion() int64 {
+func (u *RecordChildExecutionCompletedTask) GetVersion() int64 {
 	return u.Version
 }
 
 // SetVersion returns the version of the signal transfer task
-func (u *RecordWorkflowExecutionCompleteTask) SetVersion(version int64) {
+func (u *RecordChildExecutionCompletedTask) SetVersion(version int64) {
 	u.Version = version
 }
 
 // GetTaskID returns the sequence ID of the signal transfer task.
-func (u *RecordWorkflowExecutionCompleteTask) GetTaskID() int64 {
+func (u *RecordChildExecutionCompletedTask) GetTaskID() int64 {
 	return u.TaskID
 }
 
 // SetTaskID sets the sequence ID of the signal transfer task.
-func (u *RecordWorkflowExecutionCompleteTask) SetTaskID(id int64) {
+func (u *RecordChildExecutionCompletedTask) SetTaskID(id int64) {
 	u.TaskID = id
 }
 
 // GetVisibilityTimestamp get the visibility timestamp
-func (u *RecordWorkflowExecutionCompleteTask) GetVisibilityTimestamp() time.Time {
+func (u *RecordChildExecutionCompletedTask) GetVisibilityTimestamp() time.Time {
 	return u.VisibilityTimestamp
 }
 
 // SetVisibilityTimestamp set the visibility timestamp
-func (u *RecordWorkflowExecutionCompleteTask) SetVisibilityTimestamp(timestamp time.Time) {
+func (u *RecordChildExecutionCompletedTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
+}
+
+// GetType returns the type of the apply parent close policy task
+func (u *ApplyParentClosePolicyTask) GetType() int {
+	return TransferTaskTypeApplyParentClosePolicy
 }
 
 // GetVersion returns the version of the cancel transfer task
@@ -2478,6 +2497,41 @@ func (u *StartChildExecutionTask) SetVisibilityTimestamp(timestamp time.Time) {
 	u.VisibilityTimestamp = timestamp
 }
 
+// GetType returns the type of the record workflow closed task
+func (u *RecordWorkflowClosedTask) GetType() int {
+	return TransferTaskTypeRecordWorkflowClosed
+}
+
+// GetVersion returns the version of the record workflow closed task
+func (u *RecordWorkflowClosedTask) GetVersion() int64 {
+	return u.Version
+}
+
+// SetVersion returns the version of the record workflow closed task
+func (u *RecordWorkflowClosedTask) SetVersion(version int64) {
+	u.Version = version
+}
+
+// GetTaskID returns the sequence ID of the record workflow closed task
+func (u *RecordWorkflowClosedTask) GetTaskID() int64 {
+	return u.TaskID
+}
+
+// SetTaskID sets the sequence ID of the record workflow closed task
+func (u *RecordWorkflowClosedTask) SetTaskID(id int64) {
+	u.TaskID = id
+}
+
+// GetVisibilityTimestamp get the visibility timestamp
+func (u *RecordWorkflowClosedTask) GetVisibilityTimestamp() time.Time {
+	return u.VisibilityTimestamp
+}
+
+// SetVisibilityTimestamp set the visibility timestamp
+func (u *RecordWorkflowClosedTask) SetVisibilityTimestamp(timestamp time.Time) {
+	u.VisibilityTimestamp = timestamp
+}
+
 // GetType returns of type of the cross-cluster start child task
 func (c *CrossClusterStartChildExecutionTask) GetType() int {
 	return CrossClusterTaskTypeStartChildExecution
@@ -2494,13 +2548,13 @@ func (c *CrossClusterSignalExecutionTask) GetType() int {
 }
 
 // GetType returns of type of the cross-cluster record child workflow completion task
-func (c *CrossClusterRecordChildWorkflowExecutionCompleteTask) GetType() int {
-	return CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+func (c *CrossClusterRecordChildExecutionCompletedTask) GetType() int {
+	return CrossClusterTaskTypeRecordChildExeuctionCompleted
 }
 
 // GetType returns of type of the cross-cluster cancel task
 func (c *CrossClusterApplyParentClosePolicyTask) GetType() int {
-	return CrossClusterTaskTypeApplyParentPolicy
+	return CrossClusterTaskTypeApplyParentClosePolicy
 }
 
 // GetType returns the type of the history replication task

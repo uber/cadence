@@ -2727,7 +2727,7 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 			targetCluster = crossClusterTask.TargetCluster
 		case *persistence.CrossClusterSignalExecutionTask:
 			targetCluster = crossClusterTask.TargetCluster
-		case *persistence.CrossClusterRecordChildWorkflowExecutionCompleteTask:
+		case *persistence.CrossClusterRecordChildExecutionCompletedTask:
 			targetCluster = crossClusterTask.TargetCluster
 		case *persistence.CrossClusterApplyParentClosePolicyTask:
 			targetCluster = crossClusterTask.TargetCluster
