@@ -40,15 +40,11 @@ type (
 	// Bean in an collection of clients
 	Bean interface {
 		GetHistoryClient() history.Client
-		SetHistoryClient(client history.Client)
 		GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
-		SetMatchingClient(client matching.Client)
 		GetFrontendClient() frontend.Client
-		SetFrontendClient(client frontend.Client)
 		GetRemoteAdminClient(cluster string) admin.Client
 		SetRemoteAdminClient(cluster string, client admin.Client)
 		GetRemoteFrontendClient(cluster string) frontend.Client
-		SetRemoteFrontendClient(cluster string, client frontend.Client)
 	}
 
 	clientBeanImpl struct {
@@ -114,13 +110,6 @@ func (h *clientBeanImpl) GetHistoryClient() history.Client {
 	return h.historyClient
 }
 
-func (h *clientBeanImpl) SetHistoryClient(
-	client history.Client,
-) {
-
-	h.historyClient = client
-}
-
 func (h *clientBeanImpl) GetMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
 	if client := h.matchingClient.Load(); client != nil {
 		return client.(matching.Client), nil
@@ -128,22 +117,8 @@ func (h *clientBeanImpl) GetMatchingClient(domainIDToName DomainIDToNameFunc) (m
 	return h.lazyInitMatchingClient(domainIDToName)
 }
 
-func (h *clientBeanImpl) SetMatchingClient(
-	client matching.Client,
-) {
-
-	h.matchingClient.Store(client)
-}
-
 func (h *clientBeanImpl) GetFrontendClient() frontend.Client {
 	return h.frontendClient
-}
-
-func (h *clientBeanImpl) SetFrontendClient(
-	client frontend.Client,
-) {
-
-	h.frontendClient = client
 }
 
 func (h *clientBeanImpl) GetRemoteAdminClient(cluster string) admin.Client {
@@ -176,14 +151,6 @@ func (h *clientBeanImpl) GetRemoteFrontendClient(cluster string) frontend.Client
 		))
 	}
 	return client
-}
-
-func (h *clientBeanImpl) SetRemoteFrontendClient(
-	cluster string,
-	client frontend.Client,
-) {
-
-	h.remoteFrontendClients[cluster] = client
 }
 
 func (h *clientBeanImpl) lazyInitMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
