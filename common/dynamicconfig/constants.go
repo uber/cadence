@@ -1886,12 +1886,18 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	EnableBatcher
-	// EnableParentClosePolicyWorker is decides whether or not enable system workers for processing parent close policy task
+	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
 	// KeyName: system.enableParentClosePolicyWorker
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	EnableParentClosePolicyWorker
+	// EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer
+	// KeyName: system.enableESAnalyzer
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableESAnalyzer
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
@@ -2073,6 +2079,7 @@ var Keys = map[Key]string{
 	DisallowQuery:                       "system.disallowQuery",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
+	EnableESAnalyzer:                    "system.enableESAnalyzer",
 	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
