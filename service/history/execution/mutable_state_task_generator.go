@@ -83,13 +83,17 @@ type (
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
 		) error
-		// NOTE: CloseExecution task may generates both RecordChildCompletion
-		// and ApplyParentPolicy tasks. That's why we currently have a separate
-		// function for generating tasks from CloseExecution task
-		GenerateFromCloseExecutionTask(
+		// NOTE: CloseExecution task may generate both RecordChildCompletion
+		// and ApplyParentPolicy tasks. That's why we currently have separate
+		// functions for generating tasks from CloseExecution task
+		GenerateCrossClusterRecordChildCompletedTask(
 			transferTask *persistence.TransferTaskInfo,
 			targetCluster string,
 			parentInfo *types.ParentExecutionInfo,
+		) error
+		GenerateCrossClusterApplyParentClosePolicyTask(
+			transferTask *persistence.TransferTaskInfo,
+			targetCluster string,
 			childDomainIDs map[string]struct{},
 		) error
 		GenerateFromCrossClusterTask(
@@ -196,7 +200,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 			}
 
 			if !isActive {
-				crossClusterTasks = append(crossClusterTasks, &persistence.CrossClusterRecordChildExecutionCompleteTask{
+				crossClusterTasks = append(crossClusterTasks, &persistence.CrossClusterRecordChildExecutionCompletedTask{
 					TargetCluster:                     parentTargetCluster,
 					RecordChildExecutionCompletedTask: *recordChildCompletionTask,
 				})
@@ -206,7 +210,9 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		}
 
 		// 2. check if child domains are cross cluster
-		parentCloseTransferTask, parentCloseCrossClusterTask, err := r.generateApplyParentCloseTasks(nil, closeEvent.GetVersion(), time.Time{}, false)
+		parentCloseTransferTask,
+			parentCloseCrossClusterTask,
+			err := r.generateApplyParentCloseTasks(nil, closeEvent.GetVersion(), time.Time{}, false)
 		if err != nil {
 			return err
 		}
@@ -618,21 +624,18 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowResetTasks() error {
 	return nil
 }
 
-func (r *mutableStateTaskGeneratorImpl) GenerateFromCloseExecutionTask(
+func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterRecordChildCompletedTask(
 	task *persistence.TransferTaskInfo,
 	targetCluster string,
 	parentInfo *types.ParentExecutionInfo,
-	childDomainIDs map[string]struct{},
 ) error {
 	if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
 		// this should not happen
 		return errors.New("unable to create cross-cluster task for current cluster")
 	}
 
-	var crossClusterTask []persistence.Task
-
 	if parentInfo != nil {
-		crossClusterTask = append(crossClusterTask, &persistence.CrossClusterRecordChildExecutionCompleteTask{
+		r.mutableState.AddCrossClusterTasks(&persistence.CrossClusterRecordChildExecutionCompletedTask{
 			TargetCluster: targetCluster,
 			RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
 				VisibilityTimestamp: task.VisibilityTimestamp,
@@ -645,8 +648,21 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCloseExecutionTask(
 		})
 	}
 
+	return nil
+}
+
+func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterApplyParentClosePolicyTask(
+	task *persistence.TransferTaskInfo,
+	targetCluster string,
+	childDomainIDs map[string]struct{},
+) error {
+	if targetCluster == r.clusterMetadata.GetCurrentClusterName() {
+		// this should not happen
+		return errors.New("unable to create cross-cluster task for current cluster")
+	}
+
 	if len(childDomainIDs) != 0 {
-		crossClusterTask = append(crossClusterTask, &persistence.CrossClusterApplyParentClosePolicyTask{
+		r.mutableState.AddCrossClusterTasks(&persistence.CrossClusterApplyParentClosePolicyTask{
 			TargetCluster: targetCluster,
 			ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
 				TargetDomainIDs: childDomainIDs,
@@ -658,8 +674,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCloseExecutionTask(
 			},
 		})
 	}
-
-	r.mutableState.AddCrossClusterTasks(crossClusterTask...)
 
 	return nil
 }
@@ -714,7 +728,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromTransferTask(
 		}
 	// TransferTaskTypeCloseExecution,
 	// TransferTaskTypeRecordChildExecutionCompleted,
-	// TransferTaskTypeApplyParentClosePolicy are handled by GenerateFromCloseExecutionTask
+	// TransferTaskTypeApplyParentClosePolicy are handled by GenerateCrossClusterRecordChildCompletedTask
 	default:
 		return fmt.Errorf("unable to convert transfer task of type %v to cross-cluster task", task.TaskType)
 	}
@@ -873,7 +887,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 		if generateTransferTask {
 			newTask = recordChildExecutionCompletedTask
 		} else {
-			newTask = &persistence.CrossClusterRecordChildExecutionCompleteTask{
+			newTask = &persistence.CrossClusterRecordChildExecutionCompletedTask{
 				TargetCluster:                     targetCluster,
 				RecordChildExecutionCompletedTask: *recordChildExecutionCompletedTask,
 			}

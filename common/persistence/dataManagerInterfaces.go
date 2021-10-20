@@ -627,8 +627,8 @@ type (
 		TargetCluster string
 	}
 
-	// CrossClusterRecordChildExecutionCompleteTask is the cross-cluster version of RecordChildExecutionCompletedTask
-	CrossClusterRecordChildExecutionCompleteTask struct {
+	// CrossClusterRecordChildExecutionCompletedTask is the cross-cluster version of RecordChildExecutionCompletedTask
+	CrossClusterRecordChildExecutionCompletedTask struct {
 		RecordChildExecutionCompletedTask
 
 		TargetCluster string
@@ -2548,7 +2548,7 @@ func (c *CrossClusterSignalExecutionTask) GetType() int {
 }
 
 // GetType returns of type of the cross-cluster record child workflow completion task
-func (c *CrossClusterRecordChildExecutionCompleteTask) GetType() int {
+func (c *CrossClusterRecordChildExecutionCompletedTask) GetType() int {
 	return CrossClusterTaskTypeRecordChildExeuctionCompleted
 }
 

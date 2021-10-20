@@ -283,6 +283,13 @@ func (t *transferActiveTaskExecutor) processApplyParentClosePolicy(
 	return t.processCloseExecutionTaskHelper(ctx, task, false, false, true)
 }
 
+// TODO: this helper function performs three operations:
+// 1. publish workflow closed visibility record
+// 2. if has parent workflow, reply to the parent workflow
+// 3. if has child workflow(s), apply parent close policy
+// ideally we should separate them into 3 functions, but it is complicated
+// but the fact that we want to release mutable state lock as early as possible
+// we should see if there's a better way to organize the code
 func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
@@ -368,13 +375,11 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	var sameClusterChildDomainIDs map[int64]string
 	var signalParentClosePolicyWorker bool
 	if applyParentClosePolicy {
-		if crossClusterTaskGenerators,
+		crossClusterTaskGenerators,
 			sameClusterChildDomainIDs,
-			signalParentClosePolicyWorker, err = t.applyParentClosePolicyDomainActiveCheck(
-			task,
-			domainName,
-			children,
-		); err != nil {
+			signalParentClosePolicyWorker,
+			err = t.applyParentClosePolicyDomainActiveCheck(task, domainName, children)
+		if err != nil {
 			return err
 		}
 	}
@@ -401,7 +406,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			}
 			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateFromCloseExecutionTask(task, targetCluster, parentInfo, nil)
+					return taskGenerator.GenerateCrossClusterRecordChildCompletedTask(task, targetCluster, parentInfo)
 				})
 			replyToParentWorkflow = false
 		}
@@ -1799,7 +1804,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 			generators = append(
 				generators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateFromCloseExecutionTask(task, remoteCluster, nil, targetDomainIDs)
+					return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster, targetDomainIDs)
 				})
 		}
 		return generators, sameClusterChildDomainIDs, false, nil

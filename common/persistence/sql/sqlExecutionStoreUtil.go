@@ -810,13 +810,13 @@ func createCrossClusterTasks(
 			info.ScheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
 		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
-			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetCluster
-			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetDomainID)
-			info.TargetWorkflowID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetWorkflowID
-			if targetRunID := task.(*p.CrossClusterRecordChildExecutionCompleteTask).TargetRunID; targetRunID != "" {
+			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetCluster
+			info.TargetDomainID = serialization.MustParseUUID(task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetDomainID)
+			info.TargetWorkflowID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetWorkflowID
+			if targetRunID := task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetRunID; targetRunID != "" {
 				info.TargetRunID = serialization.MustParseUUID(targetRunID)
 			}
-			info.ScheduleID = task.(*p.CrossClusterRecordChildExecutionCompleteTask).InitiatedID
+			info.ScheduleID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).InitiatedID
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster

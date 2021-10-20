@@ -2334,7 +2334,7 @@ func (s *ExecutionManagerSuite) TestCrossClusterTasks() {
 				Version:                 123,
 			},
 		},
-		&p.CrossClusterRecordChildExecutionCompleteTask{
+		&p.CrossClusterRecordChildExecutionCompletedTask{
 			TargetCluster: remoteClusterName2,
 			RecordChildExecutionCompletedTask: p.RecordChildExecutionCompletedTask{
 				VisibilityTimestamp: now,
@@ -2421,7 +2421,7 @@ func (s *ExecutionManagerSuite) validateCrossClusterTasks(
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
 			s.Equal(task.TargetChildWorkflowOnly, loadedTaskInfo[index].TargetChildWorkflowOnly)
 			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
-		case *p.CrossClusterRecordChildExecutionCompleteTask:
+		case *p.CrossClusterRecordChildExecutionCompletedTask:
 			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
