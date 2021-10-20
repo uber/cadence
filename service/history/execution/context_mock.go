@@ -282,17 +282,17 @@ func (mr *MockContextMockRecorder) PersistNonStartWorkflowBatchEvents(ctx, workf
 }
 
 // CreateWorkflowExecution mocks base method
-func (m *MockContext) CreateWorkflowExecution(ctx context.Context, newWorkflow *persistence.WorkflowSnapshot, historySize int64, now time.Time, createMode persistence.CreateWorkflowMode, prevRunID string, prevLastWriteVersion int64) error {
+func (m *MockContext) CreateWorkflowExecution(ctx context.Context, newWorkflow *persistence.WorkflowSnapshot, historySize int64, createMode persistence.CreateWorkflowMode, prevRunID string, prevLastWriteVersion int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWorkflowExecution", ctx, newWorkflow, historySize, now, createMode, prevRunID, prevLastWriteVersion)
+	ret := m.ctrl.Call(m, "CreateWorkflowExecution", ctx, newWorkflow, historySize, createMode, prevRunID, prevLastWriteVersion)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateWorkflowExecution indicates an expected call of CreateWorkflowExecution
-func (mr *MockContextMockRecorder) CreateWorkflowExecution(ctx, newWorkflow, historySize, now, createMode, prevRunID, prevLastWriteVersion interface{}) *gomock.Call {
+func (mr *MockContextMockRecorder) CreateWorkflowExecution(ctx, newWorkflow, historySize, createMode, prevRunID, prevLastWriteVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkflowExecution", reflect.TypeOf((*MockContext)(nil).CreateWorkflowExecution), ctx, newWorkflow, historySize, now, createMode, prevRunID, prevLastWriteVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkflowExecution", reflect.TypeOf((*MockContext)(nil).CreateWorkflowExecution), ctx, newWorkflow, historySize, createMode, prevRunID, prevLastWriteVersion)
 }
 
 // ConflictResolveWorkflowExecution mocks base method

@@ -22,7 +22,6 @@ package testing
 
 import (
 	"fmt"
-	"runtime/debug"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -51,11 +50,6 @@ func (s *historyEventTestSuit) SetupTest() {
 
 // This is a sample about how to use the generator
 func (s *historyEventTestSuit) Test_HistoryEvent_Generator() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("stacktrace from panic: \n" + string(debug.Stack()))
-		}
-	}()
 	maxEventID := int64(0)
 	maxVersion := int64(1)
 	maxTaskID := int64(1)

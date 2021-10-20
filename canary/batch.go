@@ -167,7 +167,7 @@ func batchWorkflowChild(ctx workflow.Context, scheduledTimeNanos int64) error {
 }
 
 func startBatchWorkflow(ctx context.Context, domain, startTime string) error {
-	sdkClient := getContextValue(ctx, ctxKeyActivitySystemClient).(*activityContext).cadence
+	sdkClient := getContextValue(ctx, ctxKeyActivityBatcherClient).(*activityContext).cadence
 
 	params := BatchParams{
 		DomainName: domain,

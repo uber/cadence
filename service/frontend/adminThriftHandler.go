@@ -166,6 +166,12 @@ func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *s
 	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
 }
 
+// RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks
+func (t AdminThriftHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := t.h.RespondCrossClusterTasksCompleted(ctx, thrift.ToRespondCrossClusterTasksCompletedRequest(request))
+	return thrift.FromRespondCrossClusterTasksCompletedResponse(response), thrift.FromError(err)
+}
+
 // GetDynamicConfig fetches dynamic config value
 func (t AdminThriftHandler) GetDynamicConfig(ctx context.Context, request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse, error) {
 	response, err := t.h.GetDynamicConfig(ctx, thrift.ToGetDynamicConfigRequest(request))

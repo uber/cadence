@@ -149,7 +149,7 @@ func (s *crossClusterTaskProcessorSuite) testRespondPendingTasks(failedToRespond
 		futureSettables[idx].Set(types.CrossClusterTaskResponse{TaskID: int64(idx)}, nil)
 	}
 
-	s.mockShard.Resource.HistoryClient.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).DoAndReturn(
+	s.mockShard.Resource.RemoteAdminClient.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(
 			_ context.Context,
 			request *types.RespondCrossClusterTasksCompletedRequest,
@@ -234,7 +234,7 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 		},
 	).Times(numTasks - 1) // -1 since there's a duplicate task
 
-	s.mockShard.Resource.HistoryClient.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).DoAndReturn(
+	s.mockShard.Resource.RemoteAdminClient.EXPECT().RespondCrossClusterTasksCompleted(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(
 			_ context.Context,
 			request *types.RespondCrossClusterTasksCompletedRequest,

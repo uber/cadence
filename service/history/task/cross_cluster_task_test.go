@@ -540,6 +540,61 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 	)
 }
 
+func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStarted_ParentClosed() {
+	childExecutionRunID := "some random target run ID"
+	s.testGetStartChildExecutionRequest(
+		constants.TestDomainID,
+		func(
+			mutableState execution.MutableState,
+			workflowExecution, targetExecution types.WorkflowExecution,
+			lastEvent *types.HistoryEvent,
+			sourceTask *crossClusterSourceTask,
+			childInfo *p.ChildExecutionInfo,
+		) {
+			// child already started, advance processing to recorded
+			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), childExecutionRunID, childInfo.WorkflowTypeName)
+			di := test.AddDecisionTaskScheduledEvent(mutableState)
+			lastEvent = test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, mutableState.GetExecutionInfo().TaskList, "some random identity")
+			lastEvent = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, lastEvent.GetEventID(), nil, "some random identity")
+			lastEvent = test.AddCompleteWorkflowEvent(mutableState, lastEvent.EventID, nil)
+			mutableState.FlushBufferedEvents()
+
+			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
+			s.NoError(err)
+			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+		},
+		func(
+			request *types.CrossClusterTaskRequest,
+			getRequestErr error,
+			sourceTask *crossClusterSourceTask,
+			childInfo *p.ChildExecutionInfo,
+			initiatedEvent *types.HistoryEvent,
+		) {
+			s.NoError(getRequestErr)
+			s.NotNil(request)
+			s.Equal(&types.CrossClusterTaskInfo{
+				DomainID:            sourceTask.GetDomainID(),
+				WorkflowID:          sourceTask.GetWorkflowID(),
+				RunID:               sourceTask.GetRunID(),
+				TaskType:            types.CrossClusterTaskTypeStartChildExecution.Ptr(),
+				TaskState:           int16(processingStateResponseRecorded),
+				TaskID:              sourceTask.GetTaskID(),
+				VisibilityTimestamp: common.Int64Ptr(sourceTask.GetVisibilityTimestamp().UnixNano()),
+			}, request.TaskInfo)
+			taskInfo := sourceTask.GetInfo().(*p.CrossClusterTaskInfo)
+			s.Equal(&types.CrossClusterStartChildExecutionRequestAttributes{
+				TargetDomainID:           taskInfo.TargetDomainID,
+				RequestID:                childInfo.CreateRequestID,
+				InitiatedEventID:         taskInfo.ScheduleID,
+				InitiatedEventAttributes: initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes,
+				TargetRunID:              common.StringPtr(childExecutionRunID),
+			}, request.StartChildExecutionAttributes)
+			s.Equal(ctask.TaskStatePending, sourceTask.State())
+			s.Equal(processingStateResponseRecorded, sourceTask.ProcessingState())
+		},
+	)
+}
+
 func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_Duplication() {
 	s.testGetStartChildExecutionRequest(
 		constants.TestDomainID,
