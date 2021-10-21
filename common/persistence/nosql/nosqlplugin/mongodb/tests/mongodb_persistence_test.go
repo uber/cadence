@@ -21,16 +21,31 @@
 package tests
 
 import (
+	"log"
 	"testing"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 )
+
+func getTestConfig() *config.NoSQL {
+	return &config.NoSQL{
+		PluginName: mongodb.PluginName,
+		User:       "root",
+		Password:   "cadence",
+		Hosts:      "localhost",
+		Port:       27017,
+	}
+}
 
 // This is to make sure adding new noop method when adding new nosql interfaces
 // Remove it when any other tests are implemented.
 func TestNoopStruct(t *testing.T) {
-	_, _ = mongodb.NewMongoDB(config.NoSQL{}, nil)
+	_, err := nosql.NewNoSQLAdminDB(getTestConfig(), nil)
+	if err != nil {
+		log.Fatal("fail to connect to mongo")
+	}
 }
 
 func TestMongoDBHistoryPersistence(t *testing.T) {

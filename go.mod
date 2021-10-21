@@ -58,7 +58,7 @@ require (
 	github.com/valyala/fastjson v1.4.1
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
-	go.mongodb.org/mongo-driver v1.7.3 // indirect
+	go.mongodb.org/mongo-driver v1.7.3
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
 	go.uber.org/cadence v0.17.1-0.20210820042115-b09692f6838f

@@ -21,49 +21,50 @@
 package mongodb
 
 import (
-	"errors"
+	"context"
+	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
-var (
-	errConditionFailed = errors.New("internal condition fail error")
+const (
+	// PluginName is the name of the plugin
+	PluginName            = "mongodb"
+	defaultSessionTimeout = 10 * time.Second
 )
 
-// mdb represents a logical connection to MongoDB database
-type mdb struct {
-	client *mongo.Client
-	logger log.Logger
+type plugin struct{}
+
+var _ nosqlplugin.Plugin = (*plugin)(nil)
+
+func init() {
+	nosql.RegisterPlugin(PluginName, &plugin{})
 }
 
-var _ nosqlplugin.DB = (*mdb)(nil)
-
-func (db *mdb) Close() {
-	panic("TODO")
+// CreateDB initialize the db object
+func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
+	return p.doCreateDB(cfg, logger)
 }
 
-func (db *mdb) PluginName() string {
-	return PluginName
+// CreateAdminDB initialize the AdminDB object
+func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+	return p.doCreateDB(cfg, logger)
 }
 
-func (db *mdb) IsNotFoundError(err error) bool {
-	panic("TODO")
+func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*mdb, error) {
+	uri := fmt.Sprintf("mongodb://%v:%v@%v:%v/", cfg.User, cfg.Password, cfg.Hosts, cfg.Port)
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
+	return &mdb{
+		client: client,
+		logger: logger,
+	}, err
 }
 
-func (db *mdb) IsTimeoutError(err error) bool {
-	panic("TODO")
-}
 
-func (db *mdb) IsThrottlingError(err error) bool {
-	panic("TODO")
-}
-
-func (db *mdb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
-}
