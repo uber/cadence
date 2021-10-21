@@ -520,7 +520,7 @@ type (
 	ConfigStoreCRUD interface {
 		// InsertConfig insert a config entry with version. Return nosqlplugin.NewConditionFailure if the same version of the row_type is existing
 		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
-		// SelectLatestConfig returns the config entry of the row_type with the largest version value
+		// SelectLatestConfig returns the config entry of the row_type with the largest(latest) version value
 		SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error)
 	}
 )
