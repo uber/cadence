@@ -39,9 +39,8 @@ func getTestConfig() *config.NoSQL {
 	}
 }
 
-// This is to make sure adding new noop method when adding new nosql interfaces
-// Remove it when any other tests are implemented.
-func TestNoopStruct(t *testing.T) {
+// TestConnection will test connecting to mongo is successful
+func TestConnection(t *testing.T) {
 	_, err := nosql.NewNoSQLAdminDB(getTestConfig(), nil)
 	if err != nil {
 		log.Fatal("fail to connect to mongo")
@@ -49,9 +48,9 @@ func TestNoopStruct(t *testing.T) {
 }
 
 func TestMongoDBHistoryPersistence(t *testing.T) {
-	//s := new(persistencetests.HistoryV2PersistenceSuite)
-	//s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
+	// s := new(persistencetests.HistoryV2PersistenceSuite)
+	// s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
+	// s.TestBase.Setup()
 	//suite.Run(t, s)
 }
 
