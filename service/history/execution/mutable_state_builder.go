@@ -3493,7 +3493,16 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionStartedEvent(
 	attributes := event.ChildWorkflowExecutionStartedEventAttributes
 	initiatedID := attributes.GetInitiatedEventID()
 
-	ci, _ := e.GetChildExecutionInfo(initiatedID)
+	ci, ok := e.GetChildExecutionInfo(initiatedID)
+	if !ok {
+		e.logError(
+			"Unable to find child workflow",
+			tag.ErrorTypeInvalidMutableStateAction,
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.WorkflowInitiatedID(initiatedID),
+		)
+		return ErrMissingChildWorkflowInfo
+	}
 	ci.StartedID = event.GetEventID()
 	ci.StartedRunID = attributes.GetWorkflowExecution().GetRunID()
 	e.updateChildExecutionInfos[ci.InitiatedID] = ci
