@@ -46,13 +46,10 @@ type (
 		Close() error
 
 		// ExecDDL executes a DDL query
-		// For multiple databases, it will execute the query in all of them
 		ExecDDL(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error)
 		// SelectForSchemaQuery executes a select query for schema(returning multiple rows).
-		// For multiple databases, it will execute the query in all of them and validate they are the same using deep equal
 		SelectForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error
 		// GetForSchemaQuery executes a get query for schema(returning single row).
-		// For multiple databases, it will execute the query in all of them and validate they are the same using deep equal
 		GetForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error
 	}
 
