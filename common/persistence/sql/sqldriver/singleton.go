@@ -82,8 +82,8 @@ func (s *singleton) SelectContext(ctx context.Context, _ int, dest interface{}, 
 
 // below are non-transactional methods only
 
-func (s *singleton) ExecDDL(_ int, query string, args ...interface{}) (sql.Result, error) {
-	return s.db.Exec(query, args...)
+func (s *singleton) ExecDDL(ctx context.Context, _ int, query string, args ...interface{}) (sql.Result, error) {
+	return s.db.ExecContext(ctx, query, args...)
 }
 
 func (s *singleton) SelectForSchemaQuery(_ int, dest interface{}, query string, args ...interface{}) error {

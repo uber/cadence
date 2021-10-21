@@ -21,6 +21,7 @@
 package mysql
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -61,10 +62,10 @@ const (
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (mdb *db) CreateSchemaVersionTables() error {
-	if err := mdb.ExecSchemaOperationQuery(createSchemaVersionTableQuery); err != nil {
+	if err := mdb.ExecSchemaOperationQuery(context.Background(), createSchemaVersionTableQuery); err != nil {
 		return err
 	}
-	return mdb.ExecSchemaOperationQuery(createSchemaUpdateHistoryTableQuery)
+	return mdb.ExecSchemaOperationQuery(context.Background(), createSchemaUpdateHistoryTableQuery)
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
@@ -76,19 +77,19 @@ func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (mdb *db) UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
-	return mdb.ExecSchemaOperationQuery(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
+	return mdb.ExecSchemaOperationQuery(context.Background(), writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
-	return mdb.ExecSchemaOperationQuery(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
+	return mdb.ExecSchemaOperationQuery(context.Background(), writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
 // ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
-func (mdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error {
-	_, err := mdb.driver.ExecDDL(sqlplugin.DbShardUndefined, stmt, args...)
+func (mdb *db) ExecSchemaOperationQuery(ctx context.Context, stmt string, args ...interface{}) error {
+	_, err := mdb.driver.ExecDDL(ctx, sqlplugin.DbShardUndefined, stmt, args...)
 	return err
 }
 
@@ -101,7 +102,7 @@ func (mdb *db) ListTables(database string) ([]string, error) {
 
 // DropTable drops a given table from the database
 func (mdb *db) DropTable(name string) error {
-	return mdb.ExecSchemaOperationQuery(fmt.Sprintf(dropTableQuery, name))
+	return mdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(dropTableQuery, name))
 }
 
 // DropAllTables drops all tables from this database
@@ -120,10 +121,10 @@ func (mdb *db) DropAllTables(database string) error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (mdb *db) CreateDatabase(name string) error {
-	return mdb.ExecSchemaOperationQuery(fmt.Sprintf(createDatabaseQuery, name))
+	return mdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(createDatabaseQuery, name))
 }
 
 // DropDatabase drops a database
 func (mdb *db) DropDatabase(name string) error {
-	return mdb.ExecSchemaOperationQuery(fmt.Sprintf(dropDatabaseQuery, name))
+	return mdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(dropDatabaseQuery, name))
 }

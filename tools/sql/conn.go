@@ -21,6 +21,8 @@
 package sql
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -78,7 +80,8 @@ func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, 
 
 // ExecDDLQuery executes a sql statement
 func (c *Connection) ExecDDLQuery(stmt string, args ...interface{}) error {
-	err := c.adminDb.ExecSchemaOperationQuery(stmt, args...)
+	// TODO pass in context timeout value from command line param
+	err := c.adminDb.ExecSchemaOperationQuery(context.Background(), stmt, args...)
 	return err
 }
 

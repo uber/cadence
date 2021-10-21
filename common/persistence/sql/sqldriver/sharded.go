@@ -115,7 +115,7 @@ func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interfa
 
 // below are non-transactional methods only
 
-func (s *sharded) ExecDDL(dbShardID int, query string, args ...interface{}) (sql.Result, error) {
+func (s *sharded) ExecDDL(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error) {
 	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
 	// schema operation across shards is implemented by application layer
 	return nil, fmt.Errorf("sharded SQL driver shouldn't be used to ExecDDL, there must be a bug")

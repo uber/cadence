@@ -21,6 +21,7 @@
 package postgres
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -67,10 +68,10 @@ const (
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (pdb *db) CreateSchemaVersionTables() error {
-	if err := pdb.ExecSchemaOperationQuery(createSchemaVersionTableQuery); err != nil {
+	if err := pdb.ExecSchemaOperationQuery(context.Background(), createSchemaVersionTableQuery); err != nil {
 		return err
 	}
-	return pdb.ExecSchemaOperationQuery(createSchemaUpdateHistoryTableQuery)
+	return pdb.ExecSchemaOperationQuery(context.Background(), createSchemaUpdateHistoryTableQuery)
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
@@ -82,18 +83,18 @@ func (pdb *db) ReadSchemaVersion(database string) (string, error) {
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (pdb *db) UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
-	return pdb.ExecSchemaOperationQuery(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
+	return pdb.ExecSchemaOperationQuery(context.Background(), writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (pdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
-	return pdb.ExecSchemaOperationQuery(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
+	return pdb.ExecSchemaOperationQuery(context.Background(), writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
 // ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
-func (pdb *db) ExecSchemaOperationQuery(stmt string, args ...interface{}) error {
+func (pdb *db) ExecSchemaOperationQuery(ctx context.Context, stmt string, args ...interface{}) error {
 	_, err := pdb.driver.ExecDDL(sqlplugin.DbShardUndefined, stmt, args...)
 	return err
 }
@@ -107,7 +108,7 @@ func (pdb *db) ListTables(database string) ([]string, error) {
 
 // DropTable drops a given table from the database
 func (pdb *db) DropTable(name string) error {
-	return pdb.ExecSchemaOperationQuery(fmt.Sprintf(dropTableQuery, name))
+	return pdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(dropTableQuery, name))
 }
 
 // DropAllTables drops all tables from this database
@@ -126,10 +127,10 @@ func (pdb *db) DropAllTables(database string) error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (pdb *db) CreateDatabase(name string) error {
-	return pdb.ExecSchemaOperationQuery(fmt.Sprintf(createDatabaseQuery, name))
+	return pdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(createDatabaseQuery, name))
 }
 
 // DropDatabase drops a database
 func (pdb *db) DropDatabase(name string) error {
-	return pdb.ExecSchemaOperationQuery(fmt.Sprintf(dropDatabaseQuery, name))
+	return pdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(dropDatabaseQuery, name))
 }
