@@ -47,7 +47,7 @@ const (
 	MySQLSeeds = "MYSQL_SEEDS"
 	// MySQLPort env
 	MySQLPort = "MYSQL_PORT"
-	// MySQLDefaultPort MySQL default port
+	// MySQLDefaultPort is MySQL default port
 	MySQLDefaultPort = "3306"
 	// MySQLUser env
 	MySQLUser = "MYSQL_USER"
@@ -223,20 +223,20 @@ func GetMySQLPort() int {
 
 // GetMySQLUser return the MySQL user
 func GetMySQLUser() string {
-	addr := os.Getenv(MySQLUser)
-	if addr == "" {
-		addr = MySQLDefaultUser
+	user := os.Getenv(MySQLUser)
+	if user == "" {
+		user = MySQLDefaultUser
 	}
-	return addr
+	return user
 }
 
 // GetMySQLPassword return the MySQL password
 func GetMySQLPassword() string {
-	addr := os.Getenv(MySQLPassword)
-	if addr == "" {
-		addr = MySQLDefaultPassword
+	pw := os.Getenv(MySQLPassword)
+	if pw == "" {
+		pw = MySQLDefaultPassword
 	}
-	return addr
+	return pw
 }
 
 // GetPostgresAddress return the Postgres address
