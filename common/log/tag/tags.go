@@ -607,6 +607,11 @@ func ESDocID(id string) Tag {
 	return newStringTag("es-doc-id", id)
 }
 
+// ESAggregationID returns tag for ESDocID
+func ESAggregationID(id string) Tag {
+	return newStringTag("es-agg-id", id)
+}
+
 // LoggingCallAtKey is reserved tag
 const LoggingCallAtKey = "logging-call-at"
 

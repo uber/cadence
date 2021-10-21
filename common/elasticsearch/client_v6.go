@@ -448,6 +448,59 @@ func (c *elasticV6) search(ctx context.Context, p *searchParametersV6) (*elastic
 	return searchService.Do(ctx)
 }
 
+func (c *elasticV6) SearchRaw(ctx context.Context, index, query string) (*RawResponse, error) {
+	// There's slight differences between the v6 and v7 response preventing us to move
+	// this to a common function
+	esResult, err := c.client.Search(index).Source(query).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := RawResponse{
+		TookInMillis: esResult.TookInMillis,
+	}
+
+	if esResult.Error != nil {
+		return nil, types.InternalServiceError{
+			Message: fmt.Sprintf("ElasticSearch Error: %#v", esResult.Error),
+		}
+	} else if esResult.TimedOut {
+		return nil, types.InternalServiceError{
+			Message: fmt.Sprintf("ElasticSearch Error: Request timed out: %v ms", esResult.TookInMillis),
+		}
+	}
+
+	result.Hits = SearchHits{
+		TotalHits: esResult.TotalHits(),
+		Hits:      []*VisibilityRecord{},
+	}
+	if esResult.Hits != nil {
+		for _, hit := range esResult.Hits.Hits {
+			var record *VisibilityRecord
+			err := json.Unmarshal(*hit.Source, &record)
+			if err != nil {
+				c.logger.Error("unable to unmarshal search hit source",
+					tag.Error(err), tag.ESDocID(hit.Id))
+				return nil, err
+			}
+			result.Hits.Hits = append(result.Hits.Hits, record)
+		}
+	}
+
+	// type Aggregations map[string]*json.RawMessage
+	for key, agg := range esResult.Aggregations {
+		var parsed Aggregation
+		err := json.Unmarshal(*agg, &parsed)
+		if err != nil {
+			c.logger.Error("unable to unmarshal aggregation",
+				tag.Error(err), tag.ESAggregationID(key))
+			return nil, err
+		}
+		result.Aggregations[key] = &parsed
+	}
+
+	return &result, nil
+}
+
 func (c *elasticV6) searchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
 	return c.client.Search(index).Source(query).Do(ctx)
 }

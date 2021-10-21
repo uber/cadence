@@ -58,6 +58,8 @@ type (
 		Search(ctx context.Context, request *SearchRequest) (*SearchResponse, error)
 		// SearchByQuery is the generic purpose searching
 		SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*SearchResponse, error)
+		// SearchRaw is for searching with raw json. Returns RawResult object which is subset of ESv6 and ESv7 response
+		SearchRaw(ctx context.Context, index, query string) (*RawResponse, error)
 		// ScanByQuery is also generic purpose searching, but implemented with ScrollService of ElasticSearch,
 		// which is more performant for pagination, but comes with some limitation of in-parallel requests.
 		ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*SearchResponse, error)
@@ -222,5 +224,26 @@ type (
 		IsCron        bool
 		NumClusters   int16
 		Attr          map[string]interface{}
+	}
+
+	// Response structs: simplified from github.com/olivere/elastic
+	Bucket struct {
+		Key      string `json:"key"`
+		DocCount int64  `json:"doc_count"`
+	}
+	Aggregation struct {
+		Value   *float64   `json:"value,omitempty"`
+		Buckets *[]*Bucket `json:"buckets,omitempty"`
+	}
+
+	SearchHits struct {
+		TotalHits int64
+		Hits      []*VisibilityRecord
+	}
+
+	RawResponse struct {
+		TookInMillis int64
+		Hits         SearchHits
+		Aggregations map[string]*Aggregation
 	}
 )
