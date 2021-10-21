@@ -240,8 +240,6 @@ func sanitizeAttr(inkey string, invalue string) (string, string) {
 }
 
 const (
-	testUser      = "uber"
-	testPassword  = "uber"
 	testSchemaDir = "schema/mysql/v57"
 )
 
@@ -249,8 +247,8 @@ const (
 func GetTestClusterOption() *pt.TestBaseOptions {
 	return &pt.TestBaseOptions{
 		DBPluginName: PluginName,
-		DBUsername:   testUser,
-		DBPassword:   testPassword,
+		DBUsername:   environment.GetMySQLUser(),
+		DBPassword:   environment.GetMySQLPassword(),
 		DBHost:       environment.GetMySQLAddress(),
 		DBPort:       environment.GetMySQLPort(),
 		SchemaDir:    testSchemaDir,

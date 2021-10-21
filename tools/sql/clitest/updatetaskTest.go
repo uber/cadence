@@ -46,8 +46,8 @@ func NewUpdateSchemaTestSuite(pluginName string) *UpdateSchemaTestSuite {
 // SetupSuite setups test suite
 func (s *UpdateSchemaTestSuite) SetupSuite() {
 	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
-	os.Setenv("SQL_USER", testUser)
-	os.Setenv("SQL_PASSWORD", testPassword)
+	os.Setenv("SQL_USER", environment.GetMySQLUser())
+	os.Setenv("SQL_PASSWORD", environment.GetMySQLPassword())
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
 		log.Fatal("Error creating CQLClient")
