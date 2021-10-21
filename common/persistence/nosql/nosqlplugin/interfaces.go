@@ -510,7 +510,7 @@ type (
 	}
 
 	/***
-	* configStoreCRUD is for storing dynamic configuration parameters
+	* ConfigStoreCRUD is for storing dynamic configuration parameters
 	*
 	* Recommendation: one table
 	*
@@ -518,7 +518,9 @@ type (
 	* domain: partition key(row_type), range key(version)
 	 */
 	ConfigStoreCRUD interface {
+		// InsertConfig insert a config entry with version. Return nosqlplugin.NewConditionFailure if the same version of the row_type is existing
 		InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error
+		// SelectLatestConfig returns the config entry of the row_type with the largest version value
 		SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error)
 	}
 )
