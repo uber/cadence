@@ -95,7 +95,7 @@ func (pdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manife
 // ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
 func (pdb *db) ExecSchemaOperationQuery(ctx context.Context, stmt string, args ...interface{}) error {
-	_, err := pdb.driver.ExecDDL(sqlplugin.DbShardUndefined, stmt, args...)
+	_, err := pdb.driver.ExecDDL(ctx, sqlplugin.DbShardUndefined, stmt, args...)
 	return err
 }
 
