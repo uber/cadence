@@ -30,9 +30,9 @@ import (
 const (
 	// this means the query need to execute in one shard but the shard should be fixed/static, e.g. for domain, queue storage are single shard
 	DbDefaultShard = 0
-	// this is should never being used to query anything
+	// this is should never being used in sharded SQL driver. It is used in admin/schema operation in singleton driver, which ignores all the shardID parameter
 	DbShardUndefined = -1
-	// this means the query needs to execute in all dbShards, e.g. used for executing queries for schemas,
+	// this means the query needs to execute in all dbShards in sharded SQL driver (currently not supported)
 	DbAllShards = -2
 )
 

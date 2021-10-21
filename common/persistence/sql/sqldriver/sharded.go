@@ -24,7 +24,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"reflect"
 
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/multierr"
@@ -117,65 +116,21 @@ func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interfa
 // below are non-transactional methods only
 
 func (s *sharded) ExecDDL(dbShardID int, query string, args ...interface{}) (sql.Result, error) {
-	if dbShardID == sqlplugin.DbShardUndefined {
-		return nil, fmt.Errorf("DbShardUndefined shouldn't be used to ExecDDL, there must be a bug")
-	}
-	if dbShardID == sqlplugin.DbAllShards {
-		// NOTE: this can only be safely used for schema operation
-		var errs []error
-		for _, db := range s.dbs {
-			_, err := db.Exec(query, args...)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-		if len(errs) > 0 {
-			// Note that this will break sqlplugin.ErrorChecker contract, but it's okay for now as DbAllShards are only being used for schema
-			return nil, multierr.Combine(errs...)
-		}
-		return newShardedSqlExecResult(), nil
-	}
-	return s.dbs[dbShardID].Exec(query, args...)
+	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
+	// schema operation across shards is implemented by application layer
+	return nil, fmt.Errorf("sharded SQL driver shouldn't be used to ExecDDL, there must be a bug")
 }
 
 func (s *sharded) SelectForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	if dbShardID == sqlplugin.DbShardUndefined {
-		return fmt.Errorf("invalid dbShardID %v shouldn't be used to SelectForSchemaQuery, there must be a bug", dbShardID)
-	}
-	if dbShardID == sqlplugin.DbAllShards {
-		var prevDest interface{}
-		for idx, db := range s.dbs {
-			err := db.Select(dest, query, args...)
-			if err != nil {
-				return err
-			}
-			if prevDest != nil && !reflect.DeepEqual(prevDest, dest) {
-				return fmt.Errorf("SelectForSchemaQuery fails for multiple database, value(%v) of shard(%v) is not the same as the value(%v) or shard(%v)", dest, idx, prevDest, idx-1)
-			}
-			prevDest = dest
-		}
-	}
-	return s.dbs[dbShardID].Select(dest, query, args...)
+	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
+	// schema operation across shards is implemented by application layer
+	return fmt.Errorf("sharded SQL driver shouldn't be used to SelectForSchemaQuery, there must be a bug")
 }
 
 func (s *sharded) GetForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	if dbShardID == sqlplugin.DbShardUndefined {
-		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Get, there must be a bug", dbShardID)
-	}
-	if dbShardID == sqlplugin.DbAllShards {
-		var prevDest interface{}
-		for idx, db := range s.dbs {
-			err := db.Get(dest, query, args...)
-			if err != nil {
-				return err
-			}
-			if prevDest != nil && !reflect.DeepEqual(prevDest, dest) {
-				return fmt.Errorf("GetForSchemaQuery fails for multiple database, value(%v) of shard(%v) is not the same as the value(%v) or shard(%v)", dest, idx, prevDest, idx-1)
-			}
-			prevDest = dest
-		}
-	}
-	return s.dbs[dbShardID].Get(dest, query, args...)
+	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
+	// schema operation across shards is implemented by application layer
+	return fmt.Errorf("sharded SQL driver shouldn't be used to GetForSchemaQuery, there must be a bug")
 }
 
 func (s *sharded) BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error) {
@@ -207,18 +162,6 @@ func (s *sharded) Commit() error {
 
 func (s *sharded) Rollback() error {
 	return s.tx.Rollback()
-}
-
-func newShardedSqlExecResult() sql.Result {
-	return &shardedSqlExecResult{}
-}
-
-func (s shardedSqlExecResult) LastInsertId() (int64, error) {
-	return 0, fmt.Errorf("not implemented for sharded SQL driver")
-}
-
-func (s shardedSqlExecResult) RowsAffected() (int64, error) {
-	return 0, fmt.Errorf("not implemented for sharded SQL driver")
 }
 
 func getUnmatchedTxnError(requestShardID, startedShardId int) error {
