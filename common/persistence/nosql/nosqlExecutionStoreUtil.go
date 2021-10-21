@@ -320,8 +320,8 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 		var scheduleID int64
 		var targetCluster string
 		targetDomainID := domainID // default to source domain, can't be empty, since empty string is not valid UUID
-		var targetWorkflowID string
 		targetDomainIDs := map[string]struct{}{}
+		var targetWorkflowID string
 		targetRunID := p.CrossClusterTaskDefaultTargetRunID
 		targetChildWorkflowOnly := false
 		recordVisibility := false
@@ -339,7 +339,7 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetWorkflowID = task.(*p.CrossClusterCancelExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterCancelExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.TransferTaskTransferTargetRunID
+				targetRunID = p.CrossClusterTaskDefaultTargetRunID
 			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterCancelExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterCancelExecutionTask).InitiatedID
@@ -350,15 +350,22 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			targetWorkflowID = task.(*p.CrossClusterSignalExecutionTask).TargetWorkflowID
 			targetRunID = task.(*p.CrossClusterSignalExecutionTask).TargetRunID
 			if targetRunID == "" {
-				targetRunID = p.TransferTaskTransferTargetRunID
+				targetRunID = p.CrossClusterTaskDefaultTargetRunID
 			}
 			targetChildWorkflowOnly = task.(*p.CrossClusterSignalExecutionTask).TargetChildWorkflowOnly
 			scheduleID = task.(*p.CrossClusterSignalExecutionTask).InitiatedID
 
-		case p.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
-			targetCluster = task.(*p.CrossClusterRecordChildWorkflowExecutionCompleteTask).TargetCluster
+		case p.CrossClusterTaskTypeRecordChildExeuctionCompleted:
+			targetCluster = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetCluster
+			targetDomainID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetDomainID
+			targetWorkflowID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetWorkflowID
+			targetRunID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.CrossClusterTaskDefaultTargetRunID
+			}
+			scheduleID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).InitiatedID
 
-		case p.CrossClusterTaskTypeApplyParentPolicy:
+		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
 			targetDomainIDs = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetDomainIDs
 
@@ -434,10 +441,11 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 ) ([]*nosqlplugin.TransferTask, error) {
 	var tasks []*nosqlplugin.TransferTask
 
-	targetDomainID := domainID
 	for _, task := range transferTasks {
 		var taskList string
 		var scheduleID int64
+		targetDomainID := domainID
+		targetDomainIDs := map[string]struct{}{}
 		targetWorkflowID := p.TransferTaskTransferTargetWorkflowID
 		targetRunID := p.TransferTaskTransferTargetRunID
 		targetChildWorkflowOnly := false
@@ -480,11 +488,25 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 			targetWorkflowID = task.(*p.StartChildExecutionTask).TargetWorkflowID
 			scheduleID = task.(*p.StartChildExecutionTask).InitiatedID
 
+		case p.TransferTaskTypeRecordChildExecutionCompleted:
+			targetDomainID = task.(*p.RecordChildExecutionCompletedTask).TargetDomainID
+			targetWorkflowID = task.(*p.RecordChildExecutionCompletedTask).TargetWorkflowID
+			targetRunID = task.(*p.RecordChildExecutionCompletedTask).TargetRunID
+			if targetRunID == "" {
+				targetRunID = p.TransferTaskTransferTargetRunID
+			}
+			scheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID
+
+		case p.TransferTaskTypeApplyParentClosePolicy:
+			targetDomainIDs = task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs
+
 		case p.TransferTaskTypeCloseExecution,
 			p.TransferTaskTypeRecordWorkflowStarted,
 			p.TransferTaskTypeResetWorkflow,
-			p.TransferTaskTypeUpsertWorkflowSearchAttributes:
+			p.TransferTaskTypeUpsertWorkflowSearchAttributes,
+			p.TransferTaskTypeRecordWorkflowClosed:
 			// No explicit property needs to be set
+
 		default:
 			return nil, &types.InternalServiceError{
 				Message: fmt.Sprintf("Unknown transfer type: %v", task.GetType()),
@@ -498,6 +520,7 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 			VisibilityTimestamp:     task.GetVisibilityTimestamp(),
 			TaskID:                  task.GetTaskID(),
 			TargetDomainID:          targetDomainID,
+			TargetDomainIDs:         targetDomainIDs,
 			TargetWorkflowID:        targetWorkflowID,
 			TargetRunID:             targetRunID,
 			TargetChildWorkflowOnly: targetChildWorkflowOnly,
@@ -601,9 +624,6 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 		executionInfo.InitiatedID = emptyInitiatedID
 	}
 
-	// TODO we should set the last update time on business logic layer
-	executionInfo.LastUpdatedTimestamp = nowTimestamp
-
 	executionInfo.CompletionEvent = executionInfo.CompletionEvent.ToNilSafeDataBlob()
 	executionInfo.AutoResetPoints = executionInfo.AutoResetPoints.ToNilSafeDataBlob()
 	// TODO also need to set the start / current / last write version
@@ -637,9 +657,14 @@ func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionTxn(
 		executionInfo.InitiatedID = emptyInitiatedID
 	}
 
-	// TODO we should set the start time and last update time on business logic layer
-	executionInfo.StartTimestamp = nowTimestamp
-	executionInfo.LastUpdatedTimestamp = nowTimestamp
+	if executionInfo.StartTimestamp.IsZero() {
+		executionInfo.StartTimestamp = nowTimestamp
+		d.logger.Error("Workflow startTimestamp not set, fallback to now",
+			tag.WorkflowDomainID(executionInfo.DomainID),
+			tag.WorkflowID(executionInfo.WorkflowID),
+			tag.WorkflowRunID(executionInfo.RunID),
+		)
+	}
 	executionInfo.CompletionEvent = executionInfo.CompletionEvent.ToNilSafeDataBlob()
 	executionInfo.AutoResetPoints = executionInfo.AutoResetPoints.ToNilSafeDataBlob()
 	if versionHistories == nil {

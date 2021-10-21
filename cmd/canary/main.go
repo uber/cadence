@@ -125,7 +125,7 @@ func buildCLI() *cli.App {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:   "mode, m",
-					Value:  canary.ModeWorker,
+					Value:  canary.ModeAll,
 					Usage:  fmt.Sprintf("%v, %v or %v", canary.ModeWorker, canary.ModeCronCanary, canary.ModeAll),
 					EnvVar: canary.EnvKeyMode,
 				},

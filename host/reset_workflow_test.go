@@ -191,8 +191,12 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 		WorkflowID: id,
 		RunID:      we.GetRunID(),
 	})
+	var firstRunStartTimestamp int64
 	var lastEvent *types.HistoryEvent
 	for _, event := range events {
+		if event.GetEventType() == types.EventTypeWorkflowExecutionStarted {
+			firstRunStartTimestamp = event.GetTimestamp()
+		}
 		if event.GetEventType() == types.EventTypeDecisionTaskCompleted {
 			lastDecisionCompleted = event
 		}
@@ -200,6 +204,19 @@ func (s *IntegrationSuite) TestResetWorkflow() {
 	}
 	// assert the first run is closed, terminated by the previous reset
 	s.Equal(types.EventTypeWorkflowExecutionTerminated, lastEvent.GetEventType())
+
+	// check the start time of mutable state for the second run,
+	// it should be reset time although the start event is reused
+	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+			RunID:      resp.GetRunID(),
+		},
+	})
+	s.NoError(err)
+	s.True(descResp.WorkflowExecutionInfo.GetStartTime() > firstRunStartTimestamp)
+
 	// SECOND reset: reset the first run again, to exercise the code path of resetting closed workflow
 	resp, err = s.engine.ResetWorkflowExecution(createContext(), &types.ResetWorkflowExecutionRequest{
 		Domain: s.domainName,

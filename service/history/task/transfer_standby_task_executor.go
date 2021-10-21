@@ -80,7 +80,8 @@ func (t *transferStandbyTaskExecutor) Execute(
 	}
 
 	if !shouldProcessTask &&
-		transferTask.TaskType != persistence.TransferTaskTypeCloseExecution {
+		transferTask.TaskType != persistence.TransferTaskTypeCloseExecution &&
+		transferTask.TaskType != persistence.TransferTaskTypeRecordWorkflowClosed {
 		// guarantee the processing of workflow execution close
 		return nil
 	}
@@ -93,8 +94,14 @@ func (t *transferStandbyTaskExecutor) Execute(
 		return t.processActivityTask(ctx, transferTask)
 	case persistence.TransferTaskTypeDecisionTask:
 		return t.processDecisionTask(ctx, transferTask)
-	case persistence.TransferTaskTypeCloseExecution:
+	case persistence.TransferTaskTypeCloseExecution,
+		persistence.TransferTaskTypeRecordWorkflowClosed:
 		return t.processCloseExecution(ctx, transferTask)
+	case persistence.TransferTaskTypeRecordChildExecutionCompleted,
+		persistence.TransferTaskTypeApplyParentClosePolicy:
+		// no action needed for standby
+		// check the comment in t.processCloseExecution()
+		return nil
 	case persistence.TransferTaskTypeCancelExecution:
 		return t.processCancelExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeSignalExecution:

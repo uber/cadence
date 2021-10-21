@@ -273,7 +273,7 @@ type (
 		VisibilityTimestamp     time.Time
 	}
 
-	// CrossClusterTask blob in a serialization agnostic format
+	// CrossClusterTaskInfo blob in a serialization agnostic format
 	// Cross cluster tasks are exactly like transfer tasks so
 	// instead of creating another struct and duplicating the same
 	// logic everywhere. We reuse TransferTaskInfo

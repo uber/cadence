@@ -128,6 +128,12 @@ func (t *transferActiveTaskExecutor) Execute(
 		return t.processDecisionTask(ctx, transferTask)
 	case persistence.TransferTaskTypeCloseExecution:
 		return t.processCloseExecution(ctx, transferTask)
+	case persistence.TransferTaskTypeRecordWorkflowClosed:
+		return t.processRecordWorkflowClosed(ctx, transferTask)
+	case persistence.TransferTaskTypeRecordChildExecutionCompleted:
+		return t.processRecordChildExecutionCompleted(ctx, transferTask)
+	case persistence.TransferTaskTypeApplyParentClosePolicy:
+		return t.processApplyParentClosePolicy(ctx, transferTask)
 	case persistence.TransferTaskTypeCancelExecution:
 		return t.processCancelExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeSignalExecution:
@@ -260,6 +266,44 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 func (t *transferActiveTaskExecutor) processCloseExecution(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
+) error {
+	return t.processCloseExecutionTaskHelper(ctx, task, true, true, true)
+}
+
+func (t *transferActiveTaskExecutor) processRecordWorkflowClosed(
+	ctx context.Context,
+	task *persistence.TransferTaskInfo,
+) error {
+	return t.processCloseExecutionTaskHelper(ctx, task, true, false, false)
+}
+
+func (t *transferActiveTaskExecutor) processRecordChildExecutionCompleted(
+	ctx context.Context,
+	task *persistence.TransferTaskInfo,
+) error {
+	return t.processCloseExecutionTaskHelper(ctx, task, false, true, false)
+}
+
+func (t *transferActiveTaskExecutor) processApplyParentClosePolicy(
+	ctx context.Context,
+	task *persistence.TransferTaskInfo,
+) error {
+	return t.processCloseExecutionTaskHelper(ctx, task, false, false, true)
+}
+
+// TODO: this helper function performs three operations:
+// 1. publish workflow closed visibility record
+// 2. if has parent workflow, reply to the parent workflow
+// 3. if has child workflow(s), apply parent close policy
+// ideally we should separate them into 3 functions, but it is complicated
+// but the fact that we want to release mutable state lock as early as possible
+// we should see if there's a better way to organize the code
+func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
+	ctx context.Context,
+	task *persistence.TransferTaskInfo,
+	recordWorkflowClosed bool,
+	replyToParentWorkflow bool,
+	applyParentClosePolicy bool,
 ) (retError error) {
 
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
@@ -298,7 +342,6 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	}
 
 	executionInfo := mutableState.GetExecutionInfo()
-	replyToParentWorkflow := mutableState.HasParentExecution() && executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
 	completionEvent, err := mutableState.GetCompletionEvent(ctx)
 	if err != nil {
 		return err
@@ -326,21 +369,33 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := executionInfo.SearchAttributes
 	domainName := mutableState.GetDomainEntry().GetInfo().Name
-	children := mutableState.GetPendingChildExecutionInfos()
-
-	// generate cross cluster task for applying parent close policy
-	crossClusterTaskGenerators,
-		sameClusterChildDomainIDs,
-		signalParentClosePolicyWorker,
-		err := t.applyParentClosePolicyDomainActiveCheck(
-		task,
-		domainName,
-		children,
+	children, err := filterPendingChildExecutions(
+		task.TargetDomainIDs,
+		mutableState.GetPendingChildExecutionInfos(),
+		t.shard.GetDomainCache(),
 	)
 	if err != nil {
 		return err
 	}
 
+	// generate cross cluster task for applying parent close policy
+	var crossClusterTaskGenerators []generatorF
+	var sameClusterChildDomainIDs map[int64]string
+	var signalParentClosePolicyWorker bool
+	if applyParentClosePolicy {
+		crossClusterTaskGenerators,
+			sameClusterChildDomainIDs,
+			signalParentClosePolicyWorker,
+			err = t.applyParentClosePolicyDomainActiveCheck(task, domainName, children)
+		if err != nil {
+			return err
+		}
+	}
+
+	// generate cross cluster task for record child execution completed
+	replyToParentWorkflow = replyToParentWorkflow &&
+		mutableState.HasParentExecution() &&
+		executionInfo.CloseStatus != persistence.WorkflowCloseStatusContinuedAsNew
 	if replyToParentWorkflow {
 		// generate cross cluster task for recording child completion
 		targetDomainEntry, err := t.shard.GetDomainCache().GetDomainByID(parentDomainID)
@@ -348,42 +403,63 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 			return err
 		}
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			// TODO: consider moving this logic to GenerateWorkflowCloseTasks and use here as a back-up to save latency
+			parentInfo := &types.ParentExecutionInfo{
+				DomainUUID: parentDomainID,
+				Domain:     targetDomainEntry.GetInfo().Name,
+				Execution: &types.WorkflowExecution{
+					WorkflowID: parentWorkflowID,
+					RunID:      parentRunID,
+				},
+				InitiatedID: initiatedID,
+			}
 			crossClusterTaskGenerators = append(crossClusterTaskGenerators,
 				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+					return taskGenerator.GenerateCrossClusterRecordChildCompletedTask(task, targetCluster, parentInfo)
 				})
 			replyToParentWorkflow = false
 		}
 	}
 
-	if len(crossClusterTaskGenerators) == 0 {
-		// release the context lock if we don't need to generate any new tasks
-		// since we no longer need mutable state builder and
-		// the rest of logic is making RPC call, which takes time.
-		release(nil)
+	// update workflow execute to persist generated cross cluster tasks
+	if len(crossClusterTaskGenerators) > 0 {
+		if err := t.generateCrossClusterTasks(
+			ctx,
+			wfContext,
+			task,
+			crossClusterTaskGenerators,
+		); err != nil {
+			return err
+		}
 	}
 
-	if err := t.recordWorkflowClosed(
-		ctx,
-		task.DomainID,
-		task.WorkflowID,
-		task.RunID,
-		workflowTypeName,
-		workflowStartTimestamp,
-		workflowExecutionTimestamp.UnixNano(),
-		workflowCloseTimestamp,
-		*workflowCloseStatus,
-		workflowHistoryLength,
-		task.GetTaskID(),
-		visibilityMemo,
-		executionInfo.TaskList,
-		isCron,
-		numClusters,
-		searchAttr,
-	); err != nil {
-		fmt.Println(err)
-		return err
+	// we've gathered all necessary information from mutable state and
+	// generated/persisted necessary cross cluster tasks.
+	// release the context lock since we no longer need mutable state builder and
+	// the rest of logic is making RPC call, which takes time.
+	release(nil)
+
+	// publish workflow closed visibility records
+	if recordWorkflowClosed {
+		if err := t.recordWorkflowClosed(
+			ctx,
+			task.DomainID,
+			task.WorkflowID,
+			task.RunID,
+			workflowTypeName,
+			workflowStartTimestamp,
+			workflowExecutionTimestamp.UnixNano(),
+			workflowCloseTimestamp,
+			*workflowCloseStatus,
+			workflowHistoryLength,
+			task.GetTaskID(),
+			visibilityMemo,
+			executionInfo.TaskList,
+			isCron,
+			numClusters,
+			searchAttr,
+		); err != nil {
+			return err
+		}
 	}
 
 	// Communicate the result to parent execution if this is Child Workflow execution
@@ -416,25 +492,18 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 		}
 	}
 
-	if err := t.processParentClosePolicy(
-		ctx,
-		wfContext,
-		task,
-		domainName,
-		children,
-		sameClusterChildDomainIDs,
-		signalParentClosePolicyWorker,
-	); err != nil {
-		return err
-	}
-
-	if len(crossClusterTaskGenerators) > 0 {
-		return t.generateCrossClusterTasks(
+	if applyParentClosePolicy {
+		if err := t.processParentClosePolicy(
 			ctx,
 			wfContext,
 			task,
-			crossClusterTaskGenerators,
-		)
+			domainName,
+			children,
+			sameClusterChildDomainIDs,
+			signalParentClosePolicyWorker,
+		); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -690,7 +759,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	if err != nil {
 		return err
 	}
-	if mutableState == nil || !mutableState.IsWorkflowExecutionRunning() {
+	if mutableState == nil {
 		return nil
 	}
 
@@ -702,6 +771,16 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 	ok, err = verifyTaskVersion(t.shard, t.logger, task.DomainID, childInfo.Version, task.Version, task)
 	if err != nil || !ok {
 		return err
+	}
+
+	workflowRunning := mutableState.IsWorkflowExecutionRunning()
+	childStarted := childInfo.StartedID != common.EmptyEventID
+
+	if !workflowRunning && (!childStarted || childInfo.ParentClosePolicy != types.ParentClosePolicyAbandon) {
+		// three cases here:
+		// case 1: workflow not running, child started, close policy is not abandon
+		// case 2 & 3: workflow not running, child not started, close policy is or is not abandon
+		return nil
 	}
 
 	// Get target domain name
@@ -723,13 +802,11 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		targetDomainName = targetDomainEntry.GetInfo().Name
 	}
 
-	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
-	if err != nil {
-		return err
-	}
-
 	// ChildExecution already started, just create DecisionTask and complete transfer task
-	if childInfo.StartedID != common.EmptyEventID {
+	// if parent already closed, since child workflow started event already written to history,
+	// still schedule the decision if the parent close policy is Abandon.
+	// If parent close policy cancel, a decision will be scheduled when processing that close policy.
+	if childStarted {
 		// NOTE: do not access anything related mutable state after this lock release
 		// release the context lock since we no longer need mutable state builder and
 		// the rest of logic is making RPC call, which takes time.
@@ -742,6 +819,13 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 			})
+	}
+	// remaining 2 cases:
+	// workflow running, child not started, close policy is or is not abandon
+
+	initiatedEvent, err := mutableState.GetChildExecutionInitiatedEvent(ctx, initiatedEventID)
+	if err != nil {
+		return err
 	}
 
 	attributes := initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes
@@ -1337,6 +1421,8 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 		wfContext,
 		false,
 		func(ctx context.Context, mutableState execution.MutableState) error {
+			// TODO: we don't have to do this check here, as we hold the mutable state lock
+			// during the update and we already checked the workflow status after acquiring the lock.
 			if task.TaskType == persistence.TransferTaskTypeCloseExecution {
 				// IsWorkflowCompleted only returns true when the workflow is completed,
 				// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
@@ -1347,7 +1433,8 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 					// Returning nil to avoid infinite retry loop
 					return nil
 				}
-			} else if !mutableState.IsWorkflowExecutionRunning() {
+			} else if task.TaskType != persistence.TransferTaskTypeStartChildExecution &&
+				!mutableState.IsWorkflowExecutionRunning() {
 				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
 			}
 
@@ -1381,7 +1468,7 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
 		task,
 		[]generatorF{
 			func(taskGenerator execution.MutableStateTaskGenerator) error {
-				return taskGenerator.GenerateCrossClusterTaskFromTransferTask(task, targetCluster)
+				return taskGenerator.GenerateFromTransferTask(task, targetCluster)
 			},
 		},
 	)
@@ -1870,4 +1957,31 @@ func applyParentClosePolicy(
 			Message: fmt.Sprintf("unknown parent close policy: %v", parentClosePolicy),
 		}
 	}
+}
+
+func filterPendingChildExecutions(
+	targetDomainIDs map[string]struct{},
+	children map[int64]*persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+) (map[int64]*persistence.ChildExecutionInfo, error) {
+	if len(targetDomainIDs) == 0 {
+		return children, nil
+	}
+
+	filteredChildren := make(map[int64]*persistence.ChildExecutionInfo, len(children))
+	for initiatedID, child := range children {
+		domainID, err := domainCache.GetDomainID(child.DomainName)
+		if err != nil {
+			if common.IsEntityNotExistsError(err) {
+				// target domain deleted, ignore the child
+				continue
+			}
+			return nil, err
+		}
+		if _, ok := targetDomainIDs[domainID]; ok {
+			filteredChildren[initiatedID] = child
+		}
+	}
+
+	return filteredChildren, nil
 }

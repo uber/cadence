@@ -25,6 +25,9 @@ In the `docker/` directory, run:
 ```
 docker-compose -f docker-compose-canary.yml up
 ```
+
+This will start the canary worker and also the cron canary.
+
 You can modify [the canary worker config](../docker/config/canary/development.yaml) to run against a prod server cluster:
 * Use a different mode to start canary worker only for testing 
 * Update the config to use Thrift/gRPC for communication 
@@ -38,21 +41,21 @@ In the project root, build cadence canary binary:
  make cadence-canary
  ```
 
-Then start canary worker:
+Then start canary worker & cron:
  ```
  ./cadence-canary start
  ```
 This is essentially the same as 
 ```
- ./cadence-canary start -mode worker
+ ./cadence-canary start -mode all
  ```
 
 By default, it will load [the configuration in `config/canary/development.yaml`](../config/canary/development.yaml). 
 Run `./cadence-canary -h` for details to understand the start options of how to change the loading directory if needed. 
 
-This will only start the workers. To start both workers and cron starter:
+To start the worker only for manual testing certain cases:
  ```
-  ./cadence-canary start -mode all
+  ./cadence-canary start -mode worker
   ```
 
 ### 3. Monitoring
