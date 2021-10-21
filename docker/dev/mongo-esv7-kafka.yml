@@ -1,8 +1,7 @@
 version: '3'
 services:
   mongo:
-    image: mongo
-    tag: 5
+    image: mongo:5
     restart: always
     ports:
       - 27017:27017
