@@ -45,11 +45,6 @@ type (
 
 var _ test.DB = (*sql.Connection)(nil)
 
-const (
-	testUser     = "uber"
-	testPassword = "uber"
-)
-
 // NewSQLConnTestSuite returns the test suite
 func NewSQLConnTestSuite(pluginName string) *SQLConnTestSuite {
 	return &SQLConnTestSuite{
@@ -90,8 +85,8 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 			environment.GetMySQLAddress(),
 			strconv.Itoa(environment.GetMySQLPort()),
 		),
-		User:          testUser,
-		Password:      testPassword,
+		User:          environment.GetMySQLUser(),
+		Password:      environment.GetMySQLPassword(),
 		PluginName:    s.pluginName,
 		DatabaseName:  s.DBName,
 		EncodingType:  "thriftrw",
@@ -110,8 +105,8 @@ func newTestConn(database, pluginName string) (*sql.Connection, error) {
 			environment.GetMySQLAddress(),
 			strconv.Itoa(environment.GetMySQLPort()),
 		),
-		User:          testUser,
-		Password:      testPassword,
+		User:          environment.GetMySQLUser(),
+		Password:      environment.GetMySQLPassword(),
 		PluginName:    pluginName,
 		DatabaseName:  database,
 		EncodingType:  "thriftrw",

@@ -47,8 +47,16 @@ const (
 	MySQLSeeds = "MYSQL_SEEDS"
 	// MySQLPort env
 	MySQLPort = "MYSQL_PORT"
-	// MySQLDefaultPort MySQL default port
+	// MySQLDefaultPort is MySQL default port
 	MySQLDefaultPort = "3306"
+	// MySQLUser env
+	MySQLUser = "MYSQL_USER"
+	// MySQLDefaultUser is default user
+	MySQLDefaultUser = "root"
+	// MySQLPassword env
+	MySQLPassword = "MYSQL_PASSWORD"
+	// MySQLDefaultPassword is default password
+	MySQLDefaultPassword = "cadence"
 
 	// KafkaSeeds env
 	KafkaSeeds = "KAFKA_SEEDS"
@@ -211,6 +219,24 @@ func GetMySQLPort() int {
 		panic(fmt.Sprintf("error getting env %v", MySQLPort))
 	}
 	return p
+}
+
+// GetMySQLUser return the MySQL user
+func GetMySQLUser() string {
+	user := os.Getenv(MySQLUser)
+	if user == "" {
+		user = MySQLDefaultUser
+	}
+	return user
+}
+
+// GetMySQLPassword return the MySQL password
+func GetMySQLPassword() string {
+	pw := os.Getenv(MySQLPassword)
+	if pw == "" {
+		pw = MySQLDefaultPassword
+	}
+	return pw
 }
 
 // GetPostgresAddress return the Postgres address
