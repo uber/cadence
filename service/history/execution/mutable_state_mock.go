@@ -1054,6 +1054,20 @@ func (mr *MockMutableStateMockRecorder) GetDecisionInfo(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDecisionInfo", reflect.TypeOf((*MockMutableState)(nil).GetDecisionInfo), arg0)
 }
 
+// GetDecisionScheduleToStartTimeout mocks base method
+func (m *MockMutableState) GetDecisionScheduleToStartTimeout() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDecisionScheduleToStartTimeout")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// GetDecisionScheduleToStartTimeout indicates an expected call of GetDecisionScheduleToStartTimeout
+func (mr *MockMutableStateMockRecorder) GetDecisionScheduleToStartTimeout() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDecisionScheduleToStartTimeout", reflect.TypeOf((*MockMutableState)(nil).GetDecisionScheduleToStartTimeout))
+}
+
 // GetDomainEntry mocks base method
 func (m *MockMutableState) GetDomainEntry() *cache.DomainCacheEntry {
 	m.ctrl.T.Helper()

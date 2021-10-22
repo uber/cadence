@@ -1085,7 +1085,118 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() 
 	s.NoError(err)
 }
 
-func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
+func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_NormalDecision() {
+
+	workflowExecution, mutableState, err := test.StartWorkflow(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+
+	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeDecisionTimeout,
+		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
+		VisibilityTimestamp: s.now,
+		EventID:             di.ScheduleID,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, di.ScheduleID, di.Version)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.UpdateWorkflowExecutionRequest) bool {
+		return req.UpdateWorkflowMutation.ExecutionInfo.DecisionAttempt == 1 &&
+			req.UpdateWorkflowMutation.ExecutionInfo.DecisionScheduleID == 4 &&
+			req.UpdateWorkflowMutation.ExecutionInfo.NextEventID == 4 && // transient decision
+			len(req.UpdateWorkflowMutation.TimerTasks) == 1 // another schedule to start timer
+	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
+	s.NoError(err)
+}
+
+func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_TransientDecision() {
+	s.mockShard.GetConfig().NormalDecisionScheduleToStartMaxAttempts = dynamicconfig.GetIntPropertyFilteredByDomain(1)
+
+	workflowExecution, mutableState, err := test.StartWorkflow(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	decisionAttempt := int64(1)
+	mutableState.GetExecutionInfo().DecisionAttempt = decisionAttempt // fake a transient decision
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+
+	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeDecisionTimeout,
+		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
+		VisibilityTimestamp: s.now,
+		EventID:             di.ScheduleID,
+		ScheduleAttempt:     decisionAttempt,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, di.ScheduleID, di.Version)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.UpdateWorkflowExecutionRequest) bool {
+		return req.UpdateWorkflowMutation.ExecutionInfo.DecisionAttempt == 2 &&
+			req.UpdateWorkflowMutation.ExecutionInfo.DecisionScheduleID == 2 &&
+			req.UpdateWorkflowMutation.ExecutionInfo.NextEventID == 2 && // transient decision
+			len(req.UpdateWorkflowMutation.TimerTasks) == 0 // since the max attempt is 1 at the beginning of the test
+	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
+	s.NoError(err)
+}
+
+func (s *timerActiveTaskExecutorSuite) TestDecisionScheduleToStartTimeout_StickyDecision() {
+
+	workflowExecution, mutableState, _, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
+	s.NoError(err)
+
+	executionInfo := mutableState.GetExecutionInfo()
+	executionInfo.StickyTaskList = "sticky-tasklist"
+	executionInfo.StickyScheduleToStartTimeout = 1
+	executionInfo.LastUpdatedTimestamp = s.now
+
+	// schedule a second (sticky) decision task
+	di := test.AddDecisionTaskScheduledEvent(mutableState)
+
+	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
+		Version:             s.version,
+		DomainID:            s.domainID,
+		WorkflowID:          workflowExecution.GetWorkflowID(),
+		RunID:               workflowExecution.GetRunID(),
+		TaskID:              int64(100),
+		TaskType:            persistence.TaskTypeDecisionTimeout,
+		TimeoutType:         int(types.TimeoutTypeScheduleToStart),
+		VisibilityTimestamp: s.now,
+		EventID:             di.ScheduleID,
+	})
+
+	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, di.ScheduleID, di.Version)
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil).Once()
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(req *persistence.UpdateWorkflowExecutionRequest) bool {
+		executionInfo := req.UpdateWorkflowMutation.ExecutionInfo
+		return executionInfo.DecisionAttempt == 0 && // attempt is not increased when convert to normal decision
+			executionInfo.DecisionScheduleID == 7 &&
+			executionInfo.NextEventID == 8 && // normal decision
+			executionInfo.StickyTaskList == "" && // stickyness should be cleared
+			executionInfo.StickyScheduleToStartTimeout == 0 && // stickyness should be cleared
+			len(req.UpdateWorkflowMutation.TimerTasks) == 1 // schedule to start timer
+	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
+
+	err = s.timerActiveTaskExecutor.Execute(timerTask, true)
+	s.NoError(err)
+}
+
+func (s *timerActiveTaskExecutorSuite) TestDecisionStartToCloseTimeout_Fire() {
 
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "some random workflow ID",
@@ -1145,7 +1256,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Fire() {
 	s.Equal(int64(1), decisionInfo.Attempt)
 }
 
-func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
+func (s *timerActiveTaskExecutorSuite) TestDecisionStartToCloseTimeout_Noop() {
 
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "some random workflow ID",
@@ -1187,7 +1298,7 @@ func (s *timerActiveTaskExecutorSuite) TestDecisionTimeout_Noop() {
 		TaskType:            persistence.TaskTypeDecisionTimeout,
 		TimeoutType:         int(types.TimeoutTypeStartToClose),
 		VisibilityTimestamp: s.now,
-		EventID:             di.ScheduleID - 1,
+		EventID:             di.ScheduleID - 1, // no corresponding decision for this scheduleID
 	})
 
 	persistenceMutableState := s.createPersistenceMutableState(mutableState, startedEvent.GetEventID(), startedEvent.GetVersion())

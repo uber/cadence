@@ -110,6 +110,7 @@ type (
 		GetInFlightDecision() (*DecisionInfo, bool)
 		HasProcessedOrPendingDecision() bool
 		GetDecisionInfo(scheduleEventID int64) (*DecisionInfo, bool)
+		GetDecisionScheduleToStartTimeout() time.Duration
 
 		CreateTransientDecisionEvents(decision *DecisionInfo, identity string) (*types.HistoryEvent, *types.HistoryEvent)
 	}
@@ -256,8 +257,13 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskTimedOutEvent
 	timeoutType types.TimeoutType,
 ) error {
 	incrementAttempt := true
-	// Do not increment decision attempt in the case of sticky timeout to prevent creating next decision as transient
-	if timeoutType == types.TimeoutTypeScheduleToStart {
+	// Do not increment decision attempt in the case of sticky scheduleToStart timeout to
+	// prevent creating next decision as transient
+	// Note: this is just best effort, stickiness can be cleared before the timer fires,
+	// and we can't tell is the decision that is having scheduleToStart timeout is sticky
+	// or not.
+	if timeoutType == types.TimeoutTypeScheduleToStart &&
+		m.msb.executionInfo.StickyTaskList != "" {
 		incrementAttempt = false
 	}
 	m.FailDecision(incrementAttempt)
@@ -277,18 +283,21 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduleToStartTime
 		return nil, m.msb.createInternalServerError(opTag)
 	}
 
-	// Clear stickiness whenever decision fails
-	m.msb.ClearStickyness()
-	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
-		scheduleEventID,
-		0,
-		types.TimeoutTypeScheduleToStart,
-		"",
-		"",
-		common.EmptyVersion,
-		"",
-		types.DecisionTaskTimedOutCauseTimeout,
-	)
+	var event *types.HistoryEvent
+	// stickyness will be cleared in ReplicateDecisionTaskTimedOutEvent
+	// Avoid creating new history events when decisions are continuously timing out
+	if m.msb.executionInfo.DecisionAttempt == 0 {
+		event = m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
+			scheduleEventID,
+			0,
+			types.TimeoutTypeScheduleToStart,
+			"",
+			"",
+			common.EmptyVersion,
+			"",
+			types.DecisionTaskTimedOutCauseTimeout,
+		)
+	}
 
 	if err := m.ReplicateDecisionTaskTimedOutEvent(types.TimeoutTypeScheduleToStart); err != nil {
 		return nil, err
@@ -312,9 +321,6 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskResetTimeoutEvent(
 		)
 		return nil, m.msb.createInternalServerError(opTag)
 	}
-
-	// Clear stickiness whenever decision fails
-	m.msb.ClearStickyness()
 
 	event := m.msb.hBuilder.AddDecisionTaskTimedOutEvent(
 		scheduleEventID,
@@ -756,6 +762,25 @@ func (m *mutableStateDecisionTaskManagerImpl) GetDecisionInfo(
 	return nil, false
 }
 
+func (m *mutableStateDecisionTaskManagerImpl) GetDecisionScheduleToStartTimeout() time.Duration {
+	// we should not call IsStickyTaskListEnabled which may be false
+	// if sticky TTL has expired
+	// NOTE: this function is called in the same mutable state transaction as the one generating the decision task
+	// we stickiness won't be cleared between creating the decision and getting the timeout
+	if m.msb.executionInfo.StickyTaskList != "" {
+		return time.Duration(
+			m.msb.executionInfo.StickyScheduleToStartTimeout,
+		) * time.Second
+	}
+
+	domainName := m.msb.GetDomainEntry().GetInfo().Name
+	if m.msb.executionInfo.DecisionAttempt <
+		int64(m.msb.config.NormalDecisionScheduleToStartMaxAttempts(domainName)) {
+		return m.msb.config.NormalDecisionScheduleToStartTimeout(domainName)
+	}
+	return 0
+}
+
 func (m *mutableStateDecisionTaskManagerImpl) CreateTransientDecisionEvents(
 	decision *DecisionInfo,
 	identity string,
@@ -782,7 +807,7 @@ func (m *mutableStateDecisionTaskManagerImpl) CreateTransientDecisionEvents(
 
 func (m *mutableStateDecisionTaskManagerImpl) getDecisionInfo() *DecisionInfo {
 	taskList := m.msb.executionInfo.TaskList
-	if m.msb.IsStickyTaskListEnabled() {
+	if m.msb.executionInfo.StickyTaskList != "" {
 		taskList = m.msb.executionInfo.StickyTaskList
 	}
 	return &DecisionInfo{

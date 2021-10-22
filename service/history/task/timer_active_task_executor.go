@@ -44,6 +44,11 @@ const (
 	scanWorkflowTimeout = 30 * time.Second
 )
 
+var (
+	normalDecisionTypeTag = metrics.DecisionTypeTag("normal")
+	stickyDecisionTypeTag = metrics.DecisionTypeTag("sticky")
+)
+
 type (
 	timerActiveTaskExecutor struct {
 		*timerTaskExecutorBase
@@ -400,7 +405,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	scheduleID := task.EventID
 	decision, ok := mutableState.GetDecisionInfo(scheduleID)
 	if !ok {
-		t.logger.Debug("Potentially duplicate ", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
+		t.logger.Debug("Potentially duplicate", tag.TaskID(task.TaskID), tag.WorkflowScheduleID(scheduleID), tag.TaskType(persistence.TaskTypeDecisionTimeout))
 		return nil
 	}
 	ok, err = verifyTaskVersion(t.shard, t.logger, task.DomainID, decision.Version, task.Version, task)
@@ -413,12 +418,18 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 	}
 
 	scheduleDecision := false
+	isStickyDecision := mutableState.GetExecutionInfo().StickyTaskList != ""
+	decisionTypeTag := normalDecisionTypeTag
+	if isStickyDecision {
+		decisionTypeTag = stickyDecisionTypeTag
+	}
 	switch execution.TimerTypeFromInternal(types.TimeoutType(task.TimeoutType)) {
 	case execution.TimerTypeStartToClose:
 		t.emitTimeoutMetricScopeWithDomainTag(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeStartToClose,
+			decisionTypeTag,
 		)
 		if _, err := mutableState.AddDecisionTaskTimedOutEvent(
 			decision.ScheduleID,
@@ -434,10 +445,22 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 			return nil
 		}
 
+		if !isStickyDecision {
+			t.logger.Warn("Potential lost normal decision task",
+				tag.WorkflowDomainID(task.GetDomainID()),
+				tag.WorkflowID(task.GetWorkflowID()),
+				tag.WorkflowRunID(task.GetRunID()),
+				tag.WorkflowScheduleID(scheduleID),
+				tag.ScheduleAttempt(task.ScheduleAttempt),
+				tag.FailoverVersion(task.GetVersion()),
+			)
+		}
+
 		t.emitTimeoutMetricScopeWithDomainTag(
 			mutableState.GetExecutionInfo().DomainID,
 			metrics.TimerActiveTaskDecisionTimeoutScope,
 			execution.TimerTypeScheduleToStart,
+			decisionTypeTag,
 		)
 		_, err := mutableState.AddDecisionTaskScheduleToStartTimeoutEvent(scheduleID)
 		if err != nil {
@@ -856,13 +879,15 @@ func (t *timerActiveTaskExecutor) emitTimeoutMetricScopeWithDomainTag(
 	domainID string,
 	scope int,
 	timerType execution.TimerType,
+	tags ...metrics.Tag,
 ) {
 	domainTag, err := getDomainTagByID(t.shard.GetDomainCache(), domainID)
 	if err != nil {
 		return
 	}
+	tags = append(tags, domainTag)
 
-	metricsScope := t.metricsClient.Scope(scope, domainTag)
+	metricsScope := t.metricsClient.Scope(scope, tags...)
 	switch timerType {
 	case execution.TimerTypeScheduleToStart:
 		metricsScope.IncCounter(metrics.ScheduleToStartTimeoutCounter)

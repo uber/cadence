@@ -642,7 +642,16 @@ func (handler *handlerImpl) createRecordDecisionTaskStartedResponse(
 	// before it was started.
 	response.ScheduledEventID = decision.ScheduleID
 	response.StartedEventID = decision.StartedID
-	response.StickyExecutionEnabled = msBuilder.IsStickyTaskListEnabled()
+	// if we call IsStickyTaskListEnabled then it's possible that the decision is a
+	// sticky decision but due to TTL check, the field becomes false
+	// NOTE: it's possible that StickyTaskList is empty is even if the decision is scheduled
+	// on a sticky tasklist since stickiness can be cleared at anytime by the ResetStickyTaskList API.
+	// When this field is false, we will send full workflow history to client
+	// (see createPollForDecisionTaskResponse in workflowHandler.go)
+	// This is actually desired since if that API is called, it basically means the client side
+	// cache has been cleared for the workflow and full history is needed by the client. Even if
+	// client side still has the cache, client library is still able to handle the situation.
+	response.StickyExecutionEnabled = msBuilder.GetExecutionInfo().StickyTaskList != ""
 	response.NextEventID = msBuilder.GetNextEventID()
 	response.Attempt = decision.Attempt
 	response.WorkflowExecutionTaskList = &types.TaskList{

@@ -1416,32 +1416,15 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 	return nil
 }
 
-//nolint:unused
-func (e *mutableStateBuilder) getDecisionInfo() *DecisionInfo {
-
-	taskList := e.executionInfo.TaskList
-	if e.IsStickyTaskListEnabled() {
-		taskList = e.executionInfo.StickyTaskList
-	}
-	return &DecisionInfo{
-		Version:                    e.executionInfo.DecisionVersion,
-		ScheduleID:                 e.executionInfo.DecisionScheduleID,
-		StartedID:                  e.executionInfo.DecisionStartedID,
-		RequestID:                  e.executionInfo.DecisionRequestID,
-		DecisionTimeout:            e.executionInfo.DecisionTimeout,
-		Attempt:                    e.executionInfo.DecisionAttempt,
-		StartedTimestamp:           e.executionInfo.DecisionStartedTimestamp,
-		ScheduledTimestamp:         e.executionInfo.DecisionScheduledTimestamp,
-		TaskList:                   taskList,
-		OriginalScheduledTimestamp: e.executionInfo.DecisionOriginalScheduledTimestamp,
-	}
-}
-
 // GetDecisionInfo returns details about the in-progress decision task
 func (e *mutableStateBuilder) GetDecisionInfo(
 	scheduleEventID int64,
 ) (*DecisionInfo, bool) {
 	return e.decisionTaskManager.GetDecisionInfo(scheduleEventID)
+}
+
+func (e *mutableStateBuilder) GetDecisionScheduleToStartTimeout() time.Duration {
+	return e.decisionTaskManager.GetDecisionScheduleToStartTimeout()
 }
 
 func (e *mutableStateBuilder) GetPendingActivityInfos() map[int64]*persistence.ActivityInfo {
