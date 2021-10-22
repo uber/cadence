@@ -3546,7 +3546,11 @@ WaitForStickyTimeoutLoop:
 	s.True(stickyTimeout, "Decision not timed out.")
 
 	for i := 0; i < 3; i++ {
-		_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(i))
+		// we will jump from sticky decision to transient decision in this case (decisionAttempt increased)
+		// even though the error is sticky scheduleToStart timeout
+		// since we can't tell if the decision is a sticky decision or not when the timer fires
+		// (stickiness cleared by the ResetStickyTaskList API call above)
+		_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(i+1))
 		s.Logger.Info("PollAndProcessDecisionTask: %v", tag.Error(err))
 		s.Nil(err)
 	}
@@ -3593,7 +3597,7 @@ WaitForStickyTimeoutLoop:
 		}
 	}
 	s.True(workflowComplete, "Workflow not complete")
-	s.Equal(2, failedDecisions, "Mismatched failed decision count")
+	s.Equal(1, failedDecisions, "Mismatched failed decision count")
 }
 
 func (s *IntegrationSuite) TestBufferedEventsOutOfOrder() {

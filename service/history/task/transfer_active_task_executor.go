@@ -248,6 +248,14 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		taskList.Kind = types.TaskListKindSticky.Ptr()
 		decisionTimeout = executionInfo.StickyScheduleToStartTimeout
 	}
+	// TODO: for normal decision, we don't know if there's a scheduleToStart
+	// timeout timer task associated with the decision since it's determined
+	// when creating the decision and the result is not persisted in mutable
+	// state.
+	// If we calculated the timeout again here, the timeout may be different,
+	// or even lost the decision if there's originally no timeout timer task
+	// for the decision. Using MaxTaskTimeout here for now so at least no
+	// decision will be lost.
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.

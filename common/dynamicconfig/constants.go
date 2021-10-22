@@ -1452,6 +1452,19 @@ const (
 	// Default value: 1000
 	// Allowed filters: DomainName
 	DecisionRetryMaxAttempts
+	// NormalDecisionScheduleToStartMaxAttempts is the maximum decision attempt for creating a scheduleToStart timeout
+	// timer for normal (non-sticky) decision
+	// KeyName: history.normalDecisionScheduleToStartMaxAttempts
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	NormalDecisionScheduleToStartMaxAttempts
+	// NormalDecisionScheduleToStartTimeout is scheduleToStart timeout duration for normal (non-sticky) decision task
+	// KeyName: history.normalDecisionScheduleToStartTimeout
+	// Value type: Duration
+	// Default value: time.Minute*5
+	// Allowed filters: DomainName
+	NormalDecisionScheduleToStartTimeout
 	// EnableDropStuckTaskByDomainID is whether stuck timer/transfer task should be dropped for a domain
 	// KeyName: history.DropStuckTaskByDomain
 	// Value type: Bool
@@ -2284,6 +2297,8 @@ var Keys = map[Key]string{
 	DecisionHeartbeatTimeout:                           "history.decisionHeartbeatTimeout",
 	DecisionRetryCriticalAttempts:                      "history.decisionRetryCriticalAttempts",
 	DecisionRetryMaxAttempts:                           "history.decisionRetryMaxAttempts",
+	NormalDecisionScheduleToStartMaxAttempts:           "history.normalDecisionScheduleToStartMaxAttempts",
+	NormalDecisionScheduleToStartTimeout:               "history.normalDecisionScheduleToStartTimeout",
 	ParentClosePolicyThreshold:                         "history.parentClosePolicyThreshold",
 	NumParentClosePolicySystemWorkflows:                "history.numParentClosePolicySystemWorkflows",
 	ReplicationTaskFetcherParallelism:                  "history.ReplicationTaskFetcherParallelism",

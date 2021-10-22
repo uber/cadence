@@ -275,9 +275,15 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
-	// decision schedule to start timer task is a special snowflake.
-	// the schedule to start timer is for sticky decision, which is
-	// not applicable on the passive cluster
+	// decision schedule to start timer won't be generate for sticky decision,
+	// since sticky is cleared when applying events on passive.
+	// for normal decision, we don't know if a schedule to start timeout timer
+	// is generated or not since it's based on a dynamicconfig. On passive cluster,
+	// a timer task will be generated based on passive cluster's config, however, it
+	// may not match the active cluster.
+	// so we simply ignore the schedule to start timer here as the decision task will be
+	// pushed to matching without any timeout if's not started, and the workflow
+	// can continue execution after failover.
 	if timerTask.TimeoutType == int(types.TimeoutTypeScheduleToStart) {
 		return nil
 	}
