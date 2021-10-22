@@ -45,16 +45,10 @@ func NewConnection(cfg *config.SQL) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	dbName := cfg.DatabaseName
-	if cfg.UseMultipleDatabases {
-		// TODO: we should validate schemas on all shards(SQL databases) to be safe
-		// https://github.com/uber/cadence/issues/4509 This must be done before announcing the feature is ready
-		dbName = cfg.MultipleDatabasesConfig[sqlplugin.DbDefaultShard].DatabaseName
-	}
+	
 	return &Connection{
 		adminDb: db,
-		dbName:  dbName,
+		dbName:  cfg.DatabaseName,
 	}, nil
 }
 
