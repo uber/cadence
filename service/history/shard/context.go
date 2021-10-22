@@ -761,7 +761,6 @@ Update_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*types.ServiceBusyError,
 				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
@@ -890,7 +889,6 @@ Conflict_Resolve_Loop:
 		if err != nil {
 			switch err.(type) {
 			case *persistence.ConditionFailedError,
-				*types.ServiceBusyError,
 				*types.LimitExceededError:
 				// No special handling required for these errors
 			case *persistence.ShardOwnershipLostError:
