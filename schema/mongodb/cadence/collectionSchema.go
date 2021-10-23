@@ -16,9 +16,9 @@ import (
 
 // NOTE: MongoDB collection is schemaless -- there is no schema file for collection. We use Go lang structs to define the collection fields.
 
-// ClusterConfigEntry is the schema of configStore
+// ClusterConfigCollection is the schema of configStore
 // IMPORTANT: making change to this struct is changing the MongoDB collection schema. Please make sure it's backward compatible.
-type ClusterConfigEntry struct {
+type ClusterConfigCollection struct {
 	ID           int    `json:"_id,omitempty"`
 	RowType      int    `json:"rowType"`
 	Version      int64  `json:"version"`
@@ -91,7 +91,7 @@ func main() {
 	// 	fmt.Println("byteValues:", string(byteValues))
 	//
 	// 	// Declare an empty slice for the MongoFields docs
-	// 	var docs []ClusterConfigEntry
+	// 	var docs []ClusterConfigCollection
 	//
 	// 	// Unmarshal the encoded JSON byte string into the slice
 	// 	err = json.Unmarshal(byteValues, &docs)
