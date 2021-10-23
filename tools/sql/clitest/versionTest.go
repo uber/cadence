@@ -294,3 +294,76 @@ func (s *VersionTestSuite) TestMultipleDatabaseVersionInCompatible() {
 	s.Error(err)
 	s.Contains(err.Error(), "version mismatch")
 }
+
+func (s *VersionTestSuite) TestMultipleDatabaseVersionCompatible() {
+	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r2 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	database1 := fmt.Sprintf("version_test_%v", r1.Int63())
+	database2 := fmt.Sprintf("version_test_%v", r2.Int63())
+	defer s.createDatabase(database1)()
+	defer s.createDatabase(database2)()
+
+	dir := "check_version"
+	tmpDir, err := ioutil.TempDir("", dir)
+	s.NoError(err)
+	defer os.RemoveAll(tmpDir)
+
+	subdir := tmpDir + "/" + "db"
+	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
+
+	s.createSchemaForVersion(subdir, "0.1")
+	s.createSchemaForVersion(subdir, "0.2")
+	s.createSchemaForVersion(subdir, "0.3")
+
+	s.NoError(sql.RunTool([]string{
+		"./tool",
+		"-ep", environment.GetMySQLAddress(),
+		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-u", environment.GetMySQLUser(),
+		"-pw", environment.GetMySQLPassword(),
+		"-db", database1,
+		"-pl", s.pluginName,
+		"-q",
+		"setup-schema",
+		"-version", "0.3",
+		"-o",
+	}))
+
+	s.NoError(sql.RunTool([]string{
+		"./tool",
+		"-ep", environment.GetMySQLAddress(),
+		"-p", strconv.Itoa(environment.GetMySQLPort()),
+		"-u", environment.GetMySQLUser(),
+		"-pw", environment.GetMySQLPassword(),
+		"-db", database2,
+		"-pl", s.pluginName,
+		"-q",
+		"setup-schema",
+		"-version", "0.3",
+		"-o",
+	}))
+
+	cfg := config.SQL{
+		PluginName:           s.pluginName,
+		EncodingType:         "thriftrw",
+		DecodingTypes:        []string{"thriftrw"},
+		UseMultipleDatabases: true,
+		NumShards:            2,
+		MultipleDatabasesConfig: []config.MultipleDatabasesConfigEntry{
+			{
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				User:         environment.GetMySQLUser(),
+				Password:     environment.GetMySQLPassword(),
+				DatabaseName: database1,
+			},
+			{
+				ConnectAddr:  fmt.Sprintf("%v:%v", environment.GetMySQLAddress(), environment.GetMySQLPort()),
+				User:         environment.GetMySQLUser(),
+				Password:     environment.GetMySQLPassword(),
+				DatabaseName: database2,
+			},
+		},
+	}
+	err = sql.CheckCompatibleVersion(cfg, "0.3")
+	s.NoError(err)
+}
