@@ -28,6 +28,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/environment"
 )
 
 func getTestConfig() *config.NoSQL {
@@ -35,8 +36,8 @@ func getTestConfig() *config.NoSQL {
 		PluginName: mongodb.PluginName,
 		User:       "root",
 		Password:   "cadence",
-		Hosts:      "localhost",
-		Port:       27017,
+		Hosts:      environment.GetMongoAddress(),
+		Port:       environment.GetMongoPort(),
 	}
 }
 
