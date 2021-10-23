@@ -37,5 +37,5 @@ type ClusterConfigCollectionEntry struct {
 	Version              int64  `json:"version"`
 	Data                 []byte `json:"data"`
 	DataEncoding         string `json:"dataencoding"`
-	UnixTimestampSeconds int64  `json:"unixTimestampSeconds"`
+	UnixTimestampSeconds int64  `json:"unixtimestampseconds"`
 }

@@ -31,16 +31,6 @@ import (
 	"github.com/uber/cadence/environment"
 )
 
-func getTestConfig() *config.NoSQL {
-	return &config.NoSQL{
-		PluginName: mongodb.PluginName,
-		User:       "root",
-		Password:   "cadence",
-		Hosts:      environment.GetMongoAddress(),
-		Port:       environment.GetMongoPort(),
-	}
-}
-
 func TestConfigStorePersistence(t *testing.T) {
 	s := new(persistencetests.ConfigStorePersistenceSuite)
 	s.TestBase = NewTestBaseWithMongo()
@@ -48,33 +38,69 @@ func TestConfigStorePersistence(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestMongoDBHistoryPersistence(t *testing.T) {
-	// s := new(persistencetests.HistoryV2PersistenceSuite)
-	// s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
-	// s.TestBase.Setup()
-	// suite.Run(t, s)
-}
+// TODO uncomment the test once HistoryEventsCRUD is implemented
+// func TestMongoDBHistoryPersistence(t *testing.T) {
+// 	s := new(persistencetests.HistoryV2PersistenceSuite)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
 
-func TestMongoDBMatchingPersistence(t *testing.T) {
-	// s := new(persistencetests.MatchingPersistenceSuite)
-	// s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
-	// s.TestBase.Setup()
-	// suite.Run(t, s)
-}
+// TODO uncomment the test once TaskCRUD is implemented
+// func TestMongoDBMatchingPersistence(t *testing.T) {
+// 	s := new(persistencetests.MatchingPersistenceSuite)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
 
-func TestMongoDBDomainPersistence(t *testing.T) {
-	//s := new(persistencetests.MetadataPersistenceSuiteV2)
-	//s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
-}
+// TODO uncomment the test once DomainCRUD is implemented
+// func TestMongoDBDomainPersistence(t *testing.T) {
+// 	s := new(persistencetests.MetadataPersistenceSuiteV2)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
 
-func TestQueuePersistence(t *testing.T) {
-	//s := new(persistencetests.QueuePersistenceSuite)
-	//s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
-}
+// TODO uncomment the test once MessageQueueCRUD is implemented
+// func TestQueuePersistence(t *testing.T) {
+// 	s := new(persistencetests.QueuePersistenceSuite)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
+
+// TODO uncomment the test once ShardCRUD is implemented
+// func TestCassandraShardPersistence(t *testing.T) {
+// 	s := new(persistencetests.ShardPersistenceSuite)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
+
+// TODO uncomment the test once VisibilityCRUD is implemented
+// func TestCassandraVisibilityPersistence(t *testing.T) {
+// 	s := new(persistencetests.DBVisibilityPersistenceSuite)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
+
+// TODO uncomment the test once WorkflowCRUD is implemented
+// func TestCassandraExecutionManager(t *testing.T) {
+// 	s := new(persistencetests.ExecutionManagerSuite)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
+
+// TODO uncomment the test once WorkflowCRUD is implemented
+// func TestCassandraExecutionManagerWithEventsV2(t *testing.T) {
+// 	s := new(persistencetests.ExecutionManagerSuiteForEventsV2)
+// 	s.TestBase = NewTestBaseWithMongo()
+// 	s.TestBase.Setup()
+// 	suite.Run(t, s)
+// }
 
 func NewTestBaseWithMongo() persistencetests.TestBase {
 	options := &persistencetests.TestBaseOptions{
@@ -85,4 +111,14 @@ func NewTestBaseWithMongo() persistencetests.TestBase {
 		DBPort:       getTestConfig().Port,
 	}
 	return persistencetests.NewTestBaseWithNoSQL(options)
+}
+
+func getTestConfig() *config.NoSQL {
+	return &config.NoSQL{
+		PluginName: mongodb.PluginName,
+		User:       "root",
+		Password:   "cadence",
+		Hosts:      environment.GetMongoAddress(),
+		Port:       environment.GetMongoPort(),
+	}
 }

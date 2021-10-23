@@ -21,38 +21,38 @@ Below is an example of a schema JSON file containing two commands, for collectio
 ```json
 [
   {
-    "create": "collectionName"
+    "create": "collection_name"
   },
   {
-    "createIndexes": "collectionName",
+    "createIndexes": "collection_name",
     "indexes": [
       {
         "key": {
-          "fieldNameA": 1,
-          "fieldNameB": -1
+          "fieldnamea": 1,
+          "fieldnameb": -1
         },
-        "name": "rowType_version"
+        "name": "fieldnamea_fieldnameb"
       }
     ],
     "writeConcern": { "w": "majority" }
   },
   {
-    "insert": "collectionName",
+    "insert": "collection_name",
     "documents": [
       {
-        "fieldNameA": 1,
-        "fieldNameB": 0,
-        "fieldNameC": "1234"
+        "fieldnamea": 1,
+        "fieldnameb": 0,
+        "fieldnamec": "1234"
       },
       {
-        "fieldNameA": 2,
-        "fieldNameB": 1,
-        "fieldNameC": "12344"
+        "fieldnamea": 2,
+        "fieldnameb": 1,
+        "fieldnamec": "12344"
       },
       {
-        "fieldNameA": 2,
-        "fieldNameB": 2,
-        "fieldNameC": "12345"
+        "fieldnamea": 2,
+        "fieldnameb": 2,
+        "fieldnamec": "12345"
       }
     ],
     "ordered": false
