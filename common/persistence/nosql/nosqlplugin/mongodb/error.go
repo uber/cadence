@@ -20,28 +20,18 @@
 
 package mongodb
 
-import "errors"
-
-var (
-	errConditionFailed = errors.New("internal condition fail error")
+import (
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func (db *mdb) IsNotFoundError(err error) bool {
-	panic("TODO")
+	return err == mongo.ErrNoDocuments
 }
 
 func (db *mdb) IsTimeoutError(err error) bool {
-	panic("TODO")
+	return mongo.IsTimeout(err) || mongo.IsNetworkError(err)
 }
 
 func (db *mdb) IsThrottlingError(err error) bool {
-	panic("TODO")
-}
-
-func (db *mdb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
 	return false
 }
-

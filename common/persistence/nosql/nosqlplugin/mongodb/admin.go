@@ -58,7 +58,7 @@ func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
 		return err
 	}
 	for _, cmd := range commands {
-		result := db.db.RunCommand(context.Background(), cmd)
+		result := db.dbConn.RunCommand(context.Background(), cmd)
 		if result.Err() != nil {
 			log.Fatal(err)
 			return err
@@ -68,7 +68,7 @@ func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
 }
 
 func (db *mdb) TeardownTestDatabase() error {
-	result := db.db.RunCommand(context.Background(), bson.D{{"dropDatabase", 1}})
+	result := db.dbConn.RunCommand(context.Background(), bson.D{{"dropDatabase", 1}})
 	err := result.Err()
 	if err != nil {
 		log.Fatal(err)

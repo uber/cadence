@@ -33,7 +33,7 @@ import (
 // mdb represents a logical connection to MongoDB database
 type mdb struct {
 	client *mongo.Client
-	db     *mongo.Database
+	dbConn *mongo.Database
 	cfg    *config.NoSQL
 	logger log.Logger
 }

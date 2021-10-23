@@ -70,7 +70,7 @@ func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*mdb, error) 
 	db := client.Database(cfg.Keyspace)
 	return &mdb{
 		client: client,
-		db:     db,
+		dbConn: db,
 		cfg:    cfg,
 		logger: logger,
 	}, err

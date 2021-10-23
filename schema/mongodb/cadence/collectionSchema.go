@@ -14,17 +14,22 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// below are the names of all mongoDB collections
+const (
+	ClusterConfigCollectionName = "cluster_config"
+)
+
 // NOTE: MongoDB collection is schemaless -- there is no schema file for collection. We use Go lang structs to define the collection fields.
 
-// ClusterConfigCollection is the schema of configStore
+// ClusterConfigCollectionEntry is the schema of configStore
 // IMPORTANT: making change to this struct is changing the MongoDB collection schema. Please make sure it's backward compatible.
-type ClusterConfigCollection struct {
-	ID           int    `json:"_id,omitempty"`
-	RowType      int    `json:"rowType"`
-	Version      int64  `json:"version"`
-	Data         []byte `json:"data"`
-	DataEncoding string `json:"dataEncoding"`
-	Timestamp    int64  `json:"Timestamp"`
+type ClusterConfigCollectionEntry struct {
+	ID                   int    `json:"_id,omitempty"`
+	RowType              int    `json:"rowType"`
+	Version              int64  `json:"version"`
+	Data                 []byte `json:"data"`
+	DataEncoding         string `json:"dataEncoding"`
+	UnixTimestampSeconds int64  `json:"unixTimestampSeconds"`
 }
 
 func main() {
@@ -91,7 +96,7 @@ func main() {
 	// 	fmt.Println("byteValues:", string(byteValues))
 	//
 	// 	// Declare an empty slice for the MongoFields docs
-	// 	var docs []ClusterConfigCollection
+	// 	var docs []ClusterConfigCollectionEntry
 	//
 	// 	// Unmarshal the encoded JSON byte string into the slice
 	// 	err = json.Unmarshal(byteValues, &docs)
