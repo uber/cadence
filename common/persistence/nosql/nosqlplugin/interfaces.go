@@ -216,7 +216,9 @@ type (
 	}
 
 	/**
-	* VisibilityCRUD is for visibility storage
+	* VisibilityCRUD is for visibility using database.
+	* Database visibility usually is no longer recommended. AdvancedVisibility(with Kafka+ElasticSearch) is more powerful and scalable.
+	* Feel free to skip this interface for any NoSQL plugin(use TODO() in the implementation)
 	*
 	* Recommendation: use one table with multiple indexes
 	*
