@@ -1,0 +1,17 @@
+[
+  {
+    "rowType": 1,
+    "version": 0,
+    "value": "1234"
+  },
+  {
+    "rowType": 2,
+    "version": 1,
+    "value": "12344"
+  },
+  {
+    "rowType": 2,
+    "version": 2,
+    "value": "12345"
+  }
+]

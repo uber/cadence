@@ -4,20 +4,9 @@
     "indexes": [
       {
         "key": {
-          "item": 1,
-          "manufacturer": 1,
-          "model": 1
+          "rowType": 1,
+          "version": -1
         },
-        "name": "item_manufacturer_model",
-        "unique": true
-      },
-      {
-        "key": {
-          "item": 1,
-          "supplier": 1,
-          "model": 1
-        },
-        "name": "item_supplier_model",
         "unique": true
       }
     ],
