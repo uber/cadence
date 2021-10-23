@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// NOTE: MongoDB is schemaless, so there is no schema operation to update the fields. Here uses Go struct to define the document fields directly.
+// NOTE: MongoDB collection is schemaless -- there is no schema file for collection. We use Go lang structs to define the collection fields.
 
 // ClusterConfigEntry is the schema of configStore
 // IMPORTANT: making change to this struct is changing the MongoDB collection schema. Please make sure it's backward compatible.
