@@ -24,9 +24,12 @@ import (
 	"log"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
+	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
 func getTestConfig() *config.NoSQL {
@@ -47,18 +50,25 @@ func TestConnection(t *testing.T) {
 	}
 }
 
+func TestConfigStorePersistence(t *testing.T) {
+	s := new(persistencetests.ConfigStorePersistenceSuite)
+	s.TestBase = NewTestBaseWithMongo()
+	s.TestBase.Setup()
+	suite.Run(t, s)
+}
+
 func TestMongoDBHistoryPersistence(t *testing.T) {
 	// s := new(persistencetests.HistoryV2PersistenceSuite)
 	// s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
 	// s.TestBase.Setup()
-	//suite.Run(t, s)
+	// suite.Run(t, s)
 }
 
 func TestMongoDBMatchingPersistence(t *testing.T) {
-	//s := new(persistencetests.MatchingPersistenceSuite)
-	//s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
-	//s.TestBase.Setup()
-	//suite.Run(t, s)
+	// s := new(persistencetests.MatchingPersistenceSuite)
+	// s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
+	// s.TestBase.Setup()
+	// suite.Run(t, s)
 }
 
 func TestMongoDBDomainPersistence(t *testing.T) {
@@ -73,4 +83,15 @@ func TestQueuePersistence(t *testing.T) {
 	//s.TestBase = public.NewTestBaseWithMongoDB(&persistencetests.TestBaseOptions{})
 	//s.TestBase.Setup()
 	//suite.Run(t, s)
+}
+
+func NewTestBaseWithMongo() persistencetests.TestBase {
+	options := &persistencetests.TestBaseOptions{
+		DBPluginName: mongodb.PluginName,
+		DBHost:       getTestConfig().Hosts,
+		DBUsername:   getTestConfig().User,
+		DBPassword:   getTestConfig().Password,
+		DBPort:       getTestConfig().Port,
+	}
+	return persistencetests.NewTestBaseWithNoSQL(options)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,25 +20,28 @@
 
 package mongodb
 
-import (
-	"go.mongodb.org/mongo-driver/mongo"
+import "errors"
 
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+var (
+	errConditionFailed = errors.New("internal condition fail error")
 )
 
-// mdb represents a logical connection to MongoDB database
-type mdb struct {
-	client *mongo.Client
-	logger log.Logger
-}
-
-var _ nosqlplugin.DB = (*mdb)(nil)
-
-func (db *mdb) Close() {
+func (db *mdb) IsNotFoundError(err error) bool {
 	panic("TODO")
 }
 
-func (db *mdb) PluginName() string {
-	return PluginName
+func (db *mdb) IsTimeoutError(err error) bool {
+	panic("TODO")
 }
+
+func (db *mdb) IsThrottlingError(err error) bool {
+	panic("TODO")
+}
+
+func (db *mdb) IsConditionFailedError(err error) bool {
+	if err == errConditionFailed {
+		return true
+	}
+	return false
+}
+
