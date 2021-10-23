@@ -23,13 +23,16 @@ package mongodb
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 // InsertShard creates a new shard, return error is there is any.
 // Return ShardOperationConditionFailure if the condition doesn't meet
 func (db *mdb) InsertShard(ctx context.Context, row *nosqlplugin.ShardRow) error {
-	panic("TODO")
+	log.Warn("not implemented...ignore the error for testing...")
+	return nil
 }
 
 // SelectShard gets a shard

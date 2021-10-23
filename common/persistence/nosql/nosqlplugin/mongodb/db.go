@@ -21,6 +21,8 @@
 package mongodb
 
 import (
+	"context"
+
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/uber/cadence/common/config"
@@ -39,7 +41,7 @@ type mdb struct {
 var _ nosqlplugin.DB = (*mdb)(nil)
 
 func (db *mdb) Close() {
-	panic("TODO")
+	db.client.Disconnect(context.Background())
 }
 
 func (db *mdb) PluginName() string {

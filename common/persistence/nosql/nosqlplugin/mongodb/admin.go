@@ -68,7 +68,12 @@ func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
 }
 
 func (db *mdb) TeardownTestDatabase() error {
-	panic("TODO")
+	result := db.db.RunCommand(context.Background(), bson.D{{"dropDatabase", 1}})
+	err := result.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return err
 }
 
 func getCadencePackageDir() (string, error) {
