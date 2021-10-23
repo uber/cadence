@@ -26,6 +26,8 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/cadence/.gen/go/shared"
+	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/client/frontend"
@@ -34,6 +36,8 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/service/worker/workercommon"
 )
 
 type (
@@ -46,6 +50,7 @@ type (
 		metricsClient       metrics.Client
 		tallyScope          tally.Scope
 		visibilityIndexName string
+		resource            resource.Resource
 	}
 )
 
@@ -58,6 +63,7 @@ func New(
 	logger log.Logger,
 	metricsClient metrics.Client,
 	tallyScope tally.Scope,
+	resource resource.Resource,
 ) *Analyzer {
 	return &Analyzer{
 		svcClient:           svcClient,
@@ -67,17 +73,34 @@ func New(
 		metricsClient:       metricsClient,
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
+		resource:            resource,
 	}
 }
 
 // Start starts the scanner
 func (a *Analyzer) Start() error {
 	ctx := context.WithValue(context.Background(), analyzerContextKey, a)
+
+	a.StartWorkflow(ctx)
+
 	workerOpts := worker.Options{
 		MetricsScope:              a.tallyScope,
 		BackgroundActivityContext: ctx,
 		Tracer:                    opentracing.GlobalTracer(),
 	}
-	processorWorker := worker.New(a.svcClient, common.SystemLocalDomainName, taskListName, workerOpts)
-	return processorWorker.Start()
+	esWorker := worker.New(a.svcClient, common.SystemLocalDomainName, taskListName, workerOpts)
+	err := esWorker.Start()
+	return err
+}
+
+func (a *Analyzer) StartWorkflow(ctx context.Context) {
+	go workercommon.StartWorkflowWithRetry(wfTypeName, startUpDelay, a.resource, func(client client.Client) error {
+		_, err := client.StartWorkflow(ctx, wfOptions, wfTypeName)
+		switch err.(type) {
+		case *shared.WorkflowExecutionAlreadyStartedError:
+			return nil
+		default:
+			return err
+		}
+	})
 }

@@ -215,7 +215,8 @@ func (s *Service) Start() {
 	if s.config.EnableParentClosePolicyWorker() {
 		s.startParentClosePolicyProcessor()
 	}
-	if s.config.EnableESAnalyzer() {
+	// TODO: change
+	if true || s.config.EnableESAnalyzer() {
 		s.startESAnalyzer()
 	}
 	if s.config.EnableFailoverManager() {
@@ -267,6 +268,7 @@ func (s *Service) startESAnalyzer() {
 		s.GetLogger(),
 		s.GetMetricsClient(),
 		s.params.MetricScope,
+		s.Resource,
 	)
 
 	if err := analyzer.Start(); err != nil {

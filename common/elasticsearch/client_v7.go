@@ -486,15 +486,21 @@ func (c *elasticV7) SearchRaw(ctx context.Context, index, query string) (*RawRes
 	}
 
 	// type Aggregations map[string]*json.RawMessage
-	for key, agg := range esResult.Aggregations {
-		var parsed Aggregation
-		err := json.Unmarshal(agg, &parsed)
-		if err != nil {
-			c.logger.Error("unable to unmarshal aggregation",
-				tag.Error(err), tag.ESAggregationID(key))
-			return nil, err
+	if esResult.Aggregations != nil {
+		for key, agg := range esResult.Aggregations {
+			var parsed Aggregation
+			err := json.Unmarshal(agg, &parsed)
+			if err != nil {
+				c.logger.Error("unable to unmarshal aggregation",
+					tag.Error(err), tag.ESAggregationID(key))
+				return nil, err
+			}
+			if result.Aggregations == nil {
+				result.Aggregations = map[string]*Aggregation{}
+			}
+			result.Aggregations[key] = &parsed
 		}
-		result.Aggregations[key] = &parsed
+
 	}
 
 	return &result, nil
