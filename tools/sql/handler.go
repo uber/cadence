@@ -87,7 +87,9 @@ func CheckCompatibleVersion(
 		cfg.Password = ""
 		cfg.DatabaseName = ""
 		cfg.ConnectAddr = ""
+		cfg.UseMultipleDatabases = true
 	}()
+	cfg.UseMultipleDatabases = false
 	// loop over every database to check schema version
 	for idx, entry := range cfg.MultipleDatabasesConfig {
 		cfg.User = entry.User
