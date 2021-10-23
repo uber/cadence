@@ -21,13 +21,11 @@
 package tests
 
 import (
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 )
@@ -39,14 +37,6 @@ func getTestConfig() *config.NoSQL {
 		Password:   "cadence",
 		Hosts:      "localhost",
 		Port:       27017,
-	}
-}
-
-// TestConnection will test connecting to mongo is successful
-func TestConnection(t *testing.T) {
-	_, err := nosql.NewNoSQLAdminDB(getTestConfig(), nil)
-	if err != nil {
-		log.Fatal("fail to connect to mongo")
 	}
 }
 
