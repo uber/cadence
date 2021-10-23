@@ -22,6 +22,7 @@ package elasticsearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -226,16 +227,6 @@ type (
 		Attr          map[string]interface{}
 	}
 
-	// Response structs: simplified from github.com/olivere/elastic
-	Bucket struct {
-		Key      string `json:"key"`
-		DocCount int64  `json:"doc_count"`
-	}
-	Aggregation struct {
-		Value   *float64   `json:"value,omitempty"`
-		Buckets *[]*Bucket `json:"buckets,omitempty"`
-	}
-
 	SearchHits struct {
 		TotalHits int64
 		Hits      []*VisibilityRecord
@@ -244,6 +235,6 @@ type (
 	RawResponse struct {
 		TookInMillis int64
 		Hits         SearchHits
-		Aggregations map[string]*Aggregation
+		Aggregations map[string]*json.RawMessage
 	}
 )

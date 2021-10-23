@@ -457,6 +457,7 @@ func (c *elasticV6) SearchRaw(ctx context.Context, index, query string) (*RawRes
 	}
 	result := RawResponse{
 		TookInMillis: esResult.TookInMillis,
+		Aggregations: esResult.Aggregations,
 	}
 
 	if esResult.Error != nil {
@@ -483,23 +484,6 @@ func (c *elasticV6) SearchRaw(ctx context.Context, index, query string) (*RawRes
 				return nil, err
 			}
 			result.Hits.Hits = append(result.Hits.Hits, record)
-		}
-	}
-
-	// type Aggregations map[string]*json.RawMessage
-	if esResult.Aggregations != nil {
-		for key, agg := range esResult.Aggregations {
-			var parsed Aggregation
-			err := json.Unmarshal(*agg, &parsed)
-			if err != nil {
-				c.logger.Error("unable to unmarshal aggregation",
-					tag.Error(err), tag.ESAggregationID(key))
-				return nil, err
-			}
-			if result.Aggregations == nil {
-				result.Aggregations = map[string]*Aggregation{}
-			}
-			result.Aggregations[key] = &parsed
 		}
 	}
 

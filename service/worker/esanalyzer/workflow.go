@@ -22,6 +22,7 @@ package esanalyzer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -35,6 +36,16 @@ import (
 
 type (
 	contextKey string
+
+	Duration struct {
+		AvgExecTime float64 `json:"value"`
+	}
+
+	WorkflowTypeInfo struct {
+		Name         string   `json:"key"`
+		NumWorfklows int64    `json:"doc_count"`
+		Duration     Duration `json:"duration"`
+	}
 )
 
 const (
@@ -79,20 +90,23 @@ func init() {
 func Workflow(ctx workflow.Context) error {
 	fmt.Printf("---------- Workflow execution starts: %v \n", activityOptions)
 	opt := workflow.WithActivityOptions(ctx, activityOptions)
-	var wfTypes []string
+
+	// list of workflows with avg workflow duration
+	var wfTypes []WorkflowTypeInfo
 	err := workflow.ExecuteActivity(opt, getWorkflowTypesActivity).Get(ctx, &wfTypes)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("---------- Workflow types: %v \n", wfTypes)
+	fmt.Printf("---------- Workflow types: %#v \n", wfTypes)
 	return nil
 }
 
 // GetWorkflowTypes is activity to get workflow type list from ElasticSearch
-func GetWorkflowTypes(ctx context.Context) (*[]string, error) {
+func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30).UnixNano()
+	aggregationKey := "wfTypes"
 	// Get up to 1000 workflow types having at least 1 workflow in last 30 days
 	// TODO: make #workflows and lastNDays configurable
 	query := fmt.Sprintf(`
@@ -117,31 +131,40 @@ func GetWorkflowTypes(ctx context.Context) (*[]string, error) {
 			},
 			"size": 0,
 			"aggs" : {
-					"wfTypes" : {
-							"terms" : { "field" : "WorkflowType", "size": 1000 }
+					"%s" : {
+							"terms" : { "field" : "WorkflowType", "size": 10 },
+							"aggs": {
+									"duration" : {
+										"avg" : {
+											"script" : "(doc['CloseTime'].value - doc['StartTime'].value) / 1000000000"
+										}
+									}
+							}
 					}
 			}
 		}
-	`, thirtyDaysAgo)
+	`, thirtyDaysAgo, aggregationKey)
+
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
 		return nil, err
 	}
-	agg, foundAggregation := response.Aggregations["wfTypes"]
+	agg, foundAggregation := response.Aggregations[aggregationKey]
 	if !foundAggregation {
 		return nil, types.InternalServiceError{
-			Message: "ElasticSearch aggeration failed",
+			Message: fmt.Sprintf("ElasticSearch error: aggeration '%v' failed", aggregationKey),
 		}
 	}
-	buckets := agg.Buckets
-	if buckets == nil {
+
+	var wfTypes struct {
+		Buckets []WorkflowTypeInfo `json:"buckets"`
+	}
+	err = json.Unmarshal(*agg, &wfTypes)
+	if err != nil {
 		return nil, types.InternalServiceError{
-			Message: "ElasticSearch Error didn't return any workflow types",
+			Message: "ElasticSearch error parsing aggeration",
 		}
 	}
-	wfTypes := []string{}
-	for _, bucket := range *buckets {
-		wfTypes = append(wfTypes, bucket.Key)
-	}
-	return &wfTypes, nil
+
+	return &wfTypes.Buckets, nil
 }
