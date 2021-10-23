@@ -61,8 +61,17 @@ func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugi
 func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*mdb, error) {
 	uri := fmt.Sprintf("mongodb://%v:%v@%v:%v/", cfg.User, cfg.Password, cfg.Hosts, cfg.Port)
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Keyspace == "" {
+		return nil, fmt.Errorf("database name cannot be empty")
+	}
+	db := client.Database(cfg.Keyspace)
 	return &mdb{
 		client: client,
+		db:     db,
+		cfg:    cfg,
 		logger: logger,
 	}, err
 }

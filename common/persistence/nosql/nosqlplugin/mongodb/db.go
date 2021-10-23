@@ -23,6 +23,7 @@ package mongodb
 import (
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
@@ -30,6 +31,8 @@ import (
 // mdb represents a logical connection to MongoDB database
 type mdb struct {
 	client *mongo.Client
+	db     *mongo.Database
+	cfg    *config.NoSQL
 	logger log.Logger
 }
 
