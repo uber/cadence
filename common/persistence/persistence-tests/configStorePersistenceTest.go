@@ -73,7 +73,7 @@ func (s *ConfigStorePersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-//Tests if error is returned when trying to fetch dc values from empty table
+// Tests if error is returned when trying to fetch dc values from empty table
 func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
 	if !validDatabaseCheck(s.Config()) {
 		s.T().Skip()

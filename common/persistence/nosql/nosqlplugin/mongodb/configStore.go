@@ -51,7 +51,7 @@ func (db *mdb) InsertConfig(ctx context.Context, row *persistence.InternalConfig
 }
 
 func (db *mdb) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
-	filter := bson.D{{"rowType", rowType}}
+	filter := bson.D{{"rowtype", rowType}}
 	queryOptions := options.FindOneOptions{}
 	queryOptions.SetSort(bson.D{{"version", -1}})
 

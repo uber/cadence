@@ -1949,7 +1949,8 @@ func GenerateRandomDBName(n int) string {
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
-	return string(b)
+	ts := time.Now().Unix()
+	return fmt.Sprintf("%v_%v", ts, string(b))
 }
 
 func pickRandomEncoding() common.EncodingType {

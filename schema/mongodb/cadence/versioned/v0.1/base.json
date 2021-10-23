@@ -7,10 +7,11 @@
     "indexes": [
       {
         "key": {
-          "rowType": 1,
+          "rowtype": 1,
           "version": -1
         },
-        "name": "rowType_version"
+        "name": "rowtype_version",
+        "unique": true
       }
     ],
     "writeConcern": {
