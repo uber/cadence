@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -228,7 +229,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks() {
 		processorBase.readyForPollTasks.Put(task.GetTaskID(), task)
 	}
 
-	tasks := processorBase.pollTasks()
+	tasks := processorBase.pollTasks(context.Background())
 	s.Equal(1, len(tasks))                            // only task1 needs to be returned
 	s.Equal(2, processorBase.readyForPollTasks.Len()) // task 1 and 3
 }
@@ -270,7 +271,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestPollTasks_FetchBatchSizeLimit(
 		processorBase.readyForPollTasks.Put(task.GetTaskID(), task)
 	}
 
-	tasks := processorBase.pollTasks()
+	tasks := processorBase.pollTasks(context.Background())
 	s.Len(tasks, fetchBatchSize)
 	s.Equal(numReadyTasks, processorBase.readyForPollTasks.Len()) // fetched tasks are still available for poll
 }
@@ -558,6 +559,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_GetTa
 		processorBase.readyForPollTasks.Put(task.GetTaskID(), task)
 	}
 	notification := actionNotification{
+		ctx: context.Background(),
 		action: &Action{
 			ActionType:         ActionTypeGetTasks,
 			GetTasksAttributes: &GetTasksAttributes{},
@@ -605,6 +607,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 		processorBase.readyForPollTasks.Put(task.GetTaskID(), task)
 	}
 	notification := actionNotification{
+		ctx: context.Background(),
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
 			UpdateTaskAttributes: &UpdateTasksAttributes{
@@ -658,6 +661,7 @@ func (s *crossClusterQueueProcessorBaseSuite) TestHandleActionNotification_Updat
 		processorBase.readyForPollTasks.Put(task.GetTaskID(), task)
 	}
 	notification := actionNotification{
+		ctx: context.Background(),
 		action: &Action{
 			ActionType: ActionTypeUpdateTask,
 			UpdateTaskAttributes: &UpdateTasksAttributes{

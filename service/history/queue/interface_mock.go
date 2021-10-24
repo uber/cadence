@@ -27,6 +27,7 @@
 package queue
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -505,18 +506,18 @@ func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, executionInfo, t
 }
 
 // HandleAction mocks base method
-func (m *MockProcessor) HandleAction(clusterName string, action *Action) (*ActionResult, error) {
+func (m *MockProcessor) HandleAction(ctx context.Context, clusterName string, action *Action) (*ActionResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleAction", clusterName, action)
+	ret := m.ctrl.Call(m, "HandleAction", ctx, clusterName, action)
 	ret0, _ := ret[0].(*ActionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // HandleAction indicates an expected call of HandleAction
-func (mr *MockProcessorMockRecorder) HandleAction(clusterName, action interface{}) *gomock.Call {
+func (mr *MockProcessorMockRecorder) HandleAction(ctx, clusterName, action interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleAction", reflect.TypeOf((*MockProcessor)(nil).HandleAction), clusterName, action)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleAction", reflect.TypeOf((*MockProcessor)(nil).HandleAction), ctx, clusterName, action)
 }
 
 // LockTaskProcessing mocks base method
