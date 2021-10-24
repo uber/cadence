@@ -472,18 +472,12 @@ func (c *elasticV6) SearchRaw(ctx context.Context, index, query string) (*RawRes
 
 	result.Hits = SearchHits{
 		TotalHits: esResult.TotalHits(),
-		Hits:      []*VisibilityRecord{},
+		Hits:      []*p.InternalVisibilityWorkflowExecutionInfo{},
 	}
 	if esResult.Hits != nil {
 		for _, hit := range esResult.Hits.Hits {
-			var record *VisibilityRecord
-			err := json.Unmarshal(*hit.Source, &record)
-			if err != nil {
-				c.logger.Error("unable to unmarshal search hit source",
-					tag.Error(err), tag.ESDocID(hit.Id))
-				return nil, err
-			}
-			result.Hits.Hits = append(result.Hits.Hits, record)
+			workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(hit)
+			result.Hits.Hits = append(result.Hits.Hits, workflowExecutionInfo)
 		}
 	}
 

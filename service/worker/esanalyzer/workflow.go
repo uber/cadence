@@ -31,6 +31,7 @@ import (
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -53,13 +54,16 @@ const (
 	startUpDelay                  = time.Second * 10
 
 	// workflow constants
-	esAnalyzerWFID           = "cadence-sys-tl-esanalyzer"
-	taskListName             = "cadence-sys-es-analyzer"
-	wfTypeName               = "cadence-sys-es-analyzer-workflow"
-	getWorkflowTypesActivity = "cadence-sys-es-analyzer-get-workflow-types"
+	esAnalyzerWFID             = "cadence-sys-tl-esanalyzer"
+	taskListName               = "cadence-sys-es-analyzer"
+	wfTypeName                 = "cadence-sys-es-analyzer-workflow"
+	getWorkflowTypesActivity   = "cadence-sys-es-analyzer-get-workflow-types"
+	findStuckWorkflowsActivity = "cadence-sys-es-analyzer-find-stuck-workflows"
 )
 
 var (
+	startDateTime = time.Now().AddDate(0, 0, -30).UnixNano()
+
 	retryPolicy = cadence.RetryPolicy{
 		InitialInterval:    10 * time.Second,
 		BackoffCoefficient: 1.7,
@@ -67,9 +71,15 @@ var (
 		ExpirationInterval: time.Hour,
 	}
 
-	activityOptions = workflow.ActivityOptions{
+	getWorkflowTypesOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
+		RetryPolicy:            &retryPolicy,
+	}
+
+	findStuckWorkflowsOptions = workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    15 * time.Minute,
 		RetryPolicy:            &retryPolicy,
 	}
 
@@ -84,28 +94,95 @@ var (
 func init() {
 	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: wfTypeName})
 	activity.RegisterWithOptions(GetWorkflowTypes, activity.RegisterOptions{Name: getWorkflowTypesActivity})
+	activity.RegisterWithOptions(FindStuckWorkflows, activity.RegisterOptions{Name: findStuckWorkflowsActivity})
 }
 
 // Workflow queries ElasticSearch to detect issues and mitigates them
 func Workflow(ctx workflow.Context) error {
-	fmt.Printf("---------- Workflow execution starts: %v \n", activityOptions)
-	opt := workflow.WithActivityOptions(ctx, activityOptions)
+	fmt.Printf("---------- Workflow execution starts: %v \n", getWorkflowTypesOptions)
 
 	// list of workflows with avg workflow duration
 	var wfTypes []WorkflowTypeInfo
-	err := workflow.ExecuteActivity(opt, getWorkflowTypesActivity).Get(ctx, &wfTypes)
+	err := workflow.ExecuteActivity(
+		workflow.WithActivityOptions(ctx, getWorkflowTypesOptions),
+		getWorkflowTypesActivity,
+	).Get(ctx, &wfTypes)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("---------- Workflow types: %#v \n", wfTypes)
+
+	for _, info := range wfTypes {
+		if info.NumWorfklows < 1000 {
+			// not enough workflows to get avg time, consider making it configurable
+			continue
+		}
+		var stuckWorkflows []*persistence.InternalVisibilityWorkflowExecutionInfo
+		err := workflow.ExecuteActivity(
+			workflow.WithActivityOptions(ctx, findStuckWorkflowsOptions),
+			findStuckWorkflowsActivity,
+			info,
+		).Get(ctx, &stuckWorkflows)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]*persistence.InternalVisibilityWorkflowExecutionInfo, error) {
+	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
+	// give 30 mins buffer to any workflow; consider making this configurable
+	maxEndTimeAllowed := time.Now().Add(
+		-time.Second * time.Duration((int64(info.Duration.AvgExecTime) * 3)),
+	).UnixNano()
+	endTime := time.Now().Add(-time.Minute * time.Duration(30)).UnixNano()
+
+	if endTime > maxEndTimeAllowed {
+		endTime = maxEndTimeAllowed
+	}
+
+	query := fmt.Sprintf(`
+		{
+			"query": {
+					"bool": {
+							"must": [
+									{
+											"range" : {
+													"StartTime" : {
+															"gte" : "%d",
+															"lte" : "%d"
+													}
+											}
+									},
+									{
+											"match" : {
+													"WorkflowType" : "%s"
+											}
+									}
+							],
+						"must_not": {
+							"exists": {
+									"field": "CloseTime"
+							}
+						}
+					}
+			}
+		}
+		`, startDateTime, endTime, info.Name)
+
+	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Hits.Hits, nil
 }
 
 // GetWorkflowTypes is activity to get workflow type list from ElasticSearch
 func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
-	thirtyDaysAgo := time.Now().AddDate(0, 0, -30).UnixNano()
 	aggregationKey := "wfTypes"
 	// Get up to 1000 workflow types having at least 1 workflow in last 30 days
 	// TODO: make #workflows and lastNDays configurable
@@ -143,7 +220,7 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 					}
 			}
 		}
-	`, thirtyDaysAgo, aggregationKey)
+	`, startDateTime, aggregationKey)
 
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {

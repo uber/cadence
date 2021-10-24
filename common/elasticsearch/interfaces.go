@@ -229,7 +229,7 @@ type (
 
 	SearchHits struct {
 		TotalHits int64
-		Hits      []*VisibilityRecord
+		Hits      []*p.InternalVisibilityWorkflowExecutionInfo
 	}
 
 	RawResponse struct {
