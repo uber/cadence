@@ -889,7 +889,8 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 			InitiatedEvent:        &types.HistoryEvent{},
 			StartedID:             common.EmptyEventID,
 			CreateRequestID:       uuid.New(),
-			DomainName:            constants.TestDomainID,
+			DomainID:              constants.TestDomainID,
+			DomainName:            constants.TestDomainName,
 			WorkflowTypeName:      "code.uber.internal/test/foobar",
 		},
 	}

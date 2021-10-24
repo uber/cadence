@@ -24,6 +24,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -465,6 +466,7 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		StartedWorkflowID:     sourceInfo.StartedWorkflowID,
 		StartedRunID:          sourceInfo.StartedRunID,
 		CreateRequestID:       sourceInfo.CreateRequestID,
+		DomainID:              sourceInfo.DomainID,
 		DomainName:            sourceInfo.DomainName,
 		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 		ParentClosePolicy:     sourceInfo.ParentClosePolicy,
@@ -487,4 +489,45 @@ func deepCopyHistoryEvent(e *types.HistoryEvent) *types.HistoryEvent {
 		panic(err)
 	}
 	return &copy
+}
+
+// GetChildExecutionDomainName get domain name for the child workflow
+// NOTE: DomainName in ChildExecutionInfo is being deprecated, and
+// we should always use DomainID field instead.
+// this function exists for backward compatibility reason
+func GetChildExecutionDomainName(
+	childInfo *persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+) (string, error) {
+	if childInfo.DomainName != "" {
+		return childInfo.DomainName, nil
+	}
+
+	return domainCache.GetDomainName(childInfo.DomainID)
+}
+
+// GetChildExecutionDomainID get domainID for the child workflow
+// NOTE: DomainName in ChildExecutionInfo is being deprecated, and
+// we should always use DomainID field instead.
+// this function exists for backward compatibility reason
+func GetChildExecutionDomainID(
+	childInfo *persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+) (string, error) {
+	if childInfo.DomainID != "" {
+		return childInfo.DomainID, nil
+	}
+
+	return domainCache.GetDomainID(childInfo.DomainName)
+}
+
+func GetChildExecutionDomainEntry(
+	childInfo *persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+) (*cache.DomainCacheEntry, error) {
+	if childInfo.DomainID != "" {
+		return domainCache.GetDomainByID(childInfo.DomainID)
+	}
+
+	return domainCache.GetDomain(childInfo.DomainName)
 }

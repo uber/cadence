@@ -2996,14 +2996,15 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	updatedStats := copyExecutionStats(state0.ExecutionStats)
 	updatedInfo.NextEventID = int64(5)
 	updatedInfo.LastProcessedEvent = int64(2)
-	createRequestID := uuid.New()
 	childExecutionInfos := []*p.ChildExecutionInfo{{
 		Version:           1234,
 		InitiatedID:       1,
 		InitiatedEvent:    &types.HistoryEvent{EventID: 1},
 		StartedID:         2,
+		StartedRunID:      uuid.New(),
 		StartedEvent:      &types.HistoryEvent{EventID: 2},
-		CreateRequestID:   createRequestID,
+		CreateRequestID:   uuid.New(),
+		DomainID:          uuid.New(),
 		ParentClosePolicy: types.ParentClosePolicyTerminate,
 	}}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -3023,13 +3024,7 @@ func (s *ExecutionManagerSuite) TestWorkflowMutableStateChildExecutions() {
 	ci, ok := state.ChildExecutionInfos[1]
 	s.True(ok)
 	s.NotNil(ci)
-	s.Equal(int64(1234), ci.Version)
-	s.Equal(int64(1), ci.InitiatedID)
-	s.Equal(types.ParentClosePolicyTerminate, ci.ParentClosePolicy)
-	s.Equal(int64(1), ci.InitiatedEvent.EventID)
-	s.Equal(int64(2), ci.StartedID)
-	s.Equal(int64(2), ci.StartedEvent.EventID)
-	s.Equal(createRequestID, ci.CreateRequestID)
+	s.Equal(childExecutionInfos[0], ci)
 
 	err2 = s.DeleteChildExecutionsState(ctx, updatedInfo, updatedStats, versionHistories, int64(5), int64(1))
 	s.NoError(err2)
@@ -3747,8 +3742,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 				InitiatedID:     9,
 				InitiatedEvent:  &types.HistoryEvent{EventID: 123},
 				StartedID:       11,
+				StartedRunID:    uuid.New(),
 				StartedEvent:    nil,
 				CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				DomainID:        uuid.New(),
 			},
 		},
 
@@ -3894,7 +3891,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	ci, ok := state1.ChildExecutionInfos[9]
 	s.True(ok)
 	s.NotNil(ci)
-	s.Equal(int64(2334), ci.Version)
+	s.Equal(updatedState.ChildExecutionInfos[9], ci)
 
 	s.Equal(1, len(state1.RequestCancelInfos))
 	rci, ok := state1.RequestCancelInfos[19]
@@ -3961,8 +3958,10 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 			InitiatedID:     10,
 			InitiatedEvent:  &types.HistoryEvent{EventID: 10},
 			StartedID:       15,
+			StartedRunID:    uuid.New(),
 			StartedEvent:    nil,
 			CreateRequestID: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+			DomainID:        uuid.New(),
 		}}
 
 	resetRequestCancelInfos := []*p.RequestCancelInfo{
@@ -4057,9 +4056,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionCurrentIsSel
 	ci, ok = state4.ChildExecutionInfos[10]
 	s.True(ok)
 	s.NotNil(ci)
-	s.Equal(int64(3334), ci.Version)
-	s.Equal(int64(10), ci.InitiatedID)
-	s.Equal(int64(15), ci.StartedID)
+	s.Equal(resetChildExecutionInfos[0], ci)
 
 	s.Equal(1, len(state4.RequestCancelInfos))
 	rci, ok = state4.RequestCancelInfos[29]

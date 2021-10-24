@@ -1188,6 +1188,14 @@ func (c *ChildExecutionInfo) GetCreateRequestID() (o string) {
 	return
 }
 
+// GetDomainID internal sql blob getter
+func (c *ChildExecutionInfo) GetDomainID() (o string) {
+	if c != nil {
+		return c.DomainID
+	}
+	return
+}
+
 // GetDomainName internal sql blob getter
 func (c *ChildExecutionInfo) GetDomainName() (o string) {
 	if c != nil {

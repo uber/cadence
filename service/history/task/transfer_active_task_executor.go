@@ -497,7 +497,6 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			ctx,
 			wfContext,
 			task,
-			domainName,
 			children,
 			sameClusterChildDomainIDs,
 			signalParentClosePolicyWorker,
@@ -1804,7 +1803,10 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 			continue
 		}
 
-		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
+		targetDomainEntry, err := execution.GetChildExecutionDomainEntry(
+			childInfo,
+			t.shard.GetDomainCache(),
+		)
 		if err != nil {
 			if common.IsEntityNotExistsError(err) {
 				// if domain no longer exists, ignore the child
@@ -1844,7 +1846,6 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	ctx context.Context,
 	wfContext execution.Context,
 	task *persistence.TransferTaskInfo,
-	domainName string,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
 	sameClusterChildDomainIDs map[int64]string, // child init ID -> child domainID
 	signalParentClosePolicyWorkflow bool,
@@ -1862,8 +1863,16 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 				continue
 			}
 
+			domainName, err := execution.GetChildExecutionDomainName(childInfo, t.shard.GetDomainCache())
+			if common.IsEntityNotExistsError(err) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
 			executions = append(executions, parentclosepolicy.RequestDetail{
-				DomainName: childInfo.DomainName,
+				DomainName: domainName,
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 				Policy:     childInfo.ParentClosePolicy,
@@ -1883,12 +1892,19 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	}
 
 	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
+		domainName, err := t.shard.GetDomainCache().GetDomainName(childDomainID)
+		if err != nil {
+			// domainName is not actually used when applyParentClosePolicy is calling
+			// history service for terminating or cancelling workflow
+			domainName = childDomainID
+		}
+
 		childInfo := childInfos[initiatedID]
 		if err := applyParentClosePolicy(
 			ctx,
 			t.historyClient,
 			childDomainID,
-			childInfo.DomainName,
+			domainName,
 			childInfo.StartedWorkflowID,
 			childInfo.StartedRunID,
 			childInfo.ParentClosePolicy,
@@ -1970,7 +1986,7 @@ func filterPendingChildExecutions(
 
 	filteredChildren := make(map[int64]*persistence.ChildExecutionInfo, len(children))
 	for initiatedID, child := range children {
-		domainID, err := domainCache.GetDomainID(child.DomainName)
+		domainID, err := execution.GetChildExecutionDomainID(child, domainCache)
 		if err != nil {
 			if common.IsEntityNotExistsError(err) {
 				// target domain deleted, ignore the child

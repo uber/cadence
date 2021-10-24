@@ -188,6 +188,7 @@ const (
 		`started_event: ?, ` +
 		`create_request_id: ?, ` +
 		`event_data_encoding: ?, ` +
+		`domain_id: ?, ` +
 		`domain_name: ?, ` +
 		`workflow_type_name: ?, ` +
 		`parent_close_policy: ?` +

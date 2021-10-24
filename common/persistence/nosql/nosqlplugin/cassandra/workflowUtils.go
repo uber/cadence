@@ -706,6 +706,7 @@ func resetChildExecutionInfoMap(
 			startedRunID = c.StartedRunID
 		}
 		cInfo["started_run_id"] = startedRunID
+		cInfo["domain_id"] = c.DomainID
 		cInfo["domain_name"] = c.DomainName
 		cInfo["workflow_type_name"] = c.WorkflowTypeName
 		cInfo["parent_close_policy"] = int32(c.ParentClosePolicy)
@@ -739,6 +740,7 @@ func (db *cdb) updateChildExecutionInfos(
 			c.StartedEvent.Data,
 			c.CreateRequestID,
 			c.InitiatedEvent.GetEncodingString(),
+			c.DomainID,
 			c.DomainName,
 			c.WorkflowTypeName,
 			int32(c.ParentClosePolicy),

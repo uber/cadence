@@ -1311,6 +1311,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 		InitiatedEventBatchID: event.GetEventID(),
 		StartedID:             common.EmptyEventID,
 		CreateRequestID:       createRequestID,
+		DomainID:              constants.TestTargetDomainID,
 		DomainName:            constants.TestTargetDomainName,
 	}
 
