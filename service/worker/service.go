@@ -263,12 +263,14 @@ func (s *Service) startESAnalyzer() {
 	analyzer := esanalyzer.New(
 		s.params.PublicClient,
 		s.GetFrontendClient(),
+		s.GetClientBean(),
 		s.params.ESClient,
 		s.params.ESConfig,
 		s.GetLogger(),
 		s.GetMetricsClient(),
 		s.params.MetricScope,
 		s.Resource,
+		s.GetDomainCache(),
 	)
 
 	if err := analyzer.Start(); err != nil {

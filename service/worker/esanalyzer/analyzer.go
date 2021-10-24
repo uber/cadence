@@ -27,11 +27,13 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/client"
+	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/worker"
 
+	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -45,12 +47,14 @@ type (
 	Analyzer struct {
 		svcClient           workflowserviceclient.Interface
 		frontendClient      frontend.Client
+		clientBean          client.Bean
 		esClient            es.GenericClient
 		logger              log.Logger
 		metricsClient       metrics.Client
 		tallyScope          tally.Scope
 		visibilityIndexName string
 		resource            resource.Resource
+		domainCache         cache.DomainCache
 	}
 )
 
@@ -58,22 +62,26 @@ type (
 func New(
 	svcClient workflowserviceclient.Interface,
 	frontendClient frontend.Client,
+	clientBean client.Bean,
 	esClient es.GenericClient,
 	esConfig *config.ElasticSearchConfig,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	tallyScope tally.Scope,
 	resource resource.Resource,
+	domainCache cache.DomainCache,
 ) *Analyzer {
 	return &Analyzer{
 		svcClient:           svcClient,
 		frontendClient:      frontendClient,
+		clientBean:          clientBean,
 		esClient:            esClient,
 		logger:              logger,
 		metricsClient:       metricsClient,
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 		resource:            resource,
+		domainCache:         domainCache,
 	}
 }
 
@@ -94,7 +102,7 @@ func (a *Analyzer) Start() error {
 }
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
-	go workercommon.StartWorkflowWithRetry(wfTypeName, startUpDelay, a.resource, func(client client.Client) error {
+	go workercommon.StartWorkflowWithRetry(wfTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
 		_, err := client.StartWorkflow(ctx, wfOptions, wfTypeName)
 		switch err.(type) {
 		case *shared.WorkflowExecutionAlreadyStartedError:

@@ -214,6 +214,7 @@ type (
 		WorkflowID    string
 		RunID         string
 		WorkflowType  string
+		DomainID      string
 		StartTime     int64
 		ExecutionTime int64
 		CloseTime     int64

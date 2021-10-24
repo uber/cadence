@@ -814,3 +814,8 @@ func ArchivalBlobIntegrityCheckFailReason(blobIntegrityCheckFailReason string) T
 func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag {
 	return newDurationTag("archival-blobstore-context-timeout", blobstoreContextTimeout)
 }
+
+// VisibilityQuery returns tag for the query for getting visibility records
+func VisibilityQuery(query string) Tag {
+	return newStringTag("visibility-query", query)
+}

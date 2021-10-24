@@ -31,6 +31,7 @@ import (
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -54,11 +55,12 @@ const (
 	startUpDelay                  = time.Second * 10
 
 	// workflow constants
-	esAnalyzerWFID             = "cadence-sys-tl-esanalyzer"
-	taskListName               = "cadence-sys-es-analyzer"
-	wfTypeName                 = "cadence-sys-es-analyzer-workflow"
-	getWorkflowTypesActivity   = "cadence-sys-es-analyzer-get-workflow-types"
-	findStuckWorkflowsActivity = "cadence-sys-es-analyzer-find-stuck-workflows"
+	esAnalyzerWFID                = "cadence-sys-tl-esanalyzer"
+	taskListName                  = "cadence-sys-es-analyzer"
+	wfTypeName                    = "cadence-sys-es-analyzer-workflow"
+	getWorkflowTypesActivity      = "cadence-sys-es-analyzer-get-workflow-types"
+	findStuckWorkflowsActivity    = "cadence-sys-es-analyzer-find-stuck-workflows"
+	refreshStuckWorkflowsActivity = "cadence-sys-es-analyzer-refresh-stuck-workflows"
 )
 
 var (
@@ -76,10 +78,14 @@ var (
 		StartToCloseTimeout:    5 * time.Minute,
 		RetryPolicy:            &retryPolicy,
 	}
-
 	findStuckWorkflowsOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    15 * time.Minute,
+		StartToCloseTimeout:    3 * time.Minute,
+		RetryPolicy:            &retryPolicy,
+	}
+	refreshStuckWorkflowsOptions = workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    10 * time.Minute,
 		RetryPolicy:            &retryPolicy,
 	}
 
@@ -95,12 +101,14 @@ func init() {
 	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: wfTypeName})
 	activity.RegisterWithOptions(GetWorkflowTypes, activity.RegisterOptions{Name: getWorkflowTypesActivity})
 	activity.RegisterWithOptions(FindStuckWorkflows, activity.RegisterOptions{Name: findStuckWorkflowsActivity})
+	activity.RegisterWithOptions(
+		RefreshStuckWorkflowsFromSameWorkflowType,
+		activity.RegisterOptions{Name: refreshStuckWorkflowsActivity},
+	)
 }
 
 // Workflow queries ElasticSearch to detect issues and mitigates them
 func Workflow(ctx workflow.Context) error {
-	fmt.Printf("---------- Workflow execution starts: %v \n", getWorkflowTypesOptions)
-
 	// list of workflows with avg workflow duration
 	var wfTypes []WorkflowTypeInfo
 	err := workflow.ExecuteActivity(
@@ -111,11 +119,9 @@ func Workflow(ctx workflow.Context) error {
 		return err
 	}
 
-	fmt.Printf("---------- Workflow types: %#v \n", wfTypes)
-
 	for _, info := range wfTypes {
-		if info.NumWorfklows < 1000 {
-			// not enough workflows to get avg time, consider making it configurable
+		// not enough workflows to get avg time, consider making it configurable
+		if info.NumWorfklows < 100 {
 			continue
 		}
 		var stuckWorkflows []*persistence.InternalVisibilityWorkflowExecutionInfo
@@ -127,13 +133,82 @@ func Workflow(ctx workflow.Context) error {
 		if err != nil {
 			return err
 		}
+		if len(stuckWorkflows) == 0 {
+			continue
+		}
+
+		err = workflow.ExecuteActivity(
+			workflow.WithActivityOptions(ctx, refreshStuckWorkflowsOptions),
+			refreshStuckWorkflowsActivity,
+			stuckWorkflows,
+		).Get(ctx, nil)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
+// RefreshStuckWorkflowsFromSameWorkflowType is activity to refresh stuck workflows from the same domain
+func RefreshStuckWorkflowsFromSameWorkflowType(
+	ctx context.Context,
+	workflows []*persistence.InternalVisibilityWorkflowExecutionInfo,
+) error {
+	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
+	domainID := workflows[0].DomainID
+	domainEntry, err := analyzer.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		analyzer.logger.Error("Failed to get domain entry",
+			tag.WorkflowDomainID(domainID),
+		)
+		return err
+	}
+	domainName := domainEntry.GetInfo().Name
+	clusterName := domainEntry.GetReplicationConfig().ActiveClusterName
+
+	adminClient := analyzer.clientBean.GetRemoteAdminClient(clusterName)
+	for _, workflow := range workflows {
+		if workflow.DomainID != domainID {
+			return types.InternalServiceError{
+				Message: fmt.Sprintf(
+					"Inconsistent worklow. Expected domainID: %v, actual: %v",
+					domainID,
+					workflow.DomainID),
+			}
+		}
+
+		err = adminClient.RefreshWorkflowTasks(ctx, &types.RefreshWorkflowTasksRequest{
+			Domain: domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: workflow.WorkflowID,
+				RunID:      workflow.RunID,
+			},
+		})
+
+		if err != nil {
+			// Errors might happen if the workflow is already closed. Instead of failing the workflow
+			// log the error and continue
+			analyzer.logger.Error("Failed to refresh stuck workflow",
+				tag.WorkflowDomainName(domainName),
+				tag.WorkflowID(workflow.WorkflowID),
+				tag.WorkflowRunID(workflow.RunID),
+			)
+		} else {
+			analyzer.logger.Info("Refreshed stuck workflow",
+				tag.WorkflowDomainName(domainName),
+				tag.WorkflowID(workflow.WorkflowID),
+				tag.WorkflowRunID(workflow.RunID),
+			)
+		}
+	}
+
+	return nil
+}
+
+// FindStuckWorkflows is activity to find open workflows that are live significantly longer than average
 func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]*persistence.InternalVisibilityWorkflowExecutionInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
-	// give 30 mins buffer to any workflow; consider making this configurable
+	// allow some buffer time to any workflow; consider making this configurable
 	maxEndTimeAllowed := time.Now().Add(
 		-time.Second * time.Duration((int64(info.Duration.AvgExecTime) * 3)),
 	).UnixNano()
@@ -162,18 +237,21 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]*persist
 											}
 									}
 							],
-						"must_not": {
-							"exists": {
-									"field": "CloseTime"
-							}
-						}
-					}
-			}
+						  "must_not": {
+							  "exists": {
+								 	"field": "CloseTime"
+							  }
+						  }
+					 }
+			 }
 		}
 		`, startDateTime, endTime, info.Name)
 
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
+		analyzer.logger.Error("Failed to query ElasticSearch for stuck workflows",
+			tag.VisibilityQuery(query),
+		)
 		return nil, err
 	}
 
@@ -224,6 +302,9 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
+		analyzer.logger.Error("Failed to query ElasticSearch to find workflow type info",
+			tag.VisibilityQuery(query),
+		)
 		return nil, err
 	}
 	agg, foundAggregation := response.Aggregations[aggregationKey]
@@ -243,5 +324,8 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 		}
 	}
 
+	// This log is supposed to be fired at max once an hour; it's not invasive and can help
+	// get some workflow statistics. Size can be quite big though; not sure what the limit is.
+	analyzer.logger.Info(fmt.Sprintf("WorkflowType stats: %#v", wfTypes.Buckets))
 	return &wfTypes.Buckets, nil
 }

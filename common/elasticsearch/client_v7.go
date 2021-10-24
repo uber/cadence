@@ -652,6 +652,8 @@ func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 	}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
+		DomainID:         source.DomainID,
+		WorkflowType:     source.WorkflowType,
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,

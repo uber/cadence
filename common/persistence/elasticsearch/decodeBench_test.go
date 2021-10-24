@@ -45,6 +45,7 @@ var (
          "StartTime": 1547596872371000000,
          "WorkflowID": "6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256",
          "WorkflowType": "TestWorkflowExecute",
+				 "DomainID": "4cgaa9v2-6ce4-4e22-bbfb-e0faa9a7a604-0-1234",
          "Encoding" : "thriftrw",
          "TaskList" : "taskList",
          "IsCron" : "false",
@@ -64,6 +65,8 @@ func BenchmarkJSONDecodeToType(b *testing.B) {
 		var source *es.VisibilityRecord
 		json.Unmarshal(*bytes, &source)
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
+			DomainID:      source.DomainID,
+			WorkflowType:  source.WorkflowType,
 			WorkflowID:    source.WorkflowID,
 			RunID:         source.RunID,
 			TypeName:      source.WorkflowType,
@@ -95,6 +98,8 @@ func BenchmarkJSONDecodeToMap(b *testing.B) {
 		historyLen, _ := source[definition.HistoryLength].(json.Number).Int64()
 
 		record := &p.InternalVisibilityWorkflowExecutionInfo{
+			DomainID:      source[definition.DomainID].(string),
+			WorkflowType:  source[definition.WorkflowType].(string),
 			WorkflowID:    source[definition.WorkflowID].(string),
 			RunID:         source[definition.RunID].(string),
 			TypeName:      source[definition.WorkflowType].(string),
