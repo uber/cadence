@@ -114,8 +114,8 @@ func (a *Analyzer) Start() error {
 }
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
-	go workercommon.StartWorkflowWithRetry(wfTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
-		_, err := client.StartWorkflow(ctx, wfOptions, wfTypeName)
+	go workercommon.StartWorkflowWithRetry(esanalyzerWFTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
+		_, err := client.StartWorkflow(ctx, wfOptions, esanalyzerWFTypeName)
 		switch err.(type) {
 		case *shared.WorkflowExecutionAlreadyStartedError:
 			return nil

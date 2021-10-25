@@ -33,7 +33,6 @@ import (
 
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -64,7 +63,7 @@ const (
 	// workflow constants
 	esAnalyzerWFID                = "cadence-sys-tl-esanalyzer"
 	taskListName                  = "cadence-sys-es-analyzer"
-	wfTypeName                    = "cadence-sys-es-analyzer-workflow"
+	esanalyzerWFTypeName          = "cadence-sys-es-analyzer-workflow"
 	getWorkflowTypesActivity      = "cadence-sys-es-analyzer-get-workflow-types"
 	findStuckWorkflowsActivity    = "cadence-sys-es-analyzer-find-stuck-workflows"
 	refreshStuckWorkflowsActivity = "cadence-sys-es-analyzer-refresh-stuck-workflows"
@@ -98,12 +97,12 @@ var (
 		ID:                           esAnalyzerWFID,
 		TaskList:                     taskListName,
 		ExecutionStartToCloseTimeout: 5 * 24 * time.Hour,
-		CronSchedule:                 "*/1 * * * *", // TODO: change the schedule
+		CronSchedule:                 "0 * * * *", // "At minute 0" => every hour
 	}
 )
 
 func init() {
-	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: wfTypeName})
+	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: esanalyzerWFTypeName})
 	activity.RegisterWithOptions(GetWorkflowTypes, activity.RegisterOptions{Name: getWorkflowTypesActivity})
 	activity.RegisterWithOptions(FindStuckWorkflows, activity.RegisterOptions{Name: findStuckWorkflowsActivity})
 	activity.RegisterWithOptions(
@@ -125,8 +124,7 @@ func Workflow(ctx workflow.Context) error {
 	}
 
 	for _, info := range wfTypes {
-		// not enough workflows to get avg time, consider making it configurable
-		var stuckWorkflows []*persistence.InternalVisibilityWorkflowExecutionInfo
+		var stuckWorkflows []*WorkflowInfo
 		err := workflow.ExecuteActivity(
 			workflow.WithActivityOptions(ctx, findStuckWorkflowsOptions),
 			findStuckWorkflowsActivity,
@@ -212,8 +210,7 @@ func RefreshStuckWorkflowsFromSameWorkflowType(
 func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]WorkflowInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 
-	// TODO: remove false
-	if false && info.NumWorfklows < int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name)) {
+	if info.NumWorfklows < int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name)) {
 		return &[]WorkflowInfo{}, nil
 	}
 
@@ -234,57 +231,34 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]Workflow
 	maxNumWorkflows := analyzer.config.ESAnalyzerNumWorkflowsToRefresh(info.Name)
 
 	query := fmt.Sprintf(`
-		{
-			"query": {
-					"bool": {
-							"must": [
-									{
-											"range" : {
-													"StartTime" : {
-															"gte" : "%d",
-															"lte" : "%d"
-													}
-											}
-									},
-									{
-											"match" : {
-													"WorkflowType" : "%s"
-											}
-									}
-							],
-						  "must_not": {
-							  "exists": {
-								 	"field": "CloseTime"
-							  }
-						  }
-					 }
-			 },
-			 "size": %d
-		}
-		`, startDateTime, endTime, info.Name, maxNumWorkflows)
-
-	// TODO: remove
-	query = fmt.Sprintf(`
-			{
-				"query": {
-						"bool": {
-								"must": [
-										{
-												"match" : {
-														"WorkflowType" : "%s"
-												}
-										}
-								],
-								"must_not": {
-									"exists": {
-										 "field": "CloseTime"
-									}
-								}
-						 }
-				 },
-    	   "size": 10
-			}
-			`, info.Name)
+    {
+      "query": {
+          "bool": {
+              "must": [
+                  {
+                      "range" : {
+                          "StartTime" : {
+                              "gte" : "%d",
+                              "lte" : "%d"
+                          }
+                      }
+                  },
+                  {
+                      "match" : {
+                          "WorkflowType" : "%s"
+                      }
+                  }
+              ],
+              "must_not": {
+                "exists": {
+                  "field": "CloseTime"
+                }
+              }
+          }
+      },
+      "size": %d
+    }
+    `, startDateTime, endTime, info.Name, maxNumWorkflows)
 
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
@@ -320,39 +294,39 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 
 	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
 	query := fmt.Sprintf(`
-		{
-			"query": {
-					"bool": {
-							"must": [
-									{
-											"range" : {
-													"StartTime" : {
-															"gte" : "%d"
-													}
-											}
-									},
-									{
-											"exists": {
-													"field": "CloseTime"
-											}
-									}
-							]
-					}
-			},
-			"size": 0,
-			"aggs" : {
-					"%s" : {
-							"terms" : { "field" : "WorkflowType", "size": 10 },
-							"aggs": {
-									"duration" : {
-										"avg" : {
-											"script" : "(doc['CloseTime'].value - doc['StartTime'].value) / 1000000000"
-										}
-									}
-							}
-					}
-			}
-		}
+    {
+      "query": {
+         "bool": {
+            "must": [
+              {
+                "range" : {
+                  "StartTime" : {
+                    "gte" : "%d"
+                  }
+                }
+              },
+              {
+                "exists": {
+                  "field": "CloseTime"
+                }
+              }
+            ]
+         }
+      },
+      "size": 0,
+      "aggs" : {
+          "%s" : {
+              "terms" : { "field" : "WorkflowType", "size": 10 },
+              "aggs": {
+                  "duration" : {
+                    "avg" : {
+                      "script" : "(doc['CloseTime'].value - doc['StartTime'].value) / 1000000000"
+                    }
+                  }
+              }
+          }
+      }
+    }
 	`, startDateTime, aggregationKey)
 
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)

@@ -222,8 +222,7 @@ func (s *Service) Start() {
 	if s.config.EnableParentClosePolicyWorker() {
 		s.startParentClosePolicyProcessor()
 	}
-	// TODO: change
-	if true || s.config.EnableESAnalyzer() {
+	if s.config.EnableESAnalyzer() {
 		s.startESAnalyzer()
 	}
 	if s.config.EnableFailoverManager() {
