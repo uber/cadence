@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package simple
 
 import (
 	"fmt"
@@ -31,8 +31,8 @@ type simpleMonitor struct {
 	resolvers map[string]membership.ServiceResolver
 }
 
-// NewSimpleMonitor returns a simple monitor interface
-func newSimpleMonitor(serviceName string, hosts map[string][]string) membership.Monitor {
+// NewMonitor returns a simple monitor interface
+func NewMonitor(serviceName string, hosts map[string][]string) membership.Monitor {
 	resolvers := make(map[string]membership.ServiceResolver, len(hosts))
 	for service, hostList := range hosts {
 		resolvers[service] = newSimpleResolver(service, hostList)

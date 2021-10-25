@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package ringpop
 
 import (
 	"context"
@@ -48,7 +48,7 @@ func (s *RingpopSuite) SetupTest() {
 }
 
 func (s *RingpopSuite) TestHostsMode() {
-	var cfg Ringpop
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getHostsConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -57,13 +57,13 @@ func (s *RingpopSuite) TestHostsMode() {
 	s.Equal(time.Second*30, cfg.MaxJoinDuration)
 	err = cfg.validate()
 	s.Nil(err)
-	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
+	f, err := NewFactory(cfg, nil, "test", loggerimpl.NewNopLogger())
 	s.Nil(err)
 	s.NotNil(f)
 }
 
 func (s *RingpopSuite) TestFileMode() {
-	var cfg Ringpop
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getJSONConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -72,13 +72,13 @@ func (s *RingpopSuite) TestFileMode() {
 	s.Equal(time.Second*30, cfg.MaxJoinDuration)
 	err = cfg.validate()
 	s.Nil(err)
-	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
+	f, err := NewFactory(cfg, nil, "test", loggerimpl.NewNopLogger())
 	s.Nil(err)
 	s.NotNil(f)
 }
 
 func (s *RingpopSuite) TestCustomMode() {
-	var cfg Ringpop
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getCustomConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -86,7 +86,7 @@ func (s *RingpopSuite) TestCustomMode() {
 	s.NotNil(cfg.validate())
 	cfg.DiscoveryProvider = statichosts.New("127.0.0.1")
 	s.Nil(cfg.validate())
-	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
+	f, err := NewFactory(cfg, nil, "test", loggerimpl.NewNopLogger())
 	s.Nil(err)
 	s.NotNil(f)
 }
@@ -104,14 +104,14 @@ func (resolver *mockResolver) LookupHost(ctx context.Context, host string) ([]st
 }
 
 func (s *RingpopSuite) TestDNSMode() {
-	var cfg Ringpop
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getDNSConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
 	s.Equal(BootstrapModeDNS, cfg.BootstrapMode)
 	s.Nil(cfg.validate())
 	logger := loggerimpl.NewNopLogger()
-	f, err := cfg.NewFactory(nil, "test", logger)
+	f, err := NewFactory(cfg, nil, "test", logger)
 	s.Nil(err)
 	s.NotNil(f)
 
@@ -166,7 +166,7 @@ func (s *RingpopSuite) TestDNSMode() {
 }
 
 func (s *RingpopSuite) TestInvalidConfig() {
-	var cfg Ringpop
+	var cfg Config
 	s.NotNil(cfg.validate())
 	cfg.Name = "test"
 	s.NotNil(cfg.validate())

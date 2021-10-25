@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership/ringpop"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
@@ -153,10 +154,11 @@ func (s *server) startService() common.Daemon {
 		rpcParams.OutboundsBuilder,
 		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
 	)
-	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
-	params.RPCFactory = rpcFactory
-	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
-		rpcFactory.GetChannel(),
+	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
+	dispatcher := params.RPCFactory.GetDispatcher()
+
+	params.MembershipFactory, err = ringpop.NewFactory(s.cfg.Ringpop,
+		dispatcher,
 		params.Name,
 		params.Logger,
 	)
@@ -212,7 +214,7 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	params.PublicClient = workflowserviceclient.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
+	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(rpc.OutboundPublicClient))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,

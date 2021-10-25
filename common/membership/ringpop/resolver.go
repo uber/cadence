@@ -18,9 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package ringpop
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,12 +34,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 )
 
 const (
-	// RoleKey label is set by every single service as soon as it bootstraps its
-	// ringpop instance. The data for this key is the service name
-	RoleKey                = "serviceName"
 	minRefreshInternal     = time.Second * 4
 	defaultRefreshInterval = time.Second * 10
 	replicaPoints          = 100
@@ -60,10 +59,10 @@ type ringpopServiceResolver struct {
 	membersMap      map[string]struct{} // for de-duping change notifications
 
 	listenerLock sync.RWMutex
-	listeners    map[string]chan<- *ChangedEvent
+	listeners    map[string]chan<- *membership.ChangedEvent
 }
 
-var _ ServiceResolver = (*ringpopServiceResolver)(nil)
+var _ membership.ServiceResolver = (*ringpopServiceResolver)(nil)
 
 func newRingpopServiceResolver(
 	service string,
@@ -79,7 +78,7 @@ func newRingpopServiceResolver(
 		shutdownCh:  make(chan struct{}),
 		logger:      logger.WithTags(tag.ComponentServiceResolver),
 		membersMap:  make(map[string]struct{}),
-		listeners:   make(map[string]chan<- *ChangedEvent),
+		listeners:   make(map[string]chan<- *membership.ChangedEvent),
 	}
 	resolver.ringValue.Store(newHashRing())
 	return resolver
@@ -99,9 +98,9 @@ func (r *ringpopServiceResolver) Start() {
 		return
 	}
 
-	r.rp.AddListener(r)
+	r.rp.ringpop.AddListener(r)
 	if err := r.refresh(); err != nil {
-		r.logger.Fatal("unable to start ring pop service resolver", tag.Error(err))
+		r.logger.Fatal("unable to start ringpop service resolver", tag.Error(err))
 	}
 
 	r.shutdownWG.Add(1)
@@ -120,9 +119,9 @@ func (r *ringpopServiceResolver) Stop() {
 
 	r.listenerLock.Lock()
 	defer r.listenerLock.Unlock()
-	r.rp.RemoveListener(r)
+	r.rp.ringpop.RemoveListener(r)
 	r.ringValue.Store(newHashRing())
-	r.listeners = make(map[string]chan<- *ChangedEvent)
+	r.listeners = make(map[string]chan<- *membership.ChangedEvent)
 	close(r.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
@@ -133,7 +132,7 @@ func (r *ringpopServiceResolver) Stop() {
 // Lookup finds the host in the ring responsible for serving the given key
 func (r *ringpopServiceResolver) Lookup(
 	key string,
-) (*HostInfo, error) {
+) (*membership.HostInfo, error) {
 
 	addr, found := r.ring().Lookup(key)
 	if !found {
@@ -141,21 +140,19 @@ func (r *ringpopServiceResolver) Lookup(
 		case r.refreshChan <- struct{}{}:
 		default:
 		}
-		return nil, ErrInsufficientHosts
+		return nil, membership.ErrInsufficientHosts
 	}
-	return NewHostInfo(addr, r.getLabelsMap()), nil
+	return membership.NewHostInfo(addr, r.getLabelsMap()), nil
 }
 
 func (r *ringpopServiceResolver) AddListener(
 	name string,
-	notifyChannel chan<- *ChangedEvent,
+	notifyChannel chan<- *membership.ChangedEvent,
 ) error {
-
 	r.listenerLock.Lock()
 	defer r.listenerLock.Unlock()
-	_, ok := r.listeners[name]
-	if ok {
-		return ErrListenerAlreadyExist
+	if _, ok := r.listeners[name]; ok {
+		return fmt.Errorf("listener for service %q already exist", name)
 	}
 	r.listeners[name] = notifyChannel
 	return nil
@@ -179,10 +176,10 @@ func (r *ringpopServiceResolver) MemberCount() int {
 	return r.ring().ServerCount()
 }
 
-func (r *ringpopServiceResolver) Members() []*HostInfo {
-	var servers []*HostInfo
+func (r *ringpopServiceResolver) Members() []*membership.HostInfo {
+	var servers []*membership.HostInfo
 	for _, s := range r.ring().Servers() {
-		servers = append(servers, NewHostInfo(s, r.getLabelsMap()))
+		servers = append(servers, membership.NewHostInfo(s, r.getLabelsMap()))
 	}
 
 	return servers
@@ -224,7 +221,7 @@ func (r *ringpopServiceResolver) refreshWithBackoff() error {
 }
 
 func (r *ringpopServiceResolver) refreshNoLock() error {
-	addrs, err := r.rp.GetReachableMembers(swim.MemberWithLabelAndValue(RoleKey, r.service))
+	addrs, err := r.rp.ringpop.GetReachableMembers(swim.MemberWithLabelAndValue(membership.RoleKey, r.service))
 	if err != nil {
 		return err
 	}
@@ -236,7 +233,7 @@ func (r *ringpopServiceResolver) refreshNoLock() error {
 
 	ring := newHashRing()
 	for _, addr := range addrs {
-		host := NewHostInfo(addr, r.getLabelsMap())
+		host := membership.NewHostInfo(addr, r.getLabelsMap())
 		ring.AddMembers(host)
 	}
 
@@ -252,15 +249,15 @@ func (r *ringpopServiceResolver) emitEvent(
 ) {
 
 	// Marshall the event object into the required type
-	event := &ChangedEvent{}
+	event := &membership.ChangedEvent{}
 	for _, addr := range rpEvent.ServersAdded {
-		event.HostsAdded = append(event.HostsAdded, NewHostInfo(addr, r.getLabelsMap()))
+		event.HostsAdded = append(event.HostsAdded, membership.NewHostInfo(addr, r.getLabelsMap()))
 	}
 	for _, addr := range rpEvent.ServersRemoved {
-		event.HostsRemoved = append(event.HostsRemoved, NewHostInfo(addr, r.getLabelsMap()))
+		event.HostsRemoved = append(event.HostsRemoved, membership.NewHostInfo(addr, r.getLabelsMap()))
 	}
 	for _, addr := range rpEvent.ServersUpdated {
-		event.HostsUpdated = append(event.HostsUpdated, NewHostInfo(addr, r.getLabelsMap()))
+		event.HostsUpdated = append(event.HostsUpdated, membership.NewHostInfo(addr, r.getLabelsMap()))
 	}
 
 	// Notify listeners
@@ -288,7 +285,7 @@ func (r *ringpopServiceResolver) refreshRingWorker() {
 			return
 		case <-r.refreshChan:
 			if err := r.refreshWithBackoff(); err != nil {
-				r.logger.Error("error periodically refreshing ring", tag.Error(err))
+				r.logger.Error("refreshing ring", tag.Error(err))
 			}
 		case <-refreshTicker.C:
 			if err := r.refreshWithBackoff(); err != nil {
@@ -304,7 +301,7 @@ func (r *ringpopServiceResolver) ring() *hashring.HashRing {
 
 func (r *ringpopServiceResolver) getLabelsMap() map[string]string {
 	labels := make(map[string]string)
-	labels[RoleKey] = r.service
+	labels[membership.RoleKey] = r.service
 	return labels
 }
 

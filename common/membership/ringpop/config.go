@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package ringpop
 
 import (
 	"context"
@@ -26,23 +26,34 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
-	"go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery"
 	"github.com/uber/ringpop-go/discovery/jsonfile"
 	"github.com/uber/ringpop-go/discovery/statichosts"
-	"github.com/uber/ringpop-go/swim"
-	tcg "github.com/uber/tchannel-go"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/service"
 )
+
+// Config contains the ringpop config items
+type Config struct {
+	// Name to be used in ringpop advertisement
+	Name string `yaml:"name" validate:"nonzero"`
+	// BootstrapMode is a enum that defines the ringpop bootstrap method
+	BootstrapMode BootstrapMode `yaml:"bootstrapMode"`
+	// BootstrapHosts is a list of seed hosts to be used for ringpop bootstrap
+	BootstrapHosts []string `yaml:"bootstrapHosts"`
+	// BootstrapFile is the file path to be used for ringpop bootstrap
+	BootstrapFile string `yaml:"bootstrapFile"`
+	// MaxJoinDuration is the max wait time to join the ring
+	MaxJoinDuration time.Duration `yaml:"maxJoinDuration"`
+	// Custom discovery provider, cannot be specified through yaml
+	DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
+}
+
+// BootstrapMode is an enum type for ringpop bootstrap mode
+type BootstrapMode int
 
 const (
 	// BootstrapModeNone represents a bootstrap mode set to nothing or invalid
@@ -62,34 +73,33 @@ const (
 	defaultMaxJoinDuration = 10 * time.Second
 )
 
-// RingpopFactory implements the RingpopFactory interface
-type RingpopFactory struct {
-	config      *Ringpop
-	channel     tchannel.Channel
-	serviceName string
-	logger      log.Logger
-
-	sync.Mutex
-	ringPop           *membership.RingPop
-	membershipMonitor membership.Monitor
-}
-
-// NewFactory builds a ringpop factory conforming
-// to the underlying configuration
-func (rpConfig *Ringpop) NewFactory(
-	channel tchannel.Channel,
-	serviceName string,
-	logger log.Logger,
-) (*RingpopFactory, error) {
-
-	return newRingpopFactory(rpConfig, channel, serviceName, logger)
-}
-
-func (rpConfig *Ringpop) validate() error {
+func (rpConfig *Config) validate() error {
 	if len(rpConfig.Name) == 0 {
 		return fmt.Errorf("ringpop config missing `name` param")
 	}
 	return validateBootstrapMode(rpConfig)
+}
+
+func validateBootstrapMode(
+	rpConfig *Config,
+) error {
+	switch rpConfig.BootstrapMode {
+	case BootstrapModeFile:
+		if len(rpConfig.BootstrapFile) == 0 {
+			return fmt.Errorf("ringpop config missing bootstrap file param")
+		}
+	case BootstrapModeHosts, BootstrapModeDNS:
+		if len(rpConfig.BootstrapHosts) == 0 {
+			return fmt.Errorf("ringpop config missing boostrap hosts param")
+		}
+	case BootstrapModeCustom:
+		if rpConfig.DiscoveryProvider == nil {
+			return fmt.Errorf("ringpop bootstrapMode is set to custom but discoveryProvider is nil")
+		}
+	default:
+		return fmt.Errorf("ringpop config with unknown boostrap mode")
+	}
+	return nil
 }
 
 // UnmarshalYAML is called by the yaml package to convert
@@ -123,115 +133,6 @@ func parseBootstrapMode(
 		return BootstrapModeDNS, nil
 	}
 	return BootstrapModeNone, errors.New("invalid or no ringpop bootstrap mode")
-}
-
-func validateBootstrapMode(
-	rpConfig *Ringpop,
-) error {
-
-	switch rpConfig.BootstrapMode {
-	case BootstrapModeFile:
-		if len(rpConfig.BootstrapFile) == 0 {
-			return fmt.Errorf("ringpop config missing bootstrap file param")
-		}
-	case BootstrapModeHosts, BootstrapModeDNS:
-		if len(rpConfig.BootstrapHosts) == 0 {
-			return fmt.Errorf("ringpop config missing boostrap hosts param")
-		}
-	case BootstrapModeCustom:
-		if rpConfig.DiscoveryProvider == nil {
-			return fmt.Errorf("ringpop bootstrapMode is set to custom but discoveryProvider is nil")
-		}
-	default:
-		return fmt.Errorf("ringpop config with unknown boostrap mode")
-	}
-	return nil
-}
-
-func newRingpopFactory(
-	rpConfig *Ringpop,
-	channel tchannel.Channel,
-	serviceName string,
-	logger log.Logger,
-) (*RingpopFactory, error) {
-
-	if err := rpConfig.validate(); err != nil {
-		return nil, err
-	}
-	if rpConfig.MaxJoinDuration == 0 {
-		rpConfig.MaxJoinDuration = defaultMaxJoinDuration
-	}
-	return &RingpopFactory{
-		config:      rpConfig,
-		channel:     channel,
-		serviceName: serviceName,
-		logger:      logger,
-	}, nil
-}
-
-// GetMembershipMonitor return a membership monitor
-func (factory *RingpopFactory) GetMembershipMonitor() (membership.Monitor, error) {
-	factory.Lock()
-	defer factory.Unlock()
-
-	return factory.getMembership()
-}
-
-func (factory *RingpopFactory) getMembership() (membership.Monitor, error) {
-	if factory.membershipMonitor != nil {
-		return factory.membershipMonitor, nil
-	}
-
-	membershipMonitor, err := factory.createMembership()
-	if err != nil {
-		return nil, err
-	}
-	factory.membershipMonitor = membershipMonitor
-	return membershipMonitor, nil
-}
-
-func (factory *RingpopFactory) createMembership() (membership.Monitor, error) {
-	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
-	rp, err := factory.getRingpop()
-	if err != nil {
-		return nil, fmt.Errorf("ringpop creation failed: %v", err)
-	}
-
-	membershipMonitor := membership.NewRingpopMonitor(factory.serviceName, service.List, rp, factory.logger)
-	return membershipMonitor, nil
-}
-
-func (factory *RingpopFactory) getRingpop() (*membership.RingPop, error) {
-	if factory.ringPop != nil {
-		return factory.ringPop, nil
-	}
-
-	ringPop, err := factory.createRingpop()
-	if err != nil {
-		return nil, err
-	}
-	factory.ringPop = ringPop
-	return ringPop, nil
-}
-
-func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {
-	rp, err := ringpop.New(
-		factory.config.Name,
-		ringpop.Channel(factory.channel.(*tcg.Channel)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	discoveryProvider, err := newDiscoveryProvider(factory.config, factory.logger)
-	if err != nil {
-		return nil, err
-	}
-	bootstrapOpts := &swim.BootstrapOptions{
-		MaxJoinDuration:  factory.config.MaxJoinDuration,
-		DiscoverProvider: discoveryProvider,
-	}
-	return membership.NewRingPop(rp, bootstrapOpts, factory.logger), nil
 }
 
 type dnsHostResolver interface {
@@ -296,7 +197,7 @@ func (provider *dnsProvider) Hosts() ([]string, error) {
 }
 
 func newDiscoveryProvider(
-	cfg *Ringpop,
+	cfg Config,
 	logger log.Logger,
 ) (discovery.DiscoverProvider, error) {
 

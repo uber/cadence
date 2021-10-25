@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package ringpop
 
 import (
 	"sync/atomic"
@@ -34,8 +34,8 @@ import (
 type (
 	// RingPop is a simple wrapper
 	RingPop struct {
-		status int32
-		*ringpop.Ringpop
+		status     int32
+		ringpop    *ringpop.Ringpop
 		bootParams *swim.BootstrapOptions
 		logger     log.Logger
 	}
@@ -49,7 +49,7 @@ func NewRingPop(
 ) *RingPop {
 	return &RingPop{
 		status:     common.DaemonStatusInitialized,
-		Ringpop:    ringPop,
+		ringpop:    ringPop,
 		bootParams: bootParams,
 		logger:     logger,
 	}
@@ -65,7 +65,7 @@ func (r *RingPop) Start() {
 		return
 	}
 
-	_, err := r.Ringpop.Bootstrap(r.bootParams)
+	_, err := r.ringpop.Bootstrap(r.bootParams)
 	if err != nil {
 		r.logger.Fatal("unable to bootstrap ringpop", tag.Error(err))
 	}
@@ -81,5 +81,5 @@ func (r *RingPop) Stop() {
 		return
 	}
 
-	r.Destroy()
+	r.ringpop.Destroy()
 }

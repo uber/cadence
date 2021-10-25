@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package ringpop
 
 import (
 	"testing"
@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/membership"
 )
 
 type RpoSuite struct {
@@ -53,13 +54,13 @@ func (s *RpoSuite) TestRingpopMonitor() {
 
 	time.Sleep(time.Second)
 
-	listenCh := make(chan *ChangedEvent, 5)
+	listenCh := make(chan *membership.ChangedEvent, 5)
 	err := rpm.AddListener("rpm-test", "test-listener", listenCh)
 	s.Nil(err, "AddListener failed")
 
 	host, err := rpm.Lookup("rpm-test", "key")
-	s.Nil(err, "Ringpop monitor failed to find host for key")
-	s.NotNil(host, "Ringpop monitor returned a nil host")
+	s.Nil(err, "Config monitor failed to find host for key")
+	s.NotNil(host, "Config monitor returned a nil host")
 
 	logger.Info("Killing host 1")
 	testService.KillHost(testService.hostUUIDs[1])
@@ -75,8 +76,8 @@ func (s *RpoSuite) TestRingpopMonitor() {
 	}
 
 	host, err = rpm.Lookup("rpm-test", "key")
-	s.Nil(err, "Ringpop monitor failed to find host for key")
-	s.NotEqual(testService.hostAddrs[1], host.GetAddress(), "Ringpop monitor assigned key to dead host")
+	s.Nil(err, "Config monitor failed to find host for key")
+	s.NotEqual(testService.hostAddrs[1], host.GetAddress(), "Config monitor assigned key to dead host")
 
 	err = rpm.RemoveListener("rpm-test", "test-listener")
 	s.Nil(err, "RemoveListener() failed")

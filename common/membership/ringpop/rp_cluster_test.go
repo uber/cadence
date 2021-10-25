@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package ringpop
 
 import (
 	"fmt"
@@ -31,6 +31,8 @@ import (
 	"github.com/uber/ringpop-go/swim"
 	"github.com/uber/tchannel-go"
 
+	"github.com/uber/cadence/common/membership"
+
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 )
@@ -39,23 +41,22 @@ import (
 type TestRingpopCluster struct {
 	hostUUIDs    []string
 	hostAddrs    []string
-	hostInfoList []HostInfo
-	rings        []Monitor
+	hostInfoList []membership.HostInfo
+	rings        []membership.Monitor
 	channels     []*tchannel.Channel
 	seedNode     string
 }
 
 // NewTestRingpopCluster creates a new test cluster with the given name and cluster size
-// All the nodes in the test cluster will register themselves in Ringpop
+// All the nodes in the test cluster will register themselves in Config
 // with the specified name. This is only intended for unit tests.
 func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed string, serviceName string) *TestRingpopCluster {
-
 	logger := loggerimpl.NewNopLogger()
 	cluster := &TestRingpopCluster{
 		hostUUIDs:    make([]string, size),
 		hostAddrs:    make([]string, size),
-		hostInfoList: make([]HostInfo, size),
-		rings:        make([]Monitor, size),
+		hostInfoList: make([]membership.HostInfo, size),
+		rings:        make([]membership.Monitor, size),
 		channels:     make([]*tchannel.Channel, size),
 		seedNode:     seed,
 	}
@@ -75,7 +76,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 		}
 		cluster.hostUUIDs[i] = uuid.New()
 		cluster.hostAddrs[i] = cluster.channels[i].PeerInfo().HostPort
-		cluster.hostInfoList[i] = HostInfo{addr: cluster.hostAddrs[i]}
+		//cluster.hostInfoList[i] = membership.HostInfo{addr: cluster.hostAddrs[i]}
 	}
 
 	// if seed node is already supplied, use it; if not, set it
@@ -94,7 +95,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 			logger.Error("failed to create ringpop instance", tag.Error(err))
 			return nil
 		}
-		cluster.rings[i] = NewRingpopMonitor(
+		cluster.rings[i] = NewMonitor(
 			serviceName,
 			[]string{serviceName},
 			NewRingPop(ringPop, bOptions, logger),
@@ -133,22 +134,11 @@ func (c *TestRingpopCluster) Stop() {
 }
 
 // GetHostInfoList returns the list of all hosts within the cluster
-func (c *TestRingpopCluster) GetHostInfoList() []HostInfo {
+func (c *TestRingpopCluster) GetHostInfoList() []membership.HostInfo {
 	return c.hostInfoList
 }
 
 // GetHostAddrs returns all host addrs within the cluster
 func (c *TestRingpopCluster) GetHostAddrs() []string {
 	return c.hostAddrs
-}
-
-// FindHostByAddr returns the host info corresponding to
-// the given addr, if it exists
-func (c *TestRingpopCluster) FindHostByAddr(addr string) (HostInfo, bool) {
-	for _, hi := range c.hostInfoList {
-		if strings.Compare(hi.addr, addr) == 0 {
-			return hi, true
-		}
-	}
-	return HostInfo{}, false
 }

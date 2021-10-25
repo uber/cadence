@@ -55,6 +55,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/membership/simple"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -765,7 +766,7 @@ func newMembershipFactory(serviceName string, hosts map[string][]string) resourc
 }
 
 func (p *membershipFactoryImpl) GetMembershipMonitor() (membership.Monitor, error) {
-	return newSimpleMonitor(p.serviceName, p.hosts), nil
+	return simple.NewMonitor(p.serviceName, p.hosts), nil
 }
 
 func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitializer {
