@@ -23,28 +23,23 @@
 package ringpop
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 	"sync"
 
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/swim"
-	"github.com/uber/tchannel-go"
-	tchannel2 "go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/cadence/common/service"
-
-	"go.uber.org/yarpc"
+	tcg "github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 // Factory implements the Factory interface
 type Factory struct {
 	config      Config
-	dispatcher  *yarpc.Dispatcher
+	channel     tchannel.Channel
 	serviceName string
 	logger      log.Logger
 
@@ -55,7 +50,7 @@ type Factory struct {
 
 func NewFactory(
 	config Config,
-	dispatcher *yarpc.Dispatcher,
+	channel tchannel.Channel,
 	serviceName string,
 	logger log.Logger,
 ) (*Factory, error) {
@@ -68,7 +63,7 @@ func NewFactory(
 	}
 	return &Factory{
 		config:      config,
-		dispatcher:  dispatcher,
+		channel:     channel,
 		serviceName: serviceName,
 		logger:      logger,
 	}, nil
@@ -119,14 +114,7 @@ func (factory *Factory) getRingpop() (*RingPop, error) {
 }
 
 func (factory *Factory) createRingpop() (*RingPop, error) {
-
-	var ch *tchannel.Channel
-	var err error
-	if ch, err = factory.getChannel(factory.dispatcher); err != nil {
-		return nil, err
-	}
-
-	rp, err := ringpop.New(factory.config.Name, ringpop.Channel(ch))
+	rp, err := ringpop.New(factory.config.Name, ringpop.Channel(factory.channel.(*tcg.Channel)))
 	if err != nil {
 		return nil, err
 	}
@@ -140,18 +128,4 @@ func (factory *Factory) createRingpop() (*RingPop, error) {
 		DiscoverProvider: discoveryProvider,
 	}
 	return NewRingPop(rp, bootstrapOpts, factory.logger), nil
-}
-
-func (factory *Factory) getChannel(
-	dispatcher *yarpc.Dispatcher,
-) (*tchannel.Channel, error) {
-
-	t := dispatcher.Inbounds()[0].Transports()[0].(*tchannel2.ChannelTransport)
-	ty := reflect.ValueOf(t.Channel())
-	var ch *tchannel.Channel
-	var ok bool
-	if ch, ok = ty.Interface().(*tchannel.Channel); !ok {
-		return nil, errors.New("unable to get tchannel out of the dispatcher")
-	}
-	return ch, nil
 }

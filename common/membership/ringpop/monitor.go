@@ -80,7 +80,7 @@ func (rpo *monitor) Start() {
 		rpo.logger.Fatal("unable to get ringpop labels", tag.Error(err))
 	}
 
-	if err = labels.Set(membership.RoleKey, rpo.serviceName); err != nil {
+	if err := labels.Set(membership.RoleKey, rpo.serviceName); err != nil {
 		rpo.logger.Fatal("unable to set ringpop labels", tag.Error(err))
 	}
 

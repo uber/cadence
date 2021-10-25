@@ -154,11 +154,11 @@ func (s *server) startService() common.Daemon {
 		rpcParams.OutboundsBuilder,
 		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
 	)
-	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
-	dispatcher := params.RPCFactory.GetDispatcher()
+	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
 
+	params.RPCFactory = rpcFactory
 	params.MembershipFactory, err = ringpop.NewFactory(s.cfg.Ringpop,
-		dispatcher,
+		rpcFactory.GetChannel(),
 		params.Name,
 		params.Logger,
 	)
@@ -214,7 +214,7 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(rpc.OutboundPublicClient))
+	params.PublicClient = workflowserviceclient.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,
