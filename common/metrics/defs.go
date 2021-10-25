@@ -1184,6 +1184,8 @@ const (
 	ShardScannerScope
 	// CheckDataCorruptionWorkflowScope is scope used by the data corruption workflow
 	CheckDataCorruptionWorkflowScope
+	// ESAnalyzerScope is scope used by ElasticSearch Analyzer (esanalyzer) workflow
+	ESAnalyzerScope
 
 	NumWorkerScopes
 )
@@ -1719,6 +1721,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
+		ESAnalyzerScope:                        {operation: "ESAnalyzerScope"},
 	},
 }
 
@@ -2234,6 +2237,8 @@ const (
 	DataCorruptionWorkflowFailure
 	DataCorruptionWorkflowSuccessCount
 	DataCorruptionWorkflowSkipCount
+	ESAnalyzerNumStuckWorkflowsDiscovered
+	ESAnalyzerNumStuckWorkflowsRefreshed
 
 	NumWorkerMetrics
 )
@@ -2757,6 +2762,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DataCorruptionWorkflowSuccessCount:            {metricName: "data_corruption_workflow_success", metricType: Counter},
 		DataCorruptionWorkflowCount:                   {metricName: "data_corruption_workflow_count", metricType: Counter},
 		DataCorruptionWorkflowSkipCount:               {metricName: "data_corruption_workflow_skips", metricType: Counter},
+		ESAnalyzerNumStuckWorkflowsDiscovered:         {metricName: "es_analyzer_num_stuck_workflows_discovered", metricType: Counter},
+		ESAnalyzerNumStuckWorkflowsRefreshed:          {metricName: "es_analyzer_num_stuck_workflows_refreshed", metricType: Counter},
 	},
 }
 

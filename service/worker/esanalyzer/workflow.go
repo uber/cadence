@@ -32,6 +32,7 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -200,6 +201,7 @@ func RefreshStuckWorkflowsFromSameWorkflowType(
 				tag.WorkflowID(workflow.WorkflowID),
 				tag.WorkflowRunID(workflow.RunID),
 			)
+			analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed)
 		}
 	}
 
@@ -301,6 +303,11 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]Workflow
 			RunID:      hit.RunID,
 		})
 	}
+
+	analyzer.metricsClient.AddCounter(
+		metrics.ESAnalyzerScope,
+		metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
+		int64(len(workflows)))
 
 	return &workflows, nil
 }
