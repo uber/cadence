@@ -154,10 +154,8 @@ func (s *server) startService() common.Daemon {
 		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
 	)
 	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
-	dispatcher := params.RPCFactory.GetDispatcher()
-
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
-		dispatcher,
+		params.RPCFactory,
 		params.Name,
 		params.Logger,
 	)
@@ -213,7 +211,7 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(rpc.OutboundPublicClient))
+	params.PublicClient = workflowserviceclient.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,
