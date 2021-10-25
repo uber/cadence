@@ -491,7 +491,7 @@ func deepCopyHistoryEvent(e *types.HistoryEvent) *types.HistoryEvent {
 	return &copy
 }
 
-// GetChildExecutionDomainName get domain name for the child workflow
+// GetChildExecutionDomainName gets domain name for the child workflow
 // NOTE: DomainName in ChildExecutionInfo is being deprecated, and
 // we should always use DomainID field instead.
 // this function exists for backward compatibility reason
@@ -499,14 +499,14 @@ func GetChildExecutionDomainName(
 	childInfo *persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,
 ) (string, error) {
-	if childInfo.DomainName != "" {
+	if childInfo.DomainID == "" {
 		return childInfo.DomainName, nil
 	}
 
 	return domainCache.GetDomainName(childInfo.DomainID)
 }
 
-// GetChildExecutionDomainID get domainID for the child workflow
+// GetChildExecutionDomainID gets domainID for the child workflow
 // NOTE: DomainName in ChildExecutionInfo is being deprecated, and
 // we should always use DomainID field instead.
 // this function exists for backward compatibility reason
@@ -521,6 +521,10 @@ func GetChildExecutionDomainID(
 	return domainCache.GetDomainID(childInfo.DomainName)
 }
 
+// GetChildExecutionDomainEntry get domain entry for the child workflow
+// NOTE: DomainName in ChildExecutionInfo is being deprecated, and
+// we should always use DomainID field instead.
+// this function exists for backward compatibility reason
 func GetChildExecutionDomainEntry(
 	childInfo *persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,

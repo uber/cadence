@@ -100,6 +100,6 @@ func (s *testCluster) TearDownTestDatabase() {
 	}
 	err = adminDB.TeardownTestDatabase()
 	if err != nil {
-		log.Info(err)
+		log.Fatal(err)
 	}
 }
