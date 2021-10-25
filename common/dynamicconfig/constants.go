@@ -2036,6 +2036,27 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
+	// ESAnalyzerLastNDays controls how many days to consider for ElasticSearch Analyzer
+	// KeyName: worker.ESAnalyzerLastNDays
+	// Value type: Int
+	// Default value: 30
+	ESAnalyzerLastNDays
+	// ESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
+	// KeyName: worker.ESAnalyzerNumWorkflowsToRefresh
+	// Value type: Int
+	// Default value: 100
+	ESAnalyzerNumWorkflowsToRefresh
+	// ESAnalyzerBufferWaitTimeInSeconds controls how many seconds to take as a min buffer to consider a worklow stuck
+	// KeyName: worker.ESAnalyzerBufferWaitTimeInSeconds
+	// Value type: Int
+	// Default value: 100
+	ESAnalyzerBufferWaitTimeInSeconds
+	// ESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
+	// KeyName: worker.ESAnalyzerMinNumWorkflowsForAvg
+	// Value type: Int
+	// Default value: 100
+	ESAnalyzerMinNumWorkflowsForAvg
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2407,6 +2428,11 @@ var Keys = map[Key]string{
 	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
+
+	ESAnalyzerLastNDays:               "worker.ESAnalyzerLastNDays",
+	ESAnalyzerNumWorkflowsToRefresh:   "worker.ESAnalyzerNumWorkflowsToRefresh",
+	ESAnalyzerBufferWaitTimeInSeconds: "worker.ESAnalyzerBufferWaitTimeInSeconds",
+	ESAnalyzerMinNumWorkflowsForAvg:   "worker.ESAnalyzerMinNumWorkflowsForAvg",
 }
 
 var KeyNames map[string]Key

@@ -184,6 +184,17 @@ const (
 	TaskTypeCrossCluster TaskType = 6
 )
 
+const (
+	// DefaultESAnalyzerLastNDays controls how many days to go back for ElasticSearch Analyzer
+	DefaultESAnalyzerLastNDays = 30
+	// DefaultESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
+	DefaultESAnalyzerNumWorkflowsToRefresh = 100
+	// DefaultESAnalyzerBufferWaitTimeInSeconds controls how many seconds to take as a min buffer to consider a worklow stuck
+	DefaultESAnalyzerBufferWaitTimeInSeconds = 30 * 60
+	// DefaultESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
+	DefaultESAnalyzerMinNumWorkflowsForAvg = 100
+)
+
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError
 const StickyTaskConditionFailedErrorMsg = "StickyTaskConditionFailedError"
 

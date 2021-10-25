@@ -73,6 +73,7 @@ type (
 		IndexerCfg                        *indexer.Config
 		ScannerCfg                        *scanner.Config
 		BatcherCfg                        *batcher.Config
+		ESAnalyzerCfg                     *esanalyzer.Config
 		failoverManagerCfg                *failovermanager.Config
 		ThrottledLogRPS                   dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS           dynamicconfig.IntPropertyFn
@@ -156,6 +157,12 @@ func NewConfig(params *resource.Params) *Config {
 		failoverManagerCfg: &failovermanager.Config{
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
+		},
+		ESAnalyzerCfg: &esanalyzer.Config{
+			ESAnalyzerLastNDays:               dc.GetIntProperty(dynamicconfig.ESAnalyzerLastNDays, common.DefaultESAnalyzerLastNDays),
+			ESAnalyzerNumWorkflowsToRefresh:   dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),
+			ESAnalyzerBufferWaitTimeInSeconds: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTimeInSeconds, common.DefaultESAnalyzerBufferWaitTimeInSeconds),
+			ESAnalyzerMinNumWorkflowsForAvg:   dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg, common.DefaultESAnalyzerMinNumWorkflowsForAvg),
 		},
 		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
@@ -271,6 +278,7 @@ func (s *Service) startESAnalyzer() {
 		s.params.MetricScope,
 		s.Resource,
 		s.GetDomainCache(),
+		*s.config.ESAnalyzerCfg,
 	)
 
 	if err := analyzer.Start(); err != nil {

@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,12 @@ type (
 		NumWorfklows int64    `json:"doc_count"`
 		Duration     Duration `json:"duration"`
 	}
+
+	WorkflowInfo struct {
+		DomainID   string
+		WorkflowID string
+		RunID      string
+	}
 )
 
 const (
@@ -64,8 +70,6 @@ const (
 )
 
 var (
-	startDateTime = time.Now().AddDate(0, 0, -30).UnixNano()
-
 	retryPolicy = cadence.RetryPolicy{
 		InitialInterval:    10 * time.Second,
 		BackoffCoefficient: 1.7,
@@ -121,9 +125,6 @@ func Workflow(ctx workflow.Context) error {
 
 	for _, info := range wfTypes {
 		// not enough workflows to get avg time, consider making it configurable
-		if info.NumWorfklows < 100 {
-			continue
-		}
 		var stuckWorkflows []*persistence.InternalVisibilityWorkflowExecutionInfo
 		err := workflow.ExecuteActivity(
 			workflow.WithActivityOptions(ctx, findStuckWorkflowsOptions),
@@ -152,7 +153,7 @@ func Workflow(ctx workflow.Context) error {
 // RefreshStuckWorkflowsFromSameWorkflowType is activity to refresh stuck workflows from the same domain
 func RefreshStuckWorkflowsFromSameWorkflowType(
 	ctx context.Context,
-	workflows []*persistence.InternalVisibilityWorkflowExecutionInfo,
+	workflows []WorkflowInfo,
 ) error {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 	domainID := workflows[0].DomainID
@@ -206,17 +207,29 @@ func RefreshStuckWorkflowsFromSameWorkflowType(
 }
 
 // FindStuckWorkflows is activity to find open workflows that are live significantly longer than average
-func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]*persistence.InternalVisibilityWorkflowExecutionInfo, error) {
+func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]WorkflowInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
-	// allow some buffer time to any workflow; consider making this configurable
+
+	// TODO: remove false
+	if false && info.NumWorfklows < int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name)) {
+		return &[]WorkflowInfo{}, nil
+	}
+
+	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
+
+	// allow some buffer time to any workflow
 	maxEndTimeAllowed := time.Now().Add(
+		-time.Second * time.Duration(
+			analyzer.config.ESAnalyzerBufferWaitTimeInSeconds(info.Name))).UnixNano()
+	// if the workflow exec time takes longer than 3x avg time, we refresh
+	endTime := time.Now().Add(
 		-time.Second * time.Duration((int64(info.Duration.AvgExecTime) * 3)),
 	).UnixNano()
-	endTime := time.Now().Add(-time.Minute * time.Duration(30)).UnixNano()
-
 	if endTime > maxEndTimeAllowed {
 		endTime = maxEndTimeAllowed
 	}
+
+	maxNumWorkflows := analyzer.config.ESAnalyzerNumWorkflowsToRefresh(info.Name)
 
 	query := fmt.Sprintf(`
 		{
@@ -243,9 +256,33 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]*persist
 							  }
 						  }
 					 }
-			 }
+			 },
+			 "size": %d
 		}
-		`, startDateTime, endTime, info.Name)
+		`, startDateTime, endTime, info.Name, maxNumWorkflows)
+
+	// TODO: remove
+	query = fmt.Sprintf(`
+			{
+				"query": {
+						"bool": {
+								"must": [
+										{
+												"match" : {
+														"WorkflowType" : "%s"
+												}
+										}
+								],
+								"must_not": {
+									"exists": {
+										 "field": "CloseTime"
+									}
+								}
+						 }
+				 },
+    	   "size": 10
+			}
+			`, info.Name)
 
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
@@ -255,7 +292,17 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]*persist
 		return nil, err
 	}
 
-	return &response.Hits.Hits, nil
+	// Return a simpler structure to reduce activity output size
+	workflows := []WorkflowInfo{}
+	for _, hit := range response.Hits.Hits {
+		workflows = append(workflows, WorkflowInfo{
+			DomainID:   hit.DomainID,
+			WorkflowID: hit.WorkflowID,
+			RunID:      hit.RunID,
+		})
+	}
+
+	return &workflows, nil
 }
 
 // GetWorkflowTypes is activity to get workflow type list from ElasticSearch
@@ -263,7 +310,8 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 	aggregationKey := "wfTypes"
 	// Get up to 1000 workflow types having at least 1 workflow in last 30 days
-	// TODO: make #workflows and lastNDays configurable
+
+	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
 	query := fmt.Sprintf(`
 		{
 			"query": {

@@ -164,6 +164,9 @@ type BoolPropertyFnWithDomainIDAndWorkflowIDFilter func(domainID string, workflo
 // BoolPropertyFnWithTaskListInfoFilters is a wrapper to get bool property from dynamic config with three filters: domain, taskList, taskType
 type BoolPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) bool
 
+// IntPropertyFnWithWorkflowTypeFilter is a wrapper to get int property from dynamic config with domain as filter
+type IntPropertyFnWithWorkflowTypeFilter func(workflowType string) int
+
 // GetProperty gets a interface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
 	return func() interface{} {
@@ -197,6 +200,23 @@ func (c *Collection) GetIntProperty(key Key, defaultValue int) IntPropertyFn {
 func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) IntPropertyFnWithDomainFilter {
 	return func(domain string) int {
 		filters := c.toFilterMap(DomainFilter(domain))
+		val, err := c.client.GetIntValue(
+			key,
+			filters,
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+		}
+		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		return val
+	}
+}
+
+// GetIntPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's an integer
+func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue int) IntPropertyFnWithWorkflowTypeFilter {
+	return func(workflowType string) int {
+		filters := c.toFilterMap(WorkflowTypeFilter(workflowType))
 		val, err := c.client.GetIntValue(
 			key,
 			filters,

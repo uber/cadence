@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
@@ -55,6 +56,15 @@ type (
 		visibilityIndexName string
 		resource            resource.Resource
 		domainCache         cache.DomainCache
+		config              Config
+	}
+
+	// Config contains all configs for ElasticSearch Analyzer
+	Config struct {
+		ESAnalyzerLastNDays               dynamicconfig.IntPropertyFn
+		ESAnalyzerNumWorkflowsToRefresh   dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerBufferWaitTimeInSeconds dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerMinNumWorkflowsForAvg   dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 	}
 )
 
@@ -70,6 +80,7 @@ func New(
 	tallyScope tally.Scope,
 	resource resource.Resource,
 	domainCache cache.DomainCache,
+	config Config,
 ) *Analyzer {
 	return &Analyzer{
 		svcClient:           svcClient,
@@ -82,6 +93,7 @@ func New(
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 		resource:            resource,
 		domainCache:         domainCache,
+		config:              config,
 	}
 }
 
