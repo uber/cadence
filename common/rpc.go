@@ -24,7 +24,6 @@ import (
 	"context"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/tchannel"
 )
 
 const (
@@ -56,7 +55,6 @@ type (
 	// RPCFactory Creates a dispatcher that knows how to transport requests.
 	RPCFactory interface {
 		GetDispatcher() *yarpc.Dispatcher
-		GetChannel() tchannel.Channel
 		CreateDispatcherForOutbound(callerName, serviceName, hostName string) (*yarpc.Dispatcher, error)
 		CreateGRPCDispatcherForOutbound(callerName, serviceName, hostName string) (*yarpc.Dispatcher, error)
 		ReplaceGRPCPort(serviceName, hostAddress string) (string, error)

@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery"
 	"github.com/uber/ringpop-go/discovery/jsonfile"
@@ -36,7 +38,6 @@ import (
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -64,7 +65,7 @@ const (
 // RingpopFactory implements the RingpopFactory interface
 type RingpopFactory struct {
 	config      *Ringpop
-	rpcFactory  common.RPCFactory
+	channel     tchannel.Channel
 	serviceName string
 	logger      log.Logger
 
@@ -76,12 +77,12 @@ type RingpopFactory struct {
 // NewFactory builds a ringpop factory conforming
 // to the underlying configuration
 func (rpConfig *Ringpop) NewFactory(
-	RPCFactory common.RPCFactory,
+	channel tchannel.Channel,
 	serviceName string,
 	logger log.Logger,
 ) (*RingpopFactory, error) {
 
-	return newRingpopFactory(rpConfig, RPCFactory, serviceName, logger)
+	return newRingpopFactory(rpConfig, channel, serviceName, logger)
 }
 
 func (rpConfig *Ringpop) validate() error {
@@ -149,7 +150,7 @@ func validateBootstrapMode(
 
 func newRingpopFactory(
 	rpConfig *Ringpop,
-	RPCFactory common.RPCFactory,
+	channel tchannel.Channel,
 	serviceName string,
 	logger log.Logger,
 ) (*RingpopFactory, error) {
@@ -162,7 +163,7 @@ func newRingpopFactory(
 	}
 	return &RingpopFactory{
 		config:      rpConfig,
-		rpcFactory:  RPCFactory,
+		channel:     channel,
 		serviceName: serviceName,
 		logger:      logger,
 	}, nil
@@ -216,7 +217,7 @@ func (factory *RingpopFactory) getRingpop() (*membership.RingPop, error) {
 func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {
 	rp, err := ringpop.New(
 		factory.config.Name,
-		ringpop.Channel(factory.rpcFactory.GetChannel().(*tcg.Channel)),
+		ringpop.Channel(factory.channel.(*tcg.Channel)),
 	)
 	if err != nil {
 		return nil, err

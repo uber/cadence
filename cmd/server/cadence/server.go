@@ -153,9 +153,10 @@ func (s *server) startService() common.Daemon {
 		rpcParams.OutboundsBuilder,
 		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
 	)
-	params.RPCFactory = rpc.NewFactory(params.Logger, rpcParams)
+	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
+	params.RPCFactory = rpcFactory
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
-		params.RPCFactory,
+		rpcFactory.GetChannel(),
 		params.Name,
 		params.Logger,
 	)
