@@ -218,7 +218,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_Schedu
 	s.Equal(types.CrossClusterTaskFailedCauseWorkflowNotExists, task.response.GetFailedCause())
 }
 
-func (s *crossClusterTargetTaskExecutorSuite) TestCancelExecutionTask() {
+func (s *crossClusterTargetTaskExecutorSuite) TestCancelExecutionTask_CancelSuccess() {
 	task := s.getTestCancelExecutionTask(processingStateInitialized)
 
 	cancelRequest := createTestRequestCancelWorkflowExecutionRequest(
@@ -235,6 +235,27 @@ func (s *crossClusterTargetTaskExecutorSuite) TestCancelExecutionTask() {
 	s.Equal(types.CrossClusterTaskTypeCancelExecution, task.response.GetTaskType())
 	s.Nil(task.response.FailedCause)
 	s.NotNil(task.response.CancelExecutionAttributes)
+}
+
+func (s *crossClusterTargetTaskExecutorSuite) TestCancelExecutionTask_CancelFailed() {
+	task := s.getTestCancelExecutionTask(processingStateInitialized)
+
+	cancelRequest := createTestRequestCancelWorkflowExecutionRequest(
+		constants.TestTargetDomainName,
+		task.GetInfo().(*persistence.CrossClusterTaskInfo),
+		task.request.CancelExecutionAttributes.RequestID,
+	)
+	// domain failovered after the domain active check,
+	// but before we make the requestCancel call
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), cancelRequest).Return(&types.DomainNotActiveError{}).Times(1)
+
+	err := s.executor.Execute(task, true)
+	s.NoError(err)
+
+	s.Equal(task.GetTaskID(), task.response.GetTaskID())
+	s.Equal(types.CrossClusterTaskTypeCancelExecution, task.response.GetTaskType())
+	s.Equal(types.CrossClusterTaskFailedCauseDomainNotActive, task.response.GetFailedCause())
+	s.Nil(task.response.CancelExecutionAttributes)
 }
 
 func (s *crossClusterTargetTaskExecutorSuite) TestSignalExecutionTask_SignalSuccess() {

@@ -41,7 +41,6 @@ var (
 	errUnknownTaskProcessingState   = errors.New("unknown cross cluster task processing state")
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
-	errDomainStandby                = errors.New("domain is standby in current cluster")
 	errUnexpectedErrorFromTarget    = errors.New("unexpected target error")
 )
 
@@ -385,7 +384,7 @@ func (t *crossClusterTargetTaskExecutor) convertErrorToFailureCause(
 	switch err {
 	case errDomainNotExists:
 		return types.CrossClusterTaskFailedCauseDomainNotExists.Ptr(), false
-	case errDomainStandby:
+	case errTargetDomainNotActive:
 		return types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(), false
 	case ErrTaskPendingActive:
 		return types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(), true
@@ -414,7 +413,7 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	}
 
 	if !entry.IsDomainActive() {
-		return "", errDomainStandby
+		return "", errTargetDomainNotActive
 	}
 
 	return entry.GetInfo().Name, nil
