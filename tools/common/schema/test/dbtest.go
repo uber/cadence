@@ -39,7 +39,7 @@ import (
 type (
 	// DB is a test interface for a database that supports schema tool
 	DB interface {
-		schema.DB
+		schema.SchemaClient
 		CreateDatabase(name string) error
 		DropDatabase(name string) error
 		ListTables() ([]string, error)
