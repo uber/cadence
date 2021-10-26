@@ -277,12 +277,17 @@ func (t *taskImpl) HandleErr(
 		err = nil
 	}
 
-	// this is a transient error
+	// target domain not active error, we should retry the task
+	// so that a cross-cluster task can be created.
+	if err == errTargetDomainNotActive {
+		t.scope.IncCounter(metrics.TaskTargetNotActiveCounterPerDomain)
+		return err
+	}
+
+	// this is a transient error, and means source domain not active
 	// TODO remove this error check special case
-	//  since the new task life cycle will not give up until task processed / verified
+	// since the new task life cycle will not give up until task processed / verified
 	if _, ok := err.(*types.DomainNotActiveError); ok {
-		// TODO: check if this check applies to cross-cluster task
-		// may result in cross-cluster task being discarded
 		if t.timeSource.Now().Sub(t.submitTime) > 2*cache.DomainCacheRefreshInterval {
 			t.scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
 			return nil
