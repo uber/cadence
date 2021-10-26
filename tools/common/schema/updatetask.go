@@ -39,7 +39,7 @@ type (
 	// UpdateTask represents a task
 	// that executes a cassandra schema upgrade
 	UpdateTask struct {
-		db     DB
+		db     SchemaClient
 		config *UpdateConfig
 	}
 
@@ -85,7 +85,7 @@ var (
 )
 
 // NewUpdateSchemaTask returns a new instance of UpdateTask
-func newUpdateSchemaTask(db DB, config *UpdateConfig) *UpdateTask {
+func newUpdateSchemaTask(db SchemaClient, config *UpdateConfig) *UpdateTask {
 	return &UpdateTask{
 		db:     db,
 		config: config,
@@ -162,7 +162,7 @@ func (task *UpdateTask) execCQLStmts(ver string, stmts []string) error {
 	log.Printf("---- Executing updates for version %v ----\n", ver)
 	for _, stmt := range stmts {
 		log.Println(rmspaceRegex.ReplaceAllString(stmt, " "))
-		e := task.db.Exec(stmt)
+		e := task.db.ExecDDLQuery(stmt)
 		if e != nil {
 			return fmt.Errorf("error executing CQL statement:%v", e)
 		}

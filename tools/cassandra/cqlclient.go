@@ -87,7 +87,7 @@ const (
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
 )
 
-var _ schema.DB = (*CqlClient)(nil)
+var _ schema.SchemaClient = (*CqlClient)(nil)
 
 // NewCQLClient returns a new instance of CQLClient
 func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
@@ -123,12 +123,12 @@ func (client *CqlClient) DropDatabase(name string) error {
 
 // createKeyspace creates a cassandra Keyspace if it doesn't exist
 func (client *CqlClient) CreateKeyspace(name string) error {
-	return client.Exec(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
+	return client.ExecDDLQuery(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
 }
 
 // DropKeyspace drops a Keyspace
 func (client *CqlClient) DropKeyspace(name string) error {
-	return client.Exec(fmt.Sprintf("DROP KEYSPACE %v", name))
+	return client.ExecDDLQuery(fmt.Sprintf("DROP KEYSPACE %v", name))
 }
 
 func (client *CqlClient) DropAllTables() error {
@@ -137,10 +137,10 @@ func (client *CqlClient) DropAllTables() error {
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (client *CqlClient) CreateSchemaVersionTables() error {
-	if err := client.Exec(createSchemaVersionTableCQL); err != nil {
+	if err := client.ExecDDLQuery(createSchemaVersionTableCQL); err != nil {
 		return err
 	}
-	return client.Exec(createSchemaUpdateHistoryTableCQL)
+	return client.ExecDDLQuery(createSchemaUpdateHistoryTableCQL)
 }
 
 // ReadSchemaVersion returns the current schema version for the Keyspace
@@ -172,8 +172,8 @@ func (client *CqlClient) WriteSchemaUpdateLog(oldVersion string, newVersion stri
 	return query.Exec()
 }
 
-// Exec executes a cql statement
-func (client *CqlClient) Exec(stmt string, args ...interface{}) error {
+// ExecDDLQuery executes a cql statement
+func (client *CqlClient) ExecDDLQuery(stmt string, args ...interface{}) error {
 	return client.session.Query(stmt, args...).Exec()
 }
 
@@ -216,12 +216,12 @@ func (client *CqlClient) listTypes() ([]string, error) {
 
 // dropTable drops a given table from the Keyspace
 func (client *CqlClient) dropTable(name string) error {
-	return client.Exec(fmt.Sprintf("DROP TABLE %v", name))
+	return client.ExecDDLQuery(fmt.Sprintf("DROP TABLE %v", name))
 }
 
 // dropType drops a given type from the Keyspace
 func (client *CqlClient) dropType(name string) error {
-	return client.Exec(fmt.Sprintf("DROP TYPE %v", name))
+	return client.ExecDDLQuery(fmt.Sprintf("DROP TYPE %v", name))
 }
 
 // dropAllTablesTypes deletes all tables/types in the

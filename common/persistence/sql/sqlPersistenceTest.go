@@ -21,6 +21,7 @@
 package sql
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -199,7 +200,7 @@ func (s *testCluster) loadDatabaseSchema(dir string, fileNames []string, overrid
 		if err != nil {
 			return fmt.Errorf("error reading contents of file %v:%v", file, err.Error())
 		}
-		err = db.Exec(string(content))
+		err = db.ExecSchemaOperationQuery(context.Background(), string(content))
 		if err != nil {
 			return fmt.Errorf("error loading schema from %v: %v", file, err.Error())
 		}
