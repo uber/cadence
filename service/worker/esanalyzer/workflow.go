@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.uber.org/cadence"
@@ -247,7 +248,15 @@ func getFindStuckWorkflowsQuery(
 func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]WorkflowInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 
-	if info.NumWorfklows < int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name)) {
+	minNumWorkflowsNeeded := int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name))
+	if len(analyzer.config.ESAnalyzerLimitToTypes()) > 0 {
+		analyzer.logger.Info("Skipping minimum workflow count validation since workflow types were passed from config")
+	} else if info.NumWorfklows < minNumWorkflowsNeeded {
+		analyzer.logger.Warn(fmt.Sprintf(
+			"Skipping workflow type '%s' because it doesn't have enough(%d) workflows to avg",
+			info.Name,
+			minNumWorkflowsNeeded,
+		))
 		return &[]WorkflowInfo{}, nil
 	}
 
@@ -285,10 +294,12 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]Workflow
 		})
 	}
 
-	analyzer.metricsClient.AddCounter(
-		metrics.ESAnalyzerScope,
-		metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
-		int64(len(workflows)))
+	if len(workflows) > 0 {
+		analyzer.metricsClient.AddCounter(
+			metrics.ESAnalyzerScope,
+			metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
+			int64(len(workflows)))
+	}
 
 	return &workflows, nil
 }
@@ -334,9 +345,17 @@ func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
 // GetWorkflowTypes is activity to get workflow type list from ElasticSearch
 func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
-	aggregationKey := "wfTypes"
-	// Get up to 1000 workflow types having at least 1 workflow in last 30 days
+	limitToTypes := analyzer.config.ESAnalyzerLimitToTypes()
+	if len(limitToTypes) > 0 {
+		results := []WorkflowTypeInfo{}
+		workflowTypes := strings.Split(limitToTypes, ",")
+		for _, wfType := range workflowTypes {
+			results = append(results, WorkflowTypeInfo{Name: wfType})
+		}
+		return &results, nil
+	}
 
+	aggregationKey := "wfTypes"
 	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
 	query := getWorkflowTypesQuery(startDateTime, aggregationKey)
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)

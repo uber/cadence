@@ -193,6 +193,8 @@ const (
 	DefaultESAnalyzerBufferWaitTimeInSeconds = 30 * 60
 	// DefaultESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
 	DefaultESAnalyzerMinNumWorkflowsForAvg = 100
+	// DefaultESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types
+	DefaultESAnalyzerLimitToTypes = ""
 )
 
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError

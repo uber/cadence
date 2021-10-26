@@ -104,6 +104,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 
 	s.config = Config{
 		ESAnalyzerLastNDays:               dynamicconfig.GetIntPropertyFn(30),
+		ESAnalyzerLimitToTypes:            dynamicconfig.GetStringPropertyFn(""),
 		ESAnalyzerNumWorkflowsToRefresh:   dynamicconfig.GetIntPropertyFilteredByWorkflowType(2),
 		ESAnalyzerBufferWaitTimeInSeconds: dynamicconfig.GetIntPropertyFilteredByWorkflowType(30 * 60),
 		ESAnalyzerMinNumWorkflowsForAvg:   dynamicconfig.GetIntPropertyFilteredByWorkflowType(100),
@@ -131,7 +132,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		logger:        s.logger,
 		metricsClient: s.mockMetricClient,
 		esClient:      s.mockESClient,
-		config:        s.config,
+		config:        &s.config,
 	}
 	ctx := context.WithValue(context.Background(), analyzerContextKey, s.analyzer)
 	s.activityEnv.SetTestTimeout(time.Second * 5)
@@ -379,6 +380,30 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsNotEnoughWorkflows()
 		},
 	}
 
+	s.logger.On("Warn", mock.Anything, mock.Anything).Return().Times(1)
+
+	actFuture, err := s.activityEnv.ExecuteActivity(FindStuckWorkflows, info)
+	s.NoError(err)
+	var results []WorkflowInfo
+	err = actFuture.Get(&results)
+	s.NoError(err)
+	s.Equal(0, len(results))
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsMinNumWorkflowValidationSkipped() {
+	info := WorkflowTypeInfo{
+		Name:         s.WorkflowType,
+		NumWorfklows: int64(s.config.ESAnalyzerMinNumWorkflowsForAvg(s.WorkflowType) - 1),
+		Duration: Duration{
+			AvgExecTime: 60 * 100, // 100 mins
+		},
+	}
+
+	s.config.ESAnalyzerLimitToTypes = dynamicconfig.GetStringPropertyFn(s.WorkflowType)
+	s.logger.On("Info", mock.Anything, mock.Anything).Return().Times(1)
+	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(&elasticsearch.RawResponse{}, nil).Times(1)
+
 	actFuture, err := s.activityEnv.ExecuteActivity(FindStuckWorkflows, info)
 	s.NoError(err)
 	var results []WorkflowInfo
@@ -424,4 +449,23 @@ func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
 	s.NoError(err)
 	s.Equal(2, len(results))
 	s.Equal(esResult.Buckets, results)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypesFromConfig() {
+	workflowTypes := []WorkflowTypeInfo{
+		{Name: "workflow1"},
+		{Name: "workflow2"},
+		{Name: "workflow3"},
+	}
+
+	s.config.ESAnalyzerLimitToTypes = dynamicconfig.GetStringPropertyFn("workflow1,workflow2,workflow3")
+	s.logger.On("Info", mock.Anything, mock.Anything).Return().Once()
+
+	actFuture, err := s.activityEnv.ExecuteActivity(GetWorkflowTypes)
+	s.NoError(err)
+	var results []WorkflowTypeInfo
+	err = actFuture.Get(&results)
+	s.NoError(err)
+	s.Equal(3, len(results))
+	s.Equal(workflowTypes, results)
 }

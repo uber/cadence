@@ -56,12 +56,13 @@ type (
 		visibilityIndexName string
 		resource            resource.Resource
 		domainCache         cache.DomainCache
-		config              Config
+		config              *Config
 	}
 
 	// Config contains all configs for ElasticSearch Analyzer
 	Config struct {
 		ESAnalyzerLastNDays               dynamicconfig.IntPropertyFn
+		ESAnalyzerLimitToTypes            dynamicconfig.StringPropertyFn
 		ESAnalyzerNumWorkflowsToRefresh   dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerBufferWaitTimeInSeconds dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerMinNumWorkflowsForAvg   dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
@@ -80,7 +81,7 @@ func New(
 	tallyScope tally.Scope,
 	resource resource.Resource,
 	domainCache cache.DomainCache,
-	config Config,
+	config *Config,
 ) *Analyzer {
 	return &Analyzer{
 		svcClient:           svcClient,

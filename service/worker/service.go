@@ -160,6 +160,7 @@ func NewConfig(params *resource.Params) *Config {
 		},
 		ESAnalyzerCfg: &esanalyzer.Config{
 			ESAnalyzerLastNDays:               dc.GetIntProperty(dynamicconfig.ESAnalyzerLastNDays, common.DefaultESAnalyzerLastNDays),
+			ESAnalyzerLimitToTypes:            dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToTypes, common.DefaultESAnalyzerLimitToTypes),
 			ESAnalyzerNumWorkflowsToRefresh:   dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),
 			ESAnalyzerBufferWaitTimeInSeconds: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTimeInSeconds, common.DefaultESAnalyzerBufferWaitTimeInSeconds),
 			ESAnalyzerMinNumWorkflowsForAvg:   dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg, common.DefaultESAnalyzerMinNumWorkflowsForAvg),
@@ -277,7 +278,7 @@ func (s *Service) startESAnalyzer() {
 		s.params.MetricScope,
 		s.Resource,
 		s.GetDomainCache(),
-		*s.config.ESAnalyzerCfg,
+		s.config.ESAnalyzerCfg,
 	)
 
 	if err := analyzer.Start(); err != nil {
