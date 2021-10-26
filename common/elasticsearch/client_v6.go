@@ -448,7 +448,7 @@ func (c *elasticV6) search(ctx context.Context, p *searchParametersV6) (*elastic
 	return searchService.Do(ctx)
 }
 
-func (c *elasticV6) SearchRaw(ctx context.Context, index, query string) (*RawResponse, error) {
+func (c *elasticV6) SearchRaw(ctx context.Context, index string, query string) (*RawResponse, error) {
 	// There's slight differences between the v6 and v7 response preventing us to move
 	// this to a common function
 	esResult, err := c.client.Search(index).Source(query).Do(ctx)

@@ -1,0 +1,427 @@
+// Copyright (c) 2017-2021 Uber Technologies Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+package esanalyzer
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/testsuite"
+	"go.uber.org/cadence/worker"
+	"go.uber.org/cadence/workflow"
+
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/elasticsearch"
+	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
+
+	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/client/admin"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/resource"
+)
+
+type esanalyzerWorkflowTestSuite struct {
+	suite.Suite
+	testsuite.WorkflowTestSuite
+	activityEnv      *testsuite.TestActivityEnvironment
+	workflowEnv      *testsuite.TestWorkflowEnvironment
+	controller       *gomock.Controller
+	resource         *resource.Test
+	mockAdminClient  *admin.MockClient
+	mockDomainCache  *cache.MockDomainCache
+	clientBean       *client.MockBean
+	logger           *log.MockLogger
+	mockMetricClient *mocks.Client
+	mockESClient     *esMocks.GenericClient
+	analyzer         *Analyzer
+	config           Config
+	DomainID         string
+	DomainName       string
+	WorkflowType     string
+	WorkflowID       string
+	RunID            string
+}
+
+func TestESAnalyzerWorkflowTestSuite(t *testing.T) {
+	suite.Run(t, new(esanalyzerWorkflowTestSuite))
+}
+
+func forTest(str string) string {
+	return fmt.Sprintf("%v-test", str)
+}
+
+func (s *esanalyzerWorkflowTestSuite) SetupTest() {
+	s.DomainID = "deadbeef-0123-4567-890a-bcdef0123460"
+	s.DomainName = "test-domain"
+	s.WorkflowType = "test-workflow-type"
+	s.WorkflowID = "test-workflow_id"
+	s.RunID = "test-run_id"
+
+	activeDomainCache := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: s.DomainID, Name: s.DomainName},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234,
+		cluster.GetTestClusterMetadata(true, true),
+	)
+
+	s.config = Config{
+		ESAnalyzerLastNDays:               dynamicconfig.GetIntPropertyFn(30),
+		ESAnalyzerNumWorkflowsToRefresh:   dynamicconfig.GetIntPropertyFilteredByWorkflowType(2),
+		ESAnalyzerBufferWaitTimeInSeconds: dynamicconfig.GetIntPropertyFilteredByWorkflowType(30 * 60),
+		ESAnalyzerMinNumWorkflowsForAvg:   dynamicconfig.GetIntPropertyFilteredByWorkflowType(100),
+	}
+
+	s.activityEnv = s.NewTestActivityEnvironment()
+	s.workflowEnv = s.NewTestWorkflowEnvironment()
+	s.controller = gomock.NewController(s.T())
+	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
+	s.resource = resource.NewTest(s.controller, metrics.Worker)
+	s.mockAdminClient = admin.NewMockClient(s.controller)
+	s.clientBean = client.NewMockBean(s.controller)
+	s.logger = &log.MockLogger{}
+	s.mockMetricClient = &mocks.Client{}
+	s.mockESClient = &esMocks.GenericClient{}
+
+	s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
+	s.clientBean.EXPECT().GetRemoteAdminClient(cluster.TestCurrentClusterName).Return(s.mockAdminClient).AnyTimes()
+
+	// SET UP ANALYZER
+	s.analyzer = &Analyzer{
+		svcClient:     s.resource.GetSDKClient(),
+		clientBean:    s.clientBean,
+		domainCache:   s.mockDomainCache,
+		logger:        s.logger,
+		metricsClient: s.mockMetricClient,
+		esClient:      s.mockESClient,
+		config:        s.config,
+	}
+	ctx := context.WithValue(context.Background(), analyzerContextKey, s.analyzer)
+	s.activityEnv.SetTestTimeout(time.Second * 5)
+	s.activityEnv.SetWorkerOptions(worker.Options{BackgroundActivityContext: ctx})
+
+	// REGISTER WORKFLOWS AND ACTIVITIES
+	s.workflowEnv.RegisterWorkflowWithOptions(Workflow, workflow.RegisterOptions{Name: forTest(esanalyzerWFTypeName)})
+	s.activityEnv.RegisterActivityWithOptions(GetWorkflowTypes, activity.RegisterOptions{Name: forTest(getWorkflowTypesActivity)})
+	s.activityEnv.RegisterActivityWithOptions(FindStuckWorkflows, activity.RegisterOptions{Name: forTest(findStuckWorkflowsActivity)})
+	s.activityEnv.RegisterActivityWithOptions(
+		RefreshStuckWorkflowsFromSameWorkflowType,
+		activity.RegisterOptions{Name: forTest(refreshStuckWorkflowsActivity)},
+	)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TearDownTest() {
+	defer s.controller.Finish()
+	defer s.resource.Finish(s.T())
+
+	s.workflowEnv.AssertExpectations(s.T())
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflow() {
+	workflowTypeInfos := []WorkflowTypeInfo{
+		{
+			Name:         s.WorkflowType,
+			NumWorfklows: 564,
+			Duration:     Duration{AvgExecTime: 123},
+		},
+	}
+	s.workflowEnv.OnActivity(getWorkflowTypesActivity, mock.Anything).
+		Return(&workflowTypeInfos, nil).Times(1)
+
+	workflows := []WorkflowInfo{
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+	}
+	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[0]).
+		Return(&workflows, nil).Times(1)
+
+	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows).Return(nil).Times(1)
+
+	s.workflowEnv.ExecuteWorkflow(esanalyzerWFTypeName)
+	err := s.workflowEnv.GetWorkflowResult(nil)
+	s.NoError(err)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflowMultipleWorkflowTypes() {
+	workflowTypeInfos := []WorkflowTypeInfo{
+		{
+			Name:         s.WorkflowType,
+			NumWorfklows: 564,
+			Duration:     Duration{AvgExecTime: 123},
+		},
+		{
+			Name:         "another-workflow-type",
+			NumWorfklows: 778,
+			Duration:     Duration{AvgExecTime: 332},
+		},
+	}
+	s.workflowEnv.OnActivity(getWorkflowTypesActivity, mock.Anything).
+		Return(&workflowTypeInfos, nil).Times(1)
+
+	workflows1 := []WorkflowInfo{
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+	}
+	workflows2 := []WorkflowInfo{
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+	}
+	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[0]).
+		Return(&workflows1, nil).Times(1)
+	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[1]).
+		Return(&workflows2, nil).Times(1)
+
+	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows1).Return(nil).Times(1)
+	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows2).Return(nil).Times(1)
+
+	s.workflowEnv.ExecuteWorkflow(esanalyzerWFTypeName)
+	err := s.workflowEnv.GetWorkflowResult(nil)
+	s.NoError(err)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowTypeSingleWorkflow() {
+	workflows := []WorkflowInfo{
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+	}
+
+	s.mockAdminClient.EXPECT().RefreshWorkflowTasks(gomock.Any(), &types.RefreshWorkflowTasksRequest{
+		Domain: s.DomainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+	}).Return(nil).Times(1)
+	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Once()
+	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Once()
+
+	_, err := s.activityEnv.ExecuteActivity(RefreshStuckWorkflowsFromSameWorkflowType, workflows)
+	s.NoError(err)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowTypeMultipleWorkflows() {
+	anotherWorkflowID := "another-worklow-id"
+	anotherRunID := "another-run-id"
+
+	workflows := []WorkflowInfo{
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: anotherWorkflowID,
+			RunID:      anotherRunID,
+		},
+	}
+
+	expectedWorkflows := map[string]bool{s.WorkflowID: false, anotherWorkflowID: false}
+	expectedRunIDs := map[string]bool{s.RunID: false, anotherRunID: false}
+	s.mockAdminClient.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any()).Return(nil).Do(func(
+		ctx context.Context,
+		request *types.RefreshWorkflowTasksRequest,
+	) {
+		expectedWorkflows[request.Execution.WorkflowID] = true
+		expectedRunIDs[request.Execution.RunID] = true
+	}).Times(2)
+	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Times(2)
+	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
+
+	_, err := s.activityEnv.ExecuteActivity(RefreshStuckWorkflowsFromSameWorkflowType, workflows)
+	s.NoError(err)
+
+	s.Equal(2, len(expectedWorkflows))
+	s.True(expectedWorkflows[s.WorkflowID])
+	s.True(expectedWorkflows[anotherWorkflowID])
+
+	s.Equal(2, len(expectedRunIDs))
+	s.True(expectedRunIDs[s.RunID])
+	s.True(expectedRunIDs[anotherRunID])
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowInconsistentDomain() {
+	anotherDomainID := "another-domain-id"
+	anotherWorkflowID := "another-worklow-id"
+	anotherRunID := "another-run-id"
+
+	workflows := []WorkflowInfo{
+		{
+			DomainID:   s.DomainID,
+			WorkflowID: s.WorkflowID,
+			RunID:      s.RunID,
+		},
+		{
+			DomainID:   anotherDomainID,
+			WorkflowID: anotherWorkflowID,
+			RunID:      anotherRunID,
+		},
+	}
+
+	expectedWorkflows := map[string]bool{s.WorkflowID: false, anotherWorkflowID: false}
+	expectedRunIDs := map[string]bool{s.RunID: false, anotherRunID: false}
+	s.mockAdminClient.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any()).Return(nil).Do(func(
+		ctx context.Context,
+		request *types.RefreshWorkflowTasksRequest,
+	) {
+		expectedWorkflows[request.Execution.WorkflowID] = true
+		expectedRunIDs[request.Execution.RunID] = true
+	}).Times(1)
+	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Times(2)
+	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
+
+	_, err := s.activityEnv.ExecuteActivity(RefreshStuckWorkflowsFromSameWorkflowType, workflows)
+	s.Error(err)
+	s.EqualError(err, "InternalServiceError{Message: Inconsistent worklow. Expected domainID: deadbeef-0123-4567-890a-bcdef0123460, actual: another-domain-id}")
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflows() {
+	info := WorkflowTypeInfo{
+		Name:         s.WorkflowType,
+		NumWorfklows: 123113,
+		Duration: Duration{
+			AvgExecTime: 60 * 100, // 100 mins
+		},
+	}
+
+	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+		&elasticsearch.RawResponse{
+			TookInMillis: 12,
+			Hits: elasticsearch.SearchHits{
+				TotalHits: 2,
+				Hits: []*persistence.InternalVisibilityWorkflowExecutionInfo{
+					{
+						DomainID:   s.DomainID,
+						WorkflowID: s.WorkflowID,
+						RunID:      s.RunID,
+					},
+					{
+						DomainID:   s.DomainID,
+						WorkflowID: "workflow2",
+						RunID:      "run2",
+					},
+				},
+			},
+		},
+		nil).Times(1)
+	s.mockMetricClient.On(
+		"AddCounter",
+		metrics.ESAnalyzerScope,
+		metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
+		int64(2),
+	).Return().Times(1)
+
+	actFuture, err := s.activityEnv.ExecuteActivity(FindStuckWorkflows, info)
+	s.NoError(err)
+	var results []WorkflowInfo
+	err = actFuture.Get(&results)
+	s.NoError(err)
+	s.Equal(2, len(results))
+	s.Equal(WorkflowInfo{DomainID: s.DomainID, WorkflowID: s.WorkflowID, RunID: s.RunID}, results[0])
+	s.Equal(WorkflowInfo{DomainID: s.DomainID, WorkflowID: "workflow2", RunID: "run2"}, results[1])
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsNotEnoughWorkflows() {
+	info := WorkflowTypeInfo{
+		Name:         s.WorkflowType,
+		NumWorfklows: int64(s.config.ESAnalyzerMinNumWorkflowsForAvg(s.WorkflowType) - 1),
+		Duration: Duration{
+			AvgExecTime: 60 * 100, // 100 mins
+		},
+	}
+
+	actFuture, err := s.activityEnv.ExecuteActivity(FindStuckWorkflows, info)
+	s.NoError(err)
+	var results []WorkflowInfo
+	err = actFuture.Get(&results)
+	s.NoError(err)
+	s.Equal(0, len(results))
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
+	esResult := struct {
+		Buckets []WorkflowTypeInfo
+	}{
+		Buckets: []WorkflowTypeInfo{
+			{
+				Name:         s.WorkflowType,
+				NumWorfklows: 564,
+				Duration:     Duration{AvgExecTime: 123},
+			},
+			{
+				Name:         "another-workflow-type",
+				NumWorfklows: 745,
+				Duration:     Duration{AvgExecTime: 987},
+			},
+		},
+	}
+	encoded, err := json.Marshal(esResult)
+	s.NoError(err)
+
+	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+		&elasticsearch.RawResponse{
+			TookInMillis: 12,
+			Aggregations: map[string]*json.RawMessage{
+				"wfTypes": (*json.RawMessage)(&encoded),
+			},
+		},
+		nil).Times(1)
+	s.logger.On("Info", mock.Anything, mock.Anything).Return().Once()
+
+	actFuture, err := s.activityEnv.ExecuteActivity(GetWorkflowTypes)
+	s.NoError(err)
+	var results []WorkflowTypeInfo
+	err = actFuture.Get(&results)
+	s.NoError(err)
+	s.Equal(2, len(results))
+	s.Equal(esResult.Buckets, results)
+}

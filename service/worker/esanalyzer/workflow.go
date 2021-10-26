@@ -206,31 +206,13 @@ func RefreshStuckWorkflowsFromSameWorkflowType(
 	return nil
 }
 
-// FindStuckWorkflows is activity to find open workflows that are live significantly longer than average
-func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]WorkflowInfo, error) {
-	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
-
-	if info.NumWorfklows < int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name)) {
-		return &[]WorkflowInfo{}, nil
-	}
-
-	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
-
-	// allow some buffer time to any workflow
-	maxEndTimeAllowed := time.Now().Add(
-		-time.Second * time.Duration(
-			analyzer.config.ESAnalyzerBufferWaitTimeInSeconds(info.Name))).UnixNano()
-	// if the workflow exec time takes longer than 3x avg time, we refresh
-	endTime := time.Now().Add(
-		-time.Second * time.Duration((int64(info.Duration.AvgExecTime) * 3)),
-	).UnixNano()
-	if endTime > maxEndTimeAllowed {
-		endTime = maxEndTimeAllowed
-	}
-
-	maxNumWorkflows := analyzer.config.ESAnalyzerNumWorkflowsToRefresh(info.Name)
-
-	query := fmt.Sprintf(`
+func getFindStuckWorkflowsQuery(
+	startDateTime int64,
+	endTime int64,
+	workflowType string,
+	maxNumWorkflows int,
+) string {
+	return fmt.Sprintf(`
     {
       "query": {
           "bool": {
@@ -258,8 +240,33 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]Workflow
       },
       "size": %d
     }
-    `, startDateTime, endTime, info.Name, maxNumWorkflows)
+    `, startDateTime, endTime, workflowType, maxNumWorkflows)
+}
 
+// FindStuckWorkflows is activity to find open workflows that are live significantly longer than average
+func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]WorkflowInfo, error) {
+	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
+
+	if info.NumWorfklows < int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name)) {
+		return &[]WorkflowInfo{}, nil
+	}
+
+	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
+
+	// allow some buffer time to any workflow
+	maxEndTimeAllowed := time.Now().Add(
+		-time.Second * time.Duration(
+			analyzer.config.ESAnalyzerBufferWaitTimeInSeconds(info.Name))).UnixNano()
+	// if the workflow exec time takes longer than 3x avg time, we refresh
+	endTime := time.Now().Add(
+		-time.Second * time.Duration((int64(info.Duration.AvgExecTime) * 3)),
+	).UnixNano()
+	if endTime > maxEndTimeAllowed {
+		endTime = maxEndTimeAllowed
+	}
+
+	maxNumWorkflows := analyzer.config.ESAnalyzerNumWorkflowsToRefresh(info.Name)
+	query := getFindStuckWorkflowsQuery(startDateTime, endTime, info.Name, maxNumWorkflows)
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
 		analyzer.logger.Error("Failed to query ElasticSearch for stuck workflows",
@@ -286,14 +293,8 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]Workflow
 	return &workflows, nil
 }
 
-// GetWorkflowTypes is activity to get workflow type list from ElasticSearch
-func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
-	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
-	aggregationKey := "wfTypes"
-	// Get up to 1000 workflow types having at least 1 workflow in last 30 days
-
-	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
-	query := fmt.Sprintf(`
+func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
+	return fmt.Sprintf(`
     {
       "query": {
          "bool": {
@@ -328,7 +329,16 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
       }
     }
 	`, startDateTime, aggregationKey)
+}
 
+// GetWorkflowTypes is activity to get workflow type list from ElasticSearch
+func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
+	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
+	aggregationKey := "wfTypes"
+	// Get up to 1000 workflow types having at least 1 workflow in last 30 days
+
+	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
+	query := getWorkflowTypesQuery(startDateTime, aggregationKey)
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
 		analyzer.logger.Error("Failed to query ElasticSearch to find workflow type info",
