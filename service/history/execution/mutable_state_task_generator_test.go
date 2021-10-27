@@ -365,6 +365,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		var transferTasks []persistence.Task
 		var crossClusterTasks []persistence.Task
 		var timerTasks []persistence.Task
+		mockMutableState.EXPECT().GetDomainEntry().Return(domainEntry).AnyTimes()
 		mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
 			transferTasks = tasks
 		}).MaxTimes(1)
