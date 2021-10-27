@@ -27,13 +27,14 @@ import (
 
 	"go.uber.org/yarpc/transport/grpc"
 
-	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	"github.com/urfave/cli"
 	clientapiv11 "go.uber.org/cadence/.gen/proto/api/v1"
 	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
+
+	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 
 	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
