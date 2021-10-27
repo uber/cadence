@@ -498,12 +498,17 @@ func deepCopyHistoryEvent(e *types.HistoryEvent) *types.HistoryEvent {
 func GetChildExecutionDomainName(
 	childInfo *persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
 ) (string, error) {
-	if childInfo.DomainID == "" {
+	if childInfo.DomainID != "" {
+		return domainCache.GetDomainName(childInfo.DomainID)
+	}
+
+	if childInfo.DomainName != "" {
 		return childInfo.DomainName, nil
 	}
 
-	return domainCache.GetDomainName(childInfo.DomainID)
+	return parentDomainEntry.GetInfo().Name, nil
 }
 
 // GetChildExecutionDomainID gets domainID for the child workflow
@@ -513,12 +518,17 @@ func GetChildExecutionDomainName(
 func GetChildExecutionDomainID(
 	childInfo *persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
 ) (string, error) {
 	if childInfo.DomainID != "" {
 		return childInfo.DomainID, nil
 	}
 
-	return domainCache.GetDomainID(childInfo.DomainName)
+	if childInfo.DomainName != "" {
+		return domainCache.GetDomainID(childInfo.DomainName)
+	}
+
+	return parentDomainEntry.GetInfo().ID, nil
 }
 
 // GetChildExecutionDomainEntry get domain entry for the child workflow
@@ -528,10 +538,15 @@ func GetChildExecutionDomainID(
 func GetChildExecutionDomainEntry(
 	childInfo *persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
 ) (*cache.DomainCacheEntry, error) {
 	if childInfo.DomainID != "" {
 		return domainCache.GetDomainByID(childInfo.DomainID)
 	}
 
-	return domainCache.GetDomain(childInfo.DomainName)
+	if childInfo.DomainName != "" {
+		return domainCache.GetDomain(childInfo.DomainName)
+	}
+
+	return parentDomainEntry, nil
 }

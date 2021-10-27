@@ -1019,7 +1019,7 @@ func getChildrenClusters(
 				continue
 			}
 
-			childDomainID, err := GetChildExecutionDomainID(childInfo, domainCache)
+			childDomainID, err := GetChildExecutionDomainID(childInfo, domainCache, mutableState.GetDomainEntry())
 			if err != nil {
 				if common.IsEntityNotExistsError(err) {
 					continue // ignore deleted domain
