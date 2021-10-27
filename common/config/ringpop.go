@@ -25,10 +25,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery"
@@ -36,8 +37,6 @@ import (
 	"github.com/uber/ringpop-go/discovery/statichosts"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
-	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -66,7 +65,7 @@ const (
 // RingpopFactory implements the RingpopFactory interface
 type RingpopFactory struct {
 	config      *Ringpop
-	dispatcher  *yarpc.Dispatcher
+	channel     tchannel.Channel
 	serviceName string
 	logger      log.Logger
 
@@ -78,12 +77,12 @@ type RingpopFactory struct {
 // NewFactory builds a ringpop factory conforming
 // to the underlying configuration
 func (rpConfig *Ringpop) NewFactory(
-	dispatcher *yarpc.Dispatcher,
+	channel tchannel.Channel,
 	serviceName string,
 	logger log.Logger,
 ) (*RingpopFactory, error) {
 
-	return newRingpopFactory(rpConfig, dispatcher, serviceName, logger)
+	return newRingpopFactory(rpConfig, channel, serviceName, logger)
 }
 
 func (rpConfig *Ringpop) validate() error {
@@ -151,7 +150,7 @@ func validateBootstrapMode(
 
 func newRingpopFactory(
 	rpConfig *Ringpop,
-	dispatcher *yarpc.Dispatcher,
+	channel tchannel.Channel,
 	serviceName string,
 	logger log.Logger,
 ) (*RingpopFactory, error) {
@@ -164,7 +163,7 @@ func newRingpopFactory(
 	}
 	return &RingpopFactory{
 		config:      rpConfig,
-		dispatcher:  dispatcher,
+		channel:     channel,
 		serviceName: serviceName,
 		logger:      logger,
 	}, nil
@@ -216,14 +215,10 @@ func (factory *RingpopFactory) getRingpop() (*membership.RingPop, error) {
 }
 
 func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {
-
-	var ch *tcg.Channel
-	var err error
-	if ch, err = factory.getChannel(factory.dispatcher); err != nil {
-		return nil, err
-	}
-
-	rp, err := ringpop.New(factory.config.Name, ringpop.Channel(ch))
+	rp, err := ringpop.New(
+		factory.config.Name,
+		ringpop.Channel(factory.channel.(*tcg.Channel)),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -237,20 +232,6 @@ func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {
 		DiscoverProvider: discoveryProvider,
 	}
 	return membership.NewRingPop(rp, bootstrapOpts, factory.logger), nil
-}
-
-func (factory *RingpopFactory) getChannel(
-	dispatcher *yarpc.Dispatcher,
-) (*tcg.Channel, error) {
-
-	t := dispatcher.Inbounds()[0].Transports()[0].(*tchannel.ChannelTransport)
-	ty := reflect.ValueOf(t.Channel())
-	var ch *tcg.Channel
-	var ok bool
-	if ch, ok = ty.Interface().(*tcg.Channel); !ok {
-		return nil, errors.New("unable to get tchannel out of the dispatcher")
-	}
-	return ch, nil
 }
 
 type dnsHostResolver interface {

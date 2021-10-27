@@ -115,40 +115,22 @@ func (s *sharded) SelectContext(ctx context.Context, dbShardID int, dest interfa
 
 // below are non-transactional methods only
 
-func (s *sharded) Exec(dbShardID int, query string, args ...interface{}) (sql.Result, error) {
-	if dbShardID == sqlplugin.DbShardUndefined {
-		return nil, fmt.Errorf("DbShardUndefined shouldn't be used to Exec, there must be a bug")
-	}
-	if dbShardID == sqlplugin.DbAllShards {
-		// NOTE: this can only be safely used for schema operation
-		var errs []error
-		for _, db := range s.dbs {
-			_, err := db.Exec(query, args...)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-		if len(errs) > 0 {
-			// Note that this will break sqlplugin.ErrorChecker contract, but it's okay for now as DbAllShards are only being used for schema
-			return nil, multierr.Combine(errs...)
-		}
-		return newShardedSqlExecResult(), nil
-	}
-	return s.dbs[dbShardID].Exec(query, args...)
+func (s *sharded) ExecDDL(ctx context.Context, dbShardID int, query string, args ...interface{}) (sql.Result, error) {
+	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
+	// schema operation across shards is implemented by application layer
+	return nil, fmt.Errorf("sharded SQL driver shouldn't be used to ExecDDL, there must be a bug")
 }
 
-func (s *sharded) Select(dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
-		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Select, there must be a bug", dbShardID)
-	}
-	return s.dbs[dbShardID].Select(dest, query, args...)
+func (s *sharded) SelectForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
+	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
+	// schema operation across shards is implemented by application layer
+	return fmt.Errorf("sharded SQL driver shouldn't be used to SelectForSchemaQuery, there must be a bug")
 }
 
-func (s *sharded) Get(dbShardID int, dest interface{}, query string, args ...interface{}) error {
-	if dbShardID == sqlplugin.DbShardUndefined || dbShardID == sqlplugin.DbAllShards {
-		return fmt.Errorf("invalid dbShardID %v shouldn't be used to Get, there must be a bug", dbShardID)
-	}
-	return s.dbs[dbShardID].Get(dest, query, args...)
+func (s *sharded) GetForSchemaQuery(dbShardID int, dest interface{}, query string, args ...interface{}) error {
+	// sharded SQL driver doesn't implement any schema operation as it's hard to guarantee the correctness.
+	// schema operation across shards is implemented by application layer
+	return fmt.Errorf("sharded SQL driver shouldn't be used to GetForSchemaQuery, there must be a bug")
 }
 
 func (s *sharded) BeginTxx(ctx context.Context, dbShardID int, opts *sql.TxOptions) (*sqlx.Tx, error) {
@@ -180,18 +162,6 @@ func (s *sharded) Commit() error {
 
 func (s *sharded) Rollback() error {
 	return s.tx.Rollback()
-}
-
-func newShardedSqlExecResult() sql.Result {
-	return &shardedSqlExecResult{}
-}
-
-func (s shardedSqlExecResult) LastInsertId() (int64, error) {
-	return 0, fmt.Errorf("not implemented for sharded SQL driver")
-}
-
-func (s shardedSqlExecResult) RowsAffected() (int64, error) {
-	return 0, fmt.Errorf("not implemented for sharded SQL driver")
 }
 
 func getUnmatchedTxnError(requestShardID, startedShardId int) error {

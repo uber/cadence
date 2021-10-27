@@ -21,6 +21,8 @@
 package sql
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
@@ -35,7 +37,7 @@ type (
 	}
 )
 
-var _ schema.DB = (*Connection)(nil)
+var _ schema.SchemaClient = (*Connection)(nil)
 
 // NewConnection creates a new connection to database
 func NewConnection(cfg *config.SQL) (*Connection, error) {
@@ -44,15 +46,9 @@ func NewConnection(cfg *config.SQL) (*Connection, error) {
 		return nil, err
 	}
 
-	dbName := cfg.DatabaseName
-	if cfg.UseMultipleDatabases {
-		// TODO: we should validate schemas on all shards(SQL databases) to be safe
-		// https://github.com/uber/cadence/issues/4509 This must be done before announcing the feature is ready
-		dbName = cfg.MultipleDatabasesConfig[sqlplugin.DbDefaultShard].DatabaseName
-	}
 	return &Connection{
 		adminDb: db,
-		dbName:  dbName,
+		dbName:  cfg.DatabaseName,
 	}, nil
 }
 
@@ -76,9 +72,10 @@ func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, 
 	return c.adminDb.WriteSchemaUpdateLog(oldVersion, newVersion, manifestMD5, desc)
 }
 
-// Exec executes a sql statement
-func (c *Connection) Exec(stmt string, args ...interface{}) error {
-	err := c.adminDb.Exec(stmt, args...)
+// ExecDDLQuery executes a sql statement
+func (c *Connection) ExecDDLQuery(stmt string, args ...interface{}) error {
+	// TODO pass in context timeout value from command line param
+	err := c.adminDb.ExecSchemaOperationQuery(context.Background(), stmt, args...)
 	return err
 }
 

@@ -28,7 +28,7 @@ import (
 
 // VerifyCompatibleVersion ensures that the installed version is greater than or equal to the expected version.
 func VerifyCompatibleVersion(
-	db DB,
+	db SchemaClient,
 	dbName string,
 	expectedVersion string,
 ) error {
@@ -51,7 +51,7 @@ func VerifyCompatibleVersion(
 }
 
 // SetupFromConfig sets up schema tables based on the given config
-func SetupFromConfig(config *SetupConfig, db DB) error {
+func SetupFromConfig(config *SetupConfig, db SchemaClient) error {
 	if err := validateSetupConfig(config); err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func SetupFromConfig(config *SetupConfig, db DB) error {
 }
 
 // Setup sets up schema tables
-func Setup(cli *cli.Context, db DB) error {
+func Setup(cli *cli.Context, db SchemaClient) error {
 	cfg, err := newSetupConfig(cli)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func Setup(cli *cli.Context, db DB) error {
 }
 
 // Update updates the schema for the specified database
-func Update(cli *cli.Context, db DB) error {
+func Update(cli *cli.Context, db SchemaClient) error {
 	cfg, err := newUpdateConfig(cli)
 	if err != nil {
 		return err

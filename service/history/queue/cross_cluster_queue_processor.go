@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 
@@ -138,6 +139,7 @@ func (c *crossClusterQueueProcessor) NotifyNewTask(
 }
 
 func (c *crossClusterQueueProcessor) HandleAction(
+	ctx context.Context,
 	clusterName string,
 	action *Action,
 ) (*ActionResult, error) {
@@ -149,8 +151,11 @@ func (c *crossClusterQueueProcessor) HandleAction(
 		}
 	}
 
-	resultNotificationCh, added := queueProcessor.addAction(action)
+	resultNotificationCh, added := queueProcessor.addAction(ctx, action)
 	if !added {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
 		return nil, errProcessorShutdown
 	}
 
@@ -159,6 +164,8 @@ func (c *crossClusterQueueProcessor) HandleAction(
 		return resultNotification.result, resultNotification.err
 	case <-c.shutdownChan:
 		return nil, errProcessorShutdown
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 
