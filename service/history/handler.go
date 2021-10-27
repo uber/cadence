@@ -1968,7 +1968,10 @@ func (h *handlerImpl) RespondCrossClusterTasksCompleted(
 
 	response := &types.RespondCrossClusterTasksCompletedResponse{}
 	if request.FetchNewTasks {
-		response.Tasks, err = engine.GetCrossClusterTasks(ctx, request.TargetCluster)
+		fetchTaskCtx, cancel := common.CreateChildContext(ctx, 0.05)
+		defer cancel()
+
+		response.Tasks, err = engine.GetCrossClusterTasks(fetchTaskCtx, request.TargetCluster)
 		if err != nil {
 			return nil, h.error(err, scope, "", "")
 		}

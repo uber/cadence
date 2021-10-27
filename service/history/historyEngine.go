@@ -2746,7 +2746,7 @@ func (e *historyEngineImpl) ResetTransferQueue(
 	ctx context.Context,
 	clusterName string,
 ) error {
-	_, err := e.txProcessor.HandleAction(clusterName, queue.NewResetAction())
+	_, err := e.txProcessor.HandleAction(ctx, clusterName, queue.NewResetAction())
 	return err
 }
 
@@ -2754,7 +2754,7 @@ func (e *historyEngineImpl) ResetTimerQueue(
 	ctx context.Context,
 	clusterName string,
 ) error {
-	_, err := e.timerProcessor.HandleAction(clusterName, queue.NewResetAction())
+	_, err := e.timerProcessor.HandleAction(ctx, clusterName, queue.NewResetAction())
 	return err
 }
 
@@ -2762,7 +2762,7 @@ func (e *historyEngineImpl) ResetCrossClusterQueue(
 	ctx context.Context,
 	clusterName string,
 ) error {
-	_, err := e.crossClusterProcessor.HandleAction(clusterName, queue.NewResetAction())
+	_, err := e.crossClusterProcessor.HandleAction(ctx, clusterName, queue.NewResetAction())
 	return err
 }
 
@@ -2770,28 +2770,29 @@ func (e *historyEngineImpl) DescribeTransferQueue(
 	ctx context.Context,
 	clusterName string,
 ) (*types.DescribeQueueResponse, error) {
-	return e.describeQueue(e.txProcessor, clusterName)
+	return e.describeQueue(ctx, e.txProcessor, clusterName)
 }
 
 func (e *historyEngineImpl) DescribeTimerQueue(
 	ctx context.Context,
 	clusterName string,
 ) (*types.DescribeQueueResponse, error) {
-	return e.describeQueue(e.timerProcessor, clusterName)
+	return e.describeQueue(ctx, e.timerProcessor, clusterName)
 }
 
 func (e *historyEngineImpl) DescribeCrossClusterQueue(
 	ctx context.Context,
 	clusterName string,
 ) (*types.DescribeQueueResponse, error) {
-	return e.describeQueue(e.crossClusterProcessor, clusterName)
+	return e.describeQueue(ctx, e.crossClusterProcessor, clusterName)
 }
 
 func (e *historyEngineImpl) describeQueue(
+	ctx context.Context,
 	queueProcessor queue.Processor,
 	clusterName string,
 ) (*types.DescribeQueueResponse, error) {
-	resp, err := queueProcessor.HandleAction(clusterName, queue.NewGetStateAction())
+	resp, err := queueProcessor.HandleAction(ctx, clusterName, queue.NewGetStateAction())
 	if err != nil {
 		return nil, err
 	}
@@ -3304,7 +3305,7 @@ func (e *historyEngineImpl) GetCrossClusterTasks(
 	ctx context.Context,
 	targetCluster string,
 ) ([]*types.CrossClusterTaskRequest, error) {
-	actionResult, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewGetTasksAction())
+	actionResult, err := e.crossClusterProcessor.HandleAction(ctx, targetCluster, queue.NewGetTasksAction())
 	if err != nil {
 		return nil, err
 	}
@@ -3317,7 +3318,7 @@ func (e *historyEngineImpl) RespondCrossClusterTasksCompleted(
 	targetCluster string,
 	responses []*types.CrossClusterTaskResponse,
 ) error {
-	_, err := e.crossClusterProcessor.HandleAction(targetCluster, queue.NewUpdateTasksAction(responses))
+	_, err := e.crossClusterProcessor.HandleAction(ctx, targetCluster, queue.NewUpdateTasksAction(responses))
 	return err
 }
 

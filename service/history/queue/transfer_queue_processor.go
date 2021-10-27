@@ -253,7 +253,7 @@ func (t *transferQueueProcessor) FailoverDomain(
 	}
 
 	maxReadLevel := int64(0)
-	actionResult, err := t.HandleAction(t.currentClusterName, NewGetStateAction())
+	actionResult, err := t.HandleAction(context.Background(), t.currentClusterName, NewGetStateAction())
 	if err != nil {
 		t.logger.Error("Transfer Failover Failed", tag.WorkflowDomainIDs(domainIDs), tag.Error(err))
 		if err == errProcessorShutdown {
@@ -299,16 +299,20 @@ func (t *transferQueueProcessor) FailoverDomain(
 	failoverQueueProcessor.Start()
 }
 
-func (t *transferQueueProcessor) HandleAction(clusterName string, action *Action) (*ActionResult, error) {
+func (t *transferQueueProcessor) HandleAction(
+	ctx context.Context,
+	clusterName string,
+	action *Action,
+) (*ActionResult, error) {
 	var resultNotificationCh chan actionResultNotification
 	var added bool
 	if clusterName == t.currentClusterName {
-		resultNotificationCh, added = t.activeQueueProcessor.addAction(action)
+		resultNotificationCh, added = t.activeQueueProcessor.addAction(ctx, action)
 	} else {
 		found := false
 		for standbyClusterName, standbyProcessor := range t.standbyQueueProcessors {
 			if clusterName == standbyClusterName {
-				resultNotificationCh, added = standbyProcessor.addAction(action)
+				resultNotificationCh, added = standbyProcessor.addAction(ctx, action)
 				found = true
 				break
 			}
@@ -320,6 +324,9 @@ func (t *transferQueueProcessor) HandleAction(clusterName string, action *Action
 	}
 
 	if !added {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
 		return nil, errProcessorShutdown
 	}
 
@@ -328,6 +335,8 @@ func (t *transferQueueProcessor) HandleAction(clusterName string, action *Action
 		return resultNotification.result, resultNotification.err
 	case <-t.shutdownChan:
 		return nil, errProcessorShutdown
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 
@@ -384,7 +393,7 @@ func (t *transferQueueProcessor) completeTransferLoop() {
 
 func (t *transferQueueProcessor) completeTransfer() error {
 	newAckLevel := maximumTransferTaskKey
-	actionResult, err := t.HandleAction(t.currentClusterName, NewGetStateAction())
+	actionResult, err := t.HandleAction(context.Background(), t.currentClusterName, NewGetStateAction())
 	if err != nil {
 		return err
 	}
@@ -394,7 +403,7 @@ func (t *transferQueueProcessor) completeTransfer() error {
 
 	if t.isGlobalDomainEnabled {
 		for standbyClusterName := range t.standbyQueueProcessors {
-			actionResult, err := t.HandleAction(standbyClusterName, NewGetStateAction())
+			actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
 			if err != nil {
 				return err
 			}
