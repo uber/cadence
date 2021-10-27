@@ -78,6 +78,37 @@ func CheckCompatibleVersion(
 	cfg config.SQL,
 	expectedVersion string,
 ) error {
+	if !cfg.UseMultipleDatabases {
+		return doCheckCompatibleVersion(cfg, expectedVersion)
+	}
+	// recover from the original at the end
+	defer func() {
+		cfg.User = ""
+		cfg.Password = ""
+		cfg.DatabaseName = ""
+		cfg.ConnectAddr = ""
+		cfg.UseMultipleDatabases = true
+	}()
+	cfg.UseMultipleDatabases = false
+	// loop over every database to check schema version
+	for idx, entry := range cfg.MultipleDatabasesConfig {
+		cfg.User = entry.User
+		cfg.Password = entry.Password
+		cfg.DatabaseName = entry.DatabaseName
+		cfg.ConnectAddr = entry.ConnectAddr
+
+		err := doCheckCompatibleVersion(cfg, expectedVersion)
+		if err != nil {
+			return fmt.Errorf("shardID %d fails at check schema version: %v", idx, err)
+		}
+	}
+	return nil
+}
+
+func doCheckCompatibleVersion(
+	cfg config.SQL,
+	expectedVersion string,
+) error {
 	connection, err := NewConnection(&cfg)
 
 	if err != nil {
