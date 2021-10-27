@@ -21,9 +21,6 @@
 package elasticsearch
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -37,35 +34,9 @@ const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 
 // Build Http Client with TLS
 func buildTLSHTTPClient(config config.TLS) (*http.Client, error) {
-	// Setup base TLS config
-	// EnableHostVerification is a secure flag vs insecureSkipVerify is insecure so inverse the valu
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !config.EnableHostVerification,
-	}
-
-	// Setup server name
-	if config.ServerName != "" {
-		tlsConfig.ServerName = config.ServerName
-	}
-
-	// Load client cert
-	if config.CertFile != "" && config.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(config.CertFile, config.KeyFile)
-		if err != nil {
-			return nil, err
-		}
-		tlsConfig.Certificates = []tls.Certificate{cert}
-	}
-
-	// Load CA cert
-	if config.CaFile != "" {
-		caCert, err := ioutil.ReadFile(config.CaFile)
-		if err != nil {
-			return nil, err
-		}
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-		tlsConfig.RootCAs = caCertPool
+	tlsConfig, err := config.ToTLSConfig()
+	if err != nil {
+		return nil, err
 	}
 
 	// Setup HTTPS client

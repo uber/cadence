@@ -70,6 +70,8 @@ type (
 		RPCTransport string `yaml:"rpcTransport"`
 		// AuthorizationProvider contains the information to authorize the cluster
 		AuthorizationProvider AuthorizationProvider `yaml:"authorizationProvider"`
+		// TLS configures client TLS/SSL authentication for connections to this cluster
+		TLS TLS `yaml:"tls"`
 	}
 
 	AuthorizationProvider struct {

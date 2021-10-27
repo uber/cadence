@@ -21,10 +21,7 @@
 package kafka
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -148,7 +145,7 @@ func (c *clientImpl) newProducerByTopic(topic string) (messaging.Producer, error
 }
 
 func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
-	tlsConfig, err := convertTLSConfig(c.config.TLS)
+	tlsConfig, err := c.config.TLS.ToTLSConfig()
 	if err != nil {
 		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
 	}
@@ -181,36 +178,4 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 		}
 	}
 	return nil
-}
-
-// convertTLSConfig converts tls config
-func convertTLSConfig(authConfig config.TLS) (*tls.Config, error) {
-	if !authConfig.Enabled {
-		return nil, nil
-	}
-
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !authConfig.EnableHostVerification,
-	}
-
-	if authConfig.CaFile != "" {
-		caCertPool := x509.NewCertPool()
-		pemData, err := ioutil.ReadFile(authConfig.CaFile)
-		if err != nil {
-			return nil, err
-		}
-		caCertPool.AppendCertsFromPEM(pemData)
-
-		tlsConfig.RootCAs = caCertPool
-	}
-
-	if authConfig.CertFile != "" && authConfig.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(authConfig.CertFile, authConfig.KeyFile)
-		if err != nil {
-			return nil, err
-		}
-
-		tlsConfig.Certificates = []tls.Certificate{cert}
-	}
-	return tlsConfig, nil
 }

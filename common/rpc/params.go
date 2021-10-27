@@ -21,10 +21,12 @@
 package rpc
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/service"
 
 	"go.uber.org/yarpc"
 )
@@ -36,6 +38,9 @@ type Params struct {
 	GRPCAddress       string
 	GRPCMaxMsgSize    int
 	HostAddressMapper HostAddressMapper
+
+	InboundTLS  *tls.Config
+	OutboundTLS map[string]*tls.Config
 
 	InboundMiddleware  yarpc.InboundMiddleware
 	OutboundMiddleware yarpc.OutboundMiddleware
@@ -55,6 +60,22 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		return Params{}, fmt.Errorf("get listen IP: %v", err)
 	}
 
+	inboundTLS, err := serviceConfig.RPC.TLS.ToTLSConfig()
+	if err != nil {
+		return Params{}, fmt.Errorf("inbound TLS config: %v", err)
+	}
+	outboundTLS := map[string]*tls.Config{}
+	for _, outboundServiceName := range service.List {
+		outboundServiceConfig, err := config.GetServiceConfig(outboundServiceName)
+		if err != nil {
+			continue
+		}
+		outboundTLS[outboundServiceName], err = outboundServiceConfig.RPC.TLS.ToTLSConfig()
+		if err != nil {
+			return Params{}, fmt.Errorf("outbound %s TLS config: %v", outboundServiceName, err)
+		}
+	}
+
 	publicClientOutbound, err := newPublicClientOutbound(config)
 	if err != nil {
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
@@ -67,6 +88,8 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
 		HostAddressMapper: NewGRPCPorts(config),
 		OutboundsBuilder:  publicClientOutbound,
+		InboundTLS:        inboundTLS,
+		OutboundTLS:       outboundTLS,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &inboundMetricsMiddleware{},
 		},

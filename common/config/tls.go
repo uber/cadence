@@ -20,6 +20,12 @@
 
 package config
 
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
+)
+
 type (
 	// TLS describe TLS configuration
 	TLS struct {
@@ -45,3 +51,43 @@ type (
 		ServerName string `yaml:"serverName"`
 	}
 )
+
+// ToTLSConfig converts Cadence TLS config to crypto/tls.Config
+func (config TLS) ToTLSConfig() (*tls.Config, error) {
+	if !config.Enabled {
+		return nil, nil
+	}
+
+	// Setup base TLS config
+	// EnableHostVerification is a secure flag vs insecureSkipVerify is insecure so inverse the value
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: !config.EnableHostVerification,
+	}
+
+	// Setup server name
+	if config.ServerName != "" {
+		tlsConfig.ServerName = config.ServerName
+	}
+
+	// Load CA cert
+	if config.CaFile != "" {
+		caCert, err := ioutil.ReadFile(config.CaFile)
+		if err != nil {
+			return nil, err
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	// Load client cert
+	if config.CertFile != "" && config.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(config.CertFile, config.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	return tlsConfig, nil
+}
