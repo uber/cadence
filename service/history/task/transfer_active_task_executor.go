@@ -374,6 +374,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		task.TargetDomainIDs,
 		mutableState.GetPendingChildExecutionInfos(),
 		t.shard.GetDomainCache(),
+		domainEntry,
 	)
 	if err != nil {
 		return err
@@ -387,7 +388,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		crossClusterTaskGenerators,
 			sameClusterChildDomainIDs,
 			signalParentClosePolicyWorker,
-			err = t.applyParentClosePolicyDomainActiveCheck(task, domainName, children)
+			err = t.applyParentClosePolicyDomainActiveCheck(task, domainName, children, domainEntry)
 		if err != nil {
 			return err
 		}
@@ -500,10 +501,10 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			ctx,
 			wfContext,
 			task,
-			domainName,
 			children,
 			sameClusterChildDomainIDs,
 			signalParentClosePolicyWorker,
+			domainEntry,
 		); err != nil {
 			return err
 		}
@@ -1812,6 +1813,7 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 	task *persistence.TransferTaskInfo,
 	domainName string,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
+	parentDomainEntry *cache.DomainCacheEntry,
 ) ([]generatorF, map[int64]string, bool, error) {
 	sameClusterChildDomainIDs := make(map[int64]string) // child init eventID -> child domainID
 	remoteClusters := make(map[string]map[string]struct{})
@@ -1825,7 +1827,11 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 			continue
 		}
 
-		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
+		targetDomainEntry, err := execution.GetChildExecutionDomainEntry(
+			childInfo,
+			t.shard.GetDomainCache(),
+			parentDomainEntry,
+		)
 		if err != nil {
 			if common.IsEntityNotExistsError(err) {
 				// if domain no longer exists, ignore the child
@@ -1865,10 +1871,10 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	ctx context.Context,
 	wfContext execution.Context,
 	task *persistence.TransferTaskInfo,
-	domainName string,
 	childInfos map[int64]*persistence.ChildExecutionInfo,
 	sameClusterChildDomainIDs map[int64]string, // child init ID -> child domainID
 	signalParentClosePolicyWorkflow bool,
+	parentDomainEntry *cache.DomainCacheEntry,
 ) error {
 	if len(childInfos) == 0 {
 		return nil
@@ -1883,8 +1889,16 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 				continue
 			}
 
+			domainName, err := execution.GetChildExecutionDomainName(childInfo, t.shard.GetDomainCache(), parentDomainEntry)
+			if common.IsEntityNotExistsError(err) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+
 			executions = append(executions, parentclosepolicy.RequestDetail{
-				DomainName: childInfo.DomainName,
+				DomainName: domainName,
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 				Policy:     childInfo.ParentClosePolicy,
@@ -1904,12 +1918,19 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	}
 
 	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
+		domainName, err := t.shard.GetDomainCache().GetDomainName(childDomainID)
+		if err != nil {
+			// domainName is not actually used when applyParentClosePolicy is calling
+			// history service for terminating or cancelling workflow
+			domainName = childDomainID
+		}
+
 		childInfo := childInfos[initiatedID]
 		if err := applyParentClosePolicy(
 			ctx,
 			t.historyClient,
 			childDomainID,
-			childInfo.DomainName,
+			domainName,
 			childInfo.StartedWorkflowID,
 			childInfo.StartedRunID,
 			childInfo.ParentClosePolicy,
@@ -1990,6 +2011,7 @@ func filterPendingChildExecutions(
 	targetDomainIDs map[string]struct{},
 	children map[int64]*persistence.ChildExecutionInfo,
 	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
 ) (map[int64]*persistence.ChildExecutionInfo, error) {
 	if len(targetDomainIDs) == 0 {
 		return children, nil
@@ -1997,7 +2019,7 @@ func filterPendingChildExecutions(
 
 	filteredChildren := make(map[int64]*persistence.ChildExecutionInfo, len(children))
 	for initiatedID, child := range children {
-		domainID, err := domainCache.GetDomainID(child.DomainName)
+		domainID, err := execution.GetChildExecutionDomainID(child, domainCache, parentDomainEntry)
 		if err != nil {
 			if common.IsEntityNotExistsError(err) {
 				// target domain deleted, ignore the child

@@ -532,33 +532,29 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 		return nil, t.processingState, err
 	}
 
+	domainEntry := mutableState.GetDomainEntry()
 	attributes := &types.CrossClusterApplyParentClosePolicyRequestAttributes{}
 	children, err := filterPendingChildExecutions(
 		taskInfo.TargetDomainIDs,
 		mutableState.GetPendingChildExecutionInfos(),
 		t.GetShard().GetDomainCache(),
+		domainEntry,
 	)
 	if err != nil {
 		return nil, t.processingState, err
 	}
 	for _, childInfo := range children {
-		targetDomainEntry, err := t.shard.GetDomainCache().GetDomain(childInfo.DomainName)
+		targetDomainEntry, err := execution.GetChildExecutionDomainEntry(childInfo, t.shard.GetDomainCache(), domainEntry)
 		if err != nil {
 			return nil, t.processingState, err
 		}
 		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
-		// TODO: there's a race condition that can make this organization by clusters buggy
-		// when the child is failing over to another region. This will be handled later.
 		if targetCluster == t.targetCluster {
-			domainID, domainErr := t.shard.GetDomainCache().GetDomainID(childInfo.DomainName)
-			if domainErr != nil {
-				return nil, t.processingState, domainErr
-			}
 
 			attributes.ApplyParentClosePolicyAttributes = append(
 				attributes.ApplyParentClosePolicyAttributes,
 				&types.ApplyParentClosePolicyAttributes{
-					ChildDomainID:     domainID,
+					ChildDomainID:     targetDomainEntry.GetInfo().ID,
 					ChildWorkflowID:   childInfo.StartedWorkflowID,
 					ChildRunID:        childInfo.StartedRunID,
 					ParentClosePolicy: &childInfo.ParentClosePolicy,

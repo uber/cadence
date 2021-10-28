@@ -2150,11 +2150,11 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	attributes := event.ActivityTaskScheduledEventAttributes
 	targetDomainID := e.executionInfo.DomainID
 	if attributes.GetDomain() != "" {
-		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+		var err error
+		targetDomainID, err = e.shard.GetDomainCache().GetDomainID(attributes.GetDomain())
 		if err != nil {
 			return nil, err
 		}
-		targetDomainID = targetDomainEntry.GetInfo().ID
 	}
 
 	scheduleEventID := event.GetEventID()
@@ -3395,7 +3395,11 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 		return nil, nil, err
 	}
 
-	event := e.hBuilder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, attributes)
+	event := e.hBuilder.AddStartChildWorkflowExecutionInitiatedEvent(
+		decisionCompletedEventID,
+		attributes,
+		e.GetDomainEntry().GetInfo().Name,
+	)
 	// Write the event to cache only on active cluster
 	e.eventsCache.PutEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventID(), event)
@@ -3421,6 +3425,16 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 
 	initiatedEventID := event.GetEventID()
 	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
+
+	domainID := e.GetExecutionInfo().DomainID
+	if domainName := attributes.GetDomain(); domainName != "" {
+		// domainName may still be empty if two cadence clusters are running different versions
+		var err error
+		domainID, err = e.shard.GetDomainCache().GetDomainID(domainName)
+		if err != nil {
+			return nil, err
+		}
+	}
 	ci := &persistence.ChildExecutionInfo{
 		Version:               event.GetVersion(),
 		InitiatedID:           initiatedEventID,
@@ -3428,9 +3442,11 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 		StartedID:             common.EmptyEventID,
 		StartedWorkflowID:     attributes.GetWorkflowID(),
 		CreateRequestID:       createRequestID,
-		DomainName:            attributes.GetDomain(),
-		WorkflowTypeName:      attributes.GetWorkflowType().GetName(),
-		ParentClosePolicy:     attributes.GetParentClosePolicy(),
+		DomainID:              domainID,
+		// DomainName field is being deprecated
+		// DomainName:            attributes.GetDomain(),
+		WorkflowTypeName:  attributes.GetWorkflowType().GetName(),
+		ParentClosePolicy: attributes.GetParentClosePolicy(),
 	}
 
 	e.pendingChildExecutionInfoIDs[ci.InitiatedID] = ci
@@ -3552,12 +3568,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	childDomainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(
+		childDomainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionCompletedEvent(event); err != nil {
 		return nil, err
 	}
@@ -3595,12 +3621,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
 	}
@@ -3638,12 +3674,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionCanceledEvent(event); err != nil {
 		return nil, err
 	}
@@ -3681,12 +3727,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionTerminatedEvent(event); err != nil {
 		return nil, err
 	}
@@ -3724,12 +3780,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionTimedOutEvent(event); err != nil {
 		return nil, err
 	}

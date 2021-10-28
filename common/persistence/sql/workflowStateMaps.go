@@ -355,7 +355,8 @@ func updateChildExecutionInfos(
 				StartedWorkflowID:      childExecutionInfo.StartedWorkflowID,
 				StartedRunID:           serialization.MustParseUUID(childExecutionInfo.StartedRunID),
 				CreateRequestID:        childExecutionInfo.CreateRequestID,
-				DomainName:             childExecutionInfo.DomainName,
+				DomainID:               childExecutionInfo.DomainID,
+				DomainNameDEPRECATED:   childExecutionInfo.DomainNameDEPRECATED,
 				WorkflowTypeName:       childExecutionInfo.WorkflowTypeName,
 				ParentClosePolicy:      int32(childExecutionInfo.ParentClosePolicy),
 			}
@@ -427,7 +428,8 @@ func getChildExecutionInfoMap(
 			StartedWorkflowID:     rowInfo.GetStartedWorkflowID(),
 			StartedRunID:          serialization.UUID(rowInfo.GetStartedRunID()).String(),
 			CreateRequestID:       rowInfo.GetCreateRequestID(),
-			DomainName:            rowInfo.GetDomainName(),
+			DomainID:              rowInfo.GetDomainID(),
+			DomainNameDEPRECATED:  rowInfo.GetDomainNameDEPRECATED(),
 			WorkflowTypeName:      rowInfo.GetWorkflowTypeName(),
 			ParentClosePolicy:     types.ParentClosePolicy(rowInfo.GetParentClosePolicy()),
 		}

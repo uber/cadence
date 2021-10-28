@@ -2220,7 +2220,7 @@ func (s *IntegrationSuite) TestChildWorkflowExecution() {
 	s.Nil(err)
 	s.NotNil(completedEvent)
 	completedAttributes := completedEvent.ChildWorkflowExecutionCompletedEventAttributes
-	s.Empty(completedAttributes.Domain)
+	s.Equal(s.domainName, completedAttributes.Domain)
 	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.Equal(wtChild, completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
@@ -2392,7 +2392,7 @@ func (s *IntegrationSuite) TestCronChildWorkflowExecution() {
 	s.Nil(err)
 	s.NotNil(terminatedEvent)
 	terminatedAttributes := terminatedEvent.ChildWorkflowExecutionTerminatedEventAttributes
-	s.Empty(terminatedAttributes.Domain)
+	s.Equal(s.domainName, terminatedAttributes.Domain)
 	s.Equal(childID, terminatedAttributes.WorkflowExecution.WorkflowID)
 	s.Equal(wtChild, terminatedAttributes.WorkflowType.Name)
 

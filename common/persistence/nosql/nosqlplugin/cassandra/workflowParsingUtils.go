@@ -360,8 +360,10 @@ func parseChildExecutionInfo(
 			info.CreateRequestID = v.(gocql.UUID).String()
 		case "event_data_encoding":
 			encoding = common.EncodingType(v.(string))
+		case "domain_id":
+			info.DomainID = v.(gocql.UUID).String()
 		case "domain_name":
-			info.DomainName = v.(string)
+			info.DomainNameDEPRECATED = v.(string)
 		case "workflow_type_name":
 			info.WorkflowTypeName = v.(string)
 		case "parent_close_policy":
