@@ -59,8 +59,9 @@ var (
 )
 
 var (
-	errUnknownTransferTask = errors.New("Unknown transfer task")
-	errWorkflowBusy        = errors.New("Unable to get workflow execution lock within specified timeout")
+	errUnknownTransferTask   = errors.New("Unknown transfer task")
+	errWorkflowBusy          = errors.New("Unable to get workflow execution lock within specified timeout")
+	errTargetDomainNotActive = errors.New("target domain not active")
 )
 
 type (
@@ -485,6 +486,8 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		switch err.(type) {
 		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError:
 			err = nil
+		case *types.DomainNotActiveError:
+			err = errTargetDomainNotActive
 		}
 
 		if err != nil {
@@ -583,7 +586,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 
 		// Check to see if the error is non-transient, in which case add RequestCancelFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
+		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) || err == errTargetDomainNotActive {
 			// for retryable error just return
 			return err
 		}
@@ -693,7 +696,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
+		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) || err == errTargetDomainNotActive {
 			// for retryable error just return
 			return err
 		}
@@ -845,6 +848,9 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		// Check to see if the error is non-transient, in which case add StartChildWorkflowExecutionFailed
 		// event and complete transfer task by setting the err = nil
 		switch err.(type) {
+		// TODO: we should also handle domain not exist error here
+		// but we probably need to introduce a new error type for DomainNotExists,
+		// for now when getting an EntityNotExists error, we can't tell if it's domain or workflow.
 		case *types.WorkflowExecutionAlreadyStartedError:
 			err = recordStartChildExecutionFailed(ctx, task, wfContext, attributes, t.shard.GetTimeSource().Now())
 		}
@@ -1211,6 +1217,8 @@ func createFirstDecisionTask(
 		// as the target domain may failover before first decision is scheduled.
 		case *types.WorkflowExecutionAlreadyCompletedError:
 			return nil
+		case *types.DomainNotActiveError:
+			err = errTargetDomainNotActive
 		}
 	}
 
@@ -1541,11 +1549,14 @@ func requestCancelExternalExecutionWithRetry(
 		backoff.WithRetryableError(common.IsServiceTransientError),
 	)
 	err := throttleRetry.Do(context.Background(), op)
-	if _, ok := err.(*types.CancellationAlreadyRequestedError); ok {
+	switch err.(type) {
+	case *types.CancellationAlreadyRequestedError:
 		// err is CancellationAlreadyRequestedError
 		// this could happen if target workflow cancellation is already requested
 		// mark as success
-		return nil
+		err = nil
+	case *types.DomainNotActiveError:
+		err = errTargetDomainNotActive
 	}
 	return err
 }
@@ -1590,7 +1601,11 @@ func signalExternalExecutionWithRetry(
 		backoff.WithRetryPolicy(taskRetryPolicy),
 		backoff.WithRetryableError(common.IsServiceTransientError),
 	)
-	return throttleRetry.Do(context.Background(), op)
+	err := throttleRetry.Do(context.Background(), op)
+	if _, ok := err.(*types.DomainNotActiveError); ok {
+		err = errTargetDomainNotActive
+	}
+	return err
 }
 
 func removeSignalMutableStateWithRetry(
@@ -1620,11 +1635,14 @@ func removeSignalMutableStateWithRetry(
 		backoff.WithRetryableError(common.IsServiceTransientError),
 	)
 	err := throttleRetry.Do(context.Background(), op)
-	if err != nil && common.IsEntityNotExistsError(err) {
+	switch err.(type) {
+	case *types.EntityNotExistsError:
 		// it's safe to discard entity not exists error here
 		// as there's nothing to remove.
 		// for cross cluster task, we don't have to return the error to the source cluster
 		return nil
+	case *types.DomainNotActiveError:
+		err = errTargetDomainNotActive
 	}
 	return err
 }
@@ -1693,6 +1711,9 @@ func startWorkflowWithRetry(
 		backoff.WithRetryableError(common.IsServiceTransientError),
 	)
 	if err := throttleRetry.Do(context.Background(), op); err != nil {
+		if _, ok := err.(*types.DomainNotActiveError); ok {
+			err = errTargetDomainNotActive
+		}
 		return "", err
 	}
 	return response.GetRunID(), nil
@@ -1920,13 +1941,14 @@ func applyParentClosePolicy(
 	ctx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
 	defer cancel()
 
+	var err error
 	switch parentClosePolicy {
 	case types.ParentClosePolicyAbandon:
 		// noop
-		return nil
+		err = nil
 
 	case types.ParentClosePolicyTerminate:
-		return historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
+		err = historyClient.TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 			DomainUUID: childDomainID,
 			TerminateRequest: &types.TerminateWorkflowExecutionRequest{
 				Domain: childDomainName,
@@ -1940,7 +1962,7 @@ func applyParentClosePolicy(
 		})
 
 	case types.ParentClosePolicyRequestCancel:
-		return historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
+		err = historyClient.RequestCancelWorkflowExecution(ctx, &types.HistoryRequestCancelWorkflowExecutionRequest{
 			DomainUUID: childDomainID,
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 				Domain: childDomainName,
@@ -1953,10 +1975,15 @@ func applyParentClosePolicy(
 		})
 
 	default:
-		return &types.InternalServiceError{
+		err = &types.InternalServiceError{
 			Message: fmt.Sprintf("unknown parent close policy: %v", parentClosePolicy),
 		}
 	}
+
+	if _, ok := err.(*types.DomainNotActiveError); ok {
+		err = errTargetDomainNotActive
+	}
+	return err
 }
 
 func filterPendingChildExecutions(

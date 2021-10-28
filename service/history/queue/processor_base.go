@@ -21,6 +21,7 @@
 package queue
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -79,6 +80,7 @@ type (
 	}
 
 	actionNotification struct {
+		ctx                  context.Context
 		action               *Action
 		resultNotificationCh chan actionResultNotification
 	}
@@ -346,15 +348,22 @@ func (p *processorBase) emitProcessingQueueMetrics() {
 	p.metricsScope.RecordTimer(metrics.ProcessingQueueMaxLevelTimer, time.Duration(maxProcessingQueueLevel))
 }
 
-func (p *processorBase) addAction(action *Action) (chan actionResultNotification, bool) {
+func (p *processorBase) addAction(ctx context.Context, action *Action) (chan actionResultNotification, bool) {
 	resultNotificationCh := make(chan actionResultNotification, 1)
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	select {
 	case p.actionNotifyCh <- actionNotification{
+		ctx:                  ctx,
 		action:               action,
 		resultNotificationCh: resultNotificationCh,
 	}:
 		return resultNotificationCh, true
 	case <-p.shutdownCh:
+		close(resultNotificationCh)
+		return nil, false
+	case <-ctx.Done():
 		close(resultNotificationCh)
 		return nil, false
 	}

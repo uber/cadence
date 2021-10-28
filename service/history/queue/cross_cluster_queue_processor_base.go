@@ -352,7 +352,9 @@ func (c *crossClusterQueueProcessorBase) readTasks(
 	return response.Tasks, len(response.NextPageToken) != 0, nil
 }
 
-func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRequest {
+func (c *crossClusterQueueProcessorBase) pollTasks(
+	ctx context.Context,
+) []*types.CrossClusterTaskRequest {
 
 	batchSize := c.shard.GetConfig().CrossClusterTaskFetchBatchSize(c.shard.GetShardID())
 	tasks := make([]task.CrossClusterTask, 0, batchSize)
@@ -372,6 +374,9 @@ func (c *crossClusterQueueProcessorBase) pollTasks() []*types.CrossClusterTaskRe
 
 	result := []*types.CrossClusterTaskRequest{}
 	for _, task := range tasks {
+		if ctx.Err() != nil {
+			break
+		}
 		request, err := task.GetCrossClusterRequest()
 		if err != nil {
 			if !task.IsValid() {
@@ -500,7 +505,6 @@ func (c *crossClusterQueueProcessorBase) setupBackoffTimerLocked(level int) {
 	})
 }
 
-// TODO: we should pass in a context for handling actions
 func (c *crossClusterQueueProcessorBase) handleActionNotification(notification actionNotification) {
 	switch notification.action.ActionType {
 	case ActionTypeGetTasks:
@@ -508,18 +512,20 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 			result: &ActionResult{
 				ActionType: ActionTypeGetTasks,
 				GetTasksResult: &GetTasksResult{
-					TaskRequests: c.pollTasks(),
+					TaskRequests: c.pollTasks(notification.ctx),
 				},
 			},
 		}
+		close(notification.resultNotificationCh)
 	case ActionTypeUpdateTask:
 		actionAttr := notification.action.UpdateTaskAttributes
+		var actionErr error
 		for _, response := range actionAttr.TaskResponses {
 			if err := c.recordResponse(response); err != nil {
 				select {
 				case <-c.shutdownCh:
-					// return if error is due to shutdown
-					return
+					actionErr = errProcessorShutdown
+					break
 				default:
 				}
 
@@ -527,14 +533,19 @@ func (c *crossClusterQueueProcessorBase) handleActionNotification(notification a
 				// logging is already done in the updateTask method. task is sill available
 				// for polling and will be dispatched again to target cluster.
 			}
+			if ctxErr := notification.ctx.Err(); ctxErr != nil {
+				actionErr = ctxErr
+				break
+			}
 		}
 		notification.resultNotificationCh <- actionResultNotification{
 			result: &ActionResult{
 				ActionType:       ActionTypeUpdateTask,
 				UpdateTaskResult: &UpdateTasksResult{},
 			},
-			err: nil,
+			err: actionErr,
 		}
+		close(notification.resultNotificationCh)
 	default:
 		c.processorBase.handleActionNotification(notification, func() {
 			switch notification.action.ActionType {

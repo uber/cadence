@@ -21,6 +21,7 @@
 package mysql
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -61,48 +62,47 @@ const (
 
 // CreateSchemaVersionTables sets up the schema version tables
 func (mdb *db) CreateSchemaVersionTables() error {
-	if err := mdb.Exec(createSchemaVersionTableQuery); err != nil {
+	if err := mdb.ExecSchemaOperationQuery(context.Background(), createSchemaVersionTableQuery); err != nil {
 		return err
 	}
-	return mdb.Exec(createSchemaUpdateHistoryTableQuery)
+	return mdb.ExecSchemaOperationQuery(context.Background(), createSchemaUpdateHistoryTableQuery)
 }
 
 // ReadSchemaVersion returns the current schema version for the keyspace
 func (mdb *db) ReadSchemaVersion(database string) (string, error) {
 	var version string
-	err := mdb.driver.Get(sqlplugin.DbDefaultShard, &version, readSchemaVersionQuery, database)
+	err := mdb.driver.GetForSchemaQuery(sqlplugin.DbShardUndefined, &version, readSchemaVersionQuery, database)
 	return version, err
 }
 
 // UpdateSchemaVersion updates the schema version for the keyspace
 func (mdb *db) UpdateSchemaVersion(database string, newVersion string, minCompatibleVersion string) error {
-	return mdb.Exec(writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
+	return mdb.ExecSchemaOperationQuery(context.Background(), writeSchemaVersionQuery, database, time.Now(), newVersion, minCompatibleVersion)
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
 func (mdb *db) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
-	return mdb.Exec(writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
+	return mdb.ExecSchemaOperationQuery(context.Background(), writeSchemaUpdateHistoryQuery, now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
 }
 
-// Exec executes a sql statement
+// ExecSchemaOperationQuery executes a sql statement for schema ONLY. DO NOT use it in other cases, otherwise it will not work for multiple SQL database.
 // For Sharded SQL, it will execute the statement for all shards
-// TODO: rename to ExecSchemaQuery so that we know it should use DB_ALL_SHARDS
-func (mdb *db) Exec(stmt string, args ...interface{}) error {
-	_, err := mdb.driver.Exec(sqlplugin.DbAllShards, stmt, args...)
+func (mdb *db) ExecSchemaOperationQuery(ctx context.Context, stmt string, args ...interface{}) error {
+	_, err := mdb.driver.ExecDDL(ctx, sqlplugin.DbShardUndefined, stmt, args...)
 	return err
 }
 
 // ListTables returns a list of tables in this database
 func (mdb *db) ListTables(database string) ([]string, error) {
 	var tables []string
-	err := mdb.driver.Select(sqlplugin.DbDefaultShard, &tables, fmt.Sprintf(listTablesQuery, database))
+	err := mdb.driver.SelectForSchemaQuery(sqlplugin.DbShardUndefined, &tables, fmt.Sprintf(listTablesQuery, database))
 	return tables, err
 }
 
 // DropTable drops a given table from the database
 func (mdb *db) DropTable(name string) error {
-	return mdb.Exec(fmt.Sprintf(dropTableQuery, name))
+	return mdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(dropTableQuery, name))
 }
 
 // DropAllTables drops all tables from this database
@@ -121,10 +121,10 @@ func (mdb *db) DropAllTables(database string) error {
 
 // CreateDatabase creates a database if it doesn't exist
 func (mdb *db) CreateDatabase(name string) error {
-	return mdb.Exec(fmt.Sprintf(createDatabaseQuery, name))
+	return mdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(createDatabaseQuery, name))
 }
 
 // DropDatabase drops a database
 func (mdb *db) DropDatabase(name string) error {
-	return mdb.Exec(fmt.Sprintf(dropDatabaseQuery, name))
+	return mdb.ExecSchemaOperationQuery(context.Background(), fmt.Sprintf(dropDatabaseQuery, name))
 }
