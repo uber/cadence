@@ -23,17 +23,14 @@ package cli
 import (
 	"context"
 
-	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
-
 	"go.uber.org/yarpc/transport/grpc"
 
 	"github.com/urfave/cli"
-	clientapiv11 "go.uber.org/cadence/.gen/proto/api/v1"
-	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 
+	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 
 	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -42,6 +39,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	cc "github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/tools/common/adapter"
 )
 
 const (
@@ -86,13 +84,7 @@ func NewClientFactory() ClientFactory {
 func (b *clientFactory) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	thrift2ProtoInterface := compatibility.NewThrift2ProtoAdapter(
-		clientapiv11.NewDomainAPIYARPCClient(clientConfig),
-		clientapiv11.NewWorkflowAPIYARPCClient(clientConfig),
-		clientapiv11.NewWorkerAPIYARPCClient(clientConfig),
-		clientapiv11.NewVisibilityAPIYARPCClient(clientConfig),
-	)
-	return thrift2ProtoInterface
+	return adapter.BuildClientFrontendFromClientConfig(clientConfig)
 }
 
 // ServerFrontendClient builds a frontend client (based on server side thrift interface)
