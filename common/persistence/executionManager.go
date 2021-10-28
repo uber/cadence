@@ -234,7 +234,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 			StartedRunID:          v.StartedRunID,
 			CreateRequestID:       v.CreateRequestID,
 			DomainID:              v.DomainID,
-			DomainName:            v.DomainName,
+			DomainNameDEPRECATED:  v.DomainNameDEPRECATED,
 			WorkflowTypeName:      v.WorkflowTypeName,
 			ParentClosePolicy:     v.ParentClosePolicy,
 		}
@@ -371,7 +371,7 @@ func (m *executionManagerImpl) SerializeUpsertChildExecutionInfos(
 			StartedWorkflowID:     v.StartedWorkflowID,
 			StartedRunID:          v.StartedRunID,
 			DomainID:              v.DomainID,
-			DomainName:            v.DomainName,
+			DomainNameDEPRECATED:  v.DomainNameDEPRECATED,
 			WorkflowTypeName:      v.WorkflowTypeName,
 			ParentClosePolicy:     v.ParentClosePolicy,
 		}

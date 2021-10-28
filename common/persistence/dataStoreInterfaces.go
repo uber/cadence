@@ -398,7 +398,7 @@ type (
 		StartedEvent          *DataBlob
 		CreateRequestID       string
 		DomainID              string
-		DomainName            string // deprecated: use DomainID field
+		DomainNameDEPRECATED  string // deprecated: use DomainID field
 		WorkflowTypeName      string
 		ParentClosePolicy     types.ParentClosePolicy
 	}

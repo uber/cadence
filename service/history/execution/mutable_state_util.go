@@ -467,7 +467,7 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		StartedRunID:          sourceInfo.StartedRunID,
 		CreateRequestID:       sourceInfo.CreateRequestID,
 		DomainID:              sourceInfo.DomainID,
-		DomainName:            sourceInfo.DomainName,
+		DomainNameDEPRECATED:  sourceInfo.DomainNameDEPRECATED,
 		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 		ParentClosePolicy:     sourceInfo.ParentClosePolicy,
 		InitiatedEvent:        deepCopyHistoryEvent(sourceInfo.InitiatedEvent),
@@ -504,8 +504,8 @@ func GetChildExecutionDomainName(
 		return domainCache.GetDomainName(childInfo.DomainID)
 	}
 
-	if childInfo.DomainName != "" {
-		return childInfo.DomainName, nil
+	if childInfo.DomainNameDEPRECATED != "" {
+		return childInfo.DomainNameDEPRECATED, nil
 	}
 
 	return parentDomainEntry.GetInfo().Name, nil
@@ -524,8 +524,8 @@ func GetChildExecutionDomainID(
 		return childInfo.DomainID, nil
 	}
 
-	if childInfo.DomainName != "" {
-		return domainCache.GetDomainID(childInfo.DomainName)
+	if childInfo.DomainNameDEPRECATED != "" {
+		return domainCache.GetDomainID(childInfo.DomainNameDEPRECATED)
 	}
 
 	return parentDomainEntry.GetInfo().ID, nil
@@ -544,8 +544,8 @@ func GetChildExecutionDomainEntry(
 		return domainCache.GetDomainByID(childInfo.DomainID)
 	}
 
-	if childInfo.DomainName != "" {
-		return domainCache.GetDomain(childInfo.DomainName)
+	if childInfo.DomainNameDEPRECATED != "" {
+		return domainCache.GetDomain(childInfo.DomainNameDEPRECATED)
 	}
 
 	return parentDomainEntry, nil

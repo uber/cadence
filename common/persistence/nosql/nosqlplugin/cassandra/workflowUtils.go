@@ -707,7 +707,7 @@ func resetChildExecutionInfoMap(
 		}
 		cInfo["started_run_id"] = startedRunID
 		cInfo["domain_id"] = c.DomainID
-		cInfo["domain_name"] = c.DomainName
+		cInfo["domain_name"] = c.DomainNameDEPRECATED
 		cInfo["workflow_type_name"] = c.WorkflowTypeName
 		cInfo["parent_close_policy"] = int32(c.ParentClosePolicy)
 
@@ -741,7 +741,7 @@ func (db *cdb) updateChildExecutionInfos(
 			c.CreateRequestID,
 			c.InitiatedEvent.GetEncodingString(),
 			c.DomainID,
-			c.DomainName,
+			c.DomainNameDEPRECATED,
 			c.WorkflowTypeName,
 			int32(c.ParentClosePolicy),
 			shardID,

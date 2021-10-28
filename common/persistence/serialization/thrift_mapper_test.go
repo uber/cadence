@@ -356,7 +356,7 @@ func TestChildExecutionInfo(t *testing.T) {
 		StartedEventEncoding:   "StartedEventEncoding",
 		CreateRequestID:        "CreateRequestID",
 		DomainID:               "DomainID",
-		DomainName:             "DomainName",
+		DomainNameDEPRECATED:   "DomainName",
 		WorkflowTypeName:       "WorkflowTypeName",
 		ParentClosePolicy:      int32(rand.Intn(1000)),
 	}

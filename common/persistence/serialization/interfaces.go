@@ -210,7 +210,7 @@ type (
 		StartedEventEncoding   string
 		CreateRequestID        string
 		DomainID               string
-		DomainName             string
+		DomainNameDEPRECATED   string
 		WorkflowTypeName       string
 		ParentClosePolicy      int32
 	}
