@@ -177,6 +177,7 @@ TaskInfoLoop:
 			return nil, err
 		}
 		if skipTask(pollingCluster, domainEntity) {
+			readLevel = taskInfo.GetTaskID()
 			continue
 		}
 
@@ -234,6 +235,7 @@ TaskInfoLoop:
 	}
 	t.lastTaskCreationTime.Store(lastTaskCreationTime)
 
+	t.logger.Debug("Get replication tasks", tag.SourceCluster(pollingCluster), tag.ShardReplicationAck(lastReadTaskID), tag.ReadLevel(readLevel))
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
 		HasMore:                hasMore,
