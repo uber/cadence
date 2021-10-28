@@ -158,6 +158,9 @@ type BoolPropertyFnWithDomainFilter func(domain string) bool
 // BoolPropertyFnWithDomainIDFilter is a wrapper to get bool property from dynamic config with domainID as filter
 type BoolPropertyFnWithDomainIDFilter func(domainID string) bool
 
+// BoolPropertyFnWithDomainIDAndShardIDFilter is a wrapper to get bool property from dynamic config with domainID and shardID as filter
+type BoolPropertyFnWithDomainIDAndShardIDFilter func(domainID string, shardID int) bool
+
 // BoolPropertyFnWithTaskListInfoFilters is a wrapper to get bool property from dynamic config with three filters: domain, taskList, taskType
 type BoolPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) bool
 
@@ -458,6 +461,23 @@ func (c *Collection) GetBoolPropertyFilteredByDomain(key Key, defaultValue bool)
 func (c *Collection) GetBoolPropertyFilteredByDomainID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDFilter {
 	return func(domainID string) bool {
 		filters := c.toFilterMap(DomainIDFilter(domainID))
+		val, err := c.client.GetBoolValue(
+			key,
+			filters,
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+		}
+		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
+		return val
+	}
+}
+
+// GetBoolPropertyFilteredByDomainIDAndShardID gets property with domainID and shardID filters and asserts that it's a bool
+func (c *Collection) GetBoolPropertyFilteredByDomainIDAndShardID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDAndShardIDFilter {
+	return func(domainID string, shardID int) bool {
+		filters := c.toFilterMap(DomainIDFilter(domainID), ShardIDFilter(shardID))
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,

@@ -4358,7 +4358,14 @@ func (e *mutableStateBuilder) updateWithLastFirstEvent(
 }
 
 func (e *mutableStateBuilder) canReplicateEvents() bool {
-	return e.domainEntry.GetReplicationPolicy() == cache.ReplicationPolicyMultiCluster
+	if e.domainEntry.GetReplicationPolicy() == cache.ReplicationPolicyOneCluster {
+		return false
+	} else {
+		// ReplicationPolicyMultiCluster
+		domainID := e.domainEntry.GetInfo().ID
+		shardID := e.shard.GetShardID()
+		return e.shard.GetConfig().EnableReplicationTaskGeneration(domainID, shardID)
+	}
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch
