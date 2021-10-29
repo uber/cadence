@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -57,6 +58,14 @@ func TestResponseInfoMiddleware(t *testing.T) {
 	assert.Equal(t, 12345, responseInfo.Size)
 }
 
+func TestResponseInfoMiddleware_Error(t *testing.T) {
+	m := responseInfoMiddleware{}
+	ctx, responseInfo := ContextWithResponseInfo(context.Background())
+	_, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{err: fmt.Errorf("test")})
+	assert.Error(t, err)
+	assert.Equal(t, 0, responseInfo.Size)
+}
+
 func TestInboundMetricsMiddleware(t *testing.T) {
 	m := inboundMetricsMiddleware{}
 	h := &fakeHandler{}
@@ -88,13 +97,14 @@ func (h *fakeHandler) Handle(ctx context.Context, req *transport.Request, resw t
 type fakeOutbound struct {
 	verify   func(*transport.Request)
 	response *transport.Response
+	err      error
 }
 
 func (o fakeOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if o.verify != nil {
 		o.verify(request)
 	}
-	return o.response, nil
+	return o.response, o.err
 }
 func (o fakeOutbound) Start() error                      { return nil }
 func (o fakeOutbound) Stop() error                       { return nil }
