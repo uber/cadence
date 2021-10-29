@@ -70,7 +70,7 @@ func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Re
 	response, err := out.Call(ctx, request)
 
 	if value := ctx.Value(_responseInfoContextKey); value != nil {
-		if responseInfo, ok := value.(*ResponseInfo); ok {
+		if responseInfo, ok := value.(*ResponseInfo); ok && response != nil {
 			responseInfo.Size = response.BodySize
 		}
 	}
