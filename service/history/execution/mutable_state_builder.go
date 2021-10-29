@@ -4363,8 +4363,8 @@ func (e *mutableStateBuilder) canReplicateEvents() bool {
 	} else {
 		// ReplicationPolicyMultiCluster
 		domainID := e.domainEntry.GetInfo().ID
-		shardID := e.shard.GetShardID()
-		return e.shard.GetConfig().EnableReplicationTaskGeneration(domainID, shardID)
+		workflowID := e.GetExecutionInfo().WorkflowID
+		return e.shard.GetConfig().EnableReplicationTaskGeneration(domainID, workflowID)
 	}
 }
 

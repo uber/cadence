@@ -1670,7 +1670,7 @@ const (
 	// KeyName: history.enableReplicationTaskGeneration
 	// Value type: Bool
 	// Default value: true
-	// Allowed filters: N/A
+	// Allowed filters: DomainID, WorkflowID
 	EnableReplicationTaskGeneration
 
 	// key for worker

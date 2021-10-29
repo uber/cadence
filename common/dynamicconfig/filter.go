@@ -24,7 +24,7 @@ package dynamicconfig
 type Filter int
 
 func (f Filter) String() string {
-	if f <= UnknownFilter || f > ClusterName {
+	if f <= UnknownFilter || f > WorkflowID {
 		return filters[UnknownFilter]
 	}
 	return filters[f]
@@ -44,6 +44,8 @@ func ParseFilter(filterName string) Filter {
 		return ShardID
 	case "clusterName":
 		return ClusterName
+	case "workflowID":
+		return WorkflowID
 	default:
 		return UnknownFilter
 	}
@@ -57,6 +59,7 @@ var filters = []string{
 	"taskType",
 	"shardID",
 	"clusterName",
+	"workflowID",
 }
 
 const (
@@ -73,6 +76,8 @@ const (
 	ShardID
 	// ClusterName is the cluster name in a multi-region setup
 	ClusterName
+	// WorkflowID is the workflow id
+	WorkflowID
 
 	// LastFilterTypeForTest must be the last one in this const group for testing purpose
 	LastFilterTypeForTest
@@ -120,5 +125,12 @@ func ShardIDFilter(shardID int) FilterOption {
 func ClusterNameFilter(clusterName string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[ClusterName] = clusterName
+	}
+}
+
+// WorkflowIdFilter filters by workflowID
+func WorkflowIdFilter(workflowID string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[WorkflowID] = workflowID
 	}
 }
