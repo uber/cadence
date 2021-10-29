@@ -804,7 +804,8 @@ type (
 		StartedRunID          string
 		StartedEvent          *types.HistoryEvent
 		CreateRequestID       string
-		DomainName            string
+		DomainID              string
+		DomainNameDEPRECATED  string // deprecated: please use DomainID field instead
 		WorkflowTypeName      string
 		ParentClosePolicy     types.ParentClosePolicy
 	}

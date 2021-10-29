@@ -1311,7 +1311,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 		InitiatedEventBatchID: event.GetEventID(),
 		StartedID:             common.EmptyEventID,
 		CreateRequestID:       createRequestID,
-		DomainName:            constants.TestTargetDomainName,
+		DomainID:              constants.TestTargetDomainID,
+		DomainNameDEPRECATED:  constants.TestTargetDomainName,
 	}
 
 	// the create request ID is generated inside, cannot assert equal

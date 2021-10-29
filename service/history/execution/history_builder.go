@@ -451,9 +451,12 @@ func (b *HistoryBuilder) AddWorkflowExecutionSignaledEvent(
 }
 
 // AddStartChildWorkflowExecutionInitiatedEvent adds ChildWorkflowExecutionInitiated event to history
-func (b *HistoryBuilder) AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID int64,
-	attributes *types.StartChildWorkflowExecutionDecisionAttributes) *types.HistoryEvent {
-	event := b.newStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, attributes)
+func (b *HistoryBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
+	decisionCompletedEventID int64,
+	attributes *types.StartChildWorkflowExecutionDecisionAttributes,
+	targetDomainName string,
+) *types.HistoryEvent {
+	event := b.newStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, attributes, targetDomainName)
 
 	return b.addEventToHistory(event)
 }
@@ -989,11 +992,17 @@ func (b *HistoryBuilder) newWorkflowExecutionContinuedAsNewEvent(decisionTaskCom
 	return historyEvent
 }
 
-func (b *HistoryBuilder) newStartChildWorkflowExecutionInitiatedEvent(decisionTaskCompletedEventID int64,
-	startAttributes *types.StartChildWorkflowExecutionDecisionAttributes) *types.HistoryEvent {
+func (b *HistoryBuilder) newStartChildWorkflowExecutionInitiatedEvent(
+	decisionTaskCompletedEventID int64,
+	startAttributes *types.StartChildWorkflowExecutionDecisionAttributes,
+	parentDomainName string,
+) *types.HistoryEvent {
 	historyEvent := b.msBuilder.CreateNewHistoryEvent(types.EventTypeStartChildWorkflowExecutionInitiated)
 	attributes := &types.StartChildWorkflowExecutionInitiatedEventAttributes{}
 	attributes.Domain = startAttributes.Domain
+	if attributes.Domain == "" {
+		attributes.Domain = parentDomainName
+	}
 	attributes.WorkflowID = startAttributes.WorkflowID
 	attributes.WorkflowType = startAttributes.WorkflowType
 	attributes.TaskList = startAttributes.TaskList

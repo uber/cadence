@@ -429,7 +429,8 @@ func childExecutionInfoToThrift(info *ChildExecutionInfo) *sqlblobs.ChildExecuti
 		StartedEvent:           info.StartedEvent,
 		StartedEventEncoding:   &info.StartedEventEncoding,
 		CreateRequestID:        &info.CreateRequestID,
-		DomainName:             &info.DomainName,
+		DomainID:               &info.DomainID,
+		DomainName:             &info.DomainNameDEPRECATED,
 		WorkflowTypeName:       &info.WorkflowTypeName,
 		ParentClosePolicy:      &info.ParentClosePolicy,
 	}
@@ -450,7 +451,8 @@ func childExecutionInfoFromThrift(info *sqlblobs.ChildExecutionInfo) *ChildExecu
 		StartedEvent:           info.StartedEvent,
 		StartedEventEncoding:   info.GetStartedEventEncoding(),
 		CreateRequestID:        info.GetCreateRequestID(),
-		DomainName:             info.GetDomainName(),
+		DomainID:               info.GetDomainID(),
+		DomainNameDEPRECATED:   info.GetDomainName(),
 		WorkflowTypeName:       info.GetWorkflowTypeName(),
 		ParentClosePolicy:      info.GetParentClosePolicy(),
 	}

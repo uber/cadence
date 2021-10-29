@@ -45,7 +45,7 @@ func NewConnection(cfg *config.SQL) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Connection{
 		adminDb: db,
 		dbName:  cfg.DatabaseName,

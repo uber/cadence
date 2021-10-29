@@ -1188,10 +1188,18 @@ func (c *ChildExecutionInfo) GetCreateRequestID() (o string) {
 	return
 }
 
-// GetDomainName internal sql blob getter
-func (c *ChildExecutionInfo) GetDomainName() (o string) {
+// GetDomainID internal sql blob getter
+func (c *ChildExecutionInfo) GetDomainID() (o string) {
 	if c != nil {
-		return c.DomainName
+		return c.DomainID
+	}
+	return
+}
+
+// GetDomainNameDEPRECATED internal sql blob getter
+func (c *ChildExecutionInfo) GetDomainNameDEPRECATED() (o string) {
+	if c != nil {
+		return c.DomainNameDEPRECATED
 	}
 	return
 }

@@ -464,9 +464,13 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 		}
 	}
 
-	targetDomainID, err := r.getTargetDomainID(childWorkflowTargetDomain)
-	if err != nil {
-		return err
+	targetDomainID := childWorkflowInfo.DomainID
+	if targetDomainID == "" {
+		var err error
+		targetDomainID, err = r.getTargetDomainID(childWorkflowTargetDomain)
+		if err != nil {
+			return err
+		}
 	}
 
 	targetCluster, isCrossClusterTask, err := r.isCrossClusterTask(targetDomainID)
@@ -1015,7 +1019,7 @@ func getChildrenClusters(
 				continue
 			}
 
-			childDomainID, err := domainCache.GetDomainID(childInfo.DomainName)
+			childDomainID, err := GetChildExecutionDomainID(childInfo, domainCache, mutableState.GetDomainEntry())
 			if err != nil {
 				if common.IsEntityNotExistsError(err) {
 					continue // ignore deleted domain

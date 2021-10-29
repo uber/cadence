@@ -223,7 +223,8 @@ CREATE TYPE child_execution_info (
   started_event             blob, -- deprecated
   create_request_id         uuid,
   event_data_encoding       text, -- Protocol used for history serialization
-  domain_name               text,
+  domain_id                 uuid,
+  domain_name               text, -- deprecated
   workflow_type_name        text,
   parent_close_policy       int,
 );

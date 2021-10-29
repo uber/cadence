@@ -27,12 +27,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/types"
-
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/types"
 )
 
 func TestShardInfo(t *testing.T) {
@@ -356,7 +355,8 @@ func TestChildExecutionInfo(t *testing.T) {
 		StartedEvent:           []byte("StartedEvent"),
 		StartedEventEncoding:   "StartedEventEncoding",
 		CreateRequestID:        "CreateRequestID",
-		DomainName:             "DomainName",
+		DomainID:               "DomainID",
+		DomainNameDEPRECATED:   "DomainName",
 		WorkflowTypeName:       "WorkflowTypeName",
 		ParentClosePolicy:      int32(rand.Intn(1000)),
 	}

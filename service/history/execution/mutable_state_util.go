@@ -24,6 +24,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -465,7 +466,8 @@ func CopyChildInfo(sourceInfo *persistence.ChildExecutionInfo) *persistence.Chil
 		StartedWorkflowID:     sourceInfo.StartedWorkflowID,
 		StartedRunID:          sourceInfo.StartedRunID,
 		CreateRequestID:       sourceInfo.CreateRequestID,
-		DomainName:            sourceInfo.DomainName,
+		DomainID:              sourceInfo.DomainID,
+		DomainNameDEPRECATED:  sourceInfo.DomainNameDEPRECATED,
 		WorkflowTypeName:      sourceInfo.WorkflowTypeName,
 		ParentClosePolicy:     sourceInfo.ParentClosePolicy,
 		InitiatedEvent:        deepCopyHistoryEvent(sourceInfo.InitiatedEvent),
@@ -487,4 +489,64 @@ func deepCopyHistoryEvent(e *types.HistoryEvent) *types.HistoryEvent {
 		panic(err)
 	}
 	return &copy
+}
+
+// GetChildExecutionDomainName gets domain name for the child workflow
+// NOTE: DomainName in ChildExecutionInfo is being deprecated, and
+// we should always use DomainID field instead.
+// this function exists for backward compatibility reason
+func GetChildExecutionDomainName(
+	childInfo *persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
+) (string, error) {
+	if childInfo.DomainID != "" {
+		return domainCache.GetDomainName(childInfo.DomainID)
+	}
+
+	if childInfo.DomainNameDEPRECATED != "" {
+		return childInfo.DomainNameDEPRECATED, nil
+	}
+
+	return parentDomainEntry.GetInfo().Name, nil
+}
+
+// GetChildExecutionDomainID gets domainID for the child workflow
+// NOTE: DomainName in ChildExecutionInfo is being deprecated, and
+// we should always use DomainID field instead.
+// this function exists for backward compatibility reason
+func GetChildExecutionDomainID(
+	childInfo *persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
+) (string, error) {
+	if childInfo.DomainID != "" {
+		return childInfo.DomainID, nil
+	}
+
+	if childInfo.DomainNameDEPRECATED != "" {
+		return domainCache.GetDomainID(childInfo.DomainNameDEPRECATED)
+	}
+
+	return parentDomainEntry.GetInfo().ID, nil
+}
+
+// GetChildExecutionDomainEntry get domain entry for the child workflow
+// NOTE: DomainName in ChildExecutionInfo is being deprecated, and
+// we should always use DomainID field instead.
+// this function exists for backward compatibility reason
+func GetChildExecutionDomainEntry(
+	childInfo *persistence.ChildExecutionInfo,
+	domainCache cache.DomainCache,
+	parentDomainEntry *cache.DomainCacheEntry,
+) (*cache.DomainCacheEntry, error) {
+	if childInfo.DomainID != "" {
+		return domainCache.GetDomainByID(childInfo.DomainID)
+	}
+
+	if childInfo.DomainNameDEPRECATED != "" {
+		return domainCache.GetDomain(childInfo.DomainNameDEPRECATED)
+	}
+
+	return parentDomainEntry, nil
 }
