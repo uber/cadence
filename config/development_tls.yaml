@@ -3,21 +3,24 @@ services:
     rpc:
       tls:
         enabled: true
-        certFile: config/credentials/keytest.csr
+        certFile: config/credentials/keytest.crt
         keyFile: config/credentials/keytest
+        caFiles:
+          - config/credentials/client.crt
+        requireClientAuth: true
 
   matching:
     rpc:
       tls:
         enabled: true
-        certFile: config/credentials/keytest.csr
+        certFile: config/credentials/keytest.crt
         keyFile: config/credentials/keytest
 
   history:
     rpc:
       tls:
         enabled: true
-        certFile: config/credentials/keytest.csr
+        certFile: config/credentials/keytest.crt
         keyFile: config/credentials/keytest
 
 clusterGroupMetadata:

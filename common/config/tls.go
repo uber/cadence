@@ -49,6 +49,11 @@ type (
 		// See InSecureSkipVerify in http://golang.org/pkg/crypto/tls/ for more info
 		EnableHostVerification bool `yaml:"enableHostVerification"`
 
+		// Set RequireClientAuth to true if mutual TLS is desired.
+		// In this mode, client will need to present their certificate which is signed by CA
+		// that is specified with server "caFile"/"caFiles" or stored in server host level CA store.
+		RequireClientAuth bool `yaml:"requireClientAuth"`
+
 		ServerName string `yaml:"serverName"`
 	}
 )
@@ -86,6 +91,12 @@ func (config TLS) ToTLSConfig() (*tls.Config, error) {
 			caCertPool.AppendCertsFromPEM(caCert)
 		}
 		tlsConfig.RootCAs = caCertPool
+	}
+
+	// Enable mutual TLS
+	if config.RequireClientAuth {
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		tlsConfig.ClientCAs = tlsConfig.RootCAs
 	}
 
 	// Load client cert
