@@ -128,8 +128,8 @@ func ClusterNameFilter(clusterName string) FilterOption {
 	}
 }
 
-// WorkflowIdFilter filters by workflowID
-func WorkflowIdFilter(workflowID string) FilterOption {
+// WorkflowIDFilter filters by workflowID
+func WorkflowIDFilter(workflowID string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[WorkflowID] = workflowID
 	}

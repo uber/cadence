@@ -477,7 +477,7 @@ func (c *Collection) GetBoolPropertyFilteredByDomainID(key Key, defaultValue boo
 // GetBoolPropertyFilteredByDomainIDAndWorkflowID gets property with domainID and workflowID filters and asserts that it's a bool
 func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDAndWorkflowIDFilter {
 	return func(domainID string, workflowID string) bool {
-		filters := c.toFilterMap(DomainIDFilter(domainID), WorkflowIdFilter(workflowID))
+		filters := c.toFilterMap(DomainIDFilter(domainID), WorkflowIDFilter(workflowID))
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,
