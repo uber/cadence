@@ -307,8 +307,8 @@ func (s *Service) Stop() {
 	// 4. Wait for a second
 	// 5. Stop everything forcefully and return
 
-	requestDrainTime := common.MaxDuration(time.Second, s.config.ShutdownDrainDuration())
-	failureDetectionTime := 10 * time.Second
+	requestDrainTime := common.MinDuration(time.Second, s.config.ShutdownDrainDuration())
+	failureDetectionTime := common.MaxDuration(0, s.config.ShutdownDrainDuration()-requestDrainTime)
 
 	s.GetLogger().Info("ShutdownHandler: Updating rpc health status to ShuttingDown")
 	s.handler.UpdateHealthStatus(HealthStatusShuttingDown)
