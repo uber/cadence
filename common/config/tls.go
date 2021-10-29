@@ -42,7 +42,8 @@ type (
 		CertFile string `yaml:"certFile"`
 		KeyFile  string `yaml:"keyFile"`
 
-		CaFile string `yaml:"caFile"` //optional depending on server config
+		CaFile  string   `yaml:"caFile"` //optional depending on server config
+		CaFiles []string `yaml:"caFiles"`
 		// If you want to verify the hostname and server cert (like a wildcard for cass cluster) then you should turn this on
 		// This option is basically the inverse of InSecureSkipVerify
 		// See InSecureSkipVerify in http://golang.org/pkg/crypto/tls/ for more info
@@ -69,14 +70,21 @@ func (config TLS) ToTLSConfig() (*tls.Config, error) {
 		tlsConfig.ServerName = config.ServerName
 	}
 
-	// Load CA cert
+	// Load CA certs
+	caFiles := config.CaFiles
 	if config.CaFile != "" {
-		caCert, err := ioutil.ReadFile(config.CaFile)
-		if err != nil {
-			return nil, err
-		}
+		caFiles = append(caFiles, config.CaFile)
+	}
+
+	if len(caFiles) > 0 {
 		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
+		for _, caFile := range caFiles {
+			caCert, err := ioutil.ReadFile(caFile)
+			if err != nil {
+				return nil, err
+			}
+			caCertPool.AppendCertsFromPEM(caCert)
+		}
 		tlsConfig.RootCAs = caCertPool
 	}
 
