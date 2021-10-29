@@ -23,6 +23,8 @@
 package queue
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/history/task"
@@ -88,7 +90,7 @@ type (
 		common.Daemon
 		FailoverDomain(domainIDs map[string]struct{})
 		NotifyNewTask(clusterName string, executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
-		HandleAction(clusterName string, action *Action) (*ActionResult, error) // TODO: enforce context timeout for Actions
+		HandleAction(ctx context.Context, clusterName string, action *Action) (*ActionResult, error)
 		LockTaskProcessing()
 		UnlockTaskProcessing()
 	}

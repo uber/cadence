@@ -47,11 +47,11 @@ type (
 		Overwrite         bool // overwrite previous data
 		DisableVersioning bool // do not use schema versioning
 	}
-	// DB is the database interface that's required to be implemented
+	// SchemaClient is the database interface that's required to be implemented
 	// for the schema-tool to work
-	DB interface {
-		// Exec executes a cql statement
-		Exec(stmt string, args ...interface{}) error
+	SchemaClient interface {
+		// ExecDDLQuery executes a schema statement
+		ExecDDLQuery(stmt string, args ...interface{}) error
 		// DropAllTables drops all tables
 		DropAllTables() error
 		// CreateSchemaVersionTables sets up the schema version tables

@@ -46,6 +46,7 @@ type Factory struct {
 	logger            log.Logger
 	hostAddressMapper HostAddressMapper
 	tchannel          *tchannel.Transport
+	channel           tchannel.Channel
 	grpc              *grpc.Transport
 	dispatcher        *yarpc.Dispatcher
 }
@@ -55,7 +56,7 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 	inbounds := yarpc.Inbounds{}
 
 	// Create TChannel transport
-	// This is here only because ringpop extracts inbound from the dispatcher and expects tchannel.ChannelTransport,
+	// This is here only because ringpop expects tchannel.ChannelTransport,
 	// everywhere else we use regular tchannel.Transport.
 	ch, err := tchannel.NewChannelTransport(
 		tchannel.ServiceName(p.ServiceName),
@@ -118,12 +119,18 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 		tchannel:          tchannel,
 		grpc:              grpcTransport,
 		dispatcher:        dispatcher,
+		channel:           ch.Channel(),
 	}
 }
 
 // GetDispatcher return a cached dispatcher
 func (d *Factory) GetDispatcher() *yarpc.Dispatcher {
 	return d.dispatcher
+}
+
+// GetChannel returns Tchannel Channel used by Ringpop
+func (d *Factory) GetChannel() tchannel.Channel {
+	return d.channel
 }
 
 // CreateDispatcherForOutbound creates a dispatcher for outbound connection
