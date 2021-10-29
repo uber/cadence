@@ -1614,6 +1614,12 @@ const (
 	// Default value: 100
 	// Allowed filters: N/A
 	ReplicationTaskGenerationQPS
+	// EnableReplicationTaskGeneration is the flag to control replication generation
+	// KeyName: history.enableReplicationTaskGeneration
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: DomainID, WorkflowID
+	EnableReplicationTaskGeneration
 
 	// key for worker
 
@@ -2251,6 +2257,7 @@ var Keys = map[Key]string{
 	ReplicationTaskProcessorStartWaitJitterCoefficient: "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
 	ReplicationTaskProcessorHostQPS:                    "history.ReplicationTaskProcessorHostQPS",
 	ReplicationTaskProcessorShardQPS:                   "history.ReplicationTaskProcessorShardQPS",
+	EnableReplicationTaskGeneration:                    "history.enableReplicationTaskGeneration",
 	ReplicationTaskGenerationQPS:                       "history.ReplicationTaskGenerationQPS",
 	EnableConsistentQuery:                              "history.EnableConsistentQuery",
 	EnableConsistentQueryByDomain:                      "history.EnableConsistentQueryByDomain",
