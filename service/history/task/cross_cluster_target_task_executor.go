@@ -239,6 +239,10 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
+	response := types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	var anyErr error
+	successfulDomains := map[string]struct{}{}
+
 	for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
 		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
 		if err != nil {
@@ -259,6 +263,12 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			childAttrs.ChildRunID,
 			*childAttrs.ParentClosePolicy,
 		)
+		if err == nil {
+			successfulDomains[childAttrs.ChildDomainID] = struct{}{}
+		}
+		var failedCause *types.CrossClusterTaskFailedCause
+		retriable := false
+
 		switch err.(type) {
 		case nil:
 			continue
@@ -269,15 +279,33 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			break
 		default:
 			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
-			return nil, err
+			failedCause, retriable = t.convertErrorToFailureCause(err)
+			// return error only if the error is retriable
+			if retriable {
+				anyErr = err
+			}
 		}
-		scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
+		response.ApplyParentClosePolicyResults = append(
+			response.ApplyParentClosePolicyResults,
+			&types.ApplyParentClosePolicyResult{
+				Child:       childAttrs,
+				FailedCause: failedCause,
+			})
 	}
 
-	// TODO: Consider going through all the children, even if some fail to apply the parent policy,
-	// and add the policy application status by a child identifier (domain-wf-run id)
-	// Right now, return value is all or none even if we were able apply the policy on some children successfuly
-	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}, nil
+	if anyErr != nil && len(successfulDomains) > 0 {
+		// remove already successful domainIDs from the task so we won't retry them
+		// if the task is going to be retried on the target side
+		newAttributes := []*types.ApplyParentClosePolicyAttributes{}
+		for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
+			if _, ok := successfulDomains[childAttrs.ChildDomainID]; !ok {
+				newAttributes = append(newAttributes, childAttrs)
+			}
+		}
+		task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes = newAttributes
+	}
+
+	return &response, anyErr
 }
 
 func (t *crossClusterTargetTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(

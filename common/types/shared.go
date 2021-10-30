@@ -10837,8 +10837,38 @@ func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetAppyParentClose
 	return
 }
 
+type ApplyParentClosePolicyResult struct {
+	Child       *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
+	FailedCause *CrossClusterTaskFailedCause      `json:"failedCause,omitempty"`
+}
+
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyResult) GetChild() (o *ApplyParentClosePolicyAttributes) {
+	if v != nil && v.Child != nil {
+		return v.Child
+	}
+	return
+}
+
+// GetFailedCause is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyResult) GetFailedCause() (o CrossClusterTaskFailedCause) {
+	if v != nil && v.FailedCause != nil {
+		return *v.FailedCause
+	}
+	return
+}
+
 // CrossClusterApplyParentClosePolicyResponseAttributes is an internal type (TBD...)
 type CrossClusterApplyParentClosePolicyResponseAttributes struct {
+	ApplyParentClosePolicyResults []*ApplyParentClosePolicyResult `json:"applyParentClosePolicyResults,omitempty"`
+}
+
+// GetApplyParentClosePolicyResults is an internal getter (TBD...)
+func (v *CrossClusterApplyParentClosePolicyResponseAttributes) GetApplyParentClosePolicyResults() (o []*ApplyParentClosePolicyResult) {
+	if v != nil && v.ApplyParentClosePolicyResults != nil {
+		return v.ApplyParentClosePolicyResults
+	}
+	return
 }
 
 // CrossClusterTaskRequest is an internal type (TBD...)

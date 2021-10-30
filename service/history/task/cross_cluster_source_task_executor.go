@@ -24,6 +24,7 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -302,29 +303,61 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 		return t.generateNewTask(ctx, wfContext, mutableState, task)
 	}
 
-	// handle common errors
-	failedCause := task.response.FailedCause
-	if failedCause != nil {
-		switch *failedCause {
-		case types.CrossClusterTaskFailedCauseDomainNotActive:
-			return t.generateNewTask(ctx, wfContext, mutableState, task)
-		case types.CrossClusterTaskFailedCauseWorkflowNotExists,
-			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
-			// Do nothing, these errors are expected if the target workflow is already closed
-		default:
-			return errUnexpectedErrorFromTarget
+	if task.response == nil || task.response.ApplyParentClosePolicyAttributes == nil {
+		// this should never happen but we can't fix it by retrying. So log the event and return nil
+		t.logger.Error(fmt.Sprintf(
+			"Cross Cluster ApplyParentClosePolicy task response is invalid. Task: %#v, response: %#v.",
+			task,
+			task.response))
+		return nil
+	}
+	results := task.response.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyResults
+
+	err = nil
+	failedDomains := map[string]struct{}{}
+	domainsToRegenerateTask := map[string]struct{}{}
+
+	for _, result := range results {
+		// handle common errors
+		failedCause := result.FailedCause
+		if failedCause != nil {
+			switch *failedCause {
+			case types.CrossClusterTaskFailedCauseDomainNotActive:
+				domainsToRegenerateTask[result.Child.ChildDomainID] = struct{}{}
+				continue
+			case types.CrossClusterTaskFailedCauseWorkflowNotExists,
+				types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+				// Do nothing, these errors are expected if the target workflow is already closed
+			default:
+				// this error will be overriden if there are more than one. so we will use the first error as the failure
+				err = errUnexpectedErrorFromTarget
+				failedDomains[result.Child.ChildDomainID] = struct{}{}
+				continue
+			}
+		}
+
+		// When processing state = processingStateInitialized, there's nothing we need to do
+		// task is already complete, ack the task. All the other states are invalid
+		if processingState(task.response.TaskState) != processingStateInitialized {
+			err = errUnknownTaskProcessingState
+			failedDomains[result.Child.ChildDomainID] = struct{}{}
+			continue
 		}
 	}
 
-	switch processingState(task.response.TaskState) {
-	case processingStateInitialized:
-		// there's nothing we need to do when record child completion is complete
-		// ack the task
-		return nil
-	// processingStateResponseRecorded state is invalid for this operation
-	default:
-		return errUnknownTaskProcessingState
+	if len(domainsToRegenerateTask) > 0 {
+		// since there are domains we can retry, we need to combine them with failed ones too for the retry
+		for domainID := range failedDomains {
+			domainsToRegenerateTask[domainID] = struct{}{}
+		}
+		taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
+		taskInfo.TargetDomainIDs = domainsToRegenerateTask
+		return t.generateNewTask(ctx, wfContext, mutableState, task)
+	} else if len(failedDomains) > 0 {
+		taskInfo.TargetDomainIDs = failedDomains
 	}
+	// should be nil if everything succeeded
+	return err
 }
 
 func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
