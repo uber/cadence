@@ -454,9 +454,6 @@ func (c *elasticV7) SearchRaw(ctx context.Context, index string, query string) (
 	if err != nil {
 		return nil, err
 	}
-	result := RawResponse{
-		TookInMillis: esResult.TookInMillis,
-	}
 
 	if esResult.Error != nil {
 		return nil, types.InternalServiceError{
@@ -468,23 +465,19 @@ func (c *elasticV7) SearchRaw(ctx context.Context, index string, query string) (
 		}
 	}
 
+	result := RawResponse{
+		TookInMillis: esResult.TookInMillis,
+		Aggregations: esResult.Aggregations,
+	}
+
 	result.Hits = SearchHits{
 		TotalHits: esResult.TotalHits(),
-		Hits:      []*p.InternalVisibilityWorkflowExecutionInfo{},
 	}
-	if esResult.Hits != nil {
+	if esResult.Hits != nil && len(esResult.Hits.Hits) > 0 {
+		result.Hits.Hits = []*p.InternalVisibilityWorkflowExecutionInfo{}
 		for _, hit := range esResult.Hits.Hits {
 			workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(hit)
 			result.Hits.Hits = append(result.Hits.Hits, workflowExecutionInfo)
-		}
-	}
-
-	if esResult.Aggregations != nil {
-		for key, agg := range esResult.Aggregations {
-			if result.Aggregations == nil {
-				result.Aggregations = map[string]*json.RawMessage{}
-			}
-			result.Aggregations[key] = &agg
 		}
 	}
 

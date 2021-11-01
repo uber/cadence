@@ -31,8 +31,8 @@ import (
 	"go.uber.org/cadence/activity"
 	cclient "go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -41,25 +41,24 @@ type (
 	contextKey string
 
 	Duration struct {
-		AvgExecTime float64 `json:"value"`
+		AvgExecTimeNanoseconds float64 `json:"value"`
 	}
 
 	WorkflowTypeInfo struct {
 		Name         string   `json:"key"`
-		NumWorfklows int64    `json:"doc_count"`
+		NumWorkflows int64    `json:"doc_count"`
 		Duration     Duration `json:"duration"`
 	}
 
 	WorkflowInfo struct {
-		DomainID   string
-		WorkflowID string
-		RunID      string
+		DomainID   string `json:"DomainID"`
+		WorkflowID string `json:"WorkflowID"`
+		RunID      string `json:"RunID"`
 	}
 )
 
 const (
 	analyzerContextKey contextKey = "analyzerContext"
-	startUpDelay                  = time.Second * 10
 
 	// workflow constants
 	esAnalyzerWFID                = "cadence-sys-tl-esanalyzer"
@@ -97,23 +96,23 @@ var (
 	wfOptions = cclient.StartWorkflowOptions{
 		ID:                           esAnalyzerWFID,
 		TaskList:                     taskListName,
-		ExecutionStartToCloseTimeout: 5 * 24 * time.Hour,
+		ExecutionStartToCloseTimeout: 24 * time.Hour,
 		CronSchedule:                 "0 * * * *", // "At minute 0" => every hour
 	}
 )
 
 func init() {
-	workflow.RegisterWithOptions(Workflow, workflow.RegisterOptions{Name: esanalyzerWFTypeName})
-	activity.RegisterWithOptions(GetWorkflowTypes, activity.RegisterOptions{Name: getWorkflowTypesActivity})
-	activity.RegisterWithOptions(FindStuckWorkflows, activity.RegisterOptions{Name: findStuckWorkflowsActivity})
+	workflow.RegisterWithOptions(workflowFunc, workflow.RegisterOptions{Name: esanalyzerWFTypeName})
+	activity.RegisterWithOptions(getWorkflowTypes, activity.RegisterOptions{Name: getWorkflowTypesActivity})
+	activity.RegisterWithOptions(findStuckWorkflows, activity.RegisterOptions{Name: findStuckWorkflowsActivity})
 	activity.RegisterWithOptions(
-		RefreshStuckWorkflowsFromSameWorkflowType,
+		refreshStuckWorkflowsFromSameWorkflowType,
 		activity.RegisterOptions{Name: refreshStuckWorkflowsActivity},
 	)
 }
 
-// Workflow queries ElasticSearch to detect issues and mitigates them
-func Workflow(ctx workflow.Context) error {
+// workflowFunc queries ElasticSearch to detect issues and mitigates them
+func workflowFunc(ctx workflow.Context) error {
 	// list of workflows with avg workflow duration
 	var wfTypes []WorkflowTypeInfo
 	err := workflow.ExecuteActivity(
@@ -125,7 +124,7 @@ func Workflow(ctx workflow.Context) error {
 	}
 
 	for _, info := range wfTypes {
-		var stuckWorkflows []*WorkflowInfo
+		var stuckWorkflows []WorkflowInfo
 		err := workflow.ExecuteActivity(
 			workflow.WithActivityOptions(ctx, findStuckWorkflowsOptions),
 			findStuckWorkflowsActivity,
@@ -150,18 +149,19 @@ func Workflow(ctx workflow.Context) error {
 	return nil
 }
 
-// RefreshStuckWorkflowsFromSameWorkflowType is activity to refresh stuck workflows from the same domain
-func RefreshStuckWorkflowsFromSameWorkflowType(
+// refreshStuckWorkflowsFromSameWorkflowType is activity to refresh stuck workflows from the same domain
+func refreshStuckWorkflowsFromSameWorkflowType(
 	ctx context.Context,
 	workflows []WorkflowInfo,
 ) error {
+	logger := activity.GetLogger(ctx)
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 	domainID := workflows[0].DomainID
 	domainEntry, err := analyzer.domainCache.GetDomainByID(domainID)
 	if err != nil {
-		analyzer.logger.Error("Failed to get domain entry",
-			tag.WorkflowDomainID(domainID),
-		)
+		logger.Error("Failed to get domain entry",
+			zap.String("error", fmt.Sprintf("%v", err)),
+			zap.String("DomainID", domainID))
 		return err
 	}
 	domainName := domainEntry.GetInfo().Name
@@ -189,16 +189,18 @@ func RefreshStuckWorkflowsFromSameWorkflowType(
 		if err != nil {
 			// Errors might happen if the workflow is already closed. Instead of failing the workflow
 			// log the error and continue
-			analyzer.logger.Error("Failed to refresh stuck workflow",
-				tag.WorkflowDomainName(domainName),
-				tag.WorkflowID(workflow.WorkflowID),
-				tag.WorkflowRunID(workflow.RunID),
+			logger.Error("Failed to refresh stuck workflow",
+				zap.String("error", fmt.Sprintf("%v", err)),
+				zap.String("domainName", domainName),
+				zap.String("workflowID", workflow.WorkflowID),
+				zap.String("runID", workflow.RunID),
 			)
+			analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsFailedToRefresh)
 		} else {
-			analyzer.logger.Info("Refreshed stuck workflow",
-				tag.WorkflowDomainName(domainName),
-				tag.WorkflowID(workflow.WorkflowID),
-				tag.WorkflowRunID(workflow.RunID),
+			logger.Info("Refreshed stuck workflow",
+				zap.String("domainName", domainName),
+				zap.String("workflowID", workflow.WorkflowID),
+				zap.String("runID", workflow.RunID),
 			)
 			analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed)
 		}
@@ -212,7 +214,11 @@ func getFindStuckWorkflowsQuery(
 	endTime int64,
 	workflowType string,
 	maxNumWorkflows int,
-) string {
+) (string, error) {
+	wfTypeMarshaled, err := json.Marshal(workflowType)
+	if err != nil {
+		return "", err
+	}
 	return fmt.Sprintf(`
     {
       "query": {
@@ -241,57 +247,70 @@ func getFindStuckWorkflowsQuery(
       },
       "size": %d
     }
-    `, startDateTime, endTime, workflowType, maxNumWorkflows)
+    `, startDateTime, endTime, wfTypeMarshaled, maxNumWorkflows), nil
 }
 
-// FindStuckWorkflows is activity to find open workflows that are live significantly longer than average
-func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]WorkflowInfo, error) {
+// findStuckWorkflows is activity to find open workflows that are live significantly longer than average
+func findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) ([]WorkflowInfo, error) {
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
+	logger := activity.GetLogger(ctx)
 
 	minNumWorkflowsNeeded := int64(analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name))
 	if len(analyzer.config.ESAnalyzerLimitToTypes()) > 0 {
-		analyzer.logger.Info("Skipping minimum workflow count validation since workflow types were passed from config")
-	} else if info.NumWorfklows < minNumWorkflowsNeeded {
-		analyzer.logger.Warn(fmt.Sprintf(
+		logger.Info("Skipping minimum workflow count validation since workflow types were passed from config")
+	} else if info.NumWorkflows < minNumWorkflowsNeeded {
+		logger.Warn(fmt.Sprintf(
 			"Skipping workflow type '%s' because it doesn't have enough(%d) workflows to avg",
 			info.Name,
 			minNumWorkflowsNeeded,
 		))
-		return &[]WorkflowInfo{}, nil
+		return nil, nil
 	}
 
-	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
+	startDateTime := time.Now().Add(-analyzer.config.ESAnalyzerTimeWindow()).UnixNano()
 
 	// allow some buffer time to any workflow
-	maxEndTimeAllowed := time.Now().Add(
-		-time.Second * time.Duration(
-			analyzer.config.ESAnalyzerBufferWaitTimeInSeconds(info.Name))).UnixNano()
+	maxEndTimeAllowed := time.Now().Add(-analyzer.config.ESAnalyzerBufferWaitTime(info.Name)).UnixNano()
+
 	// if the workflow exec time takes longer than 3x avg time, we refresh
 	endTime := time.Now().Add(
-		-time.Second * time.Duration((int64(info.Duration.AvgExecTime) * 3)),
+		-time.Nanosecond * time.Duration((int64(info.Duration.AvgExecTimeNanoseconds) * 3)),
 	).UnixNano()
 	if endTime > maxEndTimeAllowed {
 		endTime = maxEndTimeAllowed
 	}
 
 	maxNumWorkflows := analyzer.config.ESAnalyzerNumWorkflowsToRefresh(info.Name)
-	query := getFindStuckWorkflowsQuery(startDateTime, endTime, info.Name, maxNumWorkflows)
+	query, err := getFindStuckWorkflowsQuery(startDateTime, endTime, info.Name, maxNumWorkflows)
+	if err != nil {
+		logger.Error("Failed to create ElasticSearch query for stuck workflows",
+			zap.String("error", fmt.Sprintf("%v", err)),
+			zap.String("startDateTime", fmt.Sprintf("%v", startDateTime)),
+			zap.String("endTime", fmt.Sprintf("%v", endTime)),
+			zap.String("workflowType", info.Name),
+			zap.String("maxNumWorkflows", fmt.Sprintf("%v", maxNumWorkflows)),
+		)
+		return nil, err
+	}
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
-		analyzer.logger.Error("Failed to query ElasticSearch for stuck workflows",
-			tag.VisibilityQuery(query),
+		logger.Error("Failed to query ElasticSearch for stuck workflows",
+			zap.String("error", fmt.Sprintf("%v", err)),
+			zap.String("VisibilityQuery", query),
 		)
 		return nil, err
 	}
 
 	// Return a simpler structure to reduce activity output size
 	workflows := []WorkflowInfo{}
-	for _, hit := range response.Hits.Hits {
-		workflows = append(workflows, WorkflowInfo{
-			DomainID:   hit.DomainID,
-			WorkflowID: hit.WorkflowID,
-			RunID:      hit.RunID,
-		})
+	if response.Hits.Hits != nil {
+		for _, hit := range response.Hits.Hits {
+			workflows = append(workflows, WorkflowInfo{
+				DomainID:   hit.DomainID,
+				WorkflowID: hit.WorkflowID,
+				RunID:      hit.RunID,
+			})
+		}
 	}
 
 	if len(workflows) > 0 {
@@ -301,7 +320,7 @@ func FindStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) (*[]Workflow
 			int64(len(workflows)))
 	}
 
-	return &workflows, nil
+	return workflows, nil
 }
 
 func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
@@ -332,7 +351,7 @@ func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
               "aggs": {
                   "duration" : {
                     "avg" : {
-                      "script" : "(doc['CloseTime'].value - doc['StartTime'].value) / 1000000000"
+                      "script" : "(doc['CloseTime'].value - doc['StartTime'].value)"
                     }
                   }
               }
@@ -342,8 +361,9 @@ func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
 	`, startDateTime, aggregationKey)
 }
 
-// GetWorkflowTypes is activity to get workflow type list from ElasticSearch
-func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
+// getWorkflowTypes is activity to get workflow type list from ElasticSearch
+func getWorkflowTypes(ctx context.Context) ([]WorkflowTypeInfo, error) {
+	logger := activity.GetLogger(ctx)
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 	limitToTypes := analyzer.config.ESAnalyzerLimitToTypes()
 	if len(limitToTypes) > 0 {
@@ -352,16 +372,17 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 		for _, wfType := range workflowTypes {
 			results = append(results, WorkflowTypeInfo{Name: wfType})
 		}
-		return &results, nil
+		return results, nil
 	}
 
 	aggregationKey := "wfTypes"
-	startDateTime := time.Now().AddDate(0, 0, -analyzer.config.ESAnalyzerLastNDays()).UnixNano()
+	startDateTime := time.Now().Add(-analyzer.config.ESAnalyzerTimeWindow()).UnixNano()
 	query := getWorkflowTypesQuery(startDateTime, aggregationKey)
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
-		analyzer.logger.Error("Failed to query ElasticSearch to find workflow type info",
-			tag.VisibilityQuery(query),
+		logger.Error("Failed to query ElasticSearch to find workflow type info",
+			zap.String("error", fmt.Sprintf("%v", err)),
+			zap.String("VisibilityQuery", query),
 		)
 		return nil, err
 	}
@@ -375,7 +396,7 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 	var wfTypes struct {
 		Buckets []WorkflowTypeInfo `json:"buckets"`
 	}
-	err = json.Unmarshal(*agg, &wfTypes)
+	err = json.Unmarshal(agg, &wfTypes)
 	if err != nil {
 		return nil, types.InternalServiceError{
 			Message: "ElasticSearch error parsing aggeration",
@@ -384,6 +405,6 @@ func GetWorkflowTypes(ctx context.Context) (*[]WorkflowTypeInfo, error) {
 
 	// This log is supposed to be fired at max once an hour; it's not invasive and can help
 	// get some workflow statistics. Size can be quite big though; not sure what the limit is.
-	analyzer.logger.Info(fmt.Sprintf("WorkflowType stats: %#v", wfTypes.Buckets))
-	return &wfTypes.Buckets, nil
+	logger.Info(fmt.Sprintf("WorkflowType stats: %#v", wfTypes.Buckets))
+	return wfTypes.Buckets, nil
 }

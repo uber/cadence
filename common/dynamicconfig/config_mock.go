@@ -49,6 +49,11 @@ func GetIntPropertyFilteredByWorkflowType(value int) func(workflowType string) i
 	return func(workflowType string) int { return value }
 }
 
+// GetDurationPropertyFilteredByWorkflowType returns values as IntPropertyFnWithWorkflowTypeFilters
+func GetDurationPropertyFilteredByWorkflowType(value time.Duration) func(workflowType string) time.Duration {
+	return func(workflowType string) time.Duration { return value }
+}
+
 // GetFloatPropertyFn returns value as FloatPropertyFn
 func GetFloatPropertyFn(value float64) func(opts ...FilterOption) float64 {
 	return func(...FilterOption) float64 { return value }

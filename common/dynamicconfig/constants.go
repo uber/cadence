@@ -2036,21 +2036,21 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
-	// ESAnalyzerLastNDays controls how many days to consider for ElasticSearch Analyzer
-	// KeyName: worker.ESAnalyzerLastNDays
-	// Value type: Int
-	// Default value: 30
-	ESAnalyzerLastNDays
+	// ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages
+	// KeyName: worker.ESAnalyzerTimeWindow
+	// Value type: Duration
+	// Default value: 30 days
+	ESAnalyzerTimeWindow
 	// ESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
 	// KeyName: worker.ESAnalyzerNumWorkflowsToRefresh
 	// Value type: Int
 	// Default value: 100
 	ESAnalyzerNumWorkflowsToRefresh
-	// ESAnalyzerBufferWaitTimeInSeconds controls how many seconds to take as a min buffer to consider a worklow stuck
-	// KeyName: worker.ESAnalyzerBufferWaitTimeInSeconds
-	// Value type: Int
-	// Default value: 100
-	ESAnalyzerBufferWaitTimeInSeconds
+	// ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck
+	// KeyName: worker.ESAnalyzerBufferWaitTime
+	// Value type: Duration
+	// Default value: 30 minutes
+	ESAnalyzerBufferWaitTime
 	// ESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
 	// KeyName: worker.ESAnalyzerMinNumWorkflowsForAvg
 	// Value type: Int
@@ -2434,11 +2434,11 @@ var Keys = map[Key]string{
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 
-	ESAnalyzerLastNDays:               "worker.ESAnalyzerLastNDays",
-	ESAnalyzerNumWorkflowsToRefresh:   "worker.ESAnalyzerNumWorkflowsToRefresh",
-	ESAnalyzerBufferWaitTimeInSeconds: "worker.ESAnalyzerBufferWaitTimeInSeconds",
-	ESAnalyzerMinNumWorkflowsForAvg:   "worker.ESAnalyzerMinNumWorkflowsForAvg",
-	ESAnalyzerLimitToTypes:            "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerTimeWindow:            "worker.ESAnalyzerTimeWindow",
+	ESAnalyzerNumWorkflowsToRefresh: "worker.ESAnalyzerNumWorkflowsToRefresh",
+	ESAnalyzerBufferWaitTime:        "worker.ESAnalyzerBufferWaitTime",
+	ESAnalyzerMinNumWorkflowsForAvg: "worker.ESAnalyzerMinNumWorkflowsForAvg",
+	ESAnalyzerLimitToTypes:          "worker.ESAnalyzerLimitToTypes",
 }
 
 var KeyNames map[string]Key

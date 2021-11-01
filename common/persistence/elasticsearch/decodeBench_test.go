@@ -45,7 +45,6 @@ var (
          "StartTime": 1547596872371000000,
          "WorkflowID": "6bfbc1e5-6ce4-4e22-bbfb-e0faa9a7a604-1-2256",
          "WorkflowType": "TestWorkflowExecute",
-				 "DomainID": "4cgaa9v2-6ce4-4e22-bbfb-e0faa9a7a604-0-1234",
          "Encoding" : "thriftrw",
          "TaskList" : "taskList",
          "IsCron" : "false",

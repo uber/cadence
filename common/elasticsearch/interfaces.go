@@ -236,6 +236,6 @@ type (
 	RawResponse struct {
 		TookInMillis int64
 		Hits         SearchHits
-		Aggregations map[string]*json.RawMessage
+		Aggregations map[string]json.RawMessage
 	}
 )

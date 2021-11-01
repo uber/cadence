@@ -22,6 +22,7 @@ package esanalyzer
 
 import (
 	"context"
+	"time"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber-go/tally"
@@ -38,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/workercommon"
@@ -61,13 +63,15 @@ type (
 
 	// Config contains all configs for ElasticSearch Analyzer
 	Config struct {
-		ESAnalyzerLastNDays               dynamicconfig.IntPropertyFn
-		ESAnalyzerLimitToTypes            dynamicconfig.StringPropertyFn
-		ESAnalyzerNumWorkflowsToRefresh   dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
-		ESAnalyzerBufferWaitTimeInSeconds dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
-		ESAnalyzerMinNumWorkflowsForAvg   dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerTimeWindow            dynamicconfig.DurationPropertyFn
+		ESAnalyzerLimitToTypes          dynamicconfig.StringPropertyFn
+		ESAnalyzerNumWorkflowsToRefresh dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerBufferWaitTime        dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerMinNumWorkflowsForAvg dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 	}
 )
+
+const startUpDelay = time.Second * 10
 
 // New returns a new instance as daemon
 func New(
@@ -121,6 +125,7 @@ func (a *Analyzer) StartWorkflow(ctx context.Context) {
 		case *shared.WorkflowExecutionAlreadyStartedError:
 			return nil
 		default:
+			a.logger.Error("Failed to start ElasticSearch Analyzer", tag.Error(err))
 			return err
 		}
 	})

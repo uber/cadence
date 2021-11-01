@@ -186,11 +186,11 @@ const (
 
 const (
 	// DefaultESAnalyzerLastNDays controls how many days to go back for ElasticSearch Analyzer
-	DefaultESAnalyzerLastNDays = 30
+	DefaultESAnalyzerTimeWindow = time.Hour * 24 * 30
 	// DefaultESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
 	DefaultESAnalyzerNumWorkflowsToRefresh = 100
-	// DefaultESAnalyzerBufferWaitTimeInSeconds controls how many seconds to take as a min buffer to consider a worklow stuck
-	DefaultESAnalyzerBufferWaitTimeInSeconds = 30 * 60
+	// DefaultESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck
+	DefaultESAnalyzerBufferWaitTime = time.Minute * 30
 	// DefaultESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
 	DefaultESAnalyzerMinNumWorkflowsForAvg = 100
 	// DefaultESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types

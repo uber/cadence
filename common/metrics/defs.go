@@ -1721,7 +1721,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryScavengerScope:                  {operation: "historyscavenger"},
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
-		ESAnalyzerScope:                        {operation: "ESAnalyzerScope"},
+		ESAnalyzerScope:                        {operation: "ESAnalyzer"},
 	},
 }
 
@@ -2239,6 +2239,7 @@ const (
 	DataCorruptionWorkflowSkipCount
 	ESAnalyzerNumStuckWorkflowsDiscovered
 	ESAnalyzerNumStuckWorkflowsRefreshed
+	ESAnalyzerNumStuckWorkflowsFailedToRefresh
 
 	NumWorkerMetrics
 )
@@ -2764,6 +2765,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DataCorruptionWorkflowSkipCount:               {metricName: "data_corruption_workflow_skips", metricType: Counter},
 		ESAnalyzerNumStuckWorkflowsDiscovered:         {metricName: "es_analyzer_num_stuck_workflows_discovered", metricType: Counter},
 		ESAnalyzerNumStuckWorkflowsRefreshed:          {metricName: "es_analyzer_num_stuck_workflows_refreshed", metricType: Counter},
+		ESAnalyzerNumStuckWorkflowsFailedToRefresh:    {metricName: "es_analyzer_num_stuck_workflows_failed_to_refresh", metricType: Counter},
 	},
 }
 
