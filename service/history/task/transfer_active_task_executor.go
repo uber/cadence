@@ -1889,7 +1889,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 				continue
 			}
 
-			domainName, err := execution.GetChildExecutionDomainName(childInfo, t.shard.GetDomainCache(), parentDomainEntry)
+			domainEntry, err := execution.GetChildExecutionDomainEntry(childInfo, t.shard.GetDomainCache(), parentDomainEntry)
 			if common.IsEntityNotExistsError(err) {
 				continue
 			}
@@ -1898,7 +1898,8 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			}
 
 			executions = append(executions, parentclosepolicy.RequestDetail{
-				DomainName: domainName,
+				DomainID:   domainEntry.GetInfo().ID,
+				DomainName: domainEntry.GetInfo().Name,
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 				Policy:     childInfo.ParentClosePolicy,
