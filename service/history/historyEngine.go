@@ -2420,6 +2420,8 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	domainID := domainEntry.GetInfo().ID
 
 	request := terminateRequest.TerminateRequest
+	parentExecution := terminateRequest.ExternalWorkflowExecution
+	childWorkflowOnly := terminateRequest.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: request.WorkflowExecution.WorkflowID,
 		RunID:      request.WorkflowExecution.RunID,
@@ -2435,6 +2437,16 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, workflow.ErrAlreadyCompleted
+			}
+
+			if childWorkflowOnly {
+				executionInfo := mutableState.GetExecutionInfo()
+				parentWorkflowID := executionInfo.ParentWorkflowID
+				parentRunID := executionInfo.ParentRunID
+				if parentExecution.GetWorkflowID() != parentWorkflowID ||
+					parentExecution.GetRunID() != parentRunID {
+					return nil, workflow.ErrParentMismatch
+				}
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()

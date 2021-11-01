@@ -1416,8 +1416,10 @@ func FromHistoryTerminateWorkflowExecutionRequest(t *types.HistoryTerminateWorkf
 		return nil
 	}
 	return &historyv1.TerminateWorkflowExecutionRequest{
-		Request:  FromTerminateWorkflowExecutionRequest(t.TerminateRequest),
-		DomainId: t.DomainUUID,
+		Request:                   FromTerminateWorkflowExecutionRequest(t.TerminateRequest),
+		DomainId:                  t.DomainUUID,
+		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
+		ChildWorkflowOnly:         t.ChildWorkflowOnly,
 	}
 }
 
@@ -1426,8 +1428,10 @@ func ToHistoryTerminateWorkflowExecutionRequest(t *historyv1.TerminateWorkflowEx
 		return nil
 	}
 	return &types.HistoryTerminateWorkflowExecutionRequest{
-		TerminateRequest: ToTerminateWorkflowExecutionRequest(t.Request),
-		DomainUUID:       t.DomainId,
+		TerminateRequest:          ToTerminateWorkflowExecutionRequest(t.Request),
+		DomainUUID:                t.DomainId,
+		ExternalWorkflowExecution: ToWorkflowExecution(t.ExternalWorkflowExecution),
+		ChildWorkflowOnly:         t.ChildWorkflowOnly,
 	}
 }
 
