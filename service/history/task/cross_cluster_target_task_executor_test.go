@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -331,6 +332,60 @@ func (s *crossClusterTargetTaskExecutorSuite) TestSignalExecutionTask_RemoveSign
 	s.NotNil(task.response.SignalExecutionAttributes)
 }
 
+func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Success() {
+	task := s.getTestApplyParentClosePolicyTask(processingStateInitialized)
+
+	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
+	for _, childAttr := range task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes {
+		switch *childAttr.GetParentClosePolicy() {
+		case types.ParentClosePolicyRequestCancel:
+			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest) error {
+					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
+					s.Equal(childAttr.ChildWorkflowID, request.GetCancelRequest().GetWorkflowExecution().GetWorkflowID())
+					s.Equal(childAttr.ChildRunID, request.GetCancelRequest().GetWorkflowExecution().GetRunID())
+					s.True(request.GetChildWorkflowOnly())
+					s.Equal(taskInfo.GetWorkflowID(), request.GetExternalWorkflowExecution().GetWorkflowID())
+					s.Equal(taskInfo.GetRunID(), request.GetExternalWorkflowExecution().GetRunID())
+					return nil
+				}).Times(1)
+		case types.ParentClosePolicyTerminate:
+			s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest) error {
+					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
+					s.Equal(childAttr.ChildWorkflowID, request.GetTerminateRequest().GetWorkflowExecution().GetWorkflowID())
+					s.Equal(childAttr.ChildRunID, request.GetTerminateRequest().GetWorkflowExecution().GetRunID())
+					s.True(request.GetChildWorkflowOnly())
+					s.Equal(taskInfo.GetWorkflowID(), request.GetExternalWorkflowExecution().GetWorkflowID())
+					s.Equal(taskInfo.GetRunID(), request.GetExternalWorkflowExecution().GetRunID())
+					return nil
+				}).Times(1)
+		}
+	}
+
+	err := s.executor.Execute(task, true)
+	s.NoError(err)
+
+	s.Equal(task.GetTaskID(), task.response.GetTaskID())
+	s.Equal(types.CrossClusterTaskTypeApplyParentPolicy, task.response.GetTaskType())
+	s.Nil(task.response.FailedCause)
+	s.NotNil(task.response.ApplyParentClosePolicyAttributes)
+}
+
+func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Failed() {
+	task := s.getTestApplyParentClosePolicyTask(processingStateInitialized)
+
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DomainNotActiveError{}).AnyTimes()
+	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.DomainNotActiveError{}).AnyTimes()
+
+	err := s.executor.Execute(task, true)
+	s.NoError(err)
+
+	s.Equal(task.GetTaskID(), task.response.GetTaskID())
+	s.Equal(types.CrossClusterTaskTypeApplyParentPolicy, task.response.GetTaskType())
+	s.Equal(types.CrossClusterTaskFailedCauseDomainNotActive, task.response.GetFailedCause())
+}
+
 func (s *crossClusterTargetTaskExecutorSuite) getTestStartChildExecutionTask(
 	processingState processingState,
 	targetRunID *string,
@@ -353,6 +408,7 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestStartChildExecutionTask(
 		},
 		nil,
 		nil,
+		nil,
 	)
 }
 
@@ -371,6 +427,7 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCancelExecutionTask(
 			InitiatedEventID:  int64(123),
 			ChildWorkflowOnly: false,
 		},
+		nil,
 		nil,
 	)
 }
@@ -394,6 +451,41 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestSignalExecutionTask(
 			SignalInput:       []byte("some random signal input"),
 			Control:           []byte("some random control"),
 		},
+		nil,
+	)
+}
+
+func (s *crossClusterTargetTaskExecutorSuite) getTestApplyParentClosePolicyTask(
+	processingState processingState,
+) *crossClusterTargetTask {
+	return s.getTestCrossClusterTargetTask(
+		types.CrossClusterTaskTypeApplyParentPolicy,
+		processingState,
+		nil,
+		nil,
+		nil,
+		&types.CrossClusterApplyParentClosePolicyRequestAttributes{
+			ApplyParentClosePolicyAttributes: []*types.ApplyParentClosePolicyAttributes{
+				{
+					ChildDomainID:     constants.TestTargetDomainID,
+					ChildWorkflowID:   "some random target workflowID",
+					ChildRunID:        "some random target runID",
+					ParentClosePolicy: types.ParentClosePolicyAbandon.Ptr(),
+				},
+				{
+					ChildDomainID:     constants.TestTargetDomainID,
+					ChildWorkflowID:   "some random target workflowID",
+					ChildRunID:        "some random target runID",
+					ParentClosePolicy: types.ParentClosePolicyRequestCancel.Ptr(),
+				},
+				{
+					ChildDomainID:     constants.TestTargetDomainID,
+					ChildWorkflowID:   "some random target workflowID",
+					ChildRunID:        "some random target runID",
+					ParentClosePolicy: types.ParentClosePolicyTerminate.Ptr(),
+				},
+			},
+		},
 	)
 }
 
@@ -403,6 +495,7 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCrossClusterTargetTask(
 	startChildAttributes *types.CrossClusterStartChildExecutionRequestAttributes,
 	cancelAttributes *types.CrossClusterCancelExecutionRequestAttributes,
 	signalAttributes *types.CrossClusterSignalExecutionRequestAttributes,
+	parentClosePolicyAttributes *types.CrossClusterApplyParentClosePolicyRequestAttributes,
 ) *crossClusterTargetTask {
 	task, _ := NewCrossClusterTargetTask(
 		s.mockShard,
@@ -416,9 +509,10 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCrossClusterTargetTask(
 				TaskID:              int64(1234),
 				VisibilityTimestamp: common.Int64Ptr(time.Now().UnixNano()),
 			},
-			StartChildExecutionAttributes: startChildAttributes,
-			CancelExecutionAttributes:     cancelAttributes,
-			SignalExecutionAttributes:     signalAttributes,
+			StartChildExecutionAttributes:    startChildAttributes,
+			CancelExecutionAttributes:        cancelAttributes,
+			SignalExecutionAttributes:        signalAttributes,
+			ApplyParentClosePolicyAttributes: parentClosePolicyAttributes,
 		},
 		s.executor,
 		nil,
