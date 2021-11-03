@@ -135,7 +135,11 @@ func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport
 			}
 			outbound = tchannelTransport.NewOutbound(peerChooser)
 		case grpc.TransportName:
-			peerChooser, err := b.pcf.CreatePeerChooser(grpcTransport, clusterInfo.RPCAddress)
+			tlsConfig, err := clusterInfo.TLS.ToTLSConfig()
+			if err != nil {
+				return nil, err
+			}
+			peerChooser, err := b.pcf.CreatePeerChooser(createDialer(grpcTransport, tlsConfig), clusterInfo.RPCAddress)
 			if err != nil {
 				return nil, err
 			}

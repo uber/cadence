@@ -139,6 +139,8 @@ type (
 		LogLevel string `yaml:"logLevel"`
 		// GRPCMaxMsgSize allows overriding default (4MB) message size for gRPC
 		GRPCMaxMsgSize int `yaml:"grpcMaxMsgSize"`
+		// TLS allows configuring optional TLS/SSL authentication on the server (only on gRPC port)
+		TLS TLS `yaml:"tls"`
 	}
 
 	// Blobstore contains the config for blobstore

@@ -21,12 +21,16 @@
 package rpc
 
 import (
+	"crypto/tls"
 	"net"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,6 +41,7 @@ const defaultGRPCSizeLimit = 4 * 1024 * 1024
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
 	maxMessageSize int
+	outboundTLS    map[string]*tls.Config
 
 	logger            log.Logger
 	hostAddressMapper HostAddressMapper
@@ -73,21 +78,26 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 		options = append(options, grpc.ServerMaxRecvMsgSize(p.GRPCMaxMsgSize))
 		options = append(options, grpc.ClientMaxRecvMsgSize(p.GRPCMaxMsgSize))
 	}
-	grpc := grpc.NewTransport(options...)
+	grpcTransport := grpc.NewTransport(options...)
 	if len(p.GRPCAddress) > 0 {
 		listener, err := net.Listen("tcp", p.GRPCAddress)
 		if err != nil {
 			logger.Fatal("Failed to listen on GRPC port", tag.Error(err))
 		}
 
-		inbounds = append(inbounds, grpc.NewInbound(listener))
+		var inboundOptions []grpc.InboundOption
+		if p.InboundTLS != nil {
+			inboundOptions = append(inboundOptions, grpc.InboundCredentials(credentials.NewTLS(p.InboundTLS)))
+		}
+
+		inbounds = append(inbounds, grpcTransport.NewInbound(listener, inboundOptions...))
 		logger.Info("Listening for GRPC requests", tag.Address(p.GRPCAddress))
 	}
 
 	// Create outbounds
 	outbounds := yarpc.Outbounds{}
 	if p.OutboundsBuilder != nil {
-		outbounds, err = p.OutboundsBuilder.Build(grpc, tchannel)
+		outbounds, err = p.OutboundsBuilder.Build(grpcTransport, tchannel)
 		if err != nil {
 			logger.Fatal("Failed to create outbounds", tag.Error(err))
 		}
@@ -103,10 +113,11 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 
 	return &Factory{
 		maxMessageSize:    p.GRPCMaxMsgSize,
+		outboundTLS:       p.OutboundTLS,
 		logger:            logger,
 		hostAddressMapper: p.HostAddressMapper,
 		tchannel:          tchannel,
-		grpc:              grpc,
+		grpc:              grpcTransport,
 		dispatcher:        dispatcher,
 		channel:           ch.Channel(),
 	}
@@ -137,7 +148,10 @@ func (d *Factory) CreateGRPCDispatcherForOutbound(
 	serviceName string,
 	hostName string,
 ) (*yarpc.Dispatcher, error) {
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.grpc.NewSingleOutbound(hostName))
+	// Service without TLS will return nil, which is ok here. We will create insecure dialer then.
+	tlsConfig := d.outboundTLS[serviceName]
+	outbound := d.grpc.NewOutbound(peer.NewSingle(hostport.PeerIdentifier(hostName), createDialer(d.grpc, tlsConfig)))
+	return d.createOutboundDispatcher(callerName, serviceName, hostName, outbound)
 }
 
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
@@ -175,4 +189,12 @@ func (d *Factory) createOutboundDispatcher(
 		return nil, err
 	}
 	return dispatcher, nil
+}
+
+func createDialer(transport *grpc.Transport, tlsConfig *tls.Config) *grpc.Dialer {
+	var dialOptions []grpc.DialOption
+	if tlsConfig != nil {
+		dialOptions = append(dialOptions, grpc.DialerCredentials(credentials.NewTLS(tlsConfig)))
+	}
+	return transport.NewDialer(dialOptions...)
 }
