@@ -50,6 +50,12 @@ type (
 		Duration     Duration `json:"duration"`
 	}
 
+	DomainInfo struct {
+		DomainID      string             `json:"key"`
+		NumWorkflows  int64              `json:"doc_count"`
+		WorkflowTypes []WorkflowTypeInfo `json:"buckets"`
+	}
+
 	WorkflowInfo struct {
 		DomainID   string `json:"DomainID"`
 		WorkflowID string `json:"WorkflowID"`
@@ -323,9 +329,9 @@ func findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) ([]WorkflowI
 	return workflows, nil
 }
 
-func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
+func getWorkflowTypesQuery(startDateTime int64, domainAggKey string, wfTypesAggKey string) string {
 	return fmt.Sprintf(`
-    {
+		{
       "query": {
          "bool": {
             "must": [
@@ -347,37 +353,89 @@ func getWorkflowTypesQuery(startDateTime int64, aggregationKey string) string {
       "size": 0,
       "aggs" : {
           "%s" : {
-              "terms" : { "field" : "WorkflowType", "size": 10 },
+              "terms" : { "field" : "DomainID", "size": 1000 },
               "aggs": {
-                  "duration" : {
-                    "avg" : {
-                      "script" : "(doc['CloseTime'].value - doc['StartTime'].value)"
+                  "%s" : {
+                    "terms" : { "field" : "WorkflowType", "size": 1000 },
+                    "aggs": {
+                      "duration" : {
+                        "avg" : {
+                          "script" : "(doc['CloseTime'].value - doc['StartTime'].value)"
+                        }
+                      }
                     }
                   }
               }
           }
       }
     }
-	`, startDateTime, aggregationKey)
+	`, startDateTime, domainAggKey, wfTypesAggKey)
+}
+
+func getWorkflowTypesFromDynamicConfig(
+	ctx context.Context,
+	analyzer *Analyzer,
+	config string,
+	logger *zap.Logger,
+) ([]DomainInfo, error) {
+	results := []DomainInfo{}
+	// Comma separated list of <DomainName>/<WorkflowType> entries
+	entries := strings.Split(config, ",")
+
+	resultMap := map[string]*DomainInfo{}
+
+	for _, domainWFTypePair := range entries {
+		index := strings.Index(domainWFTypePair, "/")
+		// -1 no delimiter, 0 means the entry starts with /
+		if index < 1 || len(domainWFTypePair) <= (index+1) {
+			return nil, types.InternalServiceError{
+				Message: fmt.Sprintf("Bad Workflow type entry '%v'", domainWFTypePair),
+			}
+		}
+		domainName := domainWFTypePair[:index]
+		wfType := domainWFTypePair[index+1:]
+		domainEntry, err := analyzer.domainCache.GetDomain(domainName)
+		if err != nil {
+			logger.Error("Failed to get domain entry",
+				zap.String("error", fmt.Sprintf("%v", err)),
+				zap.String("DomainName", domainName))
+			return nil, err
+		}
+
+		if _, ok := resultMap[domainName]; !ok {
+			resultMap[domainName] = &DomainInfo{
+				DomainID:      domainEntry.GetInfo().ID,
+				WorkflowTypes: []WorkflowTypeInfo{},
+			}
+		}
+
+		resultMap[domainName].WorkflowTypes = append(
+			resultMap[domainName].WorkflowTypes,
+			WorkflowTypeInfo{Name: wfType},
+		)
+	}
+
+	for _, wfTypes := range resultMap {
+		results = append(results, *wfTypes)
+	}
+
+	return results, nil
+
 }
 
 // getWorkflowTypes is activity to get workflow type list from ElasticSearch
-func getWorkflowTypes(ctx context.Context) ([]WorkflowTypeInfo, error) {
+func getWorkflowTypes(ctx context.Context) ([]DomainInfo, error) {
 	logger := activity.GetLogger(ctx)
 	analyzer := ctx.Value(analyzerContextKey).(*Analyzer)
 	limitToTypes := analyzer.config.ESAnalyzerLimitToTypes()
 	if len(limitToTypes) > 0 {
-		results := []WorkflowTypeInfo{}
-		workflowTypes := strings.Split(limitToTypes, ",")
-		for _, wfType := range workflowTypes {
-			results = append(results, WorkflowTypeInfo{Name: wfType})
-		}
-		return results, nil
+		return getWorkflowTypesFromDynamicConfig(ctx, analyzer, limitToTypes, logger)
 	}
 
-	aggregationKey := "wfTypes"
+	domainsAggKey := "domains"
+	wfTypesAggKey := "wfTypes"
 	startDateTime := time.Now().Add(-analyzer.config.ESAnalyzerTimeWindow()).UnixNano()
-	query := getWorkflowTypesQuery(startDateTime, aggregationKey)
+	query := getWorkflowTypesQuery(startDateTime, domainsAggKey, wfTypesAggKey)
 	response, err := analyzer.esClient.SearchRaw(ctx, analyzer.visibilityIndexName, query)
 	if err != nil {
 		logger.Error("Failed to query ElasticSearch to find workflow type info",
@@ -386,17 +444,17 @@ func getWorkflowTypes(ctx context.Context) ([]WorkflowTypeInfo, error) {
 		)
 		return nil, err
 	}
-	agg, foundAggregation := response.Aggregations[aggregationKey]
+	agg, foundAggregation := response.Aggregations[domainsAggKey]
 	if !foundAggregation {
 		return nil, types.InternalServiceError{
-			Message: fmt.Sprintf("ElasticSearch error: aggeration '%v' failed", aggregationKey),
+			Message: fmt.Sprintf("ElasticSearch error: aggeration failed. Query: %v", query),
 		}
 	}
 
-	var wfTypes struct {
-		Buckets []WorkflowTypeInfo `json:"buckets"`
+	var domains struct {
+		Buckets []DomainInfo `json:"buckets"`
 	}
-	err = json.Unmarshal(agg, &wfTypes)
+	err = json.Unmarshal(agg, &domains)
 	if err != nil {
 		return nil, types.InternalServiceError{
 			Message: "ElasticSearch error parsing aggeration",
@@ -405,6 +463,6 @@ func getWorkflowTypes(ctx context.Context) ([]WorkflowTypeInfo, error) {
 
 	// This log is supposed to be fired at max once an hour; it's not invasive and can help
 	// get some workflow statistics. Size can be quite big though; not sure what the limit is.
-	logger.Info(fmt.Sprintf("WorkflowType stats: %#v", wfTypes.Buckets))
-	return wfTypes.Buckets, nil
+	logger.Info(fmt.Sprintf("WorkflowType stats: %#v", domains.Buckets))
+	return domains.Buckets, nil
 }
