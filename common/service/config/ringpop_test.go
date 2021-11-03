@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
+	"net"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -93,6 +94,8 @@ func (s *RingpopSuite) TestCustomMode() {
 
 type mockResolver struct {
 	Hosts map[string][]string
+	SRV map[string][]net.SRV
+	suite *RingpopSuite
 }
 
 func (resolver *mockResolver) LookupHost(ctx context.Context, host string) ([]string, error) {
@@ -101,6 +104,22 @@ func (resolver *mockResolver) LookupHost(ctx context.Context, host string) ([]st
 		return nil, fmt.Errorf("Host was not resolved: %s", host)
 	}
 	return addrs, nil
+}
+
+func (resolver *mockResolver) LookupSRV(ctx context.Context, service string, proto string, name string) (string, []*net.SRV, error) {
+	var records []*net.SRV
+	srvs, ok := resolver.SRV[service]
+	if !ok {
+		return "", nil, fmt.Errorf("Host was not resolved: %s", service)
+	}
+
+	for _, record := range srvs {
+		var srvRecord net.SRV
+		srvRecord = record
+		records = append(records, &srvRecord)
+	}
+
+	return "test", records, nil
 }
 
 func (s *RingpopSuite) TestDNSMode() {
@@ -165,6 +184,80 @@ func (s *RingpopSuite) TestDNSMode() {
 	s.NotNil(err, "error should be returned when no hosts")
 }
 
+func (s *RingpopSuite) TestDNSSRVMode() {
+	var cfg Ringpop
+	err := yaml.Unmarshal([]byte(getDNSSRVConfig()), &cfg)
+	s.Nil(err)
+	s.Equal("test", cfg.Name)
+	s.Equal(BootstrapModeDNSSRV, cfg.BootstrapMode)
+	s.Nil(cfg.validate())
+	logger := loggerimpl.NewNopLogger()
+	f, err := cfg.NewFactory(nil, "test", logger)
+	s.Nil(err)
+	s.NotNil(f)
+
+	s.ElementsMatch(
+		[]string{
+			"service-a.example.net",
+			"service-b.example.net",
+			"unknown-duplicate.example.net",
+			"unknown-duplicate.example.net",
+			"badhostport",
+		},
+		cfg.BootstrapHosts,
+	)
+
+	provider := newDNSSRVProvider(
+		cfg.BootstrapHosts,
+		&mockResolver{
+			SRV: map[string][]net.SRV{
+				"service-a": []net.SRV{{ Target:"az1-service-a.addr.example.net", Port: 7755}, {Target: "az2-service-a.addr.example.net", Port: 7566}},
+				"service-b": []net.SRV{{ Target:"az1-service-b.addr.example.net", Port: 7788}, {Target: "az2-service-b.addr.example.net", Port: 7896}},
+			},
+			Hosts: map[string][]string{
+				"az1-service-a.addr.example.net": []string{"10.0.0.1"},
+				"az2-service-a.addr.example.net": []string{"10.0.2.0", "10.0.2.3"},
+				"az1-service-b.addr.example.net": []string{"10.0.3.0", "10.0.3.3"},
+				"az2-service-b.addr.example.net": []string{"10.0.3.1"},
+			},
+			suite: s,
+		},
+		logger,
+	)
+	cfg.DiscoveryProvider = provider
+	s.ElementsMatch(
+		[]string{
+			"service-a.example.net",
+			"service-b.example.net",
+			"unknown-duplicate.example.net",
+			"badhostport",
+		},
+		provider.UnresolvedHosts,
+		"duplicate entries should be removed",
+	)
+
+	hostports, err := cfg.DiscoveryProvider.Hosts()
+	s.Nil(err)
+	s.ElementsMatch(
+		[]string{
+			"10.0.0.1:7755",
+			"10.0.2.0:7566", "10.0.2.3:7566",
+			"10.0.3.0:7788", "10.0.3.3:7788",
+			"10.0.3.1:7896",
+		},
+		hostports,
+	)
+
+	cfg.DiscoveryProvider = newDNSProvider(
+		cfg.BootstrapHosts,
+		&mockResolver{Hosts: map[string][]string{}},
+		logger,
+	)
+	hostports, err = cfg.DiscoveryProvider.Hosts()
+	s.Nil(hostports)
+	s.NotNil(err, "error should be returned when no hosts")
+}
+
 func (s *RingpopSuite) TestInvalidConfig() {
 	var cfg Ringpop
 	s.NotNil(cfg.validate())
@@ -204,6 +297,18 @@ bootstrapHosts:
 - example.net:1112
 - unknown-duplicate.example.net:1111
 - unknown-duplicate.example.net:1111
+- badhostport
+maxJoinDuration: 30s`
+}
+
+func getDNSSRVConfig() string {
+	return `name: "test"
+bootstrapMode: "dns-srv"
+bootstrapHosts:
+- service-a.example.net
+- service-b.example.net
+- unknown-duplicate.example.net
+- unknown-duplicate.example.net
 - badhostport
 maxJoinDuration: 30s`
 }

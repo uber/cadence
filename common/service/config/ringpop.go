@@ -57,6 +57,8 @@ const (
 	// BootstrapModeDNS represents a list of hosts passed in the configuration
 	// to be resolved, and the resulting addresses are used for bootstrap
 	BootstrapModeDNS
+	// BootstrapModeDNSSRV represents a list of DNS hosts passed in the configuration to resolve host and ports, resulting in a list of addresses
+	BootstrapModeDNSSRV
 )
 
 const (
@@ -130,6 +132,8 @@ func parseBootstrapMode(
 		return BootstrapModeCustom, nil
 	case "dns":
 		return BootstrapModeDNS, nil
+	case "dns-srv":
+		return BootstrapModeDNSSRV, nil
 	}
 	return BootstrapModeNone, errors.New("invalid or no ringpop bootstrap mode")
 }
@@ -143,7 +147,7 @@ func validateBootstrapMode(
 		if len(rpConfig.BootstrapFile) == 0 {
 			return fmt.Errorf("ringpop config missing bootstrap file param")
 		}
-	case BootstrapModeHosts, BootstrapModeDNS:
+	case BootstrapModeHosts, BootstrapModeDNS, BootstrapModeDNSSRV:
 		if len(rpConfig.BootstrapHosts) == 0 {
 			return fmt.Errorf("ringpop config missing boostrap hosts param")
 		}
@@ -263,6 +267,7 @@ func (factory *RingpopFactory) getChannel(
 
 type dnsHostResolver interface {
 	LookupHost(ctx context.Context, host string) (addrs []string, err error)
+	LookupSRV(ctx context.Context, service string, proto string, name string) (cname string, addrs []*net.SRV, err error)
 }
 
 type dnsProvider struct {
@@ -322,6 +327,84 @@ func (provider *dnsProvider) Hosts() ([]string, error) {
 	return results, nil
 }
 
+type dnsSRVProvider struct {
+	UnresolvedHosts []string
+	Resolver        dnsHostResolver
+	Logger          log.Logger
+}
+
+func newDNSSRVProvider(
+	hosts []string,
+	resolver dnsHostResolver,
+	logger log.Logger,
+) *dnsSRVProvider {
+
+	set := map[string]struct{}{}
+	for _, hostport := range hosts {
+		set[hostport] = struct{}{}
+	}
+
+	var keys []string
+	for key := range set {
+		keys = append(keys, key)
+	}
+
+	return &dnsSRVProvider{
+		UnresolvedHosts: keys,
+		Resolver:        resolver,
+		Logger:          logger,
+	}
+}
+
+func (provider *dnsSRVProvider) Hosts() ([]string, error) {
+	var results []string
+	resolvedHosts := map[string][]string{}
+
+	for _, service := range provider.UnresolvedHosts {
+		serviceParts := strings.Split(service, ".")
+		if len(serviceParts) <= 2 {
+			provider.Logger.Warn("could seperate service name from domain", tag.Address(service))
+			continue
+		}
+		serviceName := serviceParts[0]
+		domain := strings.Join(serviceParts[1:], ".")
+		resolved, exists := resolvedHosts[serviceName]
+		if !exists {
+			_, addrs, err := provider.Resolver.LookupSRV(context.Background(), serviceName, "tcp", domain)
+
+			if err != nil {
+				provider.Logger.Warn("could not resolve host", tag.Address(serviceName), tag.Error(err))
+				continue
+			}
+
+			var targets []string
+			for _, record := range addrs {
+			   target, err := provider.Resolver.LookupHost(context.Background(), record.Target)
+
+			   if err != nil {
+					provider.Logger.Warn("could not resolve srv dns host", tag.Address(record.Target), tag.Error(err))
+					continue
+			   }
+			   for _, host := range target {
+			   		targets = append(targets, net.JoinHostPort(host, fmt.Sprintf("%d", record.Port)))
+			   }
+			}
+			resolvedHosts[serviceName] = targets
+			resolved = targets
+		}
+
+		for _, r := range resolved {
+			results = append(results, r)
+		}
+
+	}
+
+	if len(results) == 0 {
+		return nil, errors.New("no hosts found, and bootstrap requires at least one")
+	}
+	return results, nil
+}
+
 func newDiscoveryProvider(
 	cfg *Ringpop,
 	logger log.Logger,
@@ -339,6 +422,8 @@ func newDiscoveryProvider(
 		return jsonfile.New(cfg.BootstrapFile), nil
 	case BootstrapModeDNS:
 		return newDNSProvider(cfg.BootstrapHosts, net.DefaultResolver, logger), nil
+	case BootstrapModeDNSSRV:
+		return newDNSSRVProvider(cfg.BootstrapHosts, net.DefaultResolver, logger), nil
 	}
 	return nil, fmt.Errorf("unknown bootstrap mode")
 }
