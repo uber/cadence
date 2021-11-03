@@ -71,11 +71,23 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeWorkflowExecutionResponse, error)
 
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetCrossClusterTasksResponse, error)
+
 	GetDLQReplicationMessages(
 		ctx context.Context,
 		Request *replicator.GetDLQReplicationMessagesRequest,
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDLQReplicationMessagesResponse, error)
+
+	GetFailoverInfo(
+		ctx context.Context,
+		Request *history.GetFailoverInfoRequest,
+		opts ...yarpc.CallOption,
+	) (*history.GetFailoverInfoResponse, error)
 
 	GetMutableState(
 		ctx context.Context,
@@ -221,6 +233,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	RespondCrossClusterTasksCompleted(
+		ctx context.Context,
+		Request *shared.RespondCrossClusterTasksCompletedRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RespondCrossClusterTasksCompletedResponse, error)
+
 	RespondDecisionTaskCompleted(
 		ctx context.Context,
 		CompleteRequest *history.RespondDecisionTaskCompletedRequest,
@@ -285,6 +303,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "HistoryService",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "HistoryService",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -297,7 +319,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) CloseShard(
@@ -306,17 +329,22 @@ func (c client) CloseShard(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_CloseShard_Result
 	args := history.HistoryService_CloseShard_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_CloseShard_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_CloseShard_Helper.UnwrapResponse(&result)
@@ -329,17 +357,22 @@ func (c client) DescribeHistoryHost(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeHistoryHostResponse, err error) {
 
+	var result history.HistoryService_DescribeHistoryHost_Result
 	args := history.HistoryService_DescribeHistoryHost_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_DescribeHistoryHost_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_DescribeHistoryHost_Helper.UnwrapResponse(&result)
@@ -352,17 +385,22 @@ func (c client) DescribeMutableState(
 	opts ...yarpc.CallOption,
 ) (success *history.DescribeMutableStateResponse, err error) {
 
+	var result history.HistoryService_DescribeMutableState_Result
 	args := history.HistoryService_DescribeMutableState_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_DescribeMutableState_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_DescribeMutableState_Helper.UnwrapResponse(&result)
@@ -375,17 +413,22 @@ func (c client) DescribeQueue(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeQueueResponse, err error) {
 
+	var result history.HistoryService_DescribeQueue_Result
 	args := history.HistoryService_DescribeQueue_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_DescribeQueue_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_DescribeQueue_Helper.UnwrapResponse(&result)
@@ -398,20 +441,53 @@ func (c client) DescribeWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeWorkflowExecutionResponse, err error) {
 
+	var result history.HistoryService_DescribeWorkflowExecution_Result
 	args := history.HistoryService_DescribeWorkflowExecution_Helper.Args(_DescribeRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_DescribeWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetCrossClusterTasks(
+	ctx context.Context,
+	_Request *shared.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetCrossClusterTasksResponse, err error) {
+
+	var result history.HistoryService_GetCrossClusterTasks_Result
+	args := history.HistoryService_GetCrossClusterTasks_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = history.HistoryService_GetCrossClusterTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -421,20 +497,53 @@ func (c client) GetDLQReplicationMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.GetDLQReplicationMessagesResponse, err error) {
 
+	var result history.HistoryService_GetDLQReplicationMessages_Result
 	args := history.HistoryService_GetDLQReplicationMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_GetDLQReplicationMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_GetDLQReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetFailoverInfo(
+	ctx context.Context,
+	_Request *history.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (success *history.GetFailoverInfoResponse, err error) {
+
+	var result history.HistoryService_GetFailoverInfo_Result
+	args := history.HistoryService_GetFailoverInfo_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = history.HistoryService_GetFailoverInfo_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -444,17 +553,22 @@ func (c client) GetMutableState(
 	opts ...yarpc.CallOption,
 ) (success *history.GetMutableStateResponse, err error) {
 
+	var result history.HistoryService_GetMutableState_Result
 	args := history.HistoryService_GetMutableState_Helper.Args(_GetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_GetMutableState_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_GetMutableState_Helper.UnwrapResponse(&result)
@@ -467,17 +581,22 @@ func (c client) GetReplicationMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.GetReplicationMessagesResponse, err error) {
 
+	var result history.HistoryService_GetReplicationMessages_Result
 	args := history.HistoryService_GetReplicationMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_GetReplicationMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_GetReplicationMessages_Helper.UnwrapResponse(&result)
@@ -490,17 +609,22 @@ func (c client) MergeDLQMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.MergeDLQMessagesResponse, err error) {
 
+	var result history.HistoryService_MergeDLQMessages_Result
 	args := history.HistoryService_MergeDLQMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_MergeDLQMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_MergeDLQMessages_Helper.UnwrapResponse(&result)
@@ -513,17 +637,22 @@ func (c client) NotifyFailoverMarkers(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_NotifyFailoverMarkers_Result
 	args := history.HistoryService_NotifyFailoverMarkers_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_NotifyFailoverMarkers_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_NotifyFailoverMarkers_Helper.UnwrapResponse(&result)
@@ -536,17 +665,22 @@ func (c client) PollMutableState(
 	opts ...yarpc.CallOption,
 ) (success *history.PollMutableStateResponse, err error) {
 
+	var result history.HistoryService_PollMutableState_Result
 	args := history.HistoryService_PollMutableState_Helper.Args(_PollRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_PollMutableState_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_PollMutableState_Helper.UnwrapResponse(&result)
@@ -559,17 +693,22 @@ func (c client) PurgeDLQMessages(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_PurgeDLQMessages_Result
 	args := history.HistoryService_PurgeDLQMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_PurgeDLQMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_PurgeDLQMessages_Helper.UnwrapResponse(&result)
@@ -582,17 +721,22 @@ func (c client) QueryWorkflow(
 	opts ...yarpc.CallOption,
 ) (success *history.QueryWorkflowResponse, err error) {
 
+	var result history.HistoryService_QueryWorkflow_Result
 	args := history.HistoryService_QueryWorkflow_Helper.Args(_QueryRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_QueryWorkflow_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_QueryWorkflow_Helper.UnwrapResponse(&result)
@@ -605,17 +749,22 @@ func (c client) ReadDLQMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.ReadDLQMessagesResponse, err error) {
 
+	var result history.HistoryService_ReadDLQMessages_Result
 	args := history.HistoryService_ReadDLQMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ReadDLQMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_ReadDLQMessages_Helper.UnwrapResponse(&result)
@@ -628,17 +777,22 @@ func (c client) ReapplyEvents(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_ReapplyEvents_Result
 	args := history.HistoryService_ReapplyEvents_Helper.Args(_ReapplyEventsRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ReapplyEvents_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_ReapplyEvents_Helper.UnwrapResponse(&result)
@@ -651,17 +805,22 @@ func (c client) RecordActivityTaskHeartbeat(
 	opts ...yarpc.CallOption,
 ) (success *shared.RecordActivityTaskHeartbeatResponse, err error) {
 
+	var result history.HistoryService_RecordActivityTaskHeartbeat_Result
 	args := history.HistoryService_RecordActivityTaskHeartbeat_Helper.Args(_HeartbeatRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RecordActivityTaskHeartbeat_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_RecordActivityTaskHeartbeat_Helper.UnwrapResponse(&result)
@@ -674,17 +833,22 @@ func (c client) RecordActivityTaskStarted(
 	opts ...yarpc.CallOption,
 ) (success *history.RecordActivityTaskStartedResponse, err error) {
 
+	var result history.HistoryService_RecordActivityTaskStarted_Result
 	args := history.HistoryService_RecordActivityTaskStarted_Helper.Args(_AddRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RecordActivityTaskStarted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_RecordActivityTaskStarted_Helper.UnwrapResponse(&result)
@@ -697,17 +861,22 @@ func (c client) RecordChildExecutionCompleted(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RecordChildExecutionCompleted_Result
 	args := history.HistoryService_RecordChildExecutionCompleted_Helper.Args(_CompletionRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RecordChildExecutionCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RecordChildExecutionCompleted_Helper.UnwrapResponse(&result)
@@ -720,17 +889,22 @@ func (c client) RecordDecisionTaskStarted(
 	opts ...yarpc.CallOption,
 ) (success *history.RecordDecisionTaskStartedResponse, err error) {
 
+	var result history.HistoryService_RecordDecisionTaskStarted_Result
 	args := history.HistoryService_RecordDecisionTaskStarted_Helper.Args(_AddRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RecordDecisionTaskStarted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_RecordDecisionTaskStarted_Helper.UnwrapResponse(&result)
@@ -743,17 +917,22 @@ func (c client) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RefreshWorkflowTasks_Result
 	args := history.HistoryService_RefreshWorkflowTasks_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RefreshWorkflowTasks_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RefreshWorkflowTasks_Helper.UnwrapResponse(&result)
@@ -766,17 +945,22 @@ func (c client) RemoveSignalMutableState(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RemoveSignalMutableState_Result
 	args := history.HistoryService_RemoveSignalMutableState_Helper.Args(_RemoveRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RemoveSignalMutableState_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RemoveSignalMutableState_Helper.UnwrapResponse(&result)
@@ -789,17 +973,22 @@ func (c client) RemoveTask(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RemoveTask_Result
 	args := history.HistoryService_RemoveTask_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RemoveTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RemoveTask_Helper.UnwrapResponse(&result)
@@ -812,17 +1001,22 @@ func (c client) ReplicateEventsV2(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_ReplicateEventsV2_Result
 	args := history.HistoryService_ReplicateEventsV2_Helper.Args(_ReplicateV2Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ReplicateEventsV2_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_ReplicateEventsV2_Helper.UnwrapResponse(&result)
@@ -835,17 +1029,22 @@ func (c client) RequestCancelWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RequestCancelWorkflowExecution_Result
 	args := history.HistoryService_RequestCancelWorkflowExecution_Helper.Args(_CancelRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RequestCancelWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RequestCancelWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -858,17 +1057,22 @@ func (c client) ResetQueue(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_ResetQueue_Result
 	args := history.HistoryService_ResetQueue_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ResetQueue_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_ResetQueue_Helper.UnwrapResponse(&result)
@@ -881,17 +1085,22 @@ func (c client) ResetStickyTaskList(
 	opts ...yarpc.CallOption,
 ) (success *history.ResetStickyTaskListResponse, err error) {
 
+	var result history.HistoryService_ResetStickyTaskList_Result
 	args := history.HistoryService_ResetStickyTaskList_Helper.Args(_ResetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ResetStickyTaskList_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_ResetStickyTaskList_Helper.UnwrapResponse(&result)
@@ -904,17 +1113,22 @@ func (c client) ResetWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.ResetWorkflowExecutionResponse, err error) {
 
+	var result history.HistoryService_ResetWorkflowExecution_Result
 	args := history.HistoryService_ResetWorkflowExecution_Helper.Args(_ResetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ResetWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_ResetWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -927,17 +1141,22 @@ func (c client) RespondActivityTaskCanceled(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RespondActivityTaskCanceled_Result
 	args := history.HistoryService_RespondActivityTaskCanceled_Helper.Args(_CanceledRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RespondActivityTaskCanceled_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RespondActivityTaskCanceled_Helper.UnwrapResponse(&result)
@@ -950,17 +1169,22 @@ func (c client) RespondActivityTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RespondActivityTaskCompleted_Result
 	args := history.HistoryService_RespondActivityTaskCompleted_Helper.Args(_CompleteRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RespondActivityTaskCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RespondActivityTaskCompleted_Helper.UnwrapResponse(&result)
@@ -973,20 +1197,53 @@ func (c client) RespondActivityTaskFailed(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RespondActivityTaskFailed_Result
 	args := history.HistoryService_RespondActivityTaskFailed_Helper.Args(_FailRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RespondActivityTaskFailed_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RespondActivityTaskFailed_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	_Request *shared.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	var result history.HistoryService_RespondCrossClusterTasksCompleted_Result
+	args := history.HistoryService_RespondCrossClusterTasksCompleted_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = history.HistoryService_RespondCrossClusterTasksCompleted_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -996,17 +1253,22 @@ func (c client) RespondDecisionTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (success *history.RespondDecisionTaskCompletedResponse, err error) {
 
+	var result history.HistoryService_RespondDecisionTaskCompleted_Result
 	args := history.HistoryService_RespondDecisionTaskCompleted_Helper.Args(_CompleteRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RespondDecisionTaskCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
@@ -1019,17 +1281,22 @@ func (c client) RespondDecisionTaskFailed(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_RespondDecisionTaskFailed_Result
 	args := history.HistoryService_RespondDecisionTaskFailed_Helper.Args(_FailedRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_RespondDecisionTaskFailed_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
@@ -1042,17 +1309,22 @@ func (c client) ScheduleDecisionTask(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_ScheduleDecisionTask_Result
 	args := history.HistoryService_ScheduleDecisionTask_Helper.Args(_ScheduleRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_ScheduleDecisionTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_ScheduleDecisionTask_Helper.UnwrapResponse(&result)
@@ -1065,17 +1337,22 @@ func (c client) SignalWithStartWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.StartWorkflowExecutionResponse, err error) {
 
+	var result history.HistoryService_SignalWithStartWorkflowExecution_Result
 	args := history.HistoryService_SignalWithStartWorkflowExecution_Helper.Args(_SignalWithStartRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_SignalWithStartWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_SignalWithStartWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1088,17 +1365,22 @@ func (c client) SignalWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_SignalWorkflowExecution_Result
 	args := history.HistoryService_SignalWorkflowExecution_Helper.Args(_SignalRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_SignalWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_SignalWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1111,17 +1393,22 @@ func (c client) StartWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.StartWorkflowExecutionResponse, err error) {
 
+	var result history.HistoryService_StartWorkflowExecution_Result
 	args := history.HistoryService_StartWorkflowExecution_Helper.Args(_StartRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_StartWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = history.HistoryService_StartWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1134,17 +1421,22 @@ func (c client) SyncActivity(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_SyncActivity_Result
 	args := history.HistoryService_SyncActivity_Helper.Args(_SyncActivityRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_SyncActivity_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_SyncActivity_Helper.UnwrapResponse(&result)
@@ -1157,17 +1449,22 @@ func (c client) SyncShardStatus(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_SyncShardStatus_Result
 	args := history.HistoryService_SyncShardStatus_Helper.Args(_SyncShardStatusRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_SyncShardStatus_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_SyncShardStatus_Helper.UnwrapResponse(&result)
@@ -1180,17 +1477,22 @@ func (c client) TerminateWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result history.HistoryService_TerminateWorkflowExecution_Result
 	args := history.HistoryService_TerminateWorkflowExecution_Helper.Args(_TerminateRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result history.HistoryService_TerminateWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = history.HistoryService_TerminateWorkflowExecution_Helper.UnwrapResponse(&result)

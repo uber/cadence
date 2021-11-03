@@ -158,6 +158,88 @@ func (s *processingQueueCollectionSuite) TestAddTask_ReadFinished() {
 	s.Nil(queueCollection.ActiveQueue())
 }
 
+func (s *processingQueueCollectionSuite) TestGetTask_Success() {
+	totalQueues := 4
+	currentActiveIdx := 1
+
+	mockTask := task.NewMockTask(s.controller)
+	mockQueues := []*MockProcessingQueue{}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues = append(mockQueues, NewMockProcessingQueue(s.controller))
+	}
+	mockQueues[0].EXPECT().GetTask(gomock.Any()).Return(mockTask, nil).Times(1)
+	for i := 1; i != totalQueues; i++ {
+		mockQueues[i].EXPECT().GetTask(gomock.Any()).Return(nil, errTaskNotFound).AnyTimes()
+	}
+
+	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
+	queueCollection.activeQueue = mockQueues[currentActiveIdx]
+
+	newTask, err := queueCollection.GetTask(testKey{ID: 1})
+	s.NoError(err)
+	s.Equal(mockTask, newTask)
+}
+
+func (s *processingQueueCollectionSuite) TestGetTask_NoTaskFound_Fail() {
+	totalQueues := 4
+	currentActiveIdx := 1
+
+	mockQueues := []*MockProcessingQueue{}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues = append(mockQueues, NewMockProcessingQueue(s.controller))
+	}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues[i].EXPECT().GetTask(gomock.Any()).Return(nil, errTaskNotFound).AnyTimes()
+	}
+
+	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
+	queueCollection.activeQueue = mockQueues[currentActiveIdx]
+
+	newTask, err := queueCollection.GetTask(testKey{ID: 1})
+	s.Error(err)
+	s.Nil(newTask)
+}
+
+func (s *processingQueueCollectionSuite) TestGetTasks_Success() {
+	totalQueues := 4
+	currentActiveIdx := 1
+
+	mockQueues := []*MockProcessingQueue{}
+	mockTasks := []task.Task{}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues = append(mockQueues, NewMockProcessingQueue(s.controller))
+		mockTasks = append(mockTasks, task.NewMockTask(s.controller))
+	}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues[i].EXPECT().GetTasks().Return([]task.Task{mockTasks[i]}).Times(1)
+	}
+
+	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
+	queueCollection.activeQueue = mockQueues[currentActiveIdx]
+
+	newTasks := queueCollection.GetTasks()
+	s.Equal(mockTasks, newTasks)
+}
+
+func (s *processingQueueCollectionSuite) TestGetTasks_EmptyTask() {
+	totalQueues := 4
+	currentActiveIdx := 1
+
+	mockQueues := []*MockProcessingQueue{}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues = append(mockQueues, NewMockProcessingQueue(s.controller))
+	}
+	for i := 0; i != totalQueues; i++ {
+		mockQueues[i].EXPECT().GetTasks().Return([]task.Task{}).Times(1)
+	}
+
+	queueCollection := s.newTestProcessingQueueCollection(s.level, mockQueues)
+	queueCollection.activeQueue = mockQueues[currentActiveIdx]
+
+	newTasks := queueCollection.GetTasks()
+	s.Equal(0, len(newTasks))
+}
+
 func (s *processingQueueCollectionSuite) TestUpdateAckLevels() {
 	totalQueues := 5
 	currentActiveIdx := 1

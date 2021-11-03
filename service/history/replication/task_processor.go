@@ -24,12 +24,15 @@ package replication
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 	"sync/atomic"
 	"time"
 
+	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common"
@@ -39,6 +42,8 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/reconciliation"
+	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -261,12 +266,23 @@ func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
 		metrics.ReplicationTasksLag,
 		time.Duration(p.shard.GetTransferMaxReadLevel()-minAckLevel),
 	)
-	return p.shard.GetExecutionManager().RangeCompleteReplicationTask(
-		context.Background(),
-		&persistence.RangeCompleteReplicationTaskRequest{
-			InclusiveEndTaskID: minAckLevel,
-		},
-	)
+	for {
+		pageSize := p.config.ReplicatorTaskDeleteBatchSize()
+		resp, err := p.shard.GetExecutionManager().RangeCompleteReplicationTask(
+			context.Background(),
+			&persistence.RangeCompleteReplicationTaskRequest{
+				InclusiveEndTaskID: minAckLevel,
+				PageSize:           pageSize, // pageSize may or may not be honored
+			},
+		)
+		if err != nil {
+			return err
+		}
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
+			break
+		}
+	}
+	return nil
 }
 
 func (p *taskProcessorImpl) sendFetchMessageRequest() <-chan *types.ReplicationMessages {
@@ -370,27 +386,28 @@ func (p *taskProcessorImpl) handleSyncShardStatus(
 
 func (p *taskProcessorImpl) processSingleTask(replicationTask *types.ReplicationTask) error {
 	retryTransientError := func() error {
-		return backoff.Retry(
-			func() error {
-				select {
-				case <-p.done:
-					// if the processor is stopping, skip the task
-					// the ack level will not update and the new shard owner will retry the task.
-					return nil
-				default:
-					return p.processTaskOnce(replicationTask)
-				}
-			},
-			p.taskRetryPolicy,
-			isTransientRetryableError)
+		throttleRetry := backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(p.taskRetryPolicy),
+			backoff.WithRetryableError(isTransientRetryableError),
+		)
+		return throttleRetry.Do(context.Background(), func() error {
+			select {
+			case <-p.done:
+				// if the processor is stopping, skip the task
+				// the ack level will not update and the new shard owner will retry the task.
+				return nil
+			default:
+				return p.processTaskOnce(replicationTask)
+			}
+		})
 	}
 
 	//Handle service busy error
-	err := backoff.Retry(
-		retryTransientError,
-		common.CreateReplicationServiceBusyRetryPolicy(),
-		common.IsServiceBusyError,
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreateReplicationServiceBusyRetryPolicy()),
+		backoff.WithRetryableError(common.IsServiceBusyError),
 	)
+	err := throttleRetry.Do(context.Background(), retryTransientError)
 
 	switch {
 	case err == nil:
@@ -416,6 +433,11 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 			tag.TaskID(replicationTask.GetSourceTaskID()),
 			tag.Error(err),
 		)
+		//TODO: uncomment this when the execution fixer workflow is ready
+		//if err = p.triggerDataInconsistencyScan(replicationTask); err != nil {
+		//	p.logger.Warn("Failed to trigger data scan", tag.Error(err))
+		//	p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
+		//}
 		return p.putReplicationTaskToDLQ(replicationTask)
 	}
 }
@@ -469,15 +491,19 @@ func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *types.Repli
 		metrics.ReplicationDLQMaxLevelGauge,
 		float64(request.TaskInfo.GetTaskID()),
 	)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(p.dlqRetryPolicy),
+		backoff.WithRetryableError(p.shouldRetryDLQ),
+	)
 	// The following is guaranteed to success or retry forever until processor is shutdown.
-	return backoff.Retry(func() error {
+	return throttleRetry.Do(context.Background(), func() error {
 		err := p.shard.GetExecutionManager().PutReplicationTaskToDLQ(context.Background(), request)
 		if err != nil {
 			p.logger.Error("Failed to put replication task to DLQ.", tag.Error(err))
 			p.metricsClient.IncCounter(metrics.ReplicationTaskFetcherScope, metrics.ReplicationDLQFailed)
 		}
 		return err
-	}, p.dlqRetryPolicy, p.shouldRetryDLQ)
+	})
 }
 
 func (p *taskProcessorImpl) generateDLQRequest(
@@ -527,6 +553,62 @@ func (p *taskProcessorImpl) generateDLQRequest(
 	default:
 		return nil, fmt.Errorf("unknown replication task type")
 	}
+}
+
+func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.ReplicationTask) error {
+
+	var failoverVersion int64
+	var domainID string
+	var workflowID string
+	var runID string
+	switch {
+	case replicationTask.GetHistoryTaskV2Attributes() != nil:
+		attr := replicationTask.GetHistoryTaskV2Attributes()
+		versionHistoryItems := attr.GetVersionHistoryItems()
+		if versionHistoryItems == nil || len(versionHistoryItems) == 0 {
+			return errors.New("failed to trigger data scan due to invalid version history")
+		}
+		// version history items in same batch should be the same
+		failoverVersion = versionHistoryItems[0].GetVersion()
+		domainID = attr.GetDomainID()
+		workflowID = attr.GetWorkflowID()
+		runID = attr.GetRunID()
+	case replicationTask.GetSyncActivityTaskAttributes() != nil:
+		attr := replicationTask.GetSyncActivityTaskAttributes()
+		failoverVersion = replicationTask.GetSyncActivityTaskAttributes().Version
+		domainID = attr.GetDomainID()
+		workflowID = attr.GetWorkflowID()
+		runID = attr.GetRunID()
+	default:
+		return nil
+	}
+	clusterName := p.shard.GetClusterMetadata().ClusterNameForFailoverVersion(failoverVersion)
+	client := p.shard.GetService().GetClientBean().GetRemoteFrontendClient(clusterName)
+	fixExecution := entity.Execution{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+		ShardID:    p.shard.GetShardID(),
+	}
+	fixExecutionInput, err := json.Marshal(fixExecution)
+	if err != nil {
+		return err
+	}
+	// Assume the workflow is corrupted, rely on invariant to validate it
+	_, err = client.SignalWithStartWorkflowExecution(context.Background(), &types.SignalWithStartWorkflowExecutionRequest{
+		Domain:                              common.SystemLocalDomainName,
+		WorkflowID:                          reconciliation.CheckDataCorruptionWorkflowID,
+		WorkflowType:                        &types.WorkflowType{Name: reconciliation.CheckDataCorruptionWorkflowType},
+		TaskList:                            &types.TaskList{Name: reconciliation.CheckDataCorruptionWorkflowTaskList},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(reconciliation.CheckDataCorruptionWorkflowTimeoutInSeconds),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(reconciliation.CheckDataCorruptionWorkflowTaskTimeoutInSeconds),
+		Identity:                            "cadence-history-replication",
+		RequestID:                           uuid.New(),
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+		SignalName:                          reconciliation.CheckDataCorruptionWorkflowSignalName,
+		SignalInput:                         fixExecutionInput,
+	})
+	return err
 }
 
 func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
@@ -603,6 +685,8 @@ func (p *taskProcessorImpl) updateFailureMetric(scope int, err error) {
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrExecutionAlreadyStartedCounter)
 	case *types.EntityNotExistsError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrEntityNotExistsCounter)
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		p.metricsClient.IncCounter(scope, metrics.CadenceErrWorkflowExecutionAlreadyCompletedCounter)
 	case *types.LimitExceededError:
 		p.metricsClient.IncCounter(scope, metrics.CadenceErrLimitExceededCounter)
 	case *yarpcerrors.Status:

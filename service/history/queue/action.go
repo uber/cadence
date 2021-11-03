@@ -20,6 +20,10 @@
 
 package queue
 
+import (
+	"github.com/uber/cadence/common/types"
+)
+
 type (
 	// ActionType specifies the type of the Action
 	ActionType int
@@ -29,6 +33,8 @@ type (
 		ActionType               ActionType
 		ResetActionAttributes    *ResetActionAttributes
 		GetStateActionAttributes *GetStateActionAttributes
+		GetTasksAttributes       *GetTasksAttributes
+		UpdateTaskAttributes     *UpdateTasksAttributes
 		// add attributes for other action types here
 	}
 
@@ -37,6 +43,8 @@ type (
 		ActionType           ActionType
 		ResetActionResult    *ResetActionResult
 		GetStateActionResult *GetStateActionResult
+		GetTasksResult       *GetTasksResult
+		UpdateTaskResult     *UpdateTasksResult
 	}
 
 	// ResetActionAttributes contains the parameter for performing Reset Action
@@ -50,6 +58,20 @@ type (
 	GetStateActionResult struct {
 		States []ProcessingQueueState
 	}
+
+	// GetTasksAttributes contains the parameter to get tasks
+	GetTasksAttributes struct{}
+	// GetTasksResult is the result for performing GetTasks Action
+	GetTasksResult struct {
+		TaskRequests []*types.CrossClusterTaskRequest
+	}
+	// UpdateTasksAttributes contains the parameter to update task
+	UpdateTasksAttributes struct {
+		TaskResponses []*types.CrossClusterTaskResponse
+	}
+	// UpdateTasksResult is the result for performing UpdateTask Action
+	UpdateTasksResult struct {
+	}
 )
 
 const (
@@ -57,6 +79,10 @@ const (
 	ActionTypeReset ActionType = iota + 1
 	// ActionTypeGetState is the ActionType for reading processing queue states
 	ActionTypeGetState
+	// ActionTypeGetTasks is the ActionType for get cross cluster tasks
+	ActionTypeGetTasks
+	// ActionTypeUpdateTask is the ActionType to update outstanding task
+	ActionTypeUpdateTask
 	// add more ActionType here
 )
 
@@ -73,5 +99,26 @@ func NewGetStateAction() *Action {
 	return &Action{
 		ActionType:               ActionTypeGetState,
 		GetStateActionAttributes: &GetStateActionAttributes{},
+	}
+}
+
+// NewGetTasksAction creates a queue action for fetching cross cluster tasks
+func NewGetTasksAction() *Action {
+	return &Action{
+		ActionType:         ActionTypeGetTasks,
+		GetTasksAttributes: &GetTasksAttributes{},
+	}
+}
+
+// NewUpdateTasksAction creates a queue action for responding cross cluster task
+// processing results
+func NewUpdateTasksAction(
+	taskResponses []*types.CrossClusterTaskResponse,
+) *Action {
+	return &Action{
+		ActionType: ActionTypeUpdateTask,
+		UpdateTaskAttributes: &UpdateTasksAttributes{
+			TaskResponses: taskResponses,
+		},
 	}
 }

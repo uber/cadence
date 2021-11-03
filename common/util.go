@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -94,6 +95,8 @@ const (
 	FailureReasonSizeExceedsLimit = "HISTORY_EXCEEDS_LIMIT"
 	// FailureReasonTransactionSizeExceedsLimit is the failureReason for when transaction cannot be committed because it exceeds size limit
 	FailureReasonTransactionSizeExceedsLimit = "TRANSACTION_SIZE_EXCEEDS_LIMIT"
+	// FailureReasonDecisionAttemptsExceedsLimit is reason to fail workflow when decision attempts fail too many times
+	FailureReasonDecisionAttemptsExceedsLimit = "DECISION_ATTEMPTS_EXCEEDS_LIMIT"
 )
 
 var (
@@ -103,6 +106,8 @@ var (
 	ErrContextTimeoutTooShort = &types.BadRequestError{Message: "Context timeout is too short."}
 	// ErrContextTimeoutNotSet is error for not setting a context timeout when calling a long poll API
 	ErrContextTimeoutNotSet = &types.BadRequestError{Message: "Context timeout is not set."}
+	// ErrDecisionResultCountTooLarge error for decision result count exceeds limit
+	ErrDecisionResultCountTooLarge = &types.BadRequestError{Message: "Decision result count exceeds limit."}
 )
 
 // AwaitWaitGroup calls Wait on the given wait
@@ -137,6 +142,23 @@ func CreatePersistenceRetryPolicy() backoff.RetryPolicy {
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
 	policy.SetExpirationInterval(retryPersistenceOperationExpirationInterval)
 
+	return policy
+}
+
+// CreatePersistenceRetryPolicyWithContext create a retry policy for persistence layer operations
+// which has an expiration interval computed based on the context's deadline
+func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryPolicy {
+	if ctx == nil {
+		return CreatePersistenceRetryPolicy()
+	}
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return CreatePersistenceRetryPolicy()
+	}
+
+	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
+	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
+	policy.SetExpirationInterval(deadline.Sub(time.Now()))
 	return policy
 }
 
@@ -203,14 +225,32 @@ func CreateReplicationServiceBusyRetryPolicy() backoff.RetryPolicy {
 	return policy
 }
 
-// IsPersistenceTransientError checks if the error is a transient persistence error
-func IsPersistenceTransientError(err error) bool {
-	switch err.(type) {
-	case *types.InternalServiceError, *types.ServiceBusyError:
-		return true
+// ValidIDLength checks if id is valid according to its length
+func ValidIDLength(
+	id string,
+	scope metrics.Scope,
+	warnLimit int,
+	errorLimit int,
+	metricsCounter int,
+) bool {
+	valid := len(id) <= errorLimit
+	if len(id) > warnLimit {
+		scope.IncCounter(metricsCounter)
 	}
+	return valid
+}
 
-	return false
+// CheckDecisionResultLimit checks if decision result count exceeds limits.
+func CheckDecisionResultLimit(
+	actualSize int,
+	limit int,
+	scope metrics.Scope,
+) error {
+	scope.RecordTimer(metrics.DecisionResultCount, time.Duration(actualSize))
+	if limit > 0 && actualSize > limit {
+		return ErrDecisionResultCountTooLarge
+	}
+	return nil
 }
 
 // IsServiceTransientError checks if the error is a transient error.
@@ -233,6 +273,12 @@ func IsServiceTransientError(err error) bool {
 	}
 
 	return false
+}
+
+// IsEntityNotExistsError checks if the error is an entity not exists error.
+func IsEntityNotExistsError(err error) bool {
+	_, ok := err.(*types.EntityNotExistsError)
+	return ok
 }
 
 // IsServiceBusyError checks if the error is a service busy error.
@@ -296,6 +342,31 @@ func IsValidContext(ctx context.Context) error {
 		return context.DeadlineExceeded
 	}
 	return nil
+}
+
+// CreateChildContext creates a child context which shorted context timeout
+// from the given parent context
+// tailroom must be in range [0, 1] and
+// (1-tailroom) * parent timeout will be the new child context timeout
+func CreateChildContext(
+	parent context.Context,
+	tailroom float64,
+) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return nil, func() {}
+	}
+	if parent.Err() != nil {
+		return parent, func() {}
+	}
+
+	now := time.Now()
+	deadline, ok := parent.Deadline()
+	if !ok || deadline.Before(now) {
+		return parent, func() {}
+	}
+
+	newDeadline := now.Add(time.Duration(math.Ceil(float64(deadline.Sub(now)) * (1.0 - tailroom))))
+	return context.WithDeadline(parent, newDeadline)
 }
 
 // GenerateRandomString is used for generate test string
@@ -436,7 +507,19 @@ func CreateHistoryStartWorkflowRequest(
 		DomainUUID:   domainID,
 		StartRequest: startRequest,
 	}
-	firstDecisionTaskBackoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(startRequest.GetCronSchedule(), now, now)
+
+	delayStartSeconds := startRequest.GetDelayStartSeconds()
+	firstDecisionTaskBackoffSeconds := delayStartSeconds
+	if len(startRequest.GetCronSchedule()) > 0 {
+		delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
+		firstDecisionTaskBackoffSeconds = backoff.GetBackoffForNextScheduleInSeconds(
+			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime)
+
+		// backoff seconds was calculated based on delayed start time, so we need to
+		// add the delayStartSeconds to that backoff.
+		firstDecisionTaskBackoffSeconds += delayStartSeconds
+	}
+
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
 
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
@@ -876,4 +959,42 @@ func MicrosecondsToDuration(d int64) time.Duration {
 // NanosecondsToDuration converts number of nanoseconds to time.Duration
 func NanosecondsToDuration(d int64) time.Duration {
 	return time.Duration(d) * time.Nanosecond
+}
+
+// SleepWithMinDuration sleeps for the minimum of desired and available duration
+// returns the remaining available time duration
+func SleepWithMinDuration(desired time.Duration, available time.Duration) time.Duration {
+	d := MinDuration(desired, available)
+	if d > 0 {
+		time.Sleep(d)
+	}
+	return available - d
+}
+
+// ConvertErrToGetTaskFailedCause converts error to GetTaskFailedCause
+func ConvertErrToGetTaskFailedCause(err error) types.GetTaskFailedCause {
+	if IsContextTimeoutError(err) {
+		return types.GetTaskFailedCauseTimeout
+	}
+	if IsServiceBusyError(err) {
+		return types.GetTaskFailedCauseServiceBusy
+	}
+	if _, ok := err.(*types.ShardOwnershipLostError); ok {
+		return types.GetTaskFailedCauseShardOwnershipLost
+	}
+	return types.GetTaskFailedCauseUncategorized
+}
+
+// ConvertGetTaskFailedCauseToErr converts GetTaskFailedCause to error
+func ConvertGetTaskFailedCauseToErr(failedCause types.GetTaskFailedCause) error {
+	switch failedCause {
+	case types.GetTaskFailedCauseServiceBusy:
+		return &types.ServiceBusyError{}
+	case types.GetTaskFailedCauseTimeout:
+		return context.DeadlineExceeded
+	case types.GetTaskFailedCauseShardOwnershipLost:
+		return &types.ShardOwnershipLostError{}
+	default:
+		return &types.InternalServiceError{Message: "uncategorized error"}
+	}
 }

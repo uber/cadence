@@ -22,12 +22,15 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/uber/cadence/tools/common/flag"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
@@ -85,7 +88,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 	securityToken := c.String(FlagSecurityToken)
 	var err error
 
-	isGlobalDomain := false
+	isGlobalDomain := true
 	if c.IsSet(FlagIsGlobalDomain) {
 		isGlobalDomain, err = strconv.ParseBool(c.String(FlagIsGlobalDomain))
 		if err != nil {
@@ -93,16 +96,12 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		}
 	}
 
-	domainData := map[string]string{}
+	var domainData *flag.StringMap
 	if c.IsSet(FlagDomainData) {
-		domainDataStr := getRequiredOption(c, FlagDomainData)
-		domainData, err = parseDomainDataKVs(domainDataStr)
-		if err != nil {
-			ErrorAndExit(fmt.Sprintf("Option %s format is invalid.", FlagDomainData), err)
-		}
+		domainData = c.Generic(FlagDomainData).(*flag.StringMap)
 	}
 	if len(requiredDomainDataKeys) > 0 {
-		err = checkRequiredDomainDataKVs(domainData)
+		err = checkRequiredDomainDataKVs(domainData.Value())
 		if err != nil {
 			ErrorAndExit("Domain data missed required data.", err)
 		}
@@ -130,7 +129,7 @@ func (d *domainCLIImpl) RegisterDomain(c *cli.Context) {
 		Name:                                   domainName,
 		Description:                            description,
 		OwnerEmail:                             ownerEmail,
-		Data:                                   domainData,
+		Data:                                   domainData.Value(),
 		WorkflowExecutionRetentionPeriodInDays: int32(retentionDays),
 		Clusters:                               clusters,
 		ActiveClusterName:                      activeClusterName,
@@ -204,13 +203,9 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 		if c.IsSet(FlagOwnerEmail) {
 			ownerEmail = c.String(FlagOwnerEmail)
 		}
-		domainData := map[string]string{}
+		var domainData *flag.StringMap
 		if c.IsSet(FlagDomainData) {
-			domainDataStr := c.String(FlagDomainData)
-			domainData, err = parseDomainDataKVs(domainDataStr)
-			if err != nil {
-				ErrorAndExit("Domain data format is invalid.", err)
-			}
+			domainData = c.Generic(FlagDomainData).(*flag.StringMap)
 		}
 		if c.IsSet(FlagRetentionDays) {
 			retentionDays = int32(c.Int(FlagRetentionDays))
@@ -254,7 +249,7 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 			Name:                                   domainName,
 			Description:                            common.StringPtr(description),
 			OwnerEmail:                             common.StringPtr(ownerEmail),
-			Data:                                   domainData,
+			Data:                                   domainData.Value(),
 			WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(retentionDays),
 			EmitMetric:                             common.BoolPtr(emitMetric),
 			HistoryArchivalStatus:                  archivalStatus(c, FlagHistoryArchivalStatus),
@@ -284,10 +279,24 @@ func (d *domainCLIImpl) UpdateDomain(c *cli.Context) {
 func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 	domainName := getRequiredGlobalOption(c, FlagDomain)
 	securityToken := c.String(FlagSecurityToken)
+	force := c.Bool(FlagForce)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 
+	if !force {
+		// check if there is any workflow in this domain, if exists, do not deprecate
+		wfs, _ := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", workflowStatusNotSet, nil, c)
+		if len(wfs) > 0 {
+			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("workflow history not cleared in this domain"))
+			return
+		}
+		wfs, _ = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", nil, c)
+		if len(wfs) > 0 {
+			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("workflow still running in this domain"))
+			return
+		}
+	}
 	err := d.deprecateDomain(ctx, &types.DeprecateDomainRequest{
 		Name:          domainName,
 		SecurityToken: securityToken,
@@ -396,8 +405,12 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
 	}
 
+	clusters := "N/A, Not a global domain"
+	if resp.IsGlobalDomain {
+		clusters = clustersToString(resp.ReplicationConfiguration.Clusters)
+	}
 	var formatStr = "Name: %v\nUUID: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
-		"EmitMetrics: %v\nActiveClusterName: %v\nClusters: %v\nHistoryArchivalStatus: %v\n"
+		"EmitMetrics: %v\nIsGlobal(XDC)Domain: %v\nActiveClusterName: %v\nClusters: %v\nHistoryArchivalStatus: %v\n"
 	descValues := []interface{}{
 		resp.DomainInfo.GetName(),
 		resp.DomainInfo.GetUUID(),
@@ -407,8 +420,9 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		resp.DomainInfo.GetStatus(),
 		resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
 		resp.Configuration.GetEmitMetric(),
+		resp.IsGlobalDomain,
 		resp.ReplicationConfiguration.GetActiveClusterName(),
-		clustersToString(resp.ReplicationConfiguration.Clusters),
+		clusters,
 		resp.Configuration.GetHistoryArchivalStatus().String(),
 	}
 	if resp.Configuration.GetHistoryArchivalURI() != "" {
@@ -440,32 +454,77 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		}
 		table.Render()
 	}
+	if resp.GetFailoverInfo() != nil {
+		info := resp.GetFailoverInfo()
+		fmt.Println("Graceful failover info:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetBorder(true)
+		table.SetColumnSeparator("|")
+		header := []string{"Failover Version", "Start Time", "Expire Time", "Completed Shard Count", "Pending Shard"}
+		table.SetHeader(header)
+		row := []string{}
+		row = append(row, fmt.Sprintf("%v", info.GetFailoverVersion()))
+		row = append(row, time.Unix(0, info.GetFailoverStartTimestamp()).String())
+		row = append(row, time.Unix(0, info.GetFailoverExpireTimestamp()).String())
+		row = append(row, fmt.Sprintf("%v", info.GetCompletedShardCount()))
+		row = append(row, fmt.Sprintf("%v", info.GetPendingShards()))
+		table.Append(row)
+		table.Render()
+	}
 }
 
 func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 	pageSize := c.Int(FlagPageSize)
+	prefix := c.String(FlagPrefix)
 	printAll := c.Bool(FlagAll)
 	printDeprecated := c.Bool(FlagDeprecated)
 	printFull := c.Bool(FlagPrintFullyDetail)
+	printJSON := c.Bool(FlagPrintJSON)
 
 	if printAll && printDeprecated {
 		ErrorAndExit(fmt.Sprintf("Cannot specify %s and %s flags at the same time.", FlagAll, FlagDeprecated), nil)
 	}
 
 	domains := d.getAllDomains(c)
+	var filteredDomains []*types.DescribeDomainResponse
+
+	// Only list domains that are matching to the prefix if prefix is provided
+	if len(prefix) > 0 {
+		var prefixDomains []*types.DescribeDomainResponse
+		for _, domain := range domains {
+			if strings.Index(domain.DomainInfo.Name, prefix) == 0 {
+				prefixDomains = append(prefixDomains, domain)
+			}
+		}
+		domains = prefixDomains
+	}
+
+	if printAll {
+		filteredDomains = domains
+	} else {
+		filteredDomains = make([]*types.DescribeDomainResponse, 0, len(domains))
+		for _, domain := range domains {
+			if printDeprecated && *domain.DomainInfo.Status == types.DomainStatusDeprecated {
+				filteredDomains = append(filteredDomains, domain)
+			} else if !printDeprecated && *domain.DomainInfo.Status == types.DomainStatusRegistered {
+				filteredDomains = append(filteredDomains, domain)
+			}
+		}
+	}
+
+	if printJSON {
+		output, err := json.Marshal(filteredDomains)
+		if err != nil {
+			ErrorAndExit("Failed to encode domain results into JSON.", err)
+		}
+		fmt.Println(string(output))
+		return
+	}
 
 	table := createTableForListDomains(printAll, printFull)
 
 	currentPageSize := 0
-	for i, domain := range domains {
-		if printDeprecated {
-			if *domain.DomainInfo.Status != types.DomainStatusDeprecated {
-				continue
-			}
-		} else if !printAll && *domain.DomainInfo.Status != types.DomainStatusRegistered {
-			continue
-		}
-
+	for i, domain := range filteredDomains {
 		appendDomainToTable(table, domain, printAll, printFull)
 		currentPageSize++
 

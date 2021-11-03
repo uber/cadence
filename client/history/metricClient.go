@@ -739,3 +739,57 @@ func (c *metricClient) NotifyFailoverMarkers(
 	}
 	return err
 }
+
+func (c *metricClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientGetCrossClusterTasksScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetCrossClusterTasksScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetCrossClusterTasks(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientGetCrossClusterTasksScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
+
+func (c *metricClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientRespondCrossClusterTasksCompletedScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
+
+func (c *metricClient) GetFailoverInfo(
+	ctx context.Context,
+	request *types.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetFailoverInfoResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryClientGetFailoverInfoScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.HistoryClientGetFailoverInfoScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetFailoverInfo(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryClientGetFailoverInfoScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}

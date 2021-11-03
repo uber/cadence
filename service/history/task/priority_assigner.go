@@ -33,6 +33,12 @@ import (
 	"github.com/uber/cadence/service/history/config"
 )
 
+var (
+	highTaskPriority    = task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)
+	defaultTaskPriority = task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass)
+	lowTaskPriority     = task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass)
+)
+
 type (
 	priorityAssignerImpl struct {
 		sync.RWMutex
@@ -69,19 +75,23 @@ func NewPriorityAssigner(
 func (a *priorityAssignerImpl) Assign(
 	queueTask Task,
 ) error {
-	if queueTask.Priority() != task.NoPriority {
+	if priority := queueTask.Priority(); priority != task.NoPriority {
+		if priority != lowTaskPriority && queueTask.GetAttempt() > a.config.TaskCriticalRetryCount() {
+			// automatically lower the priority if task attempt exceeds certain threshold
+			queueTask.SetPriority(lowTaskPriority)
+		}
 		return nil
 	}
 
 	queueType := queueTask.GetQueueType()
 
 	if queueType == QueueTypeReplication {
-		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
+		queueTask.SetPriority(lowTaskPriority)
 		return nil
 	}
 
-	// timer or transfer task, first check if task is active or not and if domain is active or not
-	isActiveTask := queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer
+	// timer, transfer or cross cluster task, first check if task is active or not and if domain is active or not
+	isActiveTask := queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer || queueType == QueueTypeCrossCluster
 	domainName, isActiveDomain, err := a.getDomainInfo(queueTask.GetDomainID())
 	if err != nil {
 		return err
@@ -95,7 +105,7 @@ func (a *priorityAssignerImpl) Assign(
 
 	if !isActiveTask && !isActiveDomain {
 		// only assign low priority to tasks in the fourth case
-		queueTask.SetPriority(task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass))
+		queueTask.SetPriority(lowTaskPriority)
 		return nil
 	}
 
@@ -104,17 +114,20 @@ func (a *priorityAssignerImpl) Assign(
 	// it can be quickly verified/acked and won't prevent the ack level in the processor from advancing
 	// (especially for active processor)
 	if !a.getRateLimiter(domainName).Allow() {
-		queueTask.SetPriority(task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass))
+		queueTask.SetPriority(defaultTaskPriority)
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
-		if queueType == QueueTypeActiveTransfer || queueType == QueueTypeStandbyTransfer {
+		switch queueType {
+		case QueueTypeActiveTransfer, QueueTypeStandbyTransfer:
 			taggedScope.IncCounter(metrics.TransferTaskThrottledCounter)
-		} else {
+		case QueueTypeActiveTimer, QueueTypeStandbyTimer:
 			taggedScope.IncCounter(metrics.TimerTaskThrottledCounter)
+		case QueueTypeCrossCluster:
+			taggedScope.IncCounter(metrics.CrossClusterTaskThrottledCounter)
 		}
 		return nil
 	}
 
-	queueTask.SetPriority(task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass))
+	queueTask.SetPriority(highTaskPriority)
 	return nil
 }
 

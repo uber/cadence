@@ -117,6 +117,26 @@ func (mr *MockClientMockRecorder) DescribeCluster(arg0 interface{}, arg1 ...inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCluster", reflect.TypeOf((*MockClient)(nil).DescribeCluster), varargs...)
 }
 
+// DescribeShardDistribution mocks base method
+func (m *MockClient) DescribeShardDistribution(arg0 context.Context, arg1 *types.DescribeShardDistributionRequest, arg2 ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeShardDistribution", varargs...)
+	ret0, _ := ret[0].(*types.DescribeShardDistributionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeShardDistribution indicates an expected call of DescribeShardDistribution
+func (mr *MockClientMockRecorder) DescribeShardDistribution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeShardDistribution", reflect.TypeOf((*MockClient)(nil).DescribeShardDistribution), varargs...)
+}
+
 // DescribeHistoryHost mocks base method
 func (m *MockClient) DescribeHistoryHost(arg0 context.Context, arg1 *types.DescribeHistoryHostRequest, arg2 ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
 	m.ctrl.T.Helper()
@@ -409,4 +429,122 @@ func (mr *MockClientMockRecorder) ResetQueue(arg0, arg1 interface{}, arg2 ...int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQueue", reflect.TypeOf((*MockClient)(nil).ResetQueue), varargs...)
+}
+
+// GetCrossClusterTasks mocks base method
+func (m *MockClient) GetCrossClusterTasks(arg0 context.Context, arg1 *types.GetCrossClusterTasksRequest, arg2 ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks", varargs...)
+	ret0, _ := ret[0].(*types.GetCrossClusterTasksResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
+func (mr *MockClientMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockClient)(nil).GetCrossClusterTasks), varargs...)
+}
+
+// RespondCrossClusterTasksCompleted mocks base method
+func (m *MockClient) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest, arg2 ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", varargs...)
+	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted
+func (mr *MockClientMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockClient)(nil).RespondCrossClusterTasksCompleted), varargs...)
+}
+
+// GetDynamicConfig mocks base method
+func (m *MockClient) GetDynamicConfig(arg0 context.Context, arg1 *types.GetDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDynamicConfig", varargs...)
+	ret0, _ := ret[0].(*types.GetDynamicConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDynamicConfig indicates an expected call of GetDynamicConfig
+func (mr *MockClientMockRecorder) GetDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicConfig", reflect.TypeOf((*MockClient)(nil).GetDynamicConfig), varargs...)
+}
+
+// UpdateDynamicConfig mocks base method
+func (m *MockClient) UpdateDynamicConfig(arg0 context.Context, arg1 *types.UpdateDynamicConfigRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateDynamicConfig", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateDynamicConfig indicates an expected call of UpdateDynamicConfig
+func (mr *MockClientMockRecorder) UpdateDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockClient)(nil).UpdateDynamicConfig), varargs...)
+}
+
+// RestoreDynamicConfig mocks base method
+func (m *MockClient) RestoreDynamicConfig(arg0 context.Context, arg1 *types.RestoreDynamicConfigRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RestoreDynamicConfig", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreDynamicConfig indicates an expected call of RestoreDynamicConfig
+func (mr *MockClientMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDynamicConfig", reflect.TypeOf((*MockClient)(nil).RestoreDynamicConfig), varargs...)
+}
+
+// ListDynamicConfig mocks base method
+func (m *MockClient) ListDynamicConfig(arg0 context.Context, arg1 *types.ListDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListDynamicConfig", varargs...)
+	ret0, _ := ret[0].(*types.ListDynamicConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDynamicConfig indicates an expected call of ListDynamicConfig
+func (mr *MockClientMockRecorder) ListDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDynamicConfig", reflect.TypeOf((*MockClient)(nil).ListDynamicConfig), varargs...)
 }

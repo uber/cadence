@@ -80,6 +80,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.GetSearchAttributesResponse, error)
 
+	GetTaskListsByDomain(
+		ctx context.Context,
+		Request *shared.GetTaskListsByDomainRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetTaskListsByDomainResponse, error)
+
 	GetWorkflowExecutionHistory(
 		ctx context.Context,
 		GetRequest *shared.GetWorkflowExecutionHistoryRequest,
@@ -276,6 +282,10 @@ func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 			Service:      "WorkflowService",
 			ClientConfig: c,
 		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
+			Service:      "WorkflowService",
+			ClientConfig: c,
+		}, opts...),
 	}
 }
 
@@ -288,7 +298,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) CountWorkflowExecutions(
@@ -297,17 +308,22 @@ func (c client) CountWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (success *shared.CountWorkflowExecutionsResponse, err error) {
 
+	var result cadence.WorkflowService_CountWorkflowExecutions_Result
 	args := cadence.WorkflowService_CountWorkflowExecutions_Helper.Args(_CountRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_CountWorkflowExecutions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_CountWorkflowExecutions_Helper.UnwrapResponse(&result)
@@ -320,17 +336,22 @@ func (c client) DeprecateDomain(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_DeprecateDomain_Result
 	args := cadence.WorkflowService_DeprecateDomain_Helper.Args(_DeprecateRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_DeprecateDomain_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_DeprecateDomain_Helper.UnwrapResponse(&result)
@@ -343,17 +364,22 @@ func (c client) DescribeDomain(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeDomainResponse, err error) {
 
+	var result cadence.WorkflowService_DescribeDomain_Result
 	args := cadence.WorkflowService_DescribeDomain_Helper.Args(_DescribeRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_DescribeDomain_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_DescribeDomain_Helper.UnwrapResponse(&result)
@@ -366,17 +392,22 @@ func (c client) DescribeTaskList(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeTaskListResponse, err error) {
 
+	var result cadence.WorkflowService_DescribeTaskList_Result
 	args := cadence.WorkflowService_DescribeTaskList_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_DescribeTaskList_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_DescribeTaskList_Helper.UnwrapResponse(&result)
@@ -389,17 +420,22 @@ func (c client) DescribeWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeWorkflowExecutionResponse, err error) {
 
+	var result cadence.WorkflowService_DescribeWorkflowExecution_Result
 	args := cadence.WorkflowService_DescribeWorkflowExecution_Helper.Args(_DescribeRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_DescribeWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -411,17 +447,22 @@ func (c client) GetClusterInfo(
 	opts ...yarpc.CallOption,
 ) (success *shared.ClusterInfo, err error) {
 
+	var result cadence.WorkflowService_GetClusterInfo_Result
 	args := cadence.WorkflowService_GetClusterInfo_Helper.Args()
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_GetClusterInfo_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_GetClusterInfo_Helper.UnwrapResponse(&result)
@@ -433,20 +474,53 @@ func (c client) GetSearchAttributes(
 	opts ...yarpc.CallOption,
 ) (success *shared.GetSearchAttributesResponse, err error) {
 
+	var result cadence.WorkflowService_GetSearchAttributes_Result
 	args := cadence.WorkflowService_GetSearchAttributes_Helper.Args()
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_GetSearchAttributes_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_GetSearchAttributes_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetTaskListsByDomain(
+	ctx context.Context,
+	_Request *shared.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetTaskListsByDomainResponse, err error) {
+
+	var result cadence.WorkflowService_GetTaskListsByDomain_Result
+	args := cadence.WorkflowService_GetTaskListsByDomain_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = cadence.WorkflowService_GetTaskListsByDomain_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -456,17 +530,22 @@ func (c client) GetWorkflowExecutionHistory(
 	opts ...yarpc.CallOption,
 ) (success *shared.GetWorkflowExecutionHistoryResponse, err error) {
 
+	var result cadence.WorkflowService_GetWorkflowExecutionHistory_Result
 	args := cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.Args(_GetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_GetWorkflowExecutionHistory_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_GetWorkflowExecutionHistory_Helper.UnwrapResponse(&result)
@@ -479,17 +558,22 @@ func (c client) ListArchivedWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListArchivedWorkflowExecutionsResponse, err error) {
 
+	var result cadence.WorkflowService_ListArchivedWorkflowExecutions_Result
 	args := cadence.WorkflowService_ListArchivedWorkflowExecutions_Helper.Args(_ListRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ListArchivedWorkflowExecutions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ListArchivedWorkflowExecutions_Helper.UnwrapResponse(&result)
@@ -502,17 +586,22 @@ func (c client) ListClosedWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListClosedWorkflowExecutionsResponse, err error) {
 
+	var result cadence.WorkflowService_ListClosedWorkflowExecutions_Result
 	args := cadence.WorkflowService_ListClosedWorkflowExecutions_Helper.Args(_ListRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ListClosedWorkflowExecutions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ListClosedWorkflowExecutions_Helper.UnwrapResponse(&result)
@@ -525,17 +614,22 @@ func (c client) ListDomains(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListDomainsResponse, err error) {
 
+	var result cadence.WorkflowService_ListDomains_Result
 	args := cadence.WorkflowService_ListDomains_Helper.Args(_ListRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ListDomains_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ListDomains_Helper.UnwrapResponse(&result)
@@ -548,17 +642,22 @@ func (c client) ListOpenWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListOpenWorkflowExecutionsResponse, err error) {
 
+	var result cadence.WorkflowService_ListOpenWorkflowExecutions_Result
 	args := cadence.WorkflowService_ListOpenWorkflowExecutions_Helper.Args(_ListRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ListOpenWorkflowExecutions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ListOpenWorkflowExecutions_Helper.UnwrapResponse(&result)
@@ -571,17 +670,22 @@ func (c client) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListTaskListPartitionsResponse, err error) {
 
+	var result cadence.WorkflowService_ListTaskListPartitions_Result
 	args := cadence.WorkflowService_ListTaskListPartitions_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ListTaskListPartitions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ListTaskListPartitions_Helper.UnwrapResponse(&result)
@@ -594,17 +698,22 @@ func (c client) ListWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListWorkflowExecutionsResponse, err error) {
 
+	var result cadence.WorkflowService_ListWorkflowExecutions_Result
 	args := cadence.WorkflowService_ListWorkflowExecutions_Helper.Args(_ListRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ListWorkflowExecutions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ListWorkflowExecutions_Helper.UnwrapResponse(&result)
@@ -617,17 +726,22 @@ func (c client) PollForActivityTask(
 	opts ...yarpc.CallOption,
 ) (success *shared.PollForActivityTaskResponse, err error) {
 
+	var result cadence.WorkflowService_PollForActivityTask_Result
 	args := cadence.WorkflowService_PollForActivityTask_Helper.Args(_PollRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_PollForActivityTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_PollForActivityTask_Helper.UnwrapResponse(&result)
@@ -640,17 +754,22 @@ func (c client) PollForDecisionTask(
 	opts ...yarpc.CallOption,
 ) (success *shared.PollForDecisionTaskResponse, err error) {
 
+	var result cadence.WorkflowService_PollForDecisionTask_Result
 	args := cadence.WorkflowService_PollForDecisionTask_Helper.Args(_PollRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_PollForDecisionTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_PollForDecisionTask_Helper.UnwrapResponse(&result)
@@ -663,17 +782,22 @@ func (c client) QueryWorkflow(
 	opts ...yarpc.CallOption,
 ) (success *shared.QueryWorkflowResponse, err error) {
 
+	var result cadence.WorkflowService_QueryWorkflow_Result
 	args := cadence.WorkflowService_QueryWorkflow_Helper.Args(_QueryRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_QueryWorkflow_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_QueryWorkflow_Helper.UnwrapResponse(&result)
@@ -686,17 +810,22 @@ func (c client) RecordActivityTaskHeartbeat(
 	opts ...yarpc.CallOption,
 ) (success *shared.RecordActivityTaskHeartbeatResponse, err error) {
 
+	var result cadence.WorkflowService_RecordActivityTaskHeartbeat_Result
 	args := cadence.WorkflowService_RecordActivityTaskHeartbeat_Helper.Args(_HeartbeatRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RecordActivityTaskHeartbeat_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_RecordActivityTaskHeartbeat_Helper.UnwrapResponse(&result)
@@ -709,17 +838,22 @@ func (c client) RecordActivityTaskHeartbeatByID(
 	opts ...yarpc.CallOption,
 ) (success *shared.RecordActivityTaskHeartbeatResponse, err error) {
 
+	var result cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Result
 	args := cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.Args(_HeartbeatRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.UnwrapResponse(&result)
@@ -732,17 +866,22 @@ func (c client) RegisterDomain(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RegisterDomain_Result
 	args := cadence.WorkflowService_RegisterDomain_Helper.Args(_RegisterRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RegisterDomain_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RegisterDomain_Helper.UnwrapResponse(&result)
@@ -755,17 +894,22 @@ func (c client) RequestCancelWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RequestCancelWorkflowExecution_Result
 	args := cadence.WorkflowService_RequestCancelWorkflowExecution_Helper.Args(_CancelRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RequestCancelWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RequestCancelWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -778,17 +922,22 @@ func (c client) ResetStickyTaskList(
 	opts ...yarpc.CallOption,
 ) (success *shared.ResetStickyTaskListResponse, err error) {
 
+	var result cadence.WorkflowService_ResetStickyTaskList_Result
 	args := cadence.WorkflowService_ResetStickyTaskList_Helper.Args(_ResetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ResetStickyTaskList_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ResetStickyTaskList_Helper.UnwrapResponse(&result)
@@ -801,17 +950,22 @@ func (c client) ResetWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.ResetWorkflowExecutionResponse, err error) {
 
+	var result cadence.WorkflowService_ResetWorkflowExecution_Result
 	args := cadence.WorkflowService_ResetWorkflowExecution_Helper.Args(_ResetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ResetWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ResetWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -824,17 +978,22 @@ func (c client) RespondActivityTaskCanceled(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondActivityTaskCanceled_Result
 	args := cadence.WorkflowService_RespondActivityTaskCanceled_Helper.Args(_CanceledRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondActivityTaskCanceled_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskCanceled_Helper.UnwrapResponse(&result)
@@ -847,17 +1006,22 @@ func (c client) RespondActivityTaskCanceledByID(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondActivityTaskCanceledByID_Result
 	args := cadence.WorkflowService_RespondActivityTaskCanceledByID_Helper.Args(_CanceledRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondActivityTaskCanceledByID_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskCanceledByID_Helper.UnwrapResponse(&result)
@@ -870,17 +1034,22 @@ func (c client) RespondActivityTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondActivityTaskCompleted_Result
 	args := cadence.WorkflowService_RespondActivityTaskCompleted_Helper.Args(_CompleteRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondActivityTaskCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskCompleted_Helper.UnwrapResponse(&result)
@@ -893,17 +1062,22 @@ func (c client) RespondActivityTaskCompletedByID(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondActivityTaskCompletedByID_Result
 	args := cadence.WorkflowService_RespondActivityTaskCompletedByID_Helper.Args(_CompleteRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondActivityTaskCompletedByID_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskCompletedByID_Helper.UnwrapResponse(&result)
@@ -916,17 +1090,22 @@ func (c client) RespondActivityTaskFailed(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondActivityTaskFailed_Result
 	args := cadence.WorkflowService_RespondActivityTaskFailed_Helper.Args(_FailRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondActivityTaskFailed_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskFailed_Helper.UnwrapResponse(&result)
@@ -939,17 +1118,22 @@ func (c client) RespondActivityTaskFailedByID(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondActivityTaskFailedByID_Result
 	args := cadence.WorkflowService_RespondActivityTaskFailedByID_Helper.Args(_FailRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondActivityTaskFailedByID_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondActivityTaskFailedByID_Helper.UnwrapResponse(&result)
@@ -962,17 +1146,22 @@ func (c client) RespondDecisionTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (success *shared.RespondDecisionTaskCompletedResponse, err error) {
 
+	var result cadence.WorkflowService_RespondDecisionTaskCompleted_Result
 	args := cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.Args(_CompleteRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondDecisionTaskCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_RespondDecisionTaskCompleted_Helper.UnwrapResponse(&result)
@@ -985,17 +1174,22 @@ func (c client) RespondDecisionTaskFailed(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondDecisionTaskFailed_Result
 	args := cadence.WorkflowService_RespondDecisionTaskFailed_Helper.Args(_FailedRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondDecisionTaskFailed_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
@@ -1008,17 +1202,22 @@ func (c client) RespondQueryTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_RespondQueryTaskCompleted_Result
 	args := cadence.WorkflowService_RespondQueryTaskCompleted_Helper.Args(_CompleteRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_RespondQueryTaskCompleted_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_RespondQueryTaskCompleted_Helper.UnwrapResponse(&result)
@@ -1031,17 +1230,22 @@ func (c client) ScanWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (success *shared.ListWorkflowExecutionsResponse, err error) {
 
+	var result cadence.WorkflowService_ScanWorkflowExecutions_Result
 	args := cadence.WorkflowService_ScanWorkflowExecutions_Helper.Args(_ListRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_ScanWorkflowExecutions_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_ScanWorkflowExecutions_Helper.UnwrapResponse(&result)
@@ -1054,17 +1258,22 @@ func (c client) SignalWithStartWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.StartWorkflowExecutionResponse, err error) {
 
+	var result cadence.WorkflowService_SignalWithStartWorkflowExecution_Result
 	args := cadence.WorkflowService_SignalWithStartWorkflowExecution_Helper.Args(_SignalWithStartRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_SignalWithStartWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_SignalWithStartWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1077,17 +1286,22 @@ func (c client) SignalWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_SignalWorkflowExecution_Result
 	args := cadence.WorkflowService_SignalWorkflowExecution_Helper.Args(_SignalRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_SignalWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_SignalWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1100,17 +1314,22 @@ func (c client) StartWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *shared.StartWorkflowExecutionResponse, err error) {
 
+	var result cadence.WorkflowService_StartWorkflowExecution_Result
 	args := cadence.WorkflowService_StartWorkflowExecution_Helper.Args(_StartRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_StartWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_StartWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1123,17 +1342,22 @@ func (c client) TerminateWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result cadence.WorkflowService_TerminateWorkflowExecution_Result
 	args := cadence.WorkflowService_TerminateWorkflowExecution_Helper.Args(_TerminateRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_TerminateWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = cadence.WorkflowService_TerminateWorkflowExecution_Helper.UnwrapResponse(&result)
@@ -1146,17 +1370,22 @@ func (c client) UpdateDomain(
 	opts ...yarpc.CallOption,
 ) (success *shared.UpdateDomainResponse, err error) {
 
+	var result cadence.WorkflowService_UpdateDomain_Result
 	args := cadence.WorkflowService_UpdateDomain_Helper.Args(_UpdateRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result cadence.WorkflowService_UpdateDomain_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = cadence.WorkflowService_UpdateDomain_Helper.UnwrapResponse(&result)

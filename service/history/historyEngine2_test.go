@@ -826,7 +826,7 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 		},
 	})
 	s.NotNil(err)
-	s.IsType(&types.EntityNotExistsError{}, err)
+	s.IsType(&types.WorkflowExecutionAlreadyCompletedError{}, err)
 }
 
 func (s *engine2Suite) createExecutionStartedState(we types.WorkflowExecution, tl, identity string,
@@ -920,7 +920,9 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 	identity := "testIdentity"
 
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	requestID := uuid.New()
 	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
@@ -1030,14 +1032,15 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		types.WorkflowIDReusePolicyRejectDuplicate,
 	}
 
-	expecedErrs := []bool{true, false, true}
+	expectedErrs := []bool{true, false, true}
 
-	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Times(len(expecedErrs))
+	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Times(len(expectedErrs))
 	s.mockExecutionMgr.On(
 		"CreateWorkflowExecution",
 		mock.Anything,
 		mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-			return request.Mode == p.CreateWorkflowModeBrandNew
+			return request.Mode == p.CreateWorkflowModeBrandNew &&
+				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
 		}),
 	).Return(nil, &p.WorkflowExecutionAlreadyStartedError{
 		Msg:              "random message",
@@ -1046,17 +1049,18 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		State:            p.WorkflowStateCompleted,
 		CloseStatus:      p.WorkflowCloseStatusCompleted,
 		LastWriteVersion: lastWriteVersion,
-	}).Times(len(expecedErrs))
+	}).Times(len(expectedErrs))
 
 	for index, option := range options {
-		if !expecedErrs[index] {
+		if !expectedErrs[index] {
 			s.mockExecutionMgr.On(
 				"CreateWorkflowExecution",
 				mock.Anything,
 				mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
 					return request.Mode == p.CreateWorkflowModeWorkflowIDReuse &&
 						request.PreviousRunID == runID &&
-						request.PreviousLastWriteVersion == lastWriteVersion
+						request.PreviousLastWriteVersion == lastWriteVersion &&
+						!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
 				}),
 			).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 		}
@@ -1076,7 +1080,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 			},
 		})
 
-		if expecedErrs[index] {
+		if expectedErrs[index] {
 			if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
 				s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
 			}
@@ -1102,7 +1106,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 		types.WorkflowIDReusePolicyRejectDuplicate,
 	}
 
-	expecedErrs := []bool{false, false, true}
+	expectedErrs := []bool{false, false, true}
 
 	closeStates := []int{
 		p.WorkflowCloseStatusFailed,
@@ -1114,12 +1118,13 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 
 	for i, closeState := range closeStates {
 
-		s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Times(len(expecedErrs))
+		s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Times(len(expectedErrs))
 		s.mockExecutionMgr.On(
 			"CreateWorkflowExecution",
 			mock.Anything,
 			mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-				return request.Mode == p.CreateWorkflowModeBrandNew
+				return request.Mode == p.CreateWorkflowModeBrandNew &&
+					!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
 			}),
 		).Return(nil, &p.WorkflowExecutionAlreadyStartedError{
 			Msg:              "random message",
@@ -1128,11 +1133,11 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			State:            p.WorkflowStateCompleted,
 			CloseStatus:      closeState,
 			LastWriteVersion: lastWriteVersion,
-		}).Times(len(expecedErrs))
+		}).Times(len(expectedErrs))
 
 		for j, option := range options {
 
-			if !expecedErrs[j] {
+			if !expectedErrs[j] {
 				s.mockExecutionMgr.On(
 					"CreateWorkflowExecution",
 					mock.Anything,
@@ -1159,7 +1164,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 				},
 			})
 
-			if expecedErrs[j] {
+			if expectedErrs[j] {
 				if _, ok := err.(*types.WorkflowExecutionAlreadyStartedError); !ok {
 					s.Fail("return err is not *types.WorkflowExecutionAlreadyStartedError")
 				}
@@ -1250,7 +1255,9 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
@@ -1344,7 +1351,9 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(gceResponse, nil).Once()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)

@@ -33,13 +33,14 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/resource"
@@ -151,8 +152,15 @@ func (s *controllerSuite) TestAcquireShardSuccess() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+					TransferProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					TimerProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -234,8 +242,15 @@ func (s *controllerSuite) TestAcquireShardsConcurrently() {
 						cluster.TestCurrentClusterName:     currentClusterTimerAck,
 						cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 					},
-					TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-					TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+					TransferProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
+					TimerProcessingQueueStates: &types.ProcessingQueueStates{
+						StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+					},
 					ClusterReplicationLevel: map[string]int64{},
 					ReplicationDLQAckLevel:  map[string]int64{},
 				},
@@ -324,8 +339,15 @@ func (s *controllerSuite) TestAcquireShardRenewSuccess() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+				TransferProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				TimerProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -399,8 +421,15 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 					cluster.TestCurrentClusterName:     currentClusterTimerAck,
 					cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 				},
-				TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-				TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+				TransferProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
+				TimerProcessingQueueStates: &types.ProcessingQueueStates{
+					StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+				},
 				ClusterReplicationLevel: map[string]int64{},
 				ReplicationDLQAckLevel:  map[string]int64{},
 			},
@@ -559,6 +588,19 @@ func (s *controllerSuite) TestShardControllerClosed() {
 	workerWG.Wait()
 }
 
+func (s *controllerSuite) TestGetOrCreateHistoryShardItem_InvalidShardID_Error() {
+	s.config.NumberOfShards = 4
+	s.shardController = NewShardController(s.mockResource, s.mockEngineFactory, s.config).(*controller)
+
+	eng, err := s.shardController.GetEngineForShard(-1)
+	s.Nil(eng)
+	s.Error(err)
+
+	eng, err = s.shardController.GetEngineForShard(s.config.NumberOfShards)
+	s.Nil(eng)
+	s.Error(err)
+}
+
 func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *engine.MockEngine, currentRangeID,
 	newRangeID int64) {
 
@@ -609,8 +651,15 @@ func (s *controllerSuite) setupMocksForAcquireShard(shardID int, mockEngine *eng
 				cluster.TestCurrentClusterName:     currentClusterTimerAck,
 				cluster.TestAlternativeClusterName: alternativeClusterTimerAck,
 			},
-			TransferFailoverLevels:  map[string]persistence.TransferFailoverLevel{},
-			TimerFailoverLevels:     map[string]persistence.TimerFailoverLevel{},
+			TransferProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
+			CrossClusterProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
+			TimerProcessingQueueStates: &types.ProcessingQueueStates{
+				StatesByCluster: make(map[string][]*types.ProcessingQueueState),
+			},
 			ClusterReplicationLevel: map[string]int64{},
 			ReplicationDLQAckLevel:  map[string]int64{},
 		},

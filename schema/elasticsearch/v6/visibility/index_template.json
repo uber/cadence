@@ -46,6 +46,12 @@
         "TaskList": {
           "type": "keyword"
         },
+        "IsCron": {
+          "type": "boolean"
+        },
+        "NumClusters": {
+          "type": "integer"
+        },
         "Attr": {
           "properties": {
             "CadenceChangeVersion":  { "type": "keyword" },

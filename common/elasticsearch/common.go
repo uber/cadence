@@ -21,10 +21,27 @@
 package elasticsearch
 
 import (
+	"net/http"
 	"time"
+
+	"github.com/uber/cadence/common/config"
 )
 
 const unknownStatusCode = -1
 
 // TODO https://github.com/uber/cadence/issues/3686
 const oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
+
+// Build Http Client with TLS
+func buildTLSHTTPClient(config config.TLS) (*http.Client, error) {
+	tlsConfig, err := config.ToTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup HTTPS client
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	tlsClient := &http.Client{Transport: transport}
+
+	return tlsClient, nil
+}

@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/metrics/mocks"
 	"github.com/uber/cadence/common/resource"
@@ -62,7 +63,7 @@ func (s *accessControlledHandlerSuite) SetupTest() {
 	s.mockFrontendHandler = NewMockHandler(s.controller)
 	s.mockAuthorizer = authorization.NewMockAuthorizer(s.controller)
 	s.mockMetricsScope = &mocks.Scope{}
-	s.handler = NewAccessControlledHandlerImpl(s.mockFrontendHandler, s.mockResource, s.mockAuthorizer)
+	s.handler = NewAccessControlledHandlerImpl(s.mockFrontendHandler, s.mockResource, s.mockAuthorizer, config.Authorization{})
 }
 
 func (s *accessControlledHandlerSuite) TearDownTest() {

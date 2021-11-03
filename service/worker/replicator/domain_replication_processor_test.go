@@ -45,6 +45,7 @@ type domainReplicationSuite struct {
 	controller *gomock.Controller
 
 	sourceCluster          string
+	currentCluster         string
 	taskExecutor           *domain.MockReplicationTaskExecutor
 	remoteClient           *admin.MockClient
 	domainReplicationQueue *domain.MockReplicationQueue
@@ -62,6 +63,7 @@ func (s *domainReplicationSuite) SetupTest() {
 	resource := resource.NewTest(s.controller, metrics.Worker)
 
 	s.sourceCluster = "active"
+	s.currentCluster = "standby"
 	s.taskExecutor = domain.NewMockReplicationTaskExecutor(s.controller)
 	s.domainReplicationQueue = domain.NewMockReplicationQueue(s.controller)
 	s.remoteClient = resource.RemoteAdminClient
@@ -69,6 +71,7 @@ func (s *domainReplicationSuite) SetupTest() {
 	serviceResolver.EXPECT().Lookup(s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
 	s.replicationProcessor = newDomainReplicationProcessor(
 		s.sourceCluster,
+		s.currentCluster,
 		resource.GetLogger(),
 		s.remoteClient,
 		resource.GetMetricsClient(),
@@ -80,7 +83,10 @@ func (s *domainReplicationSuite) SetupTest() {
 	)
 	retryPolicy := backoff.NewExponentialRetryPolicy(time.Nanosecond)
 	retryPolicy.SetMaximumAttempts(1)
-	s.replicationProcessor.retryPolicy = retryPolicy
+	s.replicationProcessor.throttleRetry = backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(isTransientRetryableError),
+	)
 }
 
 func (s *domainReplicationSuite) TearDownTest() {

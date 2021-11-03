@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -35,15 +36,14 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -83,7 +83,7 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
 
-	params := &service.BootstrapParams{
+	params := &resource.Params{
 		PersistenceConfig: config.Persistence{
 			NumHistoryShards: 1,
 		},
@@ -92,7 +92,7 @@ func (s *adminHandlerSuite) SetupTest() {
 		EnableAdminProtection:  dynamicconfig.GetBoolPropertyFn(false),
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
-	s.handler = NewAdminHandler(s.mockResource, params, config)
+	s.handler = NewAdminHandler(s.mockResource, params, config).(*adminHandlerImpl)
 	s.handler.Start()
 }
 
@@ -429,7 +429,7 @@ func (s *adminHandlerSuite) Test_SetRequestDefaultValueAndGetTargetVersionHistor
 
 func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	handler := s.handler
-	handler.params = &service.BootstrapParams{}
+	handler.params = &resource.Params{}
 	ctx := context.Background()
 
 	type test struct {
@@ -495,7 +495,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 					"testkey": 1,
 				},
 			},
-			Expected: &types.BadRequestError{Message: "Key [testkey] is already whitelist"},
+			Expected: &types.BadRequestError{Message: "Key [testkey] is already whitelisted as a different type"},
 		},
 	}
 	for _, testCase := range testCases2 {
@@ -506,16 +506,17 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 		Name: "dynamic config update failed",
 		Request: &types.AddSearchAttributeRequest{
 			SearchAttribute: map[string]types.IndexedValueType{
-				"testkey2": 1,
+				"testkey2": -1,
 			},
 		},
-		Expected: &types.InternalServiceError{Message: "Failed to update dynamic config, err: error"},
+		Expected: &types.BadRequestError{Message: "Unknown value type, IndexedValueType(-1)"},
 	}
 	dynamicConfig.EXPECT().UpdateValue(dynamicconfig.ValidSearchAttributes, map[string]interface{}{
 		"testkey":  types.IndexedValueTypeKeyword,
-		"testkey2": 1,
+		"testkey2": -1,
 	}).Return(errors.New("error"))
-	s.Equal(dcUpdateTest.Expected, handler.AddSearchAttribute(ctx, dcUpdateTest.Request))
+	err := handler.AddSearchAttribute(ctx, dcUpdateTest.Request)
+	s.Equal(dcUpdateTest.Expected, err)
 
 	// ES operations tests
 	dynamicConfig.EXPECT().UpdateValue(gomock.Any(), gomock.Any()).Return(nil).Times(2)
@@ -578,4 +579,96 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 	for _, testCase := range testCases {
 		s.Equal(testCase.Expected, handler.AddSearchAttribute(ctx, testCase.Request))
 	}
+}
+
+func (s *adminHandlerSuite) Test_ConfigStore_NilRequest() {
+	ctx := context.Background()
+	handler := s.handler
+
+	_, err := handler.GetDynamicConfig(ctx, nil)
+	s.Error(err)
+
+	err = handler.UpdateDynamicConfig(ctx, nil)
+	s.Error(err)
+
+	err = handler.RestoreDynamicConfig(ctx, nil)
+	s.Error(err)
+}
+
+func (s *adminHandlerSuite) Test_ConfigStore_InvalidKey() {
+	ctx := context.Background()
+	handler := s.handler
+
+	_, err := handler.GetDynamicConfig(ctx, &types.GetDynamicConfigRequest{
+		ConfigName: dynamicconfig.UnknownKey.String(),
+		Filters:    nil,
+	})
+	s.Error(err)
+
+	err = handler.UpdateDynamicConfig(ctx, &types.UpdateDynamicConfigRequest{
+		ConfigName:   dynamicconfig.UnknownKey.String(),
+		ConfigValues: nil,
+	})
+	s.Error(err)
+
+	err = handler.RestoreDynamicConfig(ctx, &types.RestoreDynamicConfigRequest{
+		ConfigName: dynamicconfig.UnknownKey.String(),
+		Filters:    nil,
+	})
+	s.Error(err)
+}
+
+func (s *adminHandlerSuite) Test_GetDynamicConfig_NoFilter() {
+	ctx := context.Background()
+	handler := s.handler
+	dynamicConfig := dynamicconfig.NewMockClient(s.controller)
+	handler.params.DynamicConfig = dynamicConfig
+
+	dynamicConfig.EXPECT().
+		GetValue(dynamicconfig.TestGetBoolPropertyKey, nil).
+		Return(true, nil).AnyTimes()
+
+	resp, err := handler.GetDynamicConfig(ctx, &types.GetDynamicConfigRequest{
+		ConfigName: dynamicconfig.TestGetBoolPropertyKey.String(),
+		Filters:    nil,
+	})
+	s.NoError(err)
+
+	encTrue, err := json.Marshal(true)
+	s.NoError(err)
+	s.Equal(resp.Value.Data, encTrue)
+}
+
+func (s *adminHandlerSuite) Test_GetDynamicConfig_FilterMatch() {
+	ctx := context.Background()
+	handler := s.handler
+	dynamicConfig := dynamicconfig.NewMockClient(s.controller)
+	handler.params.DynamicConfig = dynamicConfig
+
+	dynamicConfig.EXPECT().
+		GetValueWithFilters(dynamicconfig.TestGetBoolPropertyKey, map[dynamicconfig.Filter]interface{}{
+			dynamicconfig.DomainName: "samples_domain",
+		}, nil).
+		Return(true, nil).AnyTimes()
+
+	encDomainName, err := json.Marshal("samples_domain")
+	s.NoError(err)
+
+	resp, err := handler.GetDynamicConfig(ctx, &types.GetDynamicConfigRequest{
+		ConfigName: dynamicconfig.TestGetBoolPropertyKey.String(),
+		Filters: []*types.DynamicConfigFilter{
+			{
+				Name: dynamicconfig.DomainName.String(),
+				Value: &types.DataBlob{
+					EncodingType: types.EncodingTypeJSON.Ptr(),
+					Data:         encDomainName,
+				},
+			},
+		},
+	})
+	s.NoError(err)
+
+	encTrue, err := json.Marshal(true)
+	s.NoError(err)
+	s.Equal(resp.Value.Data, encTrue)
 }

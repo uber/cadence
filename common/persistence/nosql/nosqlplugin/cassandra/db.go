@@ -21,16 +21,10 @@
 package cassandra
 
 import (
-	"errors"
-
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/service/config"
-)
-
-var (
-	errConditionFailed = errors.New("internal condition fail error")
 )
 
 // cdb represents a logical connection to Cassandra database
@@ -38,30 +32,19 @@ type cdb struct {
 	logger  log.Logger
 	client  gocql.Client
 	session gocql.Session
+	cfg     *config.NoSQL
 }
 
 var _ nosqlplugin.DB = (*cdb)(nil)
 
-// NewCassandraDBFromSession returns a DB from a session
-func NewCassandraDBFromSession(client gocql.Client, session gocql.Session, logger log.Logger) nosqlplugin.DB {
+// newCassandraDBFromSession returns a DB from a session
+func newCassandraDBFromSession(cfg *config.NoSQL, session gocql.Session, logger log.Logger) *cdb {
 	return &cdb{
-		client:  client,
+		client:  gocql.GetRegisteredClient(),
 		session: session,
 		logger:  logger,
+		cfg:     cfg,
 	}
-}
-
-// NewCassandraDB return a new DB
-func NewCassandraDB(cfg config.Cassandra, logger log.Logger) (nosqlplugin.DB, error) {
-	session, err := CreateSession(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &cdb{
-		client:  cfg.CQLClient,
-		session: session,
-		logger:  logger,
-	}, nil
 }
 
 func (db *cdb) Close() {
@@ -84,11 +67,4 @@ func (db *cdb) IsTimeoutError(err error) bool {
 
 func (db *cdb) IsThrottlingError(err error) bool {
 	return db.client.IsThrottlingError(err)
-}
-
-func (db *cdb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
 }

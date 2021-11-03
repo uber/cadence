@@ -1,1 +1,0 @@
-GRANT ALL PRIVILEGES ON *.* TO 'uber'@'%' IDENTIFIED BY 'uber';

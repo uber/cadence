@@ -200,6 +200,68 @@ func ToMatchingListTaskListPartitionsResponse(t *matchingv1.ListTaskListPartitio
 	}
 }
 
+func FromMatchingGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *matchingv1.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.GetTaskListsByDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func ToMatchingGetTaskListsByDomainRequest(t *matchingv1.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsByDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func FromMatchingGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *matchingv1.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+
+	return &matchingv1.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: FromMatchingDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromMatchingDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+func ToMatchingGetTaskListsByDomainResponse(t *matchingv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: ToMatchingDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToMatchingDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+func FromMatchingDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*matchingv1.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*matchingv1.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromMatchingDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+func ToMatchingDescribeTaskListResponseMap(t map[string]*matchingv1.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToMatchingDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
 func FromMatchingPollForActivityTaskRequest(t *types.MatchingPollForActivityTaskRequest) *matchingv1.PollForActivityTaskRequest {
 	if t == nil {
 		return nil

@@ -21,9 +21,11 @@
 package sql
 
 import (
+	"context"
+
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/tools/common/schema"
 )
 
@@ -35,7 +37,7 @@ type (
 	}
 )
 
-var _ schema.DB = (*Connection)(nil)
+var _ schema.SchemaClient = (*Connection)(nil)
 
 // NewConnection creates a new connection to database
 func NewConnection(cfg *config.SQL) (*Connection, error) {
@@ -70,9 +72,10 @@ func (c *Connection) WriteSchemaUpdateLog(oldVersion string, newVersion string, 
 	return c.adminDb.WriteSchemaUpdateLog(oldVersion, newVersion, manifestMD5, desc)
 }
 
-// Exec executes a sql statement
-func (c *Connection) Exec(stmt string, args ...interface{}) error {
-	err := c.adminDb.Exec(stmt, args...)
+// ExecDDLQuery executes a sql statement
+func (c *Connection) ExecDDLQuery(stmt string, args ...interface{}) error {
+	// TODO pass in context timeout value from command line param
+	err := c.adminDb.ExecSchemaOperationQuery(context.Background(), stmt, args...)
 	return err
 }
 

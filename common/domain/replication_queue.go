@@ -57,28 +57,25 @@ func NewReplicationQueue(
 	logger log.Logger,
 ) ReplicationQueue {
 	return &replicationQueueImpl{
-		queue:               queue,
-		clusterName:         clusterName,
-		metricsClient:       metricsClient,
-		logger:              logger,
-		encoder:             codec.NewThriftRWEncoder(),
-		ackNotificationChan: make(chan bool),
-		done:                make(chan bool),
-		status:              common.DaemonStatusInitialized,
+		queue:         queue,
+		clusterName:   clusterName,
+		metricsClient: metricsClient,
+		logger:        logger,
+		encoder:       codec.NewThriftRWEncoder(),
+		done:          make(chan bool),
+		status:        common.DaemonStatusInitialized,
 	}
 }
 
 type (
 	replicationQueueImpl struct {
-		queue               persistence.QueueManager
-		clusterName         string
-		metricsClient       metrics.Client
-		logger              log.Logger
-		encoder             codec.BinaryEncoder
-		ackLevelUpdated     bool
-		ackNotificationChan chan bool
-		done                chan bool
-		status              int32
+		queue         persistence.QueueManager
+		clusterName   string
+		metricsClient metrics.Client
+		logger        log.Logger
+		encoder       codec.BinaryEncoder
+		done          chan bool
+		status        int32
 	}
 
 	// ReplicationQueue is used to publish and list domain replication tasks
@@ -177,14 +174,8 @@ func (q *replicationQueueImpl) UpdateAckLevel(
 	clusterName string,
 ) error {
 
-	err := q.queue.UpdateAckLevel(ctx, lastProcessedMessageID, clusterName)
-	if err != nil {
+	if err := q.queue.UpdateAckLevel(ctx, lastProcessedMessageID, clusterName); err != nil {
 		return fmt.Errorf("failed to update ack level: %v", err)
-	}
-
-	select {
-	case q.ackNotificationChan <- true:
-	default:
 	}
 
 	return nil
@@ -229,16 +220,11 @@ func (q *replicationQueueImpl) UpdateDLQAckLevel(
 	ctx context.Context,
 	lastProcessedMessageID int64,
 ) error {
-
-	if err := q.queue.UpdateDLQAckLevel(
+	return q.queue.UpdateDLQAckLevel(
 		ctx,
 		lastProcessedMessageID,
 		localDomainReplicationCluster,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }
 
 func (q *replicationQueueImpl) GetDLQAckLevel(
@@ -261,16 +247,11 @@ func (q *replicationQueueImpl) RangeDeleteMessagesFromDLQ(
 	firstMessageID int64,
 	lastMessageID int64,
 ) error {
-
-	if err := q.queue.RangeDeleteMessagesFromDLQ(
+	return q.queue.RangeDeleteMessagesFromDLQ(
 		ctx,
 		firstMessageID,
 		lastMessageID,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }
 
 func (q *replicationQueueImpl) DeleteMessageFromDLQ(
@@ -298,11 +279,11 @@ func (q *replicationQueueImpl) purgeAckedMessages() error {
 		}
 	}
 
-	err = q.queue.DeleteMessagesBefore(context.Background(), minAckLevel)
-	if err != nil {
-		return fmt.Errorf("failed to purge messages: %v", err)
+	if minAckLevel != int64(math.MaxInt64) {
+		if err = q.queue.DeleteMessagesBefore(context.Background(), minAckLevel); err != nil {
+			return fmt.Errorf("failed to purge messages: %v", err)
+		}
 	}
-
 	return nil
 }
 
@@ -315,16 +296,9 @@ func (q *replicationQueueImpl) purgeProcessor() {
 		case <-q.done:
 			return
 		case <-ticker.C:
-			if q.ackLevelUpdated {
-				err := q.purgeAckedMessages()
-				if err != nil {
-					q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
-				} else {
-					q.ackLevelUpdated = false
-				}
+			if err := q.purgeAckedMessages(); err != nil {
+				q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
 			}
-		case <-q.ackNotificationChan:
-			q.ackLevelUpdated = true
 		}
 	}
 }
@@ -346,13 +320,14 @@ func (q *replicationQueueImpl) emitDLQSize() {
 				).IncCounter(
 					metrics.DomainReplicationQueueSizeErrorCount,
 				)
+			} else {
+				q.metricsClient.Scope(
+					metrics.DomainReplicationQueueScope,
+				).UpdateGauge(
+					metrics.DomainReplicationQueueSizeGauge,
+					float64(size),
+				)
 			}
-			q.metricsClient.Scope(
-				metrics.DomainReplicationQueueScope,
-			).UpdateGauge(
-				metrics.DomainReplicationQueueSizeGauge,
-				float64(size),
-			)
 		}
 	}
 }

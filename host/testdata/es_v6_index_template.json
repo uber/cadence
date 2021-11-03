@@ -40,6 +40,12 @@
         "HistoryLength": {
           "type": "integer"
         },
+        "IsCron": {
+          "type": "boolean"
+        },
+        "NumClusters": {
+          "type": "long"
+        },
         "KafkaKey": {
           "type": "keyword"
         },

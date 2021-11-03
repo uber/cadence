@@ -23,25 +23,27 @@ package cli
 import (
 	"strings"
 
+	"github.com/uber/cadence/tools/common/flag"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/tally"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/service"
 )
 
 const (
@@ -75,11 +77,13 @@ var (
 		},
 		cli.StringFlag{
 			Name:  FlagIsGlobalDomainWithAlias,
-			Usage: "Flag to indicate whether domain is a global domain",
+			Usage: "Flag to indicate whether domain is a global domain. Default to true. Local domain is now legacy.",
+			Value: "true",
 		},
-		cli.StringFlag{
+		cli.GenericFlag{
 			Name:  FlagDomainDataWithAlias,
-			Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3",
+			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
 		},
 		cli.StringFlag{
 			Name:  FlagSecurityTokenWithAlias,
@@ -127,9 +131,10 @@ var (
 			Name:  FlagClustersWithAlias,
 			Usage: "Clusters",
 		},
-		cli.StringFlag{
+		cli.GenericFlag{
 			Name:  FlagDomainDataWithAlias,
-			Usage: "Domain data of key value pairs, in format of k1:v1,k2:v2,k3:v3 ",
+			Usage: "Domain data of key value pairs (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
+			Value: &flag.StringMap{},
 		},
 		cli.StringFlag{
 			Name:  FlagSecurityTokenWithAlias,
@@ -178,6 +183,10 @@ var (
 		cli.StringFlag{
 			Name:  FlagSecurityTokenWithAlias,
 			Usage: "Optional token for security check",
+		},
+		cli.BoolFlag{
+			Name:  FlagForce,
+			Usage: "Deprecate domain regardless of domain history.",
 		},
 	}
 
@@ -241,7 +250,7 @@ func initializeAdminDomainHandler(
 		configuration,
 		logger,
 	)
-	metadataMgr := initializeMetadataMgr(
+	metadataMgr := initializeDomainMgr(
 		configuration,
 		clusterMetadata,
 		metricsClient,
@@ -273,7 +282,7 @@ func loadConfig(
 
 func initializeDomainHandler(
 	logger log.Logger,
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	clusterMetadata cluster.Metadata,
 	archivalMetadata archiver.ArchivalMetadata,
 	archiverProvider provider.ArchiverProvider,
@@ -287,7 +296,7 @@ func initializeDomainHandler(
 	return domain.NewHandler(
 		domainConfig,
 		logger,
-		metadataMgr,
+		domainManager,
 		clusterMetadata,
 		initializeDomainReplicator(logger),
 		archivalMetadata,
@@ -299,22 +308,21 @@ func initializeDomainHandler(
 func initializeLogger(
 	serviceConfig *config.Config,
 ) log.Logger {
-	return loggerimpl.NewLogger(serviceConfig.Log.NewZapLogger())
+	zapLogger, err := serviceConfig.Log.NewZapLogger()
+	if err != nil {
+		ErrorAndExit("failed to create zap logger, err: ", err)
+	}
+	return loggerimpl.NewLogger(zapLogger)
 }
 
-func initializeMetadataMgr(
+func initializeDomainMgr(
 	serviceConfig *config.Config,
 	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
-) persistence.MetadataManager {
+) persistence.DomainManager {
 
 	pConfig := serviceConfig.Persistence
-	pConfig.VisibilityConfig = &config.VisibilityConfig{
-		VisibilityListMaxQPS:            dynamicconfig.GetIntPropertyFilteredByDomain(dependencyMaxQPS),
-		EnableSampling:                  dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
-		EnableReadFromClosedExecutionV2: dynamicconfig.GetBoolPropertyFn(false), // not used by domain operation
-	}
 	pFactory := client.NewFactory(
 		&pConfig,
 		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
@@ -322,7 +330,7 @@ func initializeMetadataMgr(
 		metricsClient,
 		logger,
 	)
-	metadata, err := pFactory.NewMetadataManager()
+	metadata, err := pFactory.NewDomainManager()
 	if err != nil {
 		ErrorAndExit("Unable to initialize metadata manager.", err)
 	}
@@ -334,14 +342,14 @@ func initializeClusterMetadata(
 	logger log.Logger,
 ) cluster.Metadata {
 
-	clusterMetadata := serviceConfig.ClusterMetadata
+	clusterGroupMetadata := serviceConfig.ClusterGroupMetadata
 	return cluster.NewMetadata(
 		logger,
-		dynamicconfig.GetBoolPropertyFn(clusterMetadata.EnableGlobalDomain),
-		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.MasterClusterName,
-		clusterMetadata.CurrentClusterName,
-		clusterMetadata.ClusterInformation,
+		dynamicconfig.GetBoolPropertyFn(clusterGroupMetadata.EnableGlobalDomain),
+		clusterGroupMetadata.FailoverVersionIncrement,
+		clusterGroupMetadata.PrimaryClusterName,
+		clusterGroupMetadata.CurrentClusterName,
+		clusterGroupMetadata.ClusterGroup,
 	)
 }
 
@@ -387,7 +395,7 @@ func initializeArchivalProvider(
 	}
 
 	err := archiverProvider.RegisterBootstrapContainer(
-		common.FrontendServiceName,
+		service.Frontend,
 		historyArchiverBootstrapContainer,
 		visibilityArchiverBootstrapContainer,
 	)
@@ -416,7 +424,7 @@ func initializeDynamicConfig(
 	doneChan := make(chan struct{})
 	close(doneChan)
 	dynamicConfigClient, err := dynamicconfig.NewFileBasedClient(
-		&serviceConfig.DynamicConfigClient,
+		&serviceConfig.DynamicConfig.FileBased,
 		logger,
 		doneChan,
 	)

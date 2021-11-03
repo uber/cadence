@@ -24,28 +24,39 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/workflow"
+	"go.uber.org/zap"
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
+type (
+	contextKey string
+)
+
 const (
-	failoverManagerContextKey = "failoverManagerContext"
+	failoverManagerContextKey contextKey = "failoverManagerContext"
 	// TaskListName tasklist
 	TaskListName = "cadence-sys-failoverManager-tasklist"
-	// WorkflowTypeName workflow type name
-	WorkflowTypeName = "cadence-sys-failoverManager-workflow"
+	// FailoverWorkflowTypeName workflow type name
+	FailoverWorkflowTypeName = "cadence-sys-failoverManager-workflow"
+	// RebalanceWorkflowTypeName is rebalance workflow type name
+	RebalanceWorkflowTypeName = "cadence-sys-rebalance-workflow"
 	// WorkflowID will be reused to ensure only one workflow running
-	WorkflowID             = "cadence-failover-manager"
-	failoverActivityName   = "cadence-sys-failover-activity"
-	getDomainsActivityName = "cadence-sys-getDomains-activity"
+	FailoverWorkflowID              = "cadence-failover-manager"
+	RebalanceWorkflowID             = "cadence-rebalance-workflow"
+	DrillWorkflowID                 = FailoverWorkflowID + "-drill"
+	failoverActivityName            = "cadence-sys-failover-activity"
+	getDomainsActivityName          = "cadence-sys-getDomains-activity"
+	getRebalanceDomainsActivityName = "cadence-sys-getRebalanceDomains-activity"
 
 	defaultBatchFailoverSize              = 20
 	defaultBatchFailoverWaitTimeInSeconds = 30
@@ -64,6 +75,8 @@ const (
 
 	// workflow states for query
 
+	// WorkflowInitialized state
+	WorkflowInitialized = "initialized"
 	// WorkflowRunning state
 	WorkflowRunning = "running"
 	// WorkflowPaused state
@@ -89,12 +102,18 @@ type (
 		BatchFailoverWaitTimeInSeconds int
 		// Domains candidates to be failover
 		Domains []string
+		// DrillWaitTime defines the wait time of a failover drill
+		DrillWaitTime time.Duration
+		// GracefulFailoverTimeoutInSeconds
+		GracefulFailoverTimeoutInSeconds *int32
 	}
 
 	// FailoverResult is workflow result
 	FailoverResult struct {
-		SuccessDomains []string
-		FailedDomains  []string
+		SuccessDomains      []string
+		FailedDomains       []string
+		SuccessResetDomains []string
+		FailedResetDomains  []string
 	}
 
 	// GetDomainsActivityParams params for activity
@@ -106,8 +125,9 @@ type (
 
 	// FailoverActivityParams params for activity
 	FailoverActivityParams struct {
-		Domains       []string
-		TargetCluster string
+		Domains                          []string
+		TargetCluster                    string
+		GracefulFailoverTimeoutInSeconds *int32
 	}
 
 	// FailoverActivityResult result for failover activity
@@ -118,23 +138,19 @@ type (
 
 	// QueryResult for failover progress
 	QueryResult struct {
-		TotalDomains   int
-		Success        int
-		Failed         int
-		State          string
-		TargetCluster  string
-		SourceCluster  string
-		SuccessDomains []string // SuccessDomains are guaranteed succeed processed
-		FailedDomains  []string // FailedDomains contains false positive
-		Operator       string
+		TotalDomains        int
+		Success             int
+		Failed              int
+		State               string
+		TargetCluster       string
+		SourceCluster       string
+		SuccessDomains      []string // SuccessDomains are guaranteed succeed processed
+		FailedDomains       []string // FailedDomains contains false positive
+		SuccessResetDomains []string // SuccessResetDomains are domains successfully reset in drill mode
+		FailedResetDomains  []string // FailedResetDomains contains false positive in drill mode
+		Operator            string
 	}
 )
-
-func init() {
-	workflow.RegisterWithOptions(FailoverWorkflow, workflow.RegisterOptions{Name: WorkflowTypeName})
-	activity.RegisterWithOptions(FailoverActivity, activity.RegisterOptions{Name: failoverActivityName})
-	activity.RegisterWithOptions(GetDomainsActivity, activity.RegisterOptions{Name: getDomainsActivityName})
-}
 
 // FailoverWorkflow is the workflow that managed failover all domains with IsManagedByCadence=true
 func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverResult, error) {
@@ -146,20 +162,24 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	// define query properties
 	var failedDomains []string
 	var successDomains []string
+	var successResetDomains []string
+	var failedResetDomains []string
 	var totalNumOfDomains int
-	wfState := WorkflowRunning
+	wfState := WorkflowInitialized
 	operator := getOperator(ctx)
 	err = workflow.SetQueryHandler(ctx, QueryType, func(input []byte) (*QueryResult, error) {
 		return &QueryResult{
-			TotalDomains:   totalNumOfDomains,
-			Success:        len(successDomains),
-			Failed:         len(failedDomains),
-			State:          wfState,
-			TargetCluster:  params.TargetCluster,
-			SourceCluster:  params.SourceCluster,
-			SuccessDomains: successDomains,
-			FailedDomains:  failedDomains,
-			Operator:       operator,
+			TotalDomains:        totalNumOfDomains,
+			Success:             len(successDomains),
+			Failed:              len(failedDomains),
+			State:               wfState,
+			TargetCluster:       params.TargetCluster,
+			SourceCluster:       params.SourceCluster,
+			SuccessDomains:      successDomains,
+			FailedDomains:       failedDomains,
+			SuccessResetDomains: successResetDomains,
+			FailedResetDomains:  failedResetDomains,
+			Operator:            operator,
 		}, nil
 	})
 	if err != nil {
@@ -180,30 +200,71 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 	}
 	totalNumOfDomains = len(domains)
 
-	// failover in batch
-	ao = workflow.WithActivityOptions(ctx, getFailoverActivityOptions())
-	batchSize := params.BatchFailoverSize
-	times := len(domains)/batchSize + 1
-
 	pauseCh := workflow.GetSignalChannel(ctx, PauseSignal)
 	resumeCh := workflow.GetSignalChannel(ctx, ResumeSignal)
 	var shouldPause bool
-
-	for i := 0; i < times; i++ {
-		// check if need to pause
+	checkPauseSignal := func() {
 		shouldPause = pauseCh.ReceiveAsync(nil)
 		if shouldPause {
 			wfState = WorkflowPaused
 			resumeCh.Receive(ctx, nil)
+			// clean up all pending pause signal
+			cleanupChannel(pauseCh)
 		}
 		wfState = WorkflowRunning
+	}
+
+	// failover in batch
+	successDomains, failedDomains = failoverDomainsByBatch(ctx, domains, params, checkPauseSignal, false)
+
+	if params.DrillWaitTime == 0 {
+		// This is a normal failover
+		wfState = WorkflowCompleted
+		return &FailoverResult{
+			SuccessDomains: successDomains,
+			FailedDomains:  failedDomains,
+		}, nil
+	}
+
+	workflow.Sleep(ctx, params.DrillWaitTime)
+	// Reset domains to original cluster
+	successResetDomains, failedResetDomains = failoverDomainsByBatch(ctx, domains, params, checkPauseSignal, true)
+	wfState = WorkflowCompleted
+
+	return &FailoverResult{
+		SuccessDomains:      successDomains,
+		FailedDomains:       failedDomains,
+		SuccessResetDomains: successResetDomains,
+		FailedResetDomains:  failedResetDomains,
+	}, nil
+}
+
+func failoverDomainsByBatch(
+	ctx workflow.Context,
+	domains []string,
+	params *FailoverParams,
+	pauseSignalHandler func(),
+	reverseFailover bool,
+) (successDomains []string, failedDomains []string) {
+
+	totalNumOfDomains := len(domains)
+	batchSize := params.BatchFailoverSize
+	times := totalNumOfDomains/batchSize + 1
+	ao := workflow.WithActivityOptions(ctx, getFailoverActivityOptions())
+	targetCluster := params.TargetCluster
+	if reverseFailover {
+		targetCluster = params.SourceCluster
+	}
+	for i := 0; i < times; i++ {
+		pauseSignalHandler()
 
 		failoverActivityParams := &FailoverActivityParams{
-			Domains:       domains[i*batchSize : common.MinInt((i+1)*batchSize, totalNumOfDomains)],
-			TargetCluster: params.TargetCluster,
+			Domains:                          domains[i*batchSize : common.MinInt((i+1)*batchSize, totalNumOfDomains)],
+			TargetCluster:                    targetCluster,
+			GracefulFailoverTimeoutInSeconds: params.GracefulFailoverTimeoutInSeconds,
 		}
 		var actResult FailoverActivityResult
-		err = workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
+		err := workflow.ExecuteActivity(ao, FailoverActivity, failoverActivityParams).Get(ctx, &actResult)
 		if err != nil {
 			// Domains in failed activity can be either failovered or not, but we treated them as failed.
 			// This makes the query result for FailedDomains contains false positive results.
@@ -213,14 +274,11 @@ func FailoverWorkflow(ctx workflow.Context, params *FailoverParams) (*FailoverRe
 			failedDomains = append(failedDomains, actResult.FailedDomains...)
 		}
 
-		workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
+		if i != times-1 {
+			workflow.Sleep(ctx, time.Duration(params.BatchFailoverWaitTimeInSeconds)*time.Second)
+		}
 	}
-
-	wfState = WorkflowCompleted
-	return &FailoverResult{
-		SuccessDomains: successDomains,
-		FailedDomains:  failedDomains,
-	}, nil
+	return
 }
 
 func getOperator(ctx workflow.Context) string {
@@ -338,6 +396,12 @@ func getClient(ctx context.Context) frontend.Client {
 	return feClient
 }
 
+func getRemoteClient(ctx context.Context, clusterName string) frontend.Client {
+	manager := ctx.Value(failoverManagerContextKey).(*FailoverManager)
+	feClient := manager.clientBean.GetRemoteFrontendClient(clusterName)
+	return feClient
+}
+
 func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.DescribeDomainResponse, error) {
 	feClient := getClient(ctx)
 	var res []*types.DescribeDomainResponse
@@ -380,16 +444,28 @@ func getAllDomains(ctx context.Context, targetDomains []string) ([]*types.Descri
 
 // FailoverActivity activity def
 func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*FailoverActivityResult, error) {
-	feClient := getClient(ctx)
+
+	logger := activity.GetLogger(ctx)
+	frontendClient := getClient(ctx)
 	domains := params.Domains
 	var successDomains []string
 	var failedDomains []string
 	for _, domain := range domains {
+		// Check if poller exist
+		if err := validateTaskListPollerInfo(ctx, params.TargetCluster, domain); err != nil {
+			logger.Error("Failed to validate task list poller info", zap.Error(err))
+			failedDomains = append(failedDomains, domain)
+			continue
+		}
 		updateRequest := &types.UpdateDomainRequest{
 			Name:              domain,
 			ActiveClusterName: common.StringPtr(params.TargetCluster),
 		}
-		_, err := feClient.UpdateDomain(ctx, updateRequest)
+		if params.GracefulFailoverTimeoutInSeconds != nil {
+			updateRequest.FailoverTimeoutInSeconds = params.GracefulFailoverTimeoutInSeconds
+		}
+
+		_, err := frontendClient.UpdateDomain(ctx, updateRequest)
 		if err != nil {
 			failedDomains = append(failedDomains, domain)
 		} else {
@@ -400,4 +476,43 @@ func FailoverActivity(ctx context.Context, params *FailoverActivityParams) (*Fai
 		SuccessDomains: successDomains,
 		FailedDomains:  failedDomains,
 	}, nil
+}
+
+func cleanupChannel(channel workflow.Channel) {
+	for {
+		if hasValue := channel.ReceiveAsync(nil); !hasValue {
+			return
+		}
+	}
+}
+
+func validateTaskListPollerInfo(ctx context.Context, targetCluster string, domain string) error {
+	remoteFrontendClient := getRemoteClient(ctx, targetCluster)
+	frontendClient := getClient(ctx)
+	localTaskListResponse, err := frontendClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
+	if err != nil {
+		return fmt.Errorf("failed to get task list for domain %s", domain)
+	}
+
+	remoteTaskListRepsonse, err := remoteFrontendClient.GetTaskListsByDomain(ctx, &types.GetTaskListsByDomainRequest{Domain: domain})
+	if err != nil {
+		return fmt.Errorf("failed to get task list for domain %s", domain)
+	}
+	for name, tl := range localTaskListResponse.GetDecisionTaskListMap() {
+		if len(tl.GetPollers()) != 0 {
+			remoteTaskList, ok := remoteTaskListRepsonse.GetDecisionTaskListMap()[name]
+			if !ok || len(remoteTaskList.GetPollers()) == 0 {
+				return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+			}
+		}
+	}
+	for name, tl := range localTaskListResponse.GetActivityTaskListMap() {
+		if len(tl.GetPollers()) != 0 {
+			remoteTaskList, ok := remoteTaskListRepsonse.GetActivityTaskListMap()[name]
+			if !ok || len(remoteTaskList.GetPollers()) == 0 {
+				return fmt.Errorf("received zero poller in decision task list %s with domain %s", name, domain)
+			}
+		}
+	}
+	return nil
 }

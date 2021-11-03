@@ -26,9 +26,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/serialization"
-	"github.com/uber/cadence/common/service/config"
 )
 
 var (
@@ -91,13 +91,34 @@ type (
 		DataEncoding string
 	}
 
+	// CrossClusterTasksRow represents a row in cross_cluster_tasks table
+	CrossClusterTasksRow struct {
+		TargetCluster string
+		ShardID       int
+		TaskID        int64
+		Data          []byte
+		DataEncoding  string
+	}
+
 	// TransferTasksFilter contains the column names within transfer_tasks table that
 	// can be used to filter results through a WHERE clause
 	TransferTasksFilter struct {
 		ShardID   int
-		TaskID    *int64
-		MinTaskID *int64
-		MaxTaskID *int64
+		TaskID    int64
+		MinTaskID int64
+		MaxTaskID int64
+		PageSize  int
+	}
+
+	// CrossClusterTasksFilter contains the column names within cross_cluster_tasks table that
+	// can be used to filter results through a WHERE clause
+	CrossClusterTasksFilter struct {
+		TargetCluster string
+		ShardID       int
+		TaskID        int64
+		MinTaskID     int64
+		MaxTaskID     int64
+		PageSize      int
 	}
 
 	// ExecutionsRow represents a row in executions table
@@ -170,12 +191,21 @@ type (
 
 	// TasksRow represents a row in tasks table
 	TasksRow struct {
+		ShardID      int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID     serialization.UUID
 		TaskType     int64
 		TaskID       int64
 		TaskListName string
 		Data         []byte
 		DataEncoding string
+	}
+
+	// TaskKeyRow represents a result row giving task keys
+	TaskKeyRow struct {
+		DomainID     serialization.UUID
+		TaskListName string
+		TaskType     int64
+		TaskID       int64
 	}
 
 	// TasksRowWithTTL represents a row in tasks table with a ttl
@@ -190,6 +220,7 @@ type (
 	// TasksFilter contains the column names within tasks table that
 	// can be used to filter results through a WHERE clause
 	TasksFilter struct {
+		ShardID              int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID             serialization.UUID
 		TaskListName         string
 		TaskType             int64
@@ -201,9 +232,14 @@ type (
 		PageSize             *int
 	}
 
+	// OrphanTasksFilter contains the parameters controlling orphan deletion
+	OrphanTasksFilter struct {
+		Limit *int
+	}
+
 	// TaskListsRow represents a row in task_lists table
 	TaskListsRow struct {
-		ShardID      int
+		ShardID      int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID     serialization.UUID
 		Name         string
 		TaskType     int64
@@ -221,7 +257,7 @@ type (
 	// TaskListsFilter contains the column names within task_lists table that
 	// can be used to filter results through a WHERE clause
 	TaskListsFilter struct {
-		ShardID             int
+		ShardID             int // this is DBShardID, not historyShardID (TODO: maybe rename it for clarification)
 		DomainID            *serialization.UUID
 		Name                *string
 		TaskType            *int64
@@ -288,10 +324,10 @@ type (
 	TimerTasksFilter struct {
 		ShardID                int
 		TaskID                 int64
-		VisibilityTimestamp    *time.Time
-		MinVisibilityTimestamp *time.Time
-		MaxVisibilityTimestamp *time.Time
-		PageSize               *int
+		VisibilityTimestamp    time.Time
+		MinVisibilityTimestamp time.Time
+		MaxVisibilityTimestamp time.Time
+		PageSize               int
 	}
 
 	// EventsRow represents a row in events table
@@ -340,7 +376,7 @@ type (
 		MinNodeID *int64
 		// Exclusive
 		MaxNodeID *int64
-		PageSize  *int
+		PageSize  int
 	}
 
 	// HistoryTreeRow represents a row in history_tree table
@@ -358,6 +394,7 @@ type (
 		ShardID  int
 		TreeID   serialization.UUID
 		BranchID *serialization.UUID
+		PageSize *int
 	}
 
 	// ActivityInfoMapsRow represents a row in activity_info_maps table
@@ -499,6 +536,8 @@ type (
 		HistoryLength    *int64
 		Memo             []byte
 		Encoding         string
+		IsCron           bool
+		NumClusters      int16
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that
@@ -562,6 +601,7 @@ type (
 		//    - {domainID, tasklistName, taskType, taskIDLessThanEquals, limit }
 		//    - this will delete up to limit number of tasks less than or equal to the given task id
 		DeleteFromTasks(ctx context.Context, filter *TasksFilter) (sql.Result, error)
+		GetOrphanTasks(ctx context.Context, filter *OrphanTasksFilter) ([]TaskKeyRow, error)
 
 		InsertIntoTaskLists(ctx context.Context, row *TaskListsRow) (sql.Result, error)
 		InsertIntoTaskListsWithTTL(ctx context.Context, row *TaskListsRowWithTTL) (sql.Result, error)
@@ -582,6 +622,7 @@ type (
 		InsertIntoHistoryTree(ctx context.Context, row *HistoryTreeRow) (sql.Result, error)
 		SelectFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
 		DeleteFromHistoryTree(ctx context.Context, filter *HistoryTreeFilter) (sql.Result, error)
+		GetAllHistoryTreeBranches(ctx context.Context, filter *HistoryTreeFilter) ([]HistoryTreeRow, error)
 
 		InsertIntoExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
 		UpdateExecutions(ctx context.Context, row *ExecutionsRow) (sql.Result, error)
@@ -610,19 +651,35 @@ type (
 		// Required filter params - {shardID, minTaskID, maxTaskID}
 		SelectFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) ([]TransferTasksRow, error)
 		// DeleteFromTransferTasks deletes one or more rows from transfer_tasks table.
-		// Filter params - shardID is required. If TaskID is not nil, a single row is deleted.
-		// When MinTaskID and MaxTaskID are not-nil, a range of rows are deleted.
+		// Required filter params - {shardID, taskID}
 		DeleteFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) (sql.Result, error)
+		// RangeDeleteFromTransferTasks deletes one or more rows from transfer_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		RangeDeleteFromTransferTasks(ctx context.Context, filter *TransferTasksFilter) (sql.Result, error)
+
+		// TODO: add cross-cluster tasks methods
+		// InsertIntoCrossClusterTasks adds a new row to the cross_cluster_tasks table
+		InsertIntoCrossClusterTasks(ctx context.Context, rows []CrossClusterTasksRow) (sql.Result, error)
+		// SelectFromCrossClusterTasks returns rows that match filter criteria from cross_cluster_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		SelectFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) ([]CrossClusterTasksRow, error)
+		// DeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table.
+		// Required filter params - {shardID, taskID}
+		DeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
+		// RangeDeleteFromCrossClusterTasks deletes one or more rows from cross_cluster_tasks table.
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		RangeDeleteFromCrossClusterTasks(ctx context.Context, filter *CrossClusterTasksFilter) (sql.Result, error)
 
 		InsertIntoTimerTasks(ctx context.Context, rows []TimerTasksRow) (sql.Result, error)
 		// SelectFromTimerTasks returns one or more rows from timer_tasks table
 		// Required filter Params - {shardID, taskID, minVisibilityTimestamp, maxVisibilityTimestamp, pageSize}
 		SelectFromTimerTasks(ctx context.Context, filter *TimerTasksFilter) ([]TimerTasksRow, error)
 		// DeleteFromTimerTasks deletes one or more rows from timer_tasks table
-		// Required filter Params:
-		//  - to delete one row - {shardID, visibilityTimestamp, taskID}
-		//  - to delete multiple rows - {shardID, minVisibilityTimestamp, maxVisibilityTimestamp}
+		// Required filter Params: {shardID, visibilityTimestamp, taskID}
 		DeleteFromTimerTasks(ctx context.Context, filter *TimerTasksFilter) (sql.Result, error)
+		// RangeDeleteFromTimerTasks deletes one or more rows from timer_tasks table
+		// Required filter Params: {shardID, minVisibilityTimestamp, maxVisibilityTimestamp}
+		RangeDeleteFromTimerTasks(ctx context.Context, filter *TimerTasksFilter) (sql.Result, error)
 
 		InsertIntoBufferedEvents(ctx context.Context, rows []BufferedEventsRow) (sql.Result, error)
 		SelectFromBufferedEvents(ctx context.Context, filter *BufferedEventsFilter) ([]BufferedEventsRow, error)
@@ -633,7 +690,7 @@ type (
 		// Required filter params - {shardID, minTaskID, maxTaskID, pageSize}
 		SelectFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) ([]ReplicationTasksRow, error)
 		// DeleteFromReplicationTasks deletes a row from replication_tasks table
-		// Required filter params - {shardID, inclusiveEndTaskID}
+		// Required filter params - {shardID, taskID}
 		DeleteFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) (sql.Result, error)
 		// DeleteFromReplicationTasks deletes multi rows from replication_tasks table
 		// Required filter params - {shardID, inclusiveEndTaskID}
@@ -757,12 +814,15 @@ type (
 		DropAllTables(database string) error
 		CreateDatabase(database string) error
 		DropDatabase(database string) error
-		Exec(stmt string, args ...interface{}) error
+		// ExecSchemaOperationQuery allows passing in any query, but it must be schema operation (DDL)
+		ExecSchemaOperationQuery(ctx context.Context, stmt string, args ...interface{}) error
 	}
 
 	// Tx defines the API for a SQL transaction
 	Tx interface {
 		tableCRUD
+		ErrorChecker
+
 		Commit() error
 		Rollback() error
 	}
@@ -770,10 +830,11 @@ type (
 	// DB defines the API for regular SQL operations of a Cadence server
 	DB interface {
 		tableCRUD
+		ErrorChecker
 
-		BeginTx(ctx context.Context) (Tx, error)
+		GetTotalNumDBShards() int
+		BeginTx(dbShardID int, ctx context.Context) (Tx, error)
 		PluginName() string
-		IsDupEntryError(err error) bool
 		Close() error
 	}
 
@@ -782,5 +843,12 @@ type (
 		adminCRUD
 		PluginName() string
 		Close() error
+	}
+
+	ErrorChecker interface {
+		IsDupEntryError(err error) bool
+		IsNotFoundError(err error) bool
+		IsTimeoutError(err error) bool
+		IsThrottlingError(err error) bool
 	}
 )

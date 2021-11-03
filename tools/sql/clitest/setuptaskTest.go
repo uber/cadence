@@ -49,8 +49,8 @@ func NewSetupSchemaTestSuite(pluginName string) *SetupSchemaTestSuite {
 // SetupSuite setup test suite
 func (s *SetupSchemaTestSuite) SetupSuite() {
 	os.Setenv("SQL_HOST", environment.GetMySQLAddress())
-	os.Setenv("SQL_USER", testUser)
-	os.Setenv("SQL_PASSWORD", testPassword)
+	os.Setenv("SQL_USER", environment.GetMySQLUser())
+	os.Setenv("SQL_PASSWORD", environment.GetMySQLPassword())
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
 		log.Fatalf("error creating sql connection:%v", err)
@@ -66,7 +66,7 @@ func (s *SetupSchemaTestSuite) TearDownSuite() {
 
 // TestCreateDatabase test
 func (s *SetupSchemaTestSuite) TestCreateDatabase() {
-	s.NoError(sql.RunTool([]string{"./tool", "-u", testUser, "--pw", testPassword, "create", "--db", "foobar123"}))
+	s.NoError(sql.RunTool([]string{"./tool", "-u", environment.GetMySQLUser(), "--pw", environment.GetMySQLPassword(), "create", "--db", "foobar123"}))
 	err := s.conn.DropDatabase("foobar123")
 	s.Nil(err)
 }

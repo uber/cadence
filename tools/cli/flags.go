@@ -38,6 +38,7 @@ const (
 	FlagDBPort                            = "db_port"
 	FlagDBRegion                          = "db_region"
 	FlagHistoryAddressWithAlias           = FlagHistoryAddress + ", had"
+	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
 	FlagDomain                            = "domain"
 	FlagDomainWithAlias                   = FlagDomain + ", do"
@@ -111,9 +112,12 @@ const (
 	FlagMore                              = "more"
 	FlagMoreWithAlias                     = FlagMore + ", m"
 	FlagAll                               = "all"
+	FlagPrefix                            = "prefix"
 	FlagAllWithAlias                      = FlagAll + ", a"
 	FlagDeprecated                        = "deprecated"
 	FlagDeprecatedWithAlias               = FlagDeprecated + ", dep"
+	FlagForce                             = "force"
+	FlagPageID                            = "page_id"
 	FlagPageSize                          = "pagesize"
 	FlagPageSizeWithAlias                 = FlagPageSize + ", ps"
 	FlagEarliestTime                      = "earliest_time"
@@ -253,6 +257,10 @@ const (
 	FlagFailoverBatchSize                 = "failover_batch_size"
 	FlagFailoverBatchSizeWithAlias        = FlagFailoverBatchSize + ", fbs"
 	FlagFailoverDomains                   = "domains"
+	FlagFailoverDrillWaitTime             = "failover_drill_wait_second"
+	FlagFailoverDrillWaitTimeWithAlias    = FlagFailoverDrillWaitTime + ", fdws"
+	FlagFailoverDrill                     = "failover_drill"
+	FlagFailoverDrillWithAlias            = FlagFailoverDrill + ", fd"
 	FlagRetryInterval                     = "retry_interval"
 	FlagRetryAttempts                     = "retry_attempts"
 	FlagRetryExpiration                   = "retry_expiration"
@@ -266,6 +274,14 @@ const (
 	FlagDateFormat                        = "date_format"
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
+	DelayStartSeconds                     = "delay_start_seconds"
+	FlagConnectionAttributes              = "conn_attrs"
+	FlagJWT                               = "jwt"
+	FlagJWTPrivateKey                     = "jwt-private-key"
+	FlagJWTPrivateKeyWithAlias            = FlagJWTPrivateKey + ", jwt-pk"
+	FlagDynamicConfigName                 = "dynamic_config_name"
+	FlagDynamicConfigFilter               = "dynamic_config_filter"
+	FlagDynamicConfigValue                = "dynamic_config_value"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -279,8 +295,19 @@ var flagsForExecution = []cli.Flag{
 	},
 }
 
+var flagsOfExecutionForShow = []cli.Flag{
+	cli.StringFlag{
+		Name:  FlagWorkflowIDWithAlias,
+		Usage: "WorkflowID",
+	},
+	cli.StringFlag{
+		Name:  FlagRunIDWithAlias,
+		Usage: "RunID, required for archived history",
+	},
+}
+
 func getFlagsForShow() []cli.Flag {
-	return append(flagsForExecution, getFlagsForShowID()...)
+	return append(flagsOfExecutionForShow, getFlagsForShowID()...)
 }
 
 func getFlagsForShowID() []cli.Flag {
@@ -358,7 +385,7 @@ func getFlagsForStart() []cli.Flag {
 		cli.IntFlag{
 			Name: FlagWorkflowIDReusePolicyAlias,
 			Usage: "Optional input to configure if the same workflow ID is allow to use for new workflow execution. " +
-				"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate",
+				"Available options: 0: AllowDuplicateFailedOnly, 1: AllowDuplicate, 2: RejectDuplicate, 3:TerminateIfRunning",
 		},
 		cli.StringFlag{
 			Name:  FlagInputWithAlias,
@@ -429,6 +456,10 @@ func getFlagsForStart() []cli.Flag {
 		cli.IntFlag{
 			Name:  FlagRetryMaxInterval,
 			Usage: "Optional retry maximum interval in seconds. If set will give an upper bound for retry interval. Must be equal or greater than retry interval.",
+		},
+		cli.IntFlag{
+			Name:  DelayStartSeconds,
+			Usage: "Optional workflow start delay in seconds. If set workflow start will be delayed this many seconds",
 		},
 	}
 }

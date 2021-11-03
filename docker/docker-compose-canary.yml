@@ -1,0 +1,8 @@
+version: '3'
+services:
+  cadence-canary:
+    image: ubercadence/cadence-canary:master
+    volumes:
+      - ./config/canary:/etc/cadence-canary/config/canary
+    environment:
+      - "CADENCE_CANARY_MODE=all" # this will run both worker and cron starter

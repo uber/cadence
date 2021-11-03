@@ -1,0 +1,9 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:12
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: cadence
+    ports:
+      - "5432:5432"

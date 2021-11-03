@@ -44,8 +44,9 @@ func (v *AddSearchAttributeRequest) GetSecurityToken() (o string) {
 
 // DescribeClusterResponse is an internal type (TBD...)
 type DescribeClusterResponse struct {
-	SupportedClientVersions *SupportedClientVersions `json:"supportedClientVersions,omitempty"`
-	MembershipInfo          *MembershipInfo          `json:"membershipInfo,omitempty"`
+	SupportedClientVersions *SupportedClientVersions    `json:"supportedClientVersions,omitempty"`
+	MembershipInfo          *MembershipInfo             `json:"membershipInfo,omitempty"`
+	PersistenceInfo         map[string]*PersistenceInfo `json:"persistenceInfo,omitempty"`
 }
 
 // GetSupportedClientVersions is an internal getter (TBD...)
@@ -277,6 +278,26 @@ func (v *MembershipInfo) GetRings() (o []*RingInfo) {
 	return
 }
 
+// PersistenceSetting is used to expose persistence engine settings
+type PersistenceSetting struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// PersistenceFeature is used to expose store specific feature.
+// Feature can be cadence or store specific.
+type PersistenceFeature struct {
+	Key     string `json:"key"`
+	Enabled bool   `json:"enabled"`
+}
+
+// PersistenceInfo is used to expose store configuration
+type PersistenceInfo struct {
+	Backend  string                `json:"backend"`
+	Settings []*PersistenceSetting `json:"settings,omitempty"`
+	Features []*PersistenceFeature `json:"features,omitempty"`
+}
+
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
 	DomainID      string `json:"domainID,omitempty"`
@@ -380,6 +401,96 @@ func (v *RingInfo) GetMemberCount() (o int32) {
 func (v *RingInfo) GetMembers() (o []*HostInfo) {
 	if v != nil && v.Members != nil {
 		return v.Members
+	}
+	return
+}
+
+type GetDynamicConfigRequest struct {
+	ConfigName string                 `json:"configName,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *GetDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *GetDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type GetDynamicConfigResponse struct {
+	Value *DataBlob `json:"value,omitempty"`
+}
+
+func (v *GetDynamicConfigResponse) GetValue() (o *DataBlob) {
+	if v != nil && v.Value != nil {
+		return v.Value
+	}
+	return
+}
+
+type UpdateDynamicConfigRequest struct {
+	ConfigName   string                `json:"configName,omitempty"`
+	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
+}
+
+func (v *UpdateDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *UpdateDynamicConfigRequest) GetConfigValues() (o []*DynamicConfigValue) {
+	if v != nil && v.ConfigValues != nil {
+		return v.ConfigValues
+	}
+	return
+}
+
+type RestoreDynamicConfigRequest struct {
+	ConfigName string                 `json:"configName,omitempty"`
+	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *RestoreDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+func (v *RestoreDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
+	if v != nil && v.Filters != nil {
+		return v.Filters
+	}
+	return
+}
+
+type ListDynamicConfigRequest struct {
+	ConfigName string `json:"configName,omitempty"`
+}
+
+func (v *ListDynamicConfigRequest) GetConfigName() (o string) {
+	if v != nil {
+		return v.ConfigName
+	}
+	return
+}
+
+type ListDynamicConfigResponse struct {
+	Entries []*DynamicConfigEntry `json:"entries,omitempty"`
+}
+
+func (v *ListDynamicConfigResponse) GetEntries() (o []*DynamicConfigEntry) {
+	if v != nil && v.Entries != nil {
+		return v.Entries
 	}
 	return
 }

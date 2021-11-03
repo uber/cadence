@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/yarpc/yarpcerrors"
 
 	"github.com/uber/cadence/common/types/testdata"
 )
@@ -33,32 +34,36 @@ import (
 func TestErrors(t *testing.T) {
 	for _, err := range []error{
 		nil, // OK - no error
-		testdata.AccessDeniedError,
-		testdata.BadRequestError,
-		testdata.CancellationAlreadyRequestedError,
-		testdata.ClientVersionNotSupportedError,
-		testdata.CurrentBranchChangedError,
-		testdata.DomainAlreadyExistsError,
-		testdata.DomainNotActiveError,
-		testdata.EntityNotExistsError,
-		testdata.EventAlreadyStartedError,
-		testdata.InternalDataInconsistencyError,
-		testdata.InternalServiceError,
-		testdata.LimitExceededError,
-		testdata.QueryFailedError,
-		testdata.RemoteSyncMatchedError,
-		testdata.RetryTaskV2Error,
-		testdata.ServiceBusyError,
-		testdata.ShardOwnershipLostError,
-		testdata.WorkflowExecutionAlreadyStartedError,
+		&testdata.AccessDeniedError,
+		&testdata.BadRequestError,
+		&testdata.CancellationAlreadyRequestedError,
+		&testdata.ClientVersionNotSupportedError,
+		&testdata.CurrentBranchChangedError,
+		&testdata.DomainAlreadyExistsError,
+		&testdata.DomainNotActiveError,
+		&testdata.EntityNotExistsError,
+		&testdata.WorkflowExecutionAlreadyCompletedError,
+		&testdata.EventAlreadyStartedError,
+		&testdata.InternalDataInconsistencyError,
+		&testdata.InternalServiceError,
+		&testdata.LimitExceededError,
+		&testdata.QueryFailedError,
+		&testdata.RemoteSyncMatchedError,
+		&testdata.RetryTaskV2Error,
+		&testdata.ServiceBusyError,
+		&testdata.ShardOwnershipLostError,
+		&testdata.WorkflowExecutionAlreadyStartedError,
 		errors.New("unknown error"),
 	} {
 		name := "OK"
 		if err != nil {
-			name = reflect.TypeOf(err).Name()
+			name = reflect.TypeOf(err).Elem().Name()
 		}
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, err, ToError(FromError(err)))
 		})
 	}
+
+	timeout := yarpcerrors.DeadlineExceededErrorf("timeout")
+	assert.Equal(t, timeout, ToError(timeout))
 }

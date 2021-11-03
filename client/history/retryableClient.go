@@ -32,9 +32,8 @@ import (
 var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
-	client      Client
-	policy      backoff.RetryPolicy
-	isRetryable backoff.IsRetryable
+	client        Client
+	throttleRetry *backoff.ThrottleRetry
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
@@ -44,9 +43,11 @@ func NewRetryableClient(
 	isRetryable backoff.IsRetryable,
 ) Client {
 	return &retryableClient{
-		client:      client,
-		policy:      policy,
-		isRetryable: isRetryable,
+		client: client,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(policy),
+			backoff.WithRetryableError(isRetryable),
+		),
 	}
 }
 
@@ -63,7 +64,7 @@ func (c *retryableClient) StartWorkflowExecution(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -80,7 +81,7 @@ func (c *retryableClient) DescribeHistoryHost(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -95,7 +96,7 @@ func (c *retryableClient) CloseShard(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return err
 }
 
@@ -110,7 +111,7 @@ func (c *retryableClient) ResetQueue(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return err
 }
 
@@ -127,7 +128,7 @@ func (c *retryableClient) DescribeQueue(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -142,7 +143,7 @@ func (c *retryableClient) RemoveTask(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return err
 }
 
@@ -159,7 +160,7 @@ func (c *retryableClient) DescribeMutableState(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -176,7 +177,7 @@ func (c *retryableClient) GetMutableState(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -193,7 +194,7 @@ func (c *retryableClient) PollMutableState(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -210,7 +211,7 @@ func (c *retryableClient) ResetStickyTaskList(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -227,7 +228,7 @@ func (c *retryableClient) DescribeWorkflowExecution(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -244,7 +245,7 @@ func (c *retryableClient) RecordDecisionTaskStarted(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -261,7 +262,7 @@ func (c *retryableClient) RecordActivityTaskStarted(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -278,7 +279,7 @@ func (c *retryableClient) RespondDecisionTaskCompleted(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -292,7 +293,7 @@ func (c *retryableClient) RespondDecisionTaskFailed(
 		return c.client.RespondDecisionTaskFailed(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) RespondActivityTaskCompleted(
@@ -305,7 +306,7 @@ func (c *retryableClient) RespondActivityTaskCompleted(
 		return c.client.RespondActivityTaskCompleted(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) RespondActivityTaskFailed(
@@ -318,7 +319,7 @@ func (c *retryableClient) RespondActivityTaskFailed(
 		return c.client.RespondActivityTaskFailed(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) RespondActivityTaskCanceled(
@@ -331,7 +332,7 @@ func (c *retryableClient) RespondActivityTaskCanceled(
 		return c.client.RespondActivityTaskCanceled(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) RecordActivityTaskHeartbeat(
@@ -347,7 +348,7 @@ func (c *retryableClient) RecordActivityTaskHeartbeat(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -361,7 +362,7 @@ func (c *retryableClient) RequestCancelWorkflowExecution(
 		return c.client.RequestCancelWorkflowExecution(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) SignalWorkflowExecution(
@@ -374,7 +375,7 @@ func (c *retryableClient) SignalWorkflowExecution(
 		return c.client.SignalWorkflowExecution(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) SignalWithStartWorkflowExecution(
@@ -390,7 +391,7 @@ func (c *retryableClient) SignalWithStartWorkflowExecution(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -404,7 +405,7 @@ func (c *retryableClient) RemoveSignalMutableState(
 		return c.client.RemoveSignalMutableState(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) TerminateWorkflowExecution(
@@ -417,7 +418,7 @@ func (c *retryableClient) TerminateWorkflowExecution(
 		return c.client.TerminateWorkflowExecution(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) ResetWorkflowExecution(
@@ -433,7 +434,7 @@ func (c *retryableClient) ResetWorkflowExecution(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -447,7 +448,7 @@ func (c *retryableClient) ScheduleDecisionTask(
 		return c.client.ScheduleDecisionTask(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) RecordChildExecutionCompleted(
@@ -460,7 +461,7 @@ func (c *retryableClient) RecordChildExecutionCompleted(
 		return c.client.RecordChildExecutionCompleted(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) ReplicateEventsV2(
@@ -473,7 +474,7 @@ func (c *retryableClient) ReplicateEventsV2(
 		return c.client.ReplicateEventsV2(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) SyncShardStatus(
@@ -486,7 +487,7 @@ func (c *retryableClient) SyncShardStatus(
 		return c.client.SyncShardStatus(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) SyncActivity(
@@ -499,7 +500,7 @@ func (c *retryableClient) SyncActivity(
 		return c.client.SyncActivity(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) GetReplicationMessages(
@@ -514,7 +515,7 @@ func (c *retryableClient) GetReplicationMessages(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -530,7 +531,7 @@ func (c *retryableClient) GetDLQReplicationMessages(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -546,7 +547,7 @@ func (c *retryableClient) QueryWorkflow(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -560,7 +561,7 @@ func (c *retryableClient) ReapplyEvents(
 		return c.client.ReapplyEvents(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) ReadDLQMessages(
@@ -576,7 +577,7 @@ func (c *retryableClient) ReadDLQMessages(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -590,7 +591,7 @@ func (c *retryableClient) PurgeDLQMessages(
 		return c.client.PurgeDLQMessages(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) MergeDLQMessages(
@@ -606,7 +607,7 @@ func (c *retryableClient) MergeDLQMessages(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -620,7 +621,7 @@ func (c *retryableClient) RefreshWorkflowTasks(
 		return c.client.RefreshWorkflowTasks(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) NotifyFailoverMarkers(
@@ -633,5 +634,53 @@ func (c *retryableClient) NotifyFailoverMarkers(
 		return c.client.NotifyFailoverMarkers(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *retryableClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	var resp *types.GetCrossClusterTasksResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetCrossClusterTasks(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	var resp *types.RespondCrossClusterTasksCompletedResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) GetFailoverInfo(
+	ctx context.Context,
+	request *types.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetFailoverInfoResponse, error) {
+	var resp *types.GetFailoverInfoResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetFailoverInfo(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
 }

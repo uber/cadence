@@ -37,6 +37,7 @@ type Client interface {
 	DescribeMutableState(context.Context, *types.DescribeMutableStateRequest, ...yarpc.CallOption) (*types.DescribeMutableStateResponse, error)
 	DescribeQueue(context.Context, *types.DescribeQueueRequest, ...yarpc.CallOption) (*types.DescribeQueueResponse, error)
 	DescribeWorkflowExecution(context.Context, *types.HistoryDescribeWorkflowExecutionRequest, ...yarpc.CallOption) (*types.DescribeWorkflowExecutionResponse, error)
+	GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest, ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error)
 	GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error)
 	GetMutableState(context.Context, *types.GetMutableStateRequest, ...yarpc.CallOption) (*types.GetMutableStateResponse, error)
 	GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error)
@@ -62,6 +63,7 @@ type Client interface {
 	RespondActivityTaskCanceled(context.Context, *types.HistoryRespondActivityTaskCanceledRequest, ...yarpc.CallOption) error
 	RespondActivityTaskCompleted(context.Context, *types.HistoryRespondActivityTaskCompletedRequest, ...yarpc.CallOption) error
 	RespondActivityTaskFailed(context.Context, *types.HistoryRespondActivityTaskFailedRequest, ...yarpc.CallOption) error
+	RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest, ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error)
 	RespondDecisionTaskCompleted(context.Context, *types.HistoryRespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
 	RespondDecisionTaskFailed(context.Context, *types.HistoryRespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
 	ScheduleDecisionTask(context.Context, *types.ScheduleDecisionTaskRequest, ...yarpc.CallOption) error
@@ -71,4 +73,5 @@ type Client interface {
 	SyncActivity(context.Context, *types.SyncActivityRequest, ...yarpc.CallOption) error
 	SyncShardStatus(context.Context, *types.SyncShardStatusRequest, ...yarpc.CallOption) error
 	TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest, ...yarpc.CallOption) error
+	GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest, ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error)
 }

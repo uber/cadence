@@ -18,7 +18,10 @@ CREATE TYPE shard (
   -- Mapping of cluster to corresponding list of transfer queue processing states
   transfer_processing_queue_states  blob,
   transfer_processing_queue_states_encoding  text,
-  -- Mapping of cluster to corresponding list of transfer queue processing states
+  -- Mapping of cluster to corresponding list of cross-cluster queue processing states
+  cross_cluster_processing_queue_states blob,
+  cross_cluster_processing_queue_states_encoding text,
+  -- Mapping of cluster to corresponding list of timer queue processing states
   timer_processing_queue_states     blob,
   timer_processing_queue_states_encoding     text,
   -- Mapping of (remote) cluster to corresponding replication level (last replicated task_id)
@@ -110,20 +113,21 @@ CREATE TYPE replication_state (
 
 -- TODO: Remove fields that are left over from activity and workflow tasks.
 CREATE TYPE transfer_task (
-  domain_id                  uuid,   -- The domain ID that this transfer task belongs to
-  workflow_id                text,   -- The workflow ID that this transfer task belongs to
-  run_id                     uuid,   -- The run ID that this transfer task belongs to
+  domain_id                  uuid,         -- The domain ID that this transfer task belongs to
+  workflow_id                text,         -- The workflow ID that this transfer task belongs to
+  run_id                     uuid,         -- The run ID that this transfer task belongs to
   task_id                    bigint,
-  visibility_ts              timestamp, -- The timestamp when the transfer task is generated
-  target_domain_id           uuid,   -- The external domain ID that this transfer task is doing work for.
-  target_workflow_id         text,   -- The external workflow ID that this transfer task is doing work for.
-  target_run_id              uuid,   -- The external run ID that this transfer task is doing work for.
-  target_child_workflow_only boolean, -- The whether target child workflow only.
+  visibility_ts              timestamp,    -- The timestamp when the transfer task is generated
+  target_domain_id           uuid,         -- The external domain ID that this transfer task is doing work for.
+  target_domain_ids          set<uuid>,    -- The external domain ID that this transfer task is doing work for.
+  target_workflow_id         text,         -- The external workflow ID that this transfer task is doing work for.
+  target_run_id              uuid,         -- The external run ID that this transfer task is doing work for.
+  target_child_workflow_only boolean,      -- The whether target child workflow only.
   task_list                  text,
-  type                       int,    -- enum TaskType {ActivityTask, DecisionTask, DeleteExecution, CancelExecution, StartChildExecution, ReplicationTask}
+  type                       int,          -- enum TaskType For local: {Decision, Activity, CloseExecution, CancelExecution, StartChildExecution, SignalExecution, RecordWorkflowStarted, ResetWorkflow, UpsertWorkflowSearchAttributes}, or for crossCluster {StartChildExecution, CancelExecution, SignalExecution}
   schedule_id                bigint,
-  version                    bigint, -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
-  record_visibility          boolean, -- indicates whether or not to create a visibility record
+  version                    bigint,       -- the failover version when this task is created, used to compare against the mutable state, in case the events got overwritten
+  record_visibility          boolean,      -- indicates whether or not to create a visibility record
 );
 
 CREATE TYPE replication_task (
@@ -131,7 +135,7 @@ CREATE TYPE replication_task (
   workflow_id                text,   -- The workflow ID that this replication task belongs to
   run_id                     uuid,   -- The run ID that this replication task belongs to
   task_id                    bigint,
-  type                       int,    -- enum TaskType {History, Heartbeat}
+  type                       int,    -- enum TaskType {History, SyncActivity, FailoverMarker}
   first_event_id             bigint,  -- Used by ReplicationTask to set the first event ID of the applied transaction
   next_event_id              bigint,  -- Used by ReplicationTask to set the next event ID of the applied transaction
   version                    bigint,  -- Used by ReplicationTask to set the failover version of the applied transaction
@@ -219,7 +223,8 @@ CREATE TYPE child_execution_info (
   started_event             blob, -- deprecated
   create_request_id         uuid,
   event_data_encoding       text, -- Protocol used for history serialization
-  domain_name               text,
+  domain_id                 uuid,
+  domain_name               text, -- deprecated
   workflow_type_name        text,
   parent_close_policy       int,
 );
@@ -323,7 +328,7 @@ CREATE TYPE checksum (
 
 CREATE TABLE executions (
   shard_id                       int,
-  type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask}
+  type                           int, -- enum RowType { Shard, Execution, TransferTask, TimerTask, ReplicationTask, CrossClusterTask}
   domain_id                      uuid,
   workflow_id                    text,
   run_id                         uuid,
@@ -333,6 +338,7 @@ CREATE TABLE executions (
   shard                          frozen<shard>,
   execution                      frozen<workflow_execution>,
   transfer                       frozen<transfer_task>,
+  cross_cluster                  frozen<transfer_task>, -- reuse the transfer_task type
   replication                    frozen<replication_task>,
   timer                          frozen<timer_task>,
   next_event_id                  bigint,  -- This is needed to make conditional updates on session history
@@ -481,3 +487,12 @@ PRIMARY KEY (queue_type)
 )  WITH COMPACTION = {
      'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
    };
+
+CREATE TABLE cluster_config (
+  row_type int,
+  version int,
+  timestamp timestamp,
+  values blob,
+  encoding text,
+PRIMARY KEY (row_type, version)
+) WITH CLUSTERING ORDER BY (version DESC);

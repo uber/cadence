@@ -8,7 +8,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make cover_profile"
+    command: "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
     artifact_paths:
       - ".build/coverage/*.out"
     retry:

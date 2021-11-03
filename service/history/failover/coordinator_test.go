@@ -36,11 +36,11 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	mmocks "github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 )
@@ -127,22 +127,23 @@ func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
 }
 
 func (s *coordinatorSuite) TestNotifyRemoteCoordinator_Empty() {
-	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
+	requestByMarker := make(map[types.FailoverMarkerAttributes]*receiveRequest)
 	s.historyClient.EXPECT().NotifyFailoverMarkers(context.Background(), gomock.Any()).Times(0)
-	s.coordinator.notifyRemoteCoordinator(requestByMarker)
+	err := s.coordinator.notifyRemoteCoordinator(requestByMarker)
+	s.NoError(err)
 }
 
 func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 
-	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
-	attributes := &types.FailoverMarkerAttributes{
+	requestByMarker := make(map[types.FailoverMarkerAttributes]*receiveRequest)
+	attributes := types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: 1,
 		CreationTime:    common.Int64Ptr(1),
 	}
 	requestByMarker[attributes] = &receiveRequest{
 		shardIDs: []int32{1, 2, 3},
-		marker:   attributes,
+		marker:   &attributes,
 	}
 
 	s.historyClient.EXPECT().NotifyFailoverMarkers(
@@ -150,42 +151,72 @@ func (s *coordinatorSuite) TestNotifyRemoteCoordinator() {
 			FailoverMarkerTokens: []*types.FailoverMarkerToken{
 				{
 					ShardIDs:       []int32{1, 2, 3},
-					FailoverMarker: attributes,
+					FailoverMarker: &attributes,
 				},
 			},
 		},
 	).Return(nil).Times(1)
-	s.coordinator.notifyRemoteCoordinator(requestByMarker)
-	s.Equal(0, len(requestByMarker))
+	err := s.coordinator.notifyRemoteCoordinator(requestByMarker)
+	s.NoError(err)
+	s.Equal(1, len(requestByMarker))
 }
 
-func (s *coordinatorSuite) TestAggregateNotificationRequests() {
-	requestByMarker := make(map[*types.FailoverMarkerAttributes]*receiveRequest)
-	attributes1 := &types.FailoverMarkerAttributes{
+func (s *coordinatorSuite) TestNotifyRemoteCoordinator_Error() {
+
+	requestByMarker := make(map[types.FailoverMarkerAttributes]*receiveRequest)
+	attributes := types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: 1,
 		CreationTime:    common.Int64Ptr(1),
 	}
-	attributes2 := &types.FailoverMarkerAttributes{
+	requestByMarker[attributes] = &receiveRequest{
+		shardIDs: []int32{1, 2, 3},
+		marker:   &attributes,
+	}
+
+	s.historyClient.EXPECT().NotifyFailoverMarkers(
+		context.Background(), &types.NotifyFailoverMarkersRequest{
+			FailoverMarkerTokens: []*types.FailoverMarkerToken{
+				{
+					ShardIDs:       []int32{1, 2, 3},
+					FailoverMarker: &attributes,
+				},
+			},
+		},
+	).Return(fmt.Errorf("test")).Times(1)
+	err := s.coordinator.notifyRemoteCoordinator(requestByMarker)
+	s.Error(err)
+}
+
+func (s *coordinatorSuite) TestAggregateNotificationRequests() {
+	requestByMarker := make(map[types.FailoverMarkerAttributes]*receiveRequest)
+	attributes1 := types.FailoverMarkerAttributes{
+		DomainID:        uuid.New(),
+		FailoverVersion: 1,
+		CreationTime:    common.Int64Ptr(1),
+	}
+	attributes2 := types.FailoverMarkerAttributes{
 		DomainID:        uuid.New(),
 		FailoverVersion: 2,
 		CreationTime:    common.Int64Ptr(2),
 	}
 	request1 := &notificationRequest{
 		shardID: 1,
-		markers: []*types.FailoverMarkerAttributes{attributes1},
+		markers: []*types.FailoverMarkerAttributes{&attributes1},
 	}
 	aggregateNotificationRequests(request1, requestByMarker)
 	request2 := &notificationRequest{
 		shardID: 2,
-		markers: []*types.FailoverMarkerAttributes{attributes1},
+		markers: []*types.FailoverMarkerAttributes{&attributes1},
 	}
 	aggregateNotificationRequests(request2, requestByMarker)
 	request3 := &notificationRequest{
 		shardID: 3,
-		markers: []*types.FailoverMarkerAttributes{attributes1, attributes2},
+		markers: []*types.FailoverMarkerAttributes{&attributes1, &attributes2},
 	}
 	aggregateNotificationRequests(request3, requestByMarker)
+	attributes1.CreationTime = nil
+	attributes2.CreationTime = nil
 	s.Equal([]int32{1, 2, 3}, requestByMarker[attributes1].shardIDs)
 	s.Equal([]int32{3}, requestByMarker[attributes2].shardIDs)
 }
@@ -386,4 +417,32 @@ func (s *coordinatorSuite) TestHandleFailoverMarkers_CleanPendingActiveState_Err
 	s.coordinator.handleFailoverMarkers(request1)
 	s.coordinator.handleFailoverMarkers(request2)
 	s.Equal(1, len(s.coordinator.recorder))
+}
+
+func (s *coordinatorSuite) TestGetFailoverInfo_Success() {
+	domainID := uuid.New()
+
+	//Add failover marker
+	attributes := &types.FailoverMarkerAttributes{
+		DomainID:        domainID,
+		FailoverVersion: 2,
+		CreationTime:    common.Int64Ptr(1),
+	}
+	request := &receiveRequest{
+		shardIDs: []int32{1},
+		marker:   attributes,
+	}
+	s.coordinator.handleFailoverMarkers(request)
+
+	resp, err := s.coordinator.GetFailoverInfo(domainID)
+	s.NoError(err)
+	s.Equal(int32(1), resp.GetCompletedShardCount())
+	s.Contains(resp.GetPendingShards(), int32(0))
+}
+
+func (s *coordinatorSuite) TestGetFailoverInfo_DomainIDNotFound_Error() {
+	domainID := uuid.New()
+	resp, err := s.coordinator.GetFailoverInfo(domainID)
+	s.Nil(resp)
+	s.Error(err)
 }

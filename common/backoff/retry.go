@@ -21,8 +21,11 @@
 package backoff
 
 import (
+	"context"
 	"sync"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -39,6 +42,18 @@ type (
 		sync.Mutex
 		retrier      Retrier // Backoff retrier
 		failureCount int64   // Number of consecutive failures seen
+	}
+
+	// ThrottleRetryOption sets the options of ThrottleRetry
+	ThrottleRetryOption func(*ThrottleRetry)
+
+	// ThrottleRetry is used to run operation with retry and also avoid throttling dependencies
+	ThrottleRetry struct {
+		policy         RetryPolicy
+		isRetryable    IsRetryable
+		throttlePolicy RetryPolicy
+		isThrottle     IsRetryable
+		clock          Clock
 	}
 )
 
@@ -88,22 +103,84 @@ func NewConcurrentRetrier(retryPolicy RetryPolicy) *ConcurrentRetrier {
 	return &ConcurrentRetrier{retrier: retrier}
 }
 
-// Retry function can be used to wrap any call with retry logic using the passed in policy
-// The returned error will be preferred to a previous one if one exists. That's because the
-// very last error is very likely a timeout error, and it's not useful for logging/troubleshooting
-func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) error {
+// NewThrottleRetry returns a retry handler with given options
+func NewThrottleRetry(opts ...ThrottleRetryOption) *ThrottleRetry {
+	retryPolicy := NewExponentialRetryPolicy(50 * time.Millisecond)
+	retryPolicy.SetMaximumInterval(2 * time.Second)
+	throttlePolicy := NewExponentialRetryPolicy(time.Second)
+	throttlePolicy.SetMaximumInterval(10 * time.Second)
+	throttlePolicy.SetExpirationInterval(NoInterval)
+	tr := &ThrottleRetry{
+		policy: retryPolicy,
+		isRetryable: func(_ error) bool {
+			return false
+		},
+		throttlePolicy: throttlePolicy,
+		isThrottle: func(err error) bool {
+			_, ok := err.(*types.ServiceBusyError)
+			return ok
+		},
+		clock: SystemClock,
+	}
+	for _, opt := range opts {
+		opt(tr)
+	}
+	return tr
+}
+
+// WithRetryPolicy returns a setter setting the retry policy of ThrottleRetry
+func WithRetryPolicy(policy RetryPolicy) ThrottleRetryOption {
+	return func(tr *ThrottleRetry) {
+		tr.policy = policy
+	}
+}
+
+// WithThrottlePolicy returns setter setting the retry policy when operation returns throttle error
+func WithThrottlePolicy(throttlePolicy RetryPolicy) ThrottleRetryOption {
+	return func(tr *ThrottleRetry) {
+		tr.throttlePolicy = throttlePolicy
+	}
+}
+
+// WithRetryableError returns a setter setting the retryable error of ThrottleRetry
+func WithRetryableError(isRetryable IsRetryable) ThrottleRetryOption {
+	return func(tr *ThrottleRetry) {
+		tr.isRetryable = isRetryable
+	}
+}
+
+// WithThrottleError returns a setter setting the throttle error of ThrottleRetry
+func WithThrottleError(isThrottle IsRetryable) ThrottleRetryOption {
+	return func(tr *ThrottleRetry) {
+		tr.isThrottle = isThrottle
+	}
+}
+
+// Do function can be used to wrap any call with retry logic
+func (tr *ThrottleRetry) Do(ctx context.Context, op Operation) error {
 	var prevErr error
 	var err error
 	var next time.Duration
 
-	r := NewRetrier(policy, SystemClock)
+	r := NewRetrier(tr.policy, tr.clock)
+	t := NewRetrier(tr.throttlePolicy, tr.clock)
 	for {
 		// record the previous error before an operation
 		prevErr = err
 
-		// operation completed successfully.  No need to retry.
-		if err = operation(); err == nil {
+		// operation completed successfully. No need to retry.
+		if err = op(); err == nil {
 			return nil
+		}
+
+		// Check if the error is retryable
+		if !tr.isRetryable(err) {
+			// The returned error will be preferred to a previous one if one exists. That's because the
+			// very last error is very likely a timeout error, and it's not useful for logging/troubleshooting
+			if prevErr != nil {
+				return prevErr
+			}
+			return err
 		}
 
 		if next = r.NextBackOff(); next == done {
@@ -113,15 +190,23 @@ func Retry(operation Operation, policy RetryPolicy, isRetryable IsRetryable) err
 			return err
 		}
 
-		// Check if the error is retryable
-		if isRetryable != nil && !isRetryable(err) {
-			if prevErr != nil {
-				return prevErr
+		// check if the error is a throttle error
+		if tr.isThrottle(err) {
+			throttleBackOff := t.NextBackOff()
+			if throttleBackOff != done && throttleBackOff > next {
+				next = throttleBackOff
 			}
-			return err
 		}
 
-		time.Sleep(next)
+		select {
+		case <-ctx.Done():
+			if prevErr != nil {
+				return prevErr
+			} else {
+				return err
+			}
+		case <-time.After(next):
+		}
 	}
 }
 

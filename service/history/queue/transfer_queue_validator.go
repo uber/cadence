@@ -27,11 +27,11 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -62,11 +62,11 @@ type (
 
 func newTransferQueueValidator(
 	processor *transferQueueProcessorBase,
-	timeSource clock.TimeSource,
 	validationInterval dynamicconfig.DurationPropertyFn,
 	logger log.Logger,
 	metricsScope metrics.Scope,
 ) *transferQueueValidator {
+	timeSource := processor.shard.GetTimeSource()
 	return &transferQueueValidator{
 		processor:    processor,
 		timeSource:   timeSource,

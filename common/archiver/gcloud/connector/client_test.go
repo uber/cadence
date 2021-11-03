@@ -39,7 +39,7 @@ import (
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/gcloud/connector"
 	"github.com/uber/cadence/common/archiver/gcloud/connector/mocks"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 func (s *clientSuite) SetupTest() {

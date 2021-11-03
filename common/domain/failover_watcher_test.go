@@ -36,11 +36,11 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -85,7 +85,7 @@ func (s *failoverWatcherSuite) SetupTest() {
 
 	logger := loggerimpl.NewNopLogger()
 	scope := tally.NewTestScope("failover_test", nil)
-	metricsClient := metrics.NewClient(scope, metrics.DomainFailoverScope)
+	metricsClient := metrics.NewClient(scope, metrics.Frontend)
 	s.watcher = NewFailoverWatcher(
 		s.mockDomainCache,
 		s.mockMetadataMgr,
@@ -119,9 +119,7 @@ func (s *failoverWatcherSuite) TestCleanPendingActiveState() {
 	replicationConfig := &persistence.DomainReplicationConfig{
 		ActiveClusterName: "active",
 		Clusters: []*persistence.ClusterReplicationConfig{
-			{
-				"active",
-			},
+			{ClusterName: "active"},
 		},
 	}
 
@@ -206,9 +204,7 @@ func (s *failoverWatcherSuite) TestHandleFailoverTimeout() {
 	replicationConfig := &persistence.DomainReplicationConfig{
 		ActiveClusterName: "active",
 		Clusters: []*persistence.ClusterReplicationConfig{
-			{
-				"active",
-			},
+			{ClusterName: "active"},
 		},
 	}
 	endtime := common.Int64Ptr(s.timeSource.Now().UnixNano() - 1)

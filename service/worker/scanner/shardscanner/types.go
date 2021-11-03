@@ -33,11 +33,13 @@ import (
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/common/resource"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
@@ -58,6 +60,7 @@ type (
 		Hooks    *ScannerHooks
 		Scope    metrics.Scope
 		Config   *ScannerConfig
+		Logger   log.Logger
 	}
 
 	// FixerContext is the resource that is available to activities under ShardFixer key
@@ -66,6 +69,7 @@ type (
 		Hooks    *FixerHooks
 		Scope    metrics.Scope
 		Config   *ScannerConfig
+		Logger   log.Logger
 	}
 
 	// ScannerEmitMetricsActivityParams is the parameter for ScannerEmitMetricsActivity
@@ -114,11 +118,25 @@ type (
 		ScannerWorkflowRunID          string
 		FixerWorkflowConfigOverwrites FixerWorkflowConfigOverwrites
 	}
+
 	// ScanReport is the report of running Scan on a single shard.
 	ScanReport struct {
-		ShardID int
-		Stats   ScanStats
-		Result  ScanResult
+		ShardID     int
+		Stats       ScanStats
+		Result      ScanResult
+		DomainStats map[string]*ScanStats
+	}
+
+	// DomainStats is the report of stats for one domain
+	DomainScanStats struct {
+		DomainID string
+		Stats    ScanStats
+	}
+
+	// DomainStats is the report of stats for one domain
+	DomainFixStats struct {
+		DomainID string
+		Stats    FixStats
 	}
 
 	// ScanStats indicates the stats of entities which were handled by shard Scan.
@@ -145,9 +163,10 @@ type (
 
 	// FixReport is the report of running Fix on a single shard
 	FixReport struct {
-		ShardID int
-		Stats   FixStats
-		Result  FixResult
+		ShardID     int
+		Stats       FixStats
+		Result      FixResult
+		DomainStats map[string]*FixStats
 	}
 
 	// FixStats indicates the stats of executions that were handled by shard Fix.
@@ -421,6 +440,7 @@ func NewShardScannerContext(
 		Resource: res,
 		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsScannerScope),
 		Config:   config,
+		Logger:   res.GetLogger().WithTags(tag.ComponentShardScanner),
 		Hooks:    config.ScannerHooks(),
 	}
 }
@@ -435,6 +455,7 @@ func NewShardFixerContext(
 		Scope:    res.GetMetricsClient().Scope(metrics.ExecutionsFixerScope),
 		Config:   config,
 		Hooks:    config.FixerHooks(),
+		Logger:   res.GetLogger().WithTags(tag.ComponentShardFixer),
 	}
 }
 

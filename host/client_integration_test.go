@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -40,14 +40,14 @@ import (
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/client"
 	"go.uber.org/cadence/encoded"
-	cworker "go.uber.org/cadence/worker"
+	"go.uber.org/cadence/worker"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service"
 )
 
 func init() {
@@ -57,26 +57,27 @@ func init() {
 	workflow.Register(testChildWorkflow)
 }
 
-type (
-	clientIntegrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		IntegrationBase
-		wfService workflowserviceclient.Interface
-		wfClient  client.Client
-		worker    cworker.Worker
-		taskList  string
-	}
-)
-
 func TestClientIntegrationSuite(t *testing.T) {
 	flag.Parse()
-	suite.Run(t, new(clientIntegrationSuite))
+
+	clusterConfig, err := GetTestClusterConfig("testdata/clientintegrationtestcluster.yaml")
+	if err != nil {
+		panic(err)
+	}
+	testCluster := NewPersistenceTestCluster(clusterConfig)
+
+	s := new(ClientIntegrationSuite)
+	params := IntegrationBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		TestClusterConfig:     clusterConfig,
+	}
+	s.IntegrationBase = NewIntegrationBase(params)
+	suite.Run(t, s)
 }
 
-func (s *clientIntegrationSuite) SetupSuite() {
-	s.setupSuite("testdata/clientintegrationtestcluster.yaml")
+func (s *ClientIntegrationSuite) SetupSuite() {
+	s.setupSuite()
 
 	var err error
 	s.wfService, err = s.buildServiceClient()
@@ -86,19 +87,19 @@ func (s *clientIntegrationSuite) SetupSuite() {
 	s.wfClient = client.NewClient(s.wfService, s.domainName, nil)
 
 	s.taskList = "client-integration-test-tasklist"
-	s.worker = cworker.New(s.wfService, s.domainName, s.taskList, cworker.Options{})
+	s.worker = worker.New(s.wfService, s.domainName, s.taskList, worker.Options{})
 	if err := s.worker.Start(); err != nil {
 		s.Logger.Fatal("Error when start worker", tag.Error(err))
 	}
 }
 
-func (s *clientIntegrationSuite) TearDownSuite() {
+func (s *ClientIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
 }
 
-func (s *clientIntegrationSuite) buildServiceClient() (workflowserviceclient.Interface, error) {
+func (s *ClientIntegrationSuite) buildServiceClient() (workflowserviceclient.Interface, error) {
 	cadenceClientName := "cadence-client"
-	cadenceFrontendService := common.FrontendServiceName
+	cadenceFrontendService := service.Frontend
 	hostPort := "127.0.0.1:7104"
 	if TestFlags.FrontendAddr != "" {
 		hostPort = TestFlags.FrontendAddr
@@ -125,7 +126,7 @@ func (s *clientIntegrationSuite) buildServiceClient() (workflowserviceclient.Int
 	return workflowserviceclient.New(dispatcher.ClientConfig(cadenceFrontendService)), nil
 }
 
-func (s *clientIntegrationSuite) SetupTest() {
+func (s *ClientIntegrationSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
@@ -194,19 +195,19 @@ func testDataConverterWorkflow(ctx workflow.Context, tl string) (string, error) 
 	return result + "," + result1, nil
 }
 
-func (s *clientIntegrationSuite) startWorkerWithDataConverter(tl string, dataConverter encoded.DataConverter) cworker.Worker {
-	opts := cworker.Options{}
+func (s *ClientIntegrationSuite) startWorkerWithDataConverter(tl string, dataConverter encoded.DataConverter) worker.Worker {
+	opts := worker.Options{}
 	if dataConverter != nil {
 		opts.DataConverter = dataConverter
 	}
-	worker := cworker.New(s.wfService, s.domainName, tl, opts)
+	worker := worker.New(s.wfService, s.domainName, tl, opts)
 	if err := worker.Start(); err != nil {
 		s.Logger.Fatal("Error when start worker with data converter", tag.Error(err))
 	}
 	return worker
 }
 
-func (s *clientIntegrationSuite) TestClientDataConverter() {
+func (s *ClientIntegrationSuite) TestClientDataConverter() {
 	tl := "client-integration-data-converter-activity-tasklist"
 	dc := newTestDataConverter()
 	worker := s.startWorkerWithDataConverter(tl, dc)
@@ -238,7 +239,7 @@ func (s *clientIntegrationSuite) TestClientDataConverter() {
 	s.Equal(1, d.NumOfCallFromData)
 }
 
-func (s *clientIntegrationSuite) TestClientDataConverter_Failed() {
+func (s *ClientIntegrationSuite) TestClientDataConverter_Failed() {
 	tl := "client-integration-data-converter-activity-failed-tasklist"
 	worker := s.startWorkerWithDataConverter(tl, nil) // mismatch of data converter
 	defer worker.Stop()
@@ -341,7 +342,7 @@ func testChildWorkflow(ctx workflow.Context, totalCount, runCount int) (string, 
 	return "", workflow.NewContinueAsNewError(ctx, testChildWorkflow, totalCount, runCount)
 }
 
-func (s *clientIntegrationSuite) TestClientDataConverter_WithChild() {
+func (s *ClientIntegrationSuite) TestClientDataConverter_WithChild() {
 	dc := newTestDataConverter()
 	worker := s.startWorkerWithDataConverter(childTaskList, dc)
 	defer worker.Stop()

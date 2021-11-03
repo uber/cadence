@@ -24,6 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -187,4 +189,22 @@ func (s *workflowStateCloseStatusSuite) TestUpdateWorkflowStateCloseStatus_Workf
 	for _, closeStatus := range closeStatuses {
 		s.NotNil(ValidateUpdateWorkflowStateCloseStatus(WorkflowStateZombie, closeStatus))
 	}
+}
+
+func (s *workflowStateCloseStatusSuite) TestInternalMapping() {
+	s.Nil(ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusNone))
+	s.Equal(types.WorkflowExecutionCloseStatusCompleted.Ptr(), ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusCompleted))
+	s.Equal(types.WorkflowExecutionCloseStatusFailed.Ptr(), ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusFailed))
+	s.Equal(types.WorkflowExecutionCloseStatusCanceled.Ptr(), ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusCanceled))
+	s.Equal(types.WorkflowExecutionCloseStatusTerminated.Ptr(), ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusTerminated))
+	s.Equal(types.WorkflowExecutionCloseStatusContinuedAsNew.Ptr(), ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusContinuedAsNew))
+	s.Equal(types.WorkflowExecutionCloseStatusTimedOut.Ptr(), ToInternalWorkflowExecutionCloseStatus(WorkflowCloseStatusTimedOut))
+
+	s.Equal(WorkflowCloseStatusNone, FromInternalWorkflowExecutionCloseStatus(nil))
+	s.Equal(WorkflowCloseStatusCompleted, FromInternalWorkflowExecutionCloseStatus(types.WorkflowExecutionCloseStatusCompleted.Ptr()))
+	s.Equal(WorkflowCloseStatusFailed, FromInternalWorkflowExecutionCloseStatus(types.WorkflowExecutionCloseStatusFailed.Ptr()))
+	s.Equal(WorkflowCloseStatusCanceled, FromInternalWorkflowExecutionCloseStatus(types.WorkflowExecutionCloseStatusCanceled.Ptr()))
+	s.Equal(WorkflowCloseStatusTerminated, FromInternalWorkflowExecutionCloseStatus(types.WorkflowExecutionCloseStatusTerminated.Ptr()))
+	s.Equal(WorkflowCloseStatusContinuedAsNew, FromInternalWorkflowExecutionCloseStatus(types.WorkflowExecutionCloseStatusContinuedAsNew.Ptr()))
+	s.Equal(WorkflowCloseStatusTimedOut, FromInternalWorkflowExecutionCloseStatus(types.WorkflowExecutionCloseStatusTimedOut.Ptr()))
 }

@@ -22,17 +22,20 @@ package canary
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common"
 )
 
 type (
 	// Runnable is an interface for anything that exposes a Run method
 	Runnable interface {
-		Run() error
+		Run(mode string) error
 	}
 
 	canaryImpl struct {
@@ -40,7 +43,9 @@ type (
 		canaryDomain   string
 		archivalClient cadenceClient
 		systemClient   cadenceClient
+		batcherClient  cadenceClient
 		runtime        *RuntimeContext
+		canaryConfig   *Canary
 	}
 
 	activityContext struct {
@@ -57,46 +62,57 @@ const (
 )
 
 // new returns a new instance of Canary runnable
-func newCanary(domain string, rc *RuntimeContext) Runnable {
+func newCanary(domain string, rc *RuntimeContext, canaryConfig *Canary) Runnable {
 	canaryClient := newCadenceClient(domain, rc)
 	archivalClient := newCadenceClient(archivalDomain, rc)
-	systemClient := newCadenceClient(systemDomain, rc)
+	systemClient := newCadenceClient(common.SystemLocalDomainName, rc)
+	batcherClient := newCadenceClient(common.BatcherLocalDomainName, rc)
 	return &canaryImpl{
 		canaryClient:   canaryClient,
 		canaryDomain:   domain,
 		archivalClient: archivalClient,
 		systemClient:   systemClient,
+		batcherClient:  batcherClient,
 		runtime:        rc,
+		canaryConfig:   canaryConfig,
 	}
 }
 
 // Run runs the canary
-func (c *canaryImpl) Run() error {
+func (c *canaryImpl) Run(mode string) error {
+	if mode != ModeCronCanary && mode != ModeAll && mode != ModeWorker {
+		return fmt.Errorf("wrong mode to start canary")
+	}
 	var err error
 	log := c.runtime.logger
 
 	if err = c.createDomain(); err != nil {
 		log.Error("createDomain failed", zap.Error(err))
-		return err
 	}
 
 	if err = c.createArchivalDomain(); err != nil {
 		log.Error("createArchivalDomain failed", zap.Error(err))
-		return err
 	}
 
-	// start the initial cron workflow
-	c.startCronWorkflow()
-
-	err = c.startWorker()
-	if err != nil {
-		log.Error("start worker failed", zap.Error(err))
-		return err
+	if mode == ModeAll || mode == ModeCronCanary {
+		// start the initial cron workflow
+		c.startCronWorkflow()
 	}
+
+	if mode == ModeAll || mode == ModeWorker {
+		err = c.startWorker()
+		if err != nil {
+			log.Error("start worker failed", zap.Error(err))
+			return err
+		}
+	}
+
 	return nil
 }
 
 func (c *canaryImpl) startWorker() error {
+	c.runtime.logger.Info("starting canary worker...")
+
 	options := worker.Options{
 		Logger:                             c.runtime.logger,
 		MetricsScope:                       c.runtime.metrics,
@@ -115,18 +131,24 @@ func (c *canaryImpl) startWorker() error {
 }
 
 func (c *canaryImpl) startCronWorkflow() {
+	c.runtime.logger.Info("starting canary cron workflow...")
 	wfID := "cadence.canary.cron"
-	opts := newWorkflowOptions(wfID, cronWFExecutionTimeout)
-	opts.CronSchedule = "@every 30s" // run every 30s
+	opts := newWorkflowOptions(wfID, c.canaryConfig.Cron.CronExecutionTimeout)
+	opts.CronSchedule = c.canaryConfig.Cron.CronSchedule
+
 	// create the cron workflow span
 	ctx := context.Background()
 	span := opentracing.StartSpan("start-cron-workflow-span")
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
-	_, err := c.canaryClient.StartWorkflow(ctx, opts, cronWorkflow, c.canaryDomain, wfTypeSanity)
+	_, err := c.canaryClient.StartWorkflow(ctx, opts, cronWorkflow, wfTypeSanity)
 	if err != nil {
+		// TODO: improvement: compare the cron schedule to decide whether or not terminating the current one
+		// https://github.com/uber/cadence/issues/4469
 		if _, ok := err.(*shared.WorkflowExecutionAlreadyStartedError); !ok {
 			c.runtime.logger.Error("error starting cron workflow", zap.Error(err))
+		} else {
+			c.runtime.logger.Info("cron workflow already started, you may need to terminate and restart if cron schedule is changed...")
 		}
 	}
 }
@@ -137,6 +159,8 @@ func (c *canaryImpl) newActivityContext() context.Context {
 	ctx := context.WithValue(context.Background(), ctxKeyActivityRuntime, &activityContext{cadence: c.canaryClient})
 	ctx = context.WithValue(ctx, ctxKeyActivityArchivalRuntime, &activityContext{cadence: c.archivalClient})
 	ctx = context.WithValue(ctx, ctxKeyActivitySystemClient, &activityContext{cadence: c.systemClient})
+	ctx = context.WithValue(ctx, ctxKeyActivityBatcherClient, &activityContext{cadence: c.batcherClient})
+	ctx = context.WithValue(ctx, ctxKeyConfig, c.canaryConfig)
 	return overrideWorkerOptions(ctx)
 }
 

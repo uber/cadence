@@ -149,8 +149,9 @@ const (
 		`WHERE domains_partition = ? `
 )
 
-// Insert a new record to domain, return error if failed or already exists
-// Must return conditionFailed error if domainName already exists
+// Insert a new record to domain
+// return types.DomainAlreadyExistsError error if failed or already exists
+// Must return ConditionFailure error if other condition doesn't match
 func (db *cdb) InsertDomain(
 	ctx context.Context,
 	row *nosqlplugin.DomainRow,
@@ -204,7 +205,7 @@ func (db *cdb) InsertDomain(
 		row.LastUpdatedTime.UnixNano(),
 		metadataNotificationVersion,
 	)
-	db.updateMetadataBatch(ctx, batch, metadataNotificationVersion)
+	db.updateMetadataBatch(batch, metadataNotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -224,21 +225,29 @@ func (db *cdb) InsertDomain(
 			db.logger.Warn("Unable to delete orphan domain record. Error", tag.Error(errDelete))
 		}
 
-		if domain, ok := previous["domain"].(map[string]interface{}); ok {
-			msg := fmt.Sprintf("Domain already exists.  DomainId: %v", domain)
-			db.logger.Warn(msg)
-			return errConditionFailed
+		for {
+			// first iter MapScan is done inside MapExecuteBatchCAS
+			if domain, ok := previous["name"].(string); ok && domain == row.Info.Name {
+				db.logger.Warn("Domain already exists", tag.WorkflowDomainName(domain))
+				return &types.DomainAlreadyExistsError{
+					Message: fmt.Sprintf("Domain %v already exists", previous["domain"]),
+				}
+			}
+
+			previous = make(map[string]interface{})
+			if !iter.MapScan(previous) {
+				break
+			}
 		}
 
-		db.logger.Warn("CreateDomain operation failed because of conditional failure.")
-		return errConditionFailed
+		db.logger.Warn("Create domain operation failed because of condition update failure on domain metadata record")
+		return nosqlplugin.NewConditionFailure("domain")
 	}
 
 	return nil
 }
 
 func (db *cdb) updateMetadataBatch(
-	ctx context.Context,
 	batch gocql.Batch,
 	notificationVersion int64,
 ) {
@@ -295,7 +304,7 @@ func (db *cdb) UpdateDomain(
 		constDomainPartition,
 		row.Info.Name,
 	)
-	db.updateMetadataBatch(ctx, batch, row.NotificationVersion)
+	db.updateMetadataBatch(batch, row.NotificationVersion)
 
 	previous := make(map[string]interface{})
 	applied, iter, err := db.session.MapExecuteBatchCAS(batch, previous)
@@ -309,7 +318,7 @@ func (db *cdb) UpdateDomain(
 		return err
 	}
 	if !applied {
-		return fmt.Errorf("UpdateDomain operation failed because of conditional failure")
+		return nosqlplugin.NewConditionFailure("domain")
 	}
 	return nil
 }
@@ -565,9 +574,5 @@ func (db *cdb) deleteDomain(
 	}
 
 	query = db.session.Query(templateDeleteDomainQuery, ID).WithContext(ctx)
-	if err := query.Exec(); err != nil {
-		return err
-	}
-
-	return nil
+	return query.Exec()
 }

@@ -156,6 +156,7 @@ var (
 		Type:                common.Int32Ptr(QueueType),
 		TaskID:              TaskID,
 		VisibilityTimestamp: &Timestamp1,
+		ClusterName:         ClusterName1,
 	}
 	AdminResendReplicationTasksRequest = types.ResendReplicationTasksRequest{
 		DomainID:      DomainID,
@@ -172,4 +173,8 @@ var (
 		ClusterName: ClusterName1,
 		Type:        common.Int32Ptr(QueueType),
 	}
+	AdminGetCrossClusterTasksRequest               = GetCrossClusterTasksRequest
+	AdminGetCrossClusterTasksResponse              = GetCrossClusterTasksResponse
+	AdminRespondCrossClusterTasksCompletedRequest  = RespondCrossClusterTasksCompletedRequest
+	AdminRespondCrossClusterTasksCompletedResponse = RespondCrossClusterTasksCompletedResponse
 )

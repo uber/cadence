@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -88,6 +89,7 @@ func NewStateRebuilder(
 		historyV2Mgr:    shard.GetHistoryManager(),
 		taskRefresher: NewMutableStateTaskRefresher(
 			shard.GetConfig(),
+			shard.GetClusterMetadata(),
 			shard.GetDomainCache(),
 			shard.GetEventsCache(),
 			logger,
@@ -167,7 +169,7 @@ func (r *stateRebuilderImpl) Rebuild(
 			return nil, 0, &types.BadRequestError{Message: fmt.Sprintf(
 				"nDCStateRebuilder unable to rebuild mutable state to event ID: %v, version: %v, "+
 					"baseLastEventID + baseLastEventVersion is not the same as the last event of the last "+
-					"batch, event ID: %v, version :%v ,typicaly because of attemptting to rebuild to a middle of a batch",
+					"batch, event ID: %v, version :%v ,typically because of attemptting to rebuild to a middle of a batch",
 				baseLastEventID,
 				baseLastEventVersion,
 				lastItem.EventID,
@@ -205,7 +207,7 @@ func (r *stateRebuilderImpl) initializeBuilders(
 		r.logger,
 		resetMutableStateBuilder,
 		func(mutableState MutableState) MutableStateTaskGenerator {
-			return NewMutableStateTaskGenerator(r.shard.GetDomainCache(), r.logger, mutableState)
+			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), r.logger, mutableState)
 		},
 	)
 	return resetMutableStateBuilder, stateBuilder
@@ -245,7 +247,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
 
-		_, historyBatches, token, size, err := persistence.PaginateHistory(
+		_, historyBatches, token, size, err := persistenceutils.PaginateHistory(
 			ctx,
 			r.historyV2Mgr,
 			true,

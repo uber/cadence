@@ -38,9 +38,17 @@ const (
 	ctxKeyActivityRuntime         = "runtime"
 	ctxKeyActivityArchivalRuntime = "runtime-archival"
 	ctxKeyActivitySystemClient    = "system-client"
+	ctxKeyActivityBatcherClient   = "batcher-client"
+	ctxKeyConfig                  = "runtime-config"
 	archivalDomain                = "canary-archival-domain"
-	systemDomain                  = "cadence-system"
 	archivalTaskListName          = "canary-archival-task-queue"
+)
+
+// canary running modes
+const (
+	ModeAll        = "all"
+	ModeWorker     = "worker"
+	ModeCronCanary = "cronCanary"
 )
 
 // workflowVersion represents the current version of every single
@@ -50,11 +58,6 @@ const (
 // also see beingWorkflow function
 const workflowVersion = workflow.Version(3)
 const workflowChangeID = "initial version"
-
-const (
-	cronJobTimeout         = 9 * time.Minute
-	cronWFExecutionTimeout = 18 * time.Minute
-)
 
 // wfType/activityType refers to the friendly short names given to
 // workflows and activities - at the time of registration, these names

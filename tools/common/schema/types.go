@@ -47,11 +47,11 @@ type (
 		Overwrite         bool // overwrite previous data
 		DisableVersioning bool // do not use schema versioning
 	}
-	// DB is the database interface that's required to be implemented
+	// SchemaClient is the database interface that's required to be implemented
 	// for the schema-tool to work
-	DB interface {
-		// Exec executes a cql statement
-		Exec(stmt string, args ...interface{}) error
+	SchemaClient interface {
+		// ExecDDLQuery executes a schema statement
+		ExecDDLQuery(stmt string, args ...interface{}) error
 		// DropAllTables drops all tables
 		DropAllTables() error
 		// CreateSchemaVersionTables sets up the schema version tables
@@ -104,6 +104,8 @@ const (
 	CLIOptReplicationFactor = "replication-factor"
 	// CLIOptQuiet is the cli option for quiet mode
 	CLIOptQuiet = "quiet"
+	// CLIOptProtoVersion is the cli option for protocol version
+	CLIOptProtoVersion = "protocol-version"
 
 	// CLIFlagEndpoint is the cli flag for endpoint
 	CLIFlagEndpoint = CLIOptEndpoint + ", ep"
@@ -141,6 +143,8 @@ const (
 	CLIFlagReplicationFactor = CLIOptReplicationFactor + ", rf"
 	// CLIFlagQuiet is the cli flag for quiet mode
 	CLIFlagQuiet = CLIOptQuiet + ", q"
+	// CLIFlagProtoVersion is the cli flag for protocol version
+	CLIFlagProtoVersion = CLIOptProtoVersion + ", pv"
 
 	// CLIFlagEnableTLS enables cassandra client TLS
 	CLIFlagEnableTLS = "tls"

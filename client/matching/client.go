@@ -27,6 +27,7 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -40,12 +41,17 @@ const (
 	DefaultLongPollTimeout = time.Minute * 2
 )
 
-type clientImpl struct {
-	timeout         time.Duration
-	longPollTimeout time.Duration
-	clients         common.ClientCache
-	loadBalancer    LoadBalancer
-}
+type (
+	clientIterator func() ([]Client, error)
+
+	clientImpl struct {
+		timeout         time.Duration
+		longPollTimeout time.Duration
+		clients         common.ClientCache
+		loadBalancer    LoadBalancer
+		clientIterator  clientIterator
+	}
+)
 
 // NewClient creates a new history service TChannel client
 func NewClient(
@@ -53,12 +59,14 @@ func NewClient(
 	longPollTimeout time.Duration,
 	clients common.ClientCache,
 	lb LoadBalancer,
+	clientIterator clientIterator,
 ) Client {
 	return &clientImpl{
 		timeout:         timeout,
 		longPollTimeout: longPollTimeout,
 		clients:         clients,
 		loadBalancer:    lb,
+		clientIterator:  clientIterator,
 	}
 }
 
@@ -75,7 +83,7 @@ func (c *clientImpl) AddActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	client, err := c.getClientForTasklist(partition)
+	client, err := c.getClientForTaskList(partition)
 	if err != nil {
 		return err
 	}
@@ -97,7 +105,7 @@ func (c *clientImpl) AddDecisionTask(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -119,7 +127,7 @@ func (c *clientImpl) PollForActivityTask(
 		request.GetForwardedFrom(),
 	)
 	request.PollRequest.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.PollRequest.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +149,7 @@ func (c *clientImpl) PollForDecisionTask(
 		request.GetForwardedFrom(),
 	)
 	request.PollRequest.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.PollRequest.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.PollRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +171,7 @@ func (c *clientImpl) QueryWorkflow(
 		request.GetForwardedFrom(),
 	)
 	request.TaskList.Name = partition
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +186,7 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	opts ...yarpc.CallOption,
 ) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -193,7 +201,7 @@ func (c *clientImpl) CancelOutstandingPoll(
 	opts ...yarpc.CallOption,
 ) error {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return err
 	}
@@ -208,7 +216,7 @@ func (c *clientImpl) DescribeTaskList(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeTaskListResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.DescRequest.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.DescRequest.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -223,13 +231,60 @@ func (c *clientImpl) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (*types.ListTaskListPartitionsResponse, error) {
 	opts = common.AggregateYarpcOptions(ctx, opts...)
-	client, err := c.getClientForTasklist(request.TaskList.GetName())
+	client, err := c.getClientForTaskList(request.TaskList.GetName())
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return client.ListTaskListPartitions(ctx, request, opts...)
+}
+
+func (c *clientImpl) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	clients, err := c.clientIterator()
+	if err != nil {
+		return nil, err
+	}
+
+	var futures []future.Future
+	for _, client := range clients {
+		future, settable := future.NewFuture()
+		settable.Set(client.GetTaskListsByDomain(ctx, request, opts...))
+		futures = append(futures, future)
+	}
+
+	decisionTaskListMap := make(map[string]*types.DescribeTaskListResponse)
+	activityTaskListMap := make(map[string]*types.DescribeTaskListResponse)
+	for _, future := range futures {
+		var resp *types.GetTaskListsByDomainResponse
+		if err = future.Get(ctx, &resp); err != nil {
+			return nil, err
+		}
+		for name, tl := range resp.GetDecisionTaskListMap() {
+			if _, ok := decisionTaskListMap[name]; !ok {
+				decisionTaskListMap[name] = tl
+			} else {
+				decisionTaskListMap[name].Pollers = append(decisionTaskListMap[name].Pollers, tl.GetPollers()...)
+			}
+		}
+		for name, tl := range resp.GetActivityTaskListMap() {
+			if _, ok := activityTaskListMap[name]; !ok {
+				activityTaskListMap[name] = tl
+			} else {
+				activityTaskListMap[name].Pollers = append(activityTaskListMap[name].Pollers, tl.GetPollers()...)
+			}
+		}
+	}
+
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: decisionTaskListMap,
+		ActivityTaskListMap: activityTaskListMap,
+	}, nil
 }
 
 func (c *clientImpl) createContext(
@@ -250,7 +305,7 @@ func (c *clientImpl) createLongPollContext(
 	return context.WithTimeout(parent, c.longPollTimeout)
 }
 
-func (c *clientImpl) getClientForTasklist(key string) (Client, error) {
+func (c *clientImpl) getClientForTaskList(key string) (Client, error) {
 	client, err := c.clients.GetClientForKey(key)
 	if err != nil {
 		return nil, err

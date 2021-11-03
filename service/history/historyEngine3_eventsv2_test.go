@@ -243,7 +243,9 @@ func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 	identity := "testIdentity"
 
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	requestID := uuid.New()
 	resp, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
@@ -390,14 +392,16 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
-	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
+	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.Nil(err)
 	s.NotNil(resp.GetRunID())
 }
 
-func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist_DeprecatedDomain() {
+func (s *engine3Suite) TestSignalWithStartWorkflowExecution_DeprecatedDomain() {
 	domainID := constants.TestDomainID
 	workflowID := "wId"
 	workflowType := "workflowType"
@@ -427,11 +431,37 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist_Dep
 		},
 	}
 
-	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
-
 	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil)
-	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
+	s.IsType(&types.BadRequestError{}, err)
+}
+
+func (s *engine3Suite) TestSignalWorkflowExecution_DeprecatedDomain() {
+	we := types.WorkflowExecution{
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
+	}
+	identity := "testIdentity"
+	signalName := "my signal name"
+	input := []byte("test input")
+	signalRequest := &types.HistorySignalWorkflowExecutionRequest{
+		DomainUUID: constants.TestDomainID,
+		SignalRequest: &types.SignalWorkflowExecutionRequest{
+			Domain:            constants.TestDomainID,
+			WorkflowExecution: &we,
+			Identity:          identity,
+			SignalName:        signalName,
+			Input:             input,
+		},
+	}
+
+	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
+		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "", nil,
+	)
+
+	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil)
+
+	err := s.historyEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.IsType(&types.BadRequestError{}, err)
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
+func (s *IntegrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	id := uuid.New()
 	wt := "integration-workflow-decision-heartbeating-local-activities"
 	tl := id
@@ -138,7 +138,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithEmptyResult() {
 	s.assertLastHistoryEvent(we, 41, types.EventTypeWorkflowExecutionCompleted)
 }
 
-func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
+func (s *IntegrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	id := uuid.New()
 	wt := "integration-workflow-decision-heartbeating-local-activities"
 	tl := id
@@ -282,7 +282,7 @@ func (s *integrationSuite) TestDecisionHeartbeatingWithLocalActivitiesResult() {
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionStarted() {
+func (s *IntegrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionStarted() {
 	id := uuid.New()
 	wt := "integration-workflow-transient-decision-test-type"
 	tl := id
@@ -357,7 +357,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeRegularDecisionSta
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStarted() {
+func (s *IntegrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStarted() {
 	id := uuid.New()
 	wt := "integration-workflow-transient-decision-test-type"
 	tl := id
@@ -432,7 +432,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStartedAndFailDecision() {
+func (s *IntegrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStartedAndFailDecision() {
 	id := uuid.New()
 	wt := "integration-workflow-transient-decision-test-type"
 	tl := id
@@ -519,7 +519,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterRegularDecisionStar
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionStarted() {
+func (s *IntegrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionStarted() {
 	id := uuid.New()
 	wt := "integration-workflow-transient-decision-test-type"
 	tl := id
@@ -624,7 +624,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalBeforeTransientDecisionS
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStarted() {
+func (s *IntegrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStarted() {
 	id := uuid.New()
 	wt := "integration-workflow-transient-decision-test-type"
 	tl := id
@@ -726,7 +726,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStartedAndFailDecision() {
+func (s *IntegrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionStartedAndFailDecision() {
 	id := uuid.New()
 	wt := "integration-workflow-transient-decision-test-type"
 	tl := id
@@ -838,7 +838,7 @@ func (s *integrationSuite) TestWorkflowTerminationSignalAfterTransientDecisionSt
 	s.assertHistory(we, expectedHistory)
 }
 
-func (s *integrationSuite) assertHistory(we *types.WorkflowExecution, expectedHistory []types.EventType) {
+func (s *IntegrationSuite) assertHistory(we *types.WorkflowExecution, expectedHistory []types.EventType) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:    s.domainName,
 		Execution: we,
@@ -853,7 +853,7 @@ func (s *integrationSuite) assertHistory(we *types.WorkflowExecution, expectedHi
 	}
 }
 
-func (s *integrationSuite) assertLastHistoryEvent(we *types.WorkflowExecution, count int, eventType types.EventType) {
+func (s *IntegrationSuite) assertLastHistoryEvent(we *types.WorkflowExecution, count int, eventType types.EventType) {
 	historyResponse, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
 		Domain:    s.domainName,
 		Execution: we,

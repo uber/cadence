@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -79,11 +78,11 @@ func NewTimerStandbyTaskExecutor(
 }
 
 func (t *timerStandbyTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
 
-	timerTask, ok := taskInfo.(*persistence.TimerTaskInfo)
+	timerTask, ok := task.GetInfo().(*persistence.TimerTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}
@@ -127,7 +126,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 
 	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
-		timerSequence := t.getTimerSequence(mutableState)
+		timerSequence := execution.NewTimerSequence(mutableState)
 
 	Loop:
 		for _, timerSequenceID := range timerSequence.LoadAndSortUserTimers() {
@@ -138,7 +137,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 				return nil, &types.InternalServiceError{Message: errString}
 			}
 
-			if isExpired := timerSequence.IsExpired(
+			if _, isExpired := timerSequence.IsExpired(
 				timerTask.VisibilityTimestamp,
 				timerSequenceID,
 			); isExpired {
@@ -186,7 +185,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 
 	actionFn := func(ctx context.Context, wfContext execution.Context, mutableState execution.MutableState) (interface{}, error) {
 
-		timerSequence := t.getTimerSequence(mutableState)
+		timerSequence := execution.NewTimerSequence(mutableState)
 		updateMutableState := false
 
 	Loop:
@@ -198,7 +197,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 				return nil, &types.InternalServiceError{Message: errString}
 			}
 
-			if isExpired := timerSequence.IsExpired(
+			if _, isExpired := timerSequence.IsExpired(
 				timerTask.VisibilityTimestamp,
 				timerSequenceID,
 			); isExpired {
@@ -276,9 +275,15 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 	timerTask *persistence.TimerTaskInfo,
 ) error {
 
-	// decision schedule to start timer task is a special snowflake.
-	// the schedule to start timer is for sticky decision, which is
-	// not applicable on the passive cluster
+	// decision schedule to start timer won't be generate for sticky decision,
+	// since sticky is cleared when applying events on passive.
+	// for normal decision, we don't know if a schedule to start timeout timer
+	// is generated or not since it's based on a dynamicconfig. On passive cluster,
+	// a timer task will be generated based on passive cluster's config, however, it
+	// may not match the active cluster.
+	// so we simply ignore the schedule to start timer here as the decision task will be
+	// pushed to matching without any timeout if's not started, and the workflow
+	// can continue execution after failover.
 	if timerTask.TimeoutType == int(types.TimeoutTypeScheduleToStart) {
 		return nil
 	}
@@ -395,16 +400,6 @@ func (t *timerStandbyTaskExecutor) getStandbyClusterTime() time.Time {
 	// time of remote cluster in the shard is delayed by "StandbyClusterDelay"
 	// so to get the current accurate remote cluster time, need to add it back
 	return t.shard.GetCurrentTime(t.clusterName).Add(t.shard.GetConfig().StandbyClusterDelay())
-}
-
-func (t *timerStandbyTaskExecutor) getTimerSequence(
-	mutableState execution.MutableState,
-) execution.TimerSequence {
-
-	timeSource := clock.NewEventTimeSource()
-	now := t.getStandbyClusterTime()
-	timeSource.Update(now)
-	return execution.NewTimerSequence(timeSource, mutableState)
 }
 
 func (t *timerStandbyTaskExecutor) processTimer(

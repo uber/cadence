@@ -44,6 +44,12 @@ func (err ClientVersionNotSupportedError) Error() string {
 		err.SupportedVersions)
 }
 
+func (err FeatureNotEnabledError) Error() string {
+	return fmt.Sprintf("FeatureNotEnabledError{FeatureFlag: %v}",
+		err.FeatureFlag,
+	)
+}
+
 func (err CurrentBranchChangedError) Error() string {
 	return fmt.Sprintf("CurrentBranchChangedError{Message: %v, CurrentBranchToken: %v}",
 		err.Message,
@@ -73,6 +79,12 @@ func (err EntityNotExistsError) Error() string {
 		printField(sb, "ActiveCluster", err.ActiveCluster)
 	}
 	return fmt.Sprintf("EntityNotExistsError{%s}", sb.String())
+}
+
+func (err WorkflowExecutionAlreadyCompletedError) Error() string {
+	sb := &strings.Builder{}
+	printField(sb, "Message", err.Message)
+	return fmt.Sprintf("WorkflowExecutionAlreadyCompletedError{%s}", sb.String())
 }
 
 func (err InternalDataInconsistencyError) Error() string {

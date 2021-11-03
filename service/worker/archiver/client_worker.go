@@ -32,11 +32,11 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -64,9 +64,10 @@ type (
 
 	// Config for ClientWorker
 	Config struct {
-		ArchiverConcurrency           dynamicconfig.IntPropertyFn
-		ArchivalsPerIteration         dynamicconfig.IntPropertyFn
-		TimeLimitPerArchivalIteration dynamicconfig.DurationPropertyFn
+		ArchiverConcurrency             dynamicconfig.IntPropertyFn
+		ArchivalsPerIteration           dynamicconfig.IntPropertyFn
+		TimeLimitPerArchivalIteration   dynamicconfig.DurationPropertyFn
+		AllowArchivingIncompleteHistory dynamicconfig.BoolPropertyFn
 	}
 
 	contextKey int

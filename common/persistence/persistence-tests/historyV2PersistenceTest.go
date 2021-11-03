@@ -22,6 +22,7 @@ package persistencetests
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"os"
 	"sync"
@@ -37,8 +38,11 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/codec"
 	p "github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type (
@@ -54,7 +58,12 @@ type (
 
 const testForkRunID = "11220000-0000-f000-f000-000000000000"
 
-var historyTestRetryPolicy = createHistoryTestRetryPolicy()
+var (
+	throttleRetry = backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(createHistoryTestRetryPolicy()),
+		backoff.WithRetryableError(isConditionFail))
+	thriftEncoder = codec.NewThriftRWEncoder()
+)
 
 func createHistoryTestRetryPolicy() backoff.RetryPolicy {
 	policy := backoff.NewExponentialRetryPolicy(time.Millisecond * 50)
@@ -115,13 +124,11 @@ func (s *HistoryV2PersistenceSuite) TestGenUUIDs() {
 
 // TestScanAllTrees test
 func (s *HistoryV2PersistenceSuite) TestScanAllTrees() {
+	if os.Getenv("SKIP_SCAN_HISTORY") != "" {
+		s.T().Skipf("GetAllHistoryTreeBranches not supported in %v", s.TaskMgr.GetName())
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
-
-	// TODO https://github.com/uber/cadence/issues/2458
-	if s.HistoryV2Mgr.GetName() != "cassandra" {
-		return
-	}
 
 	resp, err := s.HistoryV2Mgr.GetAllHistoryTreeBranches(ctx, &p.GetAllHistoryTreeBranchesRequest{
 		PageSize: 1,
@@ -366,7 +373,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 
 // TestConcurrentlyCreateAndAppendBranches test
 func (s *HistoryV2PersistenceSuite) TestConcurrentlyCreateAndAppendBranches() {
-	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), largeTestContextTimeout)
 	defer cancel()
 
 	treeID := uuid.New()
@@ -714,17 +721,58 @@ func (s *HistoryV2PersistenceSuite) newHistoryBranch(treeID string) ([]byte, err
 }
 
 // persistence helper
-func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, branch []byte) error {
+func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, branchToken []byte) error {
+	var branchThrift workflow.HistoryBranch
+	err := thriftEncoder.Decode(branchToken, &branchThrift)
+	if err != nil {
+		return err
+	}
+	branch := thrift.ToHistoryBranch(&branchThrift)
+	beginNodeID := persistenceutils.GetBeginNodeID(*branch)
+	brsToDelete := append(branch.Ancestors, &types.HistoryBranchRange{
+		BranchID:    branch.BranchID,
+		BeginNodeID: common.Int64Ptr(beginNodeID),
+	})
+
+	branches := s.descTreeByToken(ctx, branchToken)
+	// validBRsMaxEndNode is to for each branch range that is being used, we want to know what is the max nodeID referred by other valid branch
+	var brs []*types.HistoryBranch
+	for _, br := range branches {
+		brs = append(brs, thrift.ToHistoryBranch(br))
+	}
+	validBRsMaxEndNode := persistenceutils.GetBranchesMaxReferredNodeIDs(brs)
+
+	minNodeID := beginNodeID
+	for i := len(brsToDelete) - 1; i >= 0; i-- {
+		br := brsToDelete[i]
+		maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
+		if ok {
+			minNodeID = maxReferredEndNodeID
+			break
+		} else {
+			minNodeID = *br.BeginNodeID
+		}
+	}
+
 	op := func() error {
 		var err error
 		err = s.HistoryV2Mgr.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
-			BranchToken: branch,
+			BranchToken: branchToken,
 			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 		})
 		return err
 	}
 
-	return backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
+	if err := throttleRetry.Do(ctx, op); err != nil {
+		return err
+	}
+	res, err := s.readWithError(ctx, branchToken, minNodeID, math.MaxInt64)
+	if err != nil {
+		s.IsType(&types.EntityNotExistsError{}, err)
+	} else {
+		s.Equal(0, len(res))
+	}
+	return nil
 }
 
 // persistence helper
@@ -821,13 +869,12 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 		return err
 	}
 
-	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
-	if err != nil {
+	if err := throttleRetry.Do(ctx, op); err != nil {
 		return err
 	}
 	s.True(resp.Size > 0)
 
-	return err
+	return nil
 }
 
 // persistence helper
@@ -849,6 +896,6 @@ func (s *HistoryV2PersistenceSuite) fork(ctx context.Context, forkBranch []byte,
 		return err
 	}
 
-	err := backoff.Retry(op, historyTestRetryPolicy, isConditionFail)
+	err := throttleRetry.Do(ctx, op)
 	return bi, err
 }

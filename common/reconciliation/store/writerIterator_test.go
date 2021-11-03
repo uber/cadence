@@ -36,12 +36,12 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore/filestore"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/fetcher"
-	"github.com/uber/cadence/common/service/config"
 )
 
 var (

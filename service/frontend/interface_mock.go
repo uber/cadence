@@ -267,6 +267,21 @@ func (mr *MockHandlerMockRecorder) ListTaskListPartitions(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskListPartitions", reflect.TypeOf((*MockHandler)(nil).ListTaskListPartitions), arg0, arg1)
 }
 
+// GetTaskListsByDomain mocks base method
+func (m *MockHandler) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetTaskListsByDomainRequest) (*types.GetTaskListsByDomainResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskListsByDomain", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetTaskListsByDomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskListsByDomain indicates an expected call of GetTaskListsByDomain
+func (mr *MockHandlerMockRecorder) GetTaskListsByDomain(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskListsByDomain", reflect.TypeOf((*MockHandler)(nil).GetTaskListsByDomain), arg0, arg1)
+}
+
 // ListWorkflowExecutions mocks base method
 func (m *MockHandler) ListWorkflowExecutions(arg0 context.Context, arg1 *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error) {
 	m.ctrl.T.Helper()

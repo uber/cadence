@@ -32,6 +32,7 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -70,10 +71,19 @@ func (s *ScavengerTestSuite) SetupTest() {
 	logger := loggerimpl.NewLogger(zapLogger)
 
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
-	s.scvgr = NewScavenger(scvgrCtx, s.taskMgr, metrics.NewClient(tally.NoopScope, metrics.Worker), logger)
+	s.scvgr = NewScavenger(
+		scvgrCtx,
+		s.taskMgr,
+		metrics.NewClient(tally.NoopScope, metrics.Worker),
+		logger,
+		&Options{
+			EnableCleaning:           dynamicconfig.GetBoolPropertyFn(true),
+			TaskBatchSizeFn:          dynamicconfig.GetIntPropertyFn(16),
+			GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(16),
+			ExecutorPollInterval:     time.Millisecond * 50,
+		},
+	)
 	s.scvgrCancelFn = scvgrCancelFn
-	maxTasksPerJob = 4
-	executorPollInterval = time.Millisecond * 50
 }
 
 func (s *ScavengerTestSuite) TestAllExpiredTasks() {
@@ -204,15 +214,23 @@ func (s *ScavengerTestSuite) setupTaskMgrMocks() {
 			return &p.GetTasksResponse{Tasks: result}
 		}, nil)
 	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(
-		func(_ context.Context, req *p.CompleteTasksLessThanRequest) int {
-			return s.taskTables[req.TaskListName].deleteLessThan(req.TaskID, req.Limit)
+		func(_ context.Context, req *p.CompleteTasksLessThanRequest) *p.CompleteTasksLessThanResponse {
+			rowsDeleted := s.taskTables[req.TaskListName].deleteLessThan(req.TaskID, req.Limit)
+			return &p.CompleteTasksLessThanResponse{TasksCompleted: rowsDeleted}
+		}, nil)
+	s.taskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(
+		func(_ context.Context, req *p.GetOrphanTasksRequest) *p.GetOrphanTasksResponse {
+			return &p.GetOrphanTasksResponse{
+				Tasks: make([]*p.TaskKey, 0),
+			}
 		}, nil)
 }
 
 func (s *ScavengerTestSuite) setupTaskMgrMocksWithErrors() {
 	s.taskMgr.On("ListTaskList", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.taskMgr.On("GetTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
-	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(0, errTest).Once()
+	s.taskMgr.On("CompleteTasksLessThan", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.taskMgr.On("DeleteTaskList", mock.Anything, mock.Anything).Return(errTest).Once()
+	s.taskMgr.On("GetOrphanTasks", mock.Anything, mock.Anything).Return(nil, errTest).Once()
 	s.setupTaskMgrMocks()
 }

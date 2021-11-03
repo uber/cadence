@@ -20,7 +20,73 @@
 
 package cassandra
 
+import (
+	"time"
+
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence/nosql"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+	"github.com/uber/cadence/environment"
+)
+
 const (
 	// PluginName is the name of the plugin
-	PluginName = "cassandra"
+	PluginName            = "cassandra"
+	defaultSessionTimeout = 10 * time.Second
 )
+
+type plugin struct{}
+
+var _ nosqlplugin.Plugin = (*plugin)(nil)
+
+func init() {
+	nosql.RegisterPlugin(PluginName, &plugin{})
+}
+
+// CreateDB initialize the db object
+func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
+	return p.doCreateDB(cfg, logger)
+}
+
+// CreateAdminDB initialize the AdminDB object
+func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+	return p.doCreateDB(cfg, logger)
+}
+
+func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*cdb, error) {
+	session, err := gocql.GetRegisteredClient().CreateSession(toGoCqlConfig(cfg))
+	if err != nil {
+		return nil, err
+	}
+	db := newCassandraDBFromSession(cfg, session, logger)
+	return db, nil
+}
+
+func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
+	if cfg.Port == 0 {
+		cfg.Port = environment.GetCassandraPort()
+	}
+	if cfg.Hosts == "" {
+		cfg.Hosts = environment.GetCassandraAddress()
+	}
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = environment.GetCassandraProtoVersion()
+	}
+	return gocql.ClusterConfig{
+		Hosts:             cfg.Hosts,
+		Port:              cfg.Port,
+		User:              cfg.User,
+		Password:          cfg.Password,
+		Keyspace:          cfg.Keyspace,
+		Region:            cfg.Region,
+		Datacenter:        cfg.Datacenter,
+		MaxConns:          cfg.MaxConns,
+		TLS:               cfg.TLS,
+		ProtoVersion:      cfg.ProtoVersion,
+		Consistency:       gocql.LocalQuorum,
+		SerialConsistency: gocql.LocalSerial,
+		Timeout:           defaultSessionTimeout,
+	}
+}

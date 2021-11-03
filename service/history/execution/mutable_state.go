@@ -112,6 +112,8 @@ type (
 		CreateNewHistoryEventWithTimestamp(eventType types.EventType, timestamp int64) *types.HistoryEvent
 		CreateTransientDecisionEvents(di *DecisionInfo, identity string) (*types.HistoryEvent, *types.HistoryEvent)
 		DeleteDecision()
+		DeleteUserTimer(timerID string) error
+		DeleteActivity(scheduleEventID int64) error
 		DeleteSignalRequested(requestID string)
 		FailDecision(bool)
 		FlushBufferedEvents() error
@@ -122,6 +124,7 @@ type (
 		GetChildExecutionInitiatedEvent(context.Context, int64) (*types.HistoryEvent, error)
 		GetCompletionEvent(context.Context) (*types.HistoryEvent, error)
 		GetDecisionInfo(int64) (*DecisionInfo, bool)
+		GetDecisionScheduleToStartTimeout() time.Duration
 		GetDomainEntry() *cache.DomainCacheEntry
 		GetStartEvent(context.Context) (*types.HistoryEvent, error)
 		GetCurrentBranchToken() ([]byte, error)
@@ -161,6 +164,7 @@ type (
 		IsSignalRequested(requestID string) bool
 		IsStickyTaskListEnabled() bool
 		IsWorkflowExecutionRunning() bool
+		IsWorkflowCompleted() bool
 		IsResourceDuplicated(resourceDedupKey definition.DeduplicationID) bool
 		UpdateDuplicatedResource(resourceDedupKey definition.DeduplicationID)
 		Load(*persistence.WorkflowMutableState)
@@ -217,17 +221,19 @@ type (
 		UpdateWorkflowStateCloseStatus(state int, closeStatus int) error
 
 		AddTransferTasks(transferTasks ...persistence.Task)
+		AddCrossClusterTasks(crossClusterTasks ...persistence.Task)
 		AddTimerTasks(timerTasks ...persistence.Task)
 		GetTransferTasks() []persistence.Task
+		GetCrossClusterTasks() []persistence.Task
 		GetTimerTasks() []persistence.Task
 		DeleteTransferTasks()
+		DeleteCrossClusterTasks()
 		DeleteTimerTasks()
 
 		SetUpdateCondition(int64)
 		GetUpdateCondition() int64
 
-		StartTransaction(entry *cache.DomainCacheEntry) (bool, error)
-		StartTransactionSkipDecisionFail(entry *cache.DomainCacheEntry) error
+		StartTransaction(entry *cache.DomainCacheEntry, incomingTaskVersion int64) (bool, error)
 		CloseTransactionAsMutation(now time.Time, transactionPolicy TransactionPolicy) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error)
 		CloseTransactionAsSnapshot(now time.Time, transactionPolicy TransactionPolicy) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error)
 	}

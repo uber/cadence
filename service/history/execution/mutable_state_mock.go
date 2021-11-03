@@ -883,6 +883,34 @@ func (mr *MockMutableStateMockRecorder) DeleteDecision() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDecision", reflect.TypeOf((*MockMutableState)(nil).DeleteDecision))
 }
 
+// DeleteUserTimer mocks base method
+func (m *MockMutableState) DeleteUserTimer(timerID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteUserTimer", timerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUserTimer indicates an expected call of DeleteUserTimer
+func (mr *MockMutableStateMockRecorder) DeleteUserTimer(timerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUserTimer", reflect.TypeOf((*MockMutableState)(nil).DeleteUserTimer), timerID)
+}
+
+// DeleteActivity mocks base method
+func (m *MockMutableState) DeleteActivity(scheduleEventID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteActivity", scheduleEventID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteActivity indicates an expected call of DeleteActivity
+func (mr *MockMutableStateMockRecorder) DeleteActivity(scheduleEventID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteActivity", reflect.TypeOf((*MockMutableState)(nil).DeleteActivity), scheduleEventID)
+}
+
 // DeleteSignalRequested mocks base method
 func (m *MockMutableState) DeleteSignalRequested(requestID string) {
 	m.ctrl.T.Helper()
@@ -1024,6 +1052,20 @@ func (m *MockMutableState) GetDecisionInfo(arg0 int64) (*DecisionInfo, bool) {
 func (mr *MockMutableStateMockRecorder) GetDecisionInfo(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDecisionInfo", reflect.TypeOf((*MockMutableState)(nil).GetDecisionInfo), arg0)
+}
+
+// GetDecisionScheduleToStartTimeout mocks base method
+func (m *MockMutableState) GetDecisionScheduleToStartTimeout() time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDecisionScheduleToStartTimeout")
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// GetDecisionScheduleToStartTimeout indicates an expected call of GetDecisionScheduleToStartTimeout
+func (mr *MockMutableStateMockRecorder) GetDecisionScheduleToStartTimeout() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDecisionScheduleToStartTimeout", reflect.TypeOf((*MockMutableState)(nil).GetDecisionScheduleToStartTimeout))
 }
 
 // GetDomainEntry mocks base method
@@ -1581,6 +1623,20 @@ func (m *MockMutableState) IsWorkflowExecutionRunning() bool {
 func (mr *MockMutableStateMockRecorder) IsWorkflowExecutionRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWorkflowExecutionRunning", reflect.TypeOf((*MockMutableState)(nil).IsWorkflowExecutionRunning))
+}
+
+// IsWorkflowCompleted mocks base method
+func (m *MockMutableState) IsWorkflowCompleted() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsWorkflowCompleted")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsWorkflowCompleted indicates an expected call of IsWorkflowCompleted
+func (mr *MockMutableStateMockRecorder) IsWorkflowCompleted() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWorkflowCompleted", reflect.TypeOf((*MockMutableState)(nil).IsWorkflowCompleted))
 }
 
 // IsResourceDuplicated mocks base method
@@ -2351,6 +2407,22 @@ func (mr *MockMutableStateMockRecorder) AddTransferTasks(transferTasks ...interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTransferTasks", reflect.TypeOf((*MockMutableState)(nil).AddTransferTasks), transferTasks...)
 }
 
+// AddCrossClusterTasks mocks base method
+func (m *MockMutableState) AddCrossClusterTasks(crossClusterTasks ...persistence.Task) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range crossClusterTasks {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "AddCrossClusterTasks", varargs...)
+}
+
+// AddCrossClusterTasks indicates an expected call of AddCrossClusterTasks
+func (mr *MockMutableStateMockRecorder) AddCrossClusterTasks(crossClusterTasks ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).AddCrossClusterTasks), crossClusterTasks...)
+}
+
 // AddTimerTasks mocks base method
 func (m *MockMutableState) AddTimerTasks(timerTasks ...persistence.Task) {
 	m.ctrl.T.Helper()
@@ -2381,6 +2453,20 @@ func (mr *MockMutableStateMockRecorder) GetTransferTasks() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTransferTasks", reflect.TypeOf((*MockMutableState)(nil).GetTransferTasks))
 }
 
+// GetCrossClusterTasks mocks base method
+func (m *MockMutableState) GetCrossClusterTasks() []persistence.Task {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks")
+	ret0, _ := ret[0].([]persistence.Task)
+	return ret0
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
+func (mr *MockMutableStateMockRecorder) GetCrossClusterTasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).GetCrossClusterTasks))
+}
+
 // GetTimerTasks mocks base method
 func (m *MockMutableState) GetTimerTasks() []persistence.Task {
 	m.ctrl.T.Helper()
@@ -2405,6 +2491,18 @@ func (m *MockMutableState) DeleteTransferTasks() {
 func (mr *MockMutableStateMockRecorder) DeleteTransferTasks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTransferTasks", reflect.TypeOf((*MockMutableState)(nil).DeleteTransferTasks))
+}
+
+// DeleteCrossClusterTasks mocks base method
+func (m *MockMutableState) DeleteCrossClusterTasks() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "DeleteCrossClusterTasks")
+}
+
+// DeleteCrossClusterTasks indicates an expected call of DeleteCrossClusterTasks
+func (mr *MockMutableStateMockRecorder) DeleteCrossClusterTasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCrossClusterTasks", reflect.TypeOf((*MockMutableState)(nil).DeleteCrossClusterTasks))
 }
 
 // DeleteTimerTasks mocks base method
@@ -2446,32 +2544,18 @@ func (mr *MockMutableStateMockRecorder) GetUpdateCondition() *gomock.Call {
 }
 
 // StartTransaction mocks base method
-func (m *MockMutableState) StartTransaction(entry *cache.DomainCacheEntry) (bool, error) {
+func (m *MockMutableState) StartTransaction(entry *cache.DomainCacheEntry, incomingTaskVersion int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartTransaction", entry)
+	ret := m.ctrl.Call(m, "StartTransaction", entry, incomingTaskVersion)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // StartTransaction indicates an expected call of StartTransaction
-func (mr *MockMutableStateMockRecorder) StartTransaction(entry interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) StartTransaction(entry, incomingTaskVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartTransaction", reflect.TypeOf((*MockMutableState)(nil).StartTransaction), entry)
-}
-
-// StartTransactionSkipDecisionFail mocks base method
-func (m *MockMutableState) StartTransactionSkipDecisionFail(entry *cache.DomainCacheEntry) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartTransactionSkipDecisionFail", entry)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StartTransactionSkipDecisionFail indicates an expected call of StartTransactionSkipDecisionFail
-func (mr *MockMutableStateMockRecorder) StartTransactionSkipDecisionFail(entry interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartTransactionSkipDecisionFail", reflect.TypeOf((*MockMutableState)(nil).StartTransactionSkipDecisionFail), entry)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartTransaction", reflect.TypeOf((*MockMutableState)(nil).StartTransaction), entry, incomingTaskVersion)
 }
 
 // CloseTransactionAsMutation mocks base method

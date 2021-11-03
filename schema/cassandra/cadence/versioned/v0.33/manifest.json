@@ -1,0 +1,9 @@
+{
+  "CurrVersion": "0.33",
+  "MinCompatibleVersion": "0.33",
+  "Description": "Added target domain ids to the executions table",
+  "SchemaUpdateCqlFiles": [
+    "target_domain_ids.cql",
+    "child_info_domain_id.cql"
+  ]
+}

@@ -40,10 +40,10 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -128,7 +128,7 @@ func (h *historyArchiver) Archive(
 	defer func() {
 		sw.Stop()
 		if err != nil {
-			if common.IsPersistenceTransientError(err) || isRetryableError(err) {
+			if persistence.IsTransientError(err) || isRetryableError(err) {
 				scope.IncCounter(metrics.HistoryArchiverArchiveTransientErrorCount)
 			} else {
 				scope.IncCounter(metrics.HistoryArchiverArchiveNonRetryableErrorCount)
@@ -159,8 +159,17 @@ func (h *historyArchiver) Archive(
 	for historyIterator.HasNext() {
 		historyBlob, err := getNextHistoryBlob(ctx, historyIterator)
 		if err != nil {
+			if common.IsEntityNotExistsError(err) {
+				// workflow history no longer exists, may due to duplicated archival signal
+				// this may happen even in the middle of iterating history as two archival signals
+				// can be processed concurrently.
+				logger.Info(archiver.ArchiveSkippedInfoMsg)
+				scope.IncCounter(metrics.HistoryArchiverDuplicateArchivalsCount)
+				return nil
+			}
+
 			logger := logger.WithTags(tag.ArchivalArchiveFailReason(archiver.ErrReasonReadHistory), tag.Error(err))
-			if common.IsPersistenceTransientError(err) {
+			if persistence.IsTransientError(err) {
 				logger.Error(archiver.ArchiveTransientErrorMsg)
 			} else {
 				logger.Error(archiver.ArchiveNonRetriableErrorMsg)
@@ -168,9 +177,10 @@ func (h *historyArchiver) Archive(
 			return err
 		}
 
-		if historyMutated(request, historyBlob.Body, *historyBlob.Header.IsLast) {
-			logger.Error(archiver.ArchiveNonRetriableErrorMsg, tag.ArchivalArchiveFailReason(archiver.ErrReasonHistoryMutated))
-			return archiver.ErrHistoryMutated
+		if archiver.IsHistoryMutated(request, historyBlob.Body, *historyBlob.Header.IsLast, logger) {
+			if !featureCatalog.ArchiveIncompleteHistory() {
+				return archiver.ErrHistoryMutated
+			}
 		}
 
 		encodedHistoryBlob, err := encode(historyBlob)
@@ -351,14 +361,18 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 		historyBlob, err = historyIterator.Next()
 		return err
 	}
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(persistence.IsTransientError),
+	)
 	for err != nil {
 		if contextExpired(ctx) {
 			return nil, archiver.ErrContextTimeout
 		}
-		if !common.IsPersistenceTransientError(err) {
+		if !persistence.IsTransientError(err) {
 			return nil, err
 		}
-		err = backoff.Retry(op, common.CreatePersistenceRetryPolicy(), common.IsPersistenceTransientError)
+		err = throttleRetry.Do(ctx, op)
 	}
 	return historyBlob, nil
 }

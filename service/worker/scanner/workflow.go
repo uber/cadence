@@ -124,7 +124,7 @@ func HistoryScavengerActivity(
 	activityCtx context.Context,
 ) (history.ScavengerHeartbeatDetails, error) {
 
-	ctx, err := GetScannerContext(activityCtx)
+	ctx, err := getScannerContext(activityCtx)
 	if err != nil {
 		return history.ScavengerHeartbeatDetails{}, err
 	}
@@ -155,12 +155,19 @@ func HistoryScavengerActivity(
 func TaskListScavengerActivity(
 	activityCtx context.Context,
 ) error {
-	ctx, err := GetScannerContext(activityCtx)
+	ctx, err := getScannerContext(activityCtx)
 	if err != nil {
 		return err
 	}
 	res := ctx.resource
-	scavenger := tasklist.NewScavenger(activityCtx, res.GetTaskManager(), res.GetMetricsClient(), res.GetLogger())
+	scavenger := tasklist.NewScavenger(
+		activityCtx,
+		res.GetTaskManager(),
+		res.GetMetricsClient(),
+		res.GetLogger(),
+		&ctx.cfg.TaskListScannerOptions,
+	)
+
 	res.GetLogger().Info("Starting task list scavenger")
 	scavenger.Start()
 	for scavenger.Alive() {

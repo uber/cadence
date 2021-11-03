@@ -41,6 +41,8 @@ func FromError(err error) error {
 		return FromCancellationAlreadyRequestedError(e)
 	case *types.ClientVersionNotSupportedError:
 		return FromClientVersionNotSupportedError(e)
+	case *types.FeatureNotEnabledError:
+		return FromFeatureNotEnabledError(e)
 	case *types.CurrentBranchChangedError:
 		return FromCurrentBranchChangedError(e)
 	case *types.DomainAlreadyExistsError:
@@ -49,6 +51,8 @@ func FromError(err error) error {
 		return FromDomainNotActiveError(e)
 	case *types.EntityNotExistsError:
 		return FromEntityNotExistsError(e)
+	case *types.WorkflowExecutionAlreadyCompletedError:
+		return FromWorkflowExecutionAlreadyCompletedError(e)
 	case *types.InternalDataInconsistencyError:
 		return FromInternalDataInconsistencyError(e)
 	case *types.InternalServiceError:
@@ -89,6 +93,8 @@ func ToError(err error) error {
 		return ToCancellationAlreadyRequestedError(e)
 	case *shared.ClientVersionNotSupportedError:
 		return ToClientVersionNotSupportedError(e)
+	case *shared.FeatureNotEnabledError:
+		return ToFeatureNotEnabledError(e)
 	case *shared.CurrentBranchChangedError:
 		return ToCurrentBranchChangedError(e)
 	case *shared.DomainAlreadyExistsError:
@@ -97,6 +103,8 @@ func ToError(err error) error {
 		return ToDomainNotActiveError(e)
 	case *shared.EntityNotExistsError:
 		return ToEntityNotExistsError(e)
+	case *shared.WorkflowExecutionAlreadyCompletedError:
+		return ToWorkflowExecutionAlreadyCompletedError(e)
 	case *shared.InternalDataInconsistencyError:
 		return ToInternalDataInconsistencyError(e)
 	case *shared.InternalServiceError:

@@ -31,11 +31,11 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 const (
@@ -57,11 +57,11 @@ type (
 		refreshJitter   dynamicconfig.FloatPropertyFn
 		retryPolicy     backoff.RetryPolicy
 
-		metadataMgr persistence.MetadataManager
-		domainCache cache.DomainCache
-		timeSource  clock.TimeSource
-		metrics     metrics.Client
-		logger      log.Logger
+		domainManager persistence.DomainManager
+		domainCache   cache.DomainCache
+		timeSource    clock.TimeSource
+		scope         metrics.Scope
+		logger        log.Logger
 	}
 )
 
@@ -70,11 +70,11 @@ var _ FailoverWatcher = (*failoverWatcherImpl)(nil)
 // NewFailoverWatcher initializes domain failover processor
 func NewFailoverWatcher(
 	domainCache cache.DomainCache,
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	timeSource clock.TimeSource,
 	refreshInterval dynamicconfig.DurationPropertyFn,
 	refreshJitter dynamicconfig.FloatPropertyFn,
-	metrics metrics.Client,
+	metricsClient metrics.Client,
 	logger log.Logger,
 ) FailoverWatcher {
 
@@ -90,9 +90,9 @@ func NewFailoverWatcher(
 		refreshJitter:   refreshJitter,
 		retryPolicy:     retryPolicy,
 		domainCache:     domainCache,
-		metadataMgr:     metadataMgr,
+		domainManager:   domainManager,
 		timeSource:      timeSource,
-		metrics:         metrics,
+		scope:           metricsClient.Scope(metrics.DomainFailoverScope),
 		logger:          logger,
 	}
 }
@@ -157,20 +157,21 @@ func (p *failoverWatcherImpl) handleFailoverTimeout(
 		domainID := domain.GetInfo().ID
 		// force failover the domain without setting the failover timeout
 		if err := CleanPendingActiveState(
-			p.metadataMgr,
+			p.domainManager,
 			domainID,
 			domain.GetFailoverVersion(),
 			p.retryPolicy,
 		); err != nil {
-			p.metrics.IncCounter(metrics.DomainFailoverScope, metrics.CadenceFailures)
-			p.logger.Error("Failed to update pending-active domain to active.", tag.WorkflowDomainID(domainID), tag.Error(err))
+			p.logger.Error("Failed to update pending-active domain to active", tag.WorkflowDomainID(domainID), tag.Error(err))
+			return
 		}
+		p.scope.Tagged(metrics.DomainTag(domain.GetInfo().Name)).IncCounter(metrics.GracefulFailoverFailure)
 	}
 }
 
 // CleanPendingActiveState removes the pending active state from the domain
 func CleanPendingActiveState(
-	metadataMgr persistence.MetadataManager,
+	domainManager persistence.DomainManager,
 	domainID string,
 	failoverVersion int64,
 	policy backoff.RetryPolicy,
@@ -180,13 +181,13 @@ func CleanPendingActiveState(
 	// this version can be regarded as the lock on the v2 domain table
 	// and since we do not know which table will return the domain afterwards
 	// this call has to be made
-	metadata, err := metadataMgr.GetMetadata(context.Background())
+	metadata, err := domainManager.GetMetadata(context.Background())
 	if err != nil {
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
 
-	getResponse, err := metadataMgr.GetDomain(context.Background(), &persistence.GetDomainRequest{ID: domainID})
+	getResponse, err := domainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{ID: domainID})
 	if err != nil {
 		return err
 	}
@@ -207,13 +208,13 @@ func CleanPendingActiveState(
 			NotificationVersion:         notificationVersion,
 		}
 		op := func() error {
-			return metadataMgr.UpdateDomain(context.Background(), updateReq)
+			return domainManager.UpdateDomain(context.Background(), updateReq)
 		}
-		if err := backoff.Retry(
-			op,
-			policy,
-			isUpdateDomainRetryable,
-		); err != nil {
+		throttleRetry := backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(policy),
+			backoff.WithRetryableError(isUpdateDomainRetryable),
+		)
+		if err := throttleRetry.Do(context.Background(), op); err != nil {
 			return err
 		}
 	}

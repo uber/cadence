@@ -53,7 +53,6 @@ func NewTransferStandbyTaskExecutor(
 	executionCache *execution.Cache,
 	historyResender ndc.HistoryResender,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	clusterName string,
 	config *config.Config,
 ) Executor {
@@ -63,7 +62,6 @@ func NewTransferStandbyTaskExecutor(
 			archiverClient,
 			executionCache,
 			logger,
-			metricsClient,
 			config,
 		),
 		clusterName:     clusterName,
@@ -72,17 +70,18 @@ func NewTransferStandbyTaskExecutor(
 }
 
 func (t *transferStandbyTaskExecutor) Execute(
-	taskInfo Info,
+	task Task,
 	shouldProcessTask bool,
 ) error {
 
-	transferTask, ok := taskInfo.(*persistence.TransferTaskInfo)
+	transferTask, ok := task.GetInfo().(*persistence.TransferTaskInfo)
 	if !ok {
 		return errUnexpectedTask
 	}
 
 	if !shouldProcessTask &&
-		transferTask.TaskType != persistence.TransferTaskTypeCloseExecution {
+		transferTask.TaskType != persistence.TransferTaskTypeCloseExecution &&
+		transferTask.TaskType != persistence.TransferTaskTypeRecordWorkflowClosed {
 		// guarantee the processing of workflow execution close
 		return nil
 	}
@@ -95,8 +94,14 @@ func (t *transferStandbyTaskExecutor) Execute(
 		return t.processActivityTask(ctx, transferTask)
 	case persistence.TransferTaskTypeDecisionTask:
 		return t.processDecisionTask(ctx, transferTask)
-	case persistence.TransferTaskTypeCloseExecution:
+	case persistence.TransferTaskTypeCloseExecution,
+		persistence.TransferTaskTypeRecordWorkflowClosed:
 		return t.processCloseExecution(ctx, transferTask)
+	case persistence.TransferTaskTypeRecordChildExecutionCompleted,
+		persistence.TransferTaskTypeApplyParentClosePolicy:
+		// no action needed for standby
+		// check the comment in t.processCloseExecution()
+		return nil
 	case persistence.TransferTaskTypeCancelExecution:
 		return t.processCancelExecution(ctx, transferTask)
 	case persistence.TransferTaskTypeSignalExecution:
@@ -239,6 +244,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		workflowExecutionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 		visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 		searchAttr := executionInfo.SearchAttributes
+		isCron := len(executionInfo.CronSchedule) > 0
 
 		lastWriteVersion, err := mutableState.GetLastWriteVersion()
 		if err != nil {
@@ -248,6 +254,12 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		if err != nil || !ok {
 			return nil, err
 		}
+
+		domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+		if err != nil {
+			return nil, err
+		}
+		numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 		// DO NOT REPLY TO PARENT
 		// since event replication should be done by active cluster
@@ -260,11 +272,13 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 			workflowStartTimestamp,
 			workflowExecutionTimestamp.UnixNano(),
 			workflowCloseTimestamp,
-			workflowCloseStatus,
+			*workflowCloseStatus,
 			workflowHistoryLength,
 			transferTask.GetTaskID(),
 			visibilityMemo,
 			executionInfo.TaskList,
+			isCron,
+			numClusters,
 			searchAttr,
 		)
 	}
@@ -458,6 +472,13 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	executionTimestamp := getWorkflowExecutionTimestamp(mutableState, startEvent)
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
+	isCron := len(executionInfo.CronSchedule) > 0
+
+	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
+	if err != nil {
+		return err
+	}
+	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
 
 	if isRecordStart {
 		return t.recordWorkflowStarted(
@@ -471,6 +492,8 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			workflowTimeout,
 			transferTask.GetTaskID(),
 			executionInfo.TaskList,
+			isCron,
+			numClusters,
 			visibilityMemo,
 			searchAttr,
 		)
@@ -487,6 +510,8 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 		transferTask.GetTaskID(),
 		executionInfo.TaskList,
 		visibilityMemo,
+		isCron,
+		numClusters,
 		searchAttr,
 	)
 

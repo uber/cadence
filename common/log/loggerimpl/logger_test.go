@@ -32,8 +32,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 func TestDefaultLogger(t *testing.T) {

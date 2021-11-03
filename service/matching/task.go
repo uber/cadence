@@ -42,10 +42,10 @@ type (
 		decisionTaskInfo *types.MatchingPollForDecisionTaskResponse
 		activityTaskInfo *types.PollForActivityTaskResponse
 	}
-	// internalTask represents an activity, decision, query or started (received from another host).
+	// InternalTask represents an activity, decision, query or started (received from another host).
 	// this struct is more like a union and only one of [ query, event, forwarded ] is
 	// non-nil for any given task
-	internalTask struct {
+	InternalTask struct {
 		event            *genericTaskInfo // non-nil for activity or decision task that's locally generated
 		query            *queryTaskInfo   // non-nil for a query task that's locally sync matched
 		started          *startedTaskInfo // non-nil for a task received from a parent partition which is already started
@@ -63,8 +63,8 @@ func newInternalTask(
 	source types.TaskSource,
 	forwardedFrom string,
 	forSyncMatch bool,
-) *internalTask {
-	task := &internalTask{
+) *InternalTask {
+	task := &InternalTask{
 		event: &genericTaskInfo{
 			TaskInfo:       info,
 			completionFunc: completionFunc,
@@ -81,8 +81,8 @@ func newInternalTask(
 func newInternalQueryTask(
 	taskID string,
 	request *types.MatchingQueryWorkflowRequest,
-) *internalTask {
-	return &internalTask{
+) *InternalTask {
+	return &InternalTask{
 		query: &queryTaskInfo{
 			taskID:  taskID,
 			request: request,
@@ -92,27 +92,27 @@ func newInternalQueryTask(
 	}
 }
 
-func newInternalStartedTask(info *startedTaskInfo) *internalTask {
-	return &internalTask{started: info}
+func newInternalStartedTask(info *startedTaskInfo) *InternalTask {
+	return &InternalTask{started: info}
 }
 
 // isQuery returns true if the underlying task is a query task
-func (task *internalTask) isQuery() bool {
+func (task *InternalTask) isQuery() bool {
 	return task.query != nil
 }
 
 // isStarted is true when this task is already marked as started
-func (task *internalTask) isStarted() bool {
+func (task *InternalTask) isStarted() bool {
 	return task.started != nil
 }
 
 // isForwarded returns true if the underlying task is forwarded by a remote matching host
 // forwarded tasks are already marked as started in history
-func (task *internalTask) isForwarded() bool {
+func (task *InternalTask) isForwarded() bool {
 	return task.forwardedFrom != ""
 }
 
-func (task *internalTask) workflowExecution() *types.WorkflowExecution {
+func (task *InternalTask) workflowExecution() *types.WorkflowExecution {
 	switch {
 	case task.event != nil:
 		return &types.WorkflowExecution{WorkflowID: task.event.WorkflowID, RunID: task.event.RunID}
@@ -128,7 +128,7 @@ func (task *internalTask) workflowExecution() *types.WorkflowExecution {
 
 // pollForDecisionResponse returns the poll response for a decision task that is
 // already marked as started. This method should only be called when isStarted() is true
-func (task *internalTask) pollForDecisionResponse() *types.MatchingPollForDecisionTaskResponse {
+func (task *InternalTask) pollForDecisionResponse() *types.MatchingPollForDecisionTaskResponse {
 	if task.isStarted() {
 		return task.started.decisionTaskInfo
 	}
@@ -137,7 +137,7 @@ func (task *internalTask) pollForDecisionResponse() *types.MatchingPollForDecisi
 
 // pollForActivityResponse returns the poll response for an activity task that is
 // already marked as started. This method should only be called when isStarted() is true
-func (task *internalTask) pollForActivityResponse() *types.PollForActivityTaskResponse {
+func (task *InternalTask) pollForActivityResponse() *types.PollForActivityTaskResponse {
 	if task.isStarted() {
 		return task.started.activityTaskInfo
 	}
@@ -147,7 +147,7 @@ func (task *internalTask) pollForActivityResponse() *types.PollForActivityTaskRe
 // finish marks a task as finished. Should be called after a poller picks up a task
 // and marks it as started. If the task is unable to marked as started, then this
 // method should be called with a non-nil error argument.
-func (task *internalTask) finish(err error) {
+func (task *InternalTask) finish(err error) {
 	switch {
 	case task.responseC != nil:
 		task.responseC <- err

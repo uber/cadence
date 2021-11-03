@@ -36,23 +36,24 @@ import (
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
-	"github.com/uber/cadence/common/service/config"
-	dc "github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
-	domainHandlerGlobalDomainEnabledNotMasterClusterSuite struct {
+	domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite struct {
 		suite.Suite
 		persistencetests.TestBase
 
 		minRetentionDays     int
 		maxBadBinaryCount    int
-		metadataMgr          persistence.MetadataManager
+		domainManager        persistence.DomainManager
 		mockProducer         *mocks.KafkaProducer
 		mockDomainReplicator Replicator
 		archivalMetadata     archiver.ArchivalMetadata
@@ -62,32 +63,32 @@ type (
 	}
 )
 
-func TestDomainHandlerGlobalDomainEnabledNotMasterClusterSuite(t *testing.T) {
-	s := new(domainHandlerGlobalDomainEnabledNotMasterClusterSuite)
+func TestDomainHandlerGlobalDomainEnabledNotPrimaryClusterSuite(t *testing.T) {
+	s := new(domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite)
 	suite.Run(t, s)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupSuite() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupSuite() {
 	if testing.Verbose() {
 		log.SetOutput(os.Stdout)
 	}
 
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true, false),
 	})
 	s.TestBase.Setup()
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TearDownSuite() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TearDownSuite() {
 	s.TestBase.TearDownWorkflowStore()
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupTest() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupTest() {
 	logger := loggerimpl.NewNopLogger()
 	dcCollection := dc.NewCollection(dc.NewNopClient(), logger)
 	s.minRetentionDays = 1
 	s.maxBadBinaryCount = 10
-	s.metadataMgr = s.TestBase.MetadataManager
+	s.domainManager = s.TestBase.DomainManager
 	s.mockProducer = &mocks.KafkaProducer{}
 	s.mockDomainReplicator = NewDomainReplicator(s.mockProducer, logger)
 	s.archivalMetadata = archiver.NewArchivalMetadata(
@@ -107,7 +108,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupTest() {
 	s.handler = NewHandler(
 		domainConfig,
 		logger,
-		s.metadataMgr,
+		s.domainManager,
 		s.ClusterMetadata,
 		s.mockDomainReplicator,
 		s.archivalMetadata,
@@ -116,16 +117,16 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) SetupTest() {
 	).(*handlerImpl)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TearDownTest() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TearDownTest() {
 	s.mockProducer.AssertExpectations(s.T())
 	s.mockArchiverProvider.AssertExpectations(s.T())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGetDomain_LocalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -171,7 +172,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_LocalDomain_NoDefault() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGetDomain_LocalDomain_NoDefault() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -187,7 +188,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	isGlobalDomain := false
 
 	var expectedClusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		expectedClusters = append(expectedClusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -238,7 +239,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_LocalDomain_NoAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDomain_LocalDomain_NoAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -246,7 +247,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -320,7 +321,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_LocalDomain_AllAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDomain_LocalDomain_AllAttrSet() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := false
 	err := s.handler.RegisterDomain(context.Background(), &types.RegisterDomainRequest{
@@ -336,7 +337,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	emitMetric := true
 	data := map[string]string{"some random key": "some random value"}
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -408,7 +409,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestDeprecateGetDomain_LocalDomain() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestDeprecateGetDomain_LocalDomain() {
 	domainName := s.getRandomDomainName()
 	domain := s.setupLocalDomain(domainName)
 
@@ -427,11 +428,11 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestDeprecateGet
 	assertDomainEqual(s.Suite, getResp, expectedResp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGetDomain_GlobalDomain_AllDefault() {
 	domainName := s.getRandomDomainName()
 	isGlobalDomain := true
 	var clusters []*types.ClusterReplicationConfiguration
-	for _, replicationConfig := range persistence.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
+	for _, replicationConfig := range cluster.GetOrUseDefaultClusters(s.ClusterMetadata.GetCurrentClusterName(), nil) {
 		clusters = append(clusters, &types.ClusterReplicationConfiguration{
 			ClusterName: replicationConfig.ClusterName,
 		})
@@ -451,7 +452,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	s.Nil(resp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetDomain_GlobalDomain_NoDefault() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGetDomain_GlobalDomain_NoDefault() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -459,7 +460,10 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -492,7 +496,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestRegisterGetD
 	s.Nil(resp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_NoAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDomain_GlobalDomain_NoAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -500,7 +504,10 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -513,7 +520,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.DomainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -547,7 +554,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	s.Nil(resp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_AllAttrSet() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDomain_GlobalDomain_AllAttrSet() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -556,7 +563,10 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
 	clustersDB := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -573,7 +583,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.DomainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -619,7 +629,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	s.Nil(updateResp)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDomain_GlobalDomain_Failover() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDomain_GlobalDomain_Failover() {
 	domainName := s.getRandomDomainName()
 	description := "some random description"
 	email := "some random email"
@@ -629,7 +639,10 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	nextActiveClusterName := s.ClusterMetadata.GetCurrentClusterName()
 	clusters := []*types.ClusterReplicationConfiguration{}
 	clustersDB := []*persistence.ClusterReplicationConfig{}
-	for clusterName := range s.ClusterMetadata.GetAllClusterInfo() {
+	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
+		if !info.Enabled {
+			continue
+		}
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			prevActiveClusterName = clusterName
 		}
@@ -646,7 +659,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := s.MetadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := s.DomainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,
@@ -733,7 +746,7 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestUpdateGetDom
 	)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestDeprecateGetDomain_GlobalDomain() {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestDeprecateGetDomain_GlobalDomain() {
 	domainName := s.getRandomDomainName()
 	s.setupGlobalDomainWithMetadataManager(domainName)
 
@@ -743,19 +756,19 @@ func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) TestDeprecateGet
 	s.IsType(&types.BadRequestError{}, err)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) getRandomDomainName() string {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) getRandomDomainName() string {
 	return "domain" + uuid.New()
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) setupLocalDomain(domainName string) *types.DescribeDomainResponse {
 	return setupLocalDomain(s.Suite, s.handler, s.ClusterMetadata, domainName)
 }
 
-func (s *domainHandlerGlobalDomainEnabledNotMasterClusterSuite) setupGlobalDomainWithMetadataManager(domainName string) *types.DescribeDomainResponse {
-	return setupGlobalDomainWithMetadataManager(s.Suite, s.handler, s.ClusterMetadata, s.MetadataManager, domainName)
+func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) setupGlobalDomainWithMetadataManager(domainName string) *types.DescribeDomainResponse {
+	return setupGlobalDomainWithMetadataManager(s.Suite, s.handler, s.ClusterMetadata, s.DomainManager, domainName)
 }
 
-func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, metadataManager persistence.MetadataManager, domainName string) *types.DescribeDomainResponse {
+func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, clusterMetadata cluster.Metadata, domainManager persistence.DomainManager, domainName string) *types.DescribeDomainResponse {
 	description := "some random description"
 	email := "some random email"
 	retention := int32(7)
@@ -775,7 +788,7 @@ func setupGlobalDomainWithMetadataManager(s suite.Suite, handler *handlerImpl, c
 	data := map[string]string{"some random key": "some random value"}
 	isGlobalDomain := true
 
-	_, err := metadataManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
+	_, err := domainManager.CreateDomain(context.Background(), &persistence.CreateDomainRequest{
 		Info: &persistence.DomainInfo{
 			ID:          uuid.New(),
 			Name:        domainName,

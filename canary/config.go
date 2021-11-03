@@ -22,12 +22,13 @@ package canary
 
 import (
 	"errors"
+	"time"
 
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 const (
@@ -39,11 +40,11 @@ const (
 	EnvKeyEnvironment = "CADENCE_CANARY_ENVIRONMENT"
 	// EnvKeyAvailabilityZone is the environment variable key for AZ
 	EnvKeyAvailabilityZone = "CADENCE_CANARY_AVAILABILITY_ZONE"
+	// EnvKeyMode is the environment variable key for Mode
+	EnvKeyMode = "CADENCE_CANARY_MODE"
 )
 
 const (
-	// CadenceLocalHostPort is the default address for cadence frontend service
-	CadenceLocalHostPort = "127.0.0.1:7933"
 	// CadenceServiceName is the default service name for cadence frontend
 	CadenceServiceName = "cadence-frontend"
 	// CanaryServiceName is the default service name for cadence canary
@@ -64,12 +65,23 @@ type (
 	Canary struct {
 		Domains  []string `yaml:"domains"`
 		Excludes []string `yaml:"excludes"`
+		Cron     Cron     `yaml:"cron"`
+	}
+
+	// Cron contains configuration for the cron workflow for canary
+	Cron struct {
+		CronSchedule         string        `yaml:"cronSchedule"`         // default to "@every 30s"
+		CronExecutionTimeout time.Duration `yaml:"cronExecutionTimeout"` //default to 18 minutes
+		StartJobTimeout      time.Duration `yaml:"startJobTimeout"`      // default to 9 minutes
 	}
 
 	// Cadence contains the configuration for cadence service
 	Cadence struct {
-		ServiceName     string `yaml:"service"`
-		HostNameAndPort string `yaml:"host"`
+		ServiceName string `yaml:"service"`
+		// support Thrift for backward compatibility. It will be ignored if host (gRPC) is used.
+		ThriftHostNameAndPort string `yaml:"host"`
+		// gRPC host name and port
+		GRPCHostNameAndPort string `yaml:"address"`
 	}
 )
 

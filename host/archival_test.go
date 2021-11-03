@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ const (
 	retryBackoffTime = 200 * time.Millisecond
 )
 
-func (s *integrationSuite) TestArchival_TimerQueueProcessor() {
+func (s *IntegrationSuite) TestArchival_TimerQueueProcessor() {
 	s.True(s.testCluster.archiverBase.metadata.GetHistoryConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
@@ -61,7 +61,7 @@ func (s *integrationSuite) TestArchival_TimerQueueProcessor() {
 	s.True(s.isMutableStateDeleted(domainID, execution))
 }
 
-func (s *integrationSuite) TestArchival_ContinueAsNew() {
+func (s *IntegrationSuite) TestArchival_ContinueAsNew() {
 	s.True(s.testCluster.archiverBase.metadata.GetHistoryConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
@@ -83,7 +83,7 @@ func (s *integrationSuite) TestArchival_ContinueAsNew() {
 	}
 }
 
-func (s *integrationSuite) TestArchival_ArchiverWorker() {
+func (s *IntegrationSuite) TestArchival_ArchiverWorker() {
 	s.True(s.testCluster.archiverBase.metadata.GetHistoryConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
@@ -102,7 +102,7 @@ func (s *integrationSuite) TestArchival_ArchiverWorker() {
 	s.True(s.isMutableStateDeleted(domainID, execution))
 }
 
-func (s *integrationSuite) TestVisibilityArchival() {
+func (s *IntegrationSuite) TestVisibilityArchival() {
 	s.True(s.testCluster.archiverBase.metadata.GetVisibilityConfig().ClusterConfiguredForArchival())
 
 	domainID := s.getDomainID(s.archivalDomainName)
@@ -147,7 +147,7 @@ func (s *integrationSuite) TestVisibilityArchival() {
 	}
 }
 
-func (s *integrationSuite) getDomainID(domain string) string {
+func (s *IntegrationSuite) getDomainID(domain string) string {
 	domainResp, err := s.engine.DescribeDomain(createContext(), &types.DescribeDomainRequest{
 		Name: common.StringPtr(s.archivalDomainName),
 	})
@@ -155,7 +155,7 @@ func (s *integrationSuite) getDomainID(domain string) string {
 	return domainResp.DomainInfo.GetUUID()
 }
 
-func (s *integrationSuite) isHistoryArchived(domain string, execution *types.WorkflowExecution) bool {
+func (s *IntegrationSuite) isHistoryArchived(domain string, execution *types.WorkflowExecution) bool {
 	request := &types.GetWorkflowExecutionHistoryRequest{
 		Domain:    s.archivalDomainName,
 		Execution: execution,
@@ -171,7 +171,7 @@ func (s *integrationSuite) isHistoryArchived(domain string, execution *types.Wor
 	return false
 }
 
-func (s *integrationSuite) isHistoryDeleted(domainID string, execution *types.WorkflowExecution) bool {
+func (s *IntegrationSuite) isHistoryDeleted(domainID string, execution *types.WorkflowExecution) bool {
 	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, s.testClusterConfig.HistoryConfig.NumHistoryShards)
 	request := &persistence.GetHistoryTreeRequest{
 		TreeID:  execution.GetRunID(),
@@ -190,7 +190,7 @@ func (s *integrationSuite) isHistoryDeleted(domainID string, execution *types.Wo
 	return false
 }
 
-func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *types.WorkflowExecution) bool {
+func (s *IntegrationSuite) isMutableStateDeleted(domainID string, execution *types.WorkflowExecution) bool {
 	request := &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: *execution,
@@ -209,7 +209,7 @@ func (s *integrationSuite) isMutableStateDeleted(domainID string, execution *typ
 	return false
 }
 
-func (s *integrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID string, numActivities, numRuns int) []string {
+func (s *IntegrationSuite) startAndFinishWorkflow(id, wt, tl, domain, domainID string, numActivities, numRuns int) []string {
 	identity := "worker1"
 	activityName := "activity_type1"
 	workflowType := &types.WorkflowType{

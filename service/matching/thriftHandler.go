@@ -84,6 +84,12 @@ func (t ThriftHandler) ListTaskListPartitions(ctx context.Context, request *m.Li
 	return thrift.FromListTaskListPartitionsResponse(response), thrift.FromError(err)
 }
 
+// GetTaskListsByDomain forwards request to the underlying handler
+func (t ThriftHandler) GetTaskListsByDomain(ctx context.Context, request *s.GetTaskListsByDomainRequest) (*s.GetTaskListsByDomainResponse, error) {
+	response, err := t.h.GetTaskListsByDomain(ctx, thrift.ToGetTaskListsByDomainRequest(request))
+	return thrift.FromGetTaskListsByDomainResponse(response), thrift.FromError(err)
+}
+
 // PollForActivityTask forwards request to the underlying handler
 func (t ThriftHandler) PollForActivityTask(ctx context.Context, request *m.PollForActivityTaskRequest) (*s.PollForActivityTaskResponse, error) {
 	response, err := t.h.PollForActivityTask(ctx, thrift.ToMatchingPollForActivityTaskRequest(request))

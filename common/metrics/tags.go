@@ -20,7 +20,9 @@
 
 package metrics
 
-import "strconv"
+import (
+	"strconv"
+)
 
 const (
 	revisionTag     = "revision"
@@ -29,20 +31,25 @@ const (
 	buildVersionTag = "build_version"
 	goVersionTag    = "go_version"
 
-	instance       = "instance"
-	domain         = "domain"
-	targetCluster  = "target_cluster"
-	activeCluster  = "active_cluster"
-	taskList       = "tasklist"
-	taskListType   = "tasklistType"
-	workflowType   = "workflowType"
-	activityType   = "activityType"
-	decisionType   = "decisionType"
-	invariantType  = "invariantType"
-	kafkaPartition = "kafkaPartition"
+	instance               = "instance"
+	domain                 = "domain"
+	targetCluster          = "target_cluster"
+	activeCluster          = "active_cluster"
+	taskList               = "tasklist"
+	taskListType           = "tasklistType"
+	workflowType           = "workflowType"
+	activityType           = "activityType"
+	decisionType           = "decisionType"
+	invariantType          = "invariantType"
+	shardScannerScanResult = "shardscanner_scan_result"
+	shardScannerFixResult  = "shardscanner_fix_result"
+	kafkaPartition         = "kafkaPartition"
+	transport              = "transport"
+	caller                 = "caller"
+	signalName             = "signalName"
 
-	domainAllValue = "all"
-	unknownValue   = "_unknown_"
+	allValue     = "all"
+	unknownValue = "_unknown_"
 )
 
 // Tag is an interface to define metrics tags
@@ -128,6 +135,16 @@ func DecisionTypeTag(value string) Tag {
 	return metricWithUnknown(decisionType, value)
 }
 
+// ShardScannerScanResult returns a new shardscanner scan result type tag.
+func ShardScannerScanResult(value string) Tag {
+	return metricWithUnknown(shardScannerScanResult, value)
+}
+
+// ShardScannerFixResult returns a new shardscanner fix result type tag.
+func ShardScannerFixResult(value string) Tag {
+	return metricWithUnknown(shardScannerFixResult, value)
+}
+
 // InvariantTypeTag returns a new invariant type tag.
 func InvariantTypeTag(value string) Tag {
 	return metricWithUnknown(invariantType, value)
@@ -136,4 +153,24 @@ func InvariantTypeTag(value string) Tag {
 // KafkaPartitionTag returns a new KafkaPartition type tag.
 func KafkaPartitionTag(value int32) Tag {
 	return simpleMetric{key: kafkaPartition, value: strconv.Itoa(int(value))}
+}
+
+// TransportTag returns a new RPC Transport type tag.
+func TransportTag(value string) Tag {
+	return simpleMetric{key: transport, value: value}
+}
+
+// CallerTag returns a new RPC Caller type tag.
+func CallerTag(value string) Tag {
+	return simpleMetric{key: caller, value: value}
+}
+
+// SignalNameTag returns a new SignalName tag
+func SignalNameTag(value string) Tag {
+	return metricWithUnknown(signalName, value)
+}
+
+// SignalNameAllTag returns a new SignalName tag with all value
+func SignalNameAllTag() Tag {
+	return metricWithUnknown(signalName, allValue)
 }

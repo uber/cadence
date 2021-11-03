@@ -186,7 +186,7 @@ func FromActivityTaskScheduledEventAttributes(t *types.ActivityTaskScheduledEven
 	return &shared.ActivityTaskScheduledEventAttributes{
 		ActivityId:                    &t.ActivityID,
 		ActivityType:                  FromActivityType(t.ActivityType),
-		Domain:                        &t.Domain,
+		Domain:                        t.Domain,
 		TaskList:                      FromTaskList(t.TaskList),
 		Input:                         t.Input,
 		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
@@ -207,7 +207,7 @@ func ToActivityTaskScheduledEventAttributes(t *shared.ActivityTaskScheduledEvent
 	return &types.ActivityTaskScheduledEventAttributes{
 		ActivityID:                    t.GetActivityId(),
 		ActivityType:                  ToActivityType(t.ActivityType),
-		Domain:                        t.GetDomain(),
+		Domain:                        t.Domain,
 		TaskList:                      ToTaskList(t.TaskList),
 		Input:                         t.Input,
 		ScheduleToCloseTimeoutSeconds: t.ScheduleToCloseTimeoutSeconds,
@@ -733,6 +733,26 @@ func ToClientVersionNotSupportedError(t *shared.ClientVersionNotSupportedError) 
 		FeatureVersion:    t.FeatureVersion,
 		ClientImpl:        t.ClientImpl,
 		SupportedVersions: t.SupportedVersions,
+	}
+}
+
+// FromFeatureNotEnabledError converts internal FeatureNotEnabledError type to thrift
+func FromFeatureNotEnabledError(t *types.FeatureNotEnabledError) *shared.FeatureNotEnabledError {
+	if t == nil {
+		return nil
+	}
+	return &shared.FeatureNotEnabledError{
+		FeatureFlag: t.FeatureFlag,
+	}
+}
+
+// ToFeatureNotEnabledError converts thrift FeatureNotEnabledError type to internal
+func ToFeatureNotEnabledError(t *shared.FeatureNotEnabledError) *types.FeatureNotEnabledError {
+	if t == nil {
+		return nil
+	}
+	return &types.FeatureNotEnabledError{
+		FeatureFlag: t.FeatureFlag,
 	}
 }
 
@@ -1515,6 +1535,7 @@ func FromDescribeDomainResponse(t *types.DescribeDomainResponse) *shared.Describ
 		ReplicationConfiguration: FromDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          &t.FailoverVersion,
 		IsGlobalDomain:           &t.IsGlobalDomain,
+		FailoverInfo:             FromFailoverInfo(t.GetFailoverInfo()),
 	}
 }
 
@@ -1529,6 +1550,7 @@ func ToDescribeDomainResponse(t *shared.DescribeDomainResponse) *types.DescribeD
 		ReplicationConfiguration: ToDomainReplicationConfiguration(t.ReplicationConfiguration),
 		FailoverVersion:          t.GetFailoverVersion(),
 		IsGlobalDomain:           t.GetIsGlobalDomain(),
+		FailoverInfo:             ToFailoverInfo(t.FailoverInfo),
 	}
 }
 
@@ -1544,6 +1566,17 @@ func FromDescribeHistoryHostRequest(t *types.DescribeHistoryHostRequest) *shared
 	}
 }
 
+// FromDescribeShardDistributionRequest converts internal DescribeHistoryHostRequest type to thrift
+func FromDescribeShardDistributionRequest(t *types.DescribeShardDistributionRequest) *shared.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionRequest{
+		PageSize: &t.PageSize,
+		PageID:   &t.PageID,
+	}
+}
+
 // ToDescribeHistoryHostRequest converts thrift DescribeHistoryHostRequest type to internal
 func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.DescribeHistoryHostRequest {
 	if t == nil {
@@ -1553,6 +1586,17 @@ func ToDescribeHistoryHostRequest(t *shared.DescribeHistoryHostRequest) *types.D
 		HostAddress:      t.HostAddress,
 		ShardIDForHost:   t.ShardIdForHost,
 		ExecutionForHost: ToWorkflowExecution(t.ExecutionForHost),
+	}
+}
+
+// ToDescribeShardDistributionRequest converts thrift DescribeHistoryHostRequest type to internal
+func ToDescribeShardDistributionRequest(t *shared.DescribeShardDistributionRequest) *types.DescribeShardDistributionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionRequest{
+		PageSize: t.GetPageSize(),
+		PageID:   t.GetPageID(),
 	}
 }
 
@@ -1570,6 +1614,17 @@ func FromDescribeHistoryHostResponse(t *types.DescribeHistoryHostResponse) *shar
 	}
 }
 
+// FromDescribeShardDistributionResponse converts internal DescribeHistoryHostResponse type to thrift
+func FromDescribeShardDistributionResponse(t *types.DescribeShardDistributionResponse) *shared.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.DescribeShardDistributionResponse{
+		NumberOfShards: &t.NumberOfShards,
+		Shards:         t.Shards,
+	}
+}
+
 // ToDescribeHistoryHostResponse converts thrift DescribeHistoryHostResponse type to internal
 func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types.DescribeHistoryHostResponse {
 	if t == nil {
@@ -1581,6 +1636,17 @@ func ToDescribeHistoryHostResponse(t *shared.DescribeHistoryHostResponse) *types
 		DomainCache:           ToDomainCacheInfo(t.DomainCache),
 		ShardControllerStatus: t.GetShardControllerStatus(),
 		Address:               t.GetAddress(),
+	}
+}
+
+// ToDescribeShardDistributionResponse converts thrift DescribeHistoryHostResponse type to internal
+func ToDescribeShardDistributionResponse(t *shared.DescribeShardDistributionResponse) *types.DescribeShardDistributionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.DescribeShardDistributionResponse{
+		NumberOfShards: t.GetNumberOfShards(),
+		Shards:         t.Shards,
 	}
 }
 
@@ -1830,6 +1896,34 @@ func ToDomainInfo(t *shared.DomainInfo) *types.DomainInfo {
 	}
 }
 
+// FromFailoverInfo converts internal FailoverInfo type to thrift
+func FromFailoverInfo(t *types.FailoverInfo) *shared.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &shared.FailoverInfo{
+		FailoverVersion:         &t.FailoverVersion,
+		FailoverStartTimestamp:  &t.FailoverStartTimestamp,
+		FailoverExpireTimestamp: &t.FailoverExpireTimestamp,
+		CompletedShardCount:     &t.CompletedShardCount,
+		PendingShards:           t.GetPendingShards(),
+	}
+}
+
+// ToFailoverInfo converts thrift FailoverInfo type to internal
+func ToFailoverInfo(t *shared.FailoverInfo) *types.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  t.GetFailoverStartTimestamp(),
+		FailoverExpireTimestamp: t.GetFailoverExpireTimestamp(),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
+	}
+}
+
 // FromDomainNotActiveError converts internal DomainNotActiveError type to thrift
 func FromDomainNotActiveError(t *types.DomainNotActiveError) *shared.DomainNotActiveError {
 	if t == nil {
@@ -1969,6 +2063,26 @@ func ToEntityNotExistsError(t *shared.EntityNotExistsError) *types.EntityNotExis
 		Message:        t.Message,
 		CurrentCluster: t.GetCurrentCluster(),
 		ActiveCluster:  t.GetActiveCluster(),
+	}
+}
+
+// FromWorkflowExecutionAlreadyCompletedError converts internal WorkflowExecutionAlreadyCompletedError type to thrift
+func FromWorkflowExecutionAlreadyCompletedError(t *types.WorkflowExecutionAlreadyCompletedError) *shared.WorkflowExecutionAlreadyCompletedError {
+	if t == nil {
+		return nil
+	}
+	return &shared.WorkflowExecutionAlreadyCompletedError{
+		Message: t.Message,
+	}
+}
+
+// ToWorkflowExecutionAlreadyCompletedError converts thrift WorkflowExecutionAlreadyCompletedError type to internal
+func ToWorkflowExecutionAlreadyCompletedError(t *shared.WorkflowExecutionAlreadyCompletedError) *types.WorkflowExecutionAlreadyCompletedError {
+	if t == nil {
+		return nil
+	}
+	return &types.WorkflowExecutionAlreadyCompletedError{
+		Message: t.Message,
 	}
 }
 
@@ -2968,6 +3082,74 @@ func ToListTaskListPartitionsResponse(t *shared.ListTaskListPartitionsResponse) 
 	}
 }
 
+// FromGetTaskListsByDomainRequest converts internal GetTaskListsByDomainRequest type to thrift
+func FromGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *shared.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.GetTaskListsByDomainRequest{
+		DomainName: &t.Domain,
+	}
+}
+
+// ToGetTaskListsByDomainRequest converts thrift GetTaskListsByDomainRequest type to internal
+func ToGetTaskListsByDomainRequest(t *shared.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsByDomainRequest{
+		Domain: t.GetDomainName(),
+	}
+}
+
+// FromGetTaskListsByDomainResponse converts internal GetTaskListsByDomainResponse type to thrift
+func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *shared.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+
+	return &shared.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: FromDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+// ToGetTaskListsByDomainResponse converts thrift GetTaskListsByDomainResponse type to internal
+func ToGetTaskListsByDomainResponse(t *shared.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: ToDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+// FromDescribeTaskListResponseMap converts internal DescribeTaskListResponse map type to thrift
+func FromDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*shared.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*shared.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+// ToDescribeTaskListResponseMap converts thrift DescribeTaskListResponse map type to internal
+func ToDescribeTaskListResponseMap(t map[string]*shared.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
 // FromListWorkflowExecutionsRequest converts internal ListWorkflowExecutionsRequest type to thrift
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *shared.ListWorkflowExecutionsRequest {
 	if t == nil {
@@ -3392,6 +3574,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *shar
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		NextEventId:               &t.NextEventID,
 	}
 }
 
@@ -3415,6 +3598,7 @@ func ToPollForDecisionTaskResponse(t *shared.PollForDecisionTaskResponse) *types
 		ScheduledTimestamp:        t.ScheduledTimestamp,
 		StartedTimestamp:          t.StartedTimestamp,
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		NextEventID:               t.GetNextEventId(),
 	}
 }
 
@@ -3880,6 +4064,7 @@ func FromRemoveTaskRequest(t *types.RemoveTaskRequest) *shared.RemoveTaskRequest
 		Type:                t.Type,
 		TaskID:              &t.TaskID,
 		VisibilityTimestamp: t.VisibilityTimestamp,
+		ClusterName:         &t.ClusterName,
 	}
 }
 
@@ -3893,6 +4078,7 @@ func ToRemoveTaskRequest(t *shared.RemoveTaskRequest) *types.RemoveTaskRequest {
 		Type:                t.Type,
 		TaskID:              t.GetTaskID(),
 		VisibilityTimestamp: t.VisibilityTimestamp,
+		ClusterName:         t.GetClusterName(),
 	}
 }
 
@@ -5039,6 +5225,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Memo:                                FromMemo(t.Memo),
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
+		DelayStartSeconds:                   t.DelayStartSeconds,
 	}
 }
 
@@ -5063,6 +5250,7 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
+		DelayStartSeconds:                   t.DelayStartSeconds,
 	}
 }
 
@@ -6017,6 +6205,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		SearchAttributes: FromSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
 		TaskList:         &t.TaskList,
+		IsCron:           &t.IsCron,
 	}
 }
 
@@ -6039,6 +6228,7 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		SearchAttributes: ToSearchAttributes(t.SearchAttributes),
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
 		TaskList:         t.GetTaskList(),
+		IsCron:           t.GetIsCron(),
 	}
 }
 
@@ -6786,4 +6976,750 @@ func ToHistoryArray(t []*shared.History) []*types.History {
 		v[i] = ToHistory(t[i])
 	}
 	return v
+}
+
+// FromCrossClusterTaskType converts internal CrossClusterTaskType type to thrift
+func FromCrossClusterTaskType(t *types.CrossClusterTaskType) *shared.CrossClusterTaskType {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case types.CrossClusterTaskTypeStartChildExecution:
+		v := shared.CrossClusterTaskTypeStartChildExecution
+		return &v
+	case types.CrossClusterTaskTypeCancelExecution:
+		v := shared.CrossClusterTaskTypeCancelExecution
+		return &v
+	case types.CrossClusterTaskTypeSignalExecution:
+		v := shared.CrossClusterTaskTypeSignalExecution
+		return &v
+	case types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		v := shared.CrossClusterTaskTypeRecordChildWorkflowExecutionComplete
+		return &v
+	case types.CrossClusterTaskTypeApplyParentPolicy:
+		v := shared.CrossClusterTaskTypeApplyParentClosePolicy
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// ToCrossClusterTaskType converts thrift CrossClusterTaskType type to internal
+func ToCrossClusterTaskType(t *shared.CrossClusterTaskType) *types.CrossClusterTaskType {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case shared.CrossClusterTaskTypeStartChildExecution:
+		v := types.CrossClusterTaskTypeStartChildExecution
+		return &v
+	case shared.CrossClusterTaskTypeCancelExecution:
+		v := types.CrossClusterTaskTypeCancelExecution
+		return &v
+	case shared.CrossClusterTaskTypeSignalExecution:
+		v := types.CrossClusterTaskTypeSignalExecution
+		return &v
+	case shared.CrossClusterTaskTypeRecordChildWorkflowExecutionComplete:
+		v := types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete
+		return &v
+	case shared.CrossClusterTaskTypeApplyParentClosePolicy:
+		v := types.CrossClusterTaskTypeApplyParentPolicy
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// FromCrossClusterTaskFailedCause converts internal CrossClusterTaskFailedCause type to thrift
+func FromCrossClusterTaskFailedCause(t *types.CrossClusterTaskFailedCause) *shared.CrossClusterTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case types.CrossClusterTaskFailedCauseDomainNotActive:
+		v := shared.CrossClusterTaskFailedCauseDomainNotActive
+		return &v
+	case types.CrossClusterTaskFailedCauseDomainNotExists:
+		v := shared.CrossClusterTaskFailedCauseDomainNotExists
+		return &v
+	case types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning:
+		v := shared.CrossClusterTaskFailedCauseWorkflowAlreadyRunning
+		return &v
+	case types.CrossClusterTaskFailedCauseWorkflowNotExists:
+		v := shared.CrossClusterTaskFailedCauseWorkflowNotExists
+		return &v
+	case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+		v := shared.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted
+		return &v
+	case types.CrossClusterTaskFailedCauseUncategorized:
+		v := shared.CrossClusterTaskFailedCauseUncategorized
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// ToCrossClusterTaskFailedCause converts thrift CrossClusterTaskFailedCause type to internal
+func ToCrossClusterTaskFailedCause(t *shared.CrossClusterTaskFailedCause) *types.CrossClusterTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case shared.CrossClusterTaskFailedCauseDomainNotActive:
+		v := types.CrossClusterTaskFailedCauseDomainNotActive
+		return &v
+	case shared.CrossClusterTaskFailedCauseDomainNotExists:
+		v := types.CrossClusterTaskFailedCauseDomainNotExists
+		return &v
+	case shared.CrossClusterTaskFailedCauseWorkflowAlreadyRunning:
+		v := types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning
+		return &v
+	case shared.CrossClusterTaskFailedCauseWorkflowNotExists:
+		v := types.CrossClusterTaskFailedCauseWorkflowNotExists
+		return &v
+	case shared.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+		v := types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted
+		return &v
+	case shared.CrossClusterTaskFailedCauseUncategorized:
+		v := types.CrossClusterTaskFailedCauseUncategorized
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// FromGetTaskFailedCause converts internal GetTaskFailedCause to thrift
+func FromGetTaskFailedCause(t *types.GetTaskFailedCause) *shared.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case types.GetTaskFailedCauseServiceBusy:
+		v := shared.GetTaskFailedCauseServiceBusy
+		return &v
+	case types.GetTaskFailedCauseTimeout:
+		v := shared.GetTaskFailedCauseTimeout
+		return &v
+	case types.GetTaskFailedCauseShardOwnershipLost:
+		v := shared.GetTaskFailedCauseShardOwnershipLost
+		return &v
+	case types.GetTaskFailedCauseUncategorized:
+		v := shared.GetTaskFailedCauseUncategorized
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// ToGetCrossClusterTaskFailedCause converts thrift GetTaskFailedCause type to internal
+func ToGetCrossClusterTaskFailedCause(t *shared.GetTaskFailedCause) *types.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	switch *t {
+	case shared.GetTaskFailedCauseServiceBusy:
+		v := types.GetTaskFailedCauseServiceBusy
+		return &v
+	case shared.GetTaskFailedCauseTimeout:
+		v := types.GetTaskFailedCauseTimeout
+		return &v
+	case shared.GetTaskFailedCauseShardOwnershipLost:
+		v := types.GetTaskFailedCauseShardOwnershipLost
+		return &v
+	case shared.GetTaskFailedCauseUncategorized:
+		v := types.GetTaskFailedCauseUncategorized
+		return &v
+	}
+	panic("unexpected enum value")
+}
+
+// FromCrossClusterTaskInfo converts internal CrossClusterTaskInfo type to thrift
+func FromCrossClusterTaskInfo(t *types.CrossClusterTaskInfo) *shared.CrossClusterTaskInfo {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterTaskInfo{
+		DomainID:            &t.DomainID,
+		WorkflowID:          &t.WorkflowID,
+		RunID:               &t.RunID,
+		TaskType:            FromCrossClusterTaskType(t.TaskType),
+		TaskState:           &t.TaskState,
+		TaskID:              &t.TaskID,
+		VisibilityTimestamp: t.VisibilityTimestamp,
+	}
+}
+
+// ToCrossClusterTaskInfo converts thrift CrossClusterTaskInfo type to internal
+func ToCrossClusterTaskInfo(t *shared.CrossClusterTaskInfo) *types.CrossClusterTaskInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterTaskInfo{
+		DomainID:            t.GetDomainID(),
+		WorkflowID:          t.GetWorkflowID(),
+		RunID:               t.GetRunID(),
+		TaskType:            ToCrossClusterTaskType(t.TaskType),
+		TaskState:           t.GetTaskState(),
+		TaskID:              t.GetTaskID(),
+		VisibilityTimestamp: t.VisibilityTimestamp,
+	}
+}
+
+// FromCrossClusterStartChildExecutionRequestAttributes converts internal CrossClusterStartChildExecutionRequestAttributes type to thrift
+func FromCrossClusterStartChildExecutionRequestAttributes(t *types.CrossClusterStartChildExecutionRequestAttributes) *shared.CrossClusterStartChildExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterStartChildExecutionRequestAttributes{
+		TargetDomainID:           &t.TargetDomainID,
+		RequestID:                &t.RequestID,
+		InitiatedEventID:         &t.InitiatedEventID,
+		InitiatedEventAttributes: FromStartChildWorkflowExecutionInitiatedEventAttributes(t.InitiatedEventAttributes),
+		TargetRunID:              t.TargetRunID,
+	}
+}
+
+// ToCrossClusterStartChildExecutionRequestAttributes converts thrift CrossClusterStartChildExecutionRequestAttributes type to internal
+func ToCrossClusterStartChildExecutionRequestAttributes(t *shared.CrossClusterStartChildExecutionRequestAttributes) *types.CrossClusterStartChildExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterStartChildExecutionRequestAttributes{
+		TargetDomainID:           t.GetTargetDomainID(),
+		RequestID:                t.GetRequestID(),
+		InitiatedEventID:         t.GetInitiatedEventID(),
+		InitiatedEventAttributes: ToStartChildWorkflowExecutionInitiatedEventAttributes(t.InitiatedEventAttributes),
+		TargetRunID:              t.TargetRunID,
+	}
+}
+
+// FromCrossClusterStartChildExecutionResponseAttributes converts internal CrossClusterStartChildExecutionResponseAttributes type to thrift
+func FromCrossClusterStartChildExecutionResponseAttributes(t *types.CrossClusterStartChildExecutionResponseAttributes) *shared.CrossClusterStartChildExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterStartChildExecutionResponseAttributes{
+		RunID: &t.RunID,
+	}
+}
+
+// ToCrossClusterStartChildExecutionResponseAttributes converts thrift CrossClusterStartChildExecutionResponseAttributes type to internal
+func ToCrossClusterStartChildExecutionResponseAttributes(t *shared.CrossClusterStartChildExecutionResponseAttributes) *types.CrossClusterStartChildExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterStartChildExecutionResponseAttributes{
+		RunID: t.GetRunID(),
+	}
+}
+
+// FromCrossClusterCancelExecutionRequestAttributes converts internal CrossClusterCancelExecutionRequestAttributes type to thrift
+func FromCrossClusterCancelExecutionRequestAttributes(t *types.CrossClusterCancelExecutionRequestAttributes) *shared.CrossClusterCancelExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterCancelExecutionRequestAttributes{
+		TargetDomainID:    &t.TargetDomainID,
+		TargetWorkflowID:  &t.TargetWorkflowID,
+		TargetRunID:       &t.TargetRunID,
+		RequestID:         &t.RequestID,
+		InitiatedEventID:  &t.InitiatedEventID,
+		ChildWorkflowOnly: &t.ChildWorkflowOnly,
+	}
+}
+
+// ToCrossClusterCancelExecutionRequestAttributes converts thrift CrossClusterCancelExecutionRequestAttributes type to internal
+func ToCrossClusterCancelExecutionRequestAttributes(t *shared.CrossClusterCancelExecutionRequestAttributes) *types.CrossClusterCancelExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterCancelExecutionRequestAttributes{
+		TargetDomainID:    t.GetTargetDomainID(),
+		TargetWorkflowID:  t.GetTargetWorkflowID(),
+		TargetRunID:       t.GetTargetRunID(),
+		RequestID:         t.GetRequestID(),
+		InitiatedEventID:  t.GetInitiatedEventID(),
+		ChildWorkflowOnly: t.GetChildWorkflowOnly(),
+	}
+}
+
+// FromCrossClusterCancelExecutionResponseAttributes converts internal CrossClusterCancelExecutionResponseAttributes type to thrift
+func FromCrossClusterCancelExecutionResponseAttributes(t *types.CrossClusterCancelExecutionResponseAttributes) *shared.CrossClusterCancelExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterCancelExecutionResponseAttributes{}
+}
+
+// ToCrossClusterCancelExecutionResponseAttributes converts thrift CrossClusterCancelExecutionResponseAttributes type to internal
+func ToCrossClusterCancelExecutionResponseAttributes(t *shared.CrossClusterCancelExecutionResponseAttributes) *types.CrossClusterCancelExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterCancelExecutionResponseAttributes{}
+}
+
+// FromCrossClusterSignalExecutionRequestAttributes converts internal CrossClusterSignalExecutionRequestAttributes type to thrift
+func FromCrossClusterSignalExecutionRequestAttributes(t *types.CrossClusterSignalExecutionRequestAttributes) *shared.CrossClusterSignalExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterSignalExecutionRequestAttributes{
+		TargetDomainID:    &t.TargetDomainID,
+		TargetWorkflowID:  &t.TargetWorkflowID,
+		TargetRunID:       &t.TargetRunID,
+		RequestID:         &t.RequestID,
+		InitiatedEventID:  &t.InitiatedEventID,
+		ChildWorkflowOnly: &t.ChildWorkflowOnly,
+		SignalName:        &t.SignalName,
+		SignalInput:       t.SignalInput,
+		Control:           t.Control,
+	}
+}
+
+// ToCrossClusterSignalExecutionRequestAttributes converts thrift CrossClusterSignalExecutionRequestAttributes type to internal
+func ToCrossClusterSignalExecutionRequestAttributes(t *shared.CrossClusterSignalExecutionRequestAttributes) *types.CrossClusterSignalExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterSignalExecutionRequestAttributes{
+		TargetDomainID:    t.GetTargetDomainID(),
+		TargetWorkflowID:  t.GetTargetWorkflowID(),
+		TargetRunID:       t.GetTargetRunID(),
+		RequestID:         t.GetRequestID(),
+		InitiatedEventID:  t.GetInitiatedEventID(),
+		ChildWorkflowOnly: t.GetChildWorkflowOnly(),
+		SignalName:        t.GetSignalName(),
+		SignalInput:       t.SignalInput,
+		Control:           t.Control,
+	}
+}
+
+// FromCrossClusterSignalExecutionResponseAttributes converts internal CrossClusterSignalExecutionResponseAttributes type to thrift
+func FromCrossClusterSignalExecutionResponseAttributes(t *types.CrossClusterSignalExecutionResponseAttributes) *shared.CrossClusterSignalExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterSignalExecutionResponseAttributes{}
+}
+
+// ToCrossClusterSignalExecutionResponseAttributes converts thrift CrossClusterSignalExecutionResponseAttributes type to internal
+func ToCrossClusterSignalExecutionResponseAttributes(t *shared.CrossClusterSignalExecutionResponseAttributes) *types.CrossClusterSignalExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterSignalExecutionResponseAttributes{}
+}
+
+// FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes converts internal
+// CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes type to thrift
+func FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(
+	t *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes,
+) *shared.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   &t.TargetDomainID,
+		TargetWorkflowID: &t.TargetWorkflowID,
+		TargetRunID:      &t.TargetRunID,
+		InitiatedEventID: &t.InitiatedEventID,
+		CompletionEvent:  FromHistoryEvent(t.CompletionEvent),
+	}
+}
+
+// ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes converts thrift
+// CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes type to internal
+func ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(
+	t *shared.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes,
+) *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   t.GetTargetDomainID(),
+		TargetWorkflowID: t.GetTargetWorkflowID(),
+		TargetRunID:      t.GetTargetRunID(),
+		InitiatedEventID: t.GetInitiatedEventID(),
+		CompletionEvent:  ToHistoryEvent(t.CompletionEvent),
+	}
+}
+
+// FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts internal
+// CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to thrift
+func FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(
+	t *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes,
+) *shared.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+}
+
+// ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts thrift
+// CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to internal
+func ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(
+	t *shared.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes,
+) *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+}
+
+// FromApplyParentClosePolicyAttributes converts internal
+// ApplyParentClosePolicyAttributes types to thrift
+func FromApplyParentClosePolicyAttributes(
+	t *types.ApplyParentClosePolicyAttributes,
+) *shared.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.ApplyParentClosePolicyAttributes{
+		ChildDomainID:     &t.ChildDomainID,
+		ChildWorkflowID:   &t.ChildWorkflowID,
+		ChildRunID:        &t.ChildRunID,
+		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// ToApplyParentClosePolicyAttributes converts thrift
+// ApplyParentClosePolicyAttributes types to internal
+func ToApplyParentClosePolicyAttributes(
+	t *shared.ApplyParentClosePolicyAttributes,
+) *types.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.ApplyParentClosePolicyAttributes{
+		ChildDomainID:     t.GetChildDomainID(),
+		ChildWorkflowID:   t.GetChildWorkflowID(),
+		ChildRunID:        t.GetChildRunID(),
+		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// FromApplyParentClosePolicyAttributesArray converts thrift
+// ApplyParentClosePolicyAttributesArray types to internal
+func FromApplyParentClosePolicyAttributesArray(
+	t []*types.ApplyParentClosePolicyAttributes,
+) []*shared.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.ApplyParentClosePolicyAttributes, len(t))
+	for i := range t {
+		v[i] = FromApplyParentClosePolicyAttributes(t[i])
+	}
+	return v
+}
+
+// ToApplyParentClosePolicyAttributesArray converts internal
+// ApplyParentClosePolicyAttributesArray types to thrift
+func ToApplyParentClosePolicyAttributesArray(
+	t []*shared.ApplyParentClosePolicyAttributes,
+) []*types.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.ApplyParentClosePolicyAttributes, len(t))
+	for i := range t {
+		v[i] = ToApplyParentClosePolicyAttributes(t[i])
+	}
+	return v
+}
+
+// FromCrossClusterApplyParentClosePolicyRequestAttributes converts internal
+// CrossClusterApplyParentClosePolicyRequestAttributes types to thrift
+func FromCrossClusterApplyParentClosePolicyRequestAttributes(
+	t *types.CrossClusterApplyParentClosePolicyRequestAttributes,
+) *shared.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterApplyParentClosePolicyRequestAttributes{
+		ApplyParentClosePolicyAttributes: FromApplyParentClosePolicyAttributesArray(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// ToCrossClusterApplyParentClosePolicyRequestAttributes converts thrift
+// CrossClusterApplyParentClosePolicyRequestAttributes types to internal
+func ToCrossClusterApplyParentClosePolicyRequestAttributes(
+	t *shared.CrossClusterApplyParentClosePolicyRequestAttributes,
+) *types.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterApplyParentClosePolicyRequestAttributes{
+		ApplyParentClosePolicyAttributes: ToApplyParentClosePolicyAttributesArray(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// FromCrossClusterApplyParentClosePolicyResponseAttributes converts internal
+// CrossClusterApplyParentClosePolicyResponseAttributes type to thrift
+func FromCrossClusterApplyParentClosePolicyResponseAttributes(
+	t *types.CrossClusterApplyParentClosePolicyResponseAttributes,
+) *shared.CrossClusterApplyParentClosePolicyResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+
+// ToCrossClusterApplyParentClosePolicyResponseAttributes converts thrift
+// CrossClusterApplyParentClosePolicyResponseAttributes type to internal
+func ToCrossClusterApplyParentClosePolicyResponseAttributes(
+	t *shared.CrossClusterApplyParentClosePolicyResponseAttributes,
+) *types.CrossClusterApplyParentClosePolicyResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+
+// FromCrossClusterTaskRequest converts internal CrossClusterTaskRequest type to thrift
+func FromCrossClusterTaskRequest(t *types.CrossClusterTaskRequest) *shared.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterTaskRequest{
+		TaskInfo:                                       FromCrossClusterTaskInfo(t.TaskInfo),
+		StartChildExecutionAttributes:                  FromCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
+		CancelExecutionAttributes:                      FromCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
+		SignalExecutionAttributes:                      FromCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               FromCrossClusterApplyParentClosePolicyRequestAttributes(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// ToCrossClusterTaskRequest converts thrift CrossClusterTaskRequest type to internal
+func ToCrossClusterTaskRequest(t *shared.CrossClusterTaskRequest) *types.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterTaskRequest{
+		TaskInfo:                                       ToCrossClusterTaskInfo(t.TaskInfo),
+		StartChildExecutionAttributes:                  ToCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
+		CancelExecutionAttributes:                      ToCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
+		SignalExecutionAttributes:                      ToCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               ToCrossClusterApplyParentClosePolicyRequestAttributes(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// FromCrossClusterTaskResponse converts internal CrossClusterTaskResponse type to thrift
+func FromCrossClusterTaskResponse(t *types.CrossClusterTaskResponse) *shared.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.CrossClusterTaskResponse{
+		TaskID:                        &t.TaskID,
+		TaskType:                      FromCrossClusterTaskType(t.TaskType),
+		TaskState:                     &t.TaskState,
+		FailedCause:                   FromCrossClusterTaskFailedCause(t.FailedCause),
+		StartChildExecutionAttributes: FromCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
+		CancelExecutionAttributes:     FromCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),
+		SignalExecutionAttributes:     FromCrossClusterSignalExecutionResponseAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               FromCrossClusterApplyParentClosePolicyResponseAttributes(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// ToCrossClusterTaskResponse converts thrift CrossClusterTaskResponse type to internal
+func ToCrossClusterTaskResponse(t *shared.CrossClusterTaskResponse) *types.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterTaskResponse{
+		TaskID:                        t.GetTaskID(),
+		TaskType:                      ToCrossClusterTaskType(t.TaskType),
+		TaskState:                     t.GetTaskState(),
+		FailedCause:                   ToCrossClusterTaskFailedCause(t.FailedCause),
+		StartChildExecutionAttributes: ToCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
+		CancelExecutionAttributes:     ToCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),
+		SignalExecutionAttributes:     ToCrossClusterSignalExecutionResponseAttributes(t.SignalExecutionAttributes),
+		RecordChildWorkflowExecutionCompleteAttributes: ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		ApplyParentClosePolicyAttributes:               ToCrossClusterApplyParentClosePolicyResponseAttributes(t.ApplyParentClosePolicyAttributes),
+	}
+}
+
+// FromGetCrossClusterTasksRequest converts internal GetCrossClusterTasksRequest type to thrift
+func FromGetCrossClusterTasksRequest(t *types.GetCrossClusterTasksRequest) *shared.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.GetCrossClusterTasksRequest{
+		ShardIDs:      t.ShardIDs,
+		TargetCluster: &t.TargetCluster,
+	}
+}
+
+// ToGetCrossClusterTasksRequest converts thrift GetCrossClusterTasksRequest type to internal
+func ToGetCrossClusterTasksRequest(t *shared.GetCrossClusterTasksRequest) *types.GetCrossClusterTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksRequest{
+		ShardIDs:      t.ShardIDs,
+		TargetCluster: t.GetTargetCluster(),
+	}
+}
+
+// FromCrossClusterTaskRequestArray converts internal CrossClusterTaskRequest type array to thrift
+func FromCrossClusterTaskRequestArray(t []*types.CrossClusterTaskRequest) []*shared.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.CrossClusterTaskRequest, len(t))
+	for i := range t {
+		v[i] = FromCrossClusterTaskRequest(t[i])
+	}
+	return v
+}
+
+// ToCrossClusterTaskRequestArray converts thrift CrossClusterTaskRequest type array to internal
+func ToCrossClusterTaskRequestArray(t []*shared.CrossClusterTaskRequest) []*types.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.CrossClusterTaskRequest, len(t))
+	for i := range t {
+		v[i] = ToCrossClusterTaskRequest(t[i])
+	}
+	return v
+}
+
+// FromCrossClusterTaskRequestMap converts internal CrossClusterTaskRequest type map to thrift
+func FromCrossClusterTaskRequestMap(t map[int32][]*types.CrossClusterTaskRequest) map[int32][]*shared.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32][]*shared.CrossClusterTaskRequest)
+	for key := range t {
+		v[key] = FromCrossClusterTaskRequestArray(t[key])
+	}
+	return v
+}
+
+// ToCrossClusterTaskRequestMap converts thrift CrossClusterTaskRequest type map to internal
+func ToCrossClusterTaskRequestMap(t map[int32][]*shared.CrossClusterTaskRequest) map[int32][]*types.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32][]*types.CrossClusterTaskRequest)
+	for key := range t {
+		v[key] = ToCrossClusterTaskRequestArray(t[key])
+	}
+	return v
+}
+
+// FromGetTaskFailedCauseMap converts internal GetTaskFailedCause type map to thrift
+func FromGetTaskFailedCauseMap(t map[int32]types.GetTaskFailedCause) map[int32]shared.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]shared.GetTaskFailedCause)
+	for key, value := range t {
+		v[key] = *FromGetTaskFailedCause(&value)
+	}
+	return v
+}
+
+// ToGetTaskFailedCauseMap converts thrift GetTaskFailedCause type map to internal
+func ToGetTaskFailedCauseMap(t map[int32]shared.GetTaskFailedCause) map[int32]types.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]types.GetTaskFailedCause)
+	for key, value := range t {
+		v[key] = *ToGetCrossClusterTaskFailedCause(&value)
+	}
+	return v
+}
+
+// FromGetCrossClusterTasksResponse converts internal GetCrossClusterTasksResponse type to thrift
+func FromGetCrossClusterTasksResponse(t *types.GetCrossClusterTasksResponse) *shared.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.GetCrossClusterTasksResponse{
+		TasksByShard:       FromCrossClusterTaskRequestMap(t.TasksByShard),
+		FailedCauseByShard: FromGetTaskFailedCauseMap(t.FailedCauseByShard),
+	}
+}
+
+// ToGetCrossClusterTasksResponse converts thrift GetCrossClusterTasksResponse type to internal
+func ToGetCrossClusterTasksResponse(t *shared.GetCrossClusterTasksResponse) *types.GetCrossClusterTasksResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetCrossClusterTasksResponse{
+		TasksByShard:       ToCrossClusterTaskRequestMap(t.TasksByShard),
+		FailedCauseByShard: ToGetTaskFailedCauseMap(t.FailedCauseByShard),
+	}
+}
+
+// FromCrossClusterTaskResponseArray converts internal CrossClusterTaskResponse type array to thrift
+func FromCrossClusterTaskResponseArray(t []*types.CrossClusterTaskResponse) []*shared.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.CrossClusterTaskResponse, len(t))
+	for i := range t {
+		v[i] = FromCrossClusterTaskResponse(t[i])
+	}
+	return v
+}
+
+// ToCrossClusterTaskResponseArray converts thrift CrossClusterTaskResponse type array to internal
+func ToCrossClusterTaskResponseArray(t []*shared.CrossClusterTaskResponse) []*types.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.CrossClusterTaskResponse, len(t))
+	for i := range t {
+		v[i] = ToCrossClusterTaskResponse(t[i])
+	}
+	return v
+}
+
+// FromRespondCrossClusterTasksCompletedRequest converts internal RespondCrossClusterTasksCompletedRequest type to thrift
+func FromRespondCrossClusterTasksCompletedRequest(t *types.RespondCrossClusterTasksCompletedRequest) *shared.RespondCrossClusterTasksCompletedRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.RespondCrossClusterTasksCompletedRequest{
+		ShardID:       &t.ShardID,
+		TargetCluster: &t.TargetCluster,
+		TaskResponses: FromCrossClusterTaskResponseArray(t.TaskResponses),
+		FetchNewTasks: &t.FetchNewTasks,
+	}
+}
+
+// ToRespondCrossClusterTasksCompletedRequest converts thrift RespondCrossClusterTasksCompletedRequest type to internal
+func ToRespondCrossClusterTasksCompletedRequest(t *shared.RespondCrossClusterTasksCompletedRequest) *types.RespondCrossClusterTasksCompletedRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RespondCrossClusterTasksCompletedRequest{
+		ShardID:       t.GetShardID(),
+		TargetCluster: t.GetTargetCluster(),
+		TaskResponses: ToCrossClusterTaskResponseArray(t.TaskResponses),
+		FetchNewTasks: t.GetFetchNewTasks(),
+	}
+}
+
+// FromRespondCrossClusterTasksCompletedResponse converts internal RespondCrossClusterTasksCompletedResponse type to thrift
+func FromRespondCrossClusterTasksCompletedResponse(t *types.RespondCrossClusterTasksCompletedResponse) *shared.RespondCrossClusterTasksCompletedResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.RespondCrossClusterTasksCompletedResponse{
+		Tasks: FromCrossClusterTaskRequestArray(t.Tasks),
+	}
+}
+
+// ToRespondCrossClusterTasksCompletedResponse converts thrift RespondCrossClusterTasksCompletedResponse type to internal
+func ToRespondCrossClusterTasksCompletedResponse(t *shared.RespondCrossClusterTasksCompletedResponse) *types.RespondCrossClusterTasksCompletedResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RespondCrossClusterTasksCompletedResponse{
+		Tasks: ToCrossClusterTaskRequestArray(t.Tasks),
+	}
 }

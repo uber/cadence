@@ -129,12 +129,8 @@ func (s *stateBuilderSuite) mockUpdateVersion(events ...*types.HistoryEvent) {
 	for _, event := range events {
 		s.mockMutableState.EXPECT().UpdateCurrentVersion(event.GetVersion(), true).Times(1)
 	}
-	s.mockTaskGenerator.EXPECT().GenerateActivityTimerTasks(
-		s.stateBuilder.unixNanoToTime(events[len(events)-1].GetTimestamp()),
-	).Return(nil).Times(1)
-	s.mockTaskGenerator.EXPECT().GenerateUserTimerTasks(
-		s.stateBuilder.unixNanoToTime(events[len(events)-1].GetTimestamp()),
-	).Return(nil).Times(1)
+	s.mockTaskGenerator.EXPECT().GenerateActivityTimerTasks().Return(nil).Times(1)
+	s.mockTaskGenerator.EXPECT().GenerateUserTimerTasks().Return(nil).Times(1)
 	s.mockMutableState.EXPECT().SetHistoryBuilder(NewHistoryBuilderFromEvents(events, s.logger)).Times(1)
 }
 
@@ -177,7 +173,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_No
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(executionInfo).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateRecordWorkflowStartedTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowStartTasks(
@@ -229,7 +224,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(executionInfo).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateRecordWorkflowStartedTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowStartTasks(
@@ -237,7 +231,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 		event,
 	).Return(nil).Times(1)
 	s.mockTaskGenerator.EXPECT().GenerateDelayedDecisionTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -269,7 +262,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
+		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -299,7 +292,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
+		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 	_, err := s.stateBuilder.ApplyEvents(constants.TestDomainID, requestID, workflowExecution, s.toHistory(event), nil)
@@ -328,7 +321,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
+		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -358,7 +351,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
+		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -388,7 +381,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
+		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -482,7 +475,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	s.mockUpdateVersion(continueAsNewEvent)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
+		continueAsNewEvent,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -490,7 +483,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	s.mockDomainCache.EXPECT().GetDomain(constants.TestParentDomainName).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
 	// task for the new workflow
 	s.mockTaskGeneratorForNew.EXPECT().GenerateRecordWorkflowStartedTasks(
-		s.stateBuilder.unixNanoToTime(newRunStartedEvent.GetTimestamp()),
 		newRunStartedEvent,
 	).Return(nil).Times(1)
 	s.mockTaskGeneratorForNew.EXPECT().GenerateWorkflowStartTasks(
@@ -498,15 +490,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		newRunStartedEvent,
 	).Return(nil).Times(1)
 	s.mockTaskGeneratorForNew.EXPECT().GenerateDecisionScheduleTasks(
-		s.stateBuilder.unixNanoToTime(newRunDecisionEvent.GetTimestamp()),
 		newRunDecisionEvent.GetEventID(),
 	).Return(nil).Times(1)
-	s.mockTaskGeneratorForNew.EXPECT().GenerateActivityTimerTasks(
-		s.stateBuilder.unixNanoToTime(newRunEvents[len(newRunEvents)-1].GetTimestamp()),
-	).Return(nil).Times(1)
-	s.mockTaskGeneratorForNew.EXPECT().GenerateUserTimerTasks(
-		s.stateBuilder.unixNanoToTime(newRunEvents[len(newRunEvents)-1].GetTimestamp()),
-	).Return(nil).Times(1)
+	s.mockTaskGeneratorForNew.EXPECT().GenerateActivityTimerTasks().Return(nil).Times(1)
+	s.mockTaskGeneratorForNew.EXPECT().GenerateUserTimerTasks().Return(nil).Times(1)
 
 	newRunStateBuilder, err := s.stateBuilder.ApplyEvents(constants.TestDomainID, requestID, workflowExecution, s.toHistory(continueAsNewEvent), newRunEvents)
 	s.Nil(err)
@@ -543,7 +530,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	s.mockUpdateVersion(continueAsNewEvent)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		s.stateBuilder.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
+		continueAsNewEvent,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -629,9 +616,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeUpsertWorkflowSearchAttribu
 	s.mockMutableState.EXPECT().ReplicateUpsertWorkflowSearchAttributesEvent(event).Return().Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
-	s.mockTaskGenerator.EXPECT().GenerateWorkflowSearchAttrTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
-	).Return(nil).Times(1)
+	s.mockTaskGenerator.EXPECT().GenerateWorkflowSearchAttrTasks().Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
 	_, err := s.stateBuilder.ApplyEvents(constants.TestDomainID, requestID, workflowExecution, s.toHistory(event), nil)
@@ -709,7 +694,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskScheduled() {
 	).Return(di, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockTaskGenerator.EXPECT().GenerateDecisionScheduleTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		di.ScheduleID,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -757,7 +741,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskStarted() {
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateDecisionStartTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		di.ScheduleID,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -804,7 +787,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskTimedOut() {
 	}, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockTaskGenerator.EXPECT().GenerateDecisionScheduleTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		newScheduleID,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -850,7 +832,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeDecisionTaskFailed() {
 	}, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockTaskGenerator.EXPECT().GenerateDecisionScheduleTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		newScheduleID,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -1071,7 +1052,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 	s.mockMutableState.EXPECT().ReplicateActivityTaskScheduledEvent(event.GetEventID(), event).Return(ai, nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockTaskGenerator.EXPECT().GenerateActivityTransferTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	// assertion on timer generated is in `mockUpdateVersion` function, since activity / user timer
@@ -1331,7 +1311,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 		InitiatedEventBatchID: event.GetEventID(),
 		StartedID:             common.EmptyEventID,
 		CreateRequestID:       createRequestID,
-		DomainName:            constants.TestTargetDomainName,
+		DomainID:              constants.TestTargetDomainID,
+		DomainNameDEPRECATED:  constants.TestTargetDomainName,
 	}
 
 	// the create request ID is generated inside, cannot assert equal
@@ -1341,7 +1322,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeStartChildWorkflowExecution
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateChildWorkflowTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -1559,7 +1539,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeRequestCancelExternalWorkfl
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateRequestCancelExternalTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
@@ -1700,7 +1679,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeSignalExternalWorkflowExecu
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	s.mockTaskGenerator.EXPECT().GenerateSignalExternalTasks(
-		s.stateBuilder.unixNanoToTime(event.GetTimestamp()),
 		event,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)

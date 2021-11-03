@@ -30,7 +30,7 @@ import (
 
 	"github.com/uber/cadence/bench"
 	"github.com/uber/cadence/bench/lib"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 const (

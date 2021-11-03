@@ -41,12 +41,8 @@ import (
 	"github.com/uber/cadence/.gen/go/replicator"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/cassandra"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -451,42 +447,20 @@ func decodeVisibility(message []byte, val *indexer.Message) error {
 // ClustersConfig describes the kafka clusters
 type ClustersConfig struct {
 	Clusters map[string]config.ClusterConfig
-	TLS      auth.TLS
+	TLS      config.TLS
 }
 
 func doRereplicate(
 	ctx context.Context,
-	shardID int,
 	domainID string,
 	wid string,
 	rid string,
-	endEventID int64,
-	endEventVersion int64,
+	endEventID *int64,
+	endEventVersion *int64,
 	sourceCluster string,
-	cqlClient gocql.Client,
-	session gocql.Session,
 	adminClient admin.Client,
 ) {
-
-	exeM, _ := cassandra.NewWorkflowExecutionPersistence(shardID, cqlClient, session, loggerimpl.NewNopLogger())
-	exeMgr := persistence.NewExecutionManagerImpl(exeM, loggerimpl.NewNopLogger())
-
-	fmt.Printf("Start rereplicate for wid: %v, rid:%v \n", wid, rid)
-	resp, err := exeMgr.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
-		DomainID: domainID,
-		Execution: types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
-		},
-	})
-	if err != nil {
-		ErrorAndExit("GetWorkflowExecution error", err)
-	}
-
-	versionHistories := resp.State.VersionHistories
-	if versionHistories == nil {
-		ErrorAndExit("The workflow is not a NDC workflow", nil)
-	}
+	fmt.Printf("Start rereplication for wid: %v, rid:%v \n", wid, rid)
 	if err := adminClient.ResendReplicationTasks(
 		ctx,
 		&types.ResendReplicationTasksRequest{
@@ -494,13 +468,13 @@ func doRereplicate(
 			WorkflowID:    wid,
 			RunID:         rid,
 			RemoteCluster: sourceCluster,
-			EndEventID:    common.Int64Ptr(endEventID + 1),
-			EndVersion:    common.Int64Ptr(endEventVersion),
+			EndEventID:    endEventID,
+			EndVersion:    endEventVersion,
 		},
 	); err != nil {
 		ErrorAndExit("Failed to resend ndc workflow", err)
 	}
-	fmt.Printf("Done rereplicate for wid: %v, rid:%v \n", wid, rid)
+	fmt.Printf("Done rereplication for wid: %v, rid:%v \n", wid, rid)
 }
 
 // AdminRereplicate parses will re-publish replication tasks to topic
@@ -511,22 +485,20 @@ func AdminRereplicate(c *cli.Context) {
 		return
 	}
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-	if !c.IsSet(FlagMaxEventID) {
-		ErrorAndExit("End event ID is not defined", nil)
-	}
-	if !c.IsSet(FlagEndEventVersion) {
-		ErrorAndExit("End event version is not defined", nil)
-	}
 
-	client, session := connectToCassandra(c)
 	adminClient := cFactory.ServerAdminClient(c)
-	endEventID := c.Int64(FlagMaxEventID)
-	endVersion := c.Int64(FlagEndEventVersion)
+	var endEventID, endVersion *int64
+	if c.IsSet(FlagMaxEventID) {
+		endEventID = common.Int64Ptr(c.Int64(FlagMaxEventID) + 1)
+	}
+	if c.IsSet(FlagEndEventVersion) {
+		endVersion = common.Int64Ptr(c.Int64(FlagEndEventVersion))
+	}
 	domainID := getRequiredOption(c, FlagDomainID)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := getRequiredOption(c, FlagRunID)
-	shardID := common.WorkflowIDToHistoryShard(wid, numberOfShards)
 	contextTimeout := defaultResendContextTimeout
+
 	if c.GlobalIsSet(FlagContextTimeout) {
 		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
@@ -535,15 +507,12 @@ func AdminRereplicate(c *cli.Context) {
 
 	doRereplicate(
 		ctx,
-		shardID,
 		domainID,
 		wid,
 		rid,
 		endEventID,
 		endVersion,
 		sourceCluster,
-		client,
-		session,
 		adminClient,
 	)
 }

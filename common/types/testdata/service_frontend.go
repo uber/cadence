@@ -69,7 +69,6 @@ var (
 		OwnerEmail:                             common.StringPtr(DomainOwnerEmail),
 		Data:                                   DomainData,
 		WorkflowExecutionRetentionPeriodInDays: common.Int32Ptr(DomainRetention),
-		EmitMetric:                             common.BoolPtr(DomainEmitMetric),
 		BadBinaries:                            &BadBinaries,
 		HistoryArchivalStatus:                  &ArchivalStatus,
 		HistoryArchivalURI:                     common.StringPtr(HistoryArchivalURI),
@@ -186,6 +185,7 @@ var (
 		ScheduledTimestamp:        &Timestamp1,
 		StartedTimestamp:          &Timestamp2,
 		Queries:                   WorkflowQueryMap,
+		NextEventID:               EventID3,
 	}
 	RespondDecisionTaskCompletedRequest = types.RespondDecisionTaskCompletedRequest{
 		TaskToken:                  TaskToken,

@@ -21,6 +21,8 @@
 package frontend
 
 import (
+	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -28,15 +30,10 @@ import (
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/common/persistence"
-	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	espersistence "github.com/uber/cadence/common/persistence/elasticsearch"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 // Config represents configuration for cadence-frontend service
@@ -56,12 +53,19 @@ type Config struct {
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxDomainRPSPerInstance         dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxIDLengthLimit                dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
-	MaxRawTaskListNameLimit         dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
+
+	// id length limits
+	MaxIDLengthWarnLimit  dynamicconfig.IntPropertyFn
+	DomainNameMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
+	IdentityMaxLength     dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowIDMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
+	SignalNameMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
+	WorkflowTypeMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
+	RequestIDMaxLength    dynamicconfig.IntPropertyFnWithDomainFilter
+	TaskListNameMaxLength dynamicconfig.IntPropertyFnWithDomainFilter
 
 	// Persistence settings
 	HistoryMgrNumConns dynamicconfig.IntPropertyFn
@@ -93,6 +97,14 @@ type Config struct {
 	VisibilityArchivalQueryMaxPageSize dynamicconfig.IntPropertyFn
 
 	SendRawWorkflowHistory dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// max number of decisions per RespondDecisionTaskCompleted request (unlimited by default)
+	DecisionResultCountLimit dynamicconfig.IntPropertyFnWithDomainFilter
+
+	//Debugging
+
+	// Emit signal related metrics with signal name tag. Be aware of cardinality.
+	EmitSignalNameMetricsTag dynamicconfig.BoolPropertyFnWithDomainFilter
 }
 
 // NewConfig returns new service config with default values
@@ -104,7 +116,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		VisibilityMaxPageSize:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:                    dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		EnableReadFromClosedExecutionV2:             dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
-		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, 10),
+		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS, defaultVisibilityListMaxQPS()),
 		ESVisibilityListMaxQPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS, 30),
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES, enableReadFromES),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
@@ -112,9 +124,14 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		RPS:                                         dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
 		MaxDomainRPSPerInstance:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainRPSPerInstance, 1200),
 		GlobalDomainRPS:                             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
-		MaxIDLengthLimit:                            dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxIDLengthLimit, 1000),
-		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, 128),
-		MaxRawTaskListNameLimit:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxRawTaskListNameLimit, 1000),
+		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, common.DefaultIDLengthWarnLimit),
+		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, common.DefaultIDLengthErrorLimit),
+		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength, common.DefaultIDLengthErrorLimit),
+		WorkflowIDMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDMaxLength, common.DefaultIDLengthErrorLimit),
+		SignalNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.SignalNameMaxLength, common.DefaultIDLengthErrorLimit),
+		WorkflowTypeMaxLength:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowTypeMaxLength, common.DefaultIDLengthErrorLimit),
+		RequestIDMaxLength:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIDMaxLength, common.DefaultIDLengthErrorLimit),
+		TaskListNameMaxLength:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskListNameMaxLength, common.DefaultIDLengthErrorLimit),
 		HistoryMgrNumConns:                          dc.GetIntProperty(dynamicconfig.FrontendHistoryMgrNumConns, 10),
 		EnableAdminProtection:                       dc.GetBoolProperty(dynamicconfig.EnableAdminProtection, false),
 		AdminOperationToken:                         dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
@@ -124,7 +141,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		ThrottledLogRPS:                             dc.GetIntProperty(dynamicconfig.FrontendThrottledLogRPS, 20),
 		ShutdownDrainDuration:                       dc.GetDurationProperty(dynamicconfig.FrontendShutdownDrainDuration, 0),
 		EnableDomainNotActiveAutoForwarding:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableDomainNotActiveAutoForwarding, true),
-		EnableGracefulFailover:                      dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, false),
+		EnableGracefulFailover:                      dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, true),
 		DomainFailoverRefreshInterval:               dc.GetDurationProperty(dynamicconfig.DomainFailoverRefreshInterval, 10*time.Second),
 		DomainFailoverRefreshTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.DomainFailoverRefreshTimerJitterCoefficient, 0.1),
 		EnableClientVersionCheck:                    dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck, false),
@@ -135,13 +152,27 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		VisibilityArchivalQueryMaxPageSize:          dc.GetIntProperty(dynamicconfig.VisibilityArchivalQueryMaxPageSize, 10000),
 		DisallowQuery:                               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.DisallowQuery, false),
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
+		DecisionResultCountLimit:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDecisionResultCountLimit, 0),
+		EmitSignalNameMetricsTag:                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.FrontendEmitSignalNameMetricsTag, false),
 		domainConfig: domain.Config{
-			MaxBadBinaryCount: dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
-			MinRetentionDays:  dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),
-			MaxRetentionDays:  dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
-			FailoverCoolDown:  dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
+			MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
+			MinRetentionDays:       dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),
+			MaxRetentionDays:       dc.GetIntProperty(dynamicconfig.MaxRetentionDays, domain.DefaultMaxWorkflowRetentionInDays),
+			FailoverCoolDown:       dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown, domain.FailoverCoolDown),
+			RequiredDomainDataKeys: dc.GetMapProperty(dynamicconfig.RequiredDomainDataKeys, nil),
 		},
 	}
+}
+
+// TODO remove this and return 10 always, after cadence-web improve the List requests with backoff retry
+// https://github.com/uber/cadence-web/issues/337
+func defaultVisibilityListMaxQPS() int {
+	cmd := strings.Join(os.Args, " ")
+	// NOTE: this is safe because only dev box should start cadence in a single box with 4 services, and only docker should use `--env docker`
+	if strings.Contains(cmd, "--root /etc/cadence --env docker start --services=history,matching,frontend,worker") {
+		return 10000
+	}
+	return 10
 }
 
 // Service represents the cadence-frontend service
@@ -150,15 +181,15 @@ type Service struct {
 
 	status       int32
 	handler      *WorkflowHandler
-	adminHandler *adminHandlerImpl
+	adminHandler AdminHandler
 	stopC        chan struct{}
 	config       *Config
-	params       *service.BootstrapParams
+	params       *resource.Params
 }
 
 // NewService builds a new cadence-frontend service
 func NewService(
-	params *service.BootstrapParams,
+	params *resource.Params,
 ) (resource.Resource, error) {
 
 	isAdvancedVisExistInConfig := len(params.PersistenceConfig.AdvancedVisibilityStore) != 0
@@ -172,47 +203,29 @@ func NewService(
 		isAdvancedVisExistInConfig,
 		false,
 	)
-
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
-	params.PersistenceConfig.VisibilityConfig = &config.VisibilityConfig{
-		VisibilityListMaxQPS:            serviceConfig.VisibilityListMaxQPS,
-		EnableSampling:                  serviceConfig.EnableVisibilitySampling,
-		EnableReadFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
-	}
-
-	visibilityManagerInitializer := func(
-		persistenceBean persistenceClient.Bean,
-		logger log.Logger,
-	) (persistence.VisibilityManager, error) {
-		visibilityFromDB := persistenceBean.GetVisibilityManager()
-
-		var visibilityFromES persistence.VisibilityManager
-		if params.ESConfig != nil {
-			visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
-			visibilityConfigForES := &config.VisibilityConfig{
-				MaxQPS:                 serviceConfig.PersistenceMaxQPS,
-				VisibilityListMaxQPS:   serviceConfig.ESVisibilityListMaxQPS,
-				ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
-				ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
-			}
-			visibilityFromES = espersistence.NewESVisibilityManager(visibilityIndexName, params.ESClient, visibilityConfigForES,
-				nil, params.MetricsClient, logger)
-		}
-		return persistence.NewVisibilityManagerWrapper(
-			visibilityFromDB,
-			visibilityFromES,
-			serviceConfig.EnableReadVisibilityFromES,
-			dynamicconfig.GetStringPropertyFn(common.AdvancedVisibilityWritingModeOff), // frontend visibility never write
-		), nil
-	}
 
 	serviceResource, err := resource.New(
 		params,
-		common.FrontendServiceName,
-		serviceConfig.PersistenceMaxQPS,
-		serviceConfig.PersistenceGlobalMaxQPS,
-		serviceConfig.ThrottledLogRPS,
-		visibilityManagerInitializer,
+		service.Frontend,
+		&service.Config{
+			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+
+			EnableReadVisibilityFromES:    serviceConfig.EnableReadVisibilityFromES,
+			AdvancedVisibilityWritingMode: nil, // frontend service never write
+
+			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
+			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
+			DBVisibilityListMaxQPS:                      serviceConfig.VisibilityListMaxQPS,
+			WriteDBVisibilityOpenMaxQPS:                 nil, // frontend service never write
+			WriteDBVisibilityClosedMaxQPS:               nil, // frontend service never write
+
+			ESVisibilityListMaxQPS: serviceConfig.ESVisibilityListMaxQPS,
+			ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
+			ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
+		},
 	)
 	if err != nil {
 		return nil, err
@@ -249,19 +262,27 @@ func (s *Service) Start() {
 
 	// Additional decorations
 	var handler Handler = s.handler
-	handler = NewDCRedirectionHandler(handler, s, s.config, s.params.DCRedirectionPolicy)
-	if s.params.Authorizer != nil {
-		handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer)
+	if s.params.ClusterRedirectionPolicy != nil {
+		handler = NewClusterRedirectionHandler(handler, s, s.config, *s.params.ClusterRedirectionPolicy)
 	}
+
+	handler = NewAccessControlledHandlerImpl(handler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	// Register the latest (most decorated) handler
 	thriftHandler := NewThriftHandler(handler)
 	thriftHandler.register(s.GetDispatcher())
 
+	grpcHandler := newGrpcHandler(handler)
+	grpcHandler.register(s.GetDispatcher())
+
 	s.adminHandler = NewAdminHandler(s, s.params, s.config)
+	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)
 	adminThriftHandler.register(s.GetDispatcher())
+
+	adminGRPCHandler := newAdminGRPCHandler(s.adminHandler)
+	adminGRPCHandler.register(s.GetDispatcher())
 
 	// must start resource first
 	s.Resource.Start()

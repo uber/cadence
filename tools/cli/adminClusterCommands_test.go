@@ -26,8 +26,8 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/bmizerany/assert"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/client/frontend"

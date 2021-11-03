@@ -1,0 +1,13 @@
+log:
+  stdout: true
+  level: info
+
+canary:
+  domains: ["cadence-canary"]
+  excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.history", "workflow.archival.visibility"]
+
+cadence:
+  service: "cadence-frontend"
+  address: "host.docker.internal:7833" # address is for gRPC
+  #host: "host.docker.internal:7933" # for using thrift, replace address with host
+

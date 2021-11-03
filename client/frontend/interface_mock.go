@@ -318,6 +318,26 @@ func (mr *MockClientMockRecorder) ListTaskListPartitions(arg0, arg1 interface{},
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskListPartitions", reflect.TypeOf((*MockClient)(nil).ListTaskListPartitions), varargs...)
 }
 
+// GetTaskListsByDomain mocks base method
+func (m *MockClient) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetTaskListsByDomainRequest, arg2 ...yarpc.CallOption) (*types.GetTaskListsByDomainResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetTaskListsByDomain", varargs...)
+	ret0, _ := ret[0].(*types.GetTaskListsByDomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskListsByDomain indicates an expected call of GetTaskListsByDomain
+func (mr *MockClientMockRecorder) GetTaskListsByDomain(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskListsByDomain", reflect.TypeOf((*MockClient)(nil).GetTaskListsByDomain), varargs...)
+}
+
 // ListWorkflowExecutions mocks base method
 func (m *MockClient) ListWorkflowExecutions(arg0 context.Context, arg1 *types.ListWorkflowExecutionsRequest, arg2 ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {
 	m.ctrl.T.Helper()

@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -42,7 +43,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 
 	"github.com/davecgh/go-spew/spew"
@@ -1794,18 +1794,20 @@ func (m *testTaskManager) CompleteTask(
 func (m *testTaskManager) CompleteTasksLessThan(
 	_ context.Context,
 	request *persistence.CompleteTasksLessThanRequest,
-) (int, error) {
+) (*persistence.CompleteTasksLessThanResponse, error) {
 	tlm := m.getTaskListManager(newTestTaskListID(request.DomainID, request.TaskListName, request.TaskType))
 	tlm.Lock()
 	defer tlm.Unlock()
+	rowsDeleted := 0
 	keys := tlm.tasks.Keys()
 	for _, key := range keys {
 		id := key.(int64)
 		if id <= request.TaskID {
 			tlm.tasks.Remove(id)
+			rowsDeleted++
 		}
 	}
-	return persistence.UnknownNumRowsAffected, nil
+	return &persistence.CompleteTasksLessThanResponse{TasksCompleted: rowsDeleted}, nil
 }
 
 // ListTaskList provides a mock function with given fields: ctx, request
@@ -1910,6 +1912,10 @@ func (m *testTaskManager) GetTasks(
 	return &persistence.GetTasksResponse{
 		Tasks: tasks,
 	}, nil
+}
+
+func (m *testTaskManager) GetOrphanTasks(_ context.Context, request *persistence.GetOrphanTasksRequest) (*persistence.GetOrphanTasksResponse, error) {
+	return &persistence.GetOrphanTasksResponse{}, nil
 }
 
 // getTaskCount returns number of tasks in a task list

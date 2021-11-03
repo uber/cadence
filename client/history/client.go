@@ -28,8 +28,11 @@ import (
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -40,27 +43,37 @@ const (
 	DefaultTimeout = time.Second * 30
 )
 
-type clientImpl struct {
-	numberOfShards  int
-	tokenSerializer common.TaskTokenSerializer
-	timeout         time.Duration
-	clients         common.ClientCache
-	logger          log.Logger
-}
+type (
+	clientImpl struct {
+		numberOfShards    int
+		rpcMaxSizeInBytes dynamicconfig.IntPropertyFn // This value currently only used in GetReplicationMessage API
+		tokenSerializer   common.TaskTokenSerializer
+		timeout           time.Duration
+		clients           common.ClientCache
+		logger            log.Logger
+	}
+
+	getReplicationMessagesWithSize struct {
+		response *types.GetReplicationMessagesResponse
+		size     int
+	}
+)
 
 // NewClient creates a new history service TChannel client
 func NewClient(
 	numberOfShards int,
+	rpcMaxSizeInBytes dynamicconfig.IntPropertyFn,
 	timeout time.Duration,
 	clients common.ClientCache,
 	logger log.Logger,
 ) Client {
 	return &clientImpl{
-		numberOfShards:  numberOfShards,
-		tokenSerializer: common.NewJSONTaskTokenSerializer(),
-		timeout:         timeout,
-		clients:         clients,
-		logger:          logger,
+		numberOfShards:    numberOfShards,
+		rpcMaxSizeInBytes: rpcMaxSizeInBytes,
+		tokenSerializer:   common.NewJSONTaskTokenSerializer(),
+		timeout:           timeout,
+		clients:           clients,
+		logger:            logger,
 	}
 }
 
@@ -823,15 +836,16 @@ func (c *clientImpl) GetReplicationMessages(
 
 	var wg sync.WaitGroup
 	wg.Add(len(requestsByClient))
-	respChan := make(chan *types.GetReplicationMessagesResponse, len(requestsByClient))
+	respChan := make(chan *getReplicationMessagesWithSize, len(requestsByClient))
 	errChan := make(chan error, 1)
-	for client, req := range requestsByClient {
-		go func(client Client, request *types.GetReplicationMessagesRequest) {
-			defer wg.Done()
 
-			ctx, cancel := c.createContext(ctx)
+	for client, req := range requestsByClient {
+		go func(ctx context.Context, client Client, request *types.GetReplicationMessagesRequest) {
+			defer wg.Done()
+			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
-			resp, err := client.GetReplicationMessages(ctx, request, opts...)
+			requestContext, responseInfo := rpc.ContextWithResponseInfo(requestContext)
+			resp, err := client.GetReplicationMessages(requestContext, request, opts...)
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
 				// Returns service busy error to notify replication
@@ -843,25 +857,37 @@ func (c *clientImpl) GetReplicationMessages(
 				}
 				return
 			}
-			respChan <- resp
-		}(client, req)
+			respChan <- &getReplicationMessagesWithSize{
+				response: resp,
+				size:     responseInfo.Size,
+			}
+		}(ctx, client, req)
 	}
 
 	wg.Wait()
 	close(respChan)
 	close(errChan)
 
+	if len(errChan) > 0 {
+		err := <-errChan
+		return nil, err
+	}
+
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
+	responseTotalSize := 0
+
 	for resp := range respChan {
-		for shardID, tasks := range resp.MessagesByShard {
+		// return partial response if the response size exceeded supported max size
+		responseTotalSize += resp.size
+		if responseTotalSize >= c.rpcMaxSizeInBytes() {
+			return response, nil
+		}
+
+		for shardID, tasks := range resp.response.GetMessagesByShard() {
 			response.MessagesByShard[shardID] = tasks
 		}
 	}
-	var err error
-	if len(errChan) > 0 {
-		err = <-errChan
-	}
-	return response, err
+	return response, nil
 }
 
 func (c *clientImpl) GetDLQReplicationMessages(
@@ -950,6 +976,9 @@ func (c *clientImpl) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) error {
 	client, err := c.getClientForWorkflowID(request.GetRequest().GetExecution().GetWorkflowID())
+	if err != nil {
+		return err
+	}
 	op := func(ctx context.Context, client Client) error {
 		ctx, cancel := c.createContext(ctx)
 		defer cancel()
@@ -1009,6 +1038,106 @@ func (c *clientImpl) NotifyFailoverMarkers(
 		}
 	}
 	return nil
+}
+
+func (c *clientImpl) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	requestByClient := make(map[Client]*types.GetCrossClusterTasksRequest)
+	for _, shardID := range request.GetShardIDs() {
+		client, err := c.getClientForShardID(int(shardID))
+		if err != nil {
+			return nil, err
+		}
+
+		if _, ok := requestByClient[client]; !ok {
+			requestByClient[client] = &types.GetCrossClusterTasksRequest{
+				TargetCluster: request.TargetCluster,
+			}
+		}
+		requestByClient[client].ShardIDs = append(requestByClient[client].ShardIDs, shardID)
+	}
+
+	// preserve 5% timeout to return partial of the result if context is timing out
+	ctx, cancel := common.CreateChildContext(ctx, 0.05)
+	defer cancel()
+
+	futureByClient := make(map[Client]future.Future, len(requestByClient))
+	for client, req := range requestByClient {
+		future, settable := future.NewFuture()
+		go func(ctx context.Context, client Client, req *types.GetCrossClusterTasksRequest) {
+			settable.Set(client.GetCrossClusterTasks(ctx, req))
+		}(ctx, client, req)
+
+		futureByClient[client] = future
+	}
+
+	response := &types.GetCrossClusterTasksResponse{
+		TasksByShard:       make(map[int32][]*types.CrossClusterTaskRequest),
+		FailedCauseByShard: make(map[int32]types.GetTaskFailedCause),
+	}
+	for client, future := range futureByClient {
+		var resp *types.GetCrossClusterTasksResponse
+		if futureErr := future.Get(ctx, &resp); futureErr != nil {
+			c.logger.Error("Failed to get cross cluster tasks", tag.Error(futureErr))
+			for _, failedShardID := range requestByClient[client].ShardIDs {
+				response.FailedCauseByShard[failedShardID] = common.ConvertErrToGetTaskFailedCause(futureErr)
+			}
+		} else {
+			for shardID, tasks := range resp.TasksByShard {
+				response.TasksByShard[shardID] = tasks
+			}
+			for shardID, failedCause := range resp.FailedCauseByShard {
+				response.FailedCauseByShard[shardID] = failedCause
+			}
+		}
+	}
+	// not using a waitGroup for created goroutines as once all futures are unblocked,
+	// those goroutines will eventually be completed
+
+	return response, nil
+}
+
+func (c *clientImpl) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	client, err := c.getClientForShardID(int(request.GetShardID()))
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+
+	var response *types.RespondCrossClusterTasksCompletedResponse
+	op := func(ctx context.Context, client Client) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+		return err
+	}
+
+	err = c.executeWithRedirect(ctx, client, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (c *clientImpl) GetFailoverInfo(
+	ctx context.Context,
+	request *types.GetFailoverInfoRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetFailoverInfoResponse, error) {
+	client, err := c.getClientForDomainID(request.GetDomainID())
+	if err != nil {
+		return nil, err
+	}
+	opts = common.AggregateYarpcOptions(ctx, opts...)
+	return client.GetFailoverInfo(ctx, request, opts...)
 }
 
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {

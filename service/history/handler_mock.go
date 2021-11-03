@@ -29,6 +29,7 @@ package history
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 
@@ -56,6 +57,44 @@ func NewMockHandler(ctrl *gomock.Controller) *MockHandler {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 	return m.recorder
+}
+
+// Start mocks base method
+func (m *MockHandler) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockHandlerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockHandler)(nil).Start))
+}
+
+// Stop mocks base method
+func (m *MockHandler) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockHandlerMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockHandler)(nil).Stop))
+}
+
+// PrepareToStop mocks base method
+func (m *MockHandler) PrepareToStop(arg0 time.Duration) time.Duration {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrepareToStop", arg0)
+	ret0, _ := ret[0].(time.Duration)
+	return ret0
+}
+
+// PrepareToStop indicates an expected call of PrepareToStop
+func (mr *MockHandlerMockRecorder) PrepareToStop(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareToStop", reflect.TypeOf((*MockHandler)(nil).PrepareToStop), arg0)
 }
 
 // Health mocks base method
@@ -145,6 +184,21 @@ func (m *MockHandler) DescribeWorkflowExecution(arg0 context.Context, arg1 *type
 func (mr *MockHandlerMockRecorder) DescribeWorkflowExecution(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeWorkflowExecution", reflect.TypeOf((*MockHandler)(nil).DescribeWorkflowExecution), arg0, arg1)
+}
+
+// GetCrossClusterTasks mocks base method
+func (m *MockHandler) GetCrossClusterTasks(arg0 context.Context, arg1 *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetCrossClusterTasksResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
+func (mr *MockHandlerMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockHandler)(nil).GetCrossClusterTasks), arg0, arg1)
 }
 
 // GetDLQReplicationMessages mocks base method
@@ -509,6 +563,21 @@ func (mr *MockHandlerMockRecorder) RespondActivityTaskFailed(arg0, arg1 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondActivityTaskFailed", reflect.TypeOf((*MockHandler)(nil).RespondActivityTaskFailed), arg0, arg1)
 }
 
+// RespondCrossClusterTasksCompleted mocks base method
+func (m *MockHandler) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", arg0, arg1)
+	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted
+func (mr *MockHandlerMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockHandler)(nil).RespondCrossClusterTasksCompleted), arg0, arg1)
+}
+
 // RespondDecisionTaskCompleted mocks base method
 func (m *MockHandler) RespondDecisionTaskCompleted(arg0 context.Context, arg1 *types.HistoryRespondDecisionTaskCompletedRequest) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
 	m.ctrl.T.Helper()
@@ -636,4 +705,19 @@ func (m *MockHandler) TerminateWorkflowExecution(arg0 context.Context, arg1 *typ
 func (mr *MockHandlerMockRecorder) TerminateWorkflowExecution(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateWorkflowExecution", reflect.TypeOf((*MockHandler)(nil).TerminateWorkflowExecution), arg0, arg1)
+}
+
+// GetFailoverInfo mocks base method
+func (m *MockHandler) GetFailoverInfo(arg0 context.Context, arg1 *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFailoverInfo", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetFailoverInfoResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFailoverInfo indicates an expected call of GetFailoverInfo
+func (mr *MockHandlerMockRecorder) GetFailoverInfo(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFailoverInfo", reflect.TypeOf((*MockHandler)(nil).GetFailoverInfo), arg0, arg1)
 }

@@ -45,18 +45,21 @@ const (
 
 // InsertIntoShards inserts one or more rows into shards table
 func (pdb *db) InsertIntoShards(ctx context.Context, row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(row.ShardID), pdb.GetTotalNumDBShards())
+	return pdb.driver.ExecContext(ctx, dbShardID, createShardQry, row.ShardID, row.RangeID, row.Data, row.DataEncoding)
 }
 
 // UpdateShards updates one or more rows into shards table
 func (pdb *db) UpdateShards(ctx context.Context, row *sqlplugin.ShardsRow) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(row.ShardID), pdb.GetTotalNumDBShards())
+	return pdb.driver.ExecContext(ctx, dbShardID, updateShardQry, row.RangeID, row.Data, row.DataEncoding, row.ShardID)
 }
 
 // SelectFromShards reads one or more rows from shards table
 func (pdb *db) SelectFromShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (*sqlplugin.ShardsRow, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
 	var row sqlplugin.ShardsRow
-	err := pdb.conn.GetContext(ctx, &row, getShardQry, filter.ShardID)
+	err := pdb.driver.GetContext(ctx, dbShardID, &row, getShardQry, filter.ShardID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,14 +68,16 @@ func (pdb *db) SelectFromShards(ctx context.Context, filter *sqlplugin.ShardsFil
 
 // ReadLockShards acquires a read lock on a single row in shards table
 func (pdb *db) ReadLockShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (int, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
 	var rangeID int
-	err := pdb.conn.GetContext(ctx, &rangeID, readLockShardQry, filter.ShardID)
+	err := pdb.driver.GetContext(ctx, dbShardID, &rangeID, readLockShardQry, filter.ShardID)
 	return rangeID, err
 }
 
 // WriteLockShards acquires a write lock on a single row in shards table
 func (pdb *db) WriteLockShards(ctx context.Context, filter *sqlplugin.ShardsFilter) (int, error) {
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
 	var rangeID int
-	err := pdb.conn.GetContext(ctx, &rangeID, lockShardQry, filter.ShardID)
+	err := pdb.driver.GetContext(ctx, dbShardID, &rangeID, lockShardQry, filter.ShardID)
 	return rangeID, err
 }

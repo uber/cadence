@@ -248,7 +248,7 @@ func (t *timerQueueProcessor) FailoverDomain(
 	}
 
 	maxReadLevel := time.Time{}
-	actionResult, err := t.HandleAction(t.currentClusterName, NewGetStateAction())
+	actionResult, err := t.HandleAction(context.Background(), t.currentClusterName, NewGetStateAction())
 	if err != nil {
 		t.logger.Error("Timer Failover Failed", tag.WorkflowDomainIDs(domainIDs), tag.Error(err))
 		if err == errProcessorShutdown {
@@ -294,16 +294,20 @@ func (t *timerQueueProcessor) FailoverDomain(
 	failoverQueueProcessor.Start()
 }
 
-func (t *timerQueueProcessor) HandleAction(clusterName string, action *Action) (*ActionResult, error) {
+func (t *timerQueueProcessor) HandleAction(
+	ctx context.Context,
+	clusterName string,
+	action *Action,
+) (*ActionResult, error) {
 	var resultNotificationCh chan actionResultNotification
 	var added bool
 	if clusterName == t.currentClusterName {
-		resultNotificationCh, added = t.activeQueueProcessor.addAction(action)
+		resultNotificationCh, added = t.activeQueueProcessor.addAction(ctx, action)
 	} else {
 		found := false
 		for standbyClusterName, standbyProcessor := range t.standbyQueueProcessors {
 			if clusterName == standbyClusterName {
-				resultNotificationCh, added = standbyProcessor.addAction(action)
+				resultNotificationCh, added = standbyProcessor.addAction(ctx, action)
 				found = true
 				break
 			}
@@ -315,6 +319,9 @@ func (t *timerQueueProcessor) HandleAction(clusterName string, action *Action) (
 	}
 
 	if !added {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
 		return nil, errProcessorShutdown
 	}
 
@@ -323,6 +330,8 @@ func (t *timerQueueProcessor) HandleAction(clusterName string, action *Action) (
 		return resultNotification.result, resultNotification.err
 	case <-t.shutdownChan:
 		return nil, errProcessorShutdown
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 
@@ -377,7 +386,7 @@ func (t *timerQueueProcessor) completeTimerLoop() {
 
 func (t *timerQueueProcessor) completeTimer() error {
 	newAckLevel := maximumTimerTaskKey
-	actionResult, err := t.HandleAction(t.currentClusterName, NewGetStateAction())
+	actionResult, err := t.HandleAction(context.Background(), t.currentClusterName, NewGetStateAction())
 	if err != nil {
 		return err
 	}
@@ -387,7 +396,7 @@ func (t *timerQueueProcessor) completeTimer() error {
 
 	if t.isGlobalDomainEnabled {
 		for standbyClusterName := range t.standbyQueueProcessors {
-			actionResult, err := t.HandleAction(standbyClusterName, NewGetStateAction())
+			actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
 			if err != nil {
 				return err
 			}
@@ -414,11 +423,19 @@ func (t *timerQueueProcessor) completeTimer() error {
 
 	t.metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.TaskBatchCompleteCounter)
 
-	if err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
-		InclusiveBeginTimestamp: t.ackLevel,
-		ExclusiveEndTimestamp:   newAckLevelTimestamp,
-	}); err != nil {
-		return err
+	for {
+		pageSize := t.config.TimerTaskDeleteBatchSize()
+		resp, err := t.shard.GetExecutionManager().RangeCompleteTimerTask(context.Background(), &persistence.RangeCompleteTimerTaskRequest{
+			InclusiveBeginTimestamp: t.ackLevel,
+			ExclusiveEndTimestamp:   newAckLevelTimestamp,
+			PageSize:                pageSize, // pageSize may or may not be honored
+		})
+		if err != nil {
+			return err
+		}
+		if !persistence.HasMoreRowsToDelete(resp.TasksCompleted, pageSize) {
+			break
+		}
 	}
 
 	t.ackLevel = newAckLevelTimestamp
@@ -545,7 +562,7 @@ func newTimerQueueStandbyProcessor(
 
 func newTimerQueueFailoverProcessor(
 	standbyClusterName string,
-	shard shard.Context,
+	shardContext shard.Context,
 	historyEngine engine.Engine,
 	taskProcessor task.Processor,
 	taskAllocator TaskAllocator,
@@ -554,11 +571,11 @@ func newTimerQueueFailoverProcessor(
 	minLevel, maxLevel time.Time,
 	domainIDs map[string]struct{},
 ) (updateClusterAckLevelFn, *timerQueueProcessorBase) {
-	config := shard.GetConfig()
+	config := shardContext.GetConfig()
 	options := newTimerQueueProcessorOptions(config, true, true)
 
-	currentClusterName := shard.GetService().GetClusterMetadata().GetCurrentClusterName()
-	failoverStartTime := shard.GetTimeSource().Now()
+	currentClusterName := shardContext.GetService().GetClusterMetadata().GetCurrentClusterName()
+	failoverStartTime := shardContext.GetTimeSource().Now()
 	failoverUUID := uuid.New()
 	logger = logger.WithTags(
 		tag.ClusterName(currentClusterName),
@@ -580,9 +597,9 @@ func newTimerQueueFailoverProcessor(
 	}
 
 	updateClusterAckLevel := func(ackLevel task.Key) error {
-		return shard.UpdateTimerFailoverLevel(
+		return shardContext.UpdateTimerFailoverLevel(
 			failoverUUID,
-			persistence.TimerFailoverLevel{
+			shard.TimerFailoverLevel{
 				StartTime:    failoverStartTime,
 				MinLevel:     minLevel,
 				CurrentLevel: ackLevel.(timerTaskKey).visibilityTimestamp,
@@ -593,7 +610,7 @@ func newTimerQueueFailoverProcessor(
 	}
 
 	queueShutdown := func() error {
-		return shard.DeleteTimerFailoverLevel(failoverUUID)
+		return shardContext.DeleteTimerFailoverLevel(failoverUUID)
 	}
 
 	processingQueueStates := []ProcessingQueueState{
@@ -607,10 +624,10 @@ func newTimerQueueFailoverProcessor(
 
 	return updateClusterAckLevel, newTimerQueueProcessorBase(
 		currentClusterName, // should use current cluster's time when doing domain failover
-		shard,
+		shardContext,
 		processingQueueStates,
 		taskProcessor,
-		NewLocalTimerGate(shard.GetTimeSource()),
+		NewLocalTimerGate(shardContext.GetTimeSource()),
 		options,
 		updateMaxReadLevel,
 		updateClusterAckLevel,
@@ -619,7 +636,7 @@ func newTimerQueueFailoverProcessor(
 		taskFilter,
 		taskExecutor,
 		logger,
-		shard.GetMetricsClient(),
+		shardContext.GetMetricsClient(),
 	)
 }
 

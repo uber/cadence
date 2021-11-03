@@ -21,6 +21,7 @@
 package task
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -28,9 +29,9 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -167,8 +168,12 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task, shutdownCh chan struc
 
 		return task.RetryErr(err)
 	}
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(p.options.RetryPolicy),
+		backoff.WithRetryableError(isRetryable),
+	)
 
-	if err := backoff.Retry(op, p.options.RetryPolicy, isRetryable); err != nil {
+	if err := throttleRetry.Do(context.Background(), op); err != nil {
 		// non-retryable error or exhausted all retries or worker shutdown
 		task.Nack()
 		return

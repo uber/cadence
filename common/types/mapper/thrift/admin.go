@@ -56,6 +56,7 @@ func FromDescribeClusterResponse(t *types.DescribeClusterResponse) *admin.Descri
 	return &admin.DescribeClusterResponse{
 		SupportedClientVersions: FromSupportedClientVersions(t.SupportedClientVersions),
 		MembershipInfo:          FromMembershipInfo(t.MembershipInfo),
+		PersistenceInfo:         FromPersistenceInfoMap(t.PersistenceInfo),
 	}
 }
 
@@ -67,6 +68,7 @@ func ToDescribeClusterResponse(t *admin.DescribeClusterResponse) *types.Describe
 	return &types.DescribeClusterResponse{
 		SupportedClientVersions: ToSupportedClientVersions(t.SupportedClientVersions),
 		MembershipInfo:          ToMembershipInfo(t.MembershipInfo),
+		PersistenceInfo:         ToPersistenceInfoMap(t.PersistenceInfo),
 	}
 }
 
@@ -220,6 +222,146 @@ func ToMembershipInfo(t *admin.MembershipInfo) *types.MembershipInfo {
 	}
 }
 
+// FromPersistenceInfoMap converts internal map[string]*types.PersistenceInfo type to thrift
+func FromPersistenceInfoMap(t map[string]*types.PersistenceInfo) map[string]*admin.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*admin.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = FromPersistenceInfo(t[key])
+	}
+	return v
+}
+
+// FromPersistenceInfo converts internal PersistenceInfo type to thrift
+func FromPersistenceInfo(t *types.PersistenceInfo) *admin.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	return &admin.PersistenceInfo{
+		Backend:  &t.Backend,
+		Settings: FromPersistenceSettings(t.Settings),
+		Features: FromPersistenceFeatures(t.Features),
+	}
+}
+
+// FromPersistenceSettings converts internal []*types.PersistenceSetting type to thrift
+func FromPersistenceSettings(t []*types.PersistenceSetting) []*admin.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = FromPersistenceSetting(t[i])
+	}
+	return v
+}
+
+// FromPersistenceSetting converts internal PersistenceSetting type to thrift
+func FromPersistenceSetting(t *types.PersistenceSetting) *admin.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &admin.PersistenceSetting{
+		Key:   &t.Key,
+		Value: &t.Value,
+	}
+}
+
+// FromPersistenceFeatures converts internal []*types.PersistenceFeature type to thrift
+func FromPersistenceFeatures(t []*types.PersistenceFeature) []*admin.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*admin.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = FromPersistenceFeature(t[i])
+	}
+	return v
+}
+
+// FromPersistenceFeature converts internal PersistenceFeature type to thrift
+func FromPersistenceFeature(t *types.PersistenceFeature) *admin.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &admin.PersistenceFeature{
+		Key:     &t.Key,
+		Enabled: &t.Enabled,
+	}
+}
+
+// ToPersistenceInfoMap converts thrift to internal map[string]*types.PersistenceInfo type
+func ToPersistenceInfoMap(t map[string]*admin.PersistenceInfo) map[string]*types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*types.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = ToPersistenceInfo(t[key])
+	}
+	return v
+}
+
+// ToPersistenceInfo converts thrift to internal PersistenceInfo type
+func ToPersistenceInfo(t *admin.PersistenceInfo) *types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceInfo{
+		Backend:  t.GetBackend(),
+		Settings: ToPersistenceSettings(t.Settings),
+		Features: ToPersistenceFeatures(t.Features),
+	}
+}
+
+// ToPersistenceSettings converts thrift to internal []*types.PersistenceSetting type
+func ToPersistenceSettings(t []*admin.PersistenceSetting) []*types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = ToPersistenceSetting(t[i])
+	}
+	return v
+}
+
+// ToPersistenceSetting converts from thrift to internal PersistenceSetting type
+func ToPersistenceSetting(t *admin.PersistenceSetting) *types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceSetting{
+		Key:   t.GetKey(),
+		Value: t.GetValue(),
+	}
+}
+
+// ToPersistenceFeatures converts from thrift to internal []*types.PersistenceFeature type
+func ToPersistenceFeatures(t []*admin.PersistenceFeature) []*types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = ToPersistenceFeature(t[i])
+	}
+	return v
+}
+
+// ToPersistenceFeature converts from thrift to internal PersistenceFeature type
+func ToPersistenceFeature(t *admin.PersistenceFeature) *types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceFeature{
+		Key:     t.GetKey(),
+		Enabled: t.GetEnabled(),
+	}
+}
+
 // FromResendReplicationTasksRequest converts internal ResendReplicationTasksRequest type to thrift
 func FromResendReplicationTasksRequest(t *types.ResendReplicationTasksRequest) *admin.ResendReplicationTasksRequest {
 	if t == nil {
@@ -324,4 +466,130 @@ func ToHostInfoArray(t []*admin.HostInfo) []*types.HostInfo {
 		v[i] = ToHostInfo(t[i])
 	}
 	return v
+}
+
+//FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to thrift
+func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *admin.GetDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToGetDynamicConfigRequest converts thrift GetDynamicConfigRequest type to internal
+func ToGetDynamicConfigRequest(t *admin.GetDynamicConfigRequest) *types.GetDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to thrift
+func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *admin.GetDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDynamicConfigResponse{
+		Value: FromDataBlob(t.Value),
+	}
+}
+
+//ToGetDynamicConfigResponse converts thrift GetDynamicConfigResponse type to internal
+func ToGetDynamicConfigResponse(t *admin.GetDynamicConfigResponse) *types.GetDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.GetDynamicConfigResponse{
+		Value: ToDataBlob(t.Value),
+	}
+}
+
+//FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to thrift
+func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *admin.UpdateDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.UpdateDynamicConfigRequest{
+		ConfigName:   &t.ConfigName,
+		ConfigValues: FromDynamicConfigValueArray(t.ConfigValues),
+	}
+}
+
+//ToUpdateDynamicConfigRequest converts thrift UpdateDynamicConfigRequest type to internal
+func ToUpdateDynamicConfigRequest(t *admin.UpdateDynamicConfigRequest) *types.UpdateDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateDynamicConfigRequest{
+		ConfigName:   t.GetConfigName(),
+		ConfigValues: ToDynamicConfigValueArray(t.ConfigValues),
+	}
+}
+
+//FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to thrift
+func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *admin.RestoreDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.RestoreDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+		Filters:    FromDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//ToRestoreDynamicConfigRequest converts thrift RestoreDynamicConfigRequest type to internal
+func ToRestoreDynamicConfigRequest(t *admin.RestoreDynamicConfigRequest) *types.RestoreDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestoreDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+		Filters:    ToDynamicConfigFilterArray(t.Filters),
+	}
+}
+
+//FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
+func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.ListDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.ListDynamicConfigResponse{
+		Entries: FromDynamicConfigEntryArray(t.Entries),
+	}
+}
+
+//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to thrift
+func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *admin.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.ListDynamicConfigRequest{
+		ConfigName: &t.ConfigName,
+	}
+}
+
+//ToListDynamicConfigRequest converts thrift ListDynamicConfigRequest type to internal
+func ToListDynamicConfigRequest(t *admin.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigRequest{
+		ConfigName: t.GetConfigName(),
+	}
+}
+
+//ToListDynamicConfigResponse converts thrift ListDynamicConfigResponse type to internal
+func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.ListDynamicConfigResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.ListDynamicConfigResponse{
+		Entries: ToDynamicConfigEntryArray(t.Entries),
+	}
 }

@@ -1,32 +1,23 @@
 - persistence:
     dbname: integration_active
-  clustermetadata:
+  clustergroupmetadata:
     enableGlobalDomain: true
-    replicationConsumer:
-      type: rpc
-      fetcher:
-        rpcParallelism: 1
-        aggregationIntervalSecs: 2
-        errorRetryWaitSecs: 1
-        timerJitterCoefficient: 0.15
-      processor:
-        noTaskInitialWaitIntervalSecs: 2
-        noTaskWaitBackoffCoefficient: 1
-        noTaskMaxWaitIntervalSecs: 2
     failoverVersionIncrement: 10
-    masterClusterName: "active"
+    primaryClusterName: "active"
     currentClusterName: "active"
-    clusterInformation:
+    clusterGroup:
       active:
         enabled: true
         initialFailoverVersion: 0
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:7104"
+        rpcAddress: "127.0.0.1:7114"
+        rpcTransport: "grpc"
       standby:
         enabled: true
         initialFailoverVersion: 1
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:8104"
+        rpcAddress: "127.0.0.1:8114"
+        rpcTransport: "grpc"
   enablearchival: false
   workerconfig:
     enablearchiver: false
@@ -62,33 +53,24 @@
       applications: { }
 - persistence:
     dbname: integration_standby
-  clustermetadata:
+  clustergroupmetadata:
     enableGlobalDomain: true
-    replicationConsumer:
-      type: rpc
-      fetcher:
-        rpcParallelism: 1
-        aggregationIntervalSecs: 2
-        errorRetryWaitSecs: 1
-        timerJitterCoefficient: 0.15
-      processor:
-        noTaskInitialWaitIntervalSecs: 2
-        noTaskWaitBackoffCoefficient: 1
-        noTaskMaxWaitIntervalSecs: 2
     failoverVersionIncrement: 10
-    masterClusterName: "active"
+    primaryClusterName: "active"
     currentClusterName: "standby"
-    clusterInformation:
+    clusterGroup:
       active:
         enabled: true
         initialFailoverVersion: 0
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:7104"
+        rpcAddress: "127.0.0.1:7114"
+        rpcTransport: "grpc"
       standby:
         enabled: true
         initialFailoverVersion: 1
         rpcName: "cadence-frontend"
-        rpcAddress: "127.0.0.1:8104"
+        rpcAddress: "127.0.0.1:8114"
+        rpcTransport: "grpc"
   enablearchival: false
   workerconfig:
     enablearchiver: false

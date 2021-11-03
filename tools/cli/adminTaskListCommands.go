@@ -70,6 +70,38 @@ func AdminDescribeTaskList(c *cli.Context) {
 	printPollerInfo(pollers, taskListType)
 }
 
+// AdminListTaskList displays all task lists under a domain.
+func AdminListTaskList(c *cli.Context) {
+	frontendClient := cFactory.ServerFrontendClient(c)
+	domain := getRequiredGlobalOption(c, FlagDomain)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	request := &types.GetTaskListsByDomainRequest{
+		Domain: domain,
+	}
+
+	response, err := frontendClient.GetTaskListsByDomain(ctx, request)
+	if err != nil {
+		ErrorAndExit("Operation GetTaskListByDomain failed.", err)
+	}
+
+	fmt.Println("Task Lists for domain " + domain + ":")
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetBorder(true)
+	table.SetColumnSeparator("|")
+	table.SetHeader([]string{"Task List Name", "Type", "Poller Count"})
+	table.SetHeaderLine(true)
+	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue, tableHeaderBlue)
+	for name, taskList := range response.GetDecisionTaskListMap() {
+		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
+	}
+	for name, taskList := range response.GetActivityTaskListMap() {
+		table.Append([]string{name, strconv.Itoa(len(taskList.GetPollers()))})
+	}
+	table.Render()
+}
+
 func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 	taskIDBlock := taskListStatus.GetTaskIDBlock()
 

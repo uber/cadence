@@ -90,7 +90,7 @@ func TestHistoryGetMutableStateRequest(t *testing.T) {
 	}
 }
 func TestHistoryGetMutableStateResponse(t *testing.T) {
-	for _, item := range []*types.GetMutableStateResponse{nil, {}, &testdata.HistoryGetMutableStateResponse} {
+	for _, item := range []*types.GetMutableStateResponse{nil, &testdata.HistoryGetMutableStateResponse} {
 		assert.Equal(t, item, ToHistoryGetMutableStateResponse(FromHistoryGetMutableStateResponse(item)))
 	}
 }
@@ -125,7 +125,7 @@ func TestHistoryPollMutableStateRequest(t *testing.T) {
 	}
 }
 func TestHistoryPollMutableStateResponse(t *testing.T) {
-	for _, item := range []*types.PollMutableStateResponse{nil, {}, &testdata.HistoryPollMutableStateResponse} {
+	for _, item := range []*types.PollMutableStateResponse{nil, &testdata.HistoryPollMutableStateResponse} {
 		assert.Equal(t, item, ToHistoryPollMutableStateResponse(FromHistoryPollMutableStateResponse(item)))
 	}
 }
@@ -315,5 +315,41 @@ func TestHistorySyncShardStatusRequest(t *testing.T) {
 func TestHistoryTerminateWorkflowExecutionRequest(t *testing.T) {
 	for _, item := range []*types.HistoryTerminateWorkflowExecutionRequest{nil, {}, &testdata.HistoryTerminateWorkflowExecutionRequest} {
 		assert.Equal(t, item, ToHistoryTerminateWorkflowExecutionRequest(FromHistoryTerminateWorkflowExecutionRequest(item)))
+	}
+}
+
+func TestHistoryGetCrossClusterTasksRequest(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksRequest{nil, {}, &testdata.HistoryGetCrossClusterTasksRequest} {
+		assert.Equal(t, item, ToHistoryGetCrossClusterTasksRequest(FromHistoryGetCrossClusterTasksRequest(item)))
+	}
+}
+
+func TestHistoryGetCrossClusterTasksResponse(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksResponse{nil, {}, &testdata.HistoryGetCrossClusterTasksResponse} {
+		assert.Equal(t, item, ToHistoryGetCrossClusterTasksResponse(FromHistoryGetCrossClusterTasksResponse(item)))
+	}
+}
+
+func TestHistoryRespondCrossClusterTasksCompletedRequest(t *testing.T) {
+	for _, item := range []*types.RespondCrossClusterTasksCompletedRequest{nil, {}, &testdata.HistoryRespondCrossClusterTasksCompletedRequest} {
+		assert.Equal(t, item, ToHistoryRespondCrossClusterTasksCompletedRequest(FromHistoryRespondCrossClusterTasksCompletedRequest(item)))
+	}
+}
+
+func TestHistoryRespondCrossClusterTasksCompletedResponse(t *testing.T) {
+	for _, item := range []*types.RespondCrossClusterTasksCompletedResponse{nil, {}, &testdata.HistoryRespondCrossClusterTasksCompletedResponse} {
+		assert.Equal(t, item, ToHistoryRespondCrossClusterTasksCompletedResponse(FromHistoryRespondCrossClusterTasksCompletedResponse(item)))
+	}
+}
+
+func TestHistoryGetTaskInfoRequest(t *testing.T) {
+	for _, item := range []*types.GetFailoverInfoRequest{nil, {}, &testdata.GetFailoverInfoRequest} {
+		assert.Equal(t, item, ToHistoryGetFailoverInfoRequest(FromHistoryGetFailoverInfoRequest(item)))
+	}
+}
+
+func TestHistoryGetTaskInfoResponse(t *testing.T) {
+	for _, item := range []*types.GetFailoverInfoResponse{nil, {}, &testdata.GetFailoverInfoResponse} {
+		assert.Equal(t, item, ToHistoryGetFailoverInfoResponse(FromHistoryGetFailoverInfoResponse(item)))
 	}
 }

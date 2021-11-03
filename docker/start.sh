@@ -13,6 +13,7 @@ export CASSANDRA_USER="${CASSANDRA_USER:-cassandra}"
 export CASSANDRA_PASSWORD="${CASSANDRA_PASSWORD:-cassandra}"
 export KEYSPACE="${KEYSPACE:-cadence}"
 export VISIBILITY_KEYSPACE="${VISIBILITY_KEYSPACE:-cadence_visibility}"
+export CASSANDRA_PROTO_VERSION="${CASSANDRA_PROTO_VERSION:-4}"
 
 # mysql env
 export DBNAME="${DBNAME:-cadence}"
@@ -84,7 +85,7 @@ setup_schema() {
 
 wait_for_cassandra() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
-    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.4 $server < /dev/null; do
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.4 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
         echo 'waiting for cassandra to start up'
         sleep 1
     done
@@ -93,7 +94,7 @@ wait_for_cassandra() {
 
 wait_for_scylla() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
-    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.3.1 $server < /dev/null; do
+    until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.3.1 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
         echo 'waiting for scylla to start up'
         sleep 1
     done

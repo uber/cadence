@@ -64,6 +64,11 @@ func (t thriftClient) DescribeWorkflowExecution(ctx context.Context, request *ty
 	return thrift.ToDescribeWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
+func (t thriftClient) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest, opts ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	response, err := t.c.GetCrossClusterTasks(ctx, thrift.FromGetCrossClusterTasksRequest(request), opts...)
+	return thrift.ToGetCrossClusterTasksResponse(response), thrift.ToError(err)
+}
+
 func (t thriftClient) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
 	response, err := t.c.GetDLQReplicationMessages(ctx, thrift.FromGetDLQReplicationMessagesRequest(request), opts...)
 	return thrift.ToGetDLQReplicationMessagesResponse(response), thrift.ToError(err)
@@ -189,6 +194,11 @@ func (t thriftClient) RespondActivityTaskFailed(ctx context.Context, request *ty
 	return thrift.ToError(err)
 }
 
+func (t thriftClient) RespondCrossClusterTasksCompleted(ctx context.Context, request *types.RespondCrossClusterTasksCompletedRequest, opts ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := t.c.RespondCrossClusterTasksCompleted(ctx, thrift.FromRespondCrossClusterTasksCompletedRequest(request), opts...)
+	return thrift.ToRespondCrossClusterTasksCompletedResponse(response), thrift.ToError(err)
+}
+
 func (t thriftClient) RespondDecisionTaskCompleted(ctx context.Context, request *types.HistoryRespondDecisionTaskCompletedRequest, opts ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
 	response, err := t.c.RespondDecisionTaskCompleted(ctx, thrift.FromHistoryRespondDecisionTaskCompletedRequest(request), opts...)
 	return thrift.ToHistoryRespondDecisionTaskCompletedResponse(response), thrift.ToError(err)
@@ -232,4 +242,9 @@ func (t thriftClient) SyncShardStatus(ctx context.Context, request *types.SyncSh
 func (t thriftClient) TerminateWorkflowExecution(ctx context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, opts ...yarpc.CallOption) error {
 	err := t.c.TerminateWorkflowExecution(ctx, thrift.FromHistoryTerminateWorkflowExecutionRequest(request), opts...)
 	return thrift.ToError(err)
+}
+
+func (t thriftClient) GetFailoverInfo(ctx context.Context, request *types.GetFailoverInfoRequest, opts ...yarpc.CallOption) (*types.GetFailoverInfoResponse, error) {
+	response, err := t.c.GetFailoverInfo(ctx, thrift.FromGetFailoverInfoRequest(request), opts...)
+	return thrift.ToGetFailoverInfoResponse(response), thrift.ToError(err)
 }

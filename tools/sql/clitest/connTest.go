@@ -21,13 +21,15 @@
 package clitest
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"strconv"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/common/schema/test"
 	"github.com/uber/cadence/tools/sql"
@@ -42,11 +44,6 @@ type (
 )
 
 var _ test.DB = (*sql.Connection)(nil)
-
-const (
-	testUser     = "uber"
-	testPassword = "uber"
-)
 
 // NewSQLConnTestSuite returns the test suite
 func NewSQLConnTestSuite(pluginName string) *SQLConnTestSuite {
@@ -64,7 +61,7 @@ func (s *SQLConnTestSuite) SetupTest() {
 func (s *SQLConnTestSuite) SetupSuite() {
 	conn, err := newTestConn("", s.pluginName)
 	if err != nil {
-		s.Log.Fatal("error creating sql conn, ", tag.Error(err))
+		log.Fatal(fmt.Sprintf("failed creating sql conn with error: %v", tag.Error(err)))
 	}
 	s.SetupSuiteBase(conn)
 }
@@ -88,8 +85,8 @@ func (s *SQLConnTestSuite) TestSQLConn() {
 			environment.GetMySQLAddress(),
 			strconv.Itoa(environment.GetMySQLPort()),
 		),
-		User:          testUser,
-		Password:      testPassword,
+		User:          environment.GetMySQLUser(),
+		Password:      environment.GetMySQLPassword(),
 		PluginName:    s.pluginName,
 		DatabaseName:  s.DBName,
 		EncodingType:  "thriftrw",
@@ -108,8 +105,8 @@ func newTestConn(database, pluginName string) (*sql.Connection, error) {
 			environment.GetMySQLAddress(),
 			strconv.Itoa(environment.GetMySQLPort()),
 		),
-		User:          testUser,
-		Password:      testPassword,
+		User:          environment.GetMySQLUser(),
+		Password:      environment.GetMySQLPassword(),
 		PluginName:    pluginName,
 		DatabaseName:  database,
 		EncodingType:  "thriftrw",

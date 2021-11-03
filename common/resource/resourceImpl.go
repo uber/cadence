@@ -43,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -52,7 +53,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 )
 
 type (
@@ -110,12 +110,9 @@ type (
 		clientBean        client.Bean
 
 		// persistence clients
-
 		persistenceBean persistenceClient.Bean
-		visibilityMgr   persistence.VisibilityManager
 
 		// loggers
-
 		logger          log.Logger
 		throttledLogger log.Logger
 
@@ -126,7 +123,7 @@ type (
 
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		membershipFactory      service.MembershipMonitorFactory
+		membershipFactory      MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
 )
@@ -135,16 +132,13 @@ var _ Resource = (*Impl)(nil)
 
 // New create a new resource containing common dependencies
 func New(
-	params *service.BootstrapParams,
+	params *Params,
 	serviceName string,
-	persistenceMaxQPS dynamicconfig.IntPropertyFn,
-	persistenceGlobalMaxQPS dynamicconfig.IntPropertyFn,
-	throttledLoggerMaxRPS dynamicconfig.IntPropertyFn,
-	visibilityManagerInitializer VisibilityManagerInitializer,
+	serviceConfig *service.Config,
 ) (impl *Impl, retError error) {
 
-	logger := params.Logger.WithTags(tag.Service(serviceName))
-	throttledLogger := loggerimpl.NewThrottledLogger(logger, throttledLoggerMaxRPS)
+	logger := params.Logger
+	throttledLogger := loggerimpl.NewThrottledLogger(logger, serviceConfig.ThrottledLoggerMaxRPS)
 
 	numShards := params.PersistenceConfig.NumHistoryShards
 	hostName, err := os.Hostname()
@@ -173,29 +167,29 @@ func New(
 			numShards,
 			logger,
 		),
-		params.DispatcherProvider,
+		params.RPCFactory.GetDispatcher(),
 		params.ClusterMetadata,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	frontendServiceResolver, err := membershipMonitor.GetResolver(common.FrontendServiceName)
+	frontendServiceResolver, err := membershipMonitor.GetResolver(service.Frontend)
 	if err != nil {
 		return nil, err
 	}
 
-	matchingServiceResolver, err := membershipMonitor.GetResolver(common.MatchingServiceName)
+	matchingServiceResolver, err := membershipMonitor.GetResolver(service.Matching)
 	if err != nil {
 		return nil, err
 	}
 
-	historyServiceResolver, err := membershipMonitor.GetResolver(common.HistoryServiceName)
+	historyServiceResolver, err := membershipMonitor.GetResolver(service.History)
 	if err != nil {
 		return nil, err
 	}
 
-	workerServiceResolver, err := membershipMonitor.GetResolver(common.WorkerServiceName)
+	workerServiceResolver, err := membershipMonitor.GetResolver(service.Worker)
 	if err != nil {
 		return nil, err
 	}
@@ -203,32 +197,31 @@ func New(
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
-			if persistenceGlobalMaxQPS() > 0 {
+			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
 				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
 				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(persistenceGlobalMaxQPS()/ringSize, 1)
-					return common.MinInt(avgQuota, persistenceMaxQPS())
+					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
 				}
 			}
-			return persistenceMaxQPS()
+			return serviceConfig.PersistenceMaxQPS()
 		},
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
-	))
-	if err != nil {
-		return nil, err
-	}
-	visibilityMgr, err := visibilityManagerInitializer(
-		persistenceBean,
-		logger,
-	)
+	), &persistenceClient.Params{
+		PersistenceConfig: params.PersistenceConfig,
+		MetricsClient:     params.MetricsClient,
+		MessagingClient:   params.MessagingClient,
+		ESClient:          params.ESClient,
+		ESConfig:          params.ESConfig,
+	}, serviceConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	domainCache := cache.NewDomainCache(
-		persistenceBean.GetMetadataManager(),
+		persistenceBean.GetDomainManager(),
 		params.ClusterMetadata,
 		params.MetricsClient,
 		logger,
@@ -331,9 +324,7 @@ func New(
 		clientBean:        clientBean,
 
 		// persistence clients
-
 		persistenceBean: persistenceBean,
-		visibilityMgr:   visibilityMgr,
 
 		// loggers
 
@@ -412,7 +403,6 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
-	h.visibilityMgr.Close()
 }
 
 // GetServiceName return service name
@@ -575,8 +565,8 @@ func (h *Impl) GetClientBean() client.Bean {
 // persistence clients
 
 // GetMetadataManager return metadata manager
-func (h *Impl) GetMetadataManager() persistence.MetadataManager {
-	return h.persistenceBean.GetMetadataManager()
+func (h *Impl) GetDomainManager() persistence.DomainManager {
+	return h.persistenceBean.GetDomainManager()
 }
 
 // GetTaskManager return task manager
@@ -586,7 +576,7 @@ func (h *Impl) GetTaskManager() persistence.TaskManager {
 
 // GetVisibilityManager return visibility manager
 func (h *Impl) GetVisibilityManager() persistence.VisibilityManager {
-	return h.visibilityMgr
+	return h.persistenceBean.GetVisibilityManager()
 }
 
 // GetShardManager return shard manager

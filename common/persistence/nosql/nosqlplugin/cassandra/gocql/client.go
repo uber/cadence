@@ -21,75 +21,42 @@
 package gocql
 
 import (
-	"context"
 	"crypto/tls"
 	"strings"
 
 	"github.com/gocql/gocql"
-)
 
-var _ Client = client{}
-
-type (
-	client struct{}
+	"github.com/uber/cadence/environment"
 )
 
 var (
-	defaultClient = client{}
+	registered Client
 )
 
-// NewClient creates a default gocql client based on the open source gocql library.
-func NewClient() Client {
-	return defaultClient
+// GetRegisteredClient gets a gocql client based registered object
+func GetRegisteredClient() Client {
+	if registered == nil {
+		panic("binary build error: gocql client is not registered yet!")
+	}
+	return registered
 }
 
-func (c client) CreateSession(
-	config ClusterConfig,
-) (Session, error) {
-	cluster := newCassandraCluster(config)
-	cluster.ProtoVersion = config.ProtoVersion
-	cluster.Consistency = mustConvertConsistency(config.Consistency)
-	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
-	cluster.Timeout = config.Timeout
-	gocqlSession, err := cluster.CreateSession()
-	if err != nil {
-		return nil, err
+// RegisterClient registers a client into this package, can only be called once
+func RegisterClient(c Client) {
+	if registered == nil {
+		registered = c
+	} else {
+		panic("binary build error: gocql client is already register!")
 	}
-	return &session{
-		Session: gocqlSession,
-	}, nil
-}
-
-func (c client) IsTimeoutError(err error) bool {
-	if err == context.DeadlineExceeded {
-		return true
-	}
-	if err == gocql.ErrTimeoutNoResponse {
-		return true
-	}
-	if err == gocql.ErrConnectionClosed {
-		return true
-	}
-	_, ok := err.(*gocql.RequestErrWriteTimeout)
-	return ok
-}
-
-func (c client) IsNotFoundError(err error) bool {
-	return err == gocql.ErrNotFound
-}
-
-func (c client) IsThrottlingError(err error) bool {
-	if req, ok := err.(gocql.RequestError); ok {
-		// gocql does not expose the constant errOverloaded = 0x1001
-		return req.Code() == 0x1001
-	}
-	return false
 }
 
 func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
 	hosts := parseHosts(cfg.Hosts)
 	cluster := gocql.NewCluster(hosts...)
-	cluster.ProtoVersion = 4
+	if cfg.ProtoVersion == 0 {
+		cfg.ProtoVersion = environment.CassandraDefaultProtoVersionInteger
+	}
+	cluster.ProtoVersion = cfg.ProtoVersion
 	if cfg.Port > 0 {
 		cluster.Port = cfg.Port
 	}

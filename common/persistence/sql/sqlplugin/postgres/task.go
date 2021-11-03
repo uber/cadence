@@ -46,9 +46,23 @@ name = :name AND
 task_type = :task_type
 `
 
+	// This query uses pagination that is best understood by analogy to simple numbers.
+	// Given a list of numbers
+	// 	111
+	//	112
+	//	121
+	//	211
+	// where the hundreds digit corresponds to domain_id, the tens digit
+	// corresponds to name, and the ones digit corresponds to task_type,
+	// Imagine recurring queries with a limit of 1.
+	// For the second query to skip the first result and return 112, it must allow equal values in hundreds & tens, but it's OK because the ones digit is higher.
+	// For the third query, the ones digit is now lower but that's irrelevant because the tens digit is greater.
+	// For the fourth query, the tens digit is now lower but that's again irrelevant because now the hundreds digit is higher.
+	// This technique is useful since the size of the table can easily change between calls, making SKIP an unreliable method, while other db-specific things like rowids are not portable
 	listTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
-		`WHERE shard_id = $1 AND domain_id > $2 AND name > $3 AND task_type > $4 ORDER BY domain_id,name,task_type LIMIT $5`
+		`WHERE shard_id = $1 AND ((domain_id = $2 AND name = $3 AND task_type > $4) OR (domain_id=$2 AND name > $3) OR (domain_id > $2)) ` +
+		`ORDER BY domain_id,name,task_type LIMIT $5`
 
 	getTaskListQry = `SELECT domain_id, range_id, name, task_type, data, data_encoding ` +
 		`FROM task_lists ` +
@@ -79,11 +93,20 @@ task_type = :task_type
 		`WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id IN (SELECT task_id FROM
 		 tasks WHERE domain_id = $1 AND task_list_name = $2 AND task_type = $3 AND task_id <= $4 ` +
 		`ORDER BY domain_id,task_list_name,task_type,task_id LIMIT $5 )`
+
+	getOrphanTaskQry = `SELECT task_id, domain_id, task_list_name, task_type FROM tasks AS t ` +
+		`WHERE NOT EXISTS ( ` +
+		`	SELECT domain_id, name, task_type FROM task_lists AS tl ` +
+		`	WHERE t.domain_id=tl.domain_id and t.task_list_name=tl.name and t.task_type=tl.task_type ` +
+		`) LIMIT $1;`
 )
 
 // InsertIntoTasks inserts one or more rows into tasks table
 func (pdb *db) InsertIntoTasks(ctx context.Context, rows []sqlplugin.TasksRow) (sql.Result, error) {
-	return pdb.conn.NamedExecContext(ctx, createTaskQry, rows)
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return pdb.driver.NamedExecContext(ctx, rows[0].ShardID, createTaskQry, rows)
 }
 
 // SelectFromTasks reads one or more rows from tasks table
@@ -92,10 +115,10 @@ func (pdb *db) SelectFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 	var rows []sqlplugin.TasksRow
 	switch {
 	case filter.MaxTaskID != nil:
-		err = pdb.conn.SelectContext(ctx, &rows, getTaskMinMaxQry, filter.DomainID,
+		err = pdb.driver.SelectContext(ctx, filter.ShardID, &rows, getTaskMinMaxQry, filter.DomainID,
 			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.MaxTaskID, *filter.PageSize)
 	default:
-		err = pdb.conn.SelectContext(ctx, &rows, getTaskMinQry, filter.DomainID,
+		err = pdb.driver.SelectContext(ctx, filter.ShardID, &rows, getTaskMinQry, filter.DomainID,
 			filter.TaskListName, filter.TaskType, *filter.MinTaskID, *filter.PageSize)
 	}
 	if err != nil {
@@ -110,20 +133,32 @@ func (pdb *db) DeleteFromTasks(ctx context.Context, filter *sqlplugin.TasksFilte
 		if filter.Limit == nil || *filter.Limit == 0 {
 			return nil, fmt.Errorf("missing limit parameter")
 		}
-		return pdb.conn.ExecContext(ctx, rangeDeleteTaskQry,
+		return pdb.driver.ExecContext(ctx, filter.ShardID, rangeDeleteTaskQry,
 			filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskIDLessThanEquals, *filter.Limit)
 	}
-	return pdb.conn.ExecContext(ctx, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+	return pdb.driver.ExecContext(ctx, filter.ShardID, deleteTaskQry, filter.DomainID, filter.TaskListName, filter.TaskType, *filter.TaskID)
+}
+
+func (pdb *db) GetOrphanTasks(ctx context.Context, filter *sqlplugin.OrphanTasksFilter) ([]sqlplugin.TaskKeyRow, error) {
+	if filter.Limit == nil || *filter.Limit == 0 {
+		return nil, fmt.Errorf("missing limit parameter")
+	}
+	var rows []sqlplugin.TaskKeyRow
+	err := pdb.driver.SelectContext(ctx, sqlplugin.DbAllShards, &rows, getOrphanTaskQry, *filter.Limit)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // InsertIntoTaskLists inserts one or more rows into task_lists table
 func (pdb *db) InsertIntoTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return pdb.conn.NamedExecContext(ctx, createTaskListQry, row)
+	return pdb.driver.NamedExecContext(ctx, row.ShardID, createTaskListQry, row)
 }
 
 // UpdateTaskLists updates a row in task_lists table
 func (pdb *db) UpdateTaskLists(ctx context.Context, row *sqlplugin.TaskListsRow) (sql.Result, error) {
-	return pdb.conn.NamedExecContext(ctx, updateTaskListQry, row)
+	return pdb.driver.NamedExecContext(ctx, row.ShardID, updateTaskListQry, row)
 }
 
 // SelectFromTaskLists reads one or more rows from task_lists table
@@ -141,7 +176,7 @@ func (pdb *db) SelectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskLi
 func (pdb *db) selectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	var err error
 	var row sqlplugin.TaskListsRow
-	err = pdb.conn.GetContext(ctx, &row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	err = pdb.driver.GetContext(ctx, filter.ShardID, &row, getTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +186,7 @@ func (pdb *db) selectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskLi
 func (pdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) ([]sqlplugin.TaskListsRow, error) {
 	var err error
 	var rows []sqlplugin.TaskListsRow
-	err = pdb.conn.SelectContext(ctx, &rows, listTaskListQry,
+	err = pdb.driver.SelectContext(ctx, filter.ShardID, &rows, listTaskListQry,
 		filter.ShardID, *filter.DomainIDGreaterThan, *filter.NameGreaterThan, *filter.TaskTypeGreaterThan, *filter.PageSize)
 	if err != nil {
 		return nil, err
@@ -164,13 +199,13 @@ func (pdb *db) rangeSelectFromTaskLists(ctx context.Context, filter *sqlplugin.T
 
 // DeleteFromTaskLists deletes a row from task_lists table
 func (pdb *db) DeleteFromTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) (sql.Result, error) {
-	return pdb.conn.ExecContext(ctx, deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
+	return pdb.driver.ExecContext(ctx, filter.ShardID, deleteTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType, *filter.RangeID)
 }
 
 // LockTaskLists locks a row in task_lists table
 func (pdb *db) LockTaskLists(ctx context.Context, filter *sqlplugin.TaskListsFilter) (int64, error) {
 	var rangeID int64
-	err := pdb.conn.GetContext(ctx, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
+	err := pdb.driver.GetContext(ctx, filter.ShardID, &rangeID, lockTaskListQry, filter.ShardID, *filter.DomainID, *filter.Name, *filter.TaskType)
 	return rangeID, err
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ import (
 	"github.com/uber/cadence/service/matching"
 )
 
-func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
+func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	id := "integration-heartbeat-test"
 	wt := "integration-heartbeat-test-type"
 	tl := "integration-heartbeat-test-tasklist"
@@ -163,7 +163,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Success() {
 	}
 }
 
-func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
+func (s *IntegrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	id := "integration-heartbeat-details-retry-test"
 	wt := "integration-heartbeat-details-retry-type"
 	tl := "integration-heartbeat-details-retry-tasklist"
@@ -337,7 +337,7 @@ func (s *integrationSuite) TestActivityHeartbeatDetailsDuringRetry() {
 	s.Equal(3, activityExecutedCount)
 }
 
-func (s *integrationSuite) TestActivityRetry() {
+func (s *IntegrationSuite) TestActivityRetry() {
 	id := "integration-activity-retry-test"
 	wt := "integration-activity-retry-type"
 	tl := "integration-activity-retry-tasklist"
@@ -552,7 +552,7 @@ func (s *integrationSuite) TestActivityRetry() {
 	s.True(activityExecutedCount == 2)
 }
 
-func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
+func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	id := "integration-heartbeat-timeout-test"
 	wt := "integration-heartbeat-timeout-test-type"
 	tl := "integration-heartbeat-timeout-test-tasklist"
@@ -655,7 +655,7 @@ func (s *integrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestActivityTimeouts() {
+func (s *IntegrationSuite) TestActivityTimeouts() {
 	id := "integration-activity-timeout-test"
 	wt := "integration-activity-timeout-test-type"
 	tl := "integration-activity-timeout-test-tasklist"
@@ -897,7 +897,7 @@ func (s *integrationSuite) TestActivityTimeouts() {
 	s.False(workflowFailed)
 }
 
-func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
+func (s *IntegrationSuite) TestActivityHeartbeatTimeouts() {
 	id := "integration-activity-heartbeat-timeout-test"
 	wt := "integration-activity-heartbeat-timeout-test-type"
 	tl := "integration-activity-heartbeat-timeout-test-tasklist"
@@ -1088,7 +1088,7 @@ func (s *integrationSuite) TestActivityHeartbeatTimeouts() {
 	}
 }
 
-func (s *integrationSuite) TestActivityCancellation() {
+func (s *IntegrationSuite) TestActivityCancellation() {
 	id := "integration-activity-cancellation-test"
 	wt := "integration-activity-cancellation-test-type"
 	tl := "integration-activity-cancellation-test-tasklist"
@@ -1215,7 +1215,7 @@ func (s *integrationSuite) TestActivityCancellation() {
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 }
 
-func (s *integrationSuite) TestActivityCancellationNotStarted() {
+func (s *IntegrationSuite) TestActivityCancellationNotStarted() {
 	id := "integration-activity-notstarted-cancellation-test"
 	wt := "integration-activity-notstarted-cancellation-test-type"
 	tl := "integration-activity-notstarted-cancellation-test-tasklist"

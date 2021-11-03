@@ -21,8 +21,6 @@
 package proto
 
 import (
-	"google.golang.org/protobuf/types/known/fieldmaskpb"
-
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -156,7 +154,7 @@ func FromActivityTaskScheduledEventAttributes(t *types.ActivityTaskScheduledEven
 	return &apiv1.ActivityTaskScheduledEventAttributes{
 		ActivityId:                   t.ActivityID,
 		ActivityType:                 FromActivityType(t.ActivityType),
-		Domain:                       t.Domain,
+		Domain:                       t.GetDomain(),
 		TaskList:                     FromTaskList(t.TaskList),
 		Input:                        FromPayload(t.Input),
 		ScheduleToCloseTimeout:       secondsToDuration(t.ScheduleToCloseTimeoutSeconds),
@@ -176,7 +174,7 @@ func ToActivityTaskScheduledEventAttributes(t *apiv1.ActivityTaskScheduledEventA
 	return &types.ActivityTaskScheduledEventAttributes{
 		ActivityID:                    t.ActivityId,
 		ActivityType:                  ToActivityType(t.ActivityType),
-		Domain:                        t.Domain,
+		Domain:                        &t.Domain,
 		TaskList:                      ToTaskList(t.TaskList),
 		Input:                         ToPayload(t.Input),
 		ScheduleToCloseTimeoutSeconds: durationToSeconds(t.ScheduleToCloseTimeout),
@@ -1081,6 +1079,9 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 		domain.ActiveClusterName = repl.ActiveClusterName
 		domain.Clusters = FromClusterReplicationConfigurationArray(repl.Clusters)
 	}
+	if info := t.GetFailoverInfo(); info != nil {
+		domain.FailoverInfo = FromFailoverInfo(t.GetFailoverInfo())
+	}
 	return &domain
 }
 
@@ -1121,6 +1122,7 @@ func ToDescribeDomainResponseDomain(t *apiv1.Domain) *types.DescribeDomainRespon
 		},
 		FailoverVersion: t.FailoverVersion,
 		IsGlobalDomain:  t.IsGlobalDomain,
+		FailoverInfo:    ToFailoverInfo(t.FailoverInfo),
 	}
 }
 
@@ -1128,7 +1130,34 @@ func ToDescribeDomainResponse(t *apiv1.DescribeDomainResponse) *types.DescribeDo
 	if t == nil {
 		return nil
 	}
-	return ToDescribeDomainResponseDomain(t.Domain)
+	response := ToDescribeDomainResponseDomain(t.Domain)
+	return response
+}
+
+func FromFailoverInfo(t *types.FailoverInfo) *apiv1.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  unixNanoToTime(&t.FailoverStartTimestamp),
+		FailoverExpireTimestamp: unixNanoToTime(&t.FailoverExpireTimestamp),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
+	}
+}
+
+func ToFailoverInfo(t *apiv1.FailoverInfo) *types.FailoverInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.FailoverInfo{
+		FailoverVersion:         t.GetFailoverVersion(),
+		FailoverStartTimestamp:  *timeToUnixNano(t.GetFailoverStartTimestamp()),
+		FailoverExpireTimestamp: *timeToUnixNano(t.GetFailoverExpireTimestamp()),
+		CompletedShardCount:     t.GetCompletedShardCount(),
+		PendingShards:           t.GetPendingShards(),
+	}
 }
 
 func FromDescribeTaskListRequest(t *types.DescribeTaskListRequest) *apiv1.DescribeTaskListRequest {
@@ -1715,6 +1744,68 @@ func ToListTaskListPartitionsResponse(t *apiv1.ListTaskListPartitionsResponse) *
 	}
 }
 
+func FromGetTaskListsByDomainRequest(t *types.GetTaskListsByDomainRequest) *apiv1.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.GetTaskListsByDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func ToGetTaskListsByDomainRequest(t *apiv1.GetTaskListsByDomainRequest) *types.GetTaskListsByDomainRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.GetTaskListsByDomainRequest{
+		Domain: t.Domain,
+	}
+}
+
+func FromGetTaskListsByDomainResponse(t *types.GetTaskListsByDomainResponse) *apiv1.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+
+	return &apiv1.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: FromDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: FromDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+func ToGetTaskListsByDomainResponse(t *apiv1.GetTaskListsByDomainResponse) *types.GetTaskListsByDomainResponse {
+	if t == nil {
+		return nil
+	}
+
+	return &types.GetTaskListsByDomainResponse{
+		DecisionTaskListMap: ToDescribeTaskListResponseMap(t.GetDecisionTaskListMap()),
+		ActivityTaskListMap: ToDescribeTaskListResponseMap(t.GetActivityTaskListMap()),
+	}
+}
+
+func FromDescribeTaskListResponseMap(t map[string]*types.DescribeTaskListResponse) map[string]*apiv1.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*apiv1.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = FromDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
+func ToDescribeTaskListResponseMap(t map[string]*apiv1.DescribeTaskListResponse) map[string]*types.DescribeTaskListResponse {
+	if t == nil {
+		return nil
+	}
+	taskListMap := make(map[string]*types.DescribeTaskListResponse, len(t))
+	for key, value := range t {
+		taskListMap[key] = ToDescribeTaskListResponse(value)
+	}
+	return taskListMap
+}
+
 func FromListWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *apiv1.ListWorkflowExecutionsRequest {
 	if t == nil {
 		return nil
@@ -2091,6 +2182,7 @@ func FromPollForDecisionTaskResponse(t *types.PollForDecisionTaskResponse) *apiv
 		ScheduledTime:             unixNanoToTime(t.ScheduledTimestamp),
 		StartedTime:               unixNanoToTime(t.StartedTimestamp),
 		Queries:                   FromWorkflowQueryMap(t.Queries),
+		NextEventId:               t.NextEventID,
 	}
 }
 
@@ -2113,6 +2205,7 @@ func ToPollForDecisionTaskResponse(t *apiv1.PollForDecisionTaskResponse) *types.
 		ScheduledTimestamp:        timeToUnixNano(t.ScheduledTime),
 		StartedTimestamp:          timeToUnixNano(t.StartedTime),
 		Queries:                   ToWorkflowQueryMap(t.Queries),
+		NextEventID:               t.NextEventId,
 	}
 }
 
@@ -3222,6 +3315,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 			Memo:                         FromMemo(t.Memo),
 			SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 			Header:                       FromHeader(t.Header),
+			DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 		},
 		SignalName:  t.SignalName,
 		SignalInput: FromPayload(t.SignalInput),
@@ -3252,6 +3346,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *apiv1.SignalWithStartWorkflowE
 		Memo:                                ToMemo(t.StartRequest.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.StartRequest.SearchAttributes),
 		Header:                              ToHeader(t.StartRequest.Header),
+		DelayStartSeconds:                   durationToSeconds(t.StartRequest.DelayStart),
 	}
 }
 
@@ -3400,6 +3495,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		Header:                       FromHeader(t.Header),
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
+		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 	}
 }
 
@@ -3424,6 +3520,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *apiv1.StartChildWo
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
 	}
 }
 
@@ -3487,6 +3584,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		Header:                       FromHeader(t.Header),
+		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
 	}
 }
 
@@ -3510,6 +3608,7 @@ func ToStartWorkflowExecutionRequest(t *apiv1.StartWorkflowExecutionRequest) *ty
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
+		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
 	}
 }
 
@@ -3971,11 +4070,7 @@ func FromUpdateDomainRequest(t *types.UpdateDomainRequest) *apiv1.UpdateDomainRe
 		fields = append(fields, DomainUpdateFailoverTimeoutField)
 	}
 
-	var err error
-	request.UpdateMask, err = fieldmaskpb.New(request.ProtoReflect().Interface(), fields...)
-	if err != nil {
-		panic(err)
-	}
+	request.UpdateMask = newFieldMask(fields)
 
 	return &request
 }
@@ -3987,7 +4082,6 @@ func ToUpdateDomainRequest(t *apiv1.UpdateDomainRequest) *types.UpdateDomainRequ
 	request := types.UpdateDomainRequest{
 		Name:          t.Name,
 		SecurityToken: t.SecurityToken,
-		EmitMetric:    common.BoolPtr(true), // DEPRECATED - defaults to true
 	}
 	fs := newFieldSet(t.UpdateMask)
 
@@ -4464,12 +4558,22 @@ func FromParentExecutionInfoFields(domainID, domainName *string, we *types.Workf
 	if domainID == nil && domainName == nil && we == nil && initiatedID == nil {
 		return nil
 	}
-	if domainID == nil || domainName == nil || we == nil || initiatedID == nil {
+	if domainName == nil || we == nil || initiatedID == nil {
 		panic("either all or none parent execution info must be set")
 	}
 
+	// Domain ID was added to unify parent execution info in several places.
+	// However it may not be present:
+	// - on older histories
+	// - if conversion involves thrift data types
+	// Fallback to empty string in those cases
+	parentDomainID := ""
+	if domainID != nil {
+		parentDomainID = *domainID
+	}
+
 	return &apiv1.ParentExecutionInfo{
-		DomainId:          *domainID,
+		DomainId:          parentDomainID,
 		DomainName:        *domainName,
 		WorkflowExecution: FromWorkflowExecution(we),
 		InitiatedId:       *initiatedID,
@@ -5148,6 +5252,13 @@ func FromPayload(data []byte) *apiv1.Payload {
 func ToPayload(p *apiv1.Payload) []byte {
 	if p == nil {
 		return nil
+	}
+	if p.Data == nil {
+		// FromPayload will not generate this case
+		// however, Data field will be dropped by the encoding if it's empty
+		// and receiver side will see nil for the Data field
+		// since we already know p is not nil, Data field must be an empty byte array
+		return []byte{}
 	}
 	return p.Data
 }

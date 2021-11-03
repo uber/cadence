@@ -81,28 +81,28 @@ var (
 
 type (
 	mutableStateBuilder struct {
-		pendingActivityInfoIDs     map[int64]*persistence.ActivityInfo    // Schedule Event ID -> Activity Info.
-		pendingActivityIDToEventID map[string]int64                       // Activity ID -> Schedule Event ID of the activity.
-		updateActivityInfos        map[*persistence.ActivityInfo]struct{} // Modified activities from last update.
-		deleteActivityInfos        map[int64]struct{}                     // Deleted activities from last update.
-		syncActivityTasks          map[int64]struct{}                     // Activity to be sync to remote
+		pendingActivityInfoIDs     map[int64]*persistence.ActivityInfo // Schedule Event ID -> Activity Info.
+		pendingActivityIDToEventID map[string]int64                    // Activity ID -> Schedule Event ID of the activity.
+		updateActivityInfos        map[int64]*persistence.ActivityInfo // Modified activities from last update.
+		deleteActivityInfos        map[int64]struct{}                  // Deleted activities from last update.
+		syncActivityTasks          map[int64]struct{}                  // Activity to be sync to remote
 
-		pendingTimerInfoIDs     map[string]*persistence.TimerInfo   // User Timer ID -> Timer Info.
-		pendingTimerEventIDToID map[int64]string                    // User Timer Start Event ID -> User Timer ID.
-		updateTimerInfos        map[*persistence.TimerInfo]struct{} // Modified timers from last update.
-		deleteTimerInfos        map[string]struct{}                 // Deleted timers from last update.
+		pendingTimerInfoIDs     map[string]*persistence.TimerInfo // User Timer ID -> Timer Info.
+		pendingTimerEventIDToID map[int64]string                  // User Timer Start Event ID -> User Timer ID.
+		updateTimerInfos        map[string]*persistence.TimerInfo // Modified timers from last update.
+		deleteTimerInfos        map[string]struct{}               // Deleted timers from last update.
 
-		pendingChildExecutionInfoIDs map[int64]*persistence.ChildExecutionInfo    // Initiated Event ID -> Child Execution Info
-		updateChildExecutionInfos    map[*persistence.ChildExecutionInfo]struct{} // Modified ChildExecution Infos since last update
-		deleteChildExecutionInfos    map[int64]struct{}                           // Deleted ChildExecution Infos since last update
+		pendingChildExecutionInfoIDs map[int64]*persistence.ChildExecutionInfo // Initiated Event ID -> Child Execution Info
+		updateChildExecutionInfos    map[int64]*persistence.ChildExecutionInfo // Modified ChildExecution Infos since last update
+		deleteChildExecutionInfos    map[int64]struct{}                        // Deleted ChildExecution Infos since last update
 
-		pendingRequestCancelInfoIDs map[int64]*persistence.RequestCancelInfo    // Initiated Event ID -> RequestCancelInfo
-		updateRequestCancelInfos    map[*persistence.RequestCancelInfo]struct{} // Modified RequestCancel Infos since last update, for persistence update
-		deleteRequestCancelInfos    map[int64]struct{}                          // Deleted RequestCancel Infos since last update, for persistence update
+		pendingRequestCancelInfoIDs map[int64]*persistence.RequestCancelInfo // Initiated Event ID -> RequestCancelInfo
+		updateRequestCancelInfos    map[int64]*persistence.RequestCancelInfo // Modified RequestCancel Infos since last update, for persistence update
+		deleteRequestCancelInfos    map[int64]struct{}                       // Deleted RequestCancel Infos since last update, for persistence update
 
-		pendingSignalInfoIDs map[int64]*persistence.SignalInfo    // Initiated Event ID -> SignalInfo
-		updateSignalInfos    map[*persistence.SignalInfo]struct{} // Modified SignalInfo since last update
-		deleteSignalInfos    map[int64]struct{}                   // Deleted SignalInfos since last update
+		pendingSignalInfoIDs map[int64]*persistence.SignalInfo // Initiated Event ID -> SignalInfo
+		updateSignalInfos    map[int64]*persistence.SignalInfo // Modified SignalInfo since last update
+		deleteSignalInfos    map[int64]struct{}                // Deleted SignalInfos since last update
 
 		pendingSignalRequestedIDs map[string]struct{} // Set of signaled requestIds
 		updateSignalRequestedIDs  map[string]struct{} // Set of signaled requestIds since last update
@@ -135,9 +135,10 @@ type (
 		// TODO: persist this to db
 		appliedEvents map[string]struct{}
 
-		insertTransferTasks    []persistence.Task
-		insertReplicationTasks []persistence.Task
-		insertTimerTasks       []persistence.Task
+		insertTransferTasks     []persistence.Task
+		insertCrossClusterTasks []persistence.Task
+		insertReplicationTasks  []persistence.Task
+		insertTimerTasks        []persistence.Task
 
 		// do not rely on this, this is only updated on
 		// Load() and closeTransactionXXX methods. So when
@@ -176,7 +177,7 @@ func newMutableStateBuilder(
 	domainEntry *cache.DomainCacheEntry,
 ) *mutableStateBuilder {
 	s := &mutableStateBuilder{
-		updateActivityInfos:        make(map[*persistence.ActivityInfo]struct{}),
+		updateActivityInfos:        make(map[int64]*persistence.ActivityInfo),
 		pendingActivityInfoIDs:     make(map[int64]*persistence.ActivityInfo),
 		pendingActivityIDToEventID: make(map[string]int64),
 		deleteActivityInfos:        make(map[int64]struct{}),
@@ -184,18 +185,18 @@ func newMutableStateBuilder(
 
 		pendingTimerInfoIDs:     make(map[string]*persistence.TimerInfo),
 		pendingTimerEventIDToID: make(map[int64]string),
-		updateTimerInfos:        make(map[*persistence.TimerInfo]struct{}),
+		updateTimerInfos:        make(map[string]*persistence.TimerInfo),
 		deleteTimerInfos:        make(map[string]struct{}),
 
-		updateChildExecutionInfos:    make(map[*persistence.ChildExecutionInfo]struct{}),
+		updateChildExecutionInfos:    make(map[int64]*persistence.ChildExecutionInfo),
 		pendingChildExecutionInfoIDs: make(map[int64]*persistence.ChildExecutionInfo),
 		deleteChildExecutionInfos:    make(map[int64]struct{}),
 
-		updateRequestCancelInfos:    make(map[*persistence.RequestCancelInfo]struct{}),
+		updateRequestCancelInfos:    make(map[int64]*persistence.RequestCancelInfo),
 		pendingRequestCancelInfoIDs: make(map[int64]*persistence.RequestCancelInfo),
 		deleteRequestCancelInfos:    make(map[int64]struct{}),
 
-		updateSignalInfos:    make(map[*persistence.SignalInfo]struct{}),
+		updateSignalInfos:    make(map[int64]*persistence.SignalInfo),
 		pendingSignalInfoIDs: make(map[int64]*persistence.SignalInfo),
 		deleteSignalInfos:    make(map[int64]struct{}),
 
@@ -233,7 +234,8 @@ func newMutableStateBuilder(
 		LastProcessedEvent: common.EmptyEventID,
 	}
 	s.hBuilder = NewHistoryBuilder(s, logger)
-	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetDomainCache(), s.logger, s)
+
+	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s.logger, s)
 	s.decisionTaskManager = newMutableStateDecisionTaskManager(s)
 
 	return s
@@ -496,7 +498,12 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 ) error {
 
 	if state, _ := e.GetWorkflowStateCloseStatus(); state == persistence.WorkflowStateCompleted {
-		// do not update current version only when workflow is completed
+		// always set current version to last write version when workflow is completed
+		lastWriteVersion, err := e.GetLastWriteVersion()
+		if err != nil {
+			return err
+		}
+		e.currentVersion = lastWriteVersion
 		return nil
 	}
 
@@ -667,7 +674,7 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 			scheduledIDToStartedID[scheduledID] = eventID
 			if ai, ok := e.GetActivityInfo(scheduledID); ok {
 				ai.StartedID = eventID
-				e.updateActivityInfos[ai] = struct{}{}
+				e.updateActivityInfos[ai.ScheduleID] = ai
 			}
 		case types.EventTypeChildWorkflowExecutionStarted:
 			attributes := event.ChildWorkflowExecutionStartedEventAttributes
@@ -675,7 +682,7 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 			scheduledIDToStartedID[initiatedID] = eventID
 			if ci, ok := e.GetChildExecutionInfo(initiatedID); ok {
 				ci.StartedID = eventID
-				e.updateChildExecutionInfos[ci] = struct{}{}
+				e.updateChildExecutionInfos[ci.InitiatedID] = ci
 			}
 		case types.EventTypeActivityTaskCompleted:
 			attributes := event.ActivityTaskCompletedEventAttributes
@@ -1168,6 +1175,7 @@ func (e *mutableStateBuilder) DeletePendingChildExecution(
 		e.logDataInconsistency()
 	}
 
+	delete(e.updateChildExecutionInfos, initiatedEventID)
 	e.deleteChildExecutionInfos[initiatedEventID] = struct{}{}
 	return nil
 }
@@ -1188,6 +1196,7 @@ func (e *mutableStateBuilder) DeletePendingRequestCancel(
 		e.logDataInconsistency()
 	}
 
+	delete(e.updateRequestCancelInfos, initiatedEventID)
 	e.deleteRequestCancelInfos[initiatedEventID] = struct{}{}
 	return nil
 }
@@ -1208,6 +1217,7 @@ func (e *mutableStateBuilder) DeletePendingSignal(
 		e.logDataInconsistency()
 	}
 
+	delete(e.updateSignalInfos, initiatedEventID)
 	e.deleteSignalInfos[initiatedEventID] = struct{}{}
 	return nil
 }
@@ -1240,7 +1250,7 @@ func (e *mutableStateBuilder) UpdateActivityProgress(
 	ai.Version = e.GetCurrentVersion()
 	ai.Details = request.Details
 	ai.LastHeartBeatUpdatedTime = e.timeSource.Now()
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 }
 
@@ -1277,7 +1287,7 @@ func (e *mutableStateBuilder) ReplicateActivityInfo(
 		ai.TimerTaskStatus = TimerTaskStatusNone
 	}
 
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 	return nil
 }
 
@@ -1295,7 +1305,7 @@ func (e *mutableStateBuilder) UpdateActivity(
 	}
 
 	e.pendingActivityInfoIDs[ai.ScheduleID] = ai
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 	return nil
 }
 
@@ -1326,6 +1336,7 @@ func (e *mutableStateBuilder) DeleteActivity(
 		e.logDataInconsistency()
 	}
 
+	delete(e.updateActivityInfos, scheduleEventID)
 	e.deleteActivityInfos[scheduleEventID] = struct{}{}
 	return nil
 }
@@ -1373,8 +1384,8 @@ func (e *mutableStateBuilder) UpdateUserTimer(
 		return ErrMissingTimerInfo
 	}
 
-	e.pendingTimerInfoIDs[timerID] = ti
-	e.updateTimerInfos[ti] = struct{}{}
+	e.pendingTimerInfoIDs[ti.TimerID] = ti
+	e.updateTimerInfos[ti.TimerID] = ti
 	return nil
 }
 
@@ -1405,29 +1416,9 @@ func (e *mutableStateBuilder) DeleteUserTimer(
 		e.logDataInconsistency()
 	}
 
+	delete(e.updateTimerInfos, timerID)
 	e.deleteTimerInfos[timerID] = struct{}{}
 	return nil
-}
-
-//nolint:unused
-func (e *mutableStateBuilder) getDecisionInfo() *DecisionInfo {
-
-	taskList := e.executionInfo.TaskList
-	if e.IsStickyTaskListEnabled() {
-		taskList = e.executionInfo.StickyTaskList
-	}
-	return &DecisionInfo{
-		Version:                    e.executionInfo.DecisionVersion,
-		ScheduleID:                 e.executionInfo.DecisionScheduleID,
-		StartedID:                  e.executionInfo.DecisionStartedID,
-		RequestID:                  e.executionInfo.DecisionRequestID,
-		DecisionTimeout:            e.executionInfo.DecisionTimeout,
-		Attempt:                    e.executionInfo.DecisionAttempt,
-		StartedTimestamp:           e.executionInfo.DecisionStartedTimestamp,
-		ScheduledTimestamp:         e.executionInfo.DecisionScheduledTimestamp,
-		TaskList:                   taskList,
-		OriginalScheduledTimestamp: e.executionInfo.DecisionOriginalScheduledTimestamp,
-	}
 }
 
 // GetDecisionInfo returns details about the in-progress decision task
@@ -1435,6 +1426,10 @@ func (e *mutableStateBuilder) GetDecisionInfo(
 	scheduleEventID int64,
 ) (*DecisionInfo, bool) {
 	return e.decisionTaskManager.GetDecisionInfo(scheduleEventID)
+}
+
+func (e *mutableStateBuilder) GetDecisionScheduleToStartTimeout() time.Duration {
+	return e.decisionTaskManager.GetDecisionScheduleToStartTimeout()
 }
 
 func (e *mutableStateBuilder) GetPendingActivityInfos() map[int64]*persistence.ActivityInfo {
@@ -1550,6 +1545,10 @@ func (e *mutableStateBuilder) IsWorkflowExecutionRunning() bool {
 	}
 }
 
+func (e *mutableStateBuilder) IsWorkflowCompleted() bool {
+	return e.executionInfo.State == persistence.WorkflowStateCompleted
+}
+
 func (e *mutableStateBuilder) IsCancelRequested() (bool, string) {
 	if e.executionInfo.CancelRequested {
 		return e.executionInfo.CancelRequested, e.executionInfo.CancelRequestID
@@ -1587,6 +1586,7 @@ func (e *mutableStateBuilder) DeleteSignalRequested(
 ) {
 
 	delete(e.pendingSignalRequestedIDs, requestID)
+	delete(e.updateSignalRequestedIDs, requestID)
 	e.deleteSignalRequestedIDs[requestID] = struct{}{}
 }
 
@@ -1644,19 +1644,20 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		ContinueAsNewInitiator:          attributes.Initiator,
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
 	}
+
+	// if ContinueAsNew as Cron or decider, recalculate the expiration timestamp and set attempts to 0
+	req.Attempt = 0
+	if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
+		// expirationTime calculates from first decision task schedule to the end of the workflow
+		expirationInSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
+		expirationTime := e.timeSource.Now().Add(time.Second * time.Duration(expirationInSeconds))
+		req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
+	}
+	// if ContinueAsNew as retry use the same expiration timestamp and increment attempts from previous execution state
 	if attributes.GetInitiator() == types.ContinueAsNewInitiatorRetryPolicy {
 		req.Attempt = previousExecutionState.GetExecutionInfo().Attempt + 1
 		expirationTime := previousExecutionState.GetExecutionInfo().ExpirationTime
 		if !expirationTime.IsZero() {
-			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
-		}
-	} else {
-		// ContinueAsNew by decider or cron
-		req.Attempt = 0
-		if attributes.RetryPolicy != nil && attributes.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {
-			// has retry policy and expiration time.
-			expirationSeconds := attributes.RetryPolicy.GetExpirationIntervalInSeconds() + req.GetFirstDecisionTaskBackoffSeconds()
-			expirationTime := e.timeSource.Now().Add(time.Second * time.Duration(expirationSeconds))
 			req.ExpirationTimestamp = common.Int64Ptr(expirationTime.UnixNano())
 		}
 	}
@@ -1689,7 +1690,6 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		return nil, err
 	}
 	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -1744,7 +1744,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 		return nil, err
 	}
 	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, err
@@ -1768,6 +1767,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	e.executionInfo.WorkflowTypeName = event.WorkflowType.GetName()
 	e.executionInfo.WorkflowTimeout = event.GetExecutionStartToCloseTimeoutSeconds()
 	e.executionInfo.DecisionStartToCloseTimeout = event.GetTaskStartToCloseTimeoutSeconds()
+	e.executionInfo.StartTimestamp = e.unixNanoToTime(startEvent.GetTimestamp())
 
 	if err := e.UpdateWorkflowStateCloseStatus(
 		persistence.WorkflowStateCreated,
@@ -1971,7 +1971,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	}
 	exeInfo.SearchAttributes[definition.BinaryChecksums] = bytes
 	if e.shard.GetConfig().AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
-		return e.taskGenerator.GenerateWorkflowSearchAttrTasks(e.unixNanoToTime(event.GetTimestamp()))
+		return e.taskGenerator.GenerateWorkflowSearchAttrTasks()
 	}
 	return nil
 }
@@ -2134,7 +2134,6 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, nil, err
@@ -2150,12 +2149,12 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 
 	attributes := event.ActivityTaskScheduledEventAttributes
 	targetDomainID := e.executionInfo.DomainID
-	if attributes.Domain != "" {
-		targetDomainEntry, err := e.shard.GetDomainCache().GetDomain(attributes.GetDomain())
+	if attributes.GetDomain() != "" {
+		var err error
+		targetDomainID, err = e.shard.GetDomainCache().GetDomainID(attributes.GetDomain())
 		if err != nil {
 			return nil, err
 		}
-		targetDomainID = targetDomainEntry.GetInfo().ID
 	}
 
 	scheduleEventID := event.GetEventID()
@@ -2195,7 +2194,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 
 	e.pendingActivityInfoIDs[scheduleEventID] = ai
 	e.pendingActivityIDToEventID[ai.ActivityID] = scheduleEventID
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 
 	return ai, nil
 }
@@ -2275,7 +2274,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(
 	ai.RequestID = attributes.GetRequestID()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
 	ai.LastHeartBeatUpdatedTime = ai.StartedTime
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 	return nil
 }
 
@@ -2466,7 +2465,7 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCancelRequestedEvent(
 	ai.CancelRequested = true
 
 	ai.CancelRequestID = event.GetEventID()
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 	return nil
 }
 
@@ -2555,7 +2554,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2595,7 +2594,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2634,7 +2633,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2713,7 +2712,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -2754,7 +2753,6 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateRequestCancelExternalTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2777,8 +2775,8 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionIni
 		CancelRequestID:       cancelRequestID,
 	}
 
-	e.pendingRequestCancelInfoIDs[initiatedEventID] = rci
-	e.updateRequestCancelInfos[rci] = struct{}{}
+	e.pendingRequestCancelInfoIDs[rci.InitiatedID] = rci
+	e.updateRequestCancelInfos[rci.InitiatedID] = rci
 
 	return rci, nil
 }
@@ -2878,7 +2876,6 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateSignalExternalTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -2905,8 +2902,8 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 		Control:               attributes.Control,
 	}
 
-	e.pendingSignalInfoIDs[initiatedEventID] = si
-	e.updateSignalInfos[si] = struct{}{}
+	e.pendingSignalInfoIDs[si.InitiatedID] = si
+	e.updateSignalInfos[si.InitiatedID] = si
 	return si, nil
 }
 
@@ -2923,9 +2920,7 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
 	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
 	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowSearchAttrTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
-	); err != nil {
+	if err := e.taskGenerator.GenerateWorkflowSearchAttrTasks(); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3081,9 +3076,9 @@ func (e *mutableStateBuilder) ReplicateTimerStartedEvent(
 		TaskStatus: TimerTaskStatusNone,
 	}
 
-	e.pendingTimerInfoIDs[timerID] = ti
-	e.pendingTimerEventIDToID[event.GetEventID()] = timerID
-	e.updateTimerInfos[ti] = struct{}{}
+	e.pendingTimerInfoIDs[ti.TimerID] = ti
+	e.pendingTimerEventIDToID[ti.StartedID] = ti.TimerID
+	e.updateTimerInfos[ti.TimerID] = ti
 
 	return ti, nil
 }
@@ -3223,7 +3218,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
+		event,
 	); err != nil {
 		return nil, err
 	}
@@ -3340,7 +3335,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		e.unixNanoToTime(continueAsNewEvent.GetTimestamp()),
+		continueAsNewEvent,
 	); err != nil {
 		return nil, nil, err
 	}
@@ -3400,7 +3395,11 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 		return nil, nil, err
 	}
 
-	event := e.hBuilder.AddStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, attributes)
+	event := e.hBuilder.AddStartChildWorkflowExecutionInitiatedEvent(
+		decisionCompletedEventID,
+		attributes,
+		e.GetDomainEntry().GetInfo().Name,
+	)
 	// Write the event to cache only on active cluster
 	e.eventsCache.PutEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
 		event.GetEventID(), event)
@@ -3411,7 +3410,6 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateChildWorkflowTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
 	); err != nil {
 		return nil, nil, err
@@ -3427,6 +3425,16 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 
 	initiatedEventID := event.GetEventID()
 	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
+
+	domainID := e.GetExecutionInfo().DomainID
+	if domainName := attributes.GetDomain(); domainName != "" {
+		// domainName may still be empty if two cadence clusters are running different versions
+		var err error
+		domainID, err = e.shard.GetDomainCache().GetDomainID(domainName)
+		if err != nil {
+			return nil, err
+		}
+	}
 	ci := &persistence.ChildExecutionInfo{
 		Version:               event.GetVersion(),
 		InitiatedID:           initiatedEventID,
@@ -3434,13 +3442,15 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 		StartedID:             common.EmptyEventID,
 		StartedWorkflowID:     attributes.GetWorkflowID(),
 		CreateRequestID:       createRequestID,
-		DomainName:            attributes.GetDomain(),
-		WorkflowTypeName:      attributes.GetWorkflowType().GetName(),
-		ParentClosePolicy:     attributes.GetParentClosePolicy(),
+		DomainID:              domainID,
+		// DomainName field is being deprecated
+		// DomainName:            attributes.GetDomain(),
+		WorkflowTypeName:  attributes.GetWorkflowType().GetName(),
+		ParentClosePolicy: attributes.GetParentClosePolicy(),
 	}
 
-	e.pendingChildExecutionInfoIDs[initiatedEventID] = ci
-	e.updateChildExecutionInfos[ci] = struct{}{}
+	e.pendingChildExecutionInfoIDs[ci.InitiatedID] = ci
+	e.updateChildExecutionInfos[ci.InitiatedID] = ci
 
 	return ci, nil
 }
@@ -3482,10 +3492,19 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionStartedEvent(
 	attributes := event.ChildWorkflowExecutionStartedEventAttributes
 	initiatedID := attributes.GetInitiatedEventID()
 
-	ci, _ := e.GetChildExecutionInfo(initiatedID)
+	ci, ok := e.GetChildExecutionInfo(initiatedID)
+	if !ok {
+		e.logError(
+			"Unable to find child workflow",
+			tag.ErrorTypeInvalidMutableStateAction,
+			tag.WorkflowEventID(e.GetNextEventID()),
+			tag.WorkflowInitiatedID(initiatedID),
+		)
+		return ErrMissingChildWorkflowInfo
+	}
 	ci.StartedID = event.GetEventID()
 	ci.StartedRunID = attributes.GetWorkflowExecution().GetRunID()
-	e.updateChildExecutionInfos[ci] = struct{}{}
+	e.updateChildExecutionInfos[ci.InitiatedID] = ci
 
 	return nil
 }
@@ -3549,12 +3568,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCompletedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	childDomainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionCompletedEvent(
+		childDomainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionCompletedEvent(event); err != nil {
 		return nil, err
 	}
@@ -3592,12 +3621,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionFailedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionFailedEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionFailedEvent(event); err != nil {
 		return nil, err
 	}
@@ -3635,12 +3674,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionCanceledEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionCanceledEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionCanceledEvent(event); err != nil {
 		return nil, err
 	}
@@ -3678,12 +3727,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTerminatedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionTerminatedEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionTerminatedEvent(event); err != nil {
 		return nil, err
 	}
@@ -3721,12 +3780,22 @@ func (e *mutableStateBuilder) AddChildWorkflowExecutionTimedOutEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
+	domainName, err := GetChildExecutionDomainName(ci, e.shard.GetDomainCache(), e.GetDomainEntry())
+	if err != nil {
+		return nil, err
+	}
 	workflowType := &types.WorkflowType{
 		Name: ci.WorkflowTypeName,
 	}
 
-	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(ci.DomainName, childExecution, workflowType, ci.InitiatedID,
-		ci.StartedID, attributes)
+	event := e.hBuilder.AddChildWorkflowExecutionTimedOutEvent(
+		domainName,
+		childExecution,
+		workflowType,
+		ci.InitiatedID,
+		ci.StartedID,
+		attributes,
+	)
 	if err := e.ReplicateChildWorkflowExecutionTimedOutEvent(event); err != nil {
 		return nil, err
 	}
@@ -3793,7 +3862,7 @@ func (e *mutableStateBuilder) RetryActivity(
 		return false, err
 	}
 
-	e.updateActivityInfos[ai] = struct{}{}
+	e.updateActivityInfos[ai.ScheduleID] = ai
 	e.syncActivityTasks[ai.ScheduleID] = struct{}{}
 	return true, nil
 }
@@ -3809,6 +3878,12 @@ func (e *mutableStateBuilder) AddTransferTasks(
 	e.insertTransferTasks = append(e.insertTransferTasks, transferTasks...)
 }
 
+func (e *mutableStateBuilder) AddCrossClusterTasks(
+	crossClusterTasks ...persistence.Task,
+) {
+	e.insertCrossClusterTasks = append(e.insertCrossClusterTasks, crossClusterTasks...)
+}
+
 // TODO convert AddTimerTasks to prepareTimerTasks
 func (e *mutableStateBuilder) AddTimerTasks(
 	timerTasks ...persistence.Task,
@@ -3821,12 +3896,20 @@ func (e *mutableStateBuilder) GetTransferTasks() []persistence.Task {
 	return e.insertTransferTasks
 }
 
+func (e *mutableStateBuilder) GetCrossClusterTasks() []persistence.Task {
+	return e.insertCrossClusterTasks
+}
+
 func (e *mutableStateBuilder) GetTimerTasks() []persistence.Task {
 	return e.insertTimerTasks
 }
 
 func (e *mutableStateBuilder) DeleteTransferTasks() {
 	e.insertTransferTasks = nil
+}
+
+func (e *mutableStateBuilder) DeleteCrossClusterTasks() {
+	e.insertCrossClusterTasks = nil
 }
 
 func (e *mutableStateBuilder) DeleteTimerTasks() {
@@ -3860,6 +3943,7 @@ func (e *mutableStateBuilder) UpdateWorkflowStateCloseStatus(
 
 func (e *mutableStateBuilder) StartTransaction(
 	domainEntry *cache.DomainCacheEntry,
+	incomingTaskVersion int64,
 ) (bool, error) {
 
 	e.domainEntry = domainEntry
@@ -3867,25 +3951,12 @@ func (e *mutableStateBuilder) StartTransaction(
 		return false, err
 	}
 
-	flushBeforeReady, err := e.startTransactionHandleDecisionFailover(false)
+	flushBeforeReady, err := e.startTransactionHandleDecisionFailover(incomingTaskVersion)
 	if err != nil {
 		return false, err
 	}
 
 	return flushBeforeReady, nil
-}
-
-func (e *mutableStateBuilder) StartTransactionSkipDecisionFail(
-	domainEntry *cache.DomainCacheEntry,
-) error {
-
-	e.domainEntry = domainEntry
-	if err := e.UpdateCurrentVersion(domainEntry.GetFailoverVersion(), false); err != nil {
-		return err
-	}
-
-	_, err := e.startTransactionHandleDecisionFailover(true)
-	return err
 }
 
 func (e *mutableStateBuilder) CloseTransactionAsMutation(
@@ -3894,7 +3965,6 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 ) (*persistence.WorkflowMutation, []*persistence.WorkflowEvents, error) {
 
 	if err := e.prepareCloseTransaction(
-		now,
 		transactionPolicy,
 	); err != nil {
 		return nil, nil, err
@@ -3947,9 +4017,10 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		NewBufferedEvents:         e.updateBufferedEvents,
 		ClearBufferedEvents:       e.clearBufferedEvents,
 
-		TransferTasks:    e.insertTransferTasks,
-		ReplicationTasks: e.insertReplicationTasks,
-		TimerTasks:       e.insertTimerTasks,
+		TransferTasks:     e.insertTransferTasks,
+		CrossClusterTasks: e.insertCrossClusterTasks,
+		ReplicationTasks:  e.insertReplicationTasks,
+		TimerTasks:        e.insertTimerTasks,
 
 		Condition: e.nextEventIDInDB,
 		Checksum:  checksum,
@@ -3968,7 +4039,6 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 ) (*persistence.WorkflowSnapshot, []*persistence.WorkflowEvents, error) {
 
 	if err := e.prepareCloseTransaction(
-		now,
 		transactionPolicy,
 	); err != nil {
 		return nil, nil, err
@@ -4025,9 +4095,10 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 		SignalInfos:         convertPendingSignalInfos(e.pendingSignalInfoIDs),
 		SignalRequestedIDs:  convertStringSetToSlice(e.pendingSignalRequestedIDs),
 
-		TransferTasks:    e.insertTransferTasks,
-		ReplicationTasks: e.insertReplicationTasks,
-		TimerTasks:       e.insertTimerTasks,
+		TransferTasks:     e.insertTransferTasks,
+		CrossClusterTasks: e.insertCrossClusterTasks,
+		ReplicationTasks:  e.insertReplicationTasks,
+		TimerTasks:        e.insertTimerTasks,
 
 		Condition: e.nextEventIDInDB,
 		Checksum:  checksum,
@@ -4056,7 +4127,6 @@ func (e *mutableStateBuilder) UpdateDuplicatedResource(
 }
 
 func (e *mutableStateBuilder) prepareCloseTransaction(
-	now time.Time,
 	transactionPolicy TransactionPolicy,
 ) error {
 
@@ -4073,7 +4143,6 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 	}
 
 	if err := e.closeTransactionHandleWorkflowReset(
-		now,
 		transactionPolicy,
 	); err != nil {
 		return err
@@ -4092,7 +4161,6 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 	//  regardless of how many activity & user timer created
 	//  so the calculation must be at the very end
 	return e.closeTransactionHandleActivityUserTimerTasks(
-		now,
 		transactionPolicy,
 	)
 }
@@ -4104,20 +4172,20 @@ func (e *mutableStateBuilder) cleanupTransaction(
 	// Clear all updates to prepare for the next session
 	e.hBuilder = NewHistoryBuilder(e, e.logger)
 
-	e.updateActivityInfos = make(map[*persistence.ActivityInfo]struct{})
+	e.updateActivityInfos = make(map[int64]*persistence.ActivityInfo)
 	e.deleteActivityInfos = make(map[int64]struct{})
 	e.syncActivityTasks = make(map[int64]struct{})
 
-	e.updateTimerInfos = make(map[*persistence.TimerInfo]struct{})
+	e.updateTimerInfos = make(map[string]*persistence.TimerInfo)
 	e.deleteTimerInfos = make(map[string]struct{})
 
-	e.updateChildExecutionInfos = make(map[*persistence.ChildExecutionInfo]struct{})
+	e.updateChildExecutionInfos = make(map[int64]*persistence.ChildExecutionInfo)
 	e.deleteChildExecutionInfos = make(map[int64]struct{})
 
-	e.updateRequestCancelInfos = make(map[*persistence.RequestCancelInfo]struct{})
+	e.updateRequestCancelInfos = make(map[int64]*persistence.RequestCancelInfo)
 	e.deleteRequestCancelInfos = make(map[int64]struct{})
 
-	e.updateSignalInfos = make(map[*persistence.SignalInfo]struct{})
+	e.updateSignalInfos = make(map[int64]*persistence.SignalInfo)
 	e.deleteSignalInfos = make(map[int64]struct{})
 
 	e.updateSignalRequestedIDs = make(map[string]struct{})
@@ -4134,6 +4202,7 @@ func (e *mutableStateBuilder) cleanupTransaction(
 	e.nextEventIDInDB = e.GetNextEventID()
 
 	e.insertTransferTasks = nil
+	e.insertCrossClusterTasks = nil
 	e.insertReplicationTasks = nil
 	e.insertTimerTasks = nil
 
@@ -4289,7 +4358,14 @@ func (e *mutableStateBuilder) updateWithLastFirstEvent(
 }
 
 func (e *mutableStateBuilder) canReplicateEvents() bool {
-	return e.domainEntry.GetReplicationPolicy() == cache.ReplicationPolicyMultiCluster
+	if e.domainEntry.GetReplicationPolicy() == cache.ReplicationPolicyOneCluster {
+		return false
+	} else {
+		// ReplicationPolicyMultiCluster
+		domainID := e.domainEntry.GetInfo().ID
+		workflowID := e.GetExecutionInfo().WorkflowID
+		return e.shard.GetConfig().EnableReplicationTaskGeneration(domainID, workflowID)
+	}
 }
 
 // validateNoEventsAfterWorkflowFinish perform check on history event batch
@@ -4337,7 +4413,7 @@ func (e *mutableStateBuilder) validateNoEventsAfterWorkflowFinish(
 }
 
 func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
-	skipDecisionTaskFailed bool,
+	incomingTaskVersion int64,
 ) (bool, error) {
 
 	if !e.IsWorkflowExecutionRunning() ||
@@ -4382,6 +4458,16 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	// 2. active -> active => fail decision & flush buffer using last write version
 	// 3. passive -> active => fail decision using current version, no buffered events
 	// 4. passive -> passive => no buffered events, since always passive, nothing to be done
+	// 5. special case: current cluster is passive. Due to some reason, the history generated by the current cluster
+	// is missing and the missing history replicate back from remote cluster via resending approach => nothing to do
+
+	//handle case 5
+	incomingTaskSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
+	if incomingTaskVersion != common.EmptyVersion &&
+		currentVersionCluster != currentCluster &&
+		incomingTaskSourceCluster == currentCluster {
+		return false, nil
+	}
 
 	// handle case 4
 	if lastWriteSourceCluster != currentCluster && currentVersionCluster != currentCluster {
@@ -4413,10 +4499,6 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	// event batch shard the same version
 	if err := e.UpdateCurrentVersion(flushBufferVersion, true); err != nil {
 		return false, err
-	}
-
-	if skipDecisionTaskFailed {
-		return false, nil
 	}
 
 	// we have a decision with buffered events on the fly with a lower version, fail it
@@ -4487,7 +4569,6 @@ func (e *mutableStateBuilder) closeTransactionHandleBufferedEventsLimit(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
-	now time.Time,
 	transactionPolicy TransactionPolicy,
 ) error {
 
@@ -4514,9 +4595,7 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 		&domainEntry.GetConfig().BadBinaries,
 		e.GetExecutionInfo().AutoResetPoints,
 	); pt != nil {
-		if err := e.taskGenerator.GenerateWorkflowResetTasks(
-			e.unixNanoToTime(now.UnixNano()),
-		); err != nil {
+		if err := e.taskGenerator.GenerateWorkflowResetTasks(); err != nil {
 			return err
 		}
 		e.logInfo("Auto-Reset task is scheduled",
@@ -4532,7 +4611,6 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 }
 
 func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
-	now time.Time,
 	transactionPolicy TransactionPolicy,
 ) error {
 
@@ -4541,15 +4619,11 @@ func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
 		return nil
 	}
 
-	if err := e.taskGenerator.GenerateActivityTimerTasks(
-		e.unixNanoToTime(now.UnixNano()),
-	); err != nil {
+	if err := e.taskGenerator.GenerateActivityTimerTasks(); err != nil {
 		return err
 	}
 
-	return e.taskGenerator.GenerateUserTimerTasks(
-		e.unixNanoToTime(now.UnixNano()),
-	)
+	return e.taskGenerator.GenerateUserTimerTasks()
 }
 
 func (e *mutableStateBuilder) checkMutability(

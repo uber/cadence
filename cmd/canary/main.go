@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path"
@@ -29,7 +30,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/canary"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 )
 
 func startHandler(c *cli.Context) {
@@ -48,12 +49,13 @@ func startHandler(c *cli.Context) {
 		log.Fatal("Invalid config: ", err)
 	}
 
+	mode := c.String("mode")
 	canary, err := canary.NewCanaryRunner(&cfg)
 	if err != nil {
 		log.Fatal("Failed to initialize canary: ", err)
 	}
 
-	if err := canary.Run(); err != nil {
+	if err := canary.Run(mode); err != nil {
 		log.Fatal("Failed to run canary: ", err)
 	}
 }
@@ -119,7 +121,15 @@ func buildCLI() *cli.App {
 	app.Commands = []cli.Command{
 		{
 			Name:  "start",
-			Usage: "start cadence canary",
+			Usage: "start cadence canary worker or cron, or both",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "mode, m",
+					Value:  canary.ModeAll,
+					Usage:  fmt.Sprintf("%v, %v or %v", canary.ModeWorker, canary.ModeCronCanary, canary.ModeAll),
+					EnvVar: canary.EnvKeyMode,
+				},
+			},
 			Action: func(c *cli.Context) {
 				startHandler(c)
 			},

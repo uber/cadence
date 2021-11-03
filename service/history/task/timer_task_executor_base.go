@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
@@ -48,6 +49,7 @@ type (
 		logger         log.Logger
 		metricsClient  metrics.Client
 		config         *config.Config
+		throttleRetry  *backoff.ThrottleRetry
 	}
 )
 
@@ -66,6 +68,10 @@ func newTimerTaskExecutorBase(
 		logger:         logger,
 		metricsClient:  metricsClient,
 		config:         config,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(taskRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 	}
 }
 
@@ -176,7 +182,7 @@ func (t *timerTaskExecutorBase) archiveWorkflow(
 			BranchToken:          branchToken,
 			CloseFailoverVersion: closeFailoverVersion,
 		},
-		CallerService:        common.HistoryServiceName,
+		CallerService:        service.History,
 		AttemptArchiveInline: false, // archive in workflow by default
 	}
 	executionStats, err := workflowContext.LoadExecutionStats(ctx)
@@ -227,7 +233,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }
 
 func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
@@ -242,7 +248,7 @@ func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
 			RunID:      task.RunID,
 		})
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }
 
 func (t *timerTaskExecutorBase) deleteWorkflowHistory(
@@ -262,7 +268,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowHistory(
 		})
 
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }
 
 func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
@@ -280,5 +286,5 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 		// TODO: expose GetVisibilityManager method on shardContext interface
 		return t.shard.GetService().GetVisibilityManager().DeleteWorkflowExecution(ctx, request) // delete from db
 	}
-	return backoff.Retry(op, taskRetryPolicy, common.IsPersistenceTransientError)
+	return t.throttleRetry.Do(ctx, op)
 }

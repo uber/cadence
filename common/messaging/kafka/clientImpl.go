@@ -21,21 +21,18 @@
 package kafka
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/config"
 )
 
 type (
@@ -86,16 +83,26 @@ func NewKafkaClient(
 // NewConsumer is used to create a Kafka consumer
 func (c *clientImpl) NewConsumer(app, consumerName string) (messaging.Consumer, error) {
 	topics := c.config.GetTopicsForApplication(app)
+	// All defaut values are copied from uber/kafka-clientImpl bo keep the same behavior
+	kafkaVersion := c.config.Version
+	if kafkaVersion == "" {
+		kafkaVersion = "0.10.2.0"
+	}
+
+	version, err := sarama.ParseKafkaVersion(kafkaVersion)
+	if err != nil {
+		return nil, err
+	}
+
 	saramaConfig := sarama.NewConfig()
-	// bellow config is copied from uber/kafka-clientImpl bo keep the same behavior
-	saramaConfig.Version = sarama.V0_10_2_0
+	saramaConfig.Version = version
 	saramaConfig.Consumer.Fetch.Default = 30 * 1024 * 1024 // 30MB.
 	saramaConfig.Consumer.Return.Errors = true
 	saramaConfig.Consumer.Offsets.CommitInterval = time.Second
 	saramaConfig.Consumer.Offsets.Initial = sarama.OffsetOldest
 	saramaConfig.Consumer.MaxProcessingTime = 250 * time.Millisecond
 
-	err := c.initAuth(saramaConfig)
+	err = c.initAuth(saramaConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +145,7 @@ func (c *clientImpl) newProducerByTopic(topic string) (messaging.Producer, error
 }
 
 func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
-	tlsConfig, err := convertTLSConfig(c.config.TLS)
+	tlsConfig, err := c.config.TLS.ToTLSConfig()
 	if err != nil {
 		panic(fmt.Sprintf("Error creating Kafka TLS config %v", err))
 	}
@@ -155,10 +162,14 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 
 	if c.config.SASL.Enabled {
 		if c.config.SASL.Algorithm == "sha512" {
-			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA512} }
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA512}
+			}
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA512
 		} else if c.config.SASL.Algorithm == "sha256" {
-			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &auth.XDGSCRAMClient{HashGeneratorFcn: auth.SHA256} }
+			saramaConfig.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &authorization.XDGSCRAMClient{HashGeneratorFcn: authorization.SHA256}
+			}
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypeSCRAMSHA256
 		} else if c.config.SASL.Algorithm == "plain" {
 			saramaConfig.Net.SASL.Mechanism = sarama.SASLTypePlaintext
@@ -167,36 +178,4 @@ func (c *clientImpl) initAuth(saramaConfig *sarama.Config) error {
 		}
 	}
 	return nil
-}
-
-// convertTLSConfig converts tls config
-func convertTLSConfig(authConfig auth.TLS) (*tls.Config, error) {
-	if !authConfig.Enabled {
-		return nil, nil
-	}
-
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: !authConfig.EnableHostVerification,
-	}
-
-	if authConfig.CaFile != "" {
-		caCertPool := x509.NewCertPool()
-		pemData, err := ioutil.ReadFile(authConfig.CaFile)
-		if err != nil {
-			return nil, err
-		}
-		caCertPool.AppendCertsFromPEM(pemData)
-
-		tlsConfig.RootCAs = caCertPool
-	}
-
-	if authConfig.CertFile != "" && authConfig.KeyFile != "" {
-		cert, err := tls.LoadX509KeyPair(authConfig.CertFile, authConfig.KeyFile)
-		if err != nil {
-			return nil, err
-		}
-
-		tlsConfig.Certificates = []tls.Certificate{cert}
-	}
-	return tlsConfig, nil
 }

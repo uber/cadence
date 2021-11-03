@@ -81,18 +81,31 @@ func (h *resourceImpl) GetEventCache() events.Cache {
 
 // New create a new resource containing common history dependencies
 func New(
-	params *service.BootstrapParams,
+	params *resource.Params,
 	serviceName string,
 	config *config.Config,
-	visibilityManagerInitializer resource.VisibilityManagerInitializer,
 ) (historyResource Resource, retError error) {
 	serviceResource, err := resource.New(
 		params,
 		serviceName,
-		config.PersistenceMaxQPS,
-		config.PersistenceGlobalMaxQPS,
-		config.ThrottledLogRPS,
-		visibilityManagerInitializer,
+		&service.Config{
+			PersistenceMaxQPS:       config.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
+			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
+
+			EnableReadVisibilityFromES:    nil, // history service never read,
+			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
+
+			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
+			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history service never read,
+			DBVisibilityListMaxQPS:                      nil, // history service never read,
+			WriteDBVisibilityOpenMaxQPS:                 config.VisibilityOpenMaxQPS,
+			WriteDBVisibilityClosedMaxQPS:               config.VisibilityClosedMaxQPS,
+
+			ESVisibilityListMaxQPS: nil, // history service never read,
+			ESIndexMaxResultWindow: nil, // history service never read,
+			ValidSearchAttributes:  nil, // history service never read,
+		},
 	)
 	if err != nil {
 		return nil, err

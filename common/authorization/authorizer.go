@@ -22,7 +22,15 @@
 
 package authorization
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"io/ioutil"
+
+	clientworker "go.uber.org/cadence/worker"
+
+	"github.com/uber/cadence/common/types"
+)
 
 const (
 	// DecisionDeny means auth decision is deny
@@ -31,13 +39,25 @@ const (
 	DecisionAllow
 )
 
+const (
+	// PermissionRead means the user can write on the domain level APIs
+	PermissionRead Permission = iota + 1
+	// PermissionWrite means the user can write on the domain level APIs
+	PermissionWrite
+	// PermissionAdmin means the user can read+write on the domain level APIs
+	PermissionAdmin
+)
+
 type (
 	// Attributes is input for authority to make decision.
 	// It can be extended in future if required auth on resources like WorkflowType and TaskList
 	Attributes struct {
-		Actor      string
-		APIName    string
-		DomainName string
+		Actor        string
+		APIName      string
+		DomainName   string
+		WorkflowType *types.WorkflowType
+		TaskList     *types.TaskList
+		Permission   Permission
 	}
 
 	// Result is result from authority.
@@ -47,9 +67,33 @@ type (
 
 	// Decision is enum type for auth decision
 	Decision int
+
+	// Permission is enum type for auth permission
+	Permission int
 )
+
+func NewPermission(permission string) Permission {
+	switch permission {
+	case "read":
+		return PermissionRead
+	case "write":
+		return PermissionWrite
+	case "admin":
+		return PermissionAdmin
+	default:
+		return -1
+	}
+}
 
 // Authorizer is an interface for authorization
 type Authorizer interface {
 	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
+}
+
+func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {
+	pk, err := ioutil.ReadFile(privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid private key path %s", privateKey)
+	}
+	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
 }

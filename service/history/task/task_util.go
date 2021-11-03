@@ -127,6 +127,21 @@ func GetTransferTaskMetricsScope(
 			return metrics.TransferActiveTaskUpsertWorkflowSearchAttributesScope
 		}
 		return metrics.TransferStandbyTaskUpsertWorkflowSearchAttributesScope
+	case persistence.TransferTaskTypeRecordWorkflowClosed:
+		if isActive {
+			return metrics.TransferActiveTaskRecordWorkflowClosedScope
+		}
+		return metrics.TransferStandbyTaskRecordWorkflowClosedScope
+	case persistence.TransferTaskTypeRecordChildExecutionCompleted:
+		if isActive {
+			return metrics.TransferActiveTaskRecordChildExecutionCompletedScope
+		}
+		return metrics.TransferStandbyTaskRecordChildExecutionCompletedScope
+	case persistence.TransferTaskTypeApplyParentClosePolicy:
+		if isActive {
+			return metrics.TransferActiveTaskApplyParentClosePolicyScope
+		}
+		return metrics.TransferStandbyTaskApplyParentClosePolicyScope
 	default:
 		if isActive {
 			return metrics.TransferActiveQueueProcessorScope
@@ -181,6 +196,42 @@ func GetTimerTaskMetricScope(
 			return metrics.TimerActiveQueueProcessorScope
 		}
 		return metrics.TimerStandbyQueueProcessorScope
+	}
+}
+
+// getCrossClusterTaskMetricsScope returns the metrics scope index for cross cluster task
+func getCrossClusterTaskMetricsScope(
+	taskType int,
+	isSource bool,
+) int {
+	switch taskType {
+	case persistence.CrossClusterTaskTypeStartChildExecution:
+		if isSource {
+			return metrics.CrossClusterSourceTaskStartChildExecutionScope
+		}
+		return metrics.CrossClusterTargetTaskStartChildExecutionScope
+	case persistence.CrossClusterTaskTypeCancelExecution:
+		if isSource {
+			return metrics.CrossClusterSourceTaskCancelExecutionScope
+		}
+		return metrics.CrossClusterTargetTaskCancelExecutionScope
+	case persistence.CrossClusterTaskTypeSignalExecution:
+		if isSource {
+			return metrics.CrossClusterSourceTaskSignalExecutionScope
+		}
+		return metrics.CrossClusterTargetTaskSignalExecutionScope
+	case persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted:
+		if isSource {
+			return metrics.CrossClusterSourceTaskRecordChildWorkflowExecutionCompleteScope
+		}
+		return metrics.CrossClusterTargetTaskRecordChildWorkflowExecutionCompleteScope
+	case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
+		if isSource {
+			return metrics.CrossClusterSourceTaskApplyParentClosePolicyScope
+		}
+		return metrics.CrossClusterTargetTaskApplyParentClosePolicyScope
+	default:
+		return metrics.CrossClusterQueueProcessorScope
 	}
 }
 
@@ -251,8 +302,10 @@ func loadMutableStateForTimerTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if timerTask.EventID >= msBuilder.GetNextEventID() {
-			metricsClient.IncCounter(metrics.TimerQueueProcessorScope, metrics.DataInconsistentCounter)
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.TimerQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
 			logger.Error("Timer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
 				tag.WorkflowDomainID(timerTask.DomainID),
 				tag.WorkflowID(timerTask.WorkflowID),
 				tag.WorkflowRunID(timerTask.RunID),
@@ -304,14 +357,64 @@ func loadMutableStateForTransferTask(
 		}
 		// after refresh, still mutable state's next event ID <= task ID
 		if transferTask.ScheduleID >= msBuilder.GetNextEventID() {
-			metricsClient.IncCounter(metrics.TransferQueueProcessorScope, metrics.DataInconsistentCounter)
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.TransferQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
 			logger.Error("Transfer Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
 				tag.WorkflowDomainID(transferTask.DomainID),
 				tag.WorkflowID(transferTask.WorkflowID),
 				tag.WorkflowRunID(transferTask.RunID),
 				tag.TaskType(transferTask.TaskType),
 				tag.TaskID(transferTask.TaskID),
 				tag.WorkflowScheduleID(transferTask.ScheduleID),
+				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
+			)
+			return nil, nil
+		}
+	}
+	return msBuilder, nil
+}
+
+// load mutable state, if mutable state's next event ID <= task ID, will attempt to refresh
+// if still mutable state's next event ID <= task ID, will return nil, nil
+// TODO: refactor loadMutableStateForXXXTask function implementation to avoid duplication
+func loadMutableStateForCrossClusterTask(
+	ctx context.Context,
+	wfContext execution.Context,
+	crossClusterTask *persistence.CrossClusterTaskInfo,
+	metricsClient metrics.Client,
+	logger log.Logger,
+) (execution.MutableState, error) {
+
+	msBuilder, err := wfContext.LoadWorkflowExecution(ctx)
+	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			// this could happen if this is a duplicate processing of the task, and the execution has already completed.
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if crossClusterTask.ScheduleID >= msBuilder.GetNextEventID() {
+		metricsClient.IncCounter(metrics.CrossClusterQueueProcessorScope, metrics.StaleMutableStateCounter)
+		wfContext.Clear()
+
+		msBuilder, err = wfContext.LoadWorkflowExecution(ctx)
+		if err != nil {
+			return nil, err
+		}
+		// after refresh, still mutable state's next event ID <= task ID
+		if crossClusterTask.ScheduleID >= msBuilder.GetNextEventID() {
+			domainName := msBuilder.GetDomainEntry().GetInfo().Name
+			metricsClient.Scope(metrics.CrossClusterQueueProcessorScope, metrics.DomainTag(domainName)).IncCounter(metrics.DataInconsistentCounter)
+			logger.Error("Cross Cluster Task Processor: task event ID >= MS NextEventID, skip.",
+				tag.WorkflowDomainName(domainName),
+				tag.WorkflowDomainID(crossClusterTask.DomainID),
+				tag.WorkflowID(crossClusterTask.WorkflowID),
+				tag.WorkflowRunID(crossClusterTask.RunID),
+				tag.TaskType(crossClusterTask.TaskType),
+				tag.TaskID(crossClusterTask.TaskID),
+				tag.WorkflowScheduleID(crossClusterTask.ScheduleID),
 				tag.WorkflowNextEventID(msBuilder.GetNextEventID()),
 			)
 			return nil, nil

@@ -38,13 +38,13 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -102,7 +102,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.mockESClient = &esMocks.GenericClient{}
-	config := &config.VisibilityConfig{
+	config := &service.Config{
 		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(esIndexMaxResultWindow),
 		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 	}
@@ -127,6 +127,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.StartTimestamp = time.Unix(0, int64(123))
 	request.ExecutionTimestamp = time.Unix(0, int64(321))
 	request.TaskID = int64(111)
+	request.IsCron = true
+	request.NumClusters = 2
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 
@@ -141,6 +143,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.ExecutionTimestamp.UnixNano(), fields[es.ExecutionTime].GetIntData())
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
+		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
+		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		return true
 	})).Return(nil).Once()
 
@@ -188,6 +192,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	closeStatus := workflow.WorkflowExecutionCloseStatusTerminated
 	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
 	request.HistoryLength = int64(20)
+	request.IsCron = false
+	request.NumClusters = 2
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -202,6 +208,8 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.CloseTimestamp.UnixNano(), fields[es.CloseTime].GetIntData())
 		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
+		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
+		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		return true
 	})).Return(nil).Once()
 

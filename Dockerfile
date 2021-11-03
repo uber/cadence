@@ -14,6 +14,8 @@ RUN go build -mod=readonly -o /go/bin/tcheck github.com/uber/tcheck
 # Build Cadence binaries
 FROM golang:1.13.6-alpine AS builder
 
+ARG RELEASE_VERSION
+
 RUN apk add --update --no-cache ca-certificates make git curl mercurial bzr unzip
 
 WORKDIR /cadence
@@ -26,8 +28,13 @@ COPY go.* ./
 RUN go mod download
 
 COPY . .
+RUN rm -fr .bin .build
 
-RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server
+ENV CADENCE_RELEASE_VERSION=$RELEASE_VERSION
+
+# bypass codegen, use committed files.  must be run separately, before building things.
+RUN make .fake-codegen
+RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-bench cadence-canary
 
 
 # Download dockerize
@@ -71,6 +78,7 @@ COPY --from=builder /cadence/schema /etc/cadence/schema
 
 COPY docker/entrypoint.sh /docker-entrypoint.sh
 COPY config/dynamicconfig /etc/cadence/config/dynamicconfig
+COPY config/credentials /etc/cadence/config/credentials
 COPY docker/config_template.yaml /etc/cadence/config
 COPY docker/start-cadence.sh /start-cadence.sh
 
@@ -102,6 +110,21 @@ COPY --from=builder /cadence/cadence /usr/local/bin
 
 ENTRYPOINT ["cadence"]
 
+# Cadence Canary
+FROM alpine AS cadence-canary
+
+COPY --from=builder /cadence/cadence-canary /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
+
+CMD ["/usr/local/bin/cadence-canary", "--root", "/etc/cadence-canary", "start"]
+
+# Cadence Bench
+FROM alpine AS cadence-bench
+
+COPY --from=builder /cadence/cadence-bench /usr/local/bin
+COPY --from=builder /cadence/cadence /usr/local/bin
+
+CMD ["/usr/local/bin/cadence-bench", "--root", "/etc/cadence-bench", "start"]
 
 # Final image
 FROM cadence-${TARGET}

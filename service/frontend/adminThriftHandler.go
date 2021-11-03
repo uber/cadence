@@ -64,6 +64,12 @@ func (t AdminThriftHandler) DescribeCluster(ctx context.Context) (*admin.Describ
 	return thrift.FromDescribeClusterResponse(response), thrift.FromError(err)
 }
 
+// DescribeShardDistribution forwards request to the underlying handler
+func (t AdminThriftHandler) DescribeShardDistribution(ctx context.Context, request *shared.DescribeShardDistributionRequest) (*shared.DescribeShardDistributionResponse, error) {
+	response, err := t.h.DescribeShardDistribution(ctx, thrift.ToDescribeShardDistributionRequest(request))
+	return thrift.FromDescribeShardDistributionResponse(response), thrift.FromError(err)
+}
+
 // DescribeHistoryHost forwards request to the underlying handler
 func (t AdminThriftHandler) DescribeHistoryHost(ctx context.Context, request *shared.DescribeHistoryHostRequest) (*shared.DescribeHistoryHostResponse, error) {
 	response, err := t.h.DescribeHistoryHost(ctx, thrift.ToDescribeHistoryHostRequest(request))
@@ -152,4 +158,40 @@ func (t AdminThriftHandler) ResendReplicationTasks(ctx context.Context, request 
 func (t AdminThriftHandler) ResetQueue(ctx context.Context, request *shared.ResetQueueRequest) error {
 	err := t.h.ResetQueue(ctx, thrift.ToResetQueueRequest(request))
 	return thrift.FromError(err)
+}
+
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t AdminThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	response, err := t.h.GetCrossClusterTasks(ctx, thrift.ToGetCrossClusterTasksRequest(request))
+	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
+}
+
+// RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks
+func (t AdminThriftHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := t.h.RespondCrossClusterTasksCompleted(ctx, thrift.ToRespondCrossClusterTasksCompletedRequest(request))
+	return thrift.FromRespondCrossClusterTasksCompletedResponse(response), thrift.FromError(err)
+}
+
+// GetDynamicConfig fetches dynamic config value
+func (t AdminThriftHandler) GetDynamicConfig(ctx context.Context, request *admin.GetDynamicConfigRequest) (*admin.GetDynamicConfigResponse, error) {
+	response, err := t.h.GetDynamicConfig(ctx, thrift.ToGetDynamicConfigRequest(request))
+	return thrift.FromGetDynamicConfigResponse(response), thrift.FromError(err)
+}
+
+// UpdateDynamicConfig updates dynamic config value
+func (t AdminThriftHandler) UpdateDynamicConfig(ctx context.Context, request *admin.UpdateDynamicConfigRequest) error {
+	err := t.h.UpdateDynamicConfig(ctx, thrift.ToUpdateDynamicConfigRequest(request))
+	return thrift.FromError(err)
+}
+
+// RestoreDynamicConfig deletes dynamic config value from config store based on filter
+func (t AdminThriftHandler) RestoreDynamicConfig(ctx context.Context, request *admin.RestoreDynamicConfigRequest) error {
+	err := t.h.RestoreDynamicConfig(ctx, thrift.ToRestoreDynamicConfigRequest(request))
+	return thrift.FromError(err)
+}
+
+// ListDynamicConfig fetches all values associated to specified dc parameters or all otherwise
+func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admin.ListDynamicConfigRequest) (*admin.ListDynamicConfigResponse, error) {
+	response, err := t.h.ListDynamicConfig(ctx, thrift.ToListDynamicConfigRequest(request))
+	return thrift.FromListDynamicConfigResponse(response), thrift.FromError(err)
 }

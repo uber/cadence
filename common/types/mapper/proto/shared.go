@@ -56,6 +56,138 @@ func FromMembershipInfo(t *types.MembershipInfo) *sharedv1.MembershipInfo {
 	}
 }
 
+func FromPersistenceSettings(t []*types.PersistenceSetting) []*sharedv1.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*sharedv1.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = FromPersistenceSetting(t[i])
+	}
+	return v
+}
+
+func FromPersistenceSetting(t *types.PersistenceSetting) *sharedv1.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.PersistenceSetting{
+		Key:   t.Key,
+		Value: t.Value,
+	}
+}
+
+func FromPersistenceFeatures(t []*types.PersistenceFeature) []*sharedv1.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*sharedv1.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = FromPersistenceFeature(t[i])
+	}
+	return v
+}
+
+func FromPersistenceFeature(t *types.PersistenceFeature) *sharedv1.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.PersistenceFeature{
+		Key:     t.Key,
+		Enabled: t.Enabled,
+	}
+}
+
+func FromPersistenceInfoMap(t map[string]*types.PersistenceInfo) map[string]*sharedv1.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*sharedv1.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = FromPersistenceInfo(t[key])
+	}
+
+	return v
+}
+
+func FromPersistenceInfo(t *types.PersistenceInfo) *sharedv1.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+
+	return &sharedv1.PersistenceInfo{
+		Backend:  t.Backend,
+		Settings: FromPersistenceSettings(t.Settings),
+		Features: FromPersistenceFeatures(t.Features),
+	}
+}
+
+func ToPersistenceSettings(t []*sharedv1.PersistenceSetting) []*types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceSetting, len(t))
+	for i := range t {
+		v[i] = ToPersistenceSetting(t[i])
+	}
+	return v
+}
+
+func ToPersistenceSetting(t *sharedv1.PersistenceSetting) *types.PersistenceSetting {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceSetting{
+		Key:   t.Key,
+		Value: t.Value,
+	}
+}
+
+func ToPersistenceFeatures(t []*sharedv1.PersistenceFeature) []*types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.PersistenceFeature, len(t))
+	for i := range t {
+		v[i] = ToPersistenceFeature(t[i])
+	}
+	return v
+}
+
+func ToPersistenceFeature(t *sharedv1.PersistenceFeature) *types.PersistenceFeature {
+	if t == nil {
+		return nil
+	}
+	return &types.PersistenceFeature{
+		Key:     t.Key,
+		Enabled: t.Enabled,
+	}
+}
+
+func ToPersistenceInfoMap(t map[string]*sharedv1.PersistenceInfo) map[string]*types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+	v := make(map[string]*types.PersistenceInfo, len(t))
+	for key := range t {
+		v[key] = ToPersistenceInfo(t[key])
+	}
+
+	return v
+}
+
+func ToPersistenceInfo(t *sharedv1.PersistenceInfo) *types.PersistenceInfo {
+	if t == nil {
+		return nil
+	}
+
+	return &types.PersistenceInfo{
+		Backend:  t.Backend,
+		Settings: ToPersistenceSettings(t.Settings),
+		Features: ToPersistenceFeatures(t.Features),
+	}
+}
+
 func ToMembershipInfo(t *sharedv1.MembershipInfo) *types.MembershipInfo {
 	if t == nil {
 		return nil
@@ -853,6 +985,8 @@ func FromTaskType(t *int32) sharedv1.TaskType {
 		return sharedv1.TaskType_TASK_TYPE_TIMER
 	case common.TaskTypeReplication:
 		return sharedv1.TaskType_TASK_TYPE_REPLICATION
+	case common.TaskTypeCrossCluster:
+		return sharedv1.TaskType_TASK_TYPE_CROSS_CLUSTER
 	}
 	panic("unexpected enum value")
 }
@@ -867,6 +1001,8 @@ func ToTaskType(t sharedv1.TaskType) *int32 {
 		return common.Int32Ptr(int32(common.TaskTypeTimer))
 	case sharedv1.TaskType_TASK_TYPE_REPLICATION:
 		return common.Int32Ptr(int32(common.TaskTypeReplication))
+	case sharedv1.TaskType_TASK_TYPE_CROSS_CLUSTER:
+		return common.Int32Ptr(int32(common.TaskTypeCrossCluster))
 	}
 	panic("unexpected enum value")
 }
@@ -937,4 +1073,647 @@ func ToEventVersion(item *sharedv1.VersionHistoryItem) *int64 {
 		return nil
 	}
 	return common.Int64Ptr(item.Version)
+}
+
+// FromCrossClusterTaskType converts internal CrossClusterTaskType type to proto
+func FromCrossClusterTaskType(t *types.CrossClusterTaskType) sharedv1.CrossClusterTaskType {
+	if t == nil {
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_INVALID
+	}
+	switch *t {
+	case types.CrossClusterTaskTypeStartChildExecution:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_START_CHILD_EXECUTION
+	case types.CrossClusterTaskTypeCancelExecution:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION
+	case types.CrossClusterTaskTypeSignalExecution:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION
+	case types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_RECORD_CHILD_WORKKLOW_EXECUTION_COMPLETE
+	case types.CrossClusterTaskTypeApplyParentPolicy:
+		return sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_APPLY_PARENT_CLOSE_POLICY
+	}
+	panic("unexpected enum value")
+}
+
+// ToCrossClusterTaskType converts proto CrossClusterTaskType type to internal
+func ToCrossClusterTaskType(t sharedv1.CrossClusterTaskType) *types.CrossClusterTaskType {
+	switch t {
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_INVALID:
+		return nil
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_START_CHILD_EXECUTION:
+		return types.CrossClusterTaskTypeStartChildExecution.Ptr()
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_CANCEL_EXECUTION:
+		return types.CrossClusterTaskTypeCancelExecution.Ptr()
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_SIGNAL_EXECUTION:
+		return types.CrossClusterTaskTypeSignalExecution.Ptr()
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_RECORD_CHILD_WORKKLOW_EXECUTION_COMPLETE:
+		return types.CrossClusterTaskTypeRecordChildWorkflowExeuctionComplete.Ptr()
+	case sharedv1.CrossClusterTaskType_CROSS_CLUSTER_TASK_TYPE_APPLY_PARENT_CLOSE_POLICY:
+		return types.CrossClusterTaskTypeApplyParentPolicy.Ptr()
+	}
+	panic("unexpected enum value")
+}
+
+// FromCrossClusterTaskFailedCause converts internal CrossClusterTaskFailedCause type to proto
+func FromCrossClusterTaskFailedCause(t *types.CrossClusterTaskFailedCause) sharedv1.CrossClusterTaskFailedCause {
+	if t == nil {
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID
+	}
+	switch *t {
+	case types.CrossClusterTaskFailedCauseDomainNotActive:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_ACTIVE
+	case types.CrossClusterTaskFailedCauseDomainNotExists:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_EXISTS
+	case types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING
+	case types.CrossClusterTaskFailedCauseWorkflowNotExists:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS
+	case types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED
+	case types.CrossClusterTaskFailedCauseUncategorized:
+		return sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED
+	}
+	panic("unexpected enum value")
+}
+
+// ToCrossClusterTaskFailedCause converts proto CrossClusterTaskFailedCause type to internal
+func ToCrossClusterTaskFailedCause(t sharedv1.CrossClusterTaskFailedCause) *types.CrossClusterTaskFailedCause {
+	switch t {
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_INVALID:
+		return nil
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_ACTIVE:
+		return types.CrossClusterTaskFailedCauseDomainNotActive.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_DOMAIN_NOT_EXISTS:
+		return types.CrossClusterTaskFailedCauseDomainNotExists.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_RUNNING:
+		return types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_NOT_EXISTS:
+		return types.CrossClusterTaskFailedCauseWorkflowNotExists.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_WORKFLOW_ALREADY_COMPLETED:
+		return types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted.Ptr()
+	case sharedv1.CrossClusterTaskFailedCause_CROSS_CLUSTER_TASK_FAILED_CAUSE_UNCATEGORIZED:
+		return types.CrossClusterTaskFailedCauseUncategorized.Ptr()
+
+	}
+	panic("unexpected enum value")
+}
+
+// FromGetTaskFailedCause converts internal GetTaskFailedCause type to proto
+func FromGetTaskFailedCause(t *types.GetTaskFailedCause) sharedv1.GetTaskFailedCause {
+	if t == nil {
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_INVALID
+	}
+	switch *t {
+	case types.GetTaskFailedCauseServiceBusy:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SERVICE_BUSY
+	case types.GetTaskFailedCauseTimeout:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_TIMEOUT
+	case types.GetTaskFailedCauseShardOwnershipLost:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SHARD_OWNERSHIP_LOST
+	case types.GetTaskFailedCauseUncategorized:
+		return sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_UNCATEGORIZED
+	}
+	panic("unexpected enum value")
+}
+
+// ToGetTaskFailedCause converts proto GetTaskFailedCause type to internal
+func ToGetTaskFailedCause(t sharedv1.GetTaskFailedCause) *types.GetTaskFailedCause {
+	switch t {
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_INVALID:
+		return nil
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SERVICE_BUSY:
+		return types.GetTaskFailedCauseServiceBusy.Ptr()
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_TIMEOUT:
+		return types.GetTaskFailedCauseTimeout.Ptr()
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_SHARD_OWNERSHIP_LOST:
+		return types.GetTaskFailedCauseShardOwnershipLost.Ptr()
+	case sharedv1.GetTaskFailedCause_GET_TASK_FAILED_CAUSE_UNCATEGORIZED:
+		return types.GetTaskFailedCauseUncategorized.Ptr()
+	}
+	panic("unexpected enum value")
+}
+
+// FromCrossClusterTaskInfo converts internal CrossClusterTaskInfo type to proto
+func FromCrossClusterTaskInfo(t *types.CrossClusterTaskInfo) *sharedv1.CrossClusterTaskInfo {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterTaskInfo{
+		DomainId:            t.DomainID,
+		WorkflowExecution:   FromWorkflowRunPair(t.WorkflowID, t.RunID),
+		TaskType:            FromCrossClusterTaskType(t.TaskType),
+		TaskState:           int32(t.TaskState),
+		TaskId:              t.TaskID,
+		VisibilityTimestamp: unixNanoToTime(t.VisibilityTimestamp),
+	}
+}
+
+// ToCrossClusterTaskInfo converts proto CrossClusterTaskInfo type to internal
+func ToCrossClusterTaskInfo(t *sharedv1.CrossClusterTaskInfo) *types.CrossClusterTaskInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterTaskInfo{
+		DomainID:            t.DomainId,
+		WorkflowID:          ToWorkflowID(t.WorkflowExecution),
+		RunID:               ToRunID(t.WorkflowExecution),
+		TaskType:            ToCrossClusterTaskType(t.TaskType),
+		TaskState:           int16(t.TaskState),
+		TaskID:              t.TaskId,
+		VisibilityTimestamp: timeToUnixNano(t.VisibilityTimestamp),
+	}
+}
+
+// FromCrossClusterStartChildExecutionRequestAttributes converts internal CrossClusterStartChildExecutionRequestAttributes type to proto
+func FromCrossClusterStartChildExecutionRequestAttributes(t *types.CrossClusterStartChildExecutionRequestAttributes) *sharedv1.CrossClusterStartChildExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterStartChildExecutionRequestAttributes{
+		TargetDomainId:           t.TargetDomainID,
+		RequestId:                t.RequestID,
+		InitiatedEventId:         t.InitiatedEventID,
+		InitiatedEventAttributes: FromStartChildWorkflowExecutionInitiatedEventAttributes(t.InitiatedEventAttributes),
+		TargetRunId:              t.GetTargetRunID(),
+	}
+}
+
+// ToCrossClusterStartChildExecutionRequestAttributes converts proto CrossClusterStartChildExecutionRequestAttributes type to internal
+func ToCrossClusterStartChildExecutionRequestAttributes(t *sharedv1.CrossClusterStartChildExecutionRequestAttributes) *types.CrossClusterStartChildExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterStartChildExecutionRequestAttributes{
+		TargetDomainID:           t.TargetDomainId,
+		RequestID:                t.RequestId,
+		InitiatedEventID:         t.InitiatedEventId,
+		InitiatedEventAttributes: ToStartChildWorkflowExecutionInitiatedEventAttributes(t.InitiatedEventAttributes),
+		TargetRunID:              &t.TargetRunId,
+	}
+}
+
+// FromCrossClusterStartChildExecutionResponseAttributes converts internal CrossClusterStartChildExecutionResponseAttributes type to proto
+func FromCrossClusterStartChildExecutionResponseAttributes(t *types.CrossClusterStartChildExecutionResponseAttributes) *sharedv1.CrossClusterStartChildExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterStartChildExecutionResponseAttributes{
+		RunId: t.RunID,
+	}
+}
+
+// ToCrossClusterStartChildExecutionResponseAttributes converts proto CrossClusterStartChildExecutionResponseAttributes type to internal
+func ToCrossClusterStartChildExecutionResponseAttributes(t *sharedv1.CrossClusterStartChildExecutionResponseAttributes) *types.CrossClusterStartChildExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterStartChildExecutionResponseAttributes{
+		RunID: t.RunId,
+	}
+}
+
+// FromCrossClusterCancelExecutionRequestAttributes converts internal CrossClusterCancelExecutionRequestAttributes type to proto
+func FromCrossClusterCancelExecutionRequestAttributes(t *types.CrossClusterCancelExecutionRequestAttributes) *sharedv1.CrossClusterCancelExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterCancelExecutionRequestAttributes{
+		TargetDomainId:          t.TargetDomainID,
+		TargetWorkflowExecution: FromWorkflowRunPair(t.TargetWorkflowID, t.TargetRunID),
+		RequestId:               t.RequestID,
+		InitiatedEventId:        t.InitiatedEventID,
+		ChildWorkflowOnly:       t.ChildWorkflowOnly,
+	}
+}
+
+// ToCrossClusterCancelExecutionRequestAttributes converts proto CrossClusterCancelExecutionRequestAttributes type to internal
+func ToCrossClusterCancelExecutionRequestAttributes(t *sharedv1.CrossClusterCancelExecutionRequestAttributes) *types.CrossClusterCancelExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterCancelExecutionRequestAttributes{
+		TargetDomainID:    t.TargetDomainId,
+		TargetWorkflowID:  ToWorkflowID(t.TargetWorkflowExecution),
+		TargetRunID:       ToRunID(t.TargetWorkflowExecution),
+		RequestID:         t.RequestId,
+		InitiatedEventID:  t.InitiatedEventId,
+		ChildWorkflowOnly: t.ChildWorkflowOnly,
+	}
+}
+
+// FromCrossClusterCancelExecutionResponseAttributes converts internal CrossClusterCancelExecutionResponseAttributes type to proto
+func FromCrossClusterCancelExecutionResponseAttributes(t *types.CrossClusterCancelExecutionResponseAttributes) *sharedv1.CrossClusterCancelExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterCancelExecutionResponseAttributes{}
+}
+
+// ToCrossClusterCancelExecutionResponseAttributes converts proto CrossClusterCancelExecutionResponseAttributes type to internal
+func ToCrossClusterCancelExecutionResponseAttributes(t *sharedv1.CrossClusterCancelExecutionResponseAttributes) *types.CrossClusterCancelExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterCancelExecutionResponseAttributes{}
+}
+
+// FromCrossClusterSignalExecutionRequestAttributes converts internal CrossClusterSignalExecutionRequestAttributes type to proto
+func FromCrossClusterSignalExecutionRequestAttributes(t *types.CrossClusterSignalExecutionRequestAttributes) *sharedv1.CrossClusterSignalExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterSignalExecutionRequestAttributes{
+		TargetDomainId:          t.TargetDomainID,
+		TargetWorkflowExecution: FromWorkflowRunPair(t.TargetWorkflowID, t.TargetRunID),
+		RequestId:               t.RequestID,
+		InitiatedEventId:        t.InitiatedEventID,
+		ChildWorkflowOnly:       t.ChildWorkflowOnly,
+		SignalName:              t.SignalName,
+		SignalInput:             FromPayload(t.SignalInput),
+		Control:                 t.Control,
+	}
+}
+
+// ToCrossClusterSignalExecutionRequestAttributes converts proto CrossClusterSignalExecutionRequestAttributes type to internal
+func ToCrossClusterSignalExecutionRequestAttributes(t *sharedv1.CrossClusterSignalExecutionRequestAttributes) *types.CrossClusterSignalExecutionRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterSignalExecutionRequestAttributes{
+		TargetDomainID:    t.TargetDomainId,
+		TargetWorkflowID:  ToWorkflowID(t.TargetWorkflowExecution),
+		TargetRunID:       ToRunID(t.TargetWorkflowExecution),
+		RequestID:         t.RequestId,
+		InitiatedEventID:  t.InitiatedEventId,
+		ChildWorkflowOnly: t.ChildWorkflowOnly,
+		SignalName:        t.SignalName,
+		SignalInput:       ToPayload(t.SignalInput),
+		Control:           t.Control,
+	}
+}
+
+// FromCrossClusterSignalExecutionResponseAttributes converts internal CrossClusterSignalExecutionResponseAttributes type to proto
+func FromCrossClusterSignalExecutionResponseAttributes(t *types.CrossClusterSignalExecutionResponseAttributes) *sharedv1.CrossClusterSignalExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterSignalExecutionResponseAttributes{}
+}
+
+// ToCrossClusterSignalExecutionResponseAttributes converts proto CrossClusterSignalExecutionResponseAttributes type to internal
+func ToCrossClusterSignalExecutionResponseAttributes(t *sharedv1.CrossClusterSignalExecutionResponseAttributes) *types.CrossClusterSignalExecutionResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterSignalExecutionResponseAttributes{}
+}
+
+// FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes converts internal CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes type to proto
+func FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) *sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainId:          t.TargetDomainID,
+		TargetWorkflowExecution: FromWorkflowRunPair(t.TargetWorkflowID, t.TargetRunID),
+		InitiatedEventId:        t.InitiatedEventID,
+		CompletionEvent:         FromHistoryEvent(t.CompletionEvent),
+	}
+}
+
+// ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes converts proto CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes type to internal
+func ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t *sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes{
+		TargetDomainID:   t.TargetDomainId,
+		TargetWorkflowID: ToWorkflowID(t.TargetWorkflowExecution),
+		TargetRunID:      ToRunID(t.TargetWorkflowExecution),
+		InitiatedEventID: t.InitiatedEventId,
+		CompletionEvent:  ToHistoryEvent(t.CompletionEvent),
+	}
+}
+
+// FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts internal CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to proto
+func FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) *sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+}
+
+// ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes converts proto CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes type to internal
+func ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t *sharedv1.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes) *types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
+}
+
+// FromApplyParentClosePolicyAttributes converts internal ApplyParentClosePolicyAttributes type to proto
+func FromApplyParentClosePolicyAttributes(t *types.ApplyParentClosePolicyAttributes) *sharedv1.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.ApplyParentClosePolicyAttributes{
+		ChildDomainId:     t.ChildDomainID,
+		ChildWorkflowId:   t.ChildWorkflowID,
+		ChildRunId:        t.ChildRunID,
+		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// ToApplyParentClosePolicyAttributes converts proto ApplyParentClosePolicyAttributes type to internal
+func ToApplyParentClosePolicyAttributes(t *sharedv1.ApplyParentClosePolicyAttributes) *types.ApplyParentClosePolicyAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.ApplyParentClosePolicyAttributes{
+		ChildDomainID:     t.ChildDomainId,
+		ChildWorkflowID:   t.ChildWorkflowId,
+		ChildRunID:        t.ChildRunId,
+		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
+	}
+}
+
+// FromCrossClusterApplyParentClosePolicyRequestAttributes converts internal CrossClusterApplyParentClosePolicyRequestAttributes type to proto
+func FromCrossClusterApplyParentClosePolicyRequestAttributes(t *types.CrossClusterApplyParentClosePolicyRequestAttributes) *sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	requestAttributes := &sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes{}
+	for _, execution := range t.ApplyParentClosePolicyAttributes {
+		requestAttributes.ApplyParentClosePolicyAttributes = append(
+			requestAttributes.ApplyParentClosePolicyAttributes,
+			FromApplyParentClosePolicyAttributes(execution),
+		)
+	}
+	return requestAttributes
+}
+
+// ToCrossClusterApplyParentClosePolicyRequestAttributes converts proto CrossClusterApplyParentClosePolicyRequestAttributes type to internal
+func ToCrossClusterApplyParentClosePolicyRequestAttributes(t *sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes) *types.CrossClusterApplyParentClosePolicyRequestAttributes {
+	if t == nil {
+		return nil
+	}
+	requestAttributes := &types.CrossClusterApplyParentClosePolicyRequestAttributes{}
+	for _, execution := range t.ApplyParentClosePolicyAttributes {
+		requestAttributes.ApplyParentClosePolicyAttributes = append(
+			requestAttributes.ApplyParentClosePolicyAttributes,
+			ToApplyParentClosePolicyAttributes(execution),
+		)
+	}
+	return requestAttributes
+}
+
+// FromCrossClusterApplyParentClosePolicyResponseAttributes converts internal CrossClusterApplyParentClosePolicyResponseAttributes type to proto
+func FromCrossClusterApplyParentClosePolicyResponseAttributes(t *types.CrossClusterApplyParentClosePolicyResponseAttributes) *sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+
+// ToCrossClusterApplyParentClosePolicyResponseAttributes converts proto CrossClusterApplyParentClosePolicyResponseAttributes type to internal
+func ToCrossClusterApplyParentClosePolicyResponseAttributes(t *sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes) *types.CrossClusterApplyParentClosePolicyResponseAttributes {
+	if t == nil {
+		return nil
+	}
+	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+}
+
+// FromCrossClusterTaskRequest converts internal CrossClusterTaskRequest type to proto
+func FromCrossClusterTaskRequest(t *types.CrossClusterTaskRequest) *sharedv1.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	request := sharedv1.CrossClusterTaskRequest{
+		TaskInfo: FromCrossClusterTaskInfo(t.TaskInfo),
+	}
+	if t.StartChildExecutionAttributes != nil {
+		request.Attributes = &sharedv1.CrossClusterTaskRequest_StartChildExecutionAttributes{
+			StartChildExecutionAttributes: FromCrossClusterStartChildExecutionRequestAttributes(t.StartChildExecutionAttributes),
+		}
+	}
+	if t.CancelExecutionAttributes != nil {
+		request.Attributes = &sharedv1.CrossClusterTaskRequest_CancelExecutionAttributes{
+			CancelExecutionAttributes: FromCrossClusterCancelExecutionRequestAttributes(t.CancelExecutionAttributes),
+		}
+	}
+	if t.SignalExecutionAttributes != nil {
+		request.Attributes = &sharedv1.CrossClusterTaskRequest_SignalExecutionAttributes{
+			SignalExecutionAttributes: FromCrossClusterSignalExecutionRequestAttributes(t.SignalExecutionAttributes),
+		}
+	}
+	if t.RecordChildWorkflowExecutionCompleteAttributes != nil {
+		request.Attributes = &sharedv1.CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes{
+			RecordChildWorkflowExecutionCompleteRequestAttributes: FromCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		}
+	}
+	if t.ApplyParentClosePolicyAttributes != nil {
+		request.Attributes = &sharedv1.CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes{
+			ApplyParentClosePolicyRequestAttributes: FromCrossClusterApplyParentClosePolicyRequestAttributes(t.ApplyParentClosePolicyAttributes),
+		}
+	}
+	return &request
+}
+
+// ToCrossClusterTaskRequest converts proto CrossClusterTaskRequest type to internal
+func ToCrossClusterTaskRequest(t *sharedv1.CrossClusterTaskRequest) *types.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	request := types.CrossClusterTaskRequest{
+		TaskInfo: ToCrossClusterTaskInfo(t.TaskInfo),
+	}
+	switch attr := t.Attributes.(type) {
+	case *sharedv1.CrossClusterTaskRequest_StartChildExecutionAttributes:
+		request.StartChildExecutionAttributes = ToCrossClusterStartChildExecutionRequestAttributes(attr.StartChildExecutionAttributes)
+	case *sharedv1.CrossClusterTaskRequest_CancelExecutionAttributes:
+		request.CancelExecutionAttributes = ToCrossClusterCancelExecutionRequestAttributes(attr.CancelExecutionAttributes)
+	case *sharedv1.CrossClusterTaskRequest_SignalExecutionAttributes:
+		request.SignalExecutionAttributes = ToCrossClusterSignalExecutionRequestAttributes(attr.SignalExecutionAttributes)
+	case *sharedv1.CrossClusterTaskRequest_RecordChildWorkflowExecutionCompleteRequestAttributes:
+		request.RecordChildWorkflowExecutionCompleteAttributes = ToCrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes(attr.RecordChildWorkflowExecutionCompleteRequestAttributes)
+	case *sharedv1.CrossClusterTaskRequest_ApplyParentClosePolicyRequestAttributes:
+		request.ApplyParentClosePolicyAttributes = ToCrossClusterApplyParentClosePolicyRequestAttributes(attr.ApplyParentClosePolicyRequestAttributes)
+	}
+	return &request
+}
+
+// FromCrossClusterTaskResponse converts internal CrossClusterTaskResponse type to proto
+func FromCrossClusterTaskResponse(t *types.CrossClusterTaskResponse) *sharedv1.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	response := sharedv1.CrossClusterTaskResponse{
+		TaskId:      t.TaskID,
+		TaskType:    FromCrossClusterTaskType(t.TaskType),
+		TaskState:   int32(t.TaskState),
+		FailedCause: FromCrossClusterTaskFailedCause(t.FailedCause),
+	}
+	if t.StartChildExecutionAttributes != nil {
+		response.Attributes = &sharedv1.CrossClusterTaskResponse_StartChildExecutionAttributes{
+			StartChildExecutionAttributes: FromCrossClusterStartChildExecutionResponseAttributes(t.StartChildExecutionAttributes),
+		}
+	}
+	if t.CancelExecutionAttributes != nil {
+		response.Attributes = &sharedv1.CrossClusterTaskResponse_CancelExecutionAttributes{
+			CancelExecutionAttributes: FromCrossClusterCancelExecutionResponseAttributes(t.CancelExecutionAttributes),
+		}
+	}
+	if t.SignalExecutionAttributes != nil {
+		response.Attributes = &sharedv1.CrossClusterTaskResponse_SignalExecutionAttributes{
+			SignalExecutionAttributes: FromCrossClusterSignalExecutionResponseAttributes(t.SignalExecutionAttributes),
+		}
+	}
+	if t.RecordChildWorkflowExecutionCompleteAttributes != nil {
+		response.Attributes = &sharedv1.CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes{
+			RecordChildWorkflowExecutionCompleteRequestAttributes: FromCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t.RecordChildWorkflowExecutionCompleteAttributes),
+		}
+	}
+	if t.ApplyParentClosePolicyAttributes != nil {
+		response.Attributes = &sharedv1.CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes{
+			ApplyParentClosePolicyResponseAttributes: FromCrossClusterApplyParentClosePolicyResponseAttributes(t.ApplyParentClosePolicyAttributes),
+		}
+	}
+	return &response
+}
+
+// ToCrossClusterTaskResponse converts proto CrossClusterTaskResponse type to internal
+func ToCrossClusterTaskResponse(t *sharedv1.CrossClusterTaskResponse) *types.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	response := types.CrossClusterTaskResponse{
+		TaskID:      t.TaskId,
+		TaskType:    ToCrossClusterTaskType(t.TaskType),
+		TaskState:   int16(t.TaskState),
+		FailedCause: ToCrossClusterTaskFailedCause(t.FailedCause),
+	}
+	switch attr := t.Attributes.(type) {
+	case *sharedv1.CrossClusterTaskResponse_StartChildExecutionAttributes:
+		response.StartChildExecutionAttributes = ToCrossClusterStartChildExecutionResponseAttributes(attr.StartChildExecutionAttributes)
+	case *sharedv1.CrossClusterTaskResponse_CancelExecutionAttributes:
+		response.CancelExecutionAttributes = ToCrossClusterCancelExecutionResponseAttributes(attr.CancelExecutionAttributes)
+	case *sharedv1.CrossClusterTaskResponse_SignalExecutionAttributes:
+		response.SignalExecutionAttributes = ToCrossClusterSignalExecutionResponseAttributes(attr.SignalExecutionAttributes)
+	case *sharedv1.CrossClusterTaskResponse_RecordChildWorkflowExecutionCompleteRequestAttributes:
+		response.RecordChildWorkflowExecutionCompleteAttributes = ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(attr.RecordChildWorkflowExecutionCompleteRequestAttributes)
+	case *sharedv1.CrossClusterTaskResponse_ApplyParentClosePolicyResponseAttributes:
+		response.ApplyParentClosePolicyAttributes = ToCrossClusterApplyParentClosePolicyResponseAttributes(attr.ApplyParentClosePolicyResponseAttributes)
+	}
+	return &response
+}
+
+// FromCrossClusterTaskRequestArray converts internal CrossClusterTaskRequest type array to proto
+func FromCrossClusterTaskRequestArray(t []*types.CrossClusterTaskRequest) *sharedv1.CrossClusterTaskRequests {
+	if t == nil {
+		return nil
+	}
+	v := make([]*sharedv1.CrossClusterTaskRequest, len(t))
+	for i := range t {
+		v[i] = FromCrossClusterTaskRequest(t[i])
+	}
+	return &sharedv1.CrossClusterTaskRequests{
+		TaskRequests: v,
+	}
+}
+
+// ToCrossClusterTaskRequestArray converts proto CrossClusterTaskRequest type array to internal
+func ToCrossClusterTaskRequestArray(t *sharedv1.CrossClusterTaskRequests) []*types.CrossClusterTaskRequest {
+	if t == nil || t.TaskRequests == nil {
+		return nil
+	}
+	v := make([]*types.CrossClusterTaskRequest, len(t.TaskRequests))
+	for i := range t.TaskRequests {
+		v[i] = ToCrossClusterTaskRequest(t.TaskRequests[i])
+	}
+	return v
+}
+
+// FromCrossClusterTaskRequestMap converts internal CrossClusterTaskRequest type map to proto
+func FromCrossClusterTaskRequestMap(t map[int32][]*types.CrossClusterTaskRequest) map[int32]*sharedv1.CrossClusterTaskRequests {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]*sharedv1.CrossClusterTaskRequests, len(t))
+	for key := range t {
+		v[key] = FromCrossClusterTaskRequestArray(t[key])
+	}
+	return v
+}
+
+// ToCrossClusterTaskRequestMap converts proto CrossClusterTaskRequest type map to internal
+func ToCrossClusterTaskRequestMap(t map[int32]*sharedv1.CrossClusterTaskRequests) map[int32][]*types.CrossClusterTaskRequest {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32][]*types.CrossClusterTaskRequest, len(t))
+	for key := range t {
+		value := ToCrossClusterTaskRequestArray(t[key])
+		if value == nil {
+			// grpc can't differentiate between empty array or nil array
+			// our application logic ensure no nil array will be returned
+			// for CrossClusterTaskRequest, so always convert to empty array
+			// we only need the special handling here as this array is used
+			// as a map value in GetCrossClusterTasksResponse,
+			// and if the map value is nil, THRIFT won't be able to encode the value
+			// this may happen when we are using grpc within a cluster but thrift across cluster
+			value = []*types.CrossClusterTaskRequest{}
+		}
+		v[key] = value
+	}
+	return v
+}
+
+// FromGetTaskFailedCauseMap converts internal GetTaskFailedCause type map to proto
+func FromGetTaskFailedCauseMap(t map[int32]types.GetTaskFailedCause) map[int32]sharedv1.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]sharedv1.GetTaskFailedCause, len(t))
+	for key, value := range t {
+		v[key] = FromGetTaskFailedCause(&value)
+	}
+	return v
+}
+
+// ToGetTaskFailedCauseMap converts proto GetTaskFailedCause type map to internal
+func ToGetTaskFailedCauseMap(t map[int32]sharedv1.GetTaskFailedCause) map[int32]types.GetTaskFailedCause {
+	if t == nil {
+		return nil
+	}
+	v := make(map[int32]types.GetTaskFailedCause, len(t))
+	for key := range t {
+		if internalValue := ToGetTaskFailedCause(t[key]); internalValue != nil {
+			v[key] = *internalValue
+		}
+	}
+	return v
+}
+
+// FromCrossClusterTaskResponseArray converts internal CrossClusterTaskResponse type array to proto
+func FromCrossClusterTaskResponseArray(t []*types.CrossClusterTaskResponse) []*sharedv1.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	v := make([]*sharedv1.CrossClusterTaskResponse, len(t))
+	for i := range t {
+		v[i] = FromCrossClusterTaskResponse(t[i])
+	}
+	return v
+}
+
+// ToCrossClusterTaskResponseArray converts proto CrossClusterTaskResponse type array to internal
+func ToCrossClusterTaskResponseArray(t []*sharedv1.CrossClusterTaskResponse) []*types.CrossClusterTaskResponse {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.CrossClusterTaskResponse, len(t))
+	for i := range t {
+		v[i] = ToCrossClusterTaskResponse(t[i])
+	}
+	return v
 }

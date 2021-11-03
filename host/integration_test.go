@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Uber Technologies, Inc.
+// Copyright (c) 2021 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -46,34 +46,39 @@ import (
 	"github.com/uber/cadence/service/matching"
 )
 
-type (
-	integrationSuite struct {
-		// override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test,
-		// not merely log an error
-		*require.Assertions
-		IntegrationBase
-	}
-)
+func TestIntegrationSuite(t *testing.T) {
+	flag.Parse()
 
-func (s *integrationSuite) SetupSuite() {
-	s.setupSuite("testdata/integration_test_cluster.yaml")
+	clusterConfig, err := GetTestClusterConfig("testdata/integration_test_cluster.yaml")
+	if err != nil {
+		panic(err)
+	}
+	testCluster := NewPersistenceTestCluster(clusterConfig)
+
+	s := new(IntegrationSuite)
+	params := IntegrationBaseParams{
+		DefaultTestCluster:    testCluster,
+		VisibilityTestCluster: testCluster,
+		TestClusterConfig:     clusterConfig,
+	}
+	s.IntegrationBase = NewIntegrationBase(params)
+	suite.Run(t, s)
 }
 
-func (s *integrationSuite) TearDownSuite() {
+func (s *IntegrationSuite) SetupSuite() {
+	s.setupSuite()
+}
+
+func (s *IntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
 }
 
-func (s *integrationSuite) SetupTest() {
+func (s *IntegrationSuite) SetupTest() {
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }
 
-func TestIntegrationSuite(t *testing.T) {
-	flag.Parse()
-	suite.Run(t, new(integrationSuite))
-}
-
-func (s *integrationSuite) TestStartWorkflowExecution() {
+func (s *IntegrationSuite) TestStartWorkflowExecution() {
 	id := "integration-start-workflow-test"
 	wt := "integration-start-workflow-test-type"
 	tl := "integration-start-workflow-test-tasklist"
@@ -95,6 +100,12 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
+		Header: &types.Header{
+			Fields: map[string][]byte{
+				"test-key":    []byte("test-value"),
+				"empty-value": {},
+			},
+		},
 	}
 
 	we0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -122,7 +133,89 @@ func (s *integrationSuite) TestStartWorkflowExecution() {
 	s.Nil(we2)
 }
 
-func (s *integrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
+func (s *IntegrationSuite) TestStartWorkflowExecution_StartTimestampMatch() {
+	id := "integration-start-workflow-start-timestamp-test"
+	wt := "integration-start-workflow-start-timestamptest-type"
+	tl := "integration-start-workflow-start-timestamp-test-tasklist"
+	identity := "worker1"
+
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           uuid.New(),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
+		WorkflowType:                        &types.WorkflowType{Name: wt},
+		TaskList:                            &types.TaskList{Name: tl},
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            identity,
+	}
+
+	we0, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	var historyStartTime time.Time
+	histResp, err := s.engine.GetWorkflowExecutionHistory(createContext(), &types.GetWorkflowExecutionHistoryRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+			RunID:      we0.GetRunID(),
+		},
+	})
+	s.NoError(err)
+
+	for _, event := range histResp.GetHistory().GetEvents() {
+		if event.GetEventType() == types.EventTypeWorkflowExecutionStarted {
+			historyStartTime = time.Unix(0, event.GetTimestamp())
+			break
+		}
+	}
+
+	descResp, err := s.engine.DescribeWorkflowExecution(createContext(), &types.DescribeWorkflowExecutionRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: id,
+			RunID:      we0.GetRunID(),
+		},
+	})
+	s.NoError(err)
+	s.WithinDuration(
+		historyStartTime,
+		time.Unix(0, descResp.GetWorkflowExecutionInfo().GetStartTime()),
+		time.Millisecond,
+	)
+
+	var listResp *types.ListOpenWorkflowExecutionsResponse
+	for i := 0; i != 20; i++ {
+		listResp, err = s.engine.ListOpenWorkflowExecutions(createContext(), &types.ListOpenWorkflowExecutionsRequest{
+			Domain: s.domainName,
+			StartTimeFilter: &types.StartTimeFilter{
+				EarliestTime: common.Int64Ptr(historyStartTime.Add(-time.Minute).UnixNano()),
+				LatestTime:   common.Int64Ptr(time.Now().UnixNano()),
+			},
+			ExecutionFilter: &types.WorkflowExecutionFilter{
+				WorkflowID: id,
+				RunID:      we0.GetRunID(),
+			},
+		})
+		s.NoError(err)
+		if len(listResp.Executions) == 0 {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	if listResp == nil || len(listResp.Executions) == 0 {
+		s.Fail("unable to get workflow visibility records")
+	}
+
+	s.WithinDuration(
+		historyStartTime,
+		time.Unix(0, listResp.Executions[0].GetStartTime()),
+		time.Millisecond,
+	)
+}
+
+func (s *IntegrationSuite) TestStartWorkflowExecution_IDReusePolicy() {
 	id := "integration-start-workflow-id-reuse-test"
 	wt := "integration-start-workflow-id-reuse-type"
 	tl := "integration-start-workflow-id-reuse-tasklist"
@@ -282,7 +375,7 @@ GetHistoryLoop:
 	s.NotEqual(we4.GetRunID(), we5.GetRunID())
 }
 
-func (s *integrationSuite) TestTerminateWorkflow() {
+func (s *IntegrationSuite) TestTerminateWorkflow() {
 	id := "integration-terminate-workflow-test"
 	wt := "integration-terminate-workflow-test-type"
 	tl := "integration-terminate-workflow-test-tasklist"
@@ -440,29 +533,68 @@ StartNewExecutionLoop:
 	s.True(newExecutionStarted)
 }
 
-func (s *integrationSuite) TestSequentialWorkflow() {
-	id := "integration-sequential-workflow-test"
-	wt := "integration-sequential-workflow-test-type"
-	tl := "integration-sequential-workflow-test-tasklist"
+func (s *IntegrationSuite) TestSequentialWorkflow() {
+	RunSequentialWorkflow(
+		s,
+		"integration-sequential-workflow-test",
+		"integration-sequential-workflow-test-type",
+		"integration-sequential-workflow-test-tasklist",
+		0,
+	)
+}
+
+func (s *IntegrationSuite) TestDelayStartWorkflow() {
+	startWorkflowTS := time.Now()
+	RunSequentialWorkflow(
+		s,
+		"integration-delay-start-workflow-test",
+		"integration-delay-start-workflow-test-type",
+		"integration-delay-start-workflow-test-tasklist",
+		10,
+	)
+
+	targetBackoffDuration := time.Second * 10
+	backoffDurationTolerance := time.Millisecond * 3000
+	backoffDuration := time.Since(startWorkflowTS)
+	s.True(
+		backoffDuration > targetBackoffDuration,
+		"Backoff duration(%f s) should have been at least 5 seconds",
+		time.Duration(backoffDuration).Round(time.Millisecond).Seconds(),
+	)
+	s.True(
+		backoffDuration < targetBackoffDuration+backoffDurationTolerance,
+		"Integration test too long: %f seconds",
+		time.Duration(backoffDuration).Round(time.Millisecond).Seconds(),
+	)
+}
+
+func RunSequentialWorkflow(
+	s *IntegrationSuite,
+	workflowID string,
+	workflowTypeStr string,
+	taskListStr string,
+	delayStartSeconds int32,
+) {
 	identity := "worker1"
 	activityName := "activity_type1"
 
 	workflowType := &types.WorkflowType{}
-	workflowType.Name = wt
+	workflowType.Name = workflowTypeStr
 
 	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList.Name = taskListStr
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           uuid.New(),
 		Domain:                              s.domainName,
-		WorkflowID:                          id,
+		WorkflowID:                          workflowID,
 		WorkflowType:                        workflowType,
 		TaskList:                            taskList,
 		Input:                               nil,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
+		DelayStartSeconds:                   common.Int32Ptr(delayStartSeconds),
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -485,7 +617,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
 					ActivityID:                    strconv.Itoa(int(activityCounter)),
 					ActivityType:                  &types.ActivityType{Name: activityName},
-					TaskList:                      &types.TaskList{Name: tl},
+					TaskList:                      &types.TaskList{Name: taskListStr},
 					Input:                         buf.Bytes(),
 					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
 					ScheduleToStartTimeoutSeconds: common.Int32Ptr(10),
@@ -507,7 +639,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	expectedActivity := int32(1)
 	atHandler := func(execution *types.WorkflowExecution, activityType *types.ActivityType,
 		ActivityID string, input []byte, taskToken []byte) ([]byte, bool, error) {
-		s.Equal(id, execution.WorkflowID)
+		s.Equal(workflowID, execution.WorkflowID)
 		s.Equal(activityName, activityType.Name)
 		id, _ := strconv.Atoi(ActivityID)
 		s.Equal(int(expectedActivity), id)
@@ -550,7 +682,7 @@ func (s *integrationSuite) TestSequentialWorkflow() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
+func (s *IntegrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	id := "integration-complete-decision-create-new-test"
 	wt := "integration-complete-decision-create-new-test-type"
 	tl := "integration-complete-decision-create-new-test-tasklist"
@@ -634,7 +766,7 @@ func (s *integrationSuite) TestCompleteDecisionTaskAndCreateNewOne() {
 	s.Equal(types.EventTypeDecisionTaskStarted, newTask.DecisionTask.History.Events[3].GetEventType())
 }
 
-func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
+func (s *IntegrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	id := "integration-timeouts-workflow-test"
 	wt := "integration-timeouts-workflow-test-type"
 	tl := "integration-timeouts-workflow-test-tasklist"
@@ -757,7 +889,7 @@ func (s *integrationSuite) TestDecisionAndActivityTimeoutsWorkflow() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestWorkflowRetry() {
+func (s *IntegrationSuite) TestWorkflowRetry() {
 	id := "integration-wf-retry-test"
 	wt := "integration-wf-retry-type"
 	tl := "integration-wf-retry-tasklist"
@@ -867,7 +999,7 @@ func (s *integrationSuite) TestWorkflowRetry() {
 	}
 }
 
-func (s *integrationSuite) TestWorkflowRetryFailures() {
+func (s *IntegrationSuite) TestWorkflowRetryFailures() {
 	id := "integration-wf-retry-failures-test"
 	wt := "integration-wf-retry-failures-type"
 	tl := "integration-wf-retry-failures-tasklist"
@@ -1011,7 +1143,7 @@ func (s *integrationSuite) TestWorkflowRetryFailures() {
 
 }
 
-func (s *integrationSuite) TestCronWorkflow() {
+func (s *IntegrationSuite) TestCronWorkflow() {
 	id := "integration-wf-cron-test"
 	wt := "integration-wf-cron-type"
 	tl := "integration-wf-cron-tasklist"
@@ -1201,27 +1333,36 @@ func (s *integrationSuite) TestCronWorkflow() {
 	})
 	lastExecution := closedExecutions[0]
 
-	// TODO https://github.com/uber/cadence/issues/3540
-	// the rest assertion can cause transient failure
-	if s.testClusterConfig.Persistence.SQLDBPluginName == "postgres" {
-		return
-	}
 	for i := 1; i != 4; i++ {
 		executionInfo := closedExecutions[i]
-		// Roundup to compare on the precision of seconds
-		expectedBackoff := executionInfo.GetExecutionTime()/1000000000 - lastExecution.GetExecutionTime()/1000000000
+		expectedBackoff := executionInfo.GetExecutionTime() - lastExecution.GetExecutionTime()
 		// The execution time calculate based on last execution close time
 		// However, the current execution time is based on the current start time
 		// This code is to remove the diff between current start time and last execution close time
 		// TODO: Remove this line once we unify the time source
-		executionTimeDiff := executionInfo.GetStartTime()/1000000000 - lastExecution.GetCloseTime()/1000000000
+		executionTimeDiff := executionInfo.GetStartTime() - lastExecution.GetCloseTime()
 		// The backoff between any two executions should be multiplier of the target backoff duration which is 3 in this test
-		s.Equal(int64(0), int64(expectedBackoff-executionTimeDiff)%(targetBackoffDuration.Nanoseconds()/1000000000))
+		// However, it's difficult to guarantee accuracy within a second, we allows 1s as buffering...
+		backoffSeconds := int(time.Duration(expectedBackoff - executionTimeDiff).Round(time.Second).Seconds())
+		targetBackoffSeconds := int(targetBackoffDuration.Seconds())
+		targetDiff := int(math.Abs(float64(backoffSeconds%targetBackoffSeconds-3))) % 3
+
+		s.True(
+			targetDiff <= 1,
+			"Still Flaky?:((%v-%v) - (%v-%v)), backoffSeconds: %v, targetBackoffSeconds: %v, targetDiff:%v",
+			backoffSeconds,
+			executionInfo.GetExecutionTime(),
+			lastExecution.GetExecutionTime(),
+			executionInfo.GetStartTime(),
+			lastExecution.GetCloseTime(),
+			targetBackoffSeconds,
+			targetDiff,
+		)
 		lastExecution = executionInfo
 	}
 }
 
-func (s *integrationSuite) TestCronWorkflowTimeout() {
+func (s *IntegrationSuite) TestCronWorkflowTimeout() {
 	id := "integration-wf-cron-timeout-test"
 	wt := "integration-wf-cron-timeout-type"
 	tl := "integration-wf-cron-timeout-tasklist"
@@ -1240,6 +1381,14 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	searchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{"CustomKeywordField": []byte(`"1"`)},
 	}
+	retryPolicy := &types.RetryPolicy{
+		InitialIntervalInSeconds:    1,
+		BackoffCoefficient:          2.0,
+		MaximumIntervalInSeconds:    1,
+		ExpirationIntervalInSeconds: 1,
+		MaximumAttempts:             0,
+		NonRetriableErrorReasons:    []string{"bad-error"},
+	}
 
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           uuid.New(),
@@ -1254,6 +1403,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 		CronSchedule:                        cronSchedule, //minimum interval by standard spec is 1m (* * * * *), use non-standard descriptor for short interval for test
 		Memo:                                memo,
 		SearchAttributes:                    searchAttr,
+		RetryPolicy:                         retryPolicy,
 	}
 
 	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
@@ -1302,6 +1452,9 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	s.Equal(memo, attributes.Memo)
 	s.Equal(searchAttr, attributes.SearchAttributes)
 
+	firstStartWorkflowEvent := events[0]
+	s.NotNil(firstStartWorkflowEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)
+
 	_, err = poller.PollAndProcessDecisionTask(false, false)
 	s.True(err == nil, err)
 
@@ -1313,6 +1466,11 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	s.Equal(memo, startAttributes.Memo)
 	s.Equal(searchAttr, startAttributes.SearchAttributes)
 
+	s.NotNil(firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)
+	// test that the new workflow has a different expiration timestamp from the first workflow
+	s.True(*firstEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp >
+		*firstStartWorkflowEvent.WorkflowExecutionStartedEventAttributes.ExpirationTimestamp)
+
 	// terminate cron
 	terminateErr := s.engine.TerminateWorkflowExecution(createContext(), &types.TerminateWorkflowExecutionRequest{
 		Domain: s.domainName,
@@ -1323,7 +1481,7 @@ func (s *integrationSuite) TestCronWorkflowTimeout() {
 	s.NoError(terminateErr)
 }
 
-func (s *integrationSuite) TestSequential_UserTimers() {
+func (s *IntegrationSuite) TestSequential_UserTimers() {
 	id := "integration-sequential-user-timers-test"
 	wt := "integration-sequential-user-timers-test-type"
 	tl := "integration-sequential-user-timers-test-tasklist"
@@ -1402,7 +1560,7 @@ func (s *integrationSuite) TestSequential_UserTimers() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestRateLimitBufferedEvents() {
+func (s *IntegrationSuite) TestRateLimitBufferedEvents() {
 	id := "integration-rate-limit-buffered-events-test"
 	wt := "integration-rate-limit-buffered-events-test-type"
 	tl := "integration-rate-limit-buffered-events-test-tasklist"
@@ -1502,7 +1660,7 @@ func (s *integrationSuite) TestRateLimitBufferedEvents() {
 	s.Equal(101, signalCount) // check that all 101 signals are received.
 }
 
-func (s *integrationSuite) TestBufferedEvents() {
+func (s *IntegrationSuite) TestBufferedEvents() {
 	id := "integration-buffered-events-test"
 	wt := "integration-buffered-events-test-type"
 	tl := "integration-buffered-events-test-tasklist"
@@ -1622,7 +1780,7 @@ func (s *integrationSuite) TestBufferedEvents() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestDescribeWorkflowExecution() {
+func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 	id := "integration-describe-wfe-test"
 	wt := "integration-describe-wfe-test-type"
 	tl := "integration-describe-wfe-test-tasklist"
@@ -1746,7 +1904,7 @@ func (s *integrationSuite) TestDescribeWorkflowExecution() {
 	s.Equal(int64(11), dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, WorkflowCompleted
 }
 
-func (s *integrationSuite) TestVisibility() {
+func (s *IntegrationSuite) TestVisibility() {
 	startTime := time.Now().UnixNano()
 
 	// Start 2 workflow executions
@@ -1882,7 +2040,7 @@ func (s *integrationSuite) TestVisibility() {
 	s.Equal(1, openCount)
 }
 
-func (s *integrationSuite) TestChildWorkflowExecution() {
+func (s *IntegrationSuite) TestChildWorkflowExecution() {
 	parentID := "integration-child-workflow-test-parent"
 	childID := "integration-child-workflow-test-child"
 	wtParent := "integration-child-workflow-test-parent-type"
@@ -2062,13 +2220,13 @@ func (s *integrationSuite) TestChildWorkflowExecution() {
 	s.Nil(err)
 	s.NotNil(completedEvent)
 	completedAttributes := completedEvent.ChildWorkflowExecutionCompletedEventAttributes
-	s.Empty(completedAttributes.Domain)
+	s.Equal(s.domainName, completedAttributes.Domain)
 	s.Equal(childID, completedAttributes.WorkflowExecution.WorkflowID)
 	s.Equal(wtChild, completedAttributes.WorkflowType.Name)
 	s.Equal([]byte("Child Done."), completedAttributes.Result)
 }
 
-func (s *integrationSuite) TestCronChildWorkflowExecution() {
+func (s *IntegrationSuite) TestCronChildWorkflowExecution() {
 	parentID := "integration-cron-child-workflow-test-parent"
 	childID := "integration-cron-child-workflow-test-child"
 	wtParent := "integration-cron-child-workflow-test-parent-type"
@@ -2234,7 +2392,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	s.Nil(err)
 	s.NotNil(terminatedEvent)
 	terminatedAttributes := terminatedEvent.ChildWorkflowExecutionTerminatedEventAttributes
-	s.Empty(terminatedAttributes.Domain)
+	s.Equal(s.domainName, terminatedAttributes.Domain)
 	s.Equal(childID, terminatedAttributes.WorkflowExecution.WorkflowID)
 	s.Equal(wtChild, terminatedAttributes.WorkflowType.Name)
 
@@ -2275,7 +2433,7 @@ func (s *integrationSuite) TestCronChildWorkflowExecution() {
 	}
 }
 
-func (s *integrationSuite) TestWorkflowTimeout() {
+func (s *IntegrationSuite) TestWorkflowTimeout() {
 	startTime := time.Now().UnixNano()
 
 	id := "integration-workflow-timeout"
@@ -2358,7 +2516,7 @@ ListClosedLoop:
 	s.Equal(1, closedCount)
 }
 
-func (s *integrationSuite) TestDecisionTaskFailed() {
+func (s *IntegrationSuite) TestDecisionTaskFailed() {
 	id := "integration-decisiontask-failed-test"
 	wt := "integration-decisiontask-failed-test-type"
 	tl := "integration-decisiontask-failed-test-tasklist"
@@ -2561,7 +2719,7 @@ func (s *integrationSuite) TestDecisionTaskFailed() {
 	s.Equal(types.EventTypeWorkflowExecutionCompleted, workflowCompletedEvent.GetEventType())
 }
 
-func (s *integrationSuite) TestDescribeTaskList() {
+func (s *IntegrationSuite) TestDescribeTaskList() {
 	WorkflowID := "integration-get-poller-history"
 	workflowTypeName := "integration-get-poller-history-type"
 	tasklistName := "integration-get-poller-history-tasklist"
@@ -2687,7 +2845,7 @@ func (s *integrationSuite) TestDescribeTaskList() {
 	s.NotEmpty(pollerInfos[0].GetLastAccessTime())
 }
 
-func (s *integrationSuite) TestTransientDecisionTimeout() {
+func (s *IntegrationSuite) TestTransientDecisionTimeout() {
 	id := "integration-transient-decision-timeout-test"
 	wt := "integration-transient-decision-timeout-test-type"
 	tl := "integration-transient-decision-timeout-test-tasklist"
@@ -2783,7 +2941,7 @@ func (s *integrationSuite) TestTransientDecisionTimeout() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
+func (s *IntegrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 	id := "integration-no-transient-decision-after-flush-buffered-events-test"
 	wt := "integration-no-transient-decision-after-flush-buffered-events-test-type"
 	tl := "integration-no-transient-decision-after-flush-buffered-events-test-tasklist"
@@ -2877,7 +3035,7 @@ func (s *integrationSuite) TestNoTransientDecisionAfterFlushBufferedEvents() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestRelayDecisionTimeout() {
+func (s *IntegrationSuite) TestRelayDecisionTimeout() {
 	id := "integration-relay-decision-timeout-test"
 	wt := "integration-relay-decision-timeout-test-type"
 	tl := "integration-relay-decision-timeout-test-tasklist"
@@ -2979,7 +3137,7 @@ func (s *integrationSuite) TestRelayDecisionTimeout() {
 	s.True(workflowComplete)
 }
 
-func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
+func (s *IntegrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	id := "integration-task-processing-protection-for-rate-limit-error-test"
 	wt := "integration-task-processing-protection-for-rate-limit-error-test-type"
 	tl := "integration-task-processing-protection-for-rate-limit-error-test-tasklist"
@@ -3096,7 +3254,7 @@ func (s *integrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	s.Equal(102, signalCount)
 }
 
-func (s *integrationSuite) TestStickyTimeout_NonTransientDecision() {
+func (s *IntegrationSuite) TestStickyTimeout_NonTransientDecision() {
 	id := "integration-sticky-timeout-non-transient-decision"
 	wt := "integration-sticky-timeout-non-transient-decision-type"
 	tl := "integration-sticky-timeout-non-transient-decision-tasklist"
@@ -3270,7 +3428,7 @@ WaitForStickyTimeoutLoop:
 	s.Equal(2, failedDecisions, "Mismatched failed decision count")
 }
 
-func (s *integrationSuite) TestStickyTasklistResetThenTimeout() {
+func (s *IntegrationSuite) TestStickyTasklistResetThenTimeout() {
 	id := "integration-reset-sticky-fire-schedule-to-start-timeout"
 	wt := "integration-reset-sticky-fire-schedule-to-start-timeout-type"
 	tl := "integration-reset-sticky-fire-schedule-to-start-timeout-tasklist"
@@ -3388,7 +3546,11 @@ WaitForStickyTimeoutLoop:
 	s.True(stickyTimeout, "Decision not timed out.")
 
 	for i := 0; i < 3; i++ {
-		_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(i))
+		// we will jump from sticky decision to transient decision in this case (decisionAttempt increased)
+		// even though the error is sticky scheduleToStart timeout
+		// since we can't tell if the decision is a sticky decision or not when the timer fires
+		// (stickiness cleared by the ResetStickyTaskList API call above)
+		_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(i+1))
 		s.Logger.Info("PollAndProcessDecisionTask: %v", tag.Error(err))
 		s.Nil(err)
 	}
@@ -3435,10 +3597,10 @@ WaitForStickyTimeoutLoop:
 		}
 	}
 	s.True(workflowComplete, "Workflow not complete")
-	s.Equal(2, failedDecisions, "Mismatched failed decision count")
+	s.Equal(1, failedDecisions, "Mismatched failed decision count")
 }
 
-func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
+func (s *IntegrationSuite) TestBufferedEventsOutOfOrder() {
 	id := "integration-buffered-events-out-of-order-test"
 	wt := "integration-buffered-events-out-of-order-test-type"
 	tl := "integration-buffered-events-out-of-order-test-tasklist"
@@ -3597,7 +3759,7 @@ func (s *integrationSuite) TestBufferedEventsOutOfOrder() {
 
 type startFunc func() (*types.StartWorkflowExecutionResponse, error)
 
-func (s *integrationSuite) TestStartWithMemo() {
+func (s *IntegrationSuite) TestStartWithMemo() {
 	id := "integration-start-with-memo-test"
 	wt := "integration-start-with-memo-test-type"
 	tl := "integration-start-with-memo-test-tasklist"
@@ -3635,7 +3797,7 @@ func (s *integrationSuite) TestStartWithMemo() {
 	s.startWithMemoHelper(fn, id, taskList, memo)
 }
 
-func (s *integrationSuite) TestSignalWithStartWithMemo() {
+func (s *IntegrationSuite) TestSignalWithStartWithMemo() {
 	id := "integration-signal-with-start-with-memo-test"
 	wt := "integration-signal-with-start-with-memo-test-type"
 	tl := "integration-signal-with-start-with-memo-test-tasklist"
@@ -3677,7 +3839,7 @@ func (s *integrationSuite) TestSignalWithStartWithMemo() {
 	s.startWithMemoHelper(fn, id, taskList, memo)
 }
 
-func (s *integrationSuite) TestCancelTimer() {
+func (s *IntegrationSuite) TestCancelTimer() {
 	id := "integration-cancel-timer-test"
 	wt := "integration-cancel-timer-test-type"
 	tl := "integration-cancel-timer-test-tasklist"
@@ -3814,7 +3976,7 @@ func (s *integrationSuite) TestCancelTimer() {
 	}
 }
 
-func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
+func (s *IntegrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 	id := "integration-cancel-timer-fired-and-buffered-test"
 	wt := "integration-cancel-timer-fired-and-buffered-test-type"
 	tl := "integration-cancel-timer-fired-and-buffered-test-tasklist"
@@ -3953,7 +4115,7 @@ func (s *integrationSuite) TestCancelTimer_CancelFiredAndBuffered() {
 }
 
 // helper function for TestStartWithMemo and TestSignalWithStartWithMemo to reduce duplicate code
-func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, taskList *types.TaskList, memo *types.Memo) {
+func (s *IntegrationSuite) startWithMemoHelper(startFn startFunc, id string, taskList *types.TaskList, memo *types.Memo) {
 	identity := "worker1"
 
 	we, err0 := startFn()
@@ -4062,7 +4224,7 @@ func (s *integrationSuite) startWithMemoHelper(startFn startFunc, id string, tas
 	s.Equal(memo, closedExecutionInfo.Memo)
 }
 
-func (s *integrationSuite) sendSignal(domainName string, execution *types.WorkflowExecution, signalName string,
+func (s *IntegrationSuite) sendSignal(domainName string, execution *types.WorkflowExecution, signalName string,
 	input []byte, identity string) error {
 	return s.engine.SignalWorkflowExecution(createContext(), &types.SignalWorkflowExecutionRequest{
 		Domain:            domainName,

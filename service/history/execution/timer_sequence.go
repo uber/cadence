@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -82,7 +81,7 @@ type (
 
 	// TimerSequence manages user / activity timer
 	TimerSequence interface {
-		IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) bool
+		IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) (time.Duration, bool)
 
 		CreateNextUserTimer() (bool, error)
 		CreateNextActivityTimer() (bool, error)
@@ -92,7 +91,6 @@ type (
 	}
 
 	timerSequenceImpl struct {
-		timeSource   clock.TimeSource
 		mutableState MutableState
 	}
 )
@@ -101,11 +99,9 @@ var _ TimerSequence = (*timerSequenceImpl)(nil)
 
 // NewTimerSequence creates a new timer sequence
 func NewTimerSequence(
-	timeSource clock.TimeSource,
 	mutableState MutableState,
 ) TimerSequence {
 	return &timerSequenceImpl{
-		timeSource:   timeSource,
 		mutableState: mutableState,
 	}
 }
@@ -113,11 +109,19 @@ func NewTimerSequence(
 func (t *timerSequenceImpl) IsExpired(
 	referenceTime time.Time,
 	TimerSequenceID TimerSequenceID,
-) bool {
+) (time.Duration, bool) {
 
 	// Cassandra timestamp resolution is in millisecond
 	// here we do the check in terms of second resolution.
-	return TimerSequenceID.Timestamp.Unix() <= referenceTime.Unix()
+
+	timerFireTimeInSecond := TimerSequenceID.Timestamp.Unix()
+	referenceTimeInSecond := referenceTime.Unix()
+
+	if timerFireTimeInSecond <= referenceTimeInSecond {
+		return time.Duration(referenceTimeInSecond-timerFireTimeInSecond) * time.Second, true
+	}
+
+	return 0, false
 }
 
 func (t *timerSequenceImpl) CreateNextUserTimer() (bool, error) {

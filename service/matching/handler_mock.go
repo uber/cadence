@@ -58,6 +58,30 @@ func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 	return m.recorder
 }
 
+// Start mocks base method
+func (m *MockHandler) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start
+func (mr *MockHandlerMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockHandler)(nil).Start))
+}
+
+// Stop mocks base method
+func (m *MockHandler) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockHandlerMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockHandler)(nil).Stop))
+}
+
 // Health mocks base method
 func (m *MockHandler) Health(arg0 context.Context) (*types.HealthStatus, error) {
 	m.ctrl.T.Helper()
@@ -143,6 +167,21 @@ func (m *MockHandler) ListTaskListPartitions(arg0 context.Context, arg1 *types.M
 func (mr *MockHandlerMockRecorder) ListTaskListPartitions(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskListPartitions", reflect.TypeOf((*MockHandler)(nil).ListTaskListPartitions), arg0, arg1)
+}
+
+// GetTaskListsByDomain mocks base method
+func (m *MockHandler) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetTaskListsByDomainRequest) (*types.GetTaskListsByDomainResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskListsByDomain", arg0, arg1)
+	ret0, _ := ret[0].(*types.GetTaskListsByDomainResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTaskListsByDomain indicates an expected call of GetTaskListsByDomain
+func (mr *MockHandlerMockRecorder) GetTaskListsByDomain(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskListsByDomain", reflect.TypeOf((*MockHandler)(nil).GetTaskListsByDomain), arg0, arg1)
 }
 
 // PollForActivityTask mocks base method

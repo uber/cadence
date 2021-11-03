@@ -26,8 +26,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/auth"
-	"github.com/uber/cadence/common/service/config"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/schema/cassandra"
 	"github.com/uber/cadence/tools/common/schema"
 )
@@ -48,39 +47,55 @@ type SetupSchemaConfig struct {
 func VerifyCompatibleVersion(
 	cfg config.Persistence,
 ) error {
+	if ds, ok := cfg.DataStores[cfg.DefaultStore]; ok {
+		if err := verifyCompatibleVersion(ds, cassandra.Version); err != nil {
+			return err
+		}
+	}
 
-	ds, ok := cfg.DataStores[cfg.DefaultStore]
-	if ok && ds.Cassandra != nil {
-		err := checkCompatibleVersion(*ds.Cassandra, cassandra.Version)
-		if err != nil {
+	if ds, ok := cfg.DataStores[cfg.VisibilityStore]; ok {
+		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion); err != nil {
 			return err
 		}
 	}
-	ds, ok = cfg.DataStores[cfg.VisibilityStore]
-	if ok && ds.Cassandra != nil {
-		err := checkCompatibleVersion(*ds.Cassandra, cassandra.VisibilityVersion)
-		if err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 
-// checkCompatibleVersion check the version compatibility
-func checkCompatibleVersion(
+func verifyCompatibleVersion(
+	ds config.DataStore,
+	expectedCassandraVersion string,
+) error {
+	if ds.NoSQL == nil {
+		// not using nosql
+		return nil
+	}
+
+	// Use hardcoded instead of constant because of cycle dependency issue.
+	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
+	// should be gone and we can use constant at that time
+	if ds.NoSQL.PluginName != "cassandra" {
+		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
+	}
+
+	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
+}
+
+// CheckCompatibleVersion check the version compatibility
+func CheckCompatibleVersion(
 	cfg config.Cassandra,
 	expectedVersion string,
 ) error {
 
-	client, err := newCQLClient(&CQLClientConfig{
-		Hosts:     cfg.Hosts,
-		Port:      cfg.Port,
-		User:      cfg.User,
-		Password:  cfg.Password,
-		Keyspace:  cfg.Keyspace,
-		Timeout:   defaultTimeout,
-		TLS:       cfg.TLS,
-		CQLClient: cfg.CQLClient,
+	client, err := NewCQLClient(&CQLClientConfig{
+		Hosts:        cfg.Hosts,
+		Port:         cfg.Port,
+		User:         cfg.User,
+		Password:     cfg.Password,
+		Keyspace:     cfg.Keyspace,
+		Timeout:      DefaultTimeout,
+		TLS:          cfg.TLS,
+		ProtoVersion: cfg.ProtoVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
@@ -98,7 +113,7 @@ func setupSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	client, err := newCQLClient(config)
+	client, err := NewCQLClient(config)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -116,7 +131,7 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	client, err := newCQLClient(config)
+	client, err := NewCQLClient(config)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -145,27 +160,28 @@ func createKeyspace(cli *cli.Context) error {
 }
 
 func doCreateKeyspace(cfg CQLClientConfig, name string) error {
-	cfg.Keyspace = systemKeyspace
-	client, err := newCQLClient(&cfg)
+	cfg.Keyspace = SystemKeyspace
+	client, err := NewCQLClient(&cfg)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
-	return client.createKeyspace(name)
+	return client.CreateKeyspace(name)
 }
 
 func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
-	config := new(CQLClientConfig)
-	config.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
-	config.Port = cli.GlobalInt(schema.CLIOptPort)
-	config.User = cli.GlobalString(schema.CLIOptUser)
-	config.Password = cli.GlobalString(schema.CLIOptPassword)
-	config.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
-	config.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
-	config.numReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	cqlConfig := new(CQLClientConfig)
+	cqlConfig.Hosts = cli.GlobalString(schema.CLIOptEndpoint)
+	cqlConfig.Port = cli.GlobalInt(schema.CLIOptPort)
+	cqlConfig.User = cli.GlobalString(schema.CLIOptUser)
+	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
+	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
+	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
+	cqlConfig.NumReplicas = cli.Int(schema.CLIOptReplicationFactor)
+	cqlConfig.ProtoVersion = cli.Int(schema.CLIOptProtoVersion)
 
 	if cli.GlobalBool(schema.CLIFlagEnableTLS) {
-		config.TLS = &auth.TLS{
+		cqlConfig.TLS = &config.TLS{
 			Enabled:                true,
 			CertFile:               cli.GlobalString(schema.CLIFlagTLSCertFile),
 			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),
@@ -174,10 +190,10 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 		}
 	}
 
-	if err := validateCQLClientConfig(config); err != nil {
+	if err := validateCQLClientConfig(cqlConfig); err != nil {
 		return nil, err
 	}
-	return config, nil
+	return cqlConfig, nil
 }
 
 func validateCQLClientConfig(config *CQLClientConfig) error {
@@ -188,13 +204,10 @@ func validateCQLClientConfig(config *CQLClientConfig) error {
 		return schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument ")
 	}
 	if config.Port == 0 {
-		config.Port = defaultCassandraPort
+		config.Port = DefaultCassandraPort
 	}
-	if config.numReplicas == 0 {
-		config.numReplicas = defaultNumReplicas
-	}
-	if config.CQLClient == nil {
-		config.CQLClient = defaultGoCQLClient
+	if config.NumReplicas == 0 {
+		config.NumReplicas = defaultNumReplicas
 	}
 
 	return nil

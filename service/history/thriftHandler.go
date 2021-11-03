@@ -85,6 +85,12 @@ func (t ThriftHandler) DescribeWorkflowExecution(ctx context.Context, request *h
 	return thrift.FromDescribeWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
+// GetCrossClusterTasks fetches cross cluster tasks
+func (t ThriftHandler) GetCrossClusterTasks(ctx context.Context, request *shared.GetCrossClusterTasksRequest) (*shared.GetCrossClusterTasksResponse, error) {
+	response, err := t.h.GetCrossClusterTasks(ctx, thrift.ToGetCrossClusterTasksRequest(request))
+	return thrift.FromGetCrossClusterTasksResponse(response), thrift.FromError(err)
+}
+
 // GetDLQReplicationMessages forwards request to the underlying handler
 func (t ThriftHandler) GetDLQReplicationMessages(ctx context.Context, request *replicator.GetDLQReplicationMessagesRequest) (*replicator.GetDLQReplicationMessagesResponse, error) {
 	response, err := t.h.GetDLQReplicationMessages(ctx, thrift.ToGetDLQReplicationMessagesRequest(request))
@@ -235,6 +241,12 @@ func (t ThriftHandler) RespondActivityTaskFailed(ctx context.Context, request *h
 	return thrift.FromError(err)
 }
 
+// RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks
+func (t ThriftHandler) RespondCrossClusterTasksCompleted(ctx context.Context, request *shared.RespondCrossClusterTasksCompletedRequest) (*shared.RespondCrossClusterTasksCompletedResponse, error) {
+	response, err := t.h.RespondCrossClusterTasksCompleted(ctx, thrift.ToRespondCrossClusterTasksCompletedRequest(request))
+	return thrift.FromRespondCrossClusterTasksCompletedResponse(response), thrift.FromError(err)
+}
+
 // RespondDecisionTaskCompleted forwards request to the underlying handler
 func (t ThriftHandler) RespondDecisionTaskCompleted(ctx context.Context, request *h.RespondDecisionTaskCompletedRequest) (*h.RespondDecisionTaskCompletedResponse, error) {
 	response, err := t.h.RespondDecisionTaskCompleted(ctx, thrift.ToHistoryRespondDecisionTaskCompletedRequest(request))
@@ -287,4 +299,10 @@ func (t ThriftHandler) SyncShardStatus(ctx context.Context, request *h.SyncShard
 func (t ThriftHandler) TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) error {
 	err := t.h.TerminateWorkflowExecution(ctx, thrift.ToHistoryTerminateWorkflowExecutionRequest(request))
 	return thrift.FromError(err)
+}
+
+// GetFailoverInfo forwards request to the underlying handler
+func (t ThriftHandler) GetFailoverInfo(ctx context.Context, request *h.GetFailoverInfoRequest) (*h.GetFailoverInfoResponse, error) {
+	response, err := t.h.GetFailoverInfo(ctx, thrift.ToGetFailoverInfoRequest(request))
+	return thrift.FromGetFailoverInfoResponse(response), thrift.FromError(err)
 }

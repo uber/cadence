@@ -28,13 +28,13 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/fetcher"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 
 	"go.uber.org/cadence/client"
@@ -136,7 +136,7 @@ func Iterator(
 
 }
 
-// FixerIterator provides iterator for concrete execution fixer.
+// FixerIterator provides iterator for timers fixer.
 func FixerIterator(
 	ctx context.Context,
 	client blobstore.Client,
@@ -146,7 +146,7 @@ func FixerIterator(
 	return store.NewBlobstoreIterator(ctx, client, keys, &entity.Timer{})
 }
 
-// FixerManager provides invariant manager for concrete execution fixer.
+// FixerManager provides invariant manager for timers fixer.
 func FixerManager(
 	_ context.Context,
 	pr persistence.Retryer,

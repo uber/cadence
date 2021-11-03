@@ -26,7 +26,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/uber/cadence/common/auth"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 // Note: this file defines the minimal interface that is needed by Cadence's cassandra
@@ -39,7 +40,7 @@ type (
 	Client interface {
 		CreateSession(ClusterConfig) (Session, error)
 
-		ErrorChecker
+		nosqlplugin.ClientErrorChecker
 	}
 
 	// Session is the interface for interacting with the database.
@@ -87,13 +88,6 @@ type (
 		String() string
 	}
 
-	// ErrorChecker checks for common gocql errors
-	ErrorChecker interface {
-		IsTimeoutError(error) bool
-		IsNotFoundError(error) bool
-		IsThrottlingError(error) bool
-	}
-
 	// BatchType is the type of the Batch operation
 	BatchType byte
 
@@ -113,7 +107,7 @@ type (
 		Region            string
 		Datacenter        string
 		MaxConns          int
-		TLS               *auth.TLS
+		TLS               *config.TLS
 		ProtoVersion      int
 		Consistency       Consistency
 		SerialConsistency SerialConsistency

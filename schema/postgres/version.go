@@ -24,8 +24,8 @@ package postgres
 
 // Version is the Postgres database release version
 // Cadence supports both MySQL and Postgres officially, so upgrade should be perform for both MySQL and Postgres
-const Version = "0.3"
+const Version = "0.4"
 
 // VisibilityVersion is the Postgres visibility database release version
 // Cadence supports both MySQL and Postgres officially, so upgrade should be perform for both MySQL and Postgres
-const VisibilityVersion = "0.3"
+const VisibilityVersion = "0.5"

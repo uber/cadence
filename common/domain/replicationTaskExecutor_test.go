@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
 )
@@ -57,13 +58,13 @@ func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
 }
 
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
-	s.TestBase = persistencetests.NewTestBaseWithCassandra(&persistencetests.TestBaseOptions{})
+	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	zapLogger, err := zap.NewDevelopment()
 	s.Require().NoError(err)
 	logger := loggerimpl.NewLogger(zapLogger)
 	s.domainReplicator = NewReplicationTaskExecutor(
-		s.MetadataManager,
+		s.DomainManager,
 		clock.NewRealTimeSource(),
 		logger,
 	).(*domainReplicationTaskExecutorImpl)
@@ -195,13 +196,13 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_RegisterDomainTask() {
 		FailoverVersion: failoverVersion,
 	}
 
-	metadata, err := s.MetadataManager.GetMetadata(context.Background())
+	metadata, err := s.DomainManager.GetMetadata(context.Background())
 	s.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.Execute(task)
 	s.Nil(err)
 
-	resp, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{ID: id})
+	resp, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{ID: id})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -281,13 +282,13 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Domain
 		FailoverVersion: failoverVersion,
 	}
 
-	metadata, err := s.MetadataManager.GetMetadata(context.Background())
+	metadata, err := s.DomainManager.GetMetadata(context.Background())
 	s.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)
 
-	resp, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
+	resp, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -415,12 +416,12 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 		ConfigVersion:   updateConfigVersion,
 		FailoverVersion: updateFailoverVersion,
 	}
-	metadata, err := s.MetadataManager.GetMetadata(context.Background())
+	metadata, err := s.DomainManager.GetMetadata(context.Background())
 	s.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
+	resp, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -550,12 +551,12 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_Update
 		FailoverVersion:         updateFailoverVersion,
 		PreviousFailoverVersion: previousFailoverVersion,
 	}
-	metadata, err := s.MetadataManager.GetMetadata(context.Background())
+	metadata, err := s.DomainManager.GetMetadata(context.Background())
 	s.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
+	resp, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -636,7 +637,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 
 	err := s.domainReplicator.Execute(createTask)
 	s.Nil(err)
-	resp1, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
+	resp1, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp1)
 	s.Equal(id, resp1.Info.ID)
@@ -703,12 +704,12 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 		FailoverVersion:         updateFailoverVersion,
 		PreviousFailoverVersion: failoverVersion,
 	}
-	metadata, err := s.MetadataManager.GetMetadata(context.Background())
+	metadata, err := s.DomainManager.GetMetadata(context.Background())
 	s.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
+	resp, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)
@@ -785,7 +786,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 		ConfigVersion:   configVersion,
 		FailoverVersion: failoverVersion,
 	}
-	metadata, err := s.MetadataManager.GetMetadata(context.Background())
+	metadata, err := s.DomainManager.GetMetadata(context.Background())
 	s.Nil(err)
 	notificationVersion := metadata.NotificationVersion
 	err = s.domainReplicator.Execute(createTask)
@@ -839,7 +840,7 @@ func (s *domainReplicationTaskExecutorSuite) TestExecute_UpdateDomainTask_NoUpda
 	}
 	err = s.domainReplicator.Execute(updateTask)
 	s.Nil(err)
-	resp, err := s.MetadataManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
+	resp, err := s.DomainManager.GetDomain(context.Background(), &persistence.GetDomainRequest{Name: name})
 	s.Nil(err)
 	s.NotNil(resp)
 	s.Equal(id, resp.Info.ID)

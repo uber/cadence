@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -34,29 +35,33 @@ import (
 	"github.com/uber/cadence/service/worker/scanner/executor"
 )
 
+const (
+	DefaultScannerGetOrphanTasksPageSize          = 1000
+	DefaultScannerMaxTasksProcessedPerTasklistJob = 256
+
+	executorMaxDeferredTasks = 10000
+	taskListBatchSize        = 32 // maximum number of task list we process concurrently
+	taskBatchSize            = 16
+	taskListGracePeriod      = 48 * time.Hour // amount of time a executorTask list has to be idle before it becomes a candidate for deletion
+)
+
 type (
 	// Scavenger is the type that holds the state for task list scavenger daemon
 	Scavenger struct {
-		ctx      context.Context
-		db       p.TaskManager
-		executor executor.Executor
-		metrics  metrics.Client
-		logger   log.Logger
-		stats    stats
-		status   int32
-		stopC    chan struct{}
-		stopWG   sync.WaitGroup
-	}
-
-	taskListKey struct {
-		DomainID string
-		Name     string
-		TaskType int
-	}
-
-	taskListState struct {
-		rangeID     int64
-		lastUpdated time.Time
+		ctx                      context.Context
+		db                       p.TaskManager
+		executor                 executor.Executor
+		scope                    metrics.Scope
+		logger                   log.Logger
+		stats                    stats
+		status                   int32
+		stopC                    chan struct{}
+		stopWG                   sync.WaitGroup
+		getOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn
+		taskBatchSizeFn          dynamicconfig.IntPropertyFn
+		maxTasksPerJobFn         dynamicconfig.IntPropertyFn
+		cleanOrphans             dynamicconfig.BoolPropertyFn
+		pollInterval             time.Duration
 	}
 
 	stats struct {
@@ -69,24 +74,27 @@ type (
 			nDeleted   int64
 		}
 	}
+	// Options is used to customize scavenger operations
+	Options struct {
+		GetOrphanTasksPageSizeFn dynamicconfig.IntPropertyFn
+		TaskBatchSizeFn          dynamicconfig.IntPropertyFn
+		EnableCleaning           dynamicconfig.BoolPropertyFn
+		MaxTasksPerJobFn         dynamicconfig.IntPropertyFn
+		ExecutorPollInterval     time.Duration
+	}
 
 	// executorTask is a runnable task that adheres to the executor.Task interface
 	// for the scavenger, each of this task processes a single task list
 	executorTask struct {
-		taskListKey
-		taskListState
+		taskListInfo p.TaskListInfo
+		scvg         *Scavenger
+	}
+
+	// orphanExecutorTask is a runnable task that processes a limited block of
+	// orphans
+	orphanExecutorTask struct {
 		scvg *Scavenger
 	}
-)
-
-var (
-	taskListBatchSize        = 32             // maximum number of task list we process concurrently
-	taskBatchSize            = 16             // number of tasks we read from persistence in one call
-	maxTasksPerJob           = 256            // maximum number of tasks we process for a executorTask list as part of a single job
-	taskListGracePeriod      = 48 * time.Hour // amount of time a executorTask list has to be idle before it becomes a candidate for deletion
-	epochStartTime           = time.Unix(0, 0)
-	executorPollInterval     = time.Minute
-	executorMaxDeferredTasks = 10000
 )
 
 // NewScavenger returns an instance of executorTask list scavenger daemon
@@ -101,17 +109,69 @@ var (
 // two conditions
 //  - either all task lists are processed successfully (or)
 //  - Stop() method is called to stop the scavenger
-func NewScavenger(ctx context.Context, db p.TaskManager, metricsClient metrics.Client, logger log.Logger) *Scavenger {
-	stopC := make(chan struct{})
+func NewScavenger(
+	ctx context.Context,
+	db p.TaskManager,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	opts *Options,
+) *Scavenger {
 	taskExecutor := executor.NewFixedSizePoolExecutor(
-		taskListBatchSize, executorMaxDeferredTasks, metricsClient, metrics.TaskListScavengerScope)
+		taskListBatchSize,
+		executorMaxDeferredTasks,
+		metricsClient,
+		metrics.TaskListScavengerScope,
+	)
+
+	if opts == nil {
+		opts = &Options{}
+	}
+
+	cleanOrphans := opts.EnableCleaning
+	if cleanOrphans == nil {
+		cleanOrphans = func(opts ...dynamicconfig.FilterOption) bool {
+			return false
+		}
+	}
+
+	getOrphanTasksPageSize := opts.GetOrphanTasksPageSizeFn
+	if getOrphanTasksPageSize == nil {
+		getOrphanTasksPageSize = func(opts ...dynamicconfig.FilterOption) int {
+			return DefaultScannerGetOrphanTasksPageSize
+		}
+	}
+
+	taskBatchSizeFn := opts.TaskBatchSizeFn
+	if taskBatchSizeFn == nil {
+		taskBatchSizeFn = func(opts ...dynamicconfig.FilterOption) int {
+			return taskBatchSize
+		}
+	}
+
+	maxTasksPerJobFn := opts.MaxTasksPerJobFn
+	if maxTasksPerJobFn == nil {
+		maxTasksPerJobFn = func(opts ...dynamicconfig.FilterOption) int {
+			return DefaultScannerMaxTasksProcessedPerTasklistJob
+		}
+	}
+
+	pollInterval := opts.ExecutorPollInterval
+	if pollInterval == 0 {
+		pollInterval = time.Minute
+	}
+
 	return &Scavenger{
-		ctx:      ctx,
-		db:       db,
-		metrics:  metricsClient,
-		logger:   logger,
-		stopC:    stopC,
-		executor: taskExecutor,
+		ctx:                      ctx,
+		db:                       db,
+		scope:                    metricsClient.Scope(metrics.TaskListScavengerScope),
+		logger:                   logger,
+		stopC:                    make(chan struct{}),
+		executor:                 taskExecutor,
+		cleanOrphans:             cleanOrphans,
+		taskBatchSizeFn:          taskBatchSizeFn,
+		pollInterval:             pollInterval,
+		maxTasksPerJobFn:         maxTasksPerJobFn,
+		getOrphanTasksPageSizeFn: getOrphanTasksPageSize,
 	}
 }
 
@@ -124,7 +184,7 @@ func (s *Scavenger) Start() {
 	s.stopWG.Add(1)
 	s.executor.Start()
 	go s.run()
-	s.metrics.IncCounter(metrics.TaskListScavengerScope, metrics.StartedCount)
+	s.scope.IncCounter(metrics.StartedCount)
 	s.logger.Info("Tasklist scavenger started")
 }
 
@@ -133,7 +193,7 @@ func (s *Scavenger) Stop() {
 	if !atomic.CompareAndSwapInt32(&s.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
-	s.metrics.IncCounter(metrics.TaskListScavengerScope, metrics.StoppedCount)
+	s.scope.IncCounter(metrics.StoppedCount)
 	s.logger.Info("Tasklist scavenger stopping")
 	close(s.stopC)
 	s.executor.Stop()
@@ -153,6 +213,11 @@ func (s *Scavenger) run() {
 		go s.Stop()
 		s.stopWG.Done()
 	}()
+
+	// Start a task to delete orphaned tasks from the tasks table, if enabled
+	if s.cleanOrphans() {
+		s.executor.Submit(&orphanExecutorTask{scvg: s})
+	}
 
 	var pageToken []byte
 	for {
@@ -179,17 +244,17 @@ func (s *Scavenger) run() {
 }
 
 // process is a callback function that gets invoked from within the executor.Run() method
-func (s *Scavenger) process(key *taskListKey, state *taskListState) executor.TaskStatus {
-	return s.deleteHandler(key, state)
+func (s *Scavenger) process(taskListInfo *p.TaskListInfo) executor.TaskStatus {
+	return s.deleteHandler(taskListInfo)
 }
 
 func (s *Scavenger) awaitExecutor() {
 	outstanding := s.executor.TaskCount()
 	for outstanding > 0 {
 		select {
-		case <-time.After(executorPollInterval):
+		case <-time.After(s.pollInterval):
 			outstanding = s.executor.TaskCount()
-			s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListOutstandingCount, float64(outstanding))
+			s.scope.UpdateGauge(metrics.TaskListOutstandingCount, float64(outstanding))
 		case <-s.stopC:
 			return
 		}
@@ -197,29 +262,25 @@ func (s *Scavenger) awaitExecutor() {
 }
 
 func (s *Scavenger) emitStats() {
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskProcessedCount, float64(s.stats.task.nProcessed))
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskDeletedCount, float64(s.stats.task.nDeleted))
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListProcessedCount, float64(s.stats.tasklist.nProcessed))
-	s.metrics.UpdateGauge(metrics.TaskListScavengerScope, metrics.TaskListDeletedCount, float64(s.stats.tasklist.nDeleted))
+	s.scope.UpdateGauge(metrics.TaskProcessedCount, float64(s.stats.task.nProcessed))
+	s.scope.UpdateGauge(metrics.TaskDeletedCount, float64(s.stats.task.nDeleted))
+	s.scope.UpdateGauge(metrics.TaskListProcessedCount, float64(s.stats.tasklist.nProcessed))
+	s.scope.UpdateGauge(metrics.TaskListDeletedCount, float64(s.stats.tasklist.nDeleted))
 }
 
 // newTask returns a new instance of an executable task which will process a single task list
 func (s *Scavenger) newTask(info *p.TaskListInfo) executor.Task {
 	return &executorTask{
-		taskListKey: taskListKey{
-			DomainID: info.DomainID,
-			Name:     info.Name,
-			TaskType: info.TaskType,
-		},
-		taskListState: taskListState{
-			rangeID:     info.RangeID,
-			lastUpdated: info.LastUpdated,
-		},
-		scvg: s,
+		taskListInfo: *info,
+		scvg:         s,
 	}
 }
 
 // Run runs the task
 func (t *executorTask) Run() executor.TaskStatus {
-	return t.scvg.process(&t.taskListKey, &t.taskListState)
+	return t.scvg.process(&t.taskListInfo)
+}
+
+func (t *orphanExecutorTask) Run() executor.TaskStatus {
+	return t.scvg.completeOrphanTasksHandler()
 }

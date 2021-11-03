@@ -70,11 +70,23 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.DescribeQueueResponse, error)
 
+	DescribeShardDistribution(
+		ctx context.Context,
+		Request *shared.DescribeShardDistributionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.DescribeShardDistributionResponse, error)
+
 	DescribeWorkflowExecution(
 		ctx context.Context,
 		Request *admin.DescribeWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.DescribeWorkflowExecutionResponse, error)
+
+	GetCrossClusterTasks(
+		ctx context.Context,
+		Request *shared.GetCrossClusterTasksRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.GetCrossClusterTasksResponse, error)
 
 	GetDLQReplicationMessages(
 		ctx context.Context,
@@ -88,6 +100,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*replicator.GetDomainReplicationMessagesResponse, error)
 
+	GetDynamicConfig(
+		ctx context.Context,
+		Request *admin.GetDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.GetDynamicConfigResponse, error)
+
 	GetReplicationMessages(
 		ctx context.Context,
 		Request *replicator.GetReplicationMessagesRequest,
@@ -99,6 +117,12 @@ type Interface interface {
 		GetRequest *admin.GetWorkflowExecutionRawHistoryV2Request,
 		opts ...yarpc.CallOption,
 	) (*admin.GetWorkflowExecutionRawHistoryV2Response, error)
+
+	ListDynamicConfig(
+		ctx context.Context,
+		Request *admin.ListDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.ListDynamicConfigResponse, error)
 
 	MergeDLQMessages(
 		ctx context.Context,
@@ -147,6 +171,24 @@ type Interface interface {
 		Request *shared.ResetQueueRequest,
 		opts ...yarpc.CallOption,
 	) error
+
+	RespondCrossClusterTasksCompleted(
+		ctx context.Context,
+		Request *shared.RespondCrossClusterTasksCompletedRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.RespondCrossClusterTasksCompletedResponse, error)
+
+	RestoreDynamicConfig(
+		ctx context.Context,
+		Request *admin.RestoreDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) error
+
+	UpdateDynamicConfig(
+		ctx context.Context,
+		Request *admin.UpdateDynamicConfigRequest,
+		opts ...yarpc.CallOption,
+	) error
 }
 
 // New builds a new client for the AdminService service.
@@ -155,6 +197,10 @@ type Interface interface {
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{
+			Service:      "AdminService",
+			ClientConfig: c,
+		}, opts...),
+		nwc: thrift.NewNoWire(thrift.Config{
 			Service:      "AdminService",
 			ClientConfig: c,
 		}, opts...),
@@ -170,7 +216,8 @@ func init() {
 }
 
 type client struct {
-	c thrift.Client
+	c   thrift.Client
+	nwc thrift.NoWireClient
 }
 
 func (c client) AddSearchAttribute(
@@ -179,17 +226,22 @@ func (c client) AddSearchAttribute(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_AddSearchAttribute_Result
 	args := admin.AdminService_AddSearchAttribute_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_AddSearchAttribute_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_AddSearchAttribute_Helper.UnwrapResponse(&result)
@@ -202,17 +254,22 @@ func (c client) CloseShard(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_CloseShard_Result
 	args := admin.AdminService_CloseShard_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_CloseShard_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_CloseShard_Helper.UnwrapResponse(&result)
@@ -224,17 +281,22 @@ func (c client) DescribeCluster(
 	opts ...yarpc.CallOption,
 ) (success *admin.DescribeClusterResponse, err error) {
 
+	var result admin.AdminService_DescribeCluster_Result
 	args := admin.AdminService_DescribeCluster_Helper.Args()
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_DescribeCluster_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_DescribeCluster_Helper.UnwrapResponse(&result)
@@ -247,17 +309,22 @@ func (c client) DescribeHistoryHost(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeHistoryHostResponse, err error) {
 
+	var result admin.AdminService_DescribeHistoryHost_Result
 	args := admin.AdminService_DescribeHistoryHost_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_DescribeHistoryHost_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_DescribeHistoryHost_Helper.UnwrapResponse(&result)
@@ -270,20 +337,53 @@ func (c client) DescribeQueue(
 	opts ...yarpc.CallOption,
 ) (success *shared.DescribeQueueResponse, err error) {
 
+	var result admin.AdminService_DescribeQueue_Result
 	args := admin.AdminService_DescribeQueue_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_DescribeQueue_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_DescribeQueue_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DescribeShardDistribution(
+	ctx context.Context,
+	_Request *shared.DescribeShardDistributionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.DescribeShardDistributionResponse, err error) {
+
+	var result admin.AdminService_DescribeShardDistribution_Result
+	args := admin.AdminService_DescribeShardDistribution_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_DescribeShardDistribution_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -293,20 +393,53 @@ func (c client) DescribeWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (success *admin.DescribeWorkflowExecutionResponse, err error) {
 
+	var result admin.AdminService_DescribeWorkflowExecution_Result
 	args := admin.AdminService_DescribeWorkflowExecution_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_DescribeWorkflowExecution_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_DescribeWorkflowExecution_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetCrossClusterTasks(
+	ctx context.Context,
+	_Request *shared.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.GetCrossClusterTasksResponse, err error) {
+
+	var result admin.AdminService_GetCrossClusterTasks_Result
+	args := admin.AdminService_GetCrossClusterTasks_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_GetCrossClusterTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -316,17 +449,22 @@ func (c client) GetDLQReplicationMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.GetDLQReplicationMessagesResponse, err error) {
 
+	var result admin.AdminService_GetDLQReplicationMessages_Result
 	args := admin.AdminService_GetDLQReplicationMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_GetDLQReplicationMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_GetDLQReplicationMessages_Helper.UnwrapResponse(&result)
@@ -339,20 +477,53 @@ func (c client) GetDomainReplicationMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.GetDomainReplicationMessagesResponse, err error) {
 
+	var result admin.AdminService_GetDomainReplicationMessages_Result
 	args := admin.AdminService_GetDomainReplicationMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_GetDomainReplicationMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_GetDomainReplicationMessages_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) GetDynamicConfig(
+	ctx context.Context,
+	_Request *admin.GetDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDynamicConfigResponse, err error) {
+
+	var result admin.AdminService_GetDynamicConfig_Result
+	args := admin.AdminService_GetDynamicConfig_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_GetDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -362,17 +533,22 @@ func (c client) GetReplicationMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.GetReplicationMessagesResponse, err error) {
 
+	var result admin.AdminService_GetReplicationMessages_Result
 	args := admin.AdminService_GetReplicationMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_GetReplicationMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_GetReplicationMessages_Helper.UnwrapResponse(&result)
@@ -385,20 +561,53 @@ func (c client) GetWorkflowExecutionRawHistoryV2(
 	opts ...yarpc.CallOption,
 ) (success *admin.GetWorkflowExecutionRawHistoryV2Response, err error) {
 
+	var result admin.AdminService_GetWorkflowExecutionRawHistoryV2_Result
 	args := admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.Args(_GetRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_GetWorkflowExecutionRawHistoryV2_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_GetWorkflowExecutionRawHistoryV2_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) ListDynamicConfig(
+	ctx context.Context,
+	_Request *admin.ListDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.ListDynamicConfigResponse, err error) {
+
+	var result admin.AdminService_ListDynamicConfig_Result
+	args := admin.AdminService_ListDynamicConfig_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_ListDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -408,17 +617,22 @@ func (c client) MergeDLQMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.MergeDLQMessagesResponse, err error) {
 
+	var result admin.AdminService_MergeDLQMessages_Result
 	args := admin.AdminService_MergeDLQMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_MergeDLQMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_MergeDLQMessages_Helper.UnwrapResponse(&result)
@@ -431,17 +645,22 @@ func (c client) PurgeDLQMessages(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_PurgeDLQMessages_Result
 	args := admin.AdminService_PurgeDLQMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_PurgeDLQMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_PurgeDLQMessages_Helper.UnwrapResponse(&result)
@@ -454,17 +673,22 @@ func (c client) ReadDLQMessages(
 	opts ...yarpc.CallOption,
 ) (success *replicator.ReadDLQMessagesResponse, err error) {
 
+	var result admin.AdminService_ReadDLQMessages_Result
 	args := admin.AdminService_ReadDLQMessages_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_ReadDLQMessages_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	success, err = admin.AdminService_ReadDLQMessages_Helper.UnwrapResponse(&result)
@@ -477,17 +701,22 @@ func (c client) ReapplyEvents(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_ReapplyEvents_Result
 	args := admin.AdminService_ReapplyEvents_Helper.Args(_ReapplyEventsRequest)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_ReapplyEvents_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_ReapplyEvents_Helper.UnwrapResponse(&result)
@@ -500,17 +729,22 @@ func (c client) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_RefreshWorkflowTasks_Result
 	args := admin.AdminService_RefreshWorkflowTasks_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_RefreshWorkflowTasks_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_RefreshWorkflowTasks_Helper.UnwrapResponse(&result)
@@ -523,17 +757,22 @@ func (c client) RemoveTask(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_RemoveTask_Result
 	args := admin.AdminService_RemoveTask_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_RemoveTask_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_RemoveTask_Helper.UnwrapResponse(&result)
@@ -546,17 +785,22 @@ func (c client) ResendReplicationTasks(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_ResendReplicationTasks_Result
 	args := admin.AdminService_ResendReplicationTasks_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_ResendReplicationTasks_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_ResendReplicationTasks_Helper.UnwrapResponse(&result)
@@ -569,19 +813,108 @@ func (c client) ResetQueue(
 	opts ...yarpc.CallOption,
 ) (err error) {
 
+	var result admin.AdminService_ResetQueue_Result
 	args := admin.AdminService_ResetQueue_Helper.Args(_Request)
 
-	var body wire.Value
-	body, err = c.c.Call(ctx, args, opts...)
-	if err != nil {
-		return
-	}
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
 
-	var result admin.AdminService_ResetQueue_Result
-	if err = result.FromWire(body); err != nil {
-		return
+		if err = result.FromWire(body); err != nil {
+			return
+		}
 	}
 
 	err = admin.AdminService_ResetQueue_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	_Request *shared.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.RespondCrossClusterTasksCompletedResponse, err error) {
+
+	var result admin.AdminService_RespondCrossClusterTasksCompleted_Result
+	args := admin.AdminService_RespondCrossClusterTasksCompleted_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_RespondCrossClusterTasksCompleted_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RestoreDynamicConfig(
+	ctx context.Context,
+	_Request *admin.RestoreDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	var result admin.AdminService_RestoreDynamicConfig_Result
+	args := admin.AdminService_RestoreDynamicConfig_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	err = admin.AdminService_RestoreDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) UpdateDynamicConfig(
+	ctx context.Context,
+	_Request *admin.UpdateDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	var result admin.AdminService_UpdateDynamicConfig_Result
+	args := admin.AdminService_UpdateDynamicConfig_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	err = admin.AdminService_UpdateDynamicConfig_Helper.UnwrapResponse(&result)
 	return
 }

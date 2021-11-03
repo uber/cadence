@@ -25,8 +25,8 @@ import "context"
 type nopAuthority struct{}
 
 // NewNopAuthorizer creates a no-op authority
-func NewNopAuthorizer() Authorizer {
-	return &nopAuthority{}
+func NewNopAuthorizer() (Authorizer, error) {
+	return &nopAuthority{}, nil
 }
 
 func (a *nopAuthority) Authorize(

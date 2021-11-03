@@ -32,9 +32,8 @@ import (
 var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
-	client      Client
-	policy      backoff.RetryPolicy
-	isRetryable backoff.IsRetryable
+	client        Client
+	throttleRetry *backoff.ThrottleRetry
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
@@ -44,9 +43,11 @@ func NewRetryableClient(
 	isRetryable backoff.IsRetryable,
 ) Client {
 	return &retryableClient{
-		client:      client,
-		policy:      policy,
-		isRetryable: isRetryable,
+		client: client,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(policy),
+			backoff.WithRetryableError(isRetryable),
+		),
 	}
 }
 
@@ -59,7 +60,7 @@ func (c *retryableClient) AddActivityTask(
 		return c.client.AddActivityTask(ctx, addRequest, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) AddDecisionTask(
@@ -72,7 +73,7 @@ func (c *retryableClient) AddDecisionTask(
 		return c.client.AddDecisionTask(ctx, addRequest, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) PollForActivityTask(
@@ -88,7 +89,7 @@ func (c *retryableClient) PollForActivityTask(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -105,7 +106,7 @@ func (c *retryableClient) PollForDecisionTask(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -122,7 +123,7 @@ func (c *retryableClient) QueryWorkflow(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -136,7 +137,7 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 		return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) CancelOutstandingPoll(
@@ -149,7 +150,7 @@ func (c *retryableClient) CancelOutstandingPoll(
 		return c.client.CancelOutstandingPoll(ctx, request, opts...)
 	}
 
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) DescribeTaskList(
@@ -165,7 +166,7 @@ func (c *retryableClient) DescribeTaskList(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -182,6 +183,23 @@ func (c *retryableClient) ListTaskListPartitions(
 		return err
 	}
 
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+
+	var resp *types.GetTaskListsByDomainResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetTaskListsByDomain(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }

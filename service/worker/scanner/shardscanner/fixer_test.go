@@ -32,17 +32,21 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
-	"github.com/uber/cadence/common/service/dynamicconfig"
+	"github.com/uber/cadence/common/resource"
 )
 
 type FixerSuite struct {
 	*require.Assertions
 	suite.Suite
-	controller *gomock.Controller
+
+	mockResource *resource.Test
+	controller   *gomock.Controller
 }
 
 func TestFixerSuite(t *testing.T) {
@@ -52,6 +56,7 @@ func TestFixerSuite(t *testing.T) {
 func (s *FixerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
+	s.mockResource = resource.NewTest(s.controller, metrics.Worker)
 }
 
 func (s *FixerSuite) TearDownTest() {
@@ -76,6 +81,7 @@ func (s *FixerSuite) TestFix_Failure_FirstIteratorError() {
 				InfoDetails: "iterator error",
 			},
 		},
+		DomainStats: map[string]*FixStats{},
 	}, result)
 }
 
@@ -116,6 +122,7 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -128,6 +135,14 @@ func (s *FixerSuite) TestFix_Failure_NonFirstError() {
 			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore iterator returned error",
 				InfoDetails: "iterator got error on: 4",
+			},
+		},
+		DomainStats: map[string]*FixStats{
+			"test_domain": {
+				EntitiesCount: 4,
+				FixedCount:    4,
+				SkippedCount:  0,
+				FailedCount:   0,
 			},
 		},
 	}, result)
@@ -159,6 +174,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -170,6 +186,14 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterError() {
 			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore add failed for skipped execution fix",
 				InfoDetails: "skipped writer error",
+			},
+		},
+		DomainStats: map[string]*FixStats{
+			"test_domain": {
+				EntitiesCount: 1,
+				FixedCount:    0,
+				SkippedCount:  0,
+				FailedCount:   0,
 			},
 		},
 	}, result)
@@ -201,6 +225,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -212,6 +237,14 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterError() {
 			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore add failed for failed execution fix",
 				InfoDetails: "failed writer error",
+			},
+		},
+		DomainStats: map[string]*FixStats{
+			"test_domain": {
+				EntitiesCount: 1,
+				FixedCount:    0,
+				SkippedCount:  0,
+				FailedCount:   0,
 			},
 		},
 	}, result)
@@ -243,6 +276,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      dynamicconfig.GetBoolPropertyFnFilteredByDomain(true),
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -254,6 +288,14 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterError() {
 			ControlFlowFailure: &ControlFlowFailure{
 				Info:        "blobstore add failed for fixed execution fix",
 				InfoDetails: "fixed writer error",
+			},
+		},
+		DomainStats: map[string]*FixStats{
+			"test_domain": {
+				EntitiesCount: 1,
+				FixedCount:    0,
+				SkippedCount:  0,
+				FailedCount:   0,
 			},
 		},
 	}, result)
@@ -279,6 +321,7 @@ func (s *FixerSuite) TestFix_Failure_FixedWriterFlushError() {
 				InfoDetails: "fix writer flush failed",
 			},
 		},
+		DomainStats: map[string]*FixStats{},
 	}, result)
 }
 
@@ -305,6 +348,7 @@ func (s *FixerSuite) TestFix_Failure_SkippedWriterFlushError() {
 				InfoDetails: "skip writer flush failed",
 			},
 		},
+		DomainStats: map[string]*FixStats{},
 	}, result)
 }
 
@@ -334,6 +378,7 @@ func (s *FixerSuite) TestFix_Failure_FailedWriterFlushError() {
 				InfoDetails: "fail writer flush failed",
 			},
 		},
+		DomainStats: map[string]*FixStats{},
 	}, result)
 }
 
@@ -672,6 +717,7 @@ func (s *FixerSuite) TestFix_Success() {
 		progressReportFn: func() {},
 		domainCache:      domainCache,
 		allowDomain:      allowDomain,
+		scope:            metrics.NoopScope(metrics.Worker),
 	}
 	result := fixer.Fix()
 	s.Equal(FixReport{
@@ -687,6 +733,44 @@ func (s *FixerSuite) TestFix_Success() {
 				Fixed:   &store.Keys{UUID: "fixed_keys_uuid"},
 				Failed:  &store.Keys{UUID: "failed_keys_uuid"},
 				Skipped: &store.Keys{UUID: "skipped_keys_uuid"},
+			},
+		},
+		DomainStats: map[string]*FixStats{
+			"disallow_domain": {
+				EntitiesCount: 2,
+				FixedCount:    0,
+				SkippedCount:  2,
+				FailedCount:   0,
+			},
+			"failed": {
+				EntitiesCount: 2,
+				FixedCount:    0,
+				SkippedCount:  0,
+				FailedCount:   2,
+			},
+			"first_history_event": {
+				EntitiesCount: 1,
+				FixedCount:    1,
+				SkippedCount:  0,
+				FailedCount:   0,
+			},
+			"history_missing": {
+				EntitiesCount: 2,
+				FixedCount:    2,
+				SkippedCount:  0,
+				FailedCount:   0,
+			},
+			"orphan_execution": {
+				EntitiesCount: 1,
+				FixedCount:    1,
+				SkippedCount:  0,
+				FailedCount:   0,
+			},
+			"skipped": {
+				EntitiesCount: 4,
+				FixedCount:    0,
+				SkippedCount:  4,
+				FailedCount:   0,
 			},
 		},
 	}, result)

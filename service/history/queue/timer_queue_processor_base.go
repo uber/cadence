@@ -30,11 +30,11 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -128,8 +128,7 @@ func newTimerQueueProcessorBase(
 				taskExecutor,
 				taskProcessor,
 				processorBase.redispatcher.AddTask,
-				shard.GetTimeSource(),
-				shard.GetConfig().TimerTaskMaxRetryCount,
+				shard.GetConfig().TaskCriticalRetryCount,
 			)
 		},
 
@@ -240,7 +239,7 @@ processorPumpLoop:
 
 			t.processQueueCollections(levels)
 		case <-updateAckTimer.C:
-			processFinished, err := t.updateAckLevel()
+			processFinished, _, err := t.updateAckLevel()
 			if err == shard.ErrShardClosed || (err == nil && processFinished) {
 				go t.Stop()
 				break processorPumpLoop
@@ -631,6 +630,7 @@ func newTimerQueueProcessorOptions(
 ) *queueProcessorOptions {
 	options := &queueProcessorOptions{
 		BatchSize:                            config.TimerTaskBatchSize,
+		DeleteBatchSize:                      config.TimerTaskDeleteBatchSize,
 		MaxPollRPS:                           config.TimerProcessorMaxPollRPS,
 		MaxPollInterval:                      config.TimerProcessorMaxPollInterval,
 		MaxPollIntervalJitterCoefficient:     config.TimerProcessorMaxPollIntervalJitterCoefficient,

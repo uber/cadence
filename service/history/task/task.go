@@ -28,11 +28,11 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	ctask "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -45,6 +45,8 @@ const (
 	activeTaskResubmitMaxAttempts = 10
 
 	defaultTaskEventLoggerSize = 100
+
+	stickyTaskMaxRetryCount = 100
 )
 
 var (
@@ -61,20 +63,20 @@ type (
 		sync.Mutex
 		Info
 
-		shard         shard.Context
-		state         ctask.State
-		priority      int
-		attempt       int
-		timeSource    clock.TimeSource
-		submitTime    time.Time
-		logger        log.Logger
-		eventLogger   eventLogger
-		scopeIdx      int
-		scope         metrics.Scope // initialized when processing task to make the initialization parallel
-		taskExecutor  Executor
-		taskProcessor Processor
-		redispatchFn  func(task Task)
-		maxRetryCount dynamicconfig.IntPropertyFn
+		shard              shard.Context
+		state              ctask.State
+		priority           int
+		attempt            int
+		timeSource         clock.TimeSource
+		submitTime         time.Time
+		logger             log.Logger
+		eventLogger        eventLogger
+		scopeIdx           int
+		scope              metrics.Scope // initialized when processing task to make the initialization parallel
+		taskExecutor       Executor
+		taskProcessor      Processor
+		redispatchFn       func(task Task)
+		criticalRetryCount dynamicconfig.IntPropertyFn
 
 		// TODO: following three fields should be removed after new task lifecycle is implemented
 		taskFilter        Filter
@@ -93,8 +95,7 @@ func NewTimerTask(
 	taskExecutor Executor,
 	taskProcessor Processor,
 	redispatchFn func(task Task),
-	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
+	criticalRetryCount dynamicconfig.IntPropertyFn,
 ) Task {
 	return newTask(
 		shard,
@@ -105,8 +106,7 @@ func NewTimerTask(
 		taskFilter,
 		taskExecutor,
 		taskProcessor,
-		timeSource,
-		maxRetryCount,
+		criticalRetryCount,
 		redispatchFn,
 	)
 }
@@ -121,8 +121,7 @@ func NewTransferTask(
 	taskExecutor Executor,
 	taskProcessor Processor,
 	redispatchFn func(task Task),
-	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
+	criticalRetryCount dynamicconfig.IntPropertyFn,
 ) Task {
 	return newTask(
 		shard,
@@ -133,8 +132,7 @@ func NewTransferTask(
 		taskFilter,
 		taskExecutor,
 		taskProcessor,
-		timeSource,
-		maxRetryCount,
+		criticalRetryCount,
 		redispatchFn,
 	)
 }
@@ -148,10 +146,10 @@ func newTask(
 	taskFilter Filter,
 	taskExecutor Executor,
 	taskProcessor Processor,
-	timeSource clock.TimeSource,
-	maxRetryCount dynamicconfig.IntPropertyFn,
+	criticalRetryCount dynamicconfig.IntPropertyFn,
 	redispatchFn func(task Task),
 ) *taskImpl {
+	timeSource := shard.GetTimeSource()
 	var eventLogger eventLogger
 	if shard.GetConfig().EnableDebugMode &&
 		(queueType == QueueTypeActiveTimer || queueType == QueueTypeActiveTransfer) &&
@@ -161,23 +159,23 @@ func newTask(
 	}
 
 	return &taskImpl{
-		Info:          taskInfo,
-		shard:         shard,
-		state:         ctask.TaskStatePending,
-		priority:      ctask.NoPriority,
-		queueType:     queueType,
-		scopeIdx:      scopeIdx,
-		scope:         nil,
-		logger:        logger,
-		eventLogger:   eventLogger,
-		attempt:       0,
-		submitTime:    timeSource.Now(),
-		timeSource:    timeSource,
-		maxRetryCount: maxRetryCount,
-		redispatchFn:  redispatchFn,
-		taskFilter:    taskFilter,
-		taskExecutor:  taskExecutor,
-		taskProcessor: taskProcessor,
+		Info:               taskInfo,
+		shard:              shard,
+		state:              ctask.TaskStatePending,
+		priority:           ctask.NoPriority,
+		queueType:          queueType,
+		scopeIdx:           scopeIdx,
+		scope:              nil,
+		logger:             logger,
+		eventLogger:        eventLogger,
+		attempt:            0,
+		submitTime:         timeSource.Now(),
+		timeSource:         timeSource,
+		criticalRetryCount: criticalRetryCount,
+		redispatchFn:       redispatchFn,
+		taskFilter:         taskFilter,
+		taskExecutor:       taskExecutor,
+		taskProcessor:      taskProcessor,
 	}
 }
 
@@ -193,7 +191,7 @@ func (t *taskImpl) Execute() error {
 	var err error
 	t.shouldProcessTask, err = t.taskFilter(t.Info)
 	if err != nil {
-		t.logEvent("TaskFilter execution failed", err)
+		logEvent(t.eventLogger, "TaskFilter execution failed", err)
 		time.Sleep(loadDomainEntryForTaskRetryDelay)
 		return err
 	}
@@ -207,8 +205,8 @@ func (t *taskImpl) Execute() error {
 		}
 	}()
 
-	t.logEvent("Executing task", t.shouldProcessTask)
-	return t.taskExecutor.Execute(t.Info, t.shouldProcessTask)
+	logEvent(t.eventLogger, "Executing task", t.shouldProcessTask)
+	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
 func (t *taskImpl) HandleErr(
@@ -216,13 +214,13 @@ func (t *taskImpl) HandleErr(
 ) (retErr error) {
 	defer func() {
 		if retErr != nil {
-			t.logEvent("Failed to handle error", retErr)
+			logEvent(t.eventLogger, "Failed to handle error", retErr)
 
 			t.Lock()
 			defer t.Unlock()
 
 			t.attempt++
-			if t.attempt > t.maxRetryCount() {
+			if t.attempt > t.criticalRetryCount() {
 				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
 				t.logger.Error("Critical error processing task, retrying.",
 					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
@@ -234,9 +232,11 @@ func (t *taskImpl) HandleErr(
 		return nil
 	}
 
-	t.logEvent("Handling task processing error", err)
+	logEvent(t.eventLogger, "Handling task processing error", err)
 
 	if _, ok := err.(*types.EntityNotExistsError); ok {
+		return nil
+	} else if _, ok := err.(*types.WorkflowExecutionAlreadyCompletedError); ok {
 		return nil
 	}
 
@@ -277,9 +277,16 @@ func (t *taskImpl) HandleErr(
 		err = nil
 	}
 
-	// this is a transient error
+	// target domain not active error, we should retry the task
+	// so that a cross-cluster task can be created.
+	if err == errTargetDomainNotActive {
+		t.scope.IncCounter(metrics.TaskTargetNotActiveCounterPerDomain)
+		return err
+	}
+
+	// this is a transient error, and means source domain not active
 	// TODO remove this error check special case
-	//  since the new task life cycle will not give up until task processed / verified
+	// since the new task life cycle will not give up until task processed / verified
 	if _, ok := err.(*types.DomainNotActiveError); ok {
 		if t.timeSource.Now().Sub(t.submitTime) > 2*cache.DomainCacheRefreshInterval {
 			t.scope.IncCounter(metrics.TaskNotActiveCounterPerDomain)
@@ -296,7 +303,7 @@ func (t *taskImpl) HandleErr(
 		return nil
 	}
 
-	if t.GetAttempt() > t.maxRetryCount() && common.IsStickyTaskConditionError(err) {
+	if t.GetAttempt() > stickyTaskMaxRetryCount && common.IsStickyTaskConditionError(err) {
 		// sticky task could end up into endless loop in rare cases and
 		// cause worker to keep getting decision timeout unless restart.
 		// return nil here to break the endless loop
@@ -318,7 +325,7 @@ func (t *taskImpl) RetryErr(
 }
 
 func (t *taskImpl) Ack() {
-	t.logEvent("Acked task")
+	logEvent(t.eventLogger, "Acked task")
 
 	t.Lock()
 	defer t.Unlock()
@@ -337,7 +344,7 @@ func (t *taskImpl) Ack() {
 }
 
 func (t *taskImpl) Nack() {
-	t.logEvent("Nacked task")
+	logEvent(t.eventLogger, "Nacked task")
 
 	t.Lock()
 	t.state = ctask.TaskStateNacked
@@ -386,6 +393,10 @@ func (t *taskImpl) GetAttempt() int {
 	return t.attempt
 }
 
+func (t *taskImpl) GetInfo() Info {
+	return t.Info
+}
+
 func (t *taskImpl) GetQueueType() QueueType {
 	return t.queueType
 }
@@ -398,12 +409,13 @@ func (t *taskImpl) shouldResubmitOnNack() bool {
 		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
 }
 
-func (t *taskImpl) logEvent(
+func logEvent(
+	eventLogger eventLogger,
 	msg string,
 	detail ...interface{},
 ) {
-	if t.eventLogger != nil {
-		t.eventLogger.AddEvent(msg, detail...)
+	if eventLogger != nil {
+		eventLogger.AddEvent(msg, detail...)
 	}
 }
 

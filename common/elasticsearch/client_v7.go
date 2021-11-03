@@ -37,11 +37,11 @@ import (
 	esaws "github.com/olivere/elastic/v7/aws/v4"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
@@ -112,6 +112,15 @@ func NewV7Client(
 			return nil, err
 		}
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
+	}
+	if connectConfig.TLS.Enabled {
+		var tlsClient *http.Client
+		var err error
+		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
+		if err != nil {
+			return nil, err
+		}
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
 	}
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
@@ -606,6 +615,8 @@ func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		ExecutionTime:    time.Unix(0, source.ExecutionTime),
 		Memo:             p.NewDataBlob(source.Memo, common.EncodingType(source.Encoding)),
 		TaskList:         source.TaskList,
+		IsCron:           source.IsCron,
+		NumClusters:      source.NumClusters,
 		SearchAttributes: source.Attr,
 	}
 	if source.CloseTime != 0 {

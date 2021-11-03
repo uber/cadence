@@ -28,24 +28,22 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
+	"github.com/uber/cadence/common/persistence/sql/sqldriver"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
 type (
-	conn interface {
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		NamedExecContext(ctx context.Context, query string, arg interface{}) (sql.Result, error)
-		GetContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-		SelectContext(ctx context.Context, dest interface{}, query string, args ...interface{}) error
-	}
-
 	db struct {
-		db        *sqlx.DB
-		tx        *sqlx.Tx
-		conn      conn
-		converter DataConverter
+		converter   DataConverter
+		driver      sqldriver.Driver
+		originalDBs []*sqlx.DB
+		numDBShards int
 	}
 )
+
+func (pdb *db) GetTotalNumDBShards() int {
+	return pdb.numDBShards
+}
 
 var _ sqlplugin.DB = (*db)(nil)
 var _ sqlplugin.Tx = (*db)(nil)
@@ -54,48 +52,79 @@ var _ sqlplugin.Tx = (*db)(nil)
 // check http://www.postgresql.org/docs/9.3/static/errcodes-appendix.html
 const ErrDupEntry = "23505"
 
+const ErrInsufficientResources = "53000"
+const ErrTooManyConnections = "53300"
+
 func (pdb *db) IsDupEntryError(err error) bool {
 	sqlErr, ok := err.(*pq.Error)
 	return ok && sqlErr.Code == ErrDupEntry
 }
 
-// newDB returns an instance of DB, which is a logical
-// connection to the underlying postgres database
-func newDB(xdb *sqlx.DB, tx *sqlx.Tx) *db {
-	db := &db{
-		db:        xdb,
-		tx:        tx,
-		converter: &converter{},
-		conn:      xdb,
+func (pdb *db) IsNotFoundError(err error) bool {
+	if err == sql.ErrNoRows {
+		return true
 	}
-	if tx != nil {
-		db.conn = tx
-	}
-	return db
+	return false
 }
 
-// BeginTx starts a new transaction and returns a reference to the Tx object
-func (pdb *db) BeginTx(ctx context.Context) (sqlplugin.Tx, error) {
-	xtx, err := pdb.db.BeginTxx(ctx, nil)
+func (pdb *db) IsTimeoutError(err error) bool {
+	if err == context.DeadlineExceeded {
+		return true
+	}
+	return false
+}
+
+func (pdb *db) IsThrottlingError(err error) bool {
+	sqlErr, ok := err.(*pq.Error)
+	if ok {
+		if sqlErr.Code == ErrTooManyConnections ||
+			sqlErr.Code == ErrInsufficientResources {
+			return true
+		}
+	}
+	return false
+}
+
+// newDB returns an instance of DB, which is a logical
+// connection to the underlying postgres database
+// dbShardID is needed when tx is not nil
+func newDB(xdbs []*sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) (*db, error) {
+	driver, err := sqldriver.NewDriver(xdbs, tx, dbShardID)
 	if err != nil {
 		return nil, err
 	}
-	return newDB(pdb.db, xtx), nil
+
+	db := &db{
+		converter:   &converter{},
+		originalDBs: xdbs, // this is kept because newDB will be called again when starting a transaction
+		driver:      driver,
+		numDBShards: numDBShards,
+	}
+	return db, nil
+}
+
+// BeginTx starts a new transaction and returns a reference to the Tx object
+func (pdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error) {
+	xtx, err := pdb.driver.BeginTxx(ctx, dbShardID, nil)
+	if err != nil {
+		return nil, err
+	}
+	return newDB(pdb.originalDBs, xtx, dbShardID, pdb.numDBShards)
 }
 
 // Commit commits a previously started transaction
 func (pdb *db) Commit() error {
-	return pdb.tx.Commit()
+	return pdb.driver.Commit()
 }
 
 // Rollback triggers rollback of a previously started transaction
 func (pdb *db) Rollback() error {
-	return pdb.tx.Rollback()
+	return pdb.driver.Rollback()
 }
 
 // Close closes the connection to the mysql db
 func (pdb *db) Close() error {
-	return pdb.db.Close()
+	return pdb.driver.Close()
 }
 
 // PluginName returns the name of the mysql plugin

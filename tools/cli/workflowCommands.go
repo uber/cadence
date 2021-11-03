@@ -45,6 +45,7 @@ import (
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -164,12 +165,17 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 		},
 	})
 	if err != nil {
+		if _, ok := err.(*types.EntityNotExistsError); ok {
+			fmt.Println("History Source: History Archival")
+			return
+		}
 		ErrorAndExit("Describe workflow execution failed, cannot get information of pending activities", err)
 	}
+	fmt.Println("History Source: Default Storage")
 
 	descOutput := convertDescribeWorkflowExecutionResponse(resp, frontendClient, c)
 	if len(descOutput.PendingActivities) > 0 {
-		fmt.Println("============Pending activities============")
+		fmt.Println("============Workflow Pending activities============")
 		prettyPrintJSONObject(descOutput.PendingActivities)
 		fmt.Println("NOTE: ActivityStartedEvent with retry policy will be written into history when the activity is finished.")
 	}
@@ -199,7 +205,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	startFn := func() {
 		tcCtx, cancel := newContext(c)
 		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
+		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest, cc.GetDefaultCLIYarpcCallOptions()...)
 
 		if err != nil {
 			ErrorAndExit("Failed to create workflow.", err)
@@ -211,7 +217,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	runFn := func() {
 		tcCtx, cancel := newContextForLongPoll(c)
 		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
+		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest, cc.GetDefaultCLIYarpcCallOptions()...)
 
 		if err != nil {
 			ErrorAndExit("Failed to run workflow.", err)
@@ -297,6 +303,10 @@ func constructStartWorkflowRequest(c *cli.Context) *s.StartWorkflowExecutionRequ
 		if c.IsSet(FlagRetryMaxInterval) {
 			startRequest.RetryPolicy.MaximumIntervalInSeconds = common.Int32Ptr(int32(c.Int(FlagRetryMaxInterval)))
 		}
+	}
+
+	if c.IsSet(DelayStartSeconds) {
+		startRequest.DelayStartSeconds = common.Int32Ptr(int32(c.Int(DelayStartSeconds)))
 	}
 
 	headerFields := processHeader(c)
@@ -498,16 +508,20 @@ func SignalWorkflow(c *cli.Context) {
 
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	err := serviceClient.SignalWorkflowExecution(tcCtx, &s.SignalWorkflowExecutionRequest{
-		Domain: common.StringPtr(domain),
-		WorkflowExecution: &s.WorkflowExecution{
-			WorkflowId: common.StringPtr(wid),
-			RunId:      getPtrOrNilIfEmpty(rid),
+	err := serviceClient.SignalWorkflowExecution(
+		tcCtx,
+		&s.SignalWorkflowExecutionRequest{
+			Domain: common.StringPtr(domain),
+			WorkflowExecution: &s.WorkflowExecution{
+				WorkflowId: common.StringPtr(wid),
+				RunId:      getPtrOrNilIfEmpty(rid),
+			},
+			SignalName: common.StringPtr(name),
+			Input:      []byte(input),
+			Identity:   common.StringPtr(getCliIdentity()),
 		},
-		SignalName: common.StringPtr(name),
-		Input:      []byte(input),
-		Identity:   common.StringPtr(getCliIdentity()),
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...,
+	)
 
 	if err != nil {
 		ErrorAndExit("Signal workflow failed.", err)
@@ -525,7 +539,7 @@ func SignalWithStartWorkflowExecution(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest)
+	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("SignalWithStart workflow failed.", err)
 	} else {
@@ -554,6 +568,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) *s.SignalWithStartW
 		Header:                              startRequest.Header,
 		SignalName:                          common.StringPtr(getRequiredOption(c, FlagName)),
 		SignalInput:                         []byte(processJSONInputSignal(c)),
+		DelayStartSeconds:                   startRequest.DelayStartSeconds,
 	}
 }
 
@@ -622,7 +637,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 		}
 		queryRequest.QueryConsistencyLevel = &consistencyLevel
 	}
-	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
+	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Query workflow failed.", err)
 		return
@@ -1111,8 +1126,8 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Task List", "Start Time", "Execution Time"}
-	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
+	header := []string{"Workflow Type", "Workflow ID", "Run ID", "Task List", "Is Cron", "Start Time", "Execution Time"}
+	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
 	if !queryOpen {
 		header = append(header, "End Time")
 		headerColor = append(headerColor, tableHeaderBlue)
@@ -1210,7 +1225,15 @@ func appendWorkflowExecutionsToTable(
 			executionTime = convertTime(e.GetExecutionTime(), !printDateTime)
 			closeTime = convertTime(e.GetCloseTime(), !printDateTime)
 		}
-		row := []string{trimWorkflowType(e.Type.GetName()), e.Execution.GetWorkflowId(), e.Execution.GetRunId(), e.GetTaskList(), startTime, executionTime}
+		row := []string{
+			trimWorkflowType(e.Type.GetName()),
+			e.Execution.GetWorkflowId(),
+			e.Execution.GetRunId(),
+			e.GetTaskList(),
+			fmt.Sprintf("%t", e.GetIsCron()),
+			startTime,
+			executionTime,
+		}
 		if !queryOpen {
 			row = append(row, closeTime)
 		}

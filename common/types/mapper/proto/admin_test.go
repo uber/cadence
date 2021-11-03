@@ -172,3 +172,27 @@ func TestAdminResetQueueRequest(t *testing.T) {
 		assert.Equal(t, item, ToAdminResetQueueRequest(FromAdminResetQueueRequest(item)))
 	}
 }
+
+func TestAdminGetCrossClusterTasksRequest(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksRequest{nil, {}, &testdata.AdminGetCrossClusterTasksRequest} {
+		assert.Equal(t, item, ToAdminGetCrossClusterTasksRequest(FromAdminGetCrossClusterTasksRequest(item)))
+	}
+}
+
+func TestAdminGetCrossClusterTasksResponse(t *testing.T) {
+	for _, item := range []*types.GetCrossClusterTasksResponse{nil, {}, &testdata.AdminGetCrossClusterTasksResponse} {
+		assert.Equal(t, item, ToAdminGetCrossClusterTasksResponse(FromAdminGetCrossClusterTasksResponse(item)))
+	}
+}
+
+func TestAdminRespondCrossClusterTasksCompletedRequest(t *testing.T) {
+	for _, item := range []*types.RespondCrossClusterTasksCompletedRequest{nil, {}, &testdata.AdminRespondCrossClusterTasksCompletedRequest} {
+		assert.Equal(t, item, ToAdminRespondCrossClusterTasksCompletedRequest(FromAdminRespondCrossClusterTasksCompletedRequest(item)))
+	}
+}
+
+func TestAdminRespondCrossClusterTasksCompletedResponse(t *testing.T) {
+	for _, item := range []*types.RespondCrossClusterTasksCompletedResponse{nil, {}, &testdata.AdminRespondCrossClusterTasksCompletedResponse} {
+		assert.Equal(t, item, ToAdminRespondCrossClusterTasksCompletedResponse(FromAdminRespondCrossClusterTasksCompletedResponse(item)))
+	}
+}

@@ -32,17 +32,18 @@ import (
 var _ Client = (*retryableClient)(nil)
 
 type retryableClient struct {
-	client      Client
-	policy      backoff.RetryPolicy
-	isRetryable backoff.IsRetryable
+	client        Client
+	throttleRetry *backoff.ThrottleRetry
 }
 
 // NewRetryableClient creates a new instance of Client with retry policy
 func NewRetryableClient(client Client, policy backoff.RetryPolicy, isRetryable backoff.IsRetryable) Client {
 	return &retryableClient{
-		client:      client,
-		policy:      policy,
-		isRetryable: isRetryable,
+		client: client,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(policy),
+			backoff.WithRetryableError(isRetryable),
+		),
 	}
 }
 
@@ -55,7 +56,23 @@ func (c *retryableClient) AddSearchAttribute(
 	op := func() error {
 		return c.client.AddSearchAttribute(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *retryableClient) DescribeShardDistribution(
+	ctx context.Context,
+	request *types.DescribeShardDistributionRequest,
+	opts ...yarpc.CallOption,
+) (*types.DescribeShardDistributionResponse, error) {
+
+	var resp *types.DescribeShardDistributionResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.DescribeShardDistribution(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
 }
 
 func (c *retryableClient) DescribeHistoryHost(
@@ -70,7 +87,7 @@ func (c *retryableClient) DescribeHistoryHost(
 		resp, err = c.client.DescribeHistoryHost(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -83,7 +100,7 @@ func (c *retryableClient) RemoveTask(
 	op := func() error {
 		return c.client.RemoveTask(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) CloseShard(
@@ -95,7 +112,7 @@ func (c *retryableClient) CloseShard(
 	op := func() error {
 		return c.client.CloseShard(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) ResetQueue(
@@ -107,7 +124,7 @@ func (c *retryableClient) ResetQueue(
 	op := func() error {
 		return c.client.ResetQueue(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) DescribeQueue(
@@ -122,7 +139,7 @@ func (c *retryableClient) DescribeQueue(
 		resp, err = c.client.DescribeQueue(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -138,7 +155,7 @@ func (c *retryableClient) DescribeWorkflowExecution(
 		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -154,7 +171,7 @@ func (c *retryableClient) GetWorkflowExecutionRawHistoryV2(
 		resp, err = c.client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -169,7 +186,7 @@ func (c *retryableClient) DescribeCluster(
 		resp, err = c.client.DescribeCluster(ctx, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -184,7 +201,7 @@ func (c *retryableClient) GetReplicationMessages(
 		resp, err = c.client.GetReplicationMessages(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -199,7 +216,7 @@ func (c *retryableClient) GetDomainReplicationMessages(
 		resp, err = c.client.GetDomainReplicationMessages(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -214,7 +231,7 @@ func (c *retryableClient) GetDLQReplicationMessages(
 		resp, err = c.client.GetDLQReplicationMessages(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -227,7 +244,7 @@ func (c *retryableClient) ReapplyEvents(
 	op := func() error {
 		return c.client.ReapplyEvents(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) ReadDLQMessages(
@@ -242,7 +259,7 @@ func (c *retryableClient) ReadDLQMessages(
 		resp, err = c.client.ReadDLQMessages(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -255,7 +272,7 @@ func (c *retryableClient) PurgeDLQMessages(
 	op := func() error {
 		return c.client.PurgeDLQMessages(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) MergeDLQMessages(
@@ -270,7 +287,7 @@ func (c *retryableClient) MergeDLQMessages(
 		resp, err = c.client.MergeDLQMessages(ctx, request, opts...)
 		return err
 	}
-	err := backoff.Retry(op, c.policy, c.isRetryable)
+	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
 
@@ -283,7 +300,7 @@ func (c *retryableClient) RefreshWorkflowTasks(
 	op := func() error {
 		return c.client.RefreshWorkflowTasks(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
 }
 
 func (c *retryableClient) ResendReplicationTasks(
@@ -295,5 +312,88 @@ func (c *retryableClient) ResendReplicationTasks(
 	op := func() error {
 		return c.client.ResendReplicationTasks(ctx, request, opts...)
 	}
-	return backoff.Retry(op, c.policy, c.isRetryable)
+	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *retryableClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *types.GetCrossClusterTasksRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetCrossClusterTasksResponse, error) {
+	var resp *types.GetCrossClusterTasksResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetCrossClusterTasks(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) RespondCrossClusterTasksCompleted(
+	ctx context.Context,
+	request *types.RespondCrossClusterTasksCompletedRequest,
+	opts ...yarpc.CallOption,
+) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	var resp *types.RespondCrossClusterTasksCompletedResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) GetDynamicConfig(
+	ctx context.Context,
+	request *types.GetDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetDynamicConfigResponse, error) {
+	var resp *types.GetDynamicConfigResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetDynamicConfig(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) UpdateDynamicConfig(
+	ctx context.Context,
+	request *types.UpdateDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) error {
+	op := func() error {
+		return c.client.UpdateDynamicConfig(ctx, request, opts...)
+	}
+	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *retryableClient) RestoreDynamicConfig(
+	ctx context.Context,
+	request *types.RestoreDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) error {
+	op := func() error {
+		return c.client.RestoreDynamicConfig(ctx, request, opts...)
+	}
+	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *retryableClient) ListDynamicConfig(
+	ctx context.Context,
+	request *types.ListDynamicConfigRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListDynamicConfigResponse, error) {
+	var resp *types.ListDynamicConfigResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.ListDynamicConfig(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
 }

@@ -26,21 +26,22 @@ import (
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
-	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/provider"
-	"github.com/uber/cadence/common/authorization"
 	"github.com/uber/cadence/common/blobstore/filestore"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
-	"github.com/uber/cadence/common/service/config"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
@@ -56,13 +57,6 @@ type (
 	}
 )
 
-const (
-	frontendService = "frontend"
-	historyService  = "history"
-	matchingService = "matching"
-	workerService   = "worker"
-)
-
 // newServer returns a new instance of a daemon
 // that represents a cadence service
 func newServer(service string, cfg *config.Config) common.Daemon {
@@ -75,9 +69,6 @@ func newServer(service string, cfg *config.Config) common.Daemon {
 
 // Start starts the server
 func (s *server) Start() {
-	if _, ok := s.cfg.Services[s.name]; !ok {
-		log.Fatalf("`%v` service missing config", s)
-	}
 	s.daemon = s.startService()
 }
 
@@ -102,31 +93,70 @@ func (s *server) Stop() {
 
 // startService starts a service with the given name and config
 func (s *server) startService() common.Daemon {
+	svcCfg, err := s.cfg.GetServiceConfig(s.name)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
-	var err error
+	params := resource.Params{}
+	params.Name = service.FullName(s.name)
 
-	params := service.BootstrapParams{}
-	params.Name = "cadence-" + s.name
-	params.Logger = loggerimpl.NewLogger(s.cfg.Log.NewZapLogger())
+	zapLogger, err := s.cfg.Log.NewZapLogger()
+	if err != nil {
+		log.Fatal("failed to create the zap logger, err: ", err.Error())
+	}
+	params.Logger = loggerimpl.NewLogger(zapLogger)
+	params.UpdateLoggerWithServiceName(params.Name)
 	params.PersistenceConfig = s.cfg.Persistence
 
-	params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger.WithTags(tag.Service(params.Name)), s.doneC)
+	err = nil
+	if s.cfg.DynamicConfig.Client == "" {
+		//try to fallback to legacy dynamicClientConfig
+		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
+	} else {
+		switch s.cfg.DynamicConfig.Client {
+		case dynamicconfig.DynamicConfigConfigStoreClient:
+			log.Printf("Trying to initialize Config Store Dynamic Config Client\n")
+			params.DynamicConfig, err = configstore.NewConfigStoreClient(
+				&s.cfg.DynamicConfig.ConfigStore,
+				&s.cfg.Persistence,
+				params.Logger,
+				s.doneC,
+			)
+		case dynamicconfig.DynamicConfigFileBasedClient:
+			log.Printf("Trying to initialize File Based Dynamic Config Client\n")
+			params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfig.FileBased, params.Logger, s.doneC)
+		default:
+			log.Printf("Trying to initialize Nop Config Client\n")
+			params.DynamicConfig = dynamicconfig.NewNopClient()
+		}
+	}
+
 	if err != nil {
-		log.Printf("error creating file based dynamic config client, use no-op config client instead. error: %v", err)
+		log.Printf("error creating dynamic config client, using no-op config client instead. error: %v", err)
 		params.DynamicConfig = dynamicconfig.NewNopClient()
 	}
-	clusterMetadata := s.cfg.ClusterMetadata
+	clusterGroupMetadata := s.cfg.ClusterGroupMetadata
 	dc := dynamicconfig.NewCollection(
 		params.DynamicConfig,
 		params.Logger,
-		dynamicconfig.ClusterNameFilter(clusterMetadata.CurrentClusterName),
+		dynamicconfig.ClusterNameFilter(clusterGroupMetadata.CurrentClusterName),
 	)
 
-	svcCfg := s.cfg.Services[s.name]
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
-	params.RPCFactory = svcCfg.RPC.NewFactory(params.Name, params.Logger)
+
+	rpcParams, err := rpc.NewParams(params.Name, s.cfg)
+	if err != nil {
+		log.Fatalf("error creating rpc factory params: %v", err)
+	}
+	rpcParams.OutboundsBuilder = rpc.CombineOutbounds(
+		rpcParams.OutboundsBuilder,
+		rpc.NewCrossDCOutbounds(clusterGroupMetadata.ClusterGroup, rpc.NewDNSPeerChooserFactory(s.cfg.PublicClient.RefreshInterval, params.Logger)),
+	)
+	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
+	params.RPCFactory = rpcFactory
 	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
-		params.RPCFactory.GetDispatcher(),
+		rpcFactory.GetChannel(),
 		params.Name,
 		params.Logger,
 	)
@@ -135,24 +165,18 @@ func (s *server) startService() common.Daemon {
 	}
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
-	params.DCRedirectionPolicy = s.cfg.DCRedirectionPolicy
+	params.ClusterRedirectionPolicy = s.cfg.ClusterGroupMetadata.ClusterRedirectionPolicy
 
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
 	params.ClusterMetadata = cluster.NewMetadata(
 		params.Logger,
-		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterMetadata.EnableGlobalDomain),
-		clusterMetadata.FailoverVersionIncrement,
-		clusterMetadata.MasterClusterName,
-		clusterMetadata.CurrentClusterName,
-		clusterMetadata.ClusterInformation,
+		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterGroupMetadata.EnableGlobalDomain),
+		clusterGroupMetadata.FailoverVersionIncrement,
+		clusterGroupMetadata.PrimaryClusterName,
+		clusterGroupMetadata.CurrentClusterName,
+		clusterGroupMetadata.ClusterGroup,
 	)
-
-	if s.cfg.PublicClient.HostPort != "" {
-		params.DispatcherProvider = client.NewDNSYarpcDispatcherProvider(params.Logger, s.cfg.PublicClient.RefreshInterval)
-	} else {
-		log.Fatalf("need to provide an endpoint config for PublicClient")
-	}
 
 	advancedVisMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
@@ -188,11 +212,7 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	dispatcher, err := params.DispatcherProvider.Get(common.FrontendServiceName, s.cfg.PublicClient.HostPort)
-	if err != nil {
-		log.Fatalf("failed to construct dispatcher: %v", err)
-	}
-	params.PublicClient = workflowserviceclient.New(dispatcher.ClientConfig(common.FrontendServiceName))
+	params.PublicClient = workflowserviceclient.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,
@@ -206,7 +226,7 @@ func (s *server) startService() common.Daemon {
 	params.ArchiverProvider = provider.NewArchiverProvider(s.cfg.Archival.History.Provider, s.cfg.Archival.Visibility.Provider)
 	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
 	params.PersistenceConfig.ErrorInjectionRate = dc.GetFloat64Property(dynamicconfig.PersistenceErrorInjectionRate, 0)
-	params.Authorizer = authorization.NewNopAuthorizer()
+	params.AuthorizationConfig = s.cfg.Authorization
 	params.BlobstoreClient, err = filestore.NewFilestoreClient(s.cfg.Blobstore.Filestore)
 	if err != nil {
 		log.Printf("failed to create file blobstore client, will continue startup without it: %v", err)
@@ -217,14 +237,14 @@ func (s *server) startService() common.Daemon {
 
 	var daemon common.Daemon
 
-	switch s.name {
-	case frontendService:
+	switch params.Name {
+	case service.Frontend:
 		daemon, err = frontend.NewService(&params)
-	case historyService:
+	case service.History:
 		daemon, err = history.NewService(&params)
-	case matchingService:
+	case service.Matching:
 		daemon, err = matching.NewService(&params)
-	case workerService:
+	case service.Worker:
 		daemon, err = worker.NewService(&params)
 	}
 	if err != nil {

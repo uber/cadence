@@ -30,11 +30,10 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	t "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
@@ -55,7 +54,6 @@ type (
 		mockTaskInfo         *MockInfo
 
 		logger        log.Logger
-		timeSource    clock.TimeSource
 		maxRetryCount dynamicconfig.IntPropertyFn
 	}
 )
@@ -85,7 +83,6 @@ func (s *taskSuite) SetupTest() {
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
-	s.timeSource = clock.NewRealTimeSource()
 	s.maxRetryCount = dynamicconfig.GetIntPropertyFn(10)
 }
 
@@ -96,7 +93,7 @@ func (s *taskSuite) TearDownTest() {
 
 func (s *taskSuite) TestExecute_TaskFilterErr() {
 	taskFilterErr := errors.New("some random error")
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return false, taskFilterErr
 	}, nil)
 	err := taskBase.Execute()
@@ -104,30 +101,30 @@ func (s *taskSuite) TestExecute_TaskFilterErr() {
 }
 
 func (s *taskSuite) TestExecute_ExecutionErr() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	task := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
 	executionErr := errors.New("some random error")
-	s.mockTaskExecutor.EXPECT().Execute(taskBase.Info, true).Return(executionErr).Times(1)
+	s.mockTaskExecutor.EXPECT().Execute(task, true).Return(executionErr).Times(1)
 
-	err := taskBase.Execute()
+	err := task.Execute()
 	s.Equal(executionErr, err)
 }
 
 func (s *taskSuite) TestExecute_Success() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	task := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
-	s.mockTaskExecutor.EXPECT().Execute(taskBase.Info, true).Return(nil).Times(1)
+	s.mockTaskExecutor.EXPECT().Execute(task, true).Return(nil).Times(1)
 
-	err := taskBase.Execute()
+	err := task.Execute()
 	s.NoError(err)
 }
 
 func (s *taskSuite) TestHandleErr_ErrEntityNotExists() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -136,7 +133,7 @@ func (s *taskSuite) TestHandleErr_ErrEntityNotExists() {
 }
 
 func (s *taskSuite) TestHandleErr_ErrTaskRetry() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -145,7 +142,7 @@ func (s *taskSuite) TestHandleErr_ErrTaskRetry() {
 }
 
 func (s *taskSuite) TestHandleErr_ErrTaskDiscarded() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -153,8 +150,24 @@ func (s *taskSuite) TestHandleErr_ErrTaskDiscarded() {
 	s.NoError(taskBase.HandleErr(err))
 }
 
+func (s *taskSuite) TestHandleErr_ErrTargetDomainNotActive() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	err := errTargetDomainNotActive
+
+	// we should always return the target domain not active error
+	// no matter that the submit time is
+	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
+	s.Equal(err, taskBase.HandleErr(err))
+
+	taskBase.submitTime = time.Now()
+	s.Equal(err, taskBase.HandleErr(err))
+}
+
 func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -168,7 +181,7 @@ func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {
 }
 
 func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -177,7 +190,7 @@ func (s *taskSuite) TestHandleErr_ErrCurrentWorkflowConditionFailed() {
 }
 
 func (s *taskSuite) TestHandleErr_UnknownErr() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -186,7 +199,7 @@ func (s *taskSuite) TestHandleErr_UnknownErr() {
 }
 
 func (s *taskSuite) TestTaskState() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -201,7 +214,7 @@ func (s *taskSuite) TestTaskState() {
 }
 
 func (s *taskSuite) TestTaskPriority() {
-	taskBase := s.newTestQueueTaskBase(func(task Info) (bool, error) {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
 
@@ -211,7 +224,7 @@ func (s *taskSuite) TestTaskPriority() {
 }
 
 func (s *taskSuite) TestTaskNack_ResubmitSucceeded() {
-	task := s.newTestQueueTaskBase(
+	task := s.newTestTask(
 		func(task Info) (bool, error) {
 			return true, nil
 		},
@@ -227,7 +240,7 @@ func (s *taskSuite) TestTaskNack_ResubmitSucceeded() {
 }
 
 func (s *taskSuite) TestTaskNack_ResubmitFailed() {
-	task := s.newTestQueueTaskBase(
+	task := s.newTestTask(
 		func(task Info) (bool, error) {
 			return true, nil
 		},
@@ -243,7 +256,7 @@ func (s *taskSuite) TestTaskNack_ResubmitFailed() {
 	s.Equal(t.TaskStateNacked, task.State())
 }
 
-func (s *taskSuite) newTestQueueTaskBase(
+func (s *taskSuite) newTestTask(
 	taskFilter Filter,
 	redispatchFn func(task Task),
 ) *taskImpl {
@@ -261,7 +274,6 @@ func (s *taskSuite) newTestQueueTaskBase(
 		taskFilter,
 		s.mockTaskExecutor,
 		s.mockTaskProcessor,
-		s.timeSource,
 		s.maxRetryCount,
 		redispatchFn,
 	)

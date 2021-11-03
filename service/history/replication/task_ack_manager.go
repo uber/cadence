@@ -29,17 +29,20 @@ import (
 	ctx "context"
 	"errors"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/service/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -50,6 +53,7 @@ var (
 	errUnknownQueueTask       = errors.New("unknown task type")
 	errUnknownReplicationTask = errors.New("unknown replication task")
 	defaultHistoryPageSize    = 1000
+	minReadTaskSize           = 20
 )
 
 type (
@@ -74,6 +78,10 @@ type (
 		historyManager   persistence.HistoryManager
 		rateLimiter      *quotas.DynamicRateLimiter
 		retryPolicy      backoff.RetryPolicy
+		throttleRetry    *backoff.ThrottleRetry
+
+		lastTaskCreationTime atomic.Value
+		maxAllowedLatencyFn  dynamicconfig.DurationPropertyFn
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -100,15 +108,21 @@ func NewTaskAckManager(
 	retryPolicy.SetBackoffCoefficient(1)
 
 	return &taskAckManagerImpl{
-		shard:               shard,
-		executionCache:      executionCache,
-		executionManager:    shard.GetExecutionManager(),
-		historyManager:      shard.GetHistoryManager(),
-		rateLimiter:         rateLimiter,
-		retryPolicy:         retryPolicy,
-		metricsClient:       shard.GetMetricsClient(),
-		logger:              shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
-		fetchTasksBatchSize: config.ReplicatorProcessorFetchTasksBatchSize,
+		shard:            shard,
+		executionCache:   executionCache,
+		executionManager: shard.GetExecutionManager(),
+		historyManager:   shard.GetHistoryManager(),
+		rateLimiter:      rateLimiter,
+		retryPolicy:      retryPolicy,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(retryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
+		lastTaskCreationTime: atomic.Value{},
+		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
+		metricsClient:        shard.GetMetricsClient(),
+		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
+		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
 	}
 }
 
@@ -146,15 +160,28 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.InstanceTag(strconv.Itoa(shardID)),
 	)
 	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
-	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, t.fetchTasksBatchSize(shardID))
+	batchSize := t.getBatchSize()
+	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, batchSize)
 	if err != nil {
 		return nil, err
 	}
 
+	var lastTaskCreationTime time.Time
 	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
 TaskInfoLoop:
 	for _, taskInfo := range taskInfoList {
+		// filter task info by domain clusters.
+		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
+		if skipTask(pollingCluster, domainEntity) {
+			readLevel = taskInfo.GetTaskID()
+			continue
+		}
+
+		// construct replication task from DB
 		_ = t.rateLimiter.Wait(ctx)
 		var replicationTask *types.ReplicationTask
 		op := func() error {
@@ -162,8 +189,7 @@ TaskInfoLoop:
 			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
 			return err
 		}
-
-		err = backoff.Retry(op, t.retryPolicy, common.IsPersistenceTransientError)
+		err = t.throttleRetry.Do(ctx, op)
 		switch err.(type) {
 		case nil:
 			// No action
@@ -178,8 +204,10 @@ TaskInfoLoop:
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
+		if taskInfo.GetVisibilityTimestamp().After(lastTaskCreationTime) {
+			lastTaskCreationTime = taskInfo.GetVisibilityTimestamp()
+		}
 	}
-
 	taskGeneratedTimer.Stop()
 
 	replicationScope.RecordTimer(
@@ -205,7 +233,9 @@ TaskInfoLoop:
 	); err != nil {
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
+	t.lastTaskCreationTime.Store(lastTaskCreationTime)
 
+	t.logger.Debug("Get replication tasks", tag.SourceCluster(pollingCluster), tag.ShardReplicationAck(lastReadTaskID), tag.ReadLevel(readLevel))
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
 		HasMore:                hasMore,
@@ -439,7 +469,7 @@ func (t *taskAckManagerImpl) getPaginationFunc(
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
-		events, _, pageToken, pageHistorySize, err := persistence.PaginateHistory(
+		events, _, pageToken, pageHistorySize, err := persistenceutils.PaginateHistory(
 			ctx,
 			t.historyManager,
 			false,
@@ -612,6 +642,35 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			return replicationTask, nil
 		},
 	)
+}
+
+func (t *taskAckManagerImpl) getBatchSize() int {
+
+	shardID := t.shard.GetShardID()
+	defaultBatchSize := t.fetchTasksBatchSize(shardID)
+	maxReplicationLatency := t.maxAllowedLatencyFn()
+	now := t.shard.GetTimeSource().Now()
+
+	if t.lastTaskCreationTime.Load() == nil {
+		return defaultBatchSize
+	}
+	taskLatency := now.Sub(t.lastTaskCreationTime.Load().(time.Time))
+	if taskLatency < 0 {
+		taskLatency = 0
+	}
+	if taskLatency >= maxReplicationLatency {
+		return defaultBatchSize
+	}
+	return minReadTaskSize + int(float64(taskLatency)/float64(maxReplicationLatency)*float64(defaultBatchSize))
+}
+
+func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {
+	for _, cluster := range domainEntity.GetReplicationConfig().Clusters {
+		if cluster.ClusterName == pollingCluster {
+			return false
+		}
+	}
+	return true
 }
 
 func getVersionHistoryItems(

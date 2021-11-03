@@ -281,21 +281,23 @@ func (c *Cache) makeReleaseFunc(
 
 	status := cacheNotReleased
 	return func(err error) {
-		if atomic.CompareAndSwapInt32(&status, cacheNotReleased, cacheReleased) {
-			if rec := recover(); rec != nil {
-				context.Clear()
-				context.Unlock()
-				c.Release(key)
-				panic(rec)
-			} else {
-				if err != nil || forceClearContext {
-					// TODO see issue #668, there are certain type or errors which can bypass the clear
+		defer func() {
+			if atomic.CompareAndSwapInt32(&status, cacheNotReleased, cacheReleased) {
+				if rec := recover(); rec != nil {
 					context.Clear()
+					context.Unlock()
+					c.Release(key)
+					panic(rec)
+				} else {
+					if err != nil || forceClearContext {
+						// TODO see issue #668, there are certain type or errors which can bypass the clear
+						context.Clear()
+					}
+					context.Unlock()
+					c.Release(key)
 				}
-				context.Unlock()
-				c.Release(key)
 			}
-		}
+		}()
 	}
 }
 
@@ -316,7 +318,11 @@ func (c *Cache) getCurrentExecutionWithRetry(
 		return err
 	}
 
-	err := backoff.Retry(op, persistenceOperationRetryPolicy, common.IsPersistenceTransientError)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(common.CreatePersistenceRetryPolicy()),
+		backoff.WithRetryableError(persistence.IsTransientError),
+	)
+	err := throttleRetry.Do(ctx, op)
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.HistoryCacheGetCurrentExecutionScope, metrics.CacheFailures)
 		return nil, err

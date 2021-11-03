@@ -34,68 +34,99 @@ func TestMatchingAddActivityTaskRequest(t *testing.T) {
 		assert.Equal(t, item, ToMatchingAddActivityTaskRequest(FromMatchingAddActivityTaskRequest(item)))
 	}
 }
+
 func TestMatchingAddDecisionTaskRequest(t *testing.T) {
 	for _, item := range []*types.AddDecisionTaskRequest{nil, {}, &testdata.MatchingAddDecisionTaskRequest} {
 		assert.Equal(t, item, ToMatchingAddDecisionTaskRequest(FromMatchingAddDecisionTaskRequest(item)))
 	}
 }
+
 func TestMatchingCancelOutstandingPollRequest(t *testing.T) {
 	for _, item := range []*types.CancelOutstandingPollRequest{nil, {}, &testdata.MatchingCancelOutstandingPollRequest} {
 		assert.Equal(t, item, ToMatchingCancelOutstandingPollRequest(FromMatchingCancelOutstandingPollRequest(item)))
 	}
 }
+
 func TestMatchingDescribeTaskListRequest(t *testing.T) {
 	for _, item := range []*types.MatchingDescribeTaskListRequest{nil, {}, &testdata.MatchingDescribeTaskListRequest} {
 		assert.Equal(t, item, ToMatchingDescribeTaskListRequest(FromMatchingDescribeTaskListRequest(item)))
 	}
 }
+
 func TestMatchingDescribeTaskListResponse(t *testing.T) {
 	for _, item := range []*types.DescribeTaskListResponse{nil, {}, &testdata.MatchingDescribeTaskListResponse} {
 		assert.Equal(t, item, ToMatchingDescribeTaskListResponse(FromMatchingDescribeTaskListResponse(item)))
 	}
 }
+
+func TestMatchingDescribeTaskListResponseMap(t *testing.T) {
+	for _, item := range []map[string]*types.DescribeTaskListResponse{nil, {}, testdata.DescribeTaskListResponseMap} {
+		assert.Equal(t, item, ToMatchingDescribeTaskListResponseMap(FromMatchingDescribeTaskListResponseMap(item)))
+	}
+}
+
 func TestMatchingListTaskListPartitionsRequest(t *testing.T) {
 	for _, item := range []*types.MatchingListTaskListPartitionsRequest{nil, {}, &testdata.MatchingListTaskListPartitionsRequest} {
 		assert.Equal(t, item, ToMatchingListTaskListPartitionsRequest(FromMatchingListTaskListPartitionsRequest(item)))
 	}
 }
+
 func TestMatchingListTaskListPartitionsResponse(t *testing.T) {
 	for _, item := range []*types.ListTaskListPartitionsResponse{nil, {}, &testdata.MatchingListTaskListPartitionsResponse} {
 		assert.Equal(t, item, ToMatchingListTaskListPartitionsResponse(FromMatchingListTaskListPartitionsResponse(item)))
 	}
 }
+
 func TestMatchingPollForActivityTaskRequest(t *testing.T) {
 	for _, item := range []*types.MatchingPollForActivityTaskRequest{nil, {}, &testdata.MatchingPollForActivityTaskRequest} {
 		assert.Equal(t, item, ToMatchingPollForActivityTaskRequest(FromMatchingPollForActivityTaskRequest(item)))
 	}
 }
+
 func TestMatchingPollForActivityTaskResponse(t *testing.T) {
 	for _, item := range []*types.PollForActivityTaskResponse{nil, {}, &testdata.MatchingPollForActivityTaskResponse} {
 		assert.Equal(t, item, ToMatchingPollForActivityTaskResponse(FromMatchingPollForActivityTaskResponse(item)))
 	}
 }
+
 func TestMatchingPollForDecisionTaskRequest(t *testing.T) {
 	for _, item := range []*types.MatchingPollForDecisionTaskRequest{nil, {}, &testdata.MatchingPollForDecisionTaskRequest} {
 		assert.Equal(t, item, ToMatchingPollForDecisionTaskRequest(FromMatchingPollForDecisionTaskRequest(item)))
 	}
 }
+
 func TestMatchingPollForDecisionTaskResponse(t *testing.T) {
 	for _, item := range []*types.MatchingPollForDecisionTaskResponse{nil, {}, &testdata.MatchingPollForDecisionTaskResponse} {
 		assert.Equal(t, item, ToMatchingPollForDecisionTaskResponse(FromMatchingPollForDecisionTaskResponse(item)))
 	}
 }
+
 func TestMatchingQueryWorkflowRequest(t *testing.T) {
 	for _, item := range []*types.MatchingQueryWorkflowRequest{nil, {}, &testdata.MatchingQueryWorkflowRequest} {
 		assert.Equal(t, item, ToMatchingQueryWorkflowRequest(FromMatchingQueryWorkflowRequest(item)))
 	}
 }
+
 func TestMatchingQueryWorkflowResponse(t *testing.T) {
 	for _, item := range []*types.QueryWorkflowResponse{nil, {}, &testdata.MatchingQueryWorkflowResponse} {
 		assert.Equal(t, item, ToMatchingQueryWorkflowResponse(FromMatchingQueryWorkflowResponse(item)))
 	}
 }
+
 func TestMatchingRespondQueryTaskCompletedRequest(t *testing.T) {
 	for _, item := range []*types.MatchingRespondQueryTaskCompletedRequest{nil, {}, &testdata.MatchingRespondQueryTaskCompletedRequest} {
 		assert.Equal(t, item, ToMatchingRespondQueryTaskCompletedRequest(FromMatchingRespondQueryTaskCompletedRequest(item)))
+	}
+}
+
+func TestMatchingGetTaskListsByDomainRequest(t *testing.T) {
+	for _, item := range []*types.GetTaskListsByDomainRequest{nil, {}, &testdata.MatchingGetTaskListsByDomainRequest} {
+		assert.Equal(t, item, ToMatchingGetTaskListsByDomainRequest(FromMatchingGetTaskListsByDomainRequest(item)))
+	}
+}
+
+func TestMatchingGetTaskListsByDomainResponse(t *testing.T) {
+	for _, item := range []*types.GetTaskListsByDomainResponse{nil, {}, &testdata.GetTaskListsByDomainResponse} {
+		assert.Equal(t, item, ToMatchingGetTaskListsByDomainResponse(FromMatchingGetTaskListsByDomainResponse(item)))
 	}
 }

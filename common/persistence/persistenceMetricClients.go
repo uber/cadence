@@ -56,7 +56,7 @@ type (
 
 	metadataPersistenceClient struct {
 		metricClient metrics.Client
-		persistence  MetadataManager
+		persistence  DomainManager
 		logger       log.Logger
 	}
 
@@ -71,15 +71,22 @@ type (
 		persistence  QueueManager
 		logger       log.Logger
 	}
+
+	configStorePersistenceClient struct {
+		metricClient metrics.Client
+		persistence  ConfigStoreManager
+		logger       log.Logger
+	}
 )
 
 var _ ShardManager = (*shardPersistenceClient)(nil)
 var _ ExecutionManager = (*workflowExecutionPersistenceClient)(nil)
 var _ TaskManager = (*taskPersistenceClient)(nil)
 var _ HistoryManager = (*historyPersistenceClient)(nil)
-var _ MetadataManager = (*metadataPersistenceClient)(nil)
+var _ DomainManager = (*metadataPersistenceClient)(nil)
 var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ QueueManager = (*queuePersistenceClient)(nil)
+var _ ConfigStoreManager = (*configStorePersistenceClient)(nil)
 
 // NewShardPersistenceMetricsClient creates a client to manage shards
 func NewShardPersistenceMetricsClient(
@@ -133,12 +140,12 @@ func NewHistoryPersistenceMetricsClient(
 	}
 }
 
-// NewMetadataPersistenceMetricsClient creates a MetadataManager client to manage metadata
-func NewMetadataPersistenceMetricsClient(
-	persistence MetadataManager,
+// NewDomainPersistenceMetricsClient creates a DomainManager client to manage metadata
+func NewDomainPersistenceMetricsClient(
+	persistence DomainManager,
 	metricClient metrics.Client,
 	logger log.Logger,
-) MetadataManager {
+) DomainManager {
 	return &metadataPersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
@@ -166,6 +173,19 @@ func NewQueuePersistenceMetricsClient(
 	logger log.Logger,
 ) QueueManager {
 	return &queuePersistenceClient{
+		persistence:  persistence,
+		metricClient: metricClient,
+		logger:       logger,
+	}
+}
+
+// NewConfigStorePersistenceMetricsClient creates a client to manage config store
+func NewConfigStorePersistenceMetricsClient(
+	persistence ConfigStoreManager,
+	metricClient metrics.Client,
+	logger log.Logger,
+) ConfigStoreManager {
+	return &configStorePersistenceClient{
 		persistence:  persistence,
 		metricClient: metricClient,
 		logger:       logger,
@@ -310,35 +330,18 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 	ctx context.Context,
 	request *ConflictResolveWorkflowExecutionRequest,
-) error {
+) (*ConflictResolveWorkflowExecutionResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceConflictResolveWorkflowExecutionScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceConflictResolveWorkflowExecutionScope, metrics.PersistenceLatency)
-	err := p.persistence.ConflictResolveWorkflowExecution(ctx, request)
+	resp, err := p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceConflictResolveWorkflowExecutionScope, err)
 	}
 
-	return err
-}
-
-func (p *workflowExecutionPersistenceClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *ResetWorkflowExecutionRequest,
-) error {
-	p.metricClient.IncCounter(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceRequests)
-
-	sw := p.metricClient.StartTimer(metrics.PersistenceResetWorkflowExecutionScope, metrics.PersistenceLatency)
-	err := p.persistence.ResetWorkflowExecution(ctx, request)
-	sw.Stop()
-
-	if err != nil {
-		p.updateErrorMetric(metrics.PersistenceResetWorkflowExecutionScope, err)
-	}
-
-	return err
+	return resp, err
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
@@ -460,6 +463,23 @@ func (p *workflowExecutionPersistenceClient) GetTransferTasks(
 	return response, err
 }
 
+func (p *workflowExecutionPersistenceClient) GetCrossClusterTasks(
+	ctx context.Context,
+	request *GetCrossClusterTasksRequest,
+) (*GetCrossClusterTasksResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceLatency)
+	response, err := p.persistence.GetCrossClusterTasks(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetCrossClusterTasksScope, err)
+	}
+
+	return response, err
+}
+
 func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 	ctx context.Context,
 	request *GetReplicationTasksRequest,
@@ -497,18 +517,52 @@ func (p *workflowExecutionPersistenceClient) CompleteTransferTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteTransferTask(
 	ctx context.Context,
 	request *RangeCompleteTransferTaskRequest,
-) error {
+) (*RangeCompleteTransferTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteTransferTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteTransferTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteTransferTask(ctx, request)
+	response, err := p.persistence.RangeCompleteTransferTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteTransferTaskScope, err)
 	}
 
+	return response, err
+}
+
+func (p *workflowExecutionPersistenceClient) CompleteCrossClusterTask(
+	ctx context.Context,
+	request *CompleteCrossClusterTaskRequest,
+) error {
+	p.metricClient.IncCounter(metrics.PersistenceCompleteCrossClusterTaskScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteCrossClusterTaskScope, metrics.PersistenceLatency)
+	err := p.persistence.CompleteCrossClusterTask(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceCompleteCrossClusterTaskScope, err)
+	}
+
 	return err
+}
+
+func (p *workflowExecutionPersistenceClient) RangeCompleteCrossClusterTask(
+	ctx context.Context,
+	request *RangeCompleteCrossClusterTaskRequest,
+) (*RangeCompleteCrossClusterTaskResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteCrossClusterTaskScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteCrossClusterTaskScope, metrics.PersistenceLatency)
+	response, err := p.persistence.RangeCompleteCrossClusterTask(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceRangeCompleteCrossClusterTaskScope, err)
+	}
+
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) CompleteReplicationTask(
@@ -531,18 +585,18 @@ func (p *workflowExecutionPersistenceClient) CompleteReplicationTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteReplicationTask(
 	ctx context.Context,
 	request *RangeCompleteReplicationTaskRequest,
-) error {
+) (*RangeCompleteReplicationTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteReplicationTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteReplicationTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteReplicationTask(ctx, request)
+	response, err := p.persistence.RangeCompleteReplicationTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteReplicationTaskScope, err)
 	}
 
-	return err
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) PutReplicationTaskToDLQ(
@@ -610,24 +664,24 @@ func (p *workflowExecutionPersistenceClient) DeleteReplicationTaskFromDLQ(
 		p.updateErrorMetric(metrics.PersistenceDeleteReplicationTaskFromDLQScope, err)
 	}
 
-	return nil
+	return err
 }
 
 func (p *workflowExecutionPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
 	ctx context.Context,
 	request *RangeDeleteReplicationTaskFromDLQRequest,
-) error {
+) (*RangeDeleteReplicationTaskFromDLQResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
+	response, err := p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, err)
 	}
 
-	return nil
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) CreateFailoverMarkerTasks(
@@ -684,18 +738,18 @@ func (p *workflowExecutionPersistenceClient) CompleteTimerTask(
 func (p *workflowExecutionPersistenceClient) RangeCompleteTimerTask(
 	ctx context.Context,
 	request *RangeCompleteTimerTaskRequest,
-) error {
+) (*RangeCompleteTimerTaskResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceRangeCompleteTimerTaskScope, metrics.PersistenceRequests)
 
 	sw := p.metricClient.StartTimer(metrics.PersistenceRangeCompleteTimerTaskScope, metrics.PersistenceLatency)
-	err := p.persistence.RangeCompleteTimerTask(ctx, request)
+	response, err := p.persistence.RangeCompleteTimerTask(ctx, request)
 	sw.Stop()
 
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceRangeCompleteTimerTaskScope, err)
 	}
 
-	return err
+	return response, err
 }
 
 func (p *workflowExecutionPersistenceClient) updateErrorMetric(scope int, err error) {
@@ -785,13 +839,24 @@ func (p *taskPersistenceClient) CompleteTask(
 func (p *taskPersistenceClient) CompleteTasksLessThan(
 	ctx context.Context,
 	request *CompleteTasksLessThanRequest,
-) (int, error) {
+) (*CompleteTasksLessThanResponse, error) {
 	p.metricClient.IncCounter(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceRequests)
 	sw := p.metricClient.StartTimer(metrics.PersistenceCompleteTasksLessThanScope, metrics.PersistenceLatency)
 	result, err := p.persistence.CompleteTasksLessThan(ctx, request)
 	sw.Stop()
 	if err != nil {
 		p.updateErrorMetric(metrics.PersistenceCompleteTasksLessThanScope, err)
+	}
+	return result, err
+}
+
+func (p *taskPersistenceClient) GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceGetOrphanTasksScope, metrics.PersistenceRequests)
+	sw := p.metricClient.StartTimer(metrics.PersistenceGetOrphanTasksScope, metrics.PersistenceLatency)
+	result, err := p.persistence.GetOrphanTasks(ctx, request)
+	sw.Stop()
+	if err != nil {
+		p.updateErrorMetric(metrics.PersistenceGetOrphanTasksScope, err)
 	}
 	return result, err
 }
@@ -1462,7 +1527,7 @@ func (p *queuePersistenceClient) EnqueueMessage(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceEnqueueMessageScope, err)
 	}
 
 	return err
@@ -1480,7 +1545,7 @@ func (p *queuePersistenceClient) ReadMessages(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceReadQueueMessagesScope, err)
 	}
 
 	return result, err
@@ -1498,7 +1563,7 @@ func (p *queuePersistenceClient) UpdateAckLevel(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceUpdateAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceUpdateAckLevelScope, err)
 	}
 
 	return err
@@ -1514,7 +1579,7 @@ func (p *queuePersistenceClient) GetAckLevels(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceGetAckLevelScope, err)
 	}
 
 	return result, err
@@ -1531,7 +1596,7 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessagesScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceDeleteQueueMessagesScope, err)
 	}
 
 	return err
@@ -1548,7 +1613,7 @@ func (p *queuePersistenceClient) EnqueueMessageToDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceEnqueueMessageToDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceEnqueueMessageToDLQScope, err)
 	}
 
 	return err
@@ -1568,7 +1633,7 @@ func (p *queuePersistenceClient) ReadMessagesFromDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesFromDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceReadQueueMessagesFromDLQScope, err)
 	}
 
 	return result, token, err
@@ -1585,7 +1650,7 @@ func (p *queuePersistenceClient) DeleteMessageFromDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceDeleteQueueMessageFromDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceDeleteQueueMessageFromDLQScope, err)
 	}
 
 	return err
@@ -1603,7 +1668,7 @@ func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceRangeDeleteMessagesFromDLQScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceRangeDeleteMessagesFromDLQScope, err)
 	}
 
 	return err
@@ -1621,7 +1686,7 @@ func (p *queuePersistenceClient) UpdateDLQAckLevel(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceUpdateDLQAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceUpdateDLQAckLevelScope, err)
 	}
 
 	return err
@@ -1637,7 +1702,7 @@ func (p *queuePersistenceClient) GetDLQAckLevels(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetDLQAckLevelScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceGetDLQAckLevelScope, err)
 	}
 
 	return result, err
@@ -1653,12 +1718,59 @@ func (p *queuePersistenceClient) GetDLQSize(
 	sw.Stop()
 
 	if err != nil {
-		p.metricClient.IncCounter(metrics.PersistenceGetDLQSizeScope, metrics.PersistenceFailures)
+		p.updateErrorMetric(metrics.PersistenceGetDLQSizeScope, err)
 	}
 
 	return result, err
 }
 
+func (p *queuePersistenceClient) updateErrorMetric(scope int, err error) {
+	switch err.(type) {
+	case *TimeoutError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *types.ServiceBusyError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	default:
+		p.logger.Error("Operation failed with internal error.",
+			tag.Error(err), tag.MetricScope(scope))
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	}
+}
+
 func (p *queuePersistenceClient) Close() {
+	p.persistence.Close()
+}
+
+func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+	p.metricClient.IncCounter(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceLatency)
+	result, err := p.persistence.FetchDynamicConfig(ctx)
+	sw.Stop()
+
+	if err != nil {
+		p.metricClient.IncCounter(metrics.PersistenceFetchDynamicConfigScope, metrics.PersistenceFailures)
+	}
+
+	return result, err
+}
+
+func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+	p.metricClient.IncCounter(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceRequests)
+
+	sw := p.metricClient.StartTimer(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceLatency)
+	err := p.persistence.UpdateDynamicConfig(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.metricClient.IncCounter(metrics.PersistenceUpdateDynamicConfigScope, metrics.PersistenceFailures)
+	}
+
+	return err
+}
+
+func (p *configStorePersistenceClient) Close() {
 	p.persistence.Close()
 }

@@ -27,10 +27,11 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/uber/cadence/common/config"
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/persistence/sql"
+	"github.com/uber/cadence/common/persistence/sql/sqldriver"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
-	"github.com/uber/cadence/common/service/config"
 	"github.com/uber/cadence/environment"
 
 	"github.com/iancoleman/strcase"
@@ -53,29 +54,31 @@ func init() {
 
 // CreateDB initialize the db object
 func (d *plugin) CreateDB(cfg *config.SQL) (sqlplugin.DB, error) {
-	conn, err := d.createDBConnection(cfg)
+	conns, err := sqldriver.CreateDBConnections(cfg, func(cfg *config.SQL) (*sqlx.DB, error) {
+		return d.createSingleDBConn(cfg)
+	})
 	if err != nil {
 		return nil, err
 	}
-	db := newDB(conn, nil)
-	return db, nil
+	return newDB(conns, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
 }
 
 // CreateAdminDB initialize the adminDB object
 func (d *plugin) CreateAdminDB(cfg *config.SQL) (sqlplugin.AdminDB, error) {
-	conn, err := d.createDBConnection(cfg)
+	conns, err := sqldriver.CreateDBConnections(cfg, func(cfg *config.SQL) (*sqlx.DB, error) {
+		return d.createSingleDBConn(cfg)
+	})
 	if err != nil {
 		return nil, err
 	}
-	db := newDB(conn, nil)
-	return db, nil
+	return newDB(conns, nil, sqlplugin.DbShardUndefined, cfg.NumShards)
 }
 
 // CreateDBConnection creates a returns a reference to a logical connection to the
 // underlying SQL database. The returned object is to tied to a single
 // SQL database and the object can be used to perform CRUD operations on
 // the tables in the database
-func (d *plugin) createDBConnection(cfg *config.SQL) (*sqlx.DB, error) {
+func (d *plugin) createSingleDBConn(cfg *config.SQL) (*sqlx.DB, error) {
 	sslParams, err := registerTLSConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -121,9 +124,9 @@ func buildDSN(cfg *config.SQL, host string, port string, sslParams url.Values) s
 }
 
 func generateCredentialString(user string, password string) string {
-	userPass := user
+	userPass := url.PathEscape(user)
 	if password != "" {
-		userPass += ":" + password
+		userPass += ":" + url.PathEscape(password)
 	}
 	return userPass
 }
@@ -169,11 +172,11 @@ func GetTestClusterOption() *pt.TestBaseOptions {
 	}
 
 	return &pt.TestBaseOptions{
-		SQLDBPluginName: PluginName,
-		DBUsername:      testUser,
-		DBPassword:      testPassword,
-		DBHost:          environment.GetPostgresAddress(),
-		DBPort:          environment.GetPostgresPort(),
-		SchemaDir:       testSchemaDir,
+		DBPluginName: PluginName,
+		DBUsername:   testUser,
+		DBPassword:   testPassword,
+		DBHost:       environment.GetPostgresAddress(),
+		DBPort:       environment.GetPostgresPort(),
+		SchemaDir:    testSchemaDir,
 	}
 }

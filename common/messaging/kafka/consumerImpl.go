@@ -29,11 +29,11 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/service/config"
 )
 
 const rcvBufferSize = 2 * 1024
@@ -64,6 +64,7 @@ type (
 
 		metricsClient metrics.Client
 		logger        log.Logger
+		throttleRetry *backoff.ThrottleRetry
 	}
 
 	messageImpl struct {
@@ -157,6 +158,10 @@ func newConsumerHandlerImpl(
 
 		metricsClient: metricsClient,
 		logger:        logger,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(common.CreateDlqPublishRetryPolicy()),
+			backoff.WithRetryableError(func(_ error) bool { return true }),
+		),
 	}
 }
 
@@ -193,7 +198,7 @@ func (h *consumerHandlerImpl) completeMessage(message *messageImpl, isAck bool) 
 			cancel()
 			return err
 		}
-		err := backoff.Retry(op, common.CreateDlqPublishRetryPolicy(), nil)
+		err := h.throttleRetry.Do(context.Background(), op)
 		if err != nil {
 			h.metricsClient.IncCounter(metrics.MessagingClientConsumerScope, metrics.KafkaConsumerMessageNackDlqErr)
 			h.logger.Error("Fail to publish message to DLQ when nacking message, please take action!!",
