@@ -38,56 +38,120 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/pagination"
+
+	"github.com/pborman/uuid"
+	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/common/types"
+
 	"github.com/cristalhq/jwt/v3"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
-	s "go.uber.org/cadence/.gen/go/shared"
-	"go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/authorization"
-	cc "github.com/uber/cadence/common/client"
 )
 
 // JSONHistorySerializer is used to encode history event in JSON
 type JSONHistorySerializer struct{}
 
 // Serialize serializes history.
-func (j *JSONHistorySerializer) Serialize(h *s.History) ([]byte, error) {
+func (j *JSONHistorySerializer) Serialize(h *types.History) ([]byte, error) {
 	return json.Marshal(h.Events)
 }
 
 // Deserialize deserializes history
-func (j *JSONHistorySerializer) Deserialize(data []byte) (*s.History, error) {
-	var events []*s.HistoryEvent
+func (j *JSONHistorySerializer) Deserialize(data []byte) (*types.History, error) {
+	var events []*types.HistoryEvent
 	err := json.Unmarshal(data, &events)
 	if err != nil {
 		return nil, err
 	}
-	return &s.History{Events: events}, nil
+	return &types.History{Events: events}, nil
 }
 
 // GetHistory helper method to iterate over all pages and return complete list of history events
-func GetHistory(ctx context.Context, workflowClient client.Client, workflowID, runID string) (*s.History, error) {
-	iter := workflowClient.GetWorkflowHistory(ctx, workflowID, runID, false,
-		s.HistoryEventFilterTypeAllEvent)
-	events := []*s.HistoryEvent{}
-	for iter.HasNext() {
-		event, err := iter.Next()
+func GetHistory(ctx context.Context, workflowClient frontend.Client, domain, workflowID, runID string) (*types.History, error) {
+	events := []*types.HistoryEvent{}
+	iterator, err := GetWorkflowHistoryIterator(ctx, workflowClient, domain, workflowID, runID, false, types.HistoryEventFilterTypeAllEvent.Ptr())
+	for iterator.HasNext() {
+		entity, err := iterator.Next()
 		if err != nil {
 			return nil, err
 		}
-		events = append(events, event)
+		events = append(events, entity.(*types.HistoryEvent))
 	}
-
-	history := &s.History{}
+	history := &types.History{}
 	history.Events = events
-	return history, nil
+	return history, err
+}
+
+// GetWorkflowHistoryIterator returns a HistoryEvent iterator
+func GetWorkflowHistoryIterator(
+	ctx context.Context,
+	workflowClient frontend.Client,
+	domain,
+	workflowID,
+	runID string,
+	isLongPoll bool,
+	filterType *types.HistoryEventFilterType,
+) (pagination.Iterator, error) {
+	paginate := func(ctx context.Context, pageToken pagination.PageToken) (pagination.Page, error) {
+		tcCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
+		defer cancel()
+
+		var nextPageToken []byte
+		if pageToken != nil {
+			nextPageToken, _ = pageToken.([]byte)
+		}
+		request := &types.GetWorkflowExecutionHistoryRequest{
+			Domain: domain,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			WaitForNewEvent:        isLongPoll,
+			HistoryEventFilterType: filterType,
+			NextPageToken:          nextPageToken,
+			SkipArchival:           isLongPoll,
+		}
+
+		var resp *types.GetWorkflowExecutionHistoryResponse
+		var err error
+	Loop:
+		for {
+			resp, err = workflowClient.GetWorkflowExecutionHistory(tcCtx, request)
+			if err != nil {
+				break Loop
+			}
+
+			if isLongPoll && len(resp.History.Events) == 0 && len(resp.NextPageToken) != 0 {
+				request.NextPageToken = resp.NextPageToken
+				continue Loop
+			}
+			break Loop
+		}
+		entities := make([]pagination.Entity, len(resp.History.Events), len(resp.History.Events))
+		for i, e := range resp.History.Events {
+			entities[i] = e
+		}
+		var nextToken interface{} = resp.NextPageToken
+		if len(resp.NextPageToken) == 0 {
+			nextToken = nil
+		}
+		page := pagination.Page{
+			CurrentToken: pageToken,
+			NextToken:    nextToken,
+			Entities:     entities,
+		}
+		return page, err
+	}
+	return pagination.NewIterator(ctx, nil, paginate), nil
 }
 
 // HistoryEventToString convert HistoryEvent to string
-func HistoryEventToString(e *s.HistoryEvent, printFully bool, maxFieldLength int) string {
+func HistoryEventToString(e *types.HistoryEvent, printFully bool, maxFieldLength int) string {
 	data := getEventAttributes(e)
 	return anyToString(data, printFully, maxFieldLength)
 }
@@ -217,130 +281,130 @@ func breakLongWords(input string, maxWordLength int) string {
 //   Completed - green
 //   Started - blue
 //   Others - default (white/black)
-func ColorEvent(e *s.HistoryEvent) string {
+func ColorEvent(e *types.HistoryEvent) string {
 	var data string
 	switch e.GetEventType() {
-	case s.EventTypeWorkflowExecutionStarted:
+	case types.EventTypeWorkflowExecutionStarted:
 		data = color.BlueString(e.EventType.String())
 
-	case s.EventTypeWorkflowExecutionCompleted:
+	case types.EventTypeWorkflowExecutionCompleted:
 		data = color.GreenString(e.EventType.String())
 
-	case s.EventTypeWorkflowExecutionFailed:
+	case types.EventTypeWorkflowExecutionFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeWorkflowExecutionTimedOut:
+	case types.EventTypeWorkflowExecutionTimedOut:
 		data = color.YellowString(e.EventType.String())
 
-	case s.EventTypeDecisionTaskScheduled:
+	case types.EventTypeDecisionTaskScheduled:
 		data = e.EventType.String()
 
-	case s.EventTypeDecisionTaskStarted:
+	case types.EventTypeDecisionTaskStarted:
 		data = e.EventType.String()
 
-	case s.EventTypeDecisionTaskCompleted:
+	case types.EventTypeDecisionTaskCompleted:
 		data = e.EventType.String()
 
-	case s.EventTypeDecisionTaskTimedOut:
+	case types.EventTypeDecisionTaskTimedOut:
 		data = color.YellowString(e.EventType.String())
 
-	case s.EventTypeActivityTaskScheduled:
+	case types.EventTypeActivityTaskScheduled:
 		data = e.EventType.String()
 
-	case s.EventTypeActivityTaskStarted:
+	case types.EventTypeActivityTaskStarted:
 		data = e.EventType.String()
 
-	case s.EventTypeActivityTaskCompleted:
+	case types.EventTypeActivityTaskCompleted:
 		data = e.EventType.String()
 
-	case s.EventTypeActivityTaskFailed:
+	case types.EventTypeActivityTaskFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeActivityTaskTimedOut:
+	case types.EventTypeActivityTaskTimedOut:
 		data = color.YellowString(e.EventType.String())
 
-	case s.EventTypeActivityTaskCancelRequested:
+	case types.EventTypeActivityTaskCancelRequested:
 		data = e.EventType.String()
 
-	case s.EventTypeRequestCancelActivityTaskFailed:
+	case types.EventTypeRequestCancelActivityTaskFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeActivityTaskCanceled:
+	case types.EventTypeActivityTaskCanceled:
 		data = e.EventType.String()
 
-	case s.EventTypeTimerStarted:
+	case types.EventTypeTimerStarted:
 		data = e.EventType.String()
 
-	case s.EventTypeTimerFired:
+	case types.EventTypeTimerFired:
 		data = e.EventType.String()
 
-	case s.EventTypeCancelTimerFailed:
+	case types.EventTypeCancelTimerFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeTimerCanceled:
+	case types.EventTypeTimerCanceled:
 		data = color.MagentaString(e.EventType.String())
 
-	case s.EventTypeWorkflowExecutionCancelRequested:
+	case types.EventTypeWorkflowExecutionCancelRequested:
 		data = e.EventType.String()
 
-	case s.EventTypeWorkflowExecutionCanceled:
+	case types.EventTypeWorkflowExecutionCanceled:
 		data = color.MagentaString(e.EventType.String())
 
-	case s.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
 		data = e.EventType.String()
 
-	case s.EventTypeRequestCancelExternalWorkflowExecutionFailed:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeExternalWorkflowExecutionCancelRequested:
+	case types.EventTypeExternalWorkflowExecutionCancelRequested:
 		data = e.EventType.String()
 
-	case s.EventTypeMarkerRecorded:
+	case types.EventTypeMarkerRecorded:
 		data = e.EventType.String()
 
-	case s.EventTypeWorkflowExecutionSignaled:
+	case types.EventTypeWorkflowExecutionSignaled:
 		data = e.EventType.String()
 
-	case s.EventTypeWorkflowExecutionTerminated:
+	case types.EventTypeWorkflowExecutionTerminated:
 		data = e.EventType.String()
 
-	case s.EventTypeWorkflowExecutionContinuedAsNew:
+	case types.EventTypeWorkflowExecutionContinuedAsNew:
 		data = e.EventType.String()
 
-	case s.EventTypeStartChildWorkflowExecutionInitiated:
+	case types.EventTypeStartChildWorkflowExecutionInitiated:
 		data = e.EventType.String()
 
-	case s.EventTypeStartChildWorkflowExecutionFailed:
+	case types.EventTypeStartChildWorkflowExecutionFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeChildWorkflowExecutionStarted:
+	case types.EventTypeChildWorkflowExecutionStarted:
 		data = color.BlueString(e.EventType.String())
 
-	case s.EventTypeChildWorkflowExecutionCompleted:
+	case types.EventTypeChildWorkflowExecutionCompleted:
 		data = color.GreenString(e.EventType.String())
 
-	case s.EventTypeChildWorkflowExecutionFailed:
+	case types.EventTypeChildWorkflowExecutionFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeChildWorkflowExecutionCanceled:
+	case types.EventTypeChildWorkflowExecutionCanceled:
 		data = color.MagentaString(e.EventType.String())
 
-	case s.EventTypeChildWorkflowExecutionTimedOut:
+	case types.EventTypeChildWorkflowExecutionTimedOut:
 		data = color.YellowString(e.EventType.String())
 
-	case s.EventTypeChildWorkflowExecutionTerminated:
+	case types.EventTypeChildWorkflowExecutionTerminated:
 		data = e.EventType.String()
 
-	case s.EventTypeSignalExternalWorkflowExecutionInitiated:
+	case types.EventTypeSignalExternalWorkflowExecutionInitiated:
 		data = e.EventType.String()
 
-	case s.EventTypeSignalExternalWorkflowExecutionFailed:
+	case types.EventTypeSignalExternalWorkflowExecutionFailed:
 		data = color.RedString(e.EventType.String())
 
-	case s.EventTypeExternalWorkflowExecutionSignaled:
+	case types.EventTypeExternalWorkflowExecutionSignaled:
 		data = e.EventType.String()
 
-	case s.EventTypeUpsertWorkflowSearchAttributes:
+	case types.EventTypeUpsertWorkflowSearchAttributes:
 		data = e.EventType.String()
 
 	default:
@@ -349,127 +413,127 @@ func ColorEvent(e *s.HistoryEvent) string {
 	return data
 }
 
-func getEventAttributes(e *s.HistoryEvent) interface{} {
+func getEventAttributes(e *types.HistoryEvent) interface{} {
 	var data interface{}
 	switch e.GetEventType() {
-	case s.EventTypeWorkflowExecutionStarted:
+	case types.EventTypeWorkflowExecutionStarted:
 		data = e.WorkflowExecutionStartedEventAttributes
 
-	case s.EventTypeWorkflowExecutionCompleted:
+	case types.EventTypeWorkflowExecutionCompleted:
 		data = e.WorkflowExecutionCompletedEventAttributes
 
-	case s.EventTypeWorkflowExecutionFailed:
+	case types.EventTypeWorkflowExecutionFailed:
 		data = e.WorkflowExecutionFailedEventAttributes
 
-	case s.EventTypeWorkflowExecutionTimedOut:
+	case types.EventTypeWorkflowExecutionTimedOut:
 		data = e.WorkflowExecutionTimedOutEventAttributes
 
-	case s.EventTypeDecisionTaskScheduled:
+	case types.EventTypeDecisionTaskScheduled:
 		data = e.DecisionTaskScheduledEventAttributes
 
-	case s.EventTypeDecisionTaskStarted:
+	case types.EventTypeDecisionTaskStarted:
 		data = e.DecisionTaskStartedEventAttributes
 
-	case s.EventTypeDecisionTaskCompleted:
+	case types.EventTypeDecisionTaskCompleted:
 		data = e.DecisionTaskCompletedEventAttributes
 
-	case s.EventTypeDecisionTaskTimedOut:
+	case types.EventTypeDecisionTaskTimedOut:
 		data = e.DecisionTaskTimedOutEventAttributes
 
-	case s.EventTypeActivityTaskScheduled:
+	case types.EventTypeActivityTaskScheduled:
 		data = e.ActivityTaskScheduledEventAttributes
 
-	case s.EventTypeActivityTaskStarted:
+	case types.EventTypeActivityTaskStarted:
 		data = e.ActivityTaskStartedEventAttributes
 
-	case s.EventTypeActivityTaskCompleted:
+	case types.EventTypeActivityTaskCompleted:
 		data = e.ActivityTaskCompletedEventAttributes
 
-	case s.EventTypeActivityTaskFailed:
+	case types.EventTypeActivityTaskFailed:
 		data = e.ActivityTaskFailedEventAttributes
 
-	case s.EventTypeActivityTaskTimedOut:
+	case types.EventTypeActivityTaskTimedOut:
 		data = e.ActivityTaskTimedOutEventAttributes
 
-	case s.EventTypeActivityTaskCancelRequested:
+	case types.EventTypeActivityTaskCancelRequested:
 		data = e.ActivityTaskCancelRequestedEventAttributes
 
-	case s.EventTypeRequestCancelActivityTaskFailed:
+	case types.EventTypeRequestCancelActivityTaskFailed:
 		data = e.RequestCancelActivityTaskFailedEventAttributes
 
-	case s.EventTypeActivityTaskCanceled:
+	case types.EventTypeActivityTaskCanceled:
 		data = e.ActivityTaskCanceledEventAttributes
 
-	case s.EventTypeTimerStarted:
+	case types.EventTypeTimerStarted:
 		data = e.TimerStartedEventAttributes
 
-	case s.EventTypeTimerFired:
+	case types.EventTypeTimerFired:
 		data = e.TimerFiredEventAttributes
 
-	case s.EventTypeCancelTimerFailed:
+	case types.EventTypeCancelTimerFailed:
 		data = e.CancelTimerFailedEventAttributes
 
-	case s.EventTypeTimerCanceled:
+	case types.EventTypeTimerCanceled:
 		data = e.TimerCanceledEventAttributes
 
-	case s.EventTypeWorkflowExecutionCancelRequested:
+	case types.EventTypeWorkflowExecutionCancelRequested:
 		data = e.WorkflowExecutionCancelRequestedEventAttributes
 
-	case s.EventTypeWorkflowExecutionCanceled:
+	case types.EventTypeWorkflowExecutionCanceled:
 		data = e.WorkflowExecutionCanceledEventAttributes
 
-	case s.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
 		data = e.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
 
-	case s.EventTypeRequestCancelExternalWorkflowExecutionFailed:
+	case types.EventTypeRequestCancelExternalWorkflowExecutionFailed:
 		data = e.RequestCancelExternalWorkflowExecutionFailedEventAttributes
 
-	case s.EventTypeExternalWorkflowExecutionCancelRequested:
+	case types.EventTypeExternalWorkflowExecutionCancelRequested:
 		data = e.ExternalWorkflowExecutionCancelRequestedEventAttributes
 
-	case s.EventTypeMarkerRecorded:
+	case types.EventTypeMarkerRecorded:
 		data = e.MarkerRecordedEventAttributes
 
-	case s.EventTypeWorkflowExecutionSignaled:
+	case types.EventTypeWorkflowExecutionSignaled:
 		data = e.WorkflowExecutionSignaledEventAttributes
 
-	case s.EventTypeWorkflowExecutionTerminated:
+	case types.EventTypeWorkflowExecutionTerminated:
 		data = e.WorkflowExecutionTerminatedEventAttributes
 
-	case s.EventTypeWorkflowExecutionContinuedAsNew:
+	case types.EventTypeWorkflowExecutionContinuedAsNew:
 		data = e.WorkflowExecutionContinuedAsNewEventAttributes
 
-	case s.EventTypeStartChildWorkflowExecutionInitiated:
+	case types.EventTypeStartChildWorkflowExecutionInitiated:
 		data = e.StartChildWorkflowExecutionInitiatedEventAttributes
 
-	case s.EventTypeStartChildWorkflowExecutionFailed:
+	case types.EventTypeStartChildWorkflowExecutionFailed:
 		data = e.StartChildWorkflowExecutionFailedEventAttributes
 
-	case s.EventTypeChildWorkflowExecutionStarted:
+	case types.EventTypeChildWorkflowExecutionStarted:
 		data = e.ChildWorkflowExecutionStartedEventAttributes
 
-	case s.EventTypeChildWorkflowExecutionCompleted:
+	case types.EventTypeChildWorkflowExecutionCompleted:
 		data = e.ChildWorkflowExecutionCompletedEventAttributes
 
-	case s.EventTypeChildWorkflowExecutionFailed:
+	case types.EventTypeChildWorkflowExecutionFailed:
 		data = e.ChildWorkflowExecutionFailedEventAttributes
 
-	case s.EventTypeChildWorkflowExecutionCanceled:
+	case types.EventTypeChildWorkflowExecutionCanceled:
 		data = e.ChildWorkflowExecutionCanceledEventAttributes
 
-	case s.EventTypeChildWorkflowExecutionTimedOut:
+	case types.EventTypeChildWorkflowExecutionTimedOut:
 		data = e.ChildWorkflowExecutionTimedOutEventAttributes
 
-	case s.EventTypeChildWorkflowExecutionTerminated:
+	case types.EventTypeChildWorkflowExecutionTerminated:
 		data = e.ChildWorkflowExecutionTerminatedEventAttributes
 
-	case s.EventTypeSignalExternalWorkflowExecutionInitiated:
+	case types.EventTypeSignalExternalWorkflowExecutionInitiated:
 		data = e.SignalExternalWorkflowExecutionInitiatedEventAttributes
 
-	case s.EventTypeSignalExternalWorkflowExecutionFailed:
+	case types.EventTypeSignalExternalWorkflowExecutionFailed:
 		data = e.SignalExternalWorkflowExecutionFailedEventAttributes
 
-	case s.EventTypeExternalWorkflowExecutionSignaled:
+	case types.EventTypeExternalWorkflowExecutionSignaled:
 		data = e.ExternalWorkflowExecutionSignaledEventAttributes
 
 	default:
@@ -479,7 +543,7 @@ func getEventAttributes(e *s.HistoryEvent) interface{} {
 }
 
 func isAttributeName(name string) bool {
-	for i := s.EventType(0); i < s.EventType(40); i++ {
+	for i := types.EventType(0); i < types.EventType(40); i++ {
 		if name == i.String()+"EventAttributes" {
 			return true
 		}
@@ -551,18 +615,19 @@ func ErrorAndExit(msg string, err error) {
 	osExit(1)
 }
 
-func getWorkflowClient(c *cli.Context) client.Client {
-	domain := getRequiredGlobalOption(c, FlagDomain)
-	return client.NewClient(
-		cFactory.ClientFrontendClient(c),
-		domain,
-		&client.Options{
-			FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
-		},
-	)
+func getWorkflowClient(c *cli.Context) frontend.Client {
+	//domain := getRequiredGlobalOption(c, FlagDomain)
+	//return client.NewClient(
+	//	cFactory.ServerFrontendClient(c),
+	//	domain,
+	//	&client.Options{
+	//		FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
+	//	},
+	//)
+	return cFactory.ServerFrontendClient(c)
 }
 
-func getWorkflowClientWithOptionalDomain(c *cli.Context) client.Client {
+func getWorkflowClientWithOptionalDomain(c *cli.Context) frontend.Client {
 	if !c.GlobalIsSet(FlagDomain) {
 		c.GlobalSet(FlagDomain, "system-domain")
 	}
@@ -743,26 +808,32 @@ func parseTimeDuration(duration string) (dur time.Duration, err error) {
 	return
 }
 
-func strToTaskListType(str string) s.TaskListType {
+func strToTaskListType(str string) *types.TaskListType {
 	if strings.ToLower(str) == "activity" {
-		return s.TaskListTypeActivity
+		return types.TaskListTypeActivity.Ptr()
 	}
-	return s.TaskListTypeDecision
-}
-
-func getPtrOrNilIfEmpty(value string) *string {
-	if value == "" {
-		return nil
-	}
-	return common.StringPtr(value)
+	return types.TaskListTypeDecision.Ptr()
 }
 
 func getCliIdentity() string {
+	return fmt.Sprintf("cadence-cli@%s", getHostName())
+}
+
+// GetWorkerIdentity gets a default identity for the worker.
+//
+// This contains a random UUID, generated each time it is called, to prevent identity collisions when workers share
+// other host/pid/etc information.  These alone are not guaranteed to be unique, especially when Docker is involved.
+// Take care to retrieve this only once per worker.
+func getWorkerIdentity(tasklistName string) string {
+	return fmt.Sprintf("%d@%s@%s@%s", os.Getpid(), getHostName(), tasklistName, uuid.New())
+}
+
+func getHostName() string {
 	hostName, err := os.Hostname()
 	if err != nil {
 		hostName = "UnKnown"
 	}
-	return fmt.Sprintf("cadence-cli@%s", hostName)
+	return hostName
 }
 
 func processJWTFlags(ctx context.Context, cliCtx *cli.Context) context.Context {

@@ -30,6 +30,10 @@ import (
 
 // GetSearchAttributes get valid search attributes
 func GetSearchAttributes(c *cli.Context) {
+	if !c.GlobalIsSet(FlagDomain) {
+		c.GlobalSet(FlagDomain, "system-domain")
+	}
+
 	wfClient := getWorkflowClientWithOptionalDomain(c)
 	ctx, cancel := newContext(c)
 	defer cancel()

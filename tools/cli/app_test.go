@@ -58,10 +58,6 @@ type clientFactoryMock struct {
 	cqlClient            gocql.Client
 }
 
-func (m *clientFactoryMock) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
-	return m.clientFrontendClient
-}
-
 func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client {
 	return m.serverFrontendClient
 }

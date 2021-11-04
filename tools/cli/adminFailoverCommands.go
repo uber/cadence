@@ -22,14 +22,18 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/user"
 	"time"
 
+	"github.com/pborman/uuid"
+	"github.com/uber/cadence/client/frontend"
+	"github.com/uber/cadence/common/types"
+
 	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/urfave/cli"
-	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/service/worker/failovermanager"
@@ -96,8 +100,15 @@ func AdminFailoverQuery(c *cli.Context) {
 	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
 	result := query(tcCtx, client, workflowID, runID)
+	request := &types.DescribeWorkflowExecutionRequest{
+		Domain: getSystemLocalDomainName(),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+	}
 
-	descResp, err := client.DescribeWorkflowExecution(tcCtx, workflowID, runID)
+	descResp, err := client.DescribeWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to describe workflow", err)
 	}
@@ -119,8 +130,16 @@ func AdminFailoverAbort(c *cli.Context) {
 	}
 	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
-
-	err := client.TerminateWorkflow(tcCtx, workflowID, runID, reason, nil)
+	request := &types.TerminateWorkflowExecutionRequest{
+		Domain: getSystemLocalDomainName(),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+		Reason: reason,
+	}
+	// do we need to pass call options
+	err := client.TerminateWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to abort failover workflow", err)
 	}
@@ -138,7 +157,17 @@ func AdminFailoverRollback(c *cli.Context) {
 
 	queryResult := query(tcCtx, client, failovermanager.FailoverWorkflowID, runID)
 	if isWorkflowRunning(queryResult) {
-		err := client.TerminateWorkflow(tcCtx, failovermanager.FailoverWorkflowID, runID, "Rollback", nil)
+		request := &types.TerminateWorkflowExecutionRequest{
+			Domain: getSystemLocalDomainName(),
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: failovermanager.FailoverWorkflowID,
+				RunID:      runID,
+			},
+			Reason:   "Rollback",
+			Identity: getWorkerIdentity(""),
+		}
+
+		err := client.TerminateWorkflowExecution(tcCtx, request)
 		if err != nil {
 			ErrorAndExit("Failed to terminate failover workflow", err)
 		}
@@ -171,18 +200,34 @@ func AdminFailoverList(c *cli.Context) {
 
 func query(
 	tcCtx context.Context,
-	client cclient.Client,
+	client frontend.Client,
 	workflowID string,
 	runID string) *failovermanager.QueryResult {
-	queryResp, err := client.QueryWorkflow(tcCtx, workflowID, runID, failovermanager.QueryType)
+
+	request := &types.QueryWorkflowRequest{
+		Domain: getSystemLocalDomainName(),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+		Query: &types.WorkflowQuery{
+			QueryType: failovermanager.QueryType,
+			// might need args here?
+		},
+	}
+	queryResp, err := client.QueryWorkflow(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
 	}
-	if !queryResp.HasValue() {
+	// test for empty byte array?
+	if queryResp.GetQueryResult() == nil {
 		ErrorAndExit("QueryResult has no value", nil)
 	}
 	var queryResult failovermanager.QueryResult
-	queryResp.Get(&queryResult)
+	err = json.Unmarshal(queryResp.GetQueryResult(), &queryResult)
+	if err != nil {
+		ErrorAndExit("Unable to deserialize QueryResult", nil)
+	}
 	return &queryResult
 }
 
@@ -191,9 +236,10 @@ func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
 		queryResult.State == failovermanager.WorkflowPaused
 }
 
-func getCadenceClient(c *cli.Context) cclient.Client {
-	svcClient := cFactory.ClientFrontendClient(c)
-	return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
+func getCadenceClient(c *cli.Context) frontend.Client {
+	//return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
+	svcClient := cFactory.ServerFrontendClient(c)
+	return svcClient
 }
 
 func getRunID(c *cli.Context) string {
@@ -206,11 +252,12 @@ func getRunID(c *cli.Context) string {
 func failoverStart(c *cli.Context, params *startParams) {
 	validateStartParams(params)
 
+	workflowId := failovermanager.FailoverWorkflowID
 	targetCluster := params.targetCluster
 	sourceCluster := params.sourceCluster
 	batchFailoverSize := params.batchFailoverSize
 	batchFailoverWaitTimeInSeconds := params.batchFailoverWaitTimeInSeconds
-	workflowTimeout := time.Duration(params.failoverWorkflowTimeout) * time.Second
+	workflowTimeout := int32(params.failoverWorkflowTimeout)
 	domains := params.domains
 	drillWaitTime := time.Duration(params.drillWaitTime) * time.Second
 	var gracefulFailoverTimeoutInSeconds *int32
@@ -222,20 +269,24 @@ func failoverStart(c *cli.Context, params *startParams) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	options := cclient.StartWorkflowOptions{
-		ID:                           failovermanager.FailoverWorkflowID,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		TaskList:                     failovermanager.TaskListName,
-		ExecutionStartToCloseTimeout: workflowTimeout,
-		Memo: map[string]interface{}{
-			common.MemoKeyForOperator: getOperator(),
+	request := &types.StartWorkflowExecutionRequest{
+		Domain:                              getSystemLocalDomainName(),
+		RequestID:                           uuid.New(),
+		WorkflowID:                          workflowId,
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+		TaskList:                            &types.TaskList{Name: failovermanager.TaskListName},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeout),
+		Memo: &types.Memo{
+			Fields: map[string][]byte{
+				common.MemoKeyForOperator: []byte(getOperator()),
+			},
 		},
+		WorkflowType: &types.WorkflowType{Name: failovermanager.FailoverWorkflowTypeName},
 	}
 	if params.drillWaitTime > 0 {
-		options.ID = failovermanager.DrillWorkflowID
-		options.CronSchedule = params.cron
+		request.WorkflowID = failovermanager.DrillWorkflowID
+		request.CronSchedule = params.cron
 	} else {
-
 		if len(params.cron) > 0 {
 			ErrorAndExit("The drill wait time is required when cron is specified.", nil)
 		}
@@ -264,13 +315,18 @@ func failoverStart(c *cli.Context, params *startParams) {
 		DrillWaitTime:                    drillWaitTime,
 		GracefulFailoverTimeoutInSeconds: gracefulFailoverTimeoutInSeconds,
 	}
-	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.FailoverWorkflowTypeName, foParams)
+	input, err := json.Marshal(foParams)
+	if err != nil {
+		ErrorAndExit("Failed to serialize Failover Params", err)
+	}
+	request.Input = input
+	wf, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
 	fmt.Println("Failover workflow started")
-	fmt.Println("wid: " + wf.ID)
-	fmt.Println("rid: " + wf.RunID)
+	fmt.Println("wid: " + workflowId)
+	fmt.Println("rid: " + wf.GetRunID())
 }
 
 func getFailoverWorkflowID(c *cli.Context) string {
@@ -289,9 +345,8 @@ func getOperator() string {
 	return fmt.Sprintf("%s (username: %s)", user.Name, user.Username)
 }
 
-func isWorkflowTerminated(descResp *shared.DescribeWorkflowExecutionResponse) bool {
-	return descResp.WorkflowExecutionInfo.CloseStatus != nil &&
-		descResp.WorkflowExecutionInfo.CloseStatus.Equals(shared.WorkflowExecutionCloseStatusTerminated)
+func isWorkflowTerminated(descResp *types.DescribeWorkflowExecutionResponse) bool {
+	return types.WorkflowExecutionCloseStatusTerminated.String() == descResp.GetWorkflowExecutionInfo().GetCloseStatus().String()
 }
 
 func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error {
@@ -307,7 +362,17 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 		signalName = failovermanager.ResumeSignal
 	}
 
-	return client.SignalWorkflow(tcCtx, workflowID, runID, signalName, nil)
+	request := &types.SignalWorkflowExecutionRequest{
+		Domain: getSystemLocalDomainName(),
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+		SignalName: signalName,
+		Identity:   getWorkerIdentity(""),
+	}
+
+	return client.SignalWorkflowExecution(tcCtx, request)
 }
 
 func validateStartParams(params *startParams) {
@@ -329,4 +394,8 @@ func validateStartParams(params *startParams) {
 	if params.failoverWorkflowTimeout <= 0 {
 		params.failoverWorkflowTimeout = defaultFailoverWorkflowTimeoutInSeconds
 	}
+}
+
+func getSystemLocalDomainName() string {
+	return common.SystemLocalDomainName
 }
