@@ -80,7 +80,7 @@ func startHandler(c *cli.Context) {
 	var daemons []common.Daemon
 	services := getServices(c)
 	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, syscall.SIGTERM)
+	signal.Notify(sigc, syscall.SIGTERM, syscall.SIGINT)
 	for _, svc := range services {
 		server := newServer(svc, &cfg)
 		daemons = append(daemons, server)
