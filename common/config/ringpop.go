@@ -56,7 +56,9 @@ const (
 	// BootstrapModeDNS represents a list of hosts passed in the configuration
 	// to be resolved, and the resulting addresses are used for bootstrap
 	BootstrapModeDNS
-	// BootstrapModeDNSSRV represents a list of DNS hosts passed in the configuration to resolve host and ports, resulting in a list of addresses
+	// BootstrapModeDNSSRV represents a list of DNS hosts passed in the configuration
+	// to resolve secondary addresses that DNS SRV record would return resulting in
+	// a host list that will contain multiple dynamic addresses and their unique ports
 	BootstrapModeDNSSRV
 )
 
@@ -240,7 +242,7 @@ func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {
 
 type dnsHostResolver interface {
 	LookupHost(ctx context.Context, host string) (addrs []string, err error)
-	LookupSRV(ctx context.Context, service string, proto string, name string) (cname string, addrs []*net.SRV, err error)
+	LookupSRV(ctx context.Context, service, proto, name string) (cname string, addrs []*net.SRV, err error)
 }
 
 type dnsProvider struct {
@@ -336,8 +338,8 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 	for _, service := range provider.UnresolvedHosts {
 		serviceParts := strings.Split(service, ".")
 		if len(serviceParts) <= 2 {
-			provider.Logger.Warn("could seperate service name from domain", tag.Address(service))
-			continue
+			provider.Logger.Error("could not seperate service name from domain", tag.Address(service))
+			return nil, errors.New("could not seperate service name from domain. check host configuration")
 		}
 		serviceName := serviceParts[0]
 		domain := strings.Join(serviceParts[1:], ".")
@@ -346,8 +348,8 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 			_, addrs, err := provider.Resolver.LookupSRV(context.Background(), serviceName, "tcp", domain)
 
 			if err != nil {
-				provider.Logger.Warn("could not resolve host", tag.Address(serviceName), tag.Error(err))
-				continue
+				provider.Logger.Error("could not resolve host", tag.Address(serviceName), tag.Error(err))
+				return nil, errors.New(fmt.Sprintf("could not resolve host: %s.%s", serviceName, domain))
 			}
 
 			var targets []string

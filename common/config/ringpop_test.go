@@ -236,6 +236,28 @@ func (s *RingpopSuite) TestDNSSRVMode() {
 		"duplicate entries should be removed",
 	)
 
+	//Expect unknown-duplicate.example.net to not resolve
+	_, err = cfg.DiscoveryProvider.Hosts()
+	s.NotNil(err)
+
+	//Remove known bad hosts from Unresolved list
+	provider.UnresolvedHosts = []string{
+		"service-a.example.net",
+		"service-b.example.net",
+		"badhostport",
+	}
+
+	//Expect badhostport to not seperate service name
+	_, err = cfg.DiscoveryProvider.Hosts()
+	s.NotNil(err)
+
+
+	//Remove known bad hosts from Unresolved list
+	provider.UnresolvedHosts = []string{
+		"service-a.example.net",
+		"service-b.example.net",
+	}
+
 	hostports, err := cfg.DiscoveryProvider.Hosts()
 	s.Nil(err)
 	s.ElementsMatch(
