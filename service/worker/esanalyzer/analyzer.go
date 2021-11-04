@@ -65,6 +65,7 @@ type (
 	Config struct {
 		ESAnalyzerTimeWindow            dynamicconfig.DurationPropertyFn
 		ESAnalyzerLimitToTypes          dynamicconfig.StringPropertyFn
+		ESAnalyzerLimitToDomains        dynamicconfig.StringPropertyFn
 		ESAnalyzerNumWorkflowsToRefresh dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerBufferWaitTime        dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerMinNumWorkflowsForAvg dynamicconfig.IntPropertyFnWithWorkflowTypeFilter

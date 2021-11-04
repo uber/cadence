@@ -11,7 +11,7 @@
 // all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABxILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
@@ -105,6 +105,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.config = Config{
 		ESAnalyzerTimeWindow:            dynamicconfig.GetDurationPropertyFn(time.Hour * 24 * 30),
 		ESAnalyzerLimitToTypes:          dynamicconfig.GetStringPropertyFn(""),
+		ESAnalyzerLimitToDomains:        dynamicconfig.GetStringPropertyFn(""),
 		ESAnalyzerNumWorkflowsToRefresh: dynamicconfig.GetIntPropertyFilteredByWorkflowType(2),
 		ESAnalyzerBufferWaitTime:        dynamicconfig.GetDurationPropertyFilteredByWorkflowType(time.Minute * 30),
 		ESAnalyzerMinNumWorkflowsForAvg: dynamicconfig.GetIntPropertyFilteredByWorkflowType(100),
@@ -122,6 +123,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.mockESClient = &esMocks.GenericClient{}
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
 	s.clientBean.EXPECT().GetRemoteAdminClient(cluster.TestCurrentClusterName).Return(s.mockAdminClient).AnyTimes()
 
 	// SET UP ANALYZER
@@ -408,18 +410,25 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsMinNumWorkflowValida
 
 func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
 	esResult := struct {
-		Buckets []WorkflowTypeInfo
+		Buckets []DomainInfo `json:"buckets"`
 	}{
-		Buckets: []WorkflowTypeInfo{
+		Buckets: []DomainInfo{
 			{
-				Name:         s.WorkflowType,
-				NumWorkflows: 564,
-				Duration:     Duration{AvgExecTimeNanoseconds: float64(123 * time.Second)},
-			},
-			{
-				Name:         "another-workflow-type",
-				NumWorkflows: 745,
-				Duration:     Duration{AvgExecTimeNanoseconds: float64(987 * time.Second)},
+				DomainID: "aaa-bbb-ccc",
+				WFTypeContainer: WorkflowTypeInfoContainer{
+					WorkflowTypes: []WorkflowTypeInfo{
+						{
+							Name:         s.WorkflowType,
+							NumWorkflows: 564,
+							Duration:     Duration{AvgExecTimeNanoseconds: float64(123 * time.Second)},
+						},
+						{
+							Name:         "another-workflow-type",
+							NumWorkflows: 745,
+							Duration:     Duration{AvgExecTimeNanoseconds: float64(987 * time.Second)},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -430,7 +439,7 @@ func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
 		&elasticsearch.RawResponse{
 			TookInMillis: 12,
 			Aggregations: map[string]json.RawMessage{
-				"wfTypes": json.RawMessage(encoded),
+				"domains": json.RawMessage(encoded),
 			},
 		},
 		nil).Times(1)
@@ -442,17 +451,16 @@ func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
 	err = actFuture.Get(&results)
 	s.NoError(err)
 	s.Equal(2, len(results))
-	s.Equal(esResult.Buckets, results)
+	s.Equal(normalizeDomainInfos(esResult.Buckets), results)
 }
 
 func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypesFromConfig() {
 	workflowTypes := []WorkflowTypeInfo{
-		{Name: "workflow1"},
-		{Name: "workflow2"},
-		{Name: "workflow3"},
+		{DomainID: s.DomainID, Name: "workflow1"},
+		{DomainID: s.DomainID, Name: "workflow2"},
 	}
 
-	s.config.ESAnalyzerLimitToTypes = dynamicconfig.GetStringPropertyFn("workflow1,workflow2,workflow3")
+	s.config.ESAnalyzerLimitToTypes = dynamicconfig.GetStringPropertyFn("test-domain/workflow1,test-domain/workflow2")
 	s.logger.On("Info", mock.Anything, mock.Anything).Return().Once()
 
 	actFuture, err := s.activityEnv.ExecuteActivity(getWorkflowTypes)
@@ -460,6 +468,6 @@ func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypesFromConfig() {
 	var results []WorkflowTypeInfo
 	err = actFuture.Get(&results)
 	s.NoError(err)
-	s.Equal(3, len(results))
+	s.Equal(2, len(results))
 	s.Equal(workflowTypes, results)
 }

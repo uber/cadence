@@ -2061,6 +2061,11 @@ const (
 	// Value type: Int
 	// Default value: "" => means no limitation
 	ESAnalyzerLimitToTypes
+	// ESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
+	// KeyName: worker.ESAnalyzerLimitToDomains
+	// Value type: Int
+	// Default value: "" => means no limitation
+	ESAnalyzerLimitToDomains
 
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
@@ -2439,6 +2444,7 @@ var Keys = map[Key]string{
 	ESAnalyzerBufferWaitTime:        "worker.ESAnalyzerBufferWaitTime",
 	ESAnalyzerMinNumWorkflowsForAvg: "worker.ESAnalyzerMinNumWorkflowsForAvg",
 	ESAnalyzerLimitToTypes:          "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerLimitToDomains:        "worker.ESAnalyzerLimitToDomains",
 }
 
 var KeyNames map[string]Key

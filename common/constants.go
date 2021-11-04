@@ -195,6 +195,8 @@ const (
 	DefaultESAnalyzerMinNumWorkflowsForAvg = 100
 	// DefaultESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types
 	DefaultESAnalyzerLimitToTypes = ""
+	// DefaultESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
+	DefaultESAnalyzerLimitToDomains = ""
 )
 
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError
