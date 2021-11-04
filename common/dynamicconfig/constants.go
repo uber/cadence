@@ -2036,12 +2036,27 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
+	// ESAnalyzerPause defines if we want to dynamically pause the analyzer workflow
+	// KeyName: worker.ESAnalyzerPause
+	// Value type: bool
+	// Default value: false
+	ESAnalyzerPause
 	// ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages
 	// KeyName: worker.ESAnalyzerTimeWindow
 	// Value type: Duration
 	// Default value: 30 days
 	ESAnalyzerTimeWindow
-	// ESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
+	// ESAnalyzerMaxNumDomains defines how many domains to check
+	// KeyName: worker.ESAnalyzerMaxNumDomains
+	// Value type: int
+	// Default value: 500
+	ESAnalyzerMaxNumDomains
+	// ESAnalyzerMaxNumWorkflowTypes defines how many workflow types to check per domain
+	// KeyName: worker.ESAnalyzerMaxNumWorkflowTypes
+	// Value type: int
+	// Default value: 100
+	ESAnalyzerMaxNumWorkflowTypes
+	// ESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed per workflow type
 	// KeyName: worker.ESAnalyzerNumWorkflowsToRefresh
 	// Value type: Int
 	// Default value: 100
@@ -2439,7 +2454,10 @@ var Keys = map[Key]string{
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 
+	ESAnalyzerPause:                 "worker.ESAnalyzerPause",
 	ESAnalyzerTimeWindow:            "worker.ESAnalyzerTimeWindow",
+	ESAnalyzerMaxNumDomains:         "worker.ESAnalyzerMaxNumDomains",
+	ESAnalyzerMaxNumWorkflowTypes:   "worker.ESAnalyzerMaxNumWorkflowTypes",
 	ESAnalyzerNumWorkflowsToRefresh: "worker.ESAnalyzerNumWorkflowsToRefresh",
 	ESAnalyzerBufferWaitTime:        "worker.ESAnalyzerBufferWaitTime",
 	ESAnalyzerMinNumWorkflowsForAvg: "worker.ESAnalyzerMinNumWorkflowsForAvg",

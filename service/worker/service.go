@@ -159,7 +159,10 @@ func NewConfig(params *resource.Params) *Config {
 			ClusterMetadata:     params.ClusterMetadata,
 		},
 		ESAnalyzerCfg: &esanalyzer.Config{
+			ESAnalyzerPause:                 dc.GetBoolProperty(dynamicconfig.ESAnalyzerPause, common.DefaultESAnalyzerPause),
 			ESAnalyzerTimeWindow:            dc.GetDurationProperty(dynamicconfig.ESAnalyzerTimeWindow, common.DefaultESAnalyzerTimeWindow),
+			ESAnalyzerMaxNumDomains:         dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumDomains, common.DefaultESAnalyzerMaxNumDomains),
+			ESAnalyzerMaxNumWorkflowTypes:   dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumWorkflowTypes, common.DefaultESAnalyzerMaxNumWorkflowTypes),
 			ESAnalyzerLimitToTypes:          dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToTypes, common.DefaultESAnalyzerLimitToTypes),
 			ESAnalyzerLimitToDomains:        dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToDomains, common.DefaultESAnalyzerLimitToDomains),
 			ESAnalyzerNumWorkflowsToRefresh: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),

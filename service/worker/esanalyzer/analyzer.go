@@ -63,7 +63,10 @@ type (
 
 	// Config contains all configs for ElasticSearch Analyzer
 	Config struct {
+		ESAnalyzerPause                 dynamicconfig.BoolPropertyFn
 		ESAnalyzerTimeWindow            dynamicconfig.DurationPropertyFn
+		ESAnalyzerMaxNumDomains         dynamicconfig.IntPropertyFn
+		ESAnalyzerMaxNumWorkflowTypes   dynamicconfig.IntPropertyFn
 		ESAnalyzerLimitToTypes          dynamicconfig.StringPropertyFn
 		ESAnalyzerLimitToDomains        dynamicconfig.StringPropertyFn
 		ESAnalyzerNumWorkflowsToRefresh dynamicconfig.IntPropertyFnWithWorkflowTypeFilter

@@ -127,6 +127,12 @@ func initWorkflow(a *Analyzer) {
 
 // workflowFunc queries ElasticSearch to detect issues and mitigates them
 func (w *Workflow) workflowFunc(ctx workflow.Context) error {
+	if w.analyzer.config.ESAnalyzerPause() {
+		logger := workflow.GetLogger(ctx)
+		logger.Info("Skipping ESAnalyzer execution cycle since it was paused")
+		return nil
+	}
+
 	// list of workflows with avg workflow duration
 	var wfTypes []WorkflowTypeInfo
 	err := workflow.ExecuteActivity(
@@ -340,12 +346,9 @@ func (w *Workflow) findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo
 	return workflows, nil
 }
 
-func (w *Workflow) getWorkflowTypesQuery(
-	startDateTime int64,
-	limitToDomains string,
-	domainAggKey string,
-	wfTypesAggKey string,
-) (string, error) {
+func (w *Workflow) getDomainsLimitQuery() (string, error) {
+	limitToDomains := w.analyzer.config.ESAnalyzerLimitToDomains()
+
 	domainsLimitQuery := ""
 	if len(limitToDomains) > 0 {
 		var domainNames []string
@@ -376,6 +379,18 @@ func (w *Workflow) getWorkflowTypesQuery(
 			`, string(marshaledDomains))
 		}
 	}
+	return domainsLimitQuery, nil
+}
+
+func (w *Workflow) getWorkflowTypesQuery() (string, error) {
+	domainsLimitQuery, err := w.getDomainsLimitQuery()
+	if err != nil {
+		return "", nil
+	}
+	startDateTime := time.Now().Add(-w.analyzer.config.ESAnalyzerTimeWindow()).UnixNano()
+	maxNumDomains := w.analyzer.config.ESAnalyzerMaxNumDomains()
+	maxNumWorkflowTypes := w.analyzer.config.ESAnalyzerMaxNumWorkflowTypes()
+
 	return fmt.Sprintf(`
 		{
       "query": {
@@ -400,10 +415,10 @@ func (w *Workflow) getWorkflowTypesQuery(
       "size": 0,
       "aggs" : {
         "%s" : {
-          "terms" : { "field" : "DomainID", "size": 1000 },
+          "terms" : { "field" : "DomainID", "size": %d },
           "aggs": {
             "%s" : {
-              "terms" : { "field" : "WorkflowType", "size": 1000 },
+              "terms" : { "field" : "WorkflowType", "size": %d },
               "aggs": {
                 "duration" : {
                   "avg" : {
@@ -416,7 +431,7 @@ func (w *Workflow) getWorkflowTypesQuery(
         }
       }
     }
-	`, startDateTime, domainsLimitQuery, domainAggKey, wfTypesAggKey), nil
+	`, startDateTime, domainsLimitQuery, domainsAggKey, maxNumDomains, wfTypesAggKey, maxNumWorkflowTypes), nil
 }
 
 func (w *Workflow) getWorkflowTypesFromDynamicConfig(
@@ -485,10 +500,8 @@ func (w *Workflow) getWorkflowTypes(ctx context.Context) ([]WorkflowTypeInfo, er
 	if len(limitToTypes) > 0 {
 		return w.getWorkflowTypesFromDynamicConfig(ctx, limitToTypes, logger)
 	}
-	limitToDomains := w.analyzer.config.ESAnalyzerLimitToDomains()
 
-	startDateTime := time.Now().Add(-w.analyzer.config.ESAnalyzerTimeWindow()).UnixNano()
-	query, err := w.getWorkflowTypesQuery(startDateTime, limitToDomains, domainsAggKey, wfTypesAggKey)
+	query, err := w.getWorkflowTypesQuery()
 	if err != nil {
 		return nil, err
 	}

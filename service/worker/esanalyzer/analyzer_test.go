@@ -99,7 +99,10 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	)
 
 	s.config = Config{
+		ESAnalyzerPause:                 dynamicconfig.GetBoolPropertyFn(false),
 		ESAnalyzerTimeWindow:            dynamicconfig.GetDurationPropertyFn(time.Hour * 24 * 30),
+		ESAnalyzerMaxNumDomains:         dynamicconfig.GetIntPropertyFn(500),
+		ESAnalyzerMaxNumWorkflowTypes:   dynamicconfig.GetIntPropertyFn(100),
 		ESAnalyzerLimitToTypes:          dynamicconfig.GetStringPropertyFn(""),
 		ESAnalyzerLimitToDomains:        dynamicconfig.GetStringPropertyFn(""),
 		ESAnalyzerNumWorkflowsToRefresh: dynamicconfig.GetIntPropertyFilteredByWorkflowType(2),
