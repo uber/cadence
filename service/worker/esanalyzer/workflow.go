@@ -93,17 +93,17 @@ var (
 	getWorkflowTypesOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
-		// RetryPolicy:            &retryPolicy,
+		RetryPolicy:            &retryPolicy,
 	}
 	findStuckWorkflowsOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    3 * time.Minute,
-		// RetryPolicy:            &retryPolicy,
+		RetryPolicy:            &retryPolicy,
 	}
 	refreshStuckWorkflowsOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    10 * time.Minute,
-		// RetryPolicy:            &retryPolicy,
+		RetryPolicy:            &retryPolicy,
 	}
 
 	wfOptions = cclient.StartWorkflowOptions{
@@ -277,8 +277,14 @@ func getFindStuckWorkflowsQuery(
 // findStuckWorkflows is activity to find open workflows that are live significantly longer than average
 func (w *Workflow) findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo) ([]WorkflowInfo, error) {
 	logger := activity.GetLogger(ctx)
+	domainEntry, err := w.analyzer.domainCache.GetDomainByID(info.DomainID)
+	if err != nil {
+		logger.Error("Failed to get domain entry", zap.Error(err), zap.String("DomainID", info.DomainID))
+		return nil, err
+	}
+	domainName := domainEntry.GetInfo().Name
 
-	minNumWorkflowsNeeded := int64(w.analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(info.Name))
+	minNumWorkflowsNeeded := int64(w.analyzer.config.ESAnalyzerMinNumWorkflowsForAvg(domainName, info.Name))
 	if len(w.analyzer.config.ESAnalyzerLimitToTypes()) > 0 || len(w.analyzer.config.ESAnalyzerLimitToDomains()) > 0 {
 		logger.Info("Skipping minimum workflow count validation since workflow types were passed from config")
 	} else if info.NumWorkflows < minNumWorkflowsNeeded {
@@ -293,7 +299,9 @@ func (w *Workflow) findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo
 	startDateTime := time.Now().Add(-w.analyzer.config.ESAnalyzerTimeWindow()).UnixNano()
 
 	// allow some buffer time to any workflow
-	maxEndTimeAllowed := time.Now().Add(-w.analyzer.config.ESAnalyzerBufferWaitTime(info.Name)).UnixNano()
+	maxEndTimeAllowed := time.Now().Add(
+		-w.analyzer.config.ESAnalyzerBufferWaitTime(domainName, info.Name),
+	).UnixNano()
 
 	// if the workflow exec time takes longer than 3x avg time, we refresh
 	endTime := time.Now().Add(
@@ -303,7 +311,7 @@ func (w *Workflow) findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo
 		endTime = maxEndTimeAllowed
 	}
 
-	maxNumWorkflows := w.analyzer.config.ESAnalyzerNumWorkflowsToRefresh(info.Name)
+	maxNumWorkflows := w.analyzer.config.ESAnalyzerNumWorkflowsToRefresh(domainName, info.Name)
 	query, err := getFindStuckWorkflowsQuery(startDateTime, endTime, info.DomainID, info.Name, maxNumWorkflows)
 	if err != nil {
 		logger.Error("Failed to create ElasticSearch query for stuck workflows",

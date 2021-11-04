@@ -346,6 +346,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowI
 
 func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflows() {
 	info := WorkflowTypeInfo{
+		DomainID:     s.DomainID,
 		Name:         s.WorkflowType,
 		NumWorkflows: 123113,
 		Duration:     Duration{AvgExecTimeNanoseconds: float64(100 * time.Minute)},
@@ -390,8 +391,9 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflows() {
 
 func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsNotEnoughWorkflows() {
 	info := WorkflowTypeInfo{
+		DomainID:     s.DomainID,
 		Name:         s.WorkflowType,
-		NumWorkflows: int64(s.config.ESAnalyzerMinNumWorkflowsForAvg(s.WorkflowType) - 1),
+		NumWorkflows: int64(s.config.ESAnalyzerMinNumWorkflowsForAvg(s.DomainID, s.WorkflowType) - 1),
 		Duration:     Duration{AvgExecTimeNanoseconds: float64(100 * time.Minute)},
 	}
 
@@ -407,8 +409,9 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsNotEnoughWorkflows()
 
 func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsMinNumWorkflowValidationSkipped() {
 	info := WorkflowTypeInfo{
+		DomainID:     s.DomainID,
 		Name:         s.WorkflowType,
-		NumWorkflows: int64(s.config.ESAnalyzerMinNumWorkflowsForAvg(s.WorkflowType) - 1),
+		NumWorkflows: int64(s.config.ESAnalyzerMinNumWorkflowsForAvg(s.DomainID, s.WorkflowType) - 1),
 		Duration:     Duration{AvgExecTimeNanoseconds: float64(100 * time.Minute)},
 	}
 
