@@ -105,8 +105,7 @@ func New(
 
 // Start starts the scanner
 func (a *Analyzer) Start() error {
-	ctx := context.WithValue(context.Background(), analyzerContextKey, a)
-
+	ctx := context.Background()
 	a.StartWorkflow(ctx)
 
 	workerOpts := worker.Options{
@@ -120,6 +119,7 @@ func (a *Analyzer) Start() error {
 }
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
+	initWorkflow(a)
 	go workercommon.StartWorkflowWithRetry(esanalyzerWFTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
 		_, err := client.StartWorkflow(ctx, wfOptions, esanalyzerWFTypeName)
 		switch err.(type) {

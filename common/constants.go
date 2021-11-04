@@ -185,7 +185,7 @@ const (
 )
 
 const (
-	// DefaultESAnalyzerLastNDays controls how many days to go back for ElasticSearch Analyzer
+	// DefaultESAnalyzerTimeWindow controls how many days to go back for ElasticSearch Analyzer
 	DefaultESAnalyzerTimeWindow = time.Hour * 24 * 30
 	// DefaultESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
 	DefaultESAnalyzerNumWorkflowsToRefresh = 100

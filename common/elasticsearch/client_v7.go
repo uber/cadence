@@ -474,7 +474,7 @@ func (c *elasticV7) SearchRaw(ctx context.Context, index string, query string) (
 		TotalHits: esResult.TotalHits(),
 	}
 	if esResult.Hits != nil && len(esResult.Hits.Hits) > 0 {
-		result.Hits.Hits = []*p.InternalVisibilityWorkflowExecutionInfo{}
+		result.Hits.Hits = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0, len(esResult.Hits.Hits))
 		for _, hit := range esResult.Hits.Hits {
 			workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(hit)
 			result.Hits.Hits = append(result.Hits.Hits, workflowExecutionInfo)

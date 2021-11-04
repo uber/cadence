@@ -22,6 +22,7 @@ package workercommon
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/cadence/client"
@@ -56,7 +57,7 @@ func StartWorkflowWithRetry(
 		return startWorkflow(sdkClient)
 	})
 	if err != nil {
-		resource.GetLogger().Fatal("unable to start workflow", tag.WorkflowType(workflowType), tag.Error(err))
+		panic(fmt.Sprintf("unreachable: %#v", err))
 	} else {
 		resource.GetLogger().Info("starting workflow", tag.WorkflowType(workflowType))
 	}
