@@ -145,7 +145,7 @@ func (s *server) startService() common.Daemon {
 
 	params.MetricScope = svcCfg.Metrics.NewScope(params.Logger, params.Name)
 
-	rpcParams, err := rpc.NewParams(params.Name, s.cfg)
+	rpcParams, err := rpc.NewParams(params.Name, s.cfg, dc)
 	if err != nil {
 		log.Fatalf("error creating rpc factory params: %v", err)
 	}
