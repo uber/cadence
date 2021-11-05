@@ -447,6 +447,43 @@ func (c *elasticV7) search(ctx context.Context, p *searchParametersV7) (*elastic
 	return searchService.Do(ctx)
 }
 
+func (c *elasticV7) SearchRaw(ctx context.Context, index string, query string) (*RawResponse, error) {
+	// There's slight differences between the v6 and v7 response preventing us to move
+	// this to a common function
+	esResult, err := c.client.Search(index).Source(query).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if esResult.Error != nil {
+		return nil, types.InternalServiceError{
+			Message: fmt.Sprintf("ElasticSearch Error: %#v", esResult.Error),
+		}
+	} else if esResult.TimedOut {
+		return nil, types.InternalServiceError{
+			Message: fmt.Sprintf("ElasticSearch Error: Request timed out: %v ms", esResult.TookInMillis),
+		}
+	}
+
+	result := RawResponse{
+		TookInMillis: esResult.TookInMillis,
+		Aggregations: esResult.Aggregations,
+	}
+
+	result.Hits = SearchHits{
+		TotalHits: esResult.TotalHits(),
+	}
+	if esResult.Hits != nil && len(esResult.Hits.Hits) > 0 {
+		result.Hits.Hits = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0, len(esResult.Hits.Hits))
+		for _, hit := range esResult.Hits.Hits {
+			workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(hit)
+			result.Hits.Hits = append(result.Hits.Hits, workflowExecutionInfo)
+		}
+	}
+
+	return &result, nil
+}
+
 func (c *elasticV7) searchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
 	return c.client.Search(index).Source(query).Do(ctx)
 }
@@ -608,6 +645,8 @@ func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 	}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
+		DomainID:         source.DomainID,
+		WorkflowType:     source.WorkflowType,
 		WorkflowID:       source.WorkflowID,
 		RunID:            source.RunID,
 		TypeName:         source.WorkflowType,
