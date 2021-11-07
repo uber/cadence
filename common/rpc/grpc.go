@@ -22,8 +22,8 @@ package rpc
 
 import (
 	"errors"
-	"fmt"
-	"strings"
+	"net"
+	"strconv"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
@@ -55,9 +55,9 @@ func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
 	}
 
 	// Drop port if provided
-	if index := strings.Index(hostAddress, ":"); index > 0 {
-		hostAddress = hostAddress[:index]
+	if newHostAddress, _, err := net.SplitHostPort(hostAddress); err == nil {
+		hostAddress = newHostAddress
 	}
 
-	return fmt.Sprintf("%s:%d", hostAddress, port), nil
+	return net.JoinHostPort(hostAddress, strconv.Itoa(port)), nil
 }

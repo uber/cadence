@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/service"
@@ -83,8 +84,8 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 
 	return Params{
 		ServiceName:       serviceName,
-		TChannelAddress:   fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.Port),
-		GRPCAddress:       fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.GRPCPort),
+		TChannelAddress:   net.JoinHostPort(listenIP.String(), strconv.Itoa(serviceConfig.RPC.Port)),
+		GRPCAddress:       net.JoinHostPort(listenIP.String(), strconv.Itoa(serviceConfig.RPC.GRPCPort)),
 		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
 		HostAddressMapper: NewGRPCPorts(config),
 		OutboundsBuilder:  publicClientOutbound,
@@ -110,7 +111,10 @@ func getListenIP(config config.RPC) (net.IP, error) {
 		if ip != nil && ip.To4() != nil {
 			return ip.To4(), nil
 		}
-		return nil, fmt.Errorf("unable to parse bindOnIP value or it is not an IPv4 address: %s", config.BindOnIP)
+		if ip != nil && ip.To16() != nil {
+			return ip.To16(), nil
+		}
+		return nil, fmt.Errorf("unable to parse bindOnIP value or it is not an IPv4 or IPv6 address: %s", config.BindOnIP)
 	}
 	return ListenIP()
 }

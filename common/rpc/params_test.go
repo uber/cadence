@@ -45,7 +45,7 @@ func TestNewParams(t *testing.T) {
 	assert.EqualError(t, err, "get listen IP: bindOnLocalHost and bindOnIP are mutually exclusive")
 
 	_, err = NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnIP: "invalidIP"}}))
-	assert.EqualError(t, err, "get listen IP: unable to parse bindOnIP value or it is not an IPv4 address: invalidIP")
+	assert.EqualError(t, err, "get listen IP: unable to parse bindOnIP value or it is not an IPv4 or IPv6 address: invalidIP")
 
 	_, err = NewParams(serviceName, &config.Config{Services: map[string]config.Service{"frontend": {}}})
 	assert.EqualError(t, err, "public client outbound: need to provide an endpoint config for PublicClient")
