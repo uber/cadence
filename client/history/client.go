@@ -50,7 +50,7 @@ type (
 		tokenSerializer   common.TaskTokenSerializer
 		timeout           time.Duration
 		client            Client
-		peer              PeerResolver
+		peerResolver      PeerResolver
 		logger            log.Logger
 	}
 
@@ -75,7 +75,7 @@ func NewClient(
 		tokenSerializer:   common.NewJSONTaskTokenSerializer(),
 		timeout:           timeout,
 		client:            client,
-		peer:              peerResolver,
+		peerResolver:      peerResolver,
 		logger:            logger,
 	}
 }
@@ -85,7 +85,7 @@ func (c *clientImpl) StartWorkflowExecution(
 	request *types.HistoryStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.StartRequest.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.StartRequest.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (c *clientImpl) GetMutableState(
 	request *types.GetMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetMutableStateResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (c *clientImpl) PollMutableState(
 	request *types.PollMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.PollMutableStateResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,11 +165,11 @@ func (c *clientImpl) DescribeHistoryHost(
 	var peer string
 
 	if request.ShardIDForHost != nil {
-		peer, err = c.peer.FromShardID(int(request.GetShardIDForHost()))
+		peer, err = c.peerResolver.FromShardID(int(request.GetShardIDForHost()))
 	} else if request.ExecutionForHost != nil {
-		peer, err = c.peer.FromWorkflowID(request.ExecutionForHost.GetWorkflowID())
+		peer, err = c.peerResolver.FromWorkflowID(request.ExecutionForHost.GetWorkflowID())
 	} else {
-		peer, err = c.peer.FromHostAddress(request.GetHostAddress())
+		peer, err = c.peerResolver.FromHostAddress(request.GetHostAddress())
 	}
 	if err != nil {
 		return nil, err
@@ -196,7 +196,7 @@ func (c *clientImpl) RemoveTask(
 	request *types.RemoveTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (c *clientImpl) CloseShard(
 	request *types.CloseShardRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (c *clientImpl) ResetQueue(
 	request *types.ResetQueueRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (c *clientImpl) DescribeQueue(
 	request *types.DescribeQueueRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeQueueResponse, error) {
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +294,7 @@ func (c *clientImpl) DescribeMutableState(
 	request *types.DescribeMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeMutableStateResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func (c *clientImpl) ResetStickyTaskList(
 	request *types.HistoryResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
 ) (*types.HistoryResetStickyTaskListResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	request *types.HistoryDescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeWorkflowExecutionResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.Request.Execution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.Request.Execution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +369,7 @@ func (c *clientImpl) RecordDecisionTaskStarted(
 	request *types.RecordDecisionTaskStartedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +394,7 @@ func (c *clientImpl) RecordActivityTaskStarted(
 	request *types.RecordActivityTaskStartedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RecordActivityTaskStartedResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +423,7 @@ func (c *clientImpl) RespondDecisionTaskCompleted(
 	if err != nil {
 		return nil, err
 	}
-	peer, err := c.peer.FromWorkflowID(taskToken.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(taskToken.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -448,7 +448,7 @@ func (c *clientImpl) RespondDecisionTaskFailed(
 	if err != nil {
 		return err
 	}
-	peer, err := c.peer.FromWorkflowID(taskToken.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(taskToken.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -471,7 +471,7 @@ func (c *clientImpl) RespondActivityTaskCompleted(
 	if err != nil {
 		return err
 	}
-	peer, err := c.peer.FromWorkflowID(taskToken.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(taskToken.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -494,7 +494,7 @@ func (c *clientImpl) RespondActivityTaskFailed(
 	if err != nil {
 		return err
 	}
-	peer, err := c.peer.FromWorkflowID(taskToken.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(taskToken.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -517,7 +517,7 @@ func (c *clientImpl) RespondActivityTaskCanceled(
 	if err != nil {
 		return err
 	}
-	peer, err := c.peer.FromWorkflowID(taskToken.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(taskToken.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -540,7 +540,7 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 	if err != nil {
 		return nil, err
 	}
-	peer, err := c.peer.FromWorkflowID(taskToken.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(taskToken.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -565,7 +565,7 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 	request *types.HistoryRequestCancelWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.CancelRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.CancelRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -583,7 +583,7 @@ func (c *clientImpl) SignalWorkflowExecution(
 	request *types.HistorySignalWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.SignalRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.SignalRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -603,7 +603,7 @@ func (c *clientImpl) SignalWithStartWorkflowExecution(
 	request *types.HistorySignalWithStartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.SignalWithStartRequest.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.SignalWithStartRequest.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -629,7 +629,7 @@ func (c *clientImpl) RemoveSignalMutableState(
 	request *types.RemoveSignalMutableStateRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -648,7 +648,7 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	request *types.HistoryTerminateWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.TerminateRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.TerminateRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -667,7 +667,7 @@ func (c *clientImpl) ResetWorkflowExecution(
 	request *types.HistoryResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ResetWorkflowExecutionResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.ResetRequest.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.ResetRequest.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -691,7 +691,7 @@ func (c *clientImpl) ScheduleDecisionTask(
 	request *types.ScheduleDecisionTaskRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -710,7 +710,7 @@ func (c *clientImpl) RecordChildExecutionCompleted(
 	request *types.RecordChildExecutionCompletedRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.WorkflowExecution.WorkflowID)
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.WorkflowID)
 	if err != nil {
 		return err
 	}
@@ -729,7 +729,7 @@ func (c *clientImpl) ReplicateEventsV2(
 	request *types.ReplicateEventsV2Request,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.WorkflowExecution.GetWorkflowID())
+	peer, err := c.peerResolver.FromWorkflowID(request.WorkflowExecution.GetWorkflowID())
 	if err != nil {
 		return err
 	}
@@ -750,7 +750,7 @@ func (c *clientImpl) SyncShardStatus(
 ) error {
 
 	// we do not have a workflow ID here, instead, we have something even better
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return err
 	}
@@ -771,7 +771,7 @@ func (c *clientImpl) SyncActivity(
 	opts ...yarpc.CallOption,
 ) error {
 
-	peer, err := c.peer.FromWorkflowID(request.GetWorkflowID())
+	peer, err := c.peerResolver.FromWorkflowID(request.GetWorkflowID())
 	if err != nil {
 		return err
 	}
@@ -790,7 +790,7 @@ func (c *clientImpl) QueryWorkflow(
 	request *types.HistoryQueryWorkflowRequest,
 	opts ...yarpc.CallOption,
 ) (*types.HistoryQueryWorkflowResponse, error) {
-	peer, err := c.peer.FromWorkflowID(request.GetRequest().GetExecution().GetWorkflowID())
+	peer, err := c.peerResolver.FromWorkflowID(request.GetRequest().GetExecution().GetWorkflowID())
 	if err != nil {
 		return nil, err
 	}
@@ -818,7 +818,7 @@ func (c *clientImpl) GetReplicationMessages(
 	requestsByPeer := make(map[string]*types.GetReplicationMessagesRequest)
 
 	for _, token := range request.Tokens {
-		peer, err := c.peer.FromShardID(int(token.GetShardID()))
+		peer, err := c.peerResolver.FromShardID(int(token.GetShardID()))
 		if err != nil {
 			return nil, err
 		}
@@ -896,7 +896,7 @@ func (c *clientImpl) GetDLQReplicationMessages(
 ) (*types.GetDLQReplicationMessagesResponse, error) {
 	// All workflow IDs are in the same shard per request
 	workflowID := request.GetTaskInfos()[0].GetWorkflowID()
-	peer, err := c.peer.FromWorkflowID(workflowID)
+	peer, err := c.peerResolver.FromWorkflowID(workflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -913,7 +913,7 @@ func (c *clientImpl) ReapplyEvents(
 	request *types.HistoryReapplyEventsRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.GetRequest().GetWorkflowExecution().GetWorkflowID())
+	peer, err := c.peerResolver.FromWorkflowID(request.GetRequest().GetWorkflowExecution().GetWorkflowID())
 	if err != nil {
 		return err
 	}
@@ -933,7 +933,7 @@ func (c *clientImpl) ReadDLQMessages(
 	opts ...yarpc.CallOption,
 ) (*types.ReadDLQMessagesResponse, error) {
 
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return nil, err
 	}
@@ -947,7 +947,7 @@ func (c *clientImpl) PurgeDLQMessages(
 	opts ...yarpc.CallOption,
 ) error {
 
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return err
 	}
@@ -961,7 +961,7 @@ func (c *clientImpl) MergeDLQMessages(
 	opts ...yarpc.CallOption,
 ) (*types.MergeDLQMessagesResponse, error) {
 
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return nil, err
 	}
@@ -974,7 +974,7 @@ func (c *clientImpl) RefreshWorkflowTasks(
 	request *types.HistoryRefreshWorkflowTasksRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	peer, err := c.peer.FromWorkflowID(request.GetRequest().GetExecution().GetWorkflowID())
+	peer, err := c.peerResolver.FromWorkflowID(request.GetRequest().GetExecution().GetWorkflowID())
 	if err != nil {
 		return err
 	}
@@ -996,7 +996,7 @@ func (c *clientImpl) NotifyFailoverMarkers(
 
 	for _, token := range request.GetFailoverMarkerTokens() {
 		marker := token.GetFailoverMarker()
-		peer, err := c.peer.FromDomainID(marker.GetDomainID())
+		peer, err := c.peerResolver.FromDomainID(marker.GetDomainID())
 		if err != nil {
 			return err
 		}
@@ -1046,7 +1046,7 @@ func (c *clientImpl) GetCrossClusterTasks(
 ) (*types.GetCrossClusterTasksResponse, error) {
 	requestByPeer := make(map[string]*types.GetCrossClusterTasksRequest)
 	for _, shardID := range request.GetShardIDs() {
-		peer, err := c.peer.FromShardID(int(shardID))
+		peer, err := c.peerResolver.FromShardID(int(shardID))
 		if err != nil {
 			return nil, err
 		}
@@ -1104,7 +1104,7 @@ func (c *clientImpl) RespondCrossClusterTasksCompleted(
 	request *types.RespondCrossClusterTasksCompletedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RespondCrossClusterTasksCompletedResponse, error) {
-	peer, err := c.peer.FromShardID(int(request.GetShardID()))
+	peer, err := c.peerResolver.FromShardID(int(request.GetShardID()))
 	if err != nil {
 		return nil, err
 	}
@@ -1131,7 +1131,7 @@ func (c *clientImpl) GetFailoverInfo(
 	request *types.GetFailoverInfoRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetFailoverInfoResponse, error) {
-	peer, err := c.peer.FromDomainID(request.GetDomainID())
+	peer, err := c.peerResolver.FromDomainID(request.GetDomainID())
 	if err != nil {
 		return nil, err
 	}
@@ -1165,7 +1165,7 @@ redirectLoop:
 		if err != nil {
 			if s, ok := err.(*types.ShardOwnershipLostError); ok {
 				// TODO: consider emitting a metric for number of redirects
-				peer, err = c.peer.FromHostAddress(s.GetOwner())
+				peer, err = c.peerResolver.FromHostAddress(s.GetOwner())
 				if err != nil {
 					return err
 				}
