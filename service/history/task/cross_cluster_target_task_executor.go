@@ -41,7 +41,6 @@ var (
 	errUnknownTaskProcessingState   = errors.New("unknown cross cluster task processing state")
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
-	errUnexpectedErrorFromTarget    = errors.New("unexpected target error")
 )
 
 type (
@@ -256,8 +255,12 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			*childAttrs.ParentClosePolicy,
 		)
 		switch err.(type) {
+		case nil:
+			// continue the for loop
+			continue
 		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
 			// expected error, no-op
+			// break the switch
 			break
 		default:
 			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
@@ -268,7 +271,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 
 	// TODO: Consider going through all the children, even if some fail to apply the parent policy,
 	// and add the policy application status by a child identifier (domain-wf-run id)
-	// Right now, return value is all or none even if we were able apply the policy on some children successfuly
+	// Right now, return value is all or none even if we were able apply the policy on some children successfully
 	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}, nil
 }
 

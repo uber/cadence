@@ -363,7 +363,6 @@ func (d *nosqlExecutionStore) prepareCrossClusterTasksForWorkflowTxn(
 			if targetRunID == "" {
 				targetRunID = p.CrossClusterTaskDefaultTargetRunID
 			}
-			scheduleID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).InitiatedID
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			targetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
@@ -495,7 +494,6 @@ func (d *nosqlExecutionStore) prepareTransferTasksForWorkflowTxn(
 			if targetRunID == "" {
 				targetRunID = p.TransferTaskTransferTargetRunID
 			}
-			scheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID
 
 		case p.TransferTaskTypeApplyParentClosePolicy:
 			targetDomainIDs = task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs

@@ -312,7 +312,14 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
 			// Do nothing, these errors are expected if the target workflow is already closed
 		default:
-			return errUnexpectedErrorFromTarget
+			// NOTE: do NOT return any custom error for unexpected error,
+			// otherwise the task will retry forever
+			// use the current task state and return errContinueExecution so that
+			// the task can be pulled by target cluster again
+			// ideally this case should not happen
+			// crossClusterSourceTask.Update() will reject response with those failed causes
+			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
+			return errContinueExecution
 		}
 	}
 
@@ -361,7 +368,8 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
 			// Do nothing, these errors are expected if the target workflow is already closed
 		default:
-			return errUnexpectedErrorFromTarget
+			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
+			return errContinueExecution
 		}
 	}
 

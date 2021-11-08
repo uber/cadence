@@ -781,6 +781,8 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
 		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeApplyParentPolicy
 		emptyResponse = response.ApplyParentClosePolicyAttributes == nil
+	default:
+		return fmt.Errorf("unknown task type: %v", t.GetTaskType())
 	}
 
 	if !taskTypeMatch {
@@ -788,7 +790,7 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	}
 
 	if emptyResponse && response.FailedCause == nil {
-		return errors.New("empty cross cluster task response")
+		return fmt.Errorf("empty cross cluster task response, task type: %v", t.GetTaskType())
 	}
 
 	if response.FailedCause != nil {
