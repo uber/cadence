@@ -184,6 +184,27 @@ const (
 	TaskTypeCrossCluster TaskType = 6
 )
 
+const (
+	// DefaultESAnalyzerPause controls if we want to dynamically pause the analyzer
+	DefaultESAnalyzerPause = false
+	// DefaultESAnalyzerTimeWindow controls how many days to go back for ElasticSearch Analyzer
+	DefaultESAnalyzerTimeWindow = time.Hour * 24 * 30
+	// DefaultESAnalyzerMaxNumDomains controls how many domains to check
+	DefaultESAnalyzerMaxNumDomains = 500
+	// DefaultESAnalyzerMaxNumWorkflowTypes controls how many workflow types per domain to check
+	DefaultESAnalyzerMaxNumWorkflowTypes = 100
+	// DefaultESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed
+	DefaultESAnalyzerNumWorkflowsToRefresh = 100
+	// DefaultESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck
+	DefaultESAnalyzerBufferWaitTime = time.Minute * 30
+	// DefaultESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
+	DefaultESAnalyzerMinNumWorkflowsForAvg = 100
+	// DefaultESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types
+	DefaultESAnalyzerLimitToTypes = ""
+	// DefaultESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
+	DefaultESAnalyzerLimitToDomains = ""
+)
+
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError
 const StickyTaskConditionFailedErrorMsg = "StickyTaskConditionFailedError"
 

@@ -794,10 +794,17 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string)
 		},
 		// For integration tests to generate client out of the same outbound.
 		OutboundsBuilder: rpc.CombineOutbounds(
-			&singleTChannelOutbound{serviceName, serviceName, tchannelHostPort},
+			&singleTChannelOutbound{testOutboundName(serviceName), serviceName, tchannelHostPort},
 			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendAddress()},
-			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger))),
+			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
+			rpc.NewDirectOutbound(service.History, true, nil),
+		),
 	})
+}
+
+// testOutbound prefixes outbound with "test-" to not clash with other real Cadence outbounds.
+func testOutboundName(name string) string {
+	return "test-" + name
 }
 
 type singleTChannelOutbound struct {
