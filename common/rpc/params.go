@@ -92,6 +92,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		HostAddressMapper: NewGRPCPorts(config),
 		OutboundsBuilder: CombineOutbounds(
 			NewDirectOutbound(service.History, enableGRPCOutbound, outboundTLS[service.History]),
+			NewDirectOutbound(service.Matching, enableGRPCOutbound, outboundTLS[service.Matching]),
 			publicClientOutbound,
 		),
 		InboundTLS:  inboundTLS,

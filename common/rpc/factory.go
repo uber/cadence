@@ -25,9 +25,6 @@ import (
 	"net"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/peer"
-	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"google.golang.org/grpc/credentials"
@@ -40,14 +37,9 @@ const defaultGRPCSizeLimit = 4 * 1024 * 1024
 
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
-	maxMessageSize int
-	outboundTLS    map[string]*tls.Config
-
-	logger            log.Logger
+	maxMessageSize    int
 	hostAddressMapper HostAddressMapper
-	tchannel          *tchannel.Transport
 	channel           tchannel.Channel
-	grpc              *grpc.Transport
 	dispatcher        *yarpc.Dispatcher
 }
 
@@ -113,11 +105,7 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 
 	return &Factory{
 		maxMessageSize:    p.GRPCMaxMsgSize,
-		outboundTLS:       p.OutboundTLS,
-		logger:            logger,
 		hostAddressMapper: p.HostAddressMapper,
-		tchannel:          tchannel,
-		grpc:              grpcTransport,
 		dispatcher:        dispatcher,
 		channel:           ch.Channel(),
 	}
@@ -133,27 +121,6 @@ func (d *Factory) GetChannel() tchannel.Channel {
 	return d.channel
 }
 
-// CreateDispatcherForOutbound creates a dispatcher for outbound connection
-func (d *Factory) CreateDispatcherForOutbound(
-	callerName string,
-	serviceName string,
-	hostName string,
-) (*yarpc.Dispatcher, error) {
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.tchannel.NewSingleOutbound(hostName))
-}
-
-// CreateGRPCDispatcherForOutbound creates a dispatcher for GRPC outbound connection
-func (d *Factory) CreateGRPCDispatcherForOutbound(
-	callerName string,
-	serviceName string,
-	hostName string,
-) (*yarpc.Dispatcher, error) {
-	// Service without TLS will return nil, which is ok here. We will create insecure dialer then.
-	tlsConfig := d.outboundTLS[serviceName]
-	outbound := d.grpc.NewOutbound(peer.NewSingle(hostport.PeerIdentifier(hostName), createDialer(d.grpc, tlsConfig)))
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, outbound)
-}
-
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
 func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
 	return d.hostAddressMapper.GetGRPCAddress(serviceName, hostAddress)
@@ -164,31 +131,6 @@ func (d *Factory) GetMaxMessageSize() int {
 		return defaultGRPCSizeLimit
 	}
 	return d.maxMessageSize
-}
-
-func (d *Factory) createOutboundDispatcher(
-	callerName string,
-	serviceName string,
-	hostName string,
-	outbound transport.UnaryOutbound,
-) (*yarpc.Dispatcher, error) {
-
-	// Setup dispatcher(outbound) for onebox
-	d.logger.Info("Created RPC dispatcher outbound", tag.Address(hostName))
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: callerName,
-		Outbounds: yarpc.Outbounds{
-			serviceName: {Unary: outbound},
-		},
-		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: &responseInfoMiddleware{},
-		},
-	})
-	if err := dispatcher.Start(); err != nil {
-		d.logger.Error("Failed to create outbound transport channel", tag.Error(err))
-		return nil, err
-	}
-	return dispatcher, nil
 }
 
 func createDialer(transport *grpc.Transport, tlsConfig *tls.Config) *grpc.Dialer {

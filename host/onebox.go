@@ -798,6 +798,7 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string)
 			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendAddress()},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
 			rpc.NewDirectOutbound(service.History, true, nil),
+			rpc.NewDirectOutbound(service.Matching, true, nil),
 		),
 	})
 }
