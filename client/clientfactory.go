@@ -145,7 +145,11 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
 	}
 
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.monitor, addressMapper)
+	resolver, err := cf.monitor.GetResolver(service.History)
+	if err != nil {
+		return nil, err
+	}
+	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, resolver, addressMapper)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
 	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)

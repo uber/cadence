@@ -28,21 +28,18 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/service"
 )
 
 func TestPeerResolver(t *testing.T) {
 	numShards := 123
 	controller := gomock.NewController(t)
-	membershipMonitor := membership.NewMockMonitor(controller)
 	serviceResolver := membership.NewMockServiceResolver(controller)
-	membershipMonitor.EXPECT().GetResolver(service.History).Return(serviceResolver, nil).AnyTimes()
 	serviceResolver.EXPECT().Lookup(string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(membership.NewHostInfo("domainHost:thriftPort", nil), nil)
 	serviceResolver.EXPECT().Lookup(string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(membership.NewHostInfo("workflowHost:thriftPort", nil), nil)
 	serviceResolver.EXPECT().Lookup(string(rune(99))).Return(membership.NewHostInfo("shardHost:thriftPort", nil), nil)
 	serviceResolver.EXPECT().Lookup(string(rune(11))).Return(nil, assert.AnError)
 
-	r := NewPeerResolver(numShards, membershipMonitor, fakeAddressMapper)
+	r := NewPeerResolver(numShards, serviceResolver, fakeAddressMapper)
 
 	peer, err := r.FromDomainID("domainID")
 	assert.NoError(t, err)
@@ -66,12 +63,6 @@ func TestPeerResolver(t *testing.T) {
 	peer, err = r.FromHostAddress("no mapper")
 	assert.NoError(t, err)
 	assert.Equal(t, "no mapper", peer)
-
-	membershipMonitorErr := membership.NewMockMonitor(controller)
-	membershipMonitorErr.EXPECT().GetResolver(service.History).Return(nil, assert.AnError)
-	r = NewPeerResolver(numShards, membershipMonitorErr, fakeAddressMapper)
-	_, err = r.FromShardID(99)
-	assert.Error(t, err)
 }
 
 func fakeAddressMapper(address string) (string, error) {
