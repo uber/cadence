@@ -169,7 +169,6 @@ func StartBatchJob(c *cli.Context) {
 	rps := c.Int(FlagRPS)
 
 	svcClient := cFactory.ServerFrontendClient(c)
-	//client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
@@ -215,28 +214,29 @@ func StartBatchJob(c *cli.Context) {
 	input, err := json.Marshal(params)
 	if err != nil {
 	}
+	memo, err := getWorkflowMemo(map[string]interface{}{
+		"Reason": []byte(reason),
+	})
+	if err != nil {
+	}
+	searchAttributes, err := serializeSearchAttributes(map[string]interface{}{
+		"CustomDomain": domain,
+		"Operator":     operator,
+	})
+	if err != nil {
+	}
 	workflowId := uuid.NewRandom().String()
 	request := &types.StartWorkflowExecutionRequest{
-		Domain:                              domain,
+		Domain:                              getBatchWorkflowDomainName(),
 		RequestID:                           uuid.New(),
 		WorkflowID:                          workflowId,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(batcher.InfiniteDuration.Seconds())),
 		TaskList:                            &types.TaskList{Name: batcher.BatcherTaskListName},
-		Memo: &types.Memo{
-			Fields: map[string][]byte{
-				"Reason": []byte(reason),
-			},
-		},
-		SearchAttributes: &types.SearchAttributes{
-			IndexedFields: map[string][]byte{
-				"CustomDomain": []byte(domain),
-				"Operator":     []byte(operator),
-			},
-		},
-		WorkflowType: &types.WorkflowType{Name: batcher.BatchWFTypeName},
-		Input:        input,
+		Memo:                                memo,
+		SearchAttributes:                    searchAttributes,
+		WorkflowType:                        &types.WorkflowType{Name: batcher.BatchWFTypeName},
+		Input:                               input,
 	}
-	// which domain does this run in?
 	_, err = svcClient.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to start batch job", err)

@@ -96,6 +96,12 @@ func AdminRebalanceStart(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to serialize params for failover workflow", err)
 	}
+	memo, err := getWorkflowMemo(map[string]interface{}{
+		common.MemoKeyForOperator: getOperator(),
+	})
+	if err != nil {
+		ErrorAndExit("Failed to serialize memo", err)
+	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
 		WorkflowID:                          failovermanager.RebalanceWorkflowID,
@@ -107,11 +113,7 @@ func AdminRebalanceStart(c *cli.Context) {
 		TaskList: &types.TaskList{
 			Name: failovermanager.TaskListName,
 		},
-		Memo: &types.Memo{
-			Fields: map[string][]byte{
-				common.MemoKeyForOperator: []byte(getOperator()),
-			},
-		},
+		Memo: memo,
 		WorkflowType: &types.WorkflowType{
 			Name: failovermanager.RebalanceWorkflowTypeName,
 		},

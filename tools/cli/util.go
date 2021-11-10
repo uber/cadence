@@ -1107,3 +1107,35 @@ func createJWT(keyPath string) (*string, error) {
 	tokenString := token.String()
 	return &tokenString, nil
 }
+
+func getWorkflowMemo(input map[string]interface{}) (*types.Memo, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	memo := make(map[string][]byte)
+	for k, v := range input {
+		memoBytes, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("encode workflow memo error: %v", err.Error())
+		}
+		memo[k] = memoBytes
+	}
+	return &types.Memo{Fields: memo}, nil
+}
+
+func serializeSearchAttributes(input map[string]interface{}) (*types.SearchAttributes, error) {
+	if input == nil {
+		return nil, nil
+	}
+
+	attr := make(map[string][]byte)
+	for k, v := range input {
+		attrBytes, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("encode search attribute [%s] error: %v", k, err)
+		}
+		attr[k] = attrBytes
+	}
+	return &types.SearchAttributes{IndexedFields: attr}, nil
+}

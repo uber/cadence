@@ -212,7 +212,6 @@ func query(
 		},
 		Query: &types.WorkflowQuery{
 			QueryType: failovermanager.QueryType,
-			// might need args here?
 		},
 	}
 	queryResp, err := client.QueryWorkflow(tcCtx, request)
@@ -237,7 +236,6 @@ func isWorkflowRunning(queryResult *failovermanager.QueryResult) bool {
 }
 
 func getCadenceClient(c *cli.Context) frontend.Client {
-	//return cclient.NewClient(svcClient, common.SystemLocalDomainName, &cclient.Options{})
 	svcClient := cFactory.ServerFrontendClient(c)
 	return svcClient
 }
@@ -268,7 +266,12 @@ func failoverStart(c *cli.Context, params *startParams) {
 	client := getCadenceClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-
+	memo, err := getWorkflowMemo(map[string]interface{}{
+		common.MemoKeyForOperator: getOperator(),
+	})
+	if err != nil {
+		ErrorAndExit("Failed to serialize memo", err)
+	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              getSystemLocalDomainName(),
 		RequestID:                           uuid.New(),
@@ -276,12 +279,8 @@ func failoverStart(c *cli.Context, params *startParams) {
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		TaskList:                            &types.TaskList{Name: failovermanager.TaskListName},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeout),
-		Memo: &types.Memo{
-			Fields: map[string][]byte{
-				common.MemoKeyForOperator: []byte(getOperator()),
-			},
-		},
-		WorkflowType: &types.WorkflowType{Name: failovermanager.FailoverWorkflowTypeName},
+		Memo:                                memo,
+		WorkflowType:                        &types.WorkflowType{Name: failovermanager.FailoverWorkflowTypeName},
 	}
 	if params.drillWaitTime > 0 {
 		request.WorkflowID = failovermanager.DrillWorkflowID
