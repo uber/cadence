@@ -31,7 +31,12 @@ import (
 )
 
 const (
-	localHostPort = "127.0.0.1:7833"
+	localHost    = "127.0.0.1"
+	tchannelPort = localHost + ":7933"
+	grpcPort     = localHost + ":7833"
+
+	grpcChannel   = "grpc"
+	thriftChannel = "tchannel"
 
 	maxOutputStringLength = 200 // max length for output string
 	maxWorkflowTypeLength = 32  // max item length for output workflow type in table

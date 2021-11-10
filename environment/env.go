@@ -89,6 +89,11 @@ const (
 	PostgresPort = "POSTGRES_PORT"
 	// PostgresDefaultPort Postgres default port
 	PostgresDefaultPort = "5432"
+
+	// CLITransportProtocol env
+	CLITransportProtocol = "CADENCE_CLI_TRANSPORT_PROTOCOL"
+	// DefaultCLITransportProtocol  CLI default channel
+	DefaultCLITransportProtocol = "tchannel"
 )
 
 // SetupEnv setup the necessary env
@@ -169,6 +174,13 @@ func SetupEnv() {
 			panic(fmt.Sprintf("error setting env %v", ESPort))
 		}
 	}
+
+	if os.Getenv(CLITransportProtocol) == "" {
+		err := os.Setenv(CLITransportProtocol, DefaultCLITransportProtocol)
+		if err != nil {
+			panic(fmt.Sprintf("error setting env %v", CLITransportProtocol))
+		}
+	}
 }
 
 // GetCassandraAddress return the cassandra address
@@ -181,7 +193,7 @@ func GetCassandraAddress() string {
 }
 
 // GetCassandraPort return the cassandra port
-func GetCassandraPort() int {
+func GetCasxsandraPort() int {
 	port := os.Getenv(CassandraPort)
 	if port == "" {
 		port = CassandraDefaultPort

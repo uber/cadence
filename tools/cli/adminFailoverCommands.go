@@ -164,7 +164,7 @@ func AdminFailoverRollback(c *cli.Context) {
 				RunID:      runID,
 			},
 			Reason:   "Rollback",
-			Identity: getWorkerIdentity(""),
+			Identity: getCliIdentity(),
 		}
 
 		err := client.TerminateWorkflowExecution(tcCtx, request)
@@ -369,7 +369,7 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 			RunID:      runID,
 		},
 		SignalName: signalName,
-		Identity:   getWorkerIdentity(""),
+		Identity:   getCliIdentity(),
 	}
 
 	return client.SignalWorkflowExecution(tcCtx, request)

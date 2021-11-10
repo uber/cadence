@@ -84,35 +84,43 @@ func NewClientFactory() ClientFactory {
 func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	frontend.NewThriftClient(serverFrontend.New(clientConfig))
-	return frontend.NewGRPCClient(
-		apiv1.NewDomainAPIYARPCClient(clientConfig),
-		apiv1.NewWorkflowAPIYARPCClient(clientConfig),
-		apiv1.NewWorkerAPIYARPCClient(clientConfig),
-		apiv1.NewVisibilityAPIYARPCClient(clientConfig),
-	)
+	if c.GlobalString(FlagTransport) == grpcChannel {
+		return frontend.NewGRPCClient(
+			apiv1.NewDomainAPIYARPCClient(clientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+			apiv1.NewWorkerAPIYARPCClient(clientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+		)
+	}
+	return frontend.NewThriftClient(serverFrontend.New(clientConfig))
 }
 
 // ServerAdminClient builds an admin client (based on server side thrift interface)
 func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	admin.NewThriftClient(serverAdmin.New(clientConfig))
-	return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+	if c.GlobalString(FlagTransport) == grpcChannel {
+		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+	}
+	return admin.NewThriftClient(serverAdmin.New(clientConfig))
 }
 
 func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if b.dispatcher != nil {
 		return
 	}
+	shouldUseGrpc := c.GlobalString(FlagTransport) == grpcChannel
 
-	b.hostPort = localHostPort
+	b.hostPort = tchannelPort
+	if shouldUseGrpc {
+		b.hostPort = grpcPort
+	}
 	if addr := c.GlobalString(FlagAddress); addr != "" {
 		b.hostPort = addr
 	}
 
 	outbounds := transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(b.hostPort)}
-	if false {
+	if !shouldUseGrpc {
 		ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
 		if err != nil {
 			b.logger.Fatal("Failed to create transport channel", zap.Error(err))

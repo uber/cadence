@@ -40,7 +40,6 @@ import (
 
 	"github.com/uber/cadence/common/pagination"
 
-	"github.com/pborman/uuid"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/types"
 
@@ -616,14 +615,6 @@ func ErrorAndExit(msg string, err error) {
 }
 
 func getWorkflowClient(c *cli.Context) frontend.Client {
-	//domain := getRequiredGlobalOption(c, FlagDomain)
-	//return client.NewClient(
-	//	cFactory.ServerFrontendClient(c),
-	//	domain,
-	//	&client.Options{
-	//		FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
-	//	},
-	//)
 	return cFactory.ServerFrontendClient(c)
 }
 
@@ -817,15 +808,6 @@ func strToTaskListType(str string) *types.TaskListType {
 
 func getCliIdentity() string {
 	return fmt.Sprintf("cadence-cli@%s", getHostName())
-}
-
-// GetWorkerIdentity gets a default identity for the worker.
-//
-// This contains a random UUID, generated each time it is called, to prevent identity collisions when workers share
-// other host/pid/etc information.  These alone are not guaranteed to be unique, especially when Docker is involved.
-// Take care to retrieve this only once per worker.
-func getWorkerIdentity(tasklistName string) string {
-	return fmt.Sprintf("%d@%s@%s@%s", os.Getpid(), getHostName(), tasklistName, uuid.New())
 }
 
 func getHostName() string {

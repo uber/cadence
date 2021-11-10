@@ -60,7 +60,7 @@ func TerminateBatchJob(c *cli.Context) {
 			RunID:      "",
 		},
 		Reason:   reason,
-		Identity: getWorkerIdentity(""),
+		Identity: getCliIdentity(),
 	})
 	if err != nil {
 		ErrorAndExit("Failed to terminate batch job", err)

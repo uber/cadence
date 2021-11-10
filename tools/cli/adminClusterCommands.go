@@ -100,7 +100,7 @@ func AdminRebalanceStart(c *cli.Context) {
 		Domain:                              common.SystemLocalDomainName,
 		WorkflowID:                          failovermanager.RebalanceWorkflowID,
 		RequestID:                           uuid.New(),
-		Identity:                            getWorkerIdentity(""),
+		Identity:                            getCliIdentity(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 		Input:                               input,

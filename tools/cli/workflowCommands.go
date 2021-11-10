@@ -479,8 +479,7 @@ func TerminateWorkflow(c *cli.Context) {
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: wid,
 			RunID:      rid,
-		},
-		Identity: getWorkerIdentity(""),
+		}, Identity: getCliIdentity(),
 	})
 
 	if err != nil {
@@ -507,7 +506,7 @@ func CancelWorkflow(c *cli.Context) {
 			WorkflowID: wid,
 			RunID:      rid,
 		},
-		Identity: getWorkerIdentity(""),
+		Identity: getCliIdentity(),
 	})
 	if err != nil {
 		ErrorAndExit("Cancel workflow failed.", err)
