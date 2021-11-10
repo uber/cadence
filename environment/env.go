@@ -193,7 +193,7 @@ func GetCassandraAddress() string {
 }
 
 // GetCassandraPort return the cassandra port
-func GetCasxsandraPort() int {
+func GetCassandraPort() int {
 	port := os.Getenv(CassandraPort)
 	if port == "" {
 		port = CassandraDefaultPort
