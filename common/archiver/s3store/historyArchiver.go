@@ -373,6 +373,9 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 	return historyBlob, nil
 }
 
+// with XDC(global domain) concept, archival may write different history with the same RunID, with different failoverVersion.
+// In that case, the history/runID with the highest failoverVersion wins.
+// getHighestVersion look up all archived files to find the highest failoverVersion.
 func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*int64, error) {
 	ctx, cancel := ensureContextTimeout(ctx)
 	defer cancel()

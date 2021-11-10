@@ -328,6 +328,10 @@ func getNextHistoryBlob(ctx context.Context, historyIterator archiver.HistoryIte
 	return historyBlob, nil
 }
 
+// with XDC(global domain) concept, archival may write different history with the same RunID, with different failoverVersion.
+// In that case, the history/runID with the highest failoverVersion wins.
+// getHighestVersion look up all archived files to find the highest failoverVersion.
+// Since a history is written into different parts in this archival implementation, it also returns the highest and lowest partVersionID.
 func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.URI, request *archiver.GetHistoryRequest) (*int64, *int, *int, error) {
 
 	filenames, err := h.gcloudStorage.Query(ctx, URI, constructHistoryFilenamePrefix(request.DomainID, request.WorkflowID, request.RunID))
@@ -364,6 +368,9 @@ func (h *historyArchiver) getHighestVersion(ctx context.Context, URI archiver.UR
 
 	}
 
+	if highestVersion == nil {
+		return nil, nil, nil, archiver.ErrHistoryNotExist
+	}
 	return highestVersion, highestVersionPart, lowestVersionPart, nil
 }
 
