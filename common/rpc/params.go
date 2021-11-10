@@ -27,6 +27,7 @@ import (
 	"strconv"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/service"
 
 	"go.uber.org/yarpc"
@@ -50,7 +51,7 @@ type Params struct {
 }
 
 // NewParams creates parameters for rpc.Factory from the given config
-func NewParams(serviceName string, config *config.Config) (Params, error) {
+func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Collection) (Params, error) {
 	serviceConfig, err := config.GetServiceConfig(serviceName)
 	if err != nil {
 		return Params{}, err
@@ -77,6 +78,8 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		}
 	}
 
+	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound, true)()
+
 	publicClientOutbound, err := newPublicClientOutbound(config)
 	if err != nil {
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
@@ -88,9 +91,12 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		GRPCAddress:       net.JoinHostPort(listenIP.String(), strconv.Itoa(serviceConfig.RPC.GRPCPort)),
 		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
 		HostAddressMapper: NewGRPCPorts(config),
-		OutboundsBuilder:  publicClientOutbound,
-		InboundTLS:        inboundTLS,
-		OutboundTLS:       outboundTLS,
+		OutboundsBuilder: CombineOutbounds(
+			NewDirectOutbound(service.History, enableGRPCOutbound, outboundTLS[service.History]),
+			publicClientOutbound,
+		),
+		InboundTLS:  inboundTLS,
+		OutboundTLS: outboundTLS,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &inboundMetricsMiddleware{},
 		},
