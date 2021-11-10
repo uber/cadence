@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"go.uber.org/yarpc/transport/tchannel"
@@ -72,21 +71,31 @@ type RingpopFactory struct {
 	channel     tchannel.Channel
 	serviceName string
 	logger      log.Logger
-
-	sync.Mutex
-	ringPop           *membership.RingPop
-	membershipMonitor membership.Monitor
 }
 
-// NewFactory builds a ringpop factory conforming
+// NewMonitor builds a ringpop monitor conforming
 // to the underlying configuration
-func (rpConfig *Ringpop) NewFactory(
+func (rpConfig *Ringpop) NewMonitor(
 	channel tchannel.Channel,
 	serviceName string,
 	logger log.Logger,
-) (*RingpopFactory, error) {
+) (*membership.RingpopMonitor, error) {
 
-	return newRingpopFactory(rpConfig, channel, serviceName, logger)
+	if err := rpConfig.validate(); err != nil {
+		return nil, err
+	}
+	if rpConfig.MaxJoinDuration == 0 {
+		rpConfig.MaxJoinDuration = defaultMaxJoinDuration
+	}
+	factory := &RingpopFactory{
+		config:      rpConfig,
+		channel:     channel,
+		serviceName: serviceName,
+		logger:      logger,
+	}
+
+	return factory.createMembership()
+
 }
 
 func (rpConfig *Ringpop) validate() error {
@@ -154,70 +163,13 @@ func validateBootstrapMode(
 	return nil
 }
 
-func newRingpopFactory(
-	rpConfig *Ringpop,
-	channel tchannel.Channel,
-	serviceName string,
-	logger log.Logger,
-) (*RingpopFactory, error) {
-
-	if err := rpConfig.validate(); err != nil {
-		return nil, err
-	}
-	if rpConfig.MaxJoinDuration == 0 {
-		rpConfig.MaxJoinDuration = defaultMaxJoinDuration
-	}
-	return &RingpopFactory{
-		config:      rpConfig,
-		channel:     channel,
-		serviceName: serviceName,
-		logger:      logger,
-	}, nil
-}
-
-// GetMembershipMonitor return a membership monitor
-func (factory *RingpopFactory) GetMembershipMonitor() (membership.Monitor, error) {
-	factory.Lock()
-	defer factory.Unlock()
-
-	return factory.getMembership()
-}
-
-func (factory *RingpopFactory) getMembership() (membership.Monitor, error) {
-	if factory.membershipMonitor != nil {
-		return factory.membershipMonitor, nil
-	}
-
-	membershipMonitor, err := factory.createMembership()
-	if err != nil {
-		return nil, err
-	}
-	factory.membershipMonitor = membershipMonitor
-	return membershipMonitor, nil
-}
-
-func (factory *RingpopFactory) createMembership() (membership.Monitor, error) {
-	// use actual listen port (in case service is bound to :0 or 0.0.0.0:0)
-	rp, err := factory.getRingpop()
+func (factory *RingpopFactory) createMembership() (*membership.RingpopMonitor, error) {
+	rp, err := factory.createRingpop()
 	if err != nil {
 		return nil, fmt.Errorf("ringpop creation failed: %v", err)
 	}
 
-	membershipMonitor := membership.NewRingpopMonitor(factory.serviceName, service.List, rp, factory.logger)
-	return membershipMonitor, nil
-}
-
-func (factory *RingpopFactory) getRingpop() (*membership.RingPop, error) {
-	if factory.ringPop != nil {
-		return factory.ringPop, nil
-	}
-
-	ringPop, err := factory.createRingpop()
-	if err != nil {
-		return nil, err
-	}
-	factory.ringPop = ringPop
-	return ringPop, nil
+	return membership.NewRingpopMonitor(factory.serviceName, service.List, rp, factory.logger), nil
 }
 
 func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {

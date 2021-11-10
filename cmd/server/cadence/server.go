@@ -155,13 +155,13 @@ func (s *server) startService() common.Daemon {
 	)
 	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
 	params.RPCFactory = rpcFactory
-	params.MembershipFactory, err = s.cfg.Ringpop.NewFactory(
+	params.MembershipMonitor, err = s.cfg.Ringpop.NewMonitor(
 		rpcFactory.GetChannel(),
 		params.Name,
 		params.Logger,
 	)
 	if err != nil {
-		log.Fatalf("error creating ringpop factory: %v", err)
+		log.Fatalf("error creating ringpop monitor: %v", err)
 	}
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
