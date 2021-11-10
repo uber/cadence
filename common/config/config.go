@@ -157,7 +157,7 @@ type (
 	Ringpop struct {
 		// Name to be used in ringpop advertisement
 		Name string `yaml:"name" validate:"nonzero"`
-		// BootstrapMode is a enum that defines the ringpop bootstrap method
+		// BootstrapMode is a enum that defines the ringpop bootstrap method, currently supports: hosts, files, custom, dns, and dns-srv
 		BootstrapMode BootstrapMode `yaml:"bootstrapMode"`
 		// BootstrapHosts is a list of seed hosts to be used for ringpop bootstrap
 		BootstrapHosts []string `yaml:"bootstrapHosts"`
