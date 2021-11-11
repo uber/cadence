@@ -21,6 +21,7 @@
 package membership
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -155,7 +156,7 @@ func (r *ringpopServiceResolver) AddListener(
 	defer r.listenerLock.Unlock()
 	_, ok := r.listeners[name]
 	if ok {
-		return ErrListenerAlreadyExist
+		return fmt.Errorf("listener already exist for service %q", name)
 	}
 	r.listeners[name] = notifyChannel
 	return nil

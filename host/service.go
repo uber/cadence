@@ -76,7 +76,6 @@ type (
 		hostName              string
 		hostInfo              *membership.HostInfo
 		dispatcher            *yarpc.Dispatcher
-		membershipFactory     resource.MembershipMonitorFactory
 		membershipMonitor     membership.Monitor
 		rpcFactory            common.RPCFactory
 		pprofInitializer      common.PProfInitializer
@@ -111,7 +110,7 @@ func NewService(params *resource.Params) Service {
 		logger:                params.Logger,
 		throttledLogger:       params.ThrottledLogger,
 		rpcFactory:            params.RPCFactory,
-		membershipFactory:     params.MembershipFactory,
+		membershipMonitor:     params.MembershipMonitor,
 		pprofInitializer:      params.PProfInitializer,
 		timeSource:            clock.NewRealTimeSource(),
 		metricsScope:          params.MetricScope,
@@ -167,11 +166,6 @@ func (h *serviceImpl) Start() {
 
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("Failed to start yarpc dispatcher")
-	}
-
-	h.membershipMonitor, err = h.membershipFactory.GetMembershipMonitor()
-	if err != nil {
-		h.logger.WithTags(tag.Error(err)).Fatal("Membership monitor creation failed")
 	}
 
 	h.membershipMonitor.Start()
