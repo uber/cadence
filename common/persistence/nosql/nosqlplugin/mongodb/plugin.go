@@ -23,7 +23,6 @@ package mongodb
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -37,7 +36,6 @@ import (
 const (
 	// PluginName is the name of the plugin
 	PluginName            = "mongodb"
-	defaultSessionTimeout = 10 * time.Second
 )
 
 type plugin struct{}
