@@ -81,6 +81,7 @@ type (
 	}
 
 	DynamicConfig struct {
+		// Client is the type of the DynamicConfig,supports configstore or filebased, default to filebased
 		Client      string                              `yaml:"client"`
 		ConfigStore c.ClientConfig                      `yaml:"configstore"`
 		FileBased   dynamicconfig.FileBasedClientConfig `yaml:"filebased"`

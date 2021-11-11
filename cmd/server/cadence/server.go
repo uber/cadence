@@ -111,7 +111,7 @@ func (s *server) startService() common.Daemon {
 
 	err = nil
 	if s.cfg.DynamicConfig.Client == "" {
-		//try to fallback to legacy dynamicClientConfig
+		// default to legacy fileBased dynamicClientConfig
 		params.DynamicConfig, err = dynamicconfig.NewFileBasedClient(&s.cfg.DynamicConfigClient, params.Logger, s.doneC)
 	} else {
 		switch s.cfg.DynamicConfig.Client {
