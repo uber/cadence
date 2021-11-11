@@ -114,7 +114,7 @@ domainDefaults:
       URI: "file:///tmp/cadence_vis_archival/development"
 
 dynamicconfig:
-  client: filebased
+  client: configstore
   configstore:
     pollInterval: "10s"
     updateRetryAttempts: 2
