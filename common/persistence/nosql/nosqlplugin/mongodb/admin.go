@@ -24,7 +24,6 @@ package mongodb
 import (
 	"context"
 	"io/ioutil"
-	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 
@@ -42,26 +41,23 @@ func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
 		var err error
 		schemaBaseDir, err = nosqlplugin.GetDefaultTestSchemaDir(testSchemaDir)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
 	schemaFile := schemaBaseDir + "cadence/schema.json"
 	byteValues, err := ioutil.ReadFile(schemaFile)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	var commands []interface{}
 	err = bson.UnmarshalExtJSON(byteValues, false, &commands)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	for _, cmd := range commands {
 		result := db.dbConn.RunCommand(context.Background(), cmd)
 		if result.Err() != nil {
-			log.Fatal(err)
 			return err
 		}
 	}
@@ -71,8 +67,5 @@ func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
 func (db *mdb) TeardownTestDatabase() error {
 	result := db.dbConn.RunCommand(context.Background(), bson.D{{"dropDatabase", 1}})
 	err := result.Err()
-	if err != nil {
-		log.Fatal(err)
-	}
 	return err
 }

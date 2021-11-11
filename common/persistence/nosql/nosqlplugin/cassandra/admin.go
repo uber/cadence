@@ -51,7 +51,7 @@ func (db *cdb) SetupTestDatabase(schemaBaseDir string) error {
 		var err error
 		schemaBaseDir, err = nosqlplugin.GetDefaultTestSchemaDir(testSchemaDir)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
