@@ -19,60 +19,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package mongodb
+package nosqlplugin
 
 import (
-	"context"
-	"io/ioutil"
-	"log"
-
-	"go.mongodb.org/mongo-driver/bson"
-
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"os"
+	"strings"
 )
 
-var _ nosqlplugin.AdminDB = (*mdb)(nil)
-
-const (
-	testSchemaDir = "schema/mongodb/"
-)
-
-func (db *mdb) SetupTestDatabase(schemaBaseDir string) error {
-	if schemaBaseDir == "" {
-		var err error
-		schemaBaseDir, err = nosqlplugin.GetDefaultTestSchemaDir(testSchemaDir)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	schemaFile := schemaBaseDir + "cadence/schema.json"
-	byteValues, err := ioutil.ReadFile(schemaFile)
+func getCadencePackageDir() (string, error) {
+	cadencePackageDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
-		return err
+		panic(err)
 	}
-	var commands []interface{}
-	err = bson.UnmarshalExtJSON(byteValues, false, &commands)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-	for _, cmd := range commands {
-		result := db.dbConn.RunCommand(context.Background(), cmd)
-		if result.Err() != nil {
-			log.Fatal(err)
-			return err
-		}
-	}
-	return nil
+	cadenceIndex := strings.LastIndex(cadencePackageDir, "/cadence/")
+	cadencePackageDir = cadencePackageDir[:cadenceIndex+len("/cadence/")]
+	return cadencePackageDir, err
 }
 
-func (db *mdb) TeardownTestDatabase() error {
-	result := db.dbConn.RunCommand(context.Background(), bson.D{{"dropDatabase", 1}})
-	err := result.Err()
+func GetDefaultTestSchemaDir(testSchemaRelativePath string) (string, error) {
+	cadencePackageDir, err := getCadencePackageDir()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
-	return err
+	return cadencePackageDir + testSchemaRelativePath, nil
 }
