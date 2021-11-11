@@ -123,7 +123,6 @@ type (
 
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		membershipFactory      MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
 )
@@ -148,10 +147,7 @@ func New(
 
 	dispatcher := params.RPCFactory.GetDispatcher()
 
-	membershipMonitor, err := params.MembershipFactory.GetMembershipMonitor()
-	if err != nil {
-		return nil, err
-	}
+	membershipMonitor := params.MembershipMonitor
 
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
@@ -342,8 +338,7 @@ func New(
 			logger,
 			params.InstanceID,
 		),
-		membershipFactory: params.MembershipFactory,
-		rpcFactory:        params.RPCFactory,
+		rpcFactory: params.RPCFactory,
 	}
 	return impl, nil
 }
