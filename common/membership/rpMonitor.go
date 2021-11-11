@@ -21,6 +21,7 @@
 package membership
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common"
@@ -28,7 +29,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 )
 
-type ringpopMonitor struct {
+type RingpopMonitor struct {
 	status int32
 
 	serviceName string
@@ -38,7 +39,7 @@ type ringpopMonitor struct {
 	logger      log.Logger
 }
 
-var _ Monitor = (*ringpopMonitor)(nil)
+var _ Monitor = (*RingpopMonitor)(nil)
 
 // NewRingpopMonitor returns a ringpop-based membership monitor
 func NewRingpopMonitor(
@@ -46,9 +47,9 @@ func NewRingpopMonitor(
 	services []string,
 	rp *RingPop,
 	logger log.Logger,
-) Monitor {
+) *RingpopMonitor {
 
-	rpo := &ringpopMonitor{
+	rpo := &RingpopMonitor{
 		status:      common.DaemonStatusInitialized,
 		serviceName: serviceName,
 		services:    services,
@@ -62,7 +63,7 @@ func NewRingpopMonitor(
 	return rpo
 }
 
-func (rpo *ringpopMonitor) Start() {
+func (rpo *RingpopMonitor) Start() {
 	if !atomic.CompareAndSwapInt32(
 		&rpo.status,
 		common.DaemonStatusInitialized,
@@ -87,7 +88,7 @@ func (rpo *ringpopMonitor) Start() {
 	}
 }
 
-func (rpo *ringpopMonitor) Stop() {
+func (rpo *RingpopMonitor) Stop() {
 	if !atomic.CompareAndSwapInt32(
 		&rpo.status,
 		common.DaemonStatusStarted,
@@ -103,7 +104,7 @@ func (rpo *ringpopMonitor) Stop() {
 	rpo.rp.Stop()
 }
 
-func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {
+func (rpo *RingpopMonitor) WhoAmI() (*HostInfo, error) {
 	address, err := rpo.rp.WhoAmI()
 	if err != nil {
 		return nil, err
@@ -115,19 +116,19 @@ func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {
 	return NewHostInfo(address, labels.AsMap()), nil
 }
 
-func (rpo *ringpopMonitor) EvictSelf() error {
+func (rpo *RingpopMonitor) EvictSelf() error {
 	return rpo.rp.SelfEvict()
 }
 
-func (rpo *ringpopMonitor) GetResolver(service string) (ServiceResolver, error) {
+func (rpo *RingpopMonitor) GetResolver(service string) (ServiceResolver, error) {
 	ring, found := rpo.rings[service]
 	if !found {
-		return nil, ErrUnknownService
+		return nil, fmt.Errorf("service %q is not tracked by Monitor", service)
 	}
 	return ring, nil
 }
 
-func (rpo *ringpopMonitor) Lookup(service string, key string) (*HostInfo, error) {
+func (rpo *RingpopMonitor) Lookup(service string, key string) (*HostInfo, error) {
 	ring, err := rpo.GetResolver(service)
 	if err != nil {
 		return nil, err
@@ -135,7 +136,7 @@ func (rpo *ringpopMonitor) Lookup(service string, key string) (*HostInfo, error)
 	return ring.Lookup(key)
 }
 
-func (rpo *ringpopMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {
+func (rpo *RingpopMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {
 	ring, err := rpo.GetResolver(service)
 	if err != nil {
 		return err
@@ -143,7 +144,7 @@ func (rpo *ringpopMonitor) AddListener(service string, name string, notifyChanne
 	return ring.AddListener(name, notifyChannel)
 }
 
-func (rpo *ringpopMonitor) RemoveListener(service string, name string) error {
+func (rpo *RingpopMonitor) RemoveListener(service string, name string) error {
 	ring, err := rpo.GetResolver(service)
 	if err != nil {
 		return err
@@ -151,11 +152,11 @@ func (rpo *ringpopMonitor) RemoveListener(service string, name string) error {
 	return ring.RemoveListener(name)
 }
 
-func (rpo *ringpopMonitor) GetReachableMembers() ([]string, error) {
+func (rpo *RingpopMonitor) GetReachableMembers() ([]string, error) {
 	return rpo.rp.GetReachableMembers()
 }
 
-func (rpo *ringpopMonitor) GetMemberCount(service string) (int, error) {
+func (rpo *RingpopMonitor) GetMemberCount(service string) (int, error) {
 	ring, err := rpo.GetResolver(service)
 	if err != nil {
 		return 0, err

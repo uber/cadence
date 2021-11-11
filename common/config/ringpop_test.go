@@ -23,9 +23,9 @@ package config
 import (
 	"context"
 	"fmt"
+	"net"
 	"testing"
 	"time"
-	"net"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -58,9 +58,6 @@ func (s *RingpopSuite) TestHostsMode() {
 	s.Equal(time.Second*30, cfg.MaxJoinDuration)
 	err = cfg.validate()
 	s.Nil(err)
-	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
-	s.Nil(err)
-	s.NotNil(f)
 }
 
 func (s *RingpopSuite) TestFileMode() {
@@ -73,9 +70,6 @@ func (s *RingpopSuite) TestFileMode() {
 	s.Equal(time.Second*30, cfg.MaxJoinDuration)
 	err = cfg.validate()
 	s.Nil(err)
-	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
-	s.Nil(err)
-	s.NotNil(f)
 }
 
 func (s *RingpopSuite) TestCustomMode() {
@@ -87,14 +81,11 @@ func (s *RingpopSuite) TestCustomMode() {
 	s.NotNil(cfg.validate())
 	cfg.DiscoveryProvider = statichosts.New("127.0.0.1")
 	s.Nil(cfg.validate())
-	f, err := cfg.NewFactory(nil, "test", loggerimpl.NewNopLogger())
-	s.Nil(err)
-	s.NotNil(f)
 }
 
 type mockResolver struct {
 	Hosts map[string][]string
-	SRV map[string][]net.SRV
+	SRV   map[string][]net.SRV
 	suite *RingpopSuite
 }
 
@@ -130,9 +121,6 @@ func (s *RingpopSuite) TestDNSMode() {
 	s.Equal(BootstrapModeDNS, cfg.BootstrapMode)
 	s.Nil(cfg.validate())
 	logger := loggerimpl.NewNopLogger()
-	f, err := cfg.NewFactory(nil, "test", logger)
-	s.Nil(err)
-	s.NotNil(f)
 
 	s.ElementsMatch(
 		[]string{
@@ -192,9 +180,6 @@ func (s *RingpopSuite) TestDNSSRVMode() {
 	s.Equal(BootstrapModeDNSSRV, cfg.BootstrapMode)
 	s.Nil(cfg.validate())
 	logger := loggerimpl.NewNopLogger()
-	f, err := cfg.NewFactory(nil, "test", logger)
-	s.Nil(err)
-	s.NotNil(f)
 
 	s.ElementsMatch(
 		[]string{
@@ -211,8 +196,8 @@ func (s *RingpopSuite) TestDNSSRVMode() {
 		cfg.BootstrapHosts,
 		&mockResolver{
 			SRV: map[string][]net.SRV{
-				"service-a": []net.SRV{{ Target:"az1-service-a.addr.example.net", Port: 7755}, {Target: "az2-service-a.addr.example.net", Port: 7566}},
-				"service-b": []net.SRV{{ Target:"az1-service-b.addr.example.net", Port: 7788}, {Target: "az2-service-b.addr.example.net", Port: 7896}},
+				"service-a": []net.SRV{{Target: "az1-service-a.addr.example.net", Port: 7755}, {Target: "az2-service-a.addr.example.net", Port: 7566}},
+				"service-b": []net.SRV{{Target: "az1-service-b.addr.example.net", Port: 7788}, {Target: "az2-service-b.addr.example.net", Port: 7896}},
 			},
 			Hosts: map[string][]string{
 				"az1-service-a.addr.example.net": []string{"10.0.0.1"},
@@ -250,7 +235,6 @@ func (s *RingpopSuite) TestDNSSRVMode() {
 	//Expect badhostport to not seperate service name
 	_, err = cfg.DiscoveryProvider.Hosts()
 	s.NotNil(err)
-
 
 	//Remove known bad hosts from Unresolved list
 	provider.UnresolvedHosts = []string{
