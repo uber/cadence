@@ -30,7 +30,7 @@ const (
 // NOTE2: MongoDB doesn't allow using camel case or underscore in the field names
 
 // ClusterConfigCollectionEntry is the schema of configStore
-// IMPORTANT: making change to this struct is changing the MongoDB collection schema. Please make sure it's backward compatible.
+// IMPORTANT: making change to this struct is changing the MongoDB collection schema. Please make sure it's backward compatible(e.g., don't delete the field, or change the annotation value).
 type ClusterConfigCollectionEntry struct {
 	ID                   int    `json:"_id,omitempty"`
 	RowType              int    `json:"rowtype"`
