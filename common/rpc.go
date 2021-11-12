@@ -21,8 +21,6 @@
 package common
 
 import (
-	"context"
-
 	"go.uber.org/yarpc"
 )
 
@@ -59,17 +57,3 @@ type (
 		GetMaxMessageSize() int
 	}
 )
-
-// AggregateYarpcOptions aggregate the header information from context to existing yarpc call options
-func AggregateYarpcOptions(ctx context.Context, opts ...yarpc.CallOption) []yarpc.CallOption {
-	var result []yarpc.CallOption
-	if ctx != nil {
-		call := yarpc.CallFromContext(ctx)
-		for _, key := range call.HeaderNames() {
-			value := call.Header(key)
-			result = append(result, yarpc.WithHeader(key, value))
-		}
-	}
-	result = append(result, opts...)
-	return result
-}
