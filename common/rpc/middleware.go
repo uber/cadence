@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 )
 
@@ -94,5 +95,24 @@ type overrideCallerMiddleware struct {
 
 func (m *overrideCallerMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	request.Caller = m.caller
+	return out.Call(ctx, request)
+}
+
+// HeaderForwardingMiddleware forwards headers from current inbound RPC call that is being handled to new outbound calls being made.
+// If new value for the same header key is provided in the outbound request, keep it instead.
+type HeaderForwardingMiddleware struct{}
+
+func (m *HeaderForwardingMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	if inboundCall := yarpc.CallFromContext(ctx); inboundCall != nil && request != nil {
+		outboundHeaders := request.Headers
+		for _, key := range inboundCall.HeaderNames() {
+			if _, exists := outboundHeaders.Get(key); !exists {
+				value := inboundCall.Header(key)
+				outboundHeaders = outboundHeaders.With(key, value)
+			}
+		}
+		request.Headers = outboundHeaders
+	}
+
 	return out.Call(ctx, request)
 }

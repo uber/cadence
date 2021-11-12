@@ -79,6 +79,7 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 * Alternatively, use `./docker/dev/cassandra-esv7-kafka.yml` for Cassandra, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 * Alternatively, use `./docker/dev/mysql-esv7-kafka.yml` for MySQL, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 * Alternatively, use `./docker/dev/cassandra-opensearch-kafka.yml` for Cassandra, OpenSearch(compatible with ElasticSearch v7) and Kafka/ZooKeeper dependencies
+* Alternatively, use `./docker/dev/mongo-esv7-kafka.yml` for MongoDB, ElasticSearch(v7) and Kafka/ZooKeeper dependencies
 
 ### 3. Schema installation 
 Based on the above dependency setup, you also need to install the schemas. 

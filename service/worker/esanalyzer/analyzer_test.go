@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -290,6 +292,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowT
 	s.mockAdminClient.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any()).Return(nil).Do(func(
 		ctx context.Context,
 		request *types.RefreshWorkflowTasksRequest,
+		option ...yarpc.CallOption,
 	) {
 		expectedWorkflows[request.Execution.WorkflowID] = true
 		expectedRunIDs[request.Execution.RunID] = true
@@ -332,6 +335,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowI
 	s.mockAdminClient.EXPECT().RefreshWorkflowTasks(gomock.Any(), gomock.Any()).Return(nil).Do(func(
 		ctx context.Context,
 		request *types.RefreshWorkflowTasksRequest,
+		option ...yarpc.CallOption,
 	) {
 		expectedWorkflows[request.Execution.WorkflowID] = true
 		expectedRunIDs[request.Execution.RunID] = true

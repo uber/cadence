@@ -146,11 +146,6 @@ type (
 		DomainReplicationTaskExecutor domain.ReplicationTaskExecutor
 		AuthorizationConfig           config.Authorization
 	}
-
-	membershipFactoryImpl struct {
-		serviceName string
-		hosts       map[string][]string
-	}
 )
 
 // NewCadence returns an instance that hosts full cadence in one process
@@ -397,7 +392,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendAddress())
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
-	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+	params.MembershipMonitor = newMembershipMonitor(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.MessagingClient = c.messagingClient
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
@@ -463,7 +458,7 @@ func (c *cadenceImpl) startHistory(
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = c.newRPCFactory(service.History, hostport)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
-		params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+		params.MembershipMonitor = newMembershipMonitor(params.Name, hosts)
 		params.ClusterMetadata = c.clusterMetadata
 		params.MessagingClient = c.messagingClient
 		params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
@@ -529,7 +524,7 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceAddress())
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
-	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+	params.MembershipMonitor = newMembershipMonitor(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
@@ -571,7 +566,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceAddress())
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
-	params.MembershipFactory = newMembershipFactory(params.Name, hosts)
+	params.MembershipMonitor = newMembershipMonitor(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, c.logger))
 	params.DynamicConfig = newIntegrationConfigClient(dynamicconfig.NewNopClient())
@@ -757,15 +752,8 @@ func copyPersistenceConfig(pConfig config.Persistence) (config.Persistence, erro
 	return pConfig, nil
 }
 
-func newMembershipFactory(serviceName string, hosts map[string][]string) resource.MembershipMonitorFactory {
-	return &membershipFactoryImpl{
-		serviceName: serviceName,
-		hosts:       hosts,
-	}
-}
-
-func (p *membershipFactoryImpl) GetMembershipMonitor() (membership.Monitor, error) {
-	return newSimpleMonitor(p.serviceName, p.hosts), nil
+func newMembershipMonitor(serviceName string, hosts map[string][]string) membership.Monitor {
+	return newSimpleMonitor(serviceName, hosts)
 }
 
 func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitializer {
@@ -798,6 +786,7 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string)
 			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendAddress()},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
 			rpc.NewDirectOutbound(service.History, true, nil),
+			rpc.NewDirectOutbound(service.Matching, true, nil),
 		),
 	})
 }

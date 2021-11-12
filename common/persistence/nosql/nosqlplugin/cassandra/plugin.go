@@ -52,6 +52,14 @@ func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB,
 
 // CreateAdminDB initialize the AdminDB object
 func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+	// the keyspace is not created yet, so use empty and let the Cassandra connect
+	keyspace := cfg.Keyspace
+	cfg.Keyspace = ""
+	// change it back
+	defer func() {
+		cfg.Keyspace = keyspace
+	}()
+
 	return p.doCreateDB(cfg, logger)
 }
 
