@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -64,7 +63,6 @@ func (c *clientImpl) AddSearchAttribute(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.AddSearchAttribute(ctx, request, opts...)
@@ -76,7 +74,6 @@ func (c *clientImpl) DescribeShardDistribution(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeShardDistributionResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeShardDistribution(ctx, request, opts...)
@@ -88,7 +85,6 @@ func (c *clientImpl) DescribeHistoryHost(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeHistoryHostResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeHistoryHost(ctx, request, opts...)
@@ -100,7 +96,6 @@ func (c *clientImpl) RemoveTask(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RemoveTask(ctx, request, opts...)
@@ -112,7 +107,6 @@ func (c *clientImpl) CloseShard(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.CloseShard(ctx, request, opts...)
@@ -124,7 +118,6 @@ func (c *clientImpl) ResetQueue(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ResetQueue(ctx, request, opts...)
@@ -136,7 +129,6 @@ func (c *clientImpl) DescribeQueue(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeQueueResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeQueue(ctx, request, opts...)
@@ -148,7 +140,6 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeWorkflowExecution(ctx, request, opts...)
@@ -160,7 +151,6 @@ func (c *clientImpl) GetWorkflowExecutionRawHistoryV2(
 	opts ...yarpc.CallOption,
 ) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetWorkflowExecutionRawHistoryV2(ctx, request, opts...)
@@ -170,7 +160,6 @@ func (c *clientImpl) DescribeCluster(
 	ctx context.Context,
 	opts ...yarpc.CallOption,
 ) (*types.DescribeClusterResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeCluster(ctx, opts...)
@@ -181,7 +170,6 @@ func (c *clientImpl) GetReplicationMessages(
 	request *types.GetReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetReplicationMessagesResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContextWithLargeTimeout(ctx)
 	defer cancel()
 	return c.client.GetReplicationMessages(ctx, request, opts...)
@@ -192,7 +180,6 @@ func (c *clientImpl) GetDomainReplicationMessages(
 	request *types.GetDomainReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetDomainReplicationMessagesResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetDomainReplicationMessages(ctx, request, opts...)
@@ -203,7 +190,6 @@ func (c *clientImpl) GetDLQReplicationMessages(
 	request *types.GetDLQReplicationMessagesRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetDLQReplicationMessagesResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetDLQReplicationMessages(ctx, request, opts...)
@@ -215,7 +201,6 @@ func (c *clientImpl) ReapplyEvents(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ReapplyEvents(ctx, request, opts...)
@@ -227,7 +212,6 @@ func (c *clientImpl) ReadDLQMessages(
 	opts ...yarpc.CallOption,
 ) (*types.ReadDLQMessagesResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ReadDLQMessages(ctx, request, opts...)
@@ -239,7 +223,6 @@ func (c *clientImpl) PurgeDLQMessages(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.PurgeDLQMessages(ctx, request, opts...)
@@ -251,7 +234,6 @@ func (c *clientImpl) MergeDLQMessages(
 	opts ...yarpc.CallOption,
 ) (*types.MergeDLQMessagesResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.MergeDLQMessages(ctx, request, opts...)
@@ -264,7 +246,6 @@ func (c *clientImpl) RefreshWorkflowTasks(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RefreshWorkflowTasks(ctx, request, opts...)
@@ -276,7 +257,6 @@ func (c *clientImpl) ResendReplicationTasks(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ResendReplicationTasks(ctx, request, opts...)
@@ -287,7 +267,6 @@ func (c *clientImpl) GetCrossClusterTasks(
 	request *types.GetCrossClusterTasksRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetCrossClusterTasksResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContextWithLargeTimeout(ctx)
 	defer cancel()
 	return c.client.GetCrossClusterTasks(ctx, request, opts...)
@@ -298,7 +277,6 @@ func (c *clientImpl) RespondCrossClusterTasksCompleted(
 	request *types.RespondCrossClusterTasksCompletedRequest,
 	opts ...yarpc.CallOption,
 ) (*types.RespondCrossClusterTasksCompletedResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondCrossClusterTasksCompleted(ctx, request, opts...)
@@ -309,7 +287,6 @@ func (c *clientImpl) GetDynamicConfig(
 	request *types.GetDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetDynamicConfigResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetDynamicConfig(ctx, request, opts...)
@@ -320,7 +297,6 @@ func (c *clientImpl) UpdateDynamicConfig(
 	request *types.UpdateDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.UpdateDynamicConfig(ctx, request, opts...)
@@ -331,7 +307,6 @@ func (c *clientImpl) RestoreDynamicConfig(
 	request *types.RestoreDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) error {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RestoreDynamicConfig(ctx, request, opts...)
@@ -342,7 +317,6 @@ func (c *clientImpl) ListDynamicConfig(
 	request *types.ListDynamicConfigRequest,
 	opts ...yarpc.CallOption,
 ) (*types.ListDynamicConfigResponse, error) {
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ListDynamicConfig(ctx, request, opts...)

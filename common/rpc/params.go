@@ -101,6 +101,9 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &inboundMetricsMiddleware{},
 		},
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: &HeaderForwardingMiddleware{},
+		},
 	}, nil
 }
 
