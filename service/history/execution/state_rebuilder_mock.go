@@ -28,12 +28,10 @@ package execution
 
 import (
 	context "context"
+	gomock "github.com/golang/mock/gomock"
+	definition "github.com/uber/cadence/common/definition"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
-
-	definition "github.com/uber/cadence/common/definition"
 )
 
 // MockStateRebuilder is a mock of StateRebuilder interface

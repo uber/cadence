@@ -27,9 +27,8 @@
 package pagination
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockEntity is a mock of Entity interface

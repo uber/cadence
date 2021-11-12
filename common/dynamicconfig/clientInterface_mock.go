@@ -27,12 +27,10 @@
 package dynamicconfig
 
 import (
+	gomock "github.com/golang/mock/gomock"
+	types "github.com/uber/cadence/common/types"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
-
-	types "github.com/uber/cadence/common/types"
 )
 
 // MockClient is a mock of Client interface

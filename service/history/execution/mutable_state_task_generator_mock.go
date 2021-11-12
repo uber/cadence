@@ -27,13 +27,11 @@
 package execution
 
 import (
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
-
 	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
+	reflect "reflect"
+	time "time"
 )
 
 // MockMutableStateTaskGenerator is a mock of MutableStateTaskGenerator interface

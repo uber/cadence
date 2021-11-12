@@ -27,9 +27,8 @@
 package ndc
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockHistoryResender is a mock of HistoryResender interface

@@ -27,9 +27,8 @@
 package archiver
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockHistoryIterator is a mock of HistoryIterator interface

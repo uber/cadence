@@ -27,9 +27,8 @@
 package domain
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockFailoverWatcher is a mock of FailoverWatcher interface

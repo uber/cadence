@@ -27,9 +27,8 @@
 package execution
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockWorkflow is a mock of Workflow interface

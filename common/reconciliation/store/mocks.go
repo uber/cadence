@@ -27,9 +27,8 @@
 package store
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockScanOutputIterator is a mock of ScanOutputIterator interface

@@ -28,9 +28,8 @@ package invariant
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockInvariant is a mock of Invariant interface

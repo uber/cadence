@@ -27,15 +27,13 @@
 package task
 
 import (
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
-
 	future "github.com/uber/cadence/common/future"
 	task "github.com/uber/cadence/common/task"
 	types "github.com/uber/cadence/common/types"
 	shard "github.com/uber/cadence/service/history/shard"
+	reflect "reflect"
+	time "time"
 )
 
 // MockInfo is a mock of Info interface

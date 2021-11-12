@@ -28,16 +28,14 @@ package execution
 
 import (
 	context "context"
-	reflect "reflect"
-	time "time"
-
 	gomock "github.com/golang/mock/gomock"
-
 	cache "github.com/uber/cadence/common/cache"
 	definition "github.com/uber/cadence/common/definition"
 	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
 	query "github.com/uber/cadence/service/history/query"
+	reflect "reflect"
+	time "time"
 )
 
 // MockMutableState is a mock of MutableState interface

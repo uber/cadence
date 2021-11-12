@@ -28,12 +28,10 @@ package frontend
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-	yarpc "go.uber.org/yarpc"
-
 	types "github.com/uber/cadence/common/types"
+	yarpc "go.uber.org/yarpc"
+	reflect "reflect"
 )
 
 // MockClient is a mock of Client interface

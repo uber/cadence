@@ -28,13 +28,11 @@ package engine
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
 	events "github.com/uber/cadence/service/history/events"
+	reflect "reflect"
 )
 
 // MockEngine is a mock of Engine interface

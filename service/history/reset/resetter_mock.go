@@ -28,12 +28,10 @@ package reset
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	types "github.com/uber/cadence/common/types"
 	execution "github.com/uber/cadence/service/history/execution"
+	reflect "reflect"
 )
 
 // MockWorkflowResetter is a mock of WorkflowResetter interface

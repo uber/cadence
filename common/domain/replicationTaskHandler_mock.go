@@ -27,11 +27,9 @@
 package domain
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	types "github.com/uber/cadence/common/types"
+	reflect "reflect"
 )
 
 // MockReplicationTaskExecutor is a mock of ReplicationTaskExecutor interface

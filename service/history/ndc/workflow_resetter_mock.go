@@ -28,12 +28,10 @@ package ndc
 
 import (
 	context "context"
+	gomock "github.com/golang/mock/gomock"
+	execution "github.com/uber/cadence/service/history/execution"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
-
-	execution "github.com/uber/cadence/service/history/execution"
 )
 
 // MockWorkflowResetter is a mock of WorkflowResetter interface

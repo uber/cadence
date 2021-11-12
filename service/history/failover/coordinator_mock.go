@@ -27,11 +27,9 @@
 package failover
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	types "github.com/uber/cadence/common/types"
+	reflect "reflect"
 )
 
 // MockCoordinator is a mock of Coordinator interface

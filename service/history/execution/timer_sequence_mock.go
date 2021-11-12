@@ -27,10 +27,9 @@
 package execution
 
 import (
+	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
-
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockTimerSequence is a mock of TimerSequence interface

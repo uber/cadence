@@ -28,11 +28,9 @@ package ndc
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	execution "github.com/uber/cadence/service/history/execution"
+	reflect "reflect"
 )
 
 // MockconflictResolver is a mock of conflictResolver interface

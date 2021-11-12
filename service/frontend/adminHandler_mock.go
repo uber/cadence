@@ -28,11 +28,9 @@ package frontend
 
 import (
 	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-
 	types "github.com/uber/cadence/common/types"
+	reflect "reflect"
 )
 
 // MockAdminHandler is a mock of AdminHandler interface
