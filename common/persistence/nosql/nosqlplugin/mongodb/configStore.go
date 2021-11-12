@@ -18,60 +18,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package mongodb
 
 import (
 	"context"
 	"time"
 
-	"github.com/gocql/gocql"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
+	"github.com/uber/cadence/schema/mongodb/cadence"
 )
 
-const (
-	// version is the clustering key(DESC order) so this query will always return the record with largest version
-	templateSelectLatestConfig = `SELECT row_type, version, timestamp, values, encoding FROM cluster_config WHERE row_type = ? LIMIT 1;`
-
-	templateInsertConfig = `INSERT INTO cluster_config (row_type, version, timestamp, values, encoding) VALUES (?, ?, ?, ?, ?) IF NOT EXISTS;`
-)
-
-func (db *cdb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
-	query := db.session.Query(templateInsertConfig, row.RowType, row.Version, row.Timestamp, row.Values.Data, row.Values.Encoding).WithContext(ctx)
-	applied, err := query.MapScanCAS(make(map[string]interface{}))
-	if err != nil {
-		return err
+func (db *mdb) InsertConfig(ctx context.Context, row *persistence.InternalConfigStoreEntry) error {
+	collection := db.dbConn.Collection(cadence.ClusterConfigCollectionName)
+	doc := cadence.ClusterConfigCollectionEntry{
+		RowType:              row.RowType,
+		Version:              row.Version,
+		UnixTimestampSeconds: row.Timestamp.Unix(),
+		Data:                 row.Values.Data,
+		DataEncoding:         row.Values.GetEncodingString(),
 	}
-	if !applied {
+	_, err := collection.InsertOne(ctx, doc)
+	if mongo.IsDuplicateKeyError(err) {
 		return nosqlplugin.NewConditionFailure("InsertConfig operation failed because of version collision")
 	}
-	return nil
+	return err
 }
 
-func (db *cdb) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
-	var version int64
-	var timestamp time.Time
-	var data []byte
-	var encoding common.EncodingType
+func (db *mdb) SelectLatestConfig(ctx context.Context, rowType int) (*persistence.InternalConfigStoreEntry, error) {
+	filter := bson.D{{"rowtype", rowType}}
+	queryOptions := options.FindOneOptions{}
+	queryOptions.SetSort(bson.D{{"version", -1}})
 
-	query := db.session.Query(templateSelectLatestConfig, rowType).WithContext(ctx)
-	err := query.Scan(&rowType, &version, &timestamp, &data, &encoding)
-	if err == gocql.ErrNotFound {
-		return nil, nil
-	}
+	collection := db.dbConn.Collection(cadence.ClusterConfigCollectionName)
+	var result cadence.ClusterConfigCollectionEntry
+	err := collection.FindOne(ctx, filter, &queryOptions).Decode(&result)
 	if err != nil {
 		return nil, err
 	}
-
 	return &persistence.InternalConfigStoreEntry{
 		RowType:   rowType,
-		Version:   version,
-		Timestamp: timestamp,
-		Values: &persistence.DataBlob{
-			Data:     data,
-			Encoding: encoding,
-		},
-	}, err
+		Version:   result.Version,
+		Timestamp: time.Unix(result.UnixTimestampSeconds, 0),
+		Values:    persistence.NewDataBlob(result.Data, common.EncodingType(result.DataEncoding)),
+	}, nil
 }

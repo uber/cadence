@@ -18,23 +18,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cassandra
+package mongodb
 
 import (
-	"time"
+	"context"
+	"fmt"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
-	"github.com/uber/cadence/environment"
 )
 
 const (
 	// PluginName is the name of the plugin
-	PluginName            = "cassandra"
-	defaultSessionTimeout = 10 * time.Second
+	PluginName            = "mongodb"
 )
 
 type plugin struct{}
@@ -52,49 +53,27 @@ func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB,
 
 // CreateAdminDB initialize the AdminDB object
 func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
-	// the keyspace is not created yet, so use empty and let the Cassandra connect
-	keyspace := cfg.Keyspace
-	cfg.Keyspace = ""
-	// change it back
-	defer func() {
-		cfg.Keyspace = keyspace
-	}()
-
 	return p.doCreateDB(cfg, logger)
 }
 
-func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*cdb, error) {
-	session, err := gocql.GetRegisteredClient().CreateSession(toGoCqlConfig(cfg))
+func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*mdb, error) {
+	uri := fmt.Sprintf("mongodb://%v:%v@%v:%v/", cfg.User, cfg.Password, cfg.Hosts, cfg.Port)
+	// TODO CreateDB/CreateAdminDB don't pass in context.Context so we are using background for now
+	// It's okay because this is being called during server startup or CLI.
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
-	db := newCassandraDBFromSession(cfg, session, logger)
-	return db, nil
+	if cfg.Keyspace == "" {
+		return nil, fmt.Errorf("database name cannot be empty")
+	}
+	db := client.Database(cfg.Keyspace)
+	return &mdb{
+		client: client,
+		dbConn: db,
+		cfg:    cfg,
+		logger: logger,
+	}, err
 }
 
-func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
-	if cfg.Port == 0 {
-		cfg.Port = environment.GetCassandraPort()
-	}
-	if cfg.Hosts == "" {
-		cfg.Hosts = environment.GetCassandraAddress()
-	}
-	if cfg.ProtoVersion == 0 {
-		cfg.ProtoVersion = environment.GetCassandraProtoVersion()
-	}
-	return gocql.ClusterConfig{
-		Hosts:             cfg.Hosts,
-		Port:              cfg.Port,
-		User:              cfg.User,
-		Password:          cfg.Password,
-		Keyspace:          cfg.Keyspace,
-		Region:            cfg.Region,
-		Datacenter:        cfg.Datacenter,
-		MaxConns:          cfg.MaxConns,
-		TLS:               cfg.TLS,
-		ProtoVersion:      cfg.ProtoVersion,
-		Consistency:       gocql.LocalQuorum,
-		SerialConsistency: gocql.LocalSerial,
-		Timeout:           defaultSessionTimeout,
-	}
-}
+
