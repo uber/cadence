@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package config
+package membership
 
 import (
 	"context"
@@ -28,20 +28,16 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/discovery"
 	"github.com/uber/ringpop-go/discovery/jsonfile"
 	"github.com/uber/ringpop-go/discovery/statichosts"
-	"github.com/uber/ringpop-go/swim"
-	tcg "github.com/uber/tchannel-go"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/membership"
-	"github.com/uber/cadence/common/service"
 )
+
+// BootstrapMode is an enum type for ringpop bootstrap mode
+type BootstrapMode int
 
 const (
 	// BootstrapModeNone represents a bootstrap mode set to nothing or invalid
@@ -65,43 +61,31 @@ const (
 	defaultMaxJoinDuration = 10 * time.Second
 )
 
-// RingpopFactory implements the RingpopFactory interface
-type RingpopFactory struct {
-	config      *Ringpop
-	channel     tchannel.Channel
-	serviceName string
-	logger      log.Logger
+// RingpopConfig contains the ringpop config items
+type RingpopConfig struct {
+	// Name to be used in ringpop advertisement
+	Name string `yaml:"name" validate:"nonzero"`
+	// BootstrapMode is a enum that defines the ringpop bootstrap method, currently supports: hosts, files, custom, dns, and dns-srv
+	BootstrapMode BootstrapMode `yaml:"bootstrapMode"`
+	// BootstrapHosts is a list of seed hosts to be used for ringpop bootstrap
+	BootstrapHosts []string `yaml:"bootstrapHosts"`
+	// BootstrapFile is the file path to be used for ringpop bootstrap
+	BootstrapFile string `yaml:"bootstrapFile"`
+	// MaxJoinDuration is the max wait time to join the ring
+	MaxJoinDuration time.Duration `yaml:"maxJoinDuration"`
+	// Custom discovery provider, cannot be specified through yaml
+	DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 }
 
-// NewMonitor builds a ringpop monitor conforming
-// to the underlying configuration
-func (rpConfig *Ringpop) NewMonitor(
-	channel tchannel.Channel,
-	serviceName string,
-	logger log.Logger,
-) (*membership.RingpopMonitor, error) {
-
-	if err := rpConfig.validate(); err != nil {
-		return nil, err
-	}
-	if rpConfig.MaxJoinDuration == 0 {
-		rpConfig.MaxJoinDuration = defaultMaxJoinDuration
-	}
-	factory := &RingpopFactory{
-		config:      rpConfig,
-		channel:     channel,
-		serviceName: serviceName,
-		logger:      logger,
-	}
-
-	return factory.createMembership()
-
-}
-
-func (rpConfig *Ringpop) validate() error {
+func (rpConfig *RingpopConfig) validate() error {
 	if len(rpConfig.Name) == 0 {
 		return fmt.Errorf("ringpop config missing `name` param")
 	}
+
+	if rpConfig.MaxJoinDuration == 0 {
+		rpConfig.MaxJoinDuration = defaultMaxJoinDuration
+	}
+
 	return validateBootstrapMode(rpConfig)
 }
 
@@ -137,11 +121,11 @@ func parseBootstrapMode(
 	case "dns-srv":
 		return BootstrapModeDNSSRV, nil
 	}
-	return BootstrapModeNone, errors.New("invalid or no ringpop bootstrap mode")
+	return BootstrapModeNone, fmt.Errorf("invalid ringpop bootstrap mode %q", mode)
 }
 
 func validateBootstrapMode(
-	rpConfig *Ringpop,
+	rpConfig *RingpopConfig,
 ) error {
 
 	switch rpConfig.BootstrapMode {
@@ -158,38 +142,9 @@ func validateBootstrapMode(
 			return fmt.Errorf("ringpop bootstrapMode is set to custom but discoveryProvider is nil")
 		}
 	default:
-		return fmt.Errorf("ringpop config with unknown boostrap mode")
+		return fmt.Errorf("ringpop config with unknown boostrap mode %q", rpConfig.BootstrapMode)
 	}
 	return nil
-}
-
-func (factory *RingpopFactory) createMembership() (*membership.RingpopMonitor, error) {
-	rp, err := factory.createRingpop()
-	if err != nil {
-		return nil, fmt.Errorf("ringpop creation failed: %v", err)
-	}
-
-	return membership.NewRingpopMonitor(factory.serviceName, service.List, rp, factory.logger), nil
-}
-
-func (factory *RingpopFactory) createRingpop() (*membership.RingPop, error) {
-	rp, err := ringpop.New(
-		factory.config.Name,
-		ringpop.Channel(factory.channel.(*tcg.Channel)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	discoveryProvider, err := newDiscoveryProvider(factory.config, factory.logger)
-	if err != nil {
-		return nil, err
-	}
-	bootstrapOpts := &swim.BootstrapOptions{
-		MaxJoinDuration:  factory.config.MaxJoinDuration,
-		DiscoverProvider: discoveryProvider,
-	}
-	return membership.NewRingPop(rp, bootstrapOpts, factory.logger), nil
 }
 
 type dnsHostResolver interface {
@@ -287,11 +242,10 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 	var results []string
 	resolvedHosts := map[string][]string{}
 
-	for _, service := range provider.UnresolvedHosts {
-		serviceParts := strings.Split(service, ".")
+	for _, host := range provider.UnresolvedHosts {
+		serviceParts := strings.Split(host, ".")
 		if len(serviceParts) <= 2 {
-			provider.Logger.Error("could not seperate service name from domain", tag.Address(service))
-			return nil, errors.New("could not seperate service name from domain. check host configuration")
+			return nil, fmt.Errorf("could not seperate service from domain %q", host)
 		}
 		serviceName := serviceParts[0]
 		domain := strings.Join(serviceParts[1:], ".")
@@ -300,8 +254,7 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 			_, addrs, err := provider.Resolver.LookupSRV(context.Background(), serviceName, "tcp", domain)
 
 			if err != nil {
-				provider.Logger.Error("could not resolve host", tag.Address(serviceName), tag.Error(err))
-				return nil, errors.New(fmt.Sprintf("could not resolve host: %s.%s", serviceName, domain))
+				return nil, fmt.Errorf("could not resolve host: %s.%s", serviceName, domain)
 			}
 
 			var targets []string
@@ -320,10 +273,7 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 			resolved = targets
 		}
 
-		for _, r := range resolved {
-			results = append(results, r)
-		}
-
+		results = append(results, resolved...)
 	}
 
 	if len(results) == 0 {
@@ -333,7 +283,7 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 }
 
 func newDiscoveryProvider(
-	cfg *Ringpop,
+	cfg *RingpopConfig,
 	logger log.Logger,
 ) (discovery.DiscoverProvider, error) {
 
@@ -352,5 +302,5 @@ func newDiscoveryProvider(
 	case BootstrapModeDNSSRV:
 		return newDNSSRVProvider(cfg.BootstrapHosts, net.DefaultResolver, logger), nil
 	}
-	return nil, fmt.Errorf("unknown bootstrap mode")
+	return nil, fmt.Errorf("unknown bootstrap mode %q", cfg.BootstrapMode)
 }

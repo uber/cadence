@@ -29,10 +29,10 @@ import (
 
 	"github.com/uber-go/tally/m3"
 	"github.com/uber-go/tally/prometheus"
-	"github.com/uber/ringpop-go/discovery"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -40,7 +40,7 @@ type (
 	// Config contains the configuration for a set of cadence services
 	Config struct {
 		// Ringpop is the ringpop related configuration
-		Ringpop Ringpop `yaml:"ringpop"`
+		Ringpop *membership.RingpopConfig `yaml:"ringpop"`
 		// Persistence contains the configuration for cadence datastores
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
@@ -151,22 +151,6 @@ type (
 	// FileBlobstore contains the config for a file backed blobstore
 	FileBlobstore struct {
 		OutputDirectory string `yaml:"outputDirectory"`
-	}
-
-	// Ringpop contains the ringpop config items
-	Ringpop struct {
-		// Name to be used in ringpop advertisement
-		Name string `yaml:"name" validate:"nonzero"`
-		// BootstrapMode is a enum that defines the ringpop bootstrap method, currently supports: hosts, files, custom, dns, and dns-srv
-		BootstrapMode BootstrapMode `yaml:"bootstrapMode"`
-		// BootstrapHosts is a list of seed hosts to be used for ringpop bootstrap
-		BootstrapHosts []string `yaml:"bootstrapHosts"`
-		// BootstrapFile is the file path to be used for ringpop bootstrap
-		BootstrapFile string `yaml:"bootstrapFile"`
-		// MaxJoinDuration is the max wait time to join the ring
-		MaxJoinDuration time.Duration `yaml:"maxJoinDuration"`
-		// Custom discovery provider, cannot be specified through yaml
-		DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 	}
 
 	// Persistence contains the configuration for data store / persistence layer
@@ -510,9 +494,6 @@ type (
 		// URI is the domain default URI for visibility archiver
 		URI string `yaml:"URI"`
 	}
-
-	// BootstrapMode is an enum type for ringpop bootstrap mode
-	BootstrapMode int
 )
 
 // ValidateAndFillDefaults validates this config and fills default values if needed
