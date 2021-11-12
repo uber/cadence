@@ -95,30 +95,30 @@ func NewFileBasedClient(config *FileBasedClientConfig, logger log.Logger, doneCh
 	return client, nil
 }
 
-func (fc *fileBasedClient) GetValue(name Key, defaultValue interface{}) (interface{}, error) {
-	return fc.getValueWithFilters(name, nil, defaultValue)
+func (fc *fileBasedClient) GetValue(name Key, sysDefaultValue interface{}) (interface{}, error) {
+	return fc.getValueWithFilters(name, nil, sysDefaultValue)
 }
 
-func (fc *fileBasedClient) GetValueWithFilters(name Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	return fc.getValueWithFilters(name, filters, defaultValue)
+func (fc *fileBasedClient) GetValueWithFilters(name Key, filters map[Filter]interface{}, sysDefaultValue interface{}) (interface{}, error) {
+	return fc.getValueWithFilters(name, filters, sysDefaultValue)
 }
 
-func (fc *fileBasedClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
-	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+func (fc *fileBasedClient) GetIntValue(name Key, filters map[Filter]interface{}, sysDefaultValue int) (int, error) {
+	val, err := fc.getValueWithFilters(name, filters, sysDefaultValue)
 	if err != nil {
-		return defaultValue, err
+		return sysDefaultValue, err
 	}
 
 	if intVal, ok := val.(int); ok {
 		return intVal, nil
 	}
-	return defaultValue, errors.New("value type is not int")
+	return sysDefaultValue, errors.New("value type is not int")
 }
 
-func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
-	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{}, sysDefaultValue float64) (float64, error) {
+	val, err := fc.getValueWithFilters(name, filters, sysDefaultValue)
 	if err != nil {
-		return defaultValue, err
+		return sysDefaultValue, err
 	}
 
 	if floatVal, ok := val.(float64); ok {
@@ -126,62 +126,62 @@ func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{
 	} else if intVal, ok := val.(int); ok {
 		return float64(intVal), nil
 	}
-	return defaultValue, errors.New("value type is not float64")
+	return sysDefaultValue, errors.New("value type is not float64")
 }
 
-func (fc *fileBasedClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
-	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+func (fc *fileBasedClient) GetBoolValue(name Key, filters map[Filter]interface{}, sysDefaultValue bool) (bool, error) {
+	val, err := fc.getValueWithFilters(name, filters, sysDefaultValue)
 	if err != nil {
-		return defaultValue, err
+		return sysDefaultValue, err
 	}
 
 	if boolVal, ok := val.(bool); ok {
 		return boolVal, nil
 	}
-	return defaultValue, errors.New("value type is not bool")
+	return sysDefaultValue, errors.New("value type is not bool")
 }
 
-func (fc *fileBasedClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
-	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+func (fc *fileBasedClient) GetStringValue(name Key, filters map[Filter]interface{}, sysDefaultValue string) (string, error) {
+	val, err := fc.getValueWithFilters(name, filters, sysDefaultValue)
 	if err != nil {
-		return defaultValue, err
+		return sysDefaultValue, err
 	}
 
 	if stringVal, ok := val.(string); ok {
 		return stringVal, nil
 	}
-	return defaultValue, errors.New("value type is not string")
+	return sysDefaultValue, errors.New("value type is not string")
 }
 
 func (fc *fileBasedClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name Key, filters map[Filter]interface{}, sysDefaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
-	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+	val, err := fc.getValueWithFilters(name, filters, sysDefaultValue)
 	if err != nil {
-		return defaultValue, err
+		return sysDefaultValue, err
 	}
 	if mapVal, ok := val.(map[string]interface{}); ok {
 		return mapVal, nil
 	}
-	return defaultValue, errors.New("value type is not map")
+	return sysDefaultValue, errors.New("value type is not map")
 }
 
 func (fc *fileBasedClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration,
 ) (time.Duration, error) {
-	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+	val, err := fc.getValueWithFilters(name, filters, sysDefaultValue)
 	if err != nil {
-		return defaultValue, err
+		return sysDefaultValue, err
 	}
 
 	durationString, ok := val.(string)
 	if !ok {
-		return defaultValue, errors.New("value type is not string")
+		return sysDefaultValue, errors.New("value type is not string")
 	}
 
 	durationVal, err := time.ParseDuration(durationString)
 	if err != nil {
-		return defaultValue, fmt.Errorf("failed to parse duration: %v", err)
+		return sysDefaultValue, fmt.Errorf("failed to parse duration: %v", err)
 	}
 	return durationVal, nil
 }
@@ -268,14 +268,14 @@ func (fc *fileBasedClient) storeValues(newValues map[string][]*constrainedValue)
 	return nil
 }
 
-func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
+func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]interface{}, sysDefaultValue interface{}) (interface{}, error) {
 	keyName := Keys[key]
 	values := fc.values.Load().(map[string][]*constrainedValue)
 	found := false
 	for _, constrainedValue := range values[keyName] {
 		if len(constrainedValue.Constraints) == 0 {
 			// special handling for default value (value without any constraints)
-			defaultValue = constrainedValue.Value
+			sysDefaultValue = constrainedValue.Value
 			found = true
 			continue
 		}
@@ -284,9 +284,9 @@ func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]inter
 		}
 	}
 	if !found {
-		return defaultValue, NotFoundError
+		return sysDefaultValue, NotFoundError
 	}
-	return defaultValue, nil
+	return sysDefaultValue, nil
 }
 
 // match will return true if the constraints matches the filters or any subsets

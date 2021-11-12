@@ -137,7 +137,7 @@ func AdminUpdateDynamicConfig(c *cli.Context) {
 			parsedValues = append(parsedValues, parsedValue)
 		}
 	} else {
-		parsedValues = nil
+		parsedValues = nil // this will delete the dynamic config entry and Cadence will use the system default value
 	}
 
 	req := &types.UpdateDynamicConfigRequest{

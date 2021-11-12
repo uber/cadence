@@ -1320,32 +1320,35 @@ func newAdminConfigStoreCommands() []cli.Command {
 					Usage: "Name of Dynamic Config parameter to update value of",
 				},
 				cli.StringSliceFlag{
-					Name:  FlagDynamicConfigValue,
-					Usage: `Optional. Can be specified multiple times for multiple values. ex: --dynamic-config-value '{"Value":true,"Filters":[]}'`,
+					Name: FlagDynamicConfigValue,
+					Usage: `Required. Can be specified multiple times for multiple values. ` +
+						`ex: --dynamic-config-value '{"Value":true,"Filters":[]}' --dynamic-config-value '{"Value":true,"Filters":["Name":"DomainName", "Value":"sample-domainA"]}'. ` +
+						`Note that in the first one, the Filters is empty, meaning this value is the fallback value when other conditions are not met'`,
 				},
 			},
 			Action: func(c *cli.Context) {
 				AdminUpdateDynamicConfig(c)
-			},
+			}, // Providing empty config value will delete the config(then Cadence will use the system default value)
 		},
-		{
-			Name:    "restore-dynamic-config",
-			Aliases: []string{"resdc", "r"},
-			Usage:   "Restore Dynamic Config Value",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDynamicConfigName,
-					Usage: "Name of Dynamic Config parameter to restore",
-				},
-				cli.StringSliceFlag{
-					Name:  FlagDynamicConfigFilter,
-					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
-				},
-			},
-			Action: func(c *cli.Context) {
-				AdminRestoreDynamicConfig(c)
-			},
-		},
+		// TODO: need to figure out why/how to use this command before making it public
+		// {
+		// 	Name:    "restore-dynamic-config",
+		// 	Aliases: []string{"resdc", "r"},
+		// 	Usage:   "Restore Dynamic Config Value",
+		// 	Flags: []cli.Flag{
+		// 		cli.StringFlag{
+		// 			Name:  FlagDynamicConfigName,
+		// 			Usage: "Name of Dynamic Config parameter to restore",
+		// 		},
+		// 		cli.StringSliceFlag{
+		// 			Name:  FlagDynamicConfigFilter,
+		// 			Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
+		// 		},
+		// 	},
+		// 	Action: func(c *cli.Context) {
+		// 		AdminRestoreDynamicConfig(c)
+		// 	},
+		// },
 		{
 			Name:    "list-dynamic-config",
 			Aliases: []string{"listdc", "l"},

@@ -38,19 +38,36 @@ const (
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
-	GetValue(name Key, defaultValue interface{}) (interface{}, error)
-	GetValueWithFilters(name Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error)
+	// GetValue get the default value of a dynamic config entry(without filter), return sysDefaultValue if no config is set
+	// name is the key to identify a dynamic config entry
+	GetValue(name Key, sysDefaultValue interface{}) (interface{}, error)
+	// GetValueWithFilters get the actual value of a dynamic config entry under certain condition using filter, return sysDefaultValue if no config is set
+	// name is the key to identify a dynamic config entry
+	GetValueWithFilters(name Key, filters map[Filter]interface{}, sysDefaultValue interface{}) (interface{}, error)
 
-	GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error)
-	GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error)
-	GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error)
-	GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error)
+	// GetIntValue is the strongly typed form of GetValueWithFilters
+	// name is the key to identify a dynamic config entry
+	GetIntValue(name Key, filters map[Filter]interface{}, sysDefaultValue int) (int, error)
+	// GetFloatValue is the strongly typed form of GetValueWithFilters
+	// name is the key to identify a dynamic config entry
+	GetFloatValue(name Key, filters map[Filter]interface{}, sysDefaultValue float64) (float64, error)
+	// GetBoolValue is the strongly typed form of GetValueWithFilters
+	// name is the key to identify a dynamic config entry
+	GetBoolValue(name Key, filters map[Filter]interface{}, sysDefaultValue bool) (bool, error)
+	// GetStringValue is the strongly typed form of GetValueWithFilters
+	// name is the key to identify a dynamic config entry
+	GetStringValue(name Key, filters map[Filter]interface{}, sysDefaultValue string) (string, error)
+	// GetMapValue is the strongly typed form of GetValueWithFilters
+	// name is the key to identify a dynamic config entry
 	GetMapValue(
-		name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+		name Key, filters map[Filter]interface{}, sysDefaultValue map[string]interface{},
 	) (map[string]interface{}, error)
+	// GetDurationValue is the strongly typed form of GetValueWithFilters
+	// name is the key to identify a dynamic config entry
 	GetDurationValue(
-		name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+		name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration,
 	) (time.Duration, error)
+	
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error
 	RestoreValue(name Key, filters map[Filter]interface{}) error

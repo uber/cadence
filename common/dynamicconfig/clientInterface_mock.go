@@ -59,123 +59,123 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 }
 
 // GetValue mocks base method
-func (m *MockClient) GetValue(name Key, defaultValue interface{}) (interface{}, error) {
+func (m *MockClient) GetValue(name Key, sysDefaultValue interface{}) (interface{}, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetValue", name, defaultValue)
+	ret := m.ctrl.Call(m, "GetValue", name, sysDefaultValue)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetValue indicates an expected call of GetValue
-func (mr *MockClientMockRecorder) GetValue(name, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetValue(name, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValue", reflect.TypeOf((*MockClient)(nil).GetValue), name, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValue", reflect.TypeOf((*MockClient)(nil).GetValue), name, sysDefaultValue)
 }
 
 // GetValueWithFilters mocks base method
-func (m *MockClient) GetValueWithFilters(name Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
+func (m *MockClient) GetValueWithFilters(name Key, filters map[Filter]interface{}, sysDefaultValue interface{}) (interface{}, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetValueWithFilters", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetValueWithFilters", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetValueWithFilters indicates an expected call of GetValueWithFilters
-func (mr *MockClientMockRecorder) GetValueWithFilters(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetValueWithFilters(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValueWithFilters", reflect.TypeOf((*MockClient)(nil).GetValueWithFilters), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValueWithFilters", reflect.TypeOf((*MockClient)(nil).GetValueWithFilters), name, filters, sysDefaultValue)
 }
 
 // GetIntValue mocks base method
-func (m *MockClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (m *MockClient) GetIntValue(name Key, filters map[Filter]interface{}, sysDefaultValue int) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIntValue", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetIntValue", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetIntValue indicates an expected call of GetIntValue
-func (mr *MockClientMockRecorder) GetIntValue(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetIntValue(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIntValue", reflect.TypeOf((*MockClient)(nil).GetIntValue), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIntValue", reflect.TypeOf((*MockClient)(nil).GetIntValue), name, filters, sysDefaultValue)
 }
 
 // GetFloatValue mocks base method
-func (m *MockClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (m *MockClient) GetFloatValue(name Key, filters map[Filter]interface{}, sysDefaultValue float64) (float64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetFloatValue", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetFloatValue", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(float64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetFloatValue indicates an expected call of GetFloatValue
-func (mr *MockClientMockRecorder) GetFloatValue(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetFloatValue(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFloatValue", reflect.TypeOf((*MockClient)(nil).GetFloatValue), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFloatValue", reflect.TypeOf((*MockClient)(nil).GetFloatValue), name, filters, sysDefaultValue)
 }
 
 // GetBoolValue mocks base method
-func (m *MockClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (m *MockClient) GetBoolValue(name Key, filters map[Filter]interface{}, sysDefaultValue bool) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBoolValue", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetBoolValue", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetBoolValue indicates an expected call of GetBoolValue
-func (mr *MockClientMockRecorder) GetBoolValue(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetBoolValue(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBoolValue", reflect.TypeOf((*MockClient)(nil).GetBoolValue), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBoolValue", reflect.TypeOf((*MockClient)(nil).GetBoolValue), name, filters, sysDefaultValue)
 }
 
 // GetStringValue mocks base method
-func (m *MockClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (m *MockClient) GetStringValue(name Key, filters map[Filter]interface{}, sysDefaultValue string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStringValue", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetStringValue", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetStringValue indicates an expected call of GetStringValue
-func (mr *MockClientMockRecorder) GetStringValue(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetStringValue(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStringValue", reflect.TypeOf((*MockClient)(nil).GetStringValue), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStringValue", reflect.TypeOf((*MockClient)(nil).GetStringValue), name, filters, sysDefaultValue)
 }
 
 // GetMapValue mocks base method
-func (m *MockClient) GetMapValue(name Key, filters map[Filter]interface{}, defaultValue map[string]interface{}) (map[string]interface{}, error) {
+func (m *MockClient) GetMapValue(name Key, filters map[Filter]interface{}, sysDefaultValue map[string]interface{}) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetMapValue", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetMapValue", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetMapValue indicates an expected call of GetMapValue
-func (mr *MockClientMockRecorder) GetMapValue(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetMapValue(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMapValue", reflect.TypeOf((*MockClient)(nil).GetMapValue), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMapValue", reflect.TypeOf((*MockClient)(nil).GetMapValue), name, filters, sysDefaultValue)
 }
 
 // GetDurationValue mocks base method
-func (m *MockClient) GetDurationValue(name Key, filters map[Filter]interface{}, defaultValue time.Duration) (time.Duration, error) {
+func (m *MockClient) GetDurationValue(name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration) (time.Duration, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDurationValue", name, filters, defaultValue)
+	ret := m.ctrl.Call(m, "GetDurationValue", name, filters, sysDefaultValue)
 	ret0, _ := ret[0].(time.Duration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetDurationValue indicates an expected call of GetDurationValue
-func (mr *MockClientMockRecorder) GetDurationValue(name, filters, defaultValue interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) GetDurationValue(name, filters, sysDefaultValue interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDurationValue", reflect.TypeOf((*MockClient)(nil).GetDurationValue), name, filters, defaultValue)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDurationValue", reflect.TypeOf((*MockClient)(nil).GetDurationValue), name, filters, sysDefaultValue)
 }
 
 // UpdateValue mocks base method

@@ -48,67 +48,67 @@ func (mc *inMemoryClient) SetValue(key Key, value interface{}) {
 	mc.globalValues[key] = value
 }
 
-func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface{}, error) {
+func (mc *inMemoryClient) GetValue(key Key, sysDefaultValue interface{}) (interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[key]; ok {
 		return val, nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetValueWithFilters(
-	name Key, filters map[Filter]interface{}, defaultValue interface{},
+	name Key, filters map[Filter]interface{}, sysDefaultValue interface{},
 ) (interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
-	return mc.GetValue(name, defaultValue)
+	return mc.GetValue(name, sysDefaultValue)
 }
 
-func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, sysDefaultValue int) (int, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(int), nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, sysDefaultValue float64) (float64, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(float64), nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, sysDefaultValue bool) (bool, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(bool), nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, sysDefaultValue string) (string, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(string), nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name Key, filters map[Filter]interface{}, sysDefaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
@@ -116,11 +116,11 @@ func (mc *inMemoryClient) GetMapValue(
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(map[string]interface{}), nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration,
 ) (time.Duration, error) {
 	mc.RLock()
 	defer mc.RUnlock()
@@ -128,7 +128,7 @@ func (mc *inMemoryClient) GetDurationValue(
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(time.Duration), nil
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {

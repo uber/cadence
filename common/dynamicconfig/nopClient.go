@@ -31,45 +31,45 @@ import (
 // nopClient is a dummy implements of dynamicconfig Client interface, all operations will always return default values.
 type nopClient struct{}
 
-func (mc *nopClient) GetValue(name Key, defaultValue interface{}) (interface{}, error) {
+func (mc *nopClient) GetValue(name Key, sysDefaultValue interface{}) (interface{}, error) {
 	return nil, NotFoundError
 }
 
 func (mc *nopClient) GetValueWithFilters(
-	name Key, filters map[Filter]interface{}, defaultValue interface{},
+	name Key, filters map[Filter]interface{}, sysDefaultValue interface{},
 ) (interface{}, error) {
 	return nil, NotFoundError
 }
 
-func (mc *nopClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
-	return defaultValue, NotFoundError
+func (mc *nopClient) GetIntValue(name Key, filters map[Filter]interface{}, sysDefaultValue int) (int, error) {
+	return sysDefaultValue, NotFoundError
 }
 
-func (mc *nopClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
-	return defaultValue, NotFoundError
+func (mc *nopClient) GetFloatValue(name Key, filters map[Filter]interface{}, sysDefaultValue float64) (float64, error) {
+	return sysDefaultValue, NotFoundError
 }
 
-func (mc *nopClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (mc *nopClient) GetBoolValue(name Key, filters map[Filter]interface{}, sysDefaultValue bool) (bool, error) {
 	if filters[DomainName] == "TestRawHistoryDomain" {
 		return true, NotFoundError
 	}
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
-func (mc *nopClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
-	return defaultValue, NotFoundError
+func (mc *nopClient) GetStringValue(name Key, filters map[Filter]interface{}, sysDefaultValue string) (string, error) {
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *nopClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name Key, filters map[Filter]interface{}, sysDefaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *nopClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration,
 ) (time.Duration, error) {
-	return defaultValue, NotFoundError
+	return sysDefaultValue, NotFoundError
 }
 
 func (mc *nopClient) UpdateValue(name Key, value interface{}) error {

@@ -322,7 +322,7 @@ func defaultTestSetup(s *configStoreClientSuite) {
 			Snapshot: snapshot1,
 		}, nil).
 		AnyTimes()
-	err := s.client.startUpdate()
+	err := s.client.startBackgroundSyncer()
 	s.NoError(err)
 }
 
@@ -735,7 +735,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 			Snapshot: snapshot2,
 		}, nil).MaxTimes(1)
 
-	err = s.client.update()
+	err = s.client.syncWithDB()
 	s.NoError(err)
 
 	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey, false)
@@ -775,7 +775,7 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 			return nil
 		}).AnyTimes()
 
-	s.client.update()
+	s.client.syncWithDB()
 	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 }
@@ -796,7 +796,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetrySuccess() {
 			Snapshot: snapshot1,
 		}, nil).AnyTimes()
 
-	s.client.update()
+	s.client.syncWithDB()
 
 	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, []*types.DynamicConfigValue{})
 	s.NoError(err)
@@ -920,7 +920,7 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 		}, nil).
 		MaxTimes(1)
 
-	s.client.update()
+	s.client.syncWithDB()
 
 	val, err := s.client.ListValue(dc.UnknownKey)
 	s.NoError(err)
