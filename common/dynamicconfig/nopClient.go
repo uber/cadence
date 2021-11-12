@@ -84,6 +84,10 @@ func (mc *nopClient) ListConfigEntries() ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }
 
+func (fc *nopClient) UpdateValues(name Key, values []*types.DynamicConfigValue) error {
+	return errors.New("not supported for file based client")
+}
+
 // NewNopClient creates a nop client
 func NewNopClient() Client {
 	return &nopClient{}

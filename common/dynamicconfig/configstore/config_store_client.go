@@ -234,9 +234,22 @@ func (csc *configStoreClient) GetDurationValue(
 	return durVal, nil
 }
 
+func (csc *configStoreClient) UpdateValues(name dc.Key, values []*types.DynamicConfigValue) error {
+	return csc.doUpdateValue(name, values, csc.config.UpdateRetryAttempts)
+}
+
 // UpdateValue updates the dynamic config entry, value is the
 func (csc *configStoreClient) UpdateFallbackRawValue(name dc.Key, value interface{}) error {
-	return csc.doUpdateValue(name, value, csc.config.UpdateRetryAttempts)
+	blob, err := convertToDataBlob(value)
+	if err != nil {
+		return err
+	}
+	values := []*types.DynamicConfigValue{
+		{
+			Value: blob,
+		},
+	}
+	return csc.UpdateValues(name, values)
 }
 
 // RestoreValue is a shortcut or special case of UpdateValue -- delete some filters from the dynamic config value in a safer way
@@ -302,7 +315,7 @@ func (csc *configStoreClient) ListConfigEntries() ([]*types.DynamicConfigEntry, 
 	return resList, nil
 }
 
-func (csc *configStoreClient) doUpdateValue(name dc.Key, value interface{}, remainingRetryAttempts int) error {
+func (csc *configStoreClient) doUpdateValue(name dc.Key, values []*types.DynamicConfigValue, remainingRetryAttempts int) error {
 	// since values are not unique, no way to know if you are trying to update a specific value
 	// or if you want to add another of the same value with different filters.
 	// UpdateValues will replace everything associated with dc key.
@@ -323,7 +336,7 @@ func (csc *configStoreClient) doUpdateValue(name dc.Key, value interface{}, rema
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
 
-	if value == nil || len(value.([]*types.DynamicConfigValue)) == 0 {
+	if len(values) == 0 {
 		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 
 		for _, entry := range currentCached.dcEntries {
@@ -334,11 +347,6 @@ func (csc *configStoreClient) doUpdateValue(name dc.Key, value interface{}, rema
 			}
 		}
 	} else {
-		dcValues, ok := value.([]*types.DynamicConfigValue)
-		if !ok {
-			return errors.New("invalid value")
-		}
-
 		if entryExists {
 			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 		} else {
@@ -346,7 +354,7 @@ func (csc *configStoreClient) doUpdateValue(name dc.Key, value interface{}, rema
 			newEntries = append(newEntries,
 				&types.DynamicConfigEntry{
 					Name:   keyName,
-					Values: dcValues,
+					Values: values,
 				})
 		}
 
@@ -355,7 +363,7 @@ func (csc *configStoreClient) doUpdateValue(name dc.Key, value interface{}, rema
 				newEntries = append(newEntries,
 					&types.DynamicConfigEntry{
 						Name:   keyName,
-						Values: dcValues,
+						Values: values,
 					})
 			} else {
 				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
@@ -394,7 +402,7 @@ func (csc *configStoreClient) doUpdateValue(name dc.Key, value interface{}, rema
 					return err
 				}
 				// call self recursively
-				return csc.doUpdateValue(name, value, remainingRetryAttempts-1)
+				return csc.doUpdateValue(name, values, remainingRetryAttempts-1)
 			}
 
 			if remainingRetryAttempts == 0 {
@@ -593,4 +601,12 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	default:
 		return nil, errors.New("unsupported blob encoding")
 	}
+}
+
+func convertToDataBlob(value interface{}) (*types.DataBlob, error) {
+	json, err := json.Marshal(value)
+	return &types.DataBlob{
+		EncodingType: types.EncodingTypeJSON.Ptr(),
+		Data:         json,
+	}, err
 }

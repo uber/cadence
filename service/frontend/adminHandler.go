@@ -1336,7 +1336,7 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 		return adh.error(err, scope)
 	}
 
-	return adh.params.DynamicConfig.UpdateFallbackRawValue(keyVal, request.ConfigValues)
+	return adh.params.DynamicConfig.UpdateValues(keyVal, request.ConfigValues)
 }
 
 func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {

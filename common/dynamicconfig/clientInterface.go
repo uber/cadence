@@ -68,9 +68,15 @@ type Client interface {
 		name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration,
 	) (time.Duration, error)
 
-	// UpdateValue update all the values(all the filters) of the dynamic config entry
+	// UpdateValues update all the values(all the filters) of the dynamic config entry
+	// name is the key to identify a dynamic config entry
+	UpdateValues(name Key, values []*types.DynamicConfigValue) error
+
+	// UpdateFallbackRawValue a special case of UpdateValues to update a dynamic config entry
+	// it only updates the fallback value(the one with empty filter)
 	// name is the key to identify a dynamic config entry
 	UpdateFallbackRawValue(name Key, value interface{}) error
+
 	// RestoreValue is a shortcut or special case of UpdateValue -- delete some filters from the dynamic config value in a safer way
 	// When filters is nil, it will delete the value with empty filters -- which is the fallback value. So that the fallback value becomes the system default value(defined in code)
 	// When filters is not nil, it will delete the values with the matched filters

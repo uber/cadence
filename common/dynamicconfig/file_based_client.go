@@ -186,6 +186,10 @@ func (fc *fileBasedClient) GetDurationValue(
 	return durationVal, nil
 }
 
+func (fc *fileBasedClient) UpdateValues(name Key, values []*types.DynamicConfigValue) error {
+	return errors.New("not supported for file based client")
+}
+
 func (fc *fileBasedClient) UpdateFallbackRawValue(name Key, value interface{}) error {
 	keyName := Keys[name]
 	currentValues := make(map[string][]*constrainedValue)
