@@ -27,35 +27,36 @@
 package execution
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/uber/cadence/common/types"
-	reflect "reflect"
 )
 
-// MockStateBuilder is a mock of StateBuilder interface
+// MockStateBuilder is a mock of StateBuilder interface.
 type MockStateBuilder struct {
 	ctrl     *gomock.Controller
 	recorder *MockStateBuilderMockRecorder
 }
 
-// MockStateBuilderMockRecorder is the mock recorder for MockStateBuilder
+// MockStateBuilderMockRecorder is the mock recorder for MockStateBuilder.
 type MockStateBuilderMockRecorder struct {
 	mock *MockStateBuilder
 }
 
-// NewMockStateBuilder creates a new mock instance
+// NewMockStateBuilder creates a new mock instance.
 func NewMockStateBuilder(ctrl *gomock.Controller) *MockStateBuilder {
 	mock := &MockStateBuilder{ctrl: ctrl}
 	mock.recorder = &MockStateBuilderMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockStateBuilder) EXPECT() *MockStateBuilderMockRecorder {
 	return m.recorder
 }
 
-// ApplyEvents mocks base method
+// ApplyEvents mocks base method.
 func (m *MockStateBuilder) ApplyEvents(domainID, requestID string, workflowExecution types.WorkflowExecution, history, newRunHistory []*types.HistoryEvent) (MutableState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyEvents", domainID, requestID, workflowExecution, history, newRunHistory)
@@ -64,13 +65,13 @@ func (m *MockStateBuilder) ApplyEvents(domainID, requestID string, workflowExecu
 	return ret0, ret1
 }
 
-// ApplyEvents indicates an expected call of ApplyEvents
+// ApplyEvents indicates an expected call of ApplyEvents.
 func (mr *MockStateBuilderMockRecorder) ApplyEvents(domainID, requestID, workflowExecution, history, newRunHistory interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyEvents", reflect.TypeOf((*MockStateBuilder)(nil).ApplyEvents), domainID, requestID, workflowExecution, history, newRunHistory)
 }
 
-// GetMutableState mocks base method
+// GetMutableState mocks base method.
 func (m *MockStateBuilder) GetMutableState() MutableState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMutableState")
@@ -78,7 +79,7 @@ func (m *MockStateBuilder) GetMutableState() MutableState {
 	return ret0
 }
 
-// GetMutableState indicates an expected call of GetMutableState
+// GetMutableState indicates an expected call of GetMutableState.
 func (mr *MockStateBuilderMockRecorder) GetMutableState() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMutableState", reflect.TypeOf((*MockStateBuilder)(nil).GetMutableState))

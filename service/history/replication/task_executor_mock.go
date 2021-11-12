@@ -27,35 +27,36 @@
 package replication
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/uber/cadence/common/types"
-	reflect "reflect"
 )
 
-// MockTaskExecutor is a mock of TaskExecutor interface
+// MockTaskExecutor is a mock of TaskExecutor interface.
 type MockTaskExecutor struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskExecutorMockRecorder
 }
 
-// MockTaskExecutorMockRecorder is the mock recorder for MockTaskExecutor
+// MockTaskExecutorMockRecorder is the mock recorder for MockTaskExecutor.
 type MockTaskExecutorMockRecorder struct {
 	mock *MockTaskExecutor
 }
 
-// NewMockTaskExecutor creates a new mock instance
+// NewMockTaskExecutor creates a new mock instance.
 func NewMockTaskExecutor(ctrl *gomock.Controller) *MockTaskExecutor {
 	mock := &MockTaskExecutor{ctrl: ctrl}
 	mock.recorder = &MockTaskExecutorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTaskExecutor) EXPECT() *MockTaskExecutorMockRecorder {
 	return m.recorder
 }
 
-// execute mocks base method
+// execute mocks base method.
 func (m *MockTaskExecutor) execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "execute", replicationTask, forceApply)
@@ -64,7 +65,7 @@ func (m *MockTaskExecutor) execute(replicationTask *types.ReplicationTask, force
 	return ret0, ret1
 }
 
-// execute indicates an expected call of execute
+// execute indicates an expected call of execute.
 func (mr *MockTaskExecutorMockRecorder) execute(replicationTask, forceApply interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "execute", reflect.TypeOf((*MockTaskExecutor)(nil).execute), replicationTask, forceApply)

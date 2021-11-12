@@ -28,35 +28,65 @@ package domain
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	types "github.com/uber/cadence/common/types"
-	reflect "reflect"
 )
 
-// MockDLQMessageHandler is a mock of DLQMessageHandler interface
+// MockDLQMessageHandler is a mock of DLQMessageHandler interface.
 type MockDLQMessageHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockDLQMessageHandlerMockRecorder
 }
 
-// MockDLQMessageHandlerMockRecorder is the mock recorder for MockDLQMessageHandler
+// MockDLQMessageHandlerMockRecorder is the mock recorder for MockDLQMessageHandler.
 type MockDLQMessageHandlerMockRecorder struct {
 	mock *MockDLQMessageHandler
 }
 
-// NewMockDLQMessageHandler creates a new mock instance
+// NewMockDLQMessageHandler creates a new mock instance.
 func NewMockDLQMessageHandler(ctrl *gomock.Controller) *MockDLQMessageHandler {
 	mock := &MockDLQMessageHandler{ctrl: ctrl}
 	mock.recorder = &MockDLQMessageHandlerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDLQMessageHandler) EXPECT() *MockDLQMessageHandlerMockRecorder {
 	return m.recorder
 }
 
-// Read mocks base method
+// Merge mocks base method.
+func (m *MockDLQMessageHandler) Merge(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Merge", ctx, lastMessageID, pageSize, pageToken)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Merge indicates an expected call of Merge.
+func (mr *MockDLQMessageHandlerMockRecorder) Merge(ctx, lastMessageID, pageSize, pageToken interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Merge", reflect.TypeOf((*MockDLQMessageHandler)(nil).Merge), ctx, lastMessageID, pageSize, pageToken)
+}
+
+// Purge mocks base method.
+func (m *MockDLQMessageHandler) Purge(ctx context.Context, lastMessageID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Purge", ctx, lastMessageID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Purge indicates an expected call of Purge.
+func (mr *MockDLQMessageHandlerMockRecorder) Purge(ctx, lastMessageID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Purge", reflect.TypeOf((*MockDLQMessageHandler)(nil).Purge), ctx, lastMessageID)
+}
+
+// Read mocks base method.
 func (m *MockDLQMessageHandler) Read(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]*types.ReplicationTask, []byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Read", ctx, lastMessageID, pageSize, pageToken)
@@ -66,37 +96,8 @@ func (m *MockDLQMessageHandler) Read(ctx context.Context, lastMessageID int64, p
 	return ret0, ret1, ret2
 }
 
-// Read indicates an expected call of Read
+// Read indicates an expected call of Read.
 func (mr *MockDLQMessageHandlerMockRecorder) Read(ctx, lastMessageID, pageSize, pageToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockDLQMessageHandler)(nil).Read), ctx, lastMessageID, pageSize, pageToken)
-}
-
-// Purge mocks base method
-func (m *MockDLQMessageHandler) Purge(ctx context.Context, lastMessageID int64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Purge", ctx, lastMessageID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Purge indicates an expected call of Purge
-func (mr *MockDLQMessageHandlerMockRecorder) Purge(ctx, lastMessageID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Purge", reflect.TypeOf((*MockDLQMessageHandler)(nil).Purge), ctx, lastMessageID)
-}
-
-// Merge mocks base method
-func (m *MockDLQMessageHandler) Merge(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Merge", ctx, lastMessageID, pageSize, pageToken)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Merge indicates an expected call of Merge
-func (mr *MockDLQMessageHandlerMockRecorder) Merge(ctx, lastMessageID, pageSize, pageToken interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Merge", reflect.TypeOf((*MockDLQMessageHandler)(nil).Merge), ctx, lastMessageID, pageSize, pageToken)
 }
