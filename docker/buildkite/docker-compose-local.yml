@@ -71,6 +71,17 @@ services:
     environment:
       - discovery.type=single-node
 
+  mongo:
+    image: mongo:5
+    restart: always
+    networks:
+      services-network:
+        aliases:
+          - mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: cadence
+
   unit-test:
     build:
       context: ../../
@@ -86,6 +97,7 @@ services:
       - cassandra
       - mysql
       - postgres
+      - mongo
     volumes:
       - ../../:/cadence
     networks:

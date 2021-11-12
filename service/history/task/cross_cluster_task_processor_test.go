@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -153,6 +155,7 @@ func (s *crossClusterTaskProcessorSuite) testRespondPendingTasks(failedToRespond
 		func(
 			_ context.Context,
 			request *types.RespondCrossClusterTasksCompletedRequest,
+			option ...yarpc.CallOption,
 		) (*types.RespondCrossClusterTasksCompletedResponse, error) {
 			select {
 			case <-processor.shutdownCh:
@@ -238,6 +241,7 @@ func (s *crossClusterTaskProcessorSuite) testProcessTaskRequests(failedToRespond
 		func(
 			_ context.Context,
 			request *types.RespondCrossClusterTasksCompletedRequest,
+			option ...yarpc.CallOption,
 		) (*types.RespondCrossClusterTasksCompletedResponse, error) {
 			s.Len(request.TaskResponses, completedTasks)
 			s.Equal(s.mockShard.Resource.GetClusterMetadata().GetCurrentClusterName(), request.TargetCluster)
@@ -293,6 +297,7 @@ func (s *crossClusterTaskProcessorSuite) TestProcessLoop() {
 		func(
 			_ context.Context,
 			request *types.GetCrossClusterTasksRequest,
+			option ...yarpc.CallOption,
 		) (*types.GetCrossClusterTasksResponse, error) {
 			numGetRequests++
 			if numGetRequests == totalGetRequests {

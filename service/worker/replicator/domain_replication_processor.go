@@ -168,7 +168,6 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 
 		if err != nil {
 			p.logger.Error("Failed to apply domain replication tasks", tag.Error(err))
-
 			dlqErr := p.throttleRetry.Do(context.Background(), func() error {
 				return p.putDomainReplicationTaskToDLQ(task)
 			})

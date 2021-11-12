@@ -57,6 +57,17 @@ services:
     environment:
       - discovery.type=single-node
 
+  mongo:
+    image: mongo:5
+    restart: always
+    networks:
+      services-network:
+        aliases:
+          - mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: cadence
+
   unit-test:
     build:
       context: ../../
@@ -65,6 +76,7 @@ services:
       - "CASSANDRA_SEEDS=cassandra"
       - "MYSQL_SEEDS=mysql"
       - "POSTGRES_SEEDS=postgres"
+      - "MONGO_SEEDS=mongo"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID
@@ -73,6 +85,7 @@ services:
       - cassandra
       - mysql
       - postgres
+      - mongo
     volumes:
       - ../../:/cadence
       - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
