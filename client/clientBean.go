@@ -75,20 +75,12 @@ func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadat
 
 		clientConfig := dispatcher.ClientConfig(clusterName)
 
-		adminClient, err := factory.NewAdminClientWithTimeoutAndConfig(
-			clientConfig,
-			admin.DefaultTimeout,
-			admin.DefaultLargeTimeout,
-		)
+		adminClient, err := factory.NewAdminClient(clientConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		frontendClient, err := factory.NewFrontendClientWithTimeoutAndConfig(
-			clientConfig,
-			frontend.DefaultTimeout,
-			frontend.DefaultLongPollTimeout,
-		)
+		frontendClient, err := factory.NewFrontendClient(clientConfig)
 		if err != nil {
 			return nil, err
 		}

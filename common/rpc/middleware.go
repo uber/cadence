@@ -22,13 +22,16 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/pkg/procedure"
 )
 
 type authOutboundMiddleware struct {
@@ -115,4 +118,36 @@ func (m *HeaderForwardingMiddleware) Call(ctx context.Context, request *transpor
 	}
 
 	return out.Call(ctx, request)
+}
+
+type TimeoutFn func(method string) *time.Duration
+
+type outboundTimeoutMiddleware struct {
+	timeoutFn TimeoutFn
+}
+
+func (m *outboundTimeoutMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	if m.timeoutFn != nil {
+		_, method := procedure.FromName(request.Procedure)
+
+		if timeout := m.timeoutFn(method); timeout != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, *timeout)
+			defer cancel()
+		}
+	}
+
+	return out.Call(ctx, request)
+}
+
+// ApplyOutboundTimeout will wrap configured outbound with middleware that sets context timeout.
+// TimeoutFn is used determine timeout duration based on method that is being called.
+// If returned timeout is nil - no new timeout is set. Existing context timeout will still remain.
+func ApplyOutboundTimeout(config transport.ClientConfig, timeout TimeoutFn) *transport.OutboundConfig {
+	outboundConfig, ok := config.(*transport.OutboundConfig)
+	if !ok {
+		panic("not an outbound config")
+	}
+	outboundConfig.Outbounds.Unary = middleware.ApplyUnaryOutbound(outboundConfig.Outbounds.Unary, &outboundTimeoutMiddleware{timeout})
+	return outboundConfig
 }

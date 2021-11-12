@@ -24,6 +24,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
@@ -35,7 +36,7 @@ import (
 
 func TestAuthOubboundMiddleware(t *testing.T) {
 	m := authOutboundMiddleware{}
-	_, err := m.Call(context.Background(), &transport.Request{}, &fakeOutbound{verify: func(request *transport.Request) {
+	_, err := m.Call(context.Background(), &transport.Request{}, &fakeOutbound{verify: func(_ context.Context, request *transport.Request) {
 		assert.Empty(t, request.Headers)
 	}})
 	assert.NoError(t, err)
@@ -45,7 +46,7 @@ func TestAuthOubboundMiddleware(t *testing.T) {
 	assert.Error(t, err)
 
 	m = authOutboundMiddleware{fakeAuthProvider{token: []byte("token")}}
-	_, err = m.Call(context.Background(), &transport.Request{}, &fakeOutbound{verify: func(request *transport.Request) {
+	_, err = m.Call(context.Background(), &transport.Request{}, &fakeOutbound{verify: func(_ context.Context, request *transport.Request) {
 		assert.Equal(t, "token", request.Headers.Items()[common.AuthorizationTokenHeaderName])
 	}})
 	assert.NoError(t, err)
@@ -80,7 +81,7 @@ func TestInboundMetricsMiddleware(t *testing.T) {
 
 func TestOverrideCallerMiddleware(t *testing.T) {
 	m := overrideCallerMiddleware{"x-caller"}
-	_, err := m.Call(context.Background(), &transport.Request{Caller: "service"}, &fakeOutbound{verify: func(r *transport.Request) {
+	_, err := m.Call(context.Background(), &transport.Request{Caller: "service"}, &fakeOutbound{verify: func(_ context.Context, r *transport.Request) {
 		assert.Equal(t, "x-caller", r.Caller)
 	}})
 	assert.NoError(t, err)
@@ -106,17 +107,51 @@ func TestHeaderForwardingMiddleware(t *testing.T) {
 
 	m := HeaderForwardingMiddleware{}
 	// No ongoing inbound call -> keep existing outbound headers
-	_, err := m.Call(context.Background(), &request, &fakeOutbound{verify: func(r *transport.Request) {
+	_, err := m.Call(context.Background(), &request, &fakeOutbound{verify: func(_ context.Context, r *transport.Request) {
 		assert.Equal(t, outboundHeaders, r.Headers.Items())
 	}})
 	assert.NoError(t, err)
 
 	// With ongoing inbound call -> forward inbound headers not present in the request
-	_, err = m.Call(ctx, &request, &fakeOutbound{verify: func(r *transport.Request) {
+	_, err = m.Call(ctx, &request, &fakeOutbound{verify: func(_ context.Context, r *transport.Request) {
 		assert.Equal(t, combinedHeaders, r.Headers.Items())
 	}})
 	assert.NoError(t, err)
+}
 
+func TestOutboundTimeoutMiddleware(t *testing.T) {
+	ctx := context.Background()
+
+	m := &outboundTimeoutMiddleware{}
+	m.Call(ctx, &transport.Request{}, &fakeOutbound{verify: func(newCtx context.Context, _ *transport.Request) {
+		assert.Equal(t, ctx, newCtx)
+	}})
+
+	m = &outboundTimeoutMiddleware{timeoutFn: func(method string) *time.Duration {
+		switch method {
+		case "A":
+			duration := time.Minute
+			return &duration
+		case "B":
+			return nil
+		default:
+			return nil
+		}
+	}}
+
+	m.Call(ctx, &transport.Request{Procedure: "service::A"}, &fakeOutbound{verify: func(newCtx context.Context, _ *transport.Request) {
+		deadline, ok := newCtx.Deadline()
+		assert.True(t, ok)
+		assert.InDelta(t, time.Now().Add(time.Minute).Unix(), deadline.Unix(), float64(time.Second))
+	}})
+
+	m.Call(ctx, &transport.Request{Procedure: "service::B"}, &fakeOutbound{verify: func(newCtx context.Context, _ *transport.Request) {
+		assert.Equal(t, ctx, newCtx)
+	}})
+
+	m.Call(ctx, &transport.Request{Procedure: "service::C"}, &fakeOutbound{verify: func(newCtx context.Context, _ *transport.Request) {
+		assert.Equal(t, ctx, newCtx)
+	}})
 }
 
 type fakeHandler struct {
@@ -129,14 +164,14 @@ func (h *fakeHandler) Handle(ctx context.Context, req *transport.Request, resw t
 }
 
 type fakeOutbound struct {
-	verify   func(*transport.Request)
+	verify   func(context.Context, *transport.Request)
 	response *transport.Response
 	err      error
 }
 
 func (o fakeOutbound) Call(ctx context.Context, request *transport.Request) (*transport.Response, error) {
 	if o.verify != nil {
-		o.verify(request)
+		o.verify(ctx, request)
 	}
 	return o.response, o.err
 }

@@ -46,6 +46,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -55,11 +56,8 @@ type (
 		NewHistoryClient() (history.Client, error)
 		NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error)
 
-		NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error)
-		NewMatchingClientWithTimeout(domainIDToName DomainIDToNameFunc, timeout time.Duration, longPollTimeout time.Duration) (matching.Client, error)
-
-		NewAdminClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, largeTimeout time.Duration) (admin.Client, error)
-		NewFrontendClientWithTimeoutAndConfig(config transport.ClientConfig, timeout time.Duration, longPollTimeout time.Duration) (frontend.Client, error)
+		NewAdminClient(config transport.ClientConfig) (admin.Client, error)
+		NewFrontendClient(config transport.ClientConfig) (frontend.Client, error)
 	}
 
 	// DomainIDToNameFunc maps a domainID to domain name. Returns error when mapping is not possible.
@@ -95,17 +93,13 @@ func NewRPCClientFactory(
 }
 
 func (cf *rpcClientFactory) NewHistoryClient() (history.Client, error) {
-	return cf.NewHistoryClientWithTimeout(history.DefaultTimeout)
-}
+	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
+	outboundConfig = rpc.ApplyOutboundTimeout(outboundConfig, func(method string) *time.Duration {
+		return history.MaxTimeouts[method]
+	})
 
-func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc) (matching.Client, error) {
-	return cf.NewMatchingClientWithTimeout(domainIDToName, matching.DefaultTimeout, matching.DefaultLongPollTimeout)
-}
-
-func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
 	var rawClient history.Client
 	var addressMapper history.AddressMapperFn
-	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
 	if isGRPCOutbound(outboundConfig) {
 		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		addressMapper = func(address string) (string, error) {
@@ -133,7 +127,6 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	client := history.NewClient(
 		cf.numberOfHistoryShards,
 		maxSizeConfig,
-		timeout,
 		rawClient,
 		peerResolver,
 		cf.logger,
@@ -147,14 +140,16 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	return client, nil
 }
 
-func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
+func (cf *rpcClientFactory) NewMatchingClient(
 	domainIDToName DomainIDToNameFunc,
-	timeout time.Duration,
-	longPollTimeout time.Duration,
 ) (matching.Client, error) {
+	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
+	outboundConfig = rpc.ApplyOutboundTimeout(outboundConfig, func(method string) *time.Duration {
+		return matching.MaxTimeouts[method]
+	})
+
 	var rawClient matching.Client
 	var addressMapper matching.AddressMapperFn
-	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
 	if isGRPCOutbound(outboundConfig) {
 		rawClient = matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
 		addressMapper = func(address string) (string, error) {
@@ -171,8 +166,6 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	peerResolver := matching.NewPeerResolver(resolver, addressMapper)
 
 	client := matching.NewClient(
-		timeout,
-		longPollTimeout,
 		rawClient,
 		peerResolver,
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
@@ -187,11 +180,13 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 
 }
 
-func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
+func (cf *rpcClientFactory) NewAdminClient(
 	config transport.ClientConfig,
-	timeout time.Duration,
-	largeTimeout time.Duration,
 ) (admin.Client, error) {
+	config = rpc.ApplyOutboundTimeout(config, func(method string) *time.Duration {
+		return admin.MaxTimeouts[method]
+	})
+
 	var client admin.Client
 	if isGRPCOutbound(config) {
 		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
@@ -199,7 +194,6 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 		client = admin.NewThriftClient(adminserviceclient.New(config))
 	}
 
-	client = admin.NewClient(timeout, largeTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
 		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
@@ -209,11 +203,13 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	return client, nil
 }
 
-func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
+func (cf *rpcClientFactory) NewFrontendClient(
 	config transport.ClientConfig,
-	timeout time.Duration,
-	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
+	config = rpc.ApplyOutboundTimeout(config, func(method string) *time.Duration {
+		return frontend.MaxTimeouts[method]
+	})
+
 	var client frontend.Client
 	if isGRPCOutbound(config) {
 		client = frontend.NewGRPCClient(
@@ -226,7 +222,6 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = frontend.NewThriftClient(workflowserviceclient.New(config))
 	}
 
-	client = frontend.NewClient(timeout, longPollTimeout, client)
 	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
 		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
