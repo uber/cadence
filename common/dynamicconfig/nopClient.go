@@ -72,15 +72,15 @@ func (mc *nopClient) GetDurationValue(
 	return sysDefaultValue, NotFoundError
 }
 
-func (mc *nopClient) UpdateValue(name Key, value interface{}) error {
+func (mc *nopClient) UpdateValues(name Key, value interface{}) error {
 	return errors.New("unable to update key")
 }
 
-func (mc *nopClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+func (mc *nopClient) RestoreValues(name Key, filters map[Filter]interface{}) error {
 	return errors.New("not supported for file based client")
 }
 
-func (mc *nopClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+func (mc *nopClient) ListConfigEntries() ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }
 

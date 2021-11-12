@@ -332,7 +332,7 @@ func (s *fileBasedClientSuite) TestUpdateConfig() {
 		"WorkflowID": 1,
 		"DomainID":   2,
 	}
-	err = client.UpdateValue(key, v)
+	err = client.UpdateValues(key, v)
 	s.NoError(err)
 
 	// verify update result
@@ -349,6 +349,6 @@ func (s *fileBasedClientSuite) TestUpdateConfig() {
 	v = map[string]interface{}{
 		"DomainID": 1,
 	}
-	err = client.UpdateValue(key, v)
+	err = client.UpdateValues(key, v)
 	s.NoError(err)
 }

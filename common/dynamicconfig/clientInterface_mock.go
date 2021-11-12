@@ -179,9 +179,9 @@ func (mr *MockClientMockRecorder) GetDurationValue(name, filters, sysDefaultValu
 }
 
 // UpdateValue mocks base method
-func (m *MockClient) UpdateValue(name Key, value interface{}) error {
+func (m *MockClient) UpdateValues(name Key, value interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateValue", name, value)
+	ret := m.ctrl.Call(m, "UpdateValues", name, value)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -189,13 +189,13 @@ func (m *MockClient) UpdateValue(name Key, value interface{}) error {
 // UpdateValue indicates an expected call of UpdateValue
 func (mr *MockClientMockRecorder) UpdateValue(name, value interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateValue", reflect.TypeOf((*MockClient)(nil).UpdateValue), name, value)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateValues", reflect.TypeOf((*MockClient)(nil).UpdateValues), name, value)
 }
 
 // RestoreValue mocks base method
-func (m *MockClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+func (m *MockClient) RestoreValues(name Key, filters map[Filter]interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestoreValue", name, filters)
+	ret := m.ctrl.Call(m, "RestoreValues", name, filters)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -203,20 +203,20 @@ func (m *MockClient) RestoreValue(name Key, filters map[Filter]interface{}) erro
 // RestoreValue indicates an expected call of RestoreValue
 func (mr *MockClientMockRecorder) RestoreValue(name, filters interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreValue", reflect.TypeOf((*MockClient)(nil).RestoreValue), name, filters)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreValues", reflect.TypeOf((*MockClient)(nil).RestoreValues), name, filters)
 }
 
 // ListValue mocks base method
-func (m *MockClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+func (m *MockClient) ListConfigEntries(name Key) ([]*types.DynamicConfigEntry, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListValue", name)
+	ret := m.ctrl.Call(m, "ListConfigEntries", name)
 	ret0, _ := ret[0].([]*types.DynamicConfigEntry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListValue indicates an expected call of ListValue
-func (mr *MockClientMockRecorder) ListValue(name interface{}) *gomock.Call {
+func (mr *MockClientMockRecorder) ListValue() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValue", reflect.TypeOf((*MockClient)(nil).ListValue), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListConfigEntries", reflect.TypeOf((*MockClient)(nil).ListConfigEntries))
 }

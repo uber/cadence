@@ -703,7 +703,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NilOverwrite() {
 			return errors.New("entry not removed")
 		}).AnyTimes()
 
-	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, nil)
+	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, nil)
 	s.NoError(err)
 }
 
@@ -724,7 +724,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 		},
 	}
 
-	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, values)
+	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 
 	snapshot2 := snapshot1
@@ -776,7 +776,7 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 		}).AnyTimes()
 
 	s.client.syncWithDB()
-	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, values)
+	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 }
 
@@ -798,7 +798,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetrySuccess() {
 
 	s.client.syncWithDB()
 
-	err := s.client.UpdateValue(dc.TestGetBoolPropertyKey, []*types.DynamicConfigValue{})
+	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, []*types.DynamicConfigValue{})
 	s.NoError(err)
 }
 
@@ -809,7 +809,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		Return(&p.ConditionFailedError{}).MaxTimes(retryAttempts + 1)
 
-	err := s.client.UpdateValue(dc.TestGetFloat64PropertyKey, []*types.DynamicConfigValue{})
+	err := s.client.UpdateValues(dc.TestGetFloat64PropertyKey, []*types.DynamicConfigValue{})
 	s.Error(err)
 }
 
@@ -822,7 +822,7 @@ func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
 			return nil
 		}).AnyTimes()
 
-	err := s.client.UpdateValue(dc.TestGetDurationPropertyKey, []*types.DynamicConfigValue{})
+	err := s.client.UpdateValues(dc.TestGetDurationPropertyKey, []*types.DynamicConfigValue{})
 	s.Error(err)
 }
 
@@ -844,7 +844,7 @@ func (s *configStoreClientSuite) TestRestoreValue_NoFilter() {
 			return nil
 		}).AnyTimes()
 
-	err := s.client.RestoreValue(dc.TestGetBoolPropertyKey, nil)
+	err := s.client.RestoreValues(dc.TestGetBoolPropertyKey, nil)
 	s.NoError(err)
 }
 
@@ -868,7 +868,7 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
 		dc.DomainName: "unknown-domain",
 	}
 
-	err := s.client.RestoreValue(dc.TestGetBoolPropertyKey, noMatchFilter)
+	err := s.client.RestoreValues(dc.TestGetBoolPropertyKey, noMatchFilter)
 	s.NoError(err)
 }
 
@@ -889,13 +889,13 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 		dc.DomainName: "samples-domain",
 	}
 
-	err := s.client.RestoreValue(dc.TestGetBoolPropertyKey, filters)
+	err := s.client.RestoreValues(dc.TestGetBoolPropertyKey, filters)
 	s.NoError(err)
 }
 
 func (s *configStoreClientSuite) TestListValues() {
 	defaultTestSetup(s)
-	val, err := s.client.ListValue(dc.UnknownKey)
+	val, err := s.client.ListConfigEntries()
 	s.NoError(err)
 	for _, resEntry := range val {
 		for _, oriEntry := range snapshot1.Values.Entries {
@@ -922,7 +922,7 @@ func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 
 	s.client.syncWithDB()
 
-	val, err := s.client.ListValue(dc.UnknownKey)
+	val, err := s.client.ListConfigEntries()
 	s.NoError(err)
 	s.Nil(val)
 }

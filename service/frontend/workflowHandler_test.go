@@ -488,7 +488,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey() {
 	dynamicClient := dc.NewInMemoryClient()
-	dynamicClient.UpdateValue(dc.RequiredDomainDataKeys, map[string]interface{}{"Tier": true})
+	dynamicClient.UpdateValues(dc.RequiredDomainDataKeys, map[string]interface{}{"Tier": true})
 	cfg := s.newConfig(dynamicClient)
 	wh := s.getWorkflowHandler(cfg)
 

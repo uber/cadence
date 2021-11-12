@@ -131,15 +131,15 @@ func (mc *inMemoryClient) GetDurationValue(
 	return sysDefaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
+func (mc *inMemoryClient) UpdateValues(key Key, value interface{}) error {
 	mc.SetValue(key, value)
 	return nil
 }
 
-func (mc *inMemoryClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+func (mc *inMemoryClient) RestoreValues(name Key, filters map[Filter]interface{}) error {
 	return errors.New("not supported for file based client")
 }
 
-func (mc *inMemoryClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+func (mc *inMemoryClient) ListConfigEntries() ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }

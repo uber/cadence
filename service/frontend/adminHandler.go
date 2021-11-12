@@ -222,7 +222,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
-	err = adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
+	err = adh.params.DynamicConfig.UpdateValues(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
 		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
@@ -1336,7 +1336,7 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 		return adh.error(err, scope)
 	}
 
-	return adh.params.DynamicConfig.UpdateValue(keyVal, request.ConfigValues)
+	return adh.params.DynamicConfig.UpdateValues(keyVal, request.ConfigValues)
 }
 
 func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {
@@ -1363,7 +1363,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 			return adh.error(errInvalidFilters, scope)
 		}
 	}
-	return adh.params.DynamicConfig.RestoreValue(keyVal, filters)
+	return adh.params.DynamicConfig.RestoreValues(keyVal, filters)
 }
 
 func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (_ *types.ListDynamicConfigResponse, retError error) {
@@ -1375,20 +1375,8 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	entries, err := adh.params.DynamicConfig.ListConfigEntries()
 	if err != nil {
-		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
-		if err2 != nil {
-			return nil, adh.error(err2, scope)
-		}
-		return &types.ListDynamicConfigResponse{
-			Entries: entries,
-		}, nil
-	}
-
-	entries, err2 := adh.params.DynamicConfig.ListValue(keyVal)
-	if err2 != nil {
-		err = adh.error(err2, scope)
 		return nil, adh.error(err, scope)
 	}
 

@@ -154,14 +154,14 @@ func (d *dynamicClient) GetDurationValue(
 	return d.client.GetDurationValue(name, filters, sysDefaultValue)
 }
 
-func (d *dynamicClient) UpdateValue(name dynamicconfig.Key, value interface{}) error {
+func (d *dynamicClient) UpdateValues(name dynamicconfig.Key, value interface{}) error {
 	if name == dynamicconfig.AdvancedVisibilityWritingMode { // override for es integration tests
 		d.Lock()
 		defer d.Unlock()
 		d.overrides[dynamicconfig.AdvancedVisibilityWritingMode] = value.(string)
 		return nil
 	}
-	return d.client.UpdateValue(name, value)
+	return d.client.UpdateValues(name, value)
 }
 
 func (d *dynamicClient) OverrideValue(name dynamicconfig.Key, value interface{}) {
@@ -170,12 +170,12 @@ func (d *dynamicClient) OverrideValue(name dynamicconfig.Key, value interface{})
 	d.overrides[name] = value
 }
 
-func (d *dynamicClient) ListValue(name dynamicconfig.Key) ([]*types.DynamicConfigEntry, error) {
-	return d.client.ListValue(name)
+func (d *dynamicClient) ListConfigEntries() ([]*types.DynamicConfigEntry, error) {
+	return d.client.ListConfigEntries()
 }
 
-func (d *dynamicClient) RestoreValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}) error {
-	return d.client.RestoreValue(name, filters)
+func (d *dynamicClient) RestoreValues(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}) error {
+	return d.client.RestoreValues(name, filters)
 }
 
 // newIntegrationConfigClient - returns a dynamic config client for integration testing

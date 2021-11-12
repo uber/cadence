@@ -186,7 +186,7 @@ func (fc *fileBasedClient) GetDurationValue(
 	return durationVal, nil
 }
 
-func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
+func (fc *fileBasedClient) UpdateValues(name Key, value interface{}) error {
 	keyName := Keys[name]
 	currentValues := make(map[string][]*constrainedValue)
 
@@ -213,11 +213,11 @@ func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 	return fc.storeValues(currentValues)
 }
 
-func (fc *fileBasedClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
+func (fc *fileBasedClient) RestoreValues(name Key, filters map[Filter]interface{}) error {
 	return errors.New("not supported for file based client")
 }
 
-func (fc *fileBasedClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
+func (fc *fileBasedClient) ListConfigEntries() ([]*types.DynamicConfigEntry, error) {
 	return nil, errors.New("not supported for file based client")
 }
 

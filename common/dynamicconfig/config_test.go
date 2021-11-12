@@ -172,10 +172,10 @@ func (s *configSuite) TestGetMapProperty() {
 func (s *configSuite) TestUpdateConfig() {
 	key := TestGetBoolPropertyKey
 	value := s.cln.GetBoolProperty(key, true)
-	err := s.client.UpdateValue(key, false)
+	err := s.client.UpdateValues(key, false)
 	s.NoError(err)
 	s.Equal(false, value())
-	err = s.client.UpdateValue(key, true)
+	err = s.client.UpdateValues(key, true)
 	s.NoError(err)
 	s.Equal(true, value())
 }

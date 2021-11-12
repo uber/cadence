@@ -67,11 +67,18 @@ type Client interface {
 	GetDurationValue(
 		name Key, filters map[Filter]interface{}, sysDefaultValue time.Duration,
 	) (time.Duration, error)
-	
-	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
-	UpdateValue(name Key, value interface{}) error
-	RestoreValue(name Key, filters map[Filter]interface{}) error
-	ListValue(name Key) ([]*types.DynamicConfigEntry, error)
+
+	// UpdateValue update all the values(all the filters) of the dynamic config entry
+	// name is the key to identify a dynamic config entry
+	UpdateValues(name Key, value interface{}) error
+	// RestoreValue is a shortcut or special case of UpdateValue -- delete some filters from the dynamic config value in a safer way
+	// When filters is nil, it will delete the value with empty filters -- which is the fallback value. So that the fallback value becomes the system default value(defined in code)
+	// When filters is not nil, it will delete the values with the matched filters
+	// name is the key to identify a dynamic config entry
+	RestoreValues(name Key, filters map[Filter]interface{}) error
+
+	// ListConfigEntries returns all the existing dynamic config entries
+	ListConfigEntries() ([]*types.DynamicConfigEntry, error)
 }
 
 var NotFoundError = &types.EntityNotExistsError{
