@@ -181,7 +181,7 @@ func (mr *MockClientMockRecorder) GetDurationValue(name, filters, sysDefaultValu
 // UpdateValue mocks base method
 func (m *MockClient) UpdateValues(name Key, value interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateValues", name, value)
+	ret := m.ctrl.Call(m, "UpdateFallbackRawValue", name, value)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -189,7 +189,7 @@ func (m *MockClient) UpdateValues(name Key, value interface{}) error {
 // UpdateValue indicates an expected call of UpdateValue
 func (mr *MockClientMockRecorder) UpdateValue(name, value interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateValues", reflect.TypeOf((*MockClient)(nil).UpdateValues), name, value)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFallbackRawValue", reflect.TypeOf((*MockClient)(nil).UpdateValues), name, value)
 }
 
 // RestoreValue mocks base method

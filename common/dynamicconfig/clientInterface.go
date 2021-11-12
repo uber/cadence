@@ -70,7 +70,7 @@ type Client interface {
 
 	// UpdateValue update all the values(all the filters) of the dynamic config entry
 	// name is the key to identify a dynamic config entry
-	UpdateValues(name Key, value interface{}) error
+	UpdateFallbackRawValue(name Key, value interface{}) error
 	// RestoreValue is a shortcut or special case of UpdateValue -- delete some filters from the dynamic config value in a safer way
 	// When filters is nil, it will delete the value with empty filters -- which is the fallback value. So that the fallback value becomes the system default value(defined in code)
 	// When filters is not nil, it will delete the values with the matched filters

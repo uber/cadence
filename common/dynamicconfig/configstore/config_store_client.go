@@ -235,7 +235,7 @@ func (csc *configStoreClient) GetDurationValue(
 }
 
 // UpdateValue updates the dynamic config entry, value is the
-func (csc *configStoreClient) UpdateValues(name dc.Key, value interface{}) error {
+func (csc *configStoreClient) UpdateFallbackRawValue(name dc.Key, value interface{}) error {
 	return csc.doUpdateValue(name, value, csc.config.UpdateRetryAttempts)
 }
 
@@ -277,7 +277,7 @@ func (csc *configStoreClient) RestoreValues(name dc.Key, filters map[dc.Filter]i
 		}
 	}
 
-	return csc.UpdateValues(name, newValues)
+	return csc.UpdateFallbackRawValue(name, newValues)
 }
 
 func (csc *configStoreClient) ListConfigEntries() ([]*types.DynamicConfigEntry, error) {

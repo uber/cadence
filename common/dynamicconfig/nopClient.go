@@ -72,7 +72,7 @@ func (mc *nopClient) GetDurationValue(
 	return sysDefaultValue, NotFoundError
 }
 
-func (mc *nopClient) UpdateValues(name Key, value interface{}) error {
+func (mc *nopClient) UpdateFallbackRawValue(name Key, value interface{}) error {
 	return errors.New("unable to update key")
 }
 

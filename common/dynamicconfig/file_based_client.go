@@ -186,7 +186,7 @@ func (fc *fileBasedClient) GetDurationValue(
 	return durationVal, nil
 }
 
-func (fc *fileBasedClient) UpdateValues(name Key, value interface{}) error {
+func (fc *fileBasedClient) UpdateFallbackRawValue(name Key, value interface{}) error {
 	keyName := Keys[name]
 	currentValues := make(map[string][]*constrainedValue)
 

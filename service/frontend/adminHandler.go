@@ -222,7 +222,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
-	err = adh.params.DynamicConfig.UpdateValues(dynamicconfig.ValidSearchAttributes, currentValidAttr)
+	err = adh.params.DynamicConfig.UpdateFallbackRawValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
 		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
@@ -1336,7 +1336,7 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 		return adh.error(err, scope)
 	}
 
-	return adh.params.DynamicConfig.UpdateValues(keyVal, request.ConfigValues)
+	return adh.params.DynamicConfig.UpdateFallbackRawValue(keyVal, request.ConfigValues)
 }
 
 func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {

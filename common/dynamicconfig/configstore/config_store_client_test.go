@@ -703,7 +703,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NilOverwrite() {
 			return errors.New("entry not removed")
 		}).AnyTimes()
 
-	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, nil)
+	err := s.client.UpdateFallbackRawValue(dc.TestGetBoolPropertyKey, nil)
 	s.NoError(err)
 }
 
@@ -724,7 +724,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 		},
 	}
 
-	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, values)
+	err := s.client.UpdateFallbackRawValue(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 
 	snapshot2 := snapshot1
@@ -776,7 +776,7 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 		}).AnyTimes()
 
 	s.client.syncWithDB()
-	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, values)
+	err := s.client.UpdateFallbackRawValue(dc.TestGetBoolPropertyKey, values)
 	s.NoError(err)
 }
 
@@ -798,7 +798,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetrySuccess() {
 
 	s.client.syncWithDB()
 
-	err := s.client.UpdateValues(dc.TestGetBoolPropertyKey, []*types.DynamicConfigValue{})
+	err := s.client.UpdateFallbackRawValue(dc.TestGetBoolPropertyKey, []*types.DynamicConfigValue{})
 	s.NoError(err)
 }
 
@@ -809,7 +809,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
 		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
 		Return(&p.ConditionFailedError{}).MaxTimes(retryAttempts + 1)
 
-	err := s.client.UpdateValues(dc.TestGetFloat64PropertyKey, []*types.DynamicConfigValue{})
+	err := s.client.UpdateFallbackRawValue(dc.TestGetFloat64PropertyKey, []*types.DynamicConfigValue{})
 	s.Error(err)
 }
 
@@ -822,7 +822,7 @@ func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
 			return nil
 		}).AnyTimes()
 
-	err := s.client.UpdateValues(dc.TestGetDurationPropertyKey, []*types.DynamicConfigValue{})
+	err := s.client.UpdateFallbackRawValue(dc.TestGetDurationPropertyKey, []*types.DynamicConfigValue{})
 	s.Error(err)
 }
 

@@ -131,7 +131,7 @@ func (mc *inMemoryClient) GetDurationValue(
 	return sysDefaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) UpdateValues(key Key, value interface{}) error {
+func (mc *inMemoryClient) UpdateFallbackRawValue(key Key, value interface{}) error {
 	mc.SetValue(key, value)
 	return nil
 }

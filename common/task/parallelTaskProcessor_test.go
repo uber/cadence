@@ -227,7 +227,7 @@ func (s *parallelTaskProcessorSuite) TestMonitor() {
 	s.processor.shutdownWG.Add(workerCount + 1)
 
 	newWorkerCount := 3
-	dcClient.UpdateValues(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
+	dcClient.UpdateFallbackRawValue(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
 
 	time.Sleep(2 * testMonitorTickerDuration)
 	for i := 0; i != newWorkerCount+1; i++ {
