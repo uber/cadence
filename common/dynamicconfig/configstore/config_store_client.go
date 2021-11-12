@@ -332,43 +332,27 @@ func (csc *configStoreClient) doUpdateValue(name dc.Key, values []*types.Dynamic
 	}
 
 	keyName := dc.Keys[name]
-	var newEntries []*types.DynamicConfigEntry
 
-	existingEntry, entryExists := currentCached.dcEntries[keyName]
+	_, entryExists := currentCached.dcEntries[keyName]
+	if !entryExists {
+		return dc.NotFoundError
+	}
 
-	if len(values) == 0 {
-		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
-
-		for _, entry := range currentCached.dcEntries {
-			if entryExists && entry == existingEntry {
-				continue
-			} else {
-				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
-			}
-		}
-	} else {
-		if entryExists {
-			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+	newEntries := make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
+	for _, entry := range currentCached.dcEntries {
+		if entry.Name == keyName {
+			continue
 		} else {
-			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries)+1)
-			newEntries = append(newEntries,
-				&types.DynamicConfigEntry{
-					Name:   keyName,
-					Values: values,
-				})
+			newEntries = append(newEntries, copyDynamicConfigEntry(entry))
 		}
+	}
 
-		for _, entry := range currentCached.dcEntries {
-			if entryExists && entry.Name == keyName {
-				newEntries = append(newEntries,
-					&types.DynamicConfigEntry{
-						Name:   keyName,
-						Values: values,
-					})
-			} else {
-				newEntries = append(newEntries, copyDynamicConfigEntry(entry))
-			}
-		}
+	if len(values) > 0 {
+		newEntries = append(newEntries,
+			&types.DynamicConfigEntry{
+				Name:   keyName,
+				Values: values,
+			})
 	}
 
 	newSnapshot := &persistence.DynamicConfigSnapshot{

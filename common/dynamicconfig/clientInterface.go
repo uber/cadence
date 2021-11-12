@@ -69,6 +69,7 @@ type Client interface {
 	) (time.Duration, error)
 
 	// UpdateValues update all the values(all the filters) of the dynamic config entry
+	// if values is empty, it's essentially deleting the entry since an entry with empty values is same as not existing
 	// name is the key to identify a dynamic config entry
 	UpdateValues(name Key, values []*types.DynamicConfigValue) error
 
