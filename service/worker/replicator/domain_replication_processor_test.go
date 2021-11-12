@@ -208,7 +208,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 	domainID1 := uuid.New()
 	domainID2 := uuid.New()
-	lastMessageID := int64(1000)
+	lastMessageID := int64(1001)
 	resp := &types.GetDomainReplicationMessagesResponse{
 		Messages: &types.ReplicationMessages{
 			ReplicationTasks: []*types.ReplicationTask{
@@ -230,7 +230,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(nil).AnyTimes()
-	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(1)
+	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(0)
 
 	s.replicationProcessor.fetchDomainReplicationTasks()
 	s.Equal(lastMessageID, s.replicationProcessor.lastProcessedMessageID)

@@ -23,7 +23,7 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/uuid v1.1.2

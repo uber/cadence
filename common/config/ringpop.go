@@ -306,15 +306,15 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 
 			var targets []string
 			for _, record := range addrs {
-			   target, err := provider.Resolver.LookupHost(context.Background(), record.Target)
+				target, err := provider.Resolver.LookupHost(context.Background(), record.Target)
 
-			   if err != nil {
+				if err != nil {
 					provider.Logger.Warn("could not resolve srv dns host", tag.Address(record.Target), tag.Error(err))
 					continue
-			   }
-			   for _, host := range target {
-			   		targets = append(targets, net.JoinHostPort(host, fmt.Sprintf("%d", record.Port)))
-			   }
+				}
+				for _, host := range target {
+					targets = append(targets, net.JoinHostPort(host, fmt.Sprintf("%d", record.Port)))
+				}
 			}
 			resolvedHosts[serviceName] = targets
 			resolved = targets

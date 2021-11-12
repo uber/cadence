@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
@@ -83,6 +84,39 @@ func TestOverrideCallerMiddleware(t *testing.T) {
 		assert.Equal(t, "x-caller", r.Caller)
 	}})
 	assert.NoError(t, err)
+}
+
+func TestHeaderForwardingMiddleware(t *testing.T) {
+	inboundHeaders := map[string]string{
+		"key-a": "inbound-value-a",
+		"key-b": "inbound-value-b",
+	}
+	outboundHeaders := map[string]string{
+		"key-b": "outbound-value-b",
+		"key-c": "outbound-value-c",
+	}
+	combinedHeaders := map[string]string{
+		"key-a": "inbound-value-a",
+		"key-b": "outbound-value-b",
+		"key-c": "outbound-value-c",
+	}
+
+	ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{Headers: inboundHeaders})
+	request := transport.Request{Headers: transport.HeadersFromMap(outboundHeaders)}
+
+	m := HeaderForwardingMiddleware{}
+	// No ongoing inbound call -> keep existing outbound headers
+	_, err := m.Call(context.Background(), &request, &fakeOutbound{verify: func(r *transport.Request) {
+		assert.Equal(t, outboundHeaders, r.Headers.Items())
+	}})
+	assert.NoError(t, err)
+
+	// With ongoing inbound call -> forward inbound headers not present in the request
+	_, err = m.Call(ctx, &request, &fakeOutbound{verify: func(r *transport.Request) {
+		assert.Equal(t, combinedHeaders, r.Headers.Items())
+	}})
+	assert.NoError(t, err)
+
 }
 
 type fakeHandler struct {
