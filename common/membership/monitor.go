@@ -29,7 +29,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -94,6 +93,7 @@ type (
 // NewRingpopMonitor returns a ringpop-based membership monitor
 func NewRingpopMonitor(
 	serviceName string,
+	services []string,
 	rp *RingpopWrapper,
 	logger log.Logger,
 ) *RingpopMonitor {
@@ -105,7 +105,7 @@ func NewRingpopMonitor(
 		logger:         logger,
 		rings:          make(map[string]*ringpopServiceResolver),
 	}
-	for _, s := range service.List {
+	for _, s := range services {
 		rpo.rings[s] = newRingpopServiceResolver(s, rp, logger)
 	}
 	return rpo

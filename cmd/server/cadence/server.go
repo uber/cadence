@@ -157,7 +157,7 @@ func (s *server) startService() common.Daemon {
 	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
 	params.RPCFactory = rpcFactory
 	params.MembershipMonitor, err = membership.NewMonitor(
-		s.cfg.Ringpop,
+		&s.cfg.Ringpop,
 		rpcFactory.GetChannel(),
 		params.Name,
 		params.Logger,

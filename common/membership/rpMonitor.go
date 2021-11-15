@@ -29,6 +29,7 @@ import (
 	"go.uber.org/yarpc/transport/tchannel"
 
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/service"
 )
 
 type RingpopMonitor struct {
@@ -42,7 +43,7 @@ type RingpopMonitor struct {
 
 var _ Monitor = (*RingpopMonitor)(nil)
 
-// NewRingpopMonitor builds a ringpop monitor conforming
+// NewMonitor builds a ringpop monitor conforming
 // to the underlying configuration
 func NewMonitor(
 	config *RingpopConfig,
@@ -71,6 +72,6 @@ func NewMonitor(
 	}
 	rpw := NewRingpopWraper(rp, bootstrapOpts, logger)
 
-	return NewRingpopMonitor(serviceName, rpw, logger), nil
+	return NewRingpopMonitor(serviceName, service.List, rpw, logger), nil
 
 }

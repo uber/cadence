@@ -96,6 +96,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 		}
 		cluster.rings[i] = NewRingpopMonitor(
 			serviceName,
+			[]string{serviceName},
 			NewRingpopWraper(ringPop, bOptions, logger),
 			logger,
 		)
