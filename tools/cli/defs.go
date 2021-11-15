@@ -35,8 +35,8 @@ const (
 	tchannelPort = localHost + ":7933"
 	grpcPort     = localHost + ":7833"
 
-	grpcChannel   = "grpc"
-	thriftChannel = "tchannel"
+	grpcTransport   = "grpc"
+	thriftTransport = "tchannel"
 
 	maxOutputStringLength = 200 // max length for output string
 	maxWorkflowTypeLength = 32  // max item length for output workflow type in table

@@ -84,7 +84,7 @@ func NewClientFactory() ClientFactory {
 func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	if c.GlobalString(FlagTransport) == grpcChannel {
+	if c.GlobalString(FlagTransport) == grpcTransport {
 		return frontend.NewGRPCClient(
 			apiv1.NewDomainAPIYARPCClient(clientConfig),
 			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
@@ -99,7 +99,7 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
 	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
-	if c.GlobalString(FlagTransport) == grpcChannel {
+	if c.GlobalString(FlagTransport) == grpcTransport {
 		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
 	return admin.NewThriftClient(serverAdmin.New(clientConfig))
@@ -109,7 +109,7 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if b.dispatcher != nil {
 		return
 	}
-	shouldUseGrpc := c.GlobalString(FlagTransport) == grpcChannel
+	shouldUseGrpc := c.GlobalString(FlagTransport) == grpcTransport
 
 	b.hostPort = tchannelPort
 	if shouldUseGrpc {

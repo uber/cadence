@@ -29,20 +29,12 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
-	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/service/worker/batcher"
 
 	"github.com/uber/cadence/common/types"
-)
-
-var (
-	//TODO convert feature flagd into yarpc options
-	DefaultClientOptions = cclient.Options{
-		FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
-	}
 )
 
 // TerminateBatchJob stops abatch job
