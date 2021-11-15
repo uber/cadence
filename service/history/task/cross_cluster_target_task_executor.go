@@ -285,8 +285,8 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 				anyErr = err
 			}
 		}
-		response.ApplyParentClosePolicyResults = append(
-			response.ApplyParentClosePolicyResults,
+		response.ChildrenStatus = append(
+			response.ChildrenStatus,
 			&types.ApplyParentClosePolicyResult{
 				Child:       childAttrs,
 				FailedCause: failedCause,

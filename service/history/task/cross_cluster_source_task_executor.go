@@ -311,13 +311,13 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 			task.response))
 		return nil
 	}
-	results := task.response.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyResults
+	childrenStatus := task.response.ApplyParentClosePolicyAttributes.ChildrenStatus
 
 	err = nil
 	failedDomains := map[string]struct{}{}
 	domainsToRegenerateTask := map[string]struct{}{}
 
-	for _, result := range results {
+	for _, result := range childrenStatus {
 		// handle common errors
 		failedCause := result.FailedCause
 		if failedCause != nil {

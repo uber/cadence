@@ -133,7 +133,13 @@ message CrossClusterApplyParentClosePolicyRequestAttributes {
   repeated ApplyParentClosePolicyAttributes apply_parent_close_policy_attributes = 1;
 }
 
+message ApplyParentClosePolicyResult {
+  ApplyParentClosePolicyAttributes child = 1;
+  CrossClusterTaskFailedCause failed_cause = 2;
+}
+
 message CrossClusterApplyParentClosePolicyResponseAttributes {
+  repeated ApplyParentClosePolicyResult children_status = 1;
 }
 
 message CrossClusterTaskRequest {

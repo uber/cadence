@@ -7426,6 +7426,42 @@ func ToApplyParentClosePolicyAttributesArray(
 	return v
 }
 
+// FromApplyParentClosePolicyResultArray converts internal
+// ApplyParentClosePolicyResultArray types to internal
+func FromApplyParentClosePolicyResultArray(
+	t []*types.ApplyParentClosePolicyResult,
+) []*shared.ApplyParentClosePolicyResult {
+	if t == nil {
+		return nil
+	}
+	v := make([]*shared.ApplyParentClosePolicyResult, len(t))
+	for i := range t {
+		v[i] = &shared.ApplyParentClosePolicyResult{
+			Child:       FromApplyParentClosePolicyAttributes(t[i].Child),
+			FailedCause: FromCrossClusterTaskFailedCause(t[i].FailedCause),
+		}
+	}
+	return v
+}
+
+// ToApplyParentClosePolicyResultArray converts internal
+// ApplyParentClosePolicyResultArray types to thrift
+func ToApplyParentClosePolicyResultArray(
+	t []*shared.ApplyParentClosePolicyResult,
+) []*types.ApplyParentClosePolicyResult {
+	if t == nil {
+		return nil
+	}
+	v := make([]*types.ApplyParentClosePolicyResult, len(t))
+	for i := range t {
+		v[i] = &types.ApplyParentClosePolicyResult{
+			Child:       ToApplyParentClosePolicyAttributes(t[i].Child),
+			FailedCause: ToCrossClusterTaskFailedCause(t[i].FailedCause),
+		}
+	}
+	return v
+}
+
 // FromCrossClusterApplyParentClosePolicyRequestAttributes converts internal
 // CrossClusterApplyParentClosePolicyRequestAttributes types to thrift
 func FromCrossClusterApplyParentClosePolicyRequestAttributes(
@@ -7460,7 +7496,9 @@ func FromCrossClusterApplyParentClosePolicyResponseAttributes(
 	if t == nil {
 		return nil
 	}
-	return &shared.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	return &shared.CrossClusterApplyParentClosePolicyResponseAttributes{
+		ChildrenStatus: FromApplyParentClosePolicyResultArray(t.ChildrenStatus),
+	}
 }
 
 // ToCrossClusterApplyParentClosePolicyResponseAttributes converts thrift
@@ -7471,7 +7509,9 @@ func ToCrossClusterApplyParentClosePolicyResponseAttributes(
 	if t == nil {
 		return nil
 	}
-	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{
+		ChildrenStatus: ToApplyParentClosePolicyResultArray(t.ChildrenStatus),
+	}
 }
 
 // FromCrossClusterTaskRequest converts internal CrossClusterTaskRequest type to thrift

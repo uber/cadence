@@ -1437,6 +1437,28 @@ func ToApplyParentClosePolicyAttributes(t *sharedv1.ApplyParentClosePolicyAttrib
 	}
 }
 
+// FromApplyParentClosePolicyResult converts proto ApplyParentClosePolicyResult type to internal
+func FromApplyParentClosePolicyResult(t *types.ApplyParentClosePolicyResult) *sharedv1.ApplyParentClosePolicyResult {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.ApplyParentClosePolicyResult{
+		Child:       FromApplyParentClosePolicyAttributes(t.Child),
+		FailedCause: FromCrossClusterTaskFailedCause(t.FailedCause),
+	}
+}
+
+// ToApplyParentClosePolicyResult converts proto ApplyParentClosePolicyResult type to internal
+func ToApplyParentClosePolicyResult(t *sharedv1.ApplyParentClosePolicyResult) *types.ApplyParentClosePolicyResult {
+	if t == nil {
+		return nil
+	}
+	return &types.ApplyParentClosePolicyResult{
+		Child:       ToApplyParentClosePolicyAttributes(t.Child),
+		FailedCause: ToCrossClusterTaskFailedCause(t.FailedCause),
+	}
+}
+
 // FromCrossClusterApplyParentClosePolicyRequestAttributes converts internal CrossClusterApplyParentClosePolicyRequestAttributes type to proto
 func FromCrossClusterApplyParentClosePolicyRequestAttributes(t *types.CrossClusterApplyParentClosePolicyRequestAttributes) *sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes {
 	if t == nil {
@@ -1472,7 +1494,14 @@ func FromCrossClusterApplyParentClosePolicyResponseAttributes(t *types.CrossClus
 	if t == nil {
 		return nil
 	}
-	return &sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	response := &sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	for _, childStatus := range t.ChildrenStatus {
+		response.ChildrenStatus = append(
+			response.ChildrenStatus,
+			FromApplyParentClosePolicyResult(childStatus),
+		)
+	}
+	return response
 }
 
 // ToCrossClusterApplyParentClosePolicyResponseAttributes converts proto CrossClusterApplyParentClosePolicyResponseAttributes type to internal
@@ -1480,7 +1509,14 @@ func ToCrossClusterApplyParentClosePolicyResponseAttributes(t *sharedv1.CrossClu
 	if t == nil {
 		return nil
 	}
-	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	response := &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	for _, childStatus := range t.ChildrenStatus {
+		response.ChildrenStatus = append(
+			response.ChildrenStatus,
+			ToApplyParentClosePolicyResult(childStatus),
+		)
+	}
+	return response
 }
 
 // FromCrossClusterTaskRequest converts internal CrossClusterTaskRequest type to proto
