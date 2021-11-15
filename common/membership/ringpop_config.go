@@ -243,30 +243,30 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 	resolvedHosts := map[string][]string{}
 
 	for _, host := range provider.UnresolvedHosts {
-		serviceParts := strings.Split(host, ".")
-		if len(serviceParts) <= 2 {
-			return nil, fmt.Errorf("could not seperate service from domain %q", host)
+		hostParts := strings.Split(host, ".")
+		if len(hostParts) <= 2 {
+			return nil, fmt.Errorf("could not seperate host from domain %q", host)
 		}
-		serviceName := serviceParts[0]
-		domain := strings.Join(serviceParts[1:], ".")
+		serviceName := hostParts[0]
+		domain := strings.Join(hostParts[1:], ".")
 		resolved, exists := resolvedHosts[serviceName]
 		if !exists {
-			_, addrs, err := provider.Resolver.LookupSRV(context.Background(), serviceName, "tcp", domain)
+			_, srvs, err := provider.Resolver.LookupSRV(context.Background(), serviceName, "tcp", domain)
 
 			if err != nil {
 				return nil, fmt.Errorf("could not resolve host: %s.%s", serviceName, domain)
 			}
 
 			var targets []string
-			for _, record := range addrs {
-				target, err := provider.Resolver.LookupHost(context.Background(), record.Target)
+			for _, s := range srvs {
+				addrs, err := provider.Resolver.LookupHost(context.Background(), s.Target)
 
 				if err != nil {
-					provider.Logger.Warn("could not resolve srv dns host", tag.Address(record.Target), tag.Error(err))
+					provider.Logger.Warn("could not resolve srv dns host", tag.Address(s.Target), tag.Error(err))
 					continue
 				}
-				for _, host := range target {
-					targets = append(targets, net.JoinHostPort(host, fmt.Sprintf("%d", record.Port)))
+				for _, a := range addrs {
+					targets = append(targets, net.JoinHostPort(a, fmt.Sprintf("%d", s.Port)))
 				}
 			}
 			resolvedHosts[serviceName] = targets
