@@ -32,8 +32,8 @@ import (
 )
 
 type (
-	// RingPop is a simple wrapper
-	RingPop struct {
+	// RingpopWrapper is a simple wrapper
+	RingpopWrapper struct {
 		status int32
 		*ringpop.Ringpop
 		bootParams *swim.BootstrapOptions
@@ -41,13 +41,13 @@ type (
 	}
 )
 
-// NewRingPop create a new ring pop wrapper
-func NewRingPop(
+// NewRingpopWraper create a new ring pop wrapper
+func NewRingpopWraper(
 	ringPop *ringpop.Ringpop,
 	bootParams *swim.BootstrapOptions,
 	logger log.Logger,
-) *RingPop {
-	return &RingPop{
+) *RingpopWrapper {
+	return &RingpopWrapper{
 		status:     common.DaemonStatusInitialized,
 		Ringpop:    ringPop,
 		bootParams: bootParams,
@@ -56,7 +56,7 @@ func NewRingPop(
 }
 
 // Start start ring pop
-func (r *RingPop) Start() {
+func (r *RingpopWrapper) Start() {
 	if !atomic.CompareAndSwapInt32(
 		&r.status,
 		common.DaemonStatusInitialized,
@@ -72,7 +72,7 @@ func (r *RingPop) Start() {
 }
 
 // Stop stop ring pop
-func (r *RingPop) Stop() {
+func (r *RingpopWrapper) Stop() {
 	if !atomic.CompareAndSwapInt32(
 		&r.status,
 		common.DaemonStatusStarted,

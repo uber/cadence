@@ -48,7 +48,7 @@ const (
 type ringpopServiceResolver struct {
 	status      int32
 	service     string
-	rp          *RingPop
+	rp          *RingpopWrapper
 	refreshChan chan struct{}
 	shutdownCh  chan struct{}
 	shutdownWG  sync.WaitGroup
@@ -68,7 +68,7 @@ var _ ServiceResolver = (*ringpopServiceResolver)(nil)
 
 func newRingpopServiceResolver(
 	service string,
-	rp *RingPop,
+	rp *RingpopWrapper,
 	logger log.Logger,
 ) *ringpopServiceResolver {
 

@@ -18,12 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interfaces_mock.go -self_package github.com/uber/cadence/common/membership
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination monitor_mock.go -self_package github.com/uber/cadence/common/membership
 
 package membership
 
 import (
+	"fmt"
+	"sync/atomic"
+
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -84,3 +89,125 @@ type (
 		Members() []*HostInfo
 	}
 )
+
+// NewRingpopMonitor returns a ringpop-based membership monitor
+func NewRingpopMonitor(
+	serviceName string,
+	services []string,
+	rp *RingpopWrapper,
+	logger log.Logger,
+) *RingpopMonitor {
+
+	rpo := &RingpopMonitor{
+		status:         common.DaemonStatusInitialized,
+		serviceName:    serviceName,
+		ringpopWrapper: rp,
+		logger:         logger,
+		rings:          make(map[string]*ringpopServiceResolver),
+	}
+	for _, s := range services {
+		rpo.rings[s] = newRingpopServiceResolver(s, rp, logger)
+	}
+	return rpo
+}
+
+func (rpo *RingpopMonitor) Start() {
+	if !atomic.CompareAndSwapInt32(
+		&rpo.status,
+		common.DaemonStatusInitialized,
+		common.DaemonStatusStarted,
+	) {
+		return
+	}
+
+	rpo.ringpopWrapper.Start()
+
+	labels, err := rpo.ringpopWrapper.Labels()
+	if err != nil {
+		rpo.logger.Fatal("unable to get ring pop labels", tag.Error(err))
+	}
+
+	if err = labels.Set(RoleKey, rpo.serviceName); err != nil {
+		rpo.logger.Fatal("unable to set ring pop labels", tag.Error(err))
+	}
+
+	for _, ring := range rpo.rings {
+		ring.Start()
+	}
+}
+
+func (rpo *RingpopMonitor) Stop() {
+	if !atomic.CompareAndSwapInt32(
+		&rpo.status,
+		common.DaemonStatusStarted,
+		common.DaemonStatusStopped,
+	) {
+		return
+	}
+
+	for _, ring := range rpo.rings {
+		ring.Stop()
+	}
+
+	rpo.ringpopWrapper.Stop()
+}
+
+func (rpo *RingpopMonitor) WhoAmI() (*HostInfo, error) {
+	address, err := rpo.ringpopWrapper.WhoAmI()
+	if err != nil {
+		return nil, err
+	}
+	labels, err := rpo.ringpopWrapper.Labels()
+	if err != nil {
+		return nil, err
+	}
+	return NewHostInfo(address, labels.AsMap()), nil
+}
+
+func (rpo *RingpopMonitor) EvictSelf() error {
+	return rpo.ringpopWrapper.SelfEvict()
+}
+
+func (rpo *RingpopMonitor) GetResolver(service string) (ServiceResolver, error) {
+	ring, found := rpo.rings[service]
+	if !found {
+		return nil, fmt.Errorf("service %q is not tracked by Monitor", service)
+	}
+	return ring, nil
+}
+
+func (rpo *RingpopMonitor) Lookup(service string, key string) (*HostInfo, error) {
+	ring, err := rpo.GetResolver(service)
+	if err != nil {
+		return nil, err
+	}
+	return ring.Lookup(key)
+}
+
+func (rpo *RingpopMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {
+	ring, err := rpo.GetResolver(service)
+	if err != nil {
+		return err
+	}
+	return ring.AddListener(name, notifyChannel)
+}
+
+func (rpo *RingpopMonitor) RemoveListener(service string, name string) error {
+	ring, err := rpo.GetResolver(service)
+	if err != nil {
+		return err
+	}
+	return ring.RemoveListener(name)
+}
+
+func (rpo *RingpopMonitor) GetReachableMembers() ([]string, error) {
+	return rpo.ringpopWrapper.GetReachableMembers()
+}
+
+func (rpo *RingpopMonitor) GetMemberCount(service string) (int, error) {
+	ring, err := rpo.GetResolver(service)
+	if err != nil {
+		return 0, err
+	}
+	return ring.MemberCount(), nil
+}

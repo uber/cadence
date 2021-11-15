@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
@@ -155,13 +156,14 @@ func (s *server) startService() common.Daemon {
 	)
 	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
 	params.RPCFactory = rpcFactory
-	params.MembershipMonitor, err = s.cfg.Ringpop.NewMonitor(
+	params.MembershipMonitor, err = membership.NewMonitor(
+		&s.cfg.Ringpop,
 		rpcFactory.GetChannel(),
 		params.Name,
 		params.Logger,
 	)
 	if err != nil {
-		log.Fatalf("error creating ringpop monitor: %v", err)
+		log.Fatalf("error creating membership monitor: %v", err)
 	}
 	params.PProfInitializer = svcCfg.PProf.NewInitializer(params.Logger)
 
