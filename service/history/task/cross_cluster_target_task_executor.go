@@ -241,7 +241,6 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 
 	response := types.CrossClusterApplyParentClosePolicyResponseAttributes{}
 	var anyErr error
-	successfulDomains := map[string]struct{}{}
 
 	for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
 		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
@@ -263,9 +262,6 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			childAttrs.ChildRunID,
 			*childAttrs.ParentClosePolicy,
 		)
-		if err == nil {
-			successfulDomains[childAttrs.ChildDomainID] = struct{}{}
-		}
 		var failedCause *types.CrossClusterTaskFailedCause
 		retriable := false
 
@@ -285,6 +281,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 				anyErr = err
 			}
 		}
+		// Optimize SOURCE SIDE RETRIES by returning each child status separately
 		response.ChildrenStatus = append(
 			response.ChildrenStatus,
 			&types.ApplyParentClosePolicyResult{
@@ -293,13 +290,12 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			})
 	}
 
-	if anyErr != nil && len(successfulDomains) > 0 {
-		// remove already successful domainIDs from the task so we won't retry them
-		// if the task is going to be retried on the target side
+	if anyErr != nil {
+		// Optimize TARGET SIDE RETRIES by removing already succeeded children from the request
 		newAttributes := []*types.ApplyParentClosePolicyAttributes{}
-		for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
-			if _, ok := successfulDomains[childAttrs.ChildDomainID]; !ok {
-				newAttributes = append(newAttributes, childAttrs)
+		for _, childAttrs := range response.ChildrenStatus {
+			if childAttrs.FailedCause != nil {
+				newAttributes = append(newAttributes, childAttrs.Child)
 			}
 		}
 		task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes = newAttributes
