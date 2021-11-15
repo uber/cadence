@@ -119,7 +119,7 @@ func AdminRebalanceStart(c *cli.Context) {
 		},
 	}
 
-	resp, err := client.StartWorkflowExecution(tcCtx, request)
+	resp, err := client.StartWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}

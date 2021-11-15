@@ -473,14 +473,17 @@ func TerminateWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	err := wfClient.TerminateWorkflowExecution(ctx, &types.TerminateWorkflowExecutionRequest{
-		Domain: domain,
-		Reason: reason,
-		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
-		}, Identity: getCliIdentity(),
-	})
+	err := wfClient.TerminateWorkflowExecution(
+		ctx,
+		&types.TerminateWorkflowExecutionRequest{
+			Domain: domain,
+			Reason: reason,
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			}, Identity: getCliIdentity(),
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...)
 
 	if err != nil {
 		ErrorAndExit("Terminate workflow failed.", err)
@@ -500,14 +503,17 @@ func CancelWorkflow(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	err := wfClient.RequestCancelWorkflowExecution(ctx, &types.RequestCancelWorkflowExecutionRequest{
-		Domain: domain,
-		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: wid,
-			RunID:      rid,
+	err := wfClient.RequestCancelWorkflowExecution(
+		ctx,
+		&types.RequestCancelWorkflowExecutionRequest{
+			Domain: domain,
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			},
+			Identity: getCliIdentity(),
 		},
-		Identity: getCliIdentity(),
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Cancel workflow failed.", err)
 	} else {
@@ -802,7 +808,7 @@ func CountWorkflow(c *cli.Context) {
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
 	//set options?
-	response, err := wfClient.CountWorkflowExecutions(ctx, request)
+	response, err := wfClient.CountWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to count workflow.", err)
 	}
@@ -842,7 +848,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 		// so keep calling the API until some results are returned (query completed)
 		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 
-		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request)
+		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 		if err != nil {
 			cancel()
 			ErrorAndExit("Failed to list archived workflow.", err)
@@ -896,7 +902,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 		request.NextPageToken = result.NextPageToken
 		// create a new context for each new request as each request may take a long time
 		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request)
+		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 		if err != nil {
 			cancel()
 			ErrorAndExit("Failed to list archived workflow", err)
@@ -1318,7 +1324,7 @@ func listWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken 
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListWorkflowExecutions(ctx, request)
+	response, err := client.ListWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to list workflow.", err)
 	}
@@ -1346,7 +1352,7 @@ func listOpenWorkflow(client frontend.Client, pageSize int, earliestTime, latest
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListOpenWorkflowExecutions(ctx, request)
+	response, err := client.ListOpenWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to list open workflow.", err)
 	}
@@ -1377,7 +1383,7 @@ func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, late
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListClosedWorkflowExecutions(ctx, request)
+	response, err := client.ListClosedWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to list closed workflow.", err)
 	}
@@ -1446,7 +1452,7 @@ func scanWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken 
 	}
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ScanWorkflowExecutions(ctx, request)
+	response, err := client.ScanWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to list workflow.", err)
 	}

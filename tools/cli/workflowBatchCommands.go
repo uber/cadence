@@ -53,15 +53,19 @@ func TerminateBatchJob(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	err := svcClient.TerminateWorkflowExecution(tcCtx, &types.TerminateWorkflowExecutionRequest{
-		Domain: getBatchWorkflowDomainName(),
-		WorkflowExecution: &types.WorkflowExecution{
-			WorkflowID: jobID,
-			RunID:      "",
+	err := svcClient.TerminateWorkflowExecution(
+		tcCtx,
+		&types.TerminateWorkflowExecutionRequest{
+			Domain: getBatchWorkflowDomainName(),
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: jobID,
+				RunID:      "",
+			},
+			Reason:   reason,
+			Identity: getCliIdentity(),
 		},
-		Reason:   reason,
-		Identity: getCliIdentity(),
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...,
+	)
 	if err != nil {
 		ErrorAndExit("Failed to terminate batch job", err)
 	}
@@ -79,13 +83,16 @@ func DescribeBatchJob(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	wf, err := svcClient.DescribeWorkflowExecution(tcCtx, &types.DescribeWorkflowExecutionRequest{
-		Domain: getBatchWorkflowDomainName(),
-		Execution: &types.WorkflowExecution{
-			WorkflowID: jobID,
-			RunID:      "",
+	wf, err := svcClient.DescribeWorkflowExecution(
+		tcCtx,
+		&types.DescribeWorkflowExecutionRequest{
+			Domain: getBatchWorkflowDomainName(),
+			Execution: &types.WorkflowExecution{
+				WorkflowID: jobID,
+				RunID:      "",
+			},
 		},
-	})
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to describe batch job", err)
 	}
@@ -121,11 +128,14 @@ func ListBatchJobs(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := svcClient.ListWorkflowExecutions(tcCtx, &types.ListWorkflowExecutionsRequest{
-		Domain:   getBatchWorkflowDomainName(),
-		PageSize: int32(pageSize),
-		Query:    fmt.Sprintf("CustomDomain = '%v'", domain),
-	})
+	resp, err := svcClient.ListWorkflowExecutions(
+		tcCtx,
+		&types.ListWorkflowExecutionsRequest{
+			Domain:   getBatchWorkflowDomainName(),
+			PageSize: int32(pageSize),
+			Query:    fmt.Sprintf("CustomDomain = '%v'", domain),
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to list batch jobs", err)
 	}
@@ -172,10 +182,13 @@ func StartBatchJob(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := svcClient.CountWorkflowExecutions(tcCtx, &types.CountWorkflowExecutionsRequest{
-		Domain: domain,
-		Query:  query,
-	})
+	resp, err := svcClient.CountWorkflowExecutions(
+		tcCtx,
+		&types.CountWorkflowExecutionsRequest{
+			Domain: domain,
+			Query:  query,
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to count impacting workflows for starting a batch job", err)
 	}
@@ -237,7 +250,7 @@ func StartBatchJob(c *cli.Context) {
 		WorkflowType:                        &types.WorkflowType{Name: batcher.BatchWFTypeName},
 		Input:                               input,
 	}
-	_, err = svcClient.StartWorkflowExecution(tcCtx, request)
+	_, err = svcClient.StartWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to start batch job", err)
 	}

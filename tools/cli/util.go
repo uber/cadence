@@ -38,6 +38,8 @@ import (
 	"strings"
 	"time"
 
+	cc "github.com/uber/cadence/common/client"
+
 	"github.com/uber/cadence/common/pagination"
 
 	"github.com/uber/cadence/client/frontend"
@@ -120,7 +122,7 @@ func GetWorkflowHistoryIterator(
 		var err error
 	Loop:
 		for {
-			resp, err = workflowClient.GetWorkflowExecutionHistory(tcCtx, request)
+			resp, err = workflowClient.GetWorkflowExecutionHistory(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 			if err != nil {
 				break Loop
 			}
@@ -616,13 +618,6 @@ func ErrorAndExit(msg string, err error) {
 
 func getWorkflowClient(c *cli.Context) frontend.Client {
 	return cFactory.ServerFrontendClient(c)
-}
-
-func getWorkflowClientWithOptionalDomain(c *cli.Context) frontend.Client {
-	if !c.GlobalIsSet(FlagDomain) {
-		c.GlobalSet(FlagDomain, "system-domain")
-	}
-	return getWorkflowClient(c)
 }
 
 func getRequiredOption(c *cli.Context, optionName string) string {
