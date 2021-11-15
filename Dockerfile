@@ -4,7 +4,7 @@ ARG TARGET=server
 ARG GOPROXY
 
 # Build tcheck binary
-FROM golang:1.17-alpine AS tcheck
+FROM golang:1.17-alpine3.13 AS tcheck
 
 WORKDIR /go/src/github.com/uber/tcheck
 
@@ -12,7 +12,7 @@ COPY go.* ./
 RUN go build -mod=readonly -o /go/bin/tcheck github.com/uber/tcheck
 
 # Build Cadence binaries
-FROM golang:1.17-alpine AS builder
+FROM golang:1.17-alpine3.13 AS builder
 
 ARG RELEASE_VERSION
 
