@@ -344,12 +344,9 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 	s.Equal(task.GetTaskID(), task.response.GetTaskID())
 	s.Equal(types.CrossClusterTaskTypeApplyParentPolicy, task.response.GetTaskType())
 	s.NotNil(task.response.ApplyParentClosePolicyAttributes)
-	s.Equal(2, len(task.response.ApplyParentClosePolicyAttributes.ChildrenStatus))
-	for _, failedChild := range task.response.ApplyParentClosePolicyAttributes.ChildrenStatus {
-		if failedChild.Child.ChildDomainID == constants.TestDomainID {
-			// TODO: delete
-			s.Nil(failedChild.FailedCause)
-		} else if failedChild.Child.ChildDomainID == otherDomainID {
+	s.Equal(1, len(task.response.ApplyParentClosePolicyAttributes.FailedChildren))
+	for _, failedChild := range task.response.ApplyParentClosePolicyAttributes.FailedChildren {
+		if failedChild.Child.ChildDomainID == otherDomainID {
 			s.Equal(expectedFailedCause, failedChild.FailedCause)
 		} else {
 			panic(fmt.Sprintf("unexpected domain id: %v", failedChild.Child.ChildDomainID))

@@ -1495,9 +1495,9 @@ func FromCrossClusterApplyParentClosePolicyResponseAttributes(t *types.CrossClus
 		return nil
 	}
 	response := &sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes{}
-	for _, childStatus := range t.ChildrenStatus {
-		response.ChildrenStatus = append(
-			response.ChildrenStatus,
+	for _, childStatus := range t.FailedChildren {
+		response.FailedChildren = append(
+			response.FailedChildren,
 			FromApplyParentClosePolicyResult(childStatus),
 		)
 	}
@@ -1510,9 +1510,9 @@ func ToCrossClusterApplyParentClosePolicyResponseAttributes(t *sharedv1.CrossClu
 		return nil
 	}
 	response := &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
-	for _, childStatus := range t.ChildrenStatus {
-		response.ChildrenStatus = append(
-			response.ChildrenStatus,
+	for _, childStatus := range t.FailedChildren {
+		response.FailedChildren = append(
+			response.FailedChildren,
 			ToApplyParentClosePolicyResult(childStatus),
 		)
 	}

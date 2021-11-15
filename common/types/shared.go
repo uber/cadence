@@ -10860,13 +10860,13 @@ func (v *ApplyParentClosePolicyResult) GetFailedCause() (o CrossClusterTaskFaile
 
 // CrossClusterApplyParentClosePolicyResponseAttributes is an internal type (TBD...)
 type CrossClusterApplyParentClosePolicyResponseAttributes struct {
-	ChildrenStatus []*ApplyParentClosePolicyResult `json:"childrenStatus,omitempty"`
+	FailedChildren []*ApplyParentClosePolicyResult `json:"failedChildren,omitempty"`
 }
 
-// GetChildrenStatus is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyResponseAttributes) GetChildrenStatus() (o []*ApplyParentClosePolicyResult) {
-	if v != nil && v.ChildrenStatus != nil {
-		return v.ChildrenStatus
+// GetFailedChildren is an internal getter (TBD...)
+func (v *CrossClusterApplyParentClosePolicyResponseAttributes) GetFailedChildren() (o []*ApplyParentClosePolicyResult) {
+	if v != nil && v.FailedChildren != nil {
+		return v.FailedChildren
 	}
 	return
 }

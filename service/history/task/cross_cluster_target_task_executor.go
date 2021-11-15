@@ -282,18 +282,22 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			}
 		}
 		// Optimize SOURCE SIDE RETRIES by returning each child status separately
-		response.ChildrenStatus = append(
-			response.ChildrenStatus,
-			&types.ApplyParentClosePolicyResult{
-				Child:       childAttrs,
-				FailedCause: failedCause,
-			})
+		if err != nil {
+			response.FailedChildren = append(
+				response.FailedChildren,
+				&types.ApplyParentClosePolicyResult{
+					Child:       childAttrs,
+					FailedCause: failedCause,
+				})
+		}
 	}
 
 	if anyErr != nil {
 		// Optimize TARGET SIDE RETRIES by removing already succeeded children from the request
+		// Note that, since we modify the request here, we can no longer report a status for all the
+		// children. Here is why we only report "failed children" to the source
 		newAttributes := []*types.ApplyParentClosePolicyAttributes{}
-		for _, childAttrs := range response.ChildrenStatus {
+		for _, childAttrs := range response.FailedChildren {
 			if childAttrs.FailedCause != nil {
 				newAttributes = append(newAttributes, childAttrs.Child)
 			}

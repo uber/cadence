@@ -139,7 +139,7 @@ message ApplyParentClosePolicyResult {
 }
 
 message CrossClusterApplyParentClosePolicyResponseAttributes {
-  repeated ApplyParentClosePolicyResult children_status = 1;
+  repeated ApplyParentClosePolicyResult failed_children = 1;
 }
 
 message CrossClusterTaskRequest {

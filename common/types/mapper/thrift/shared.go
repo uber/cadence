@@ -7497,7 +7497,7 @@ func FromCrossClusterApplyParentClosePolicyResponseAttributes(
 		return nil
 	}
 	return &shared.CrossClusterApplyParentClosePolicyResponseAttributes{
-		ChildrenStatus: FromApplyParentClosePolicyResultArray(t.ChildrenStatus),
+		FailedChildren: FromApplyParentClosePolicyResultArray(t.FailedChildren),
 	}
 }
 
@@ -7510,7 +7510,7 @@ func ToCrossClusterApplyParentClosePolicyResponseAttributes(
 		return nil
 	}
 	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{
-		ChildrenStatus: ToApplyParentClosePolicyResultArray(t.ChildrenStatus),
+		FailedChildren: ToApplyParentClosePolicyResultArray(t.FailedChildren),
 	}
 }
 

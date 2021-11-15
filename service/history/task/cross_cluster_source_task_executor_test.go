@@ -342,7 +342,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
 					TaskState:   int16(processingStateInitialized),
 					FailedCause: tc.targetError,
 					ApplyParentClosePolicyAttributes: &types.CrossClusterApplyParentClosePolicyResponseAttributes{
-						ChildrenStatus: []*types.ApplyParentClosePolicyResult{
+						FailedChildren: []*types.ApplyParentClosePolicyResult{
 							{
 								Child: &types.ApplyParentClosePolicyAttributes{
 									ChildDomainID:   constants.TestRemoteTargetDomainID,
@@ -537,7 +537,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicyPartialR
 			TaskState: int16(processingStateInitialized),
 			// FailedCause: nil, not used for this type of task
 			ApplyParentClosePolicyAttributes: &types.CrossClusterApplyParentClosePolicyResponseAttributes{
-				ChildrenStatus: []*types.ApplyParentClosePolicyResult{
+				FailedChildren: []*types.ApplyParentClosePolicyResult{
 					{
 						Child: &types.ApplyParentClosePolicyAttributes{
 							ChildDomainID:   "remote-domain-1",
