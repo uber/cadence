@@ -309,8 +309,10 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 			"Cross Cluster ApplyParentClosePolicy task response is invalid. Task: %#v, response: %#v.",
 			task,
 			task.response))
-		return nil
+		t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
+		return errContinueExecution
 	}
+
 	failedChildren := task.response.ApplyParentClosePolicyAttributes.FailedChildren
 
 	err = nil
@@ -335,14 +337,6 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 				continue
 			}
 		}
-
-		// When processing state = processingStateInitialized, there's nothing we need to do
-		// task is already complete, ack the task. All the other states are invalid
-		if processingState(task.response.TaskState) != processingStateInitialized {
-			err = errUnknownTaskProcessingState
-			failedDomains[result.Child.ChildDomainID] = struct{}{}
-			continue
-		}
 	}
 
 	if len(domainsToRegenerateTask) > 0 {
@@ -353,11 +347,20 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 		taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
 		taskInfo.TargetDomainIDs = domainsToRegenerateTask
 		return t.generateNewTask(ctx, wfContext, mutableState, task)
-	} else if len(failedDomains) > 0 {
-		taskInfo.TargetDomainIDs = failedDomains
 	}
-	// should be nil if everything succeeded
-	return err
+	if len(failedDomains) > 0 {
+		taskInfo.TargetDomainIDs = failedDomains
+		t.setTaskState(task, ctask.TaskStatePending, processingStateInitialized)
+		return err
+	}
+
+	// When processing state = processingStateInitialized, there's nothing we need to do
+	// task is already complete, ack the task. All the other states are invalid
+	if processingState(task.response.TaskState) != processingStateInitialized {
+		return errUnknownTaskProcessingState
+	}
+
+	return err // should be nil
 }
 
 func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(

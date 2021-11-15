@@ -243,27 +243,27 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 	var anyErr error
 
 	for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
-		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
-		if err != nil {
-			return nil, err
-		}
-
+		// DON'T RETURN ERROR INSIDE THIS LOOP, CONVERT THEM AND ASSIGN IT TO EACH CHILD'S FailedCause
 		scope := t.metricsClient.Scope(metrics.CrossClusterSourceTaskApplyParentClosePolicyScope)
-		err = applyParentClosePolicy(
-			ctx,
-			t.historyClient,
-			&types.WorkflowExecution{
-				WorkflowID: task.GetWorkflowID(),
-				RunID:      task.GetRunID(),
-			},
-			childAttrs.ChildDomainID,
-			targetDomainName,
-			childAttrs.ChildWorkflowID,
-			childAttrs.ChildRunID,
-			*childAttrs.ParentClosePolicy,
-		)
 		var failedCause *types.CrossClusterTaskFailedCause
 		retriable := false
+
+		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
+		if err == nil {
+			err = applyParentClosePolicy(
+				ctx,
+				t.historyClient,
+				&types.WorkflowExecution{
+					WorkflowID: task.GetWorkflowID(),
+					RunID:      task.GetRunID(),
+				},
+				childAttrs.ChildDomainID,
+				targetDomainName,
+				childAttrs.ChildWorkflowID,
+				childAttrs.ChildRunID,
+				*childAttrs.ParentClosePolicy,
+			)
+		}
 
 		switch err.(type) {
 		case nil:
@@ -272,7 +272,6 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			*types.WorkflowExecutionAlreadyCompletedError,
 			*types.CancellationAlreadyRequestedError:
 			// expected error, no-op
-			break
 		default:
 			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 			failedCause, retriable = t.convertErrorToFailureCause(err)
