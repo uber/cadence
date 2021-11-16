@@ -29,11 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/types"
 )
-
-// ErrInsufficientHosts is thrown when there are not enough hosts to serve the request
-var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
 
 type (
 
@@ -45,31 +41,15 @@ type (
 	}
 
 	// Monitor provides membership information for all cadence services.
-	// It can be used to query which member host of a service is responsible for serving a given key.
 	Monitor interface {
 		common.Daemon
-
+		// WhoAmI returns self address
 		WhoAmI() (*HostInfo, error)
 		// EvictSelf evicts this member from the membership ring. After this method is
 		// called, other members will discover that this node is no longer part of the
 		// ring. This primitive is useful to carry out graceful host shutdown during deployments.
 		EvictSelf() error
-		Lookup(service string, key string) (*HostInfo, error)
 		GetResolver(service string) (ServiceResolver, error)
-		// AddListener adds a listener for this service.
-		// The listener will get notified on the given
-		// channel, whenever there is a membership change.
-		// @service: The service to be listened on
-		// @name: The name for identifying the listener
-		// @notifyChannel: The channel on which the caller receives notifications
-		AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error
-		// RemoveListener removes a listener for this service.
-		RemoveListener(service string, name string) error
-		// GetReachableMembers returns addresses of all members of the ring
-		GetReachableMembers() ([]string, error)
-		// GetMemberCount returns the number of reachable members
-		// currently in this node's membership list for the given role
-		GetMemberCount(role string) (int, error)
 	}
 
 	// ServiceResolver provides membership information for a specific cadence service.
@@ -78,14 +58,12 @@ type (
 		Lookup(key string) (*HostInfo, error)
 		// AddListener adds a listener which will get notified on the given
 		// channel, whenever membership changes.
-		// @name: The name for identifying the listener
-		// @notifyChannel: The channel on which the caller receives notifications
 		AddListener(name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
 		RemoveListener(name string) error
-		// MemberCount returns host count in hashring for any particular role
+		// MemberCount returns host count in a hashring
 		MemberCount() int
-		// Members returns all host addresses in hashring for any particular role
+		// Members returns all host addresses in a hashring
 		Members() []*HostInfo
 	}
 )
@@ -174,40 +152,4 @@ func (rpo *RingpopMonitor) GetResolver(service string) (ServiceResolver, error) 
 		return nil, fmt.Errorf("service %q is not tracked by Monitor", service)
 	}
 	return ring, nil
-}
-
-func (rpo *RingpopMonitor) Lookup(service string, key string) (*HostInfo, error) {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return nil, err
-	}
-	return ring.Lookup(key)
-}
-
-func (rpo *RingpopMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return err
-	}
-	return ring.AddListener(name, notifyChannel)
-}
-
-func (rpo *RingpopMonitor) RemoveListener(service string, name string) error {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return err
-	}
-	return ring.RemoveListener(name)
-}
-
-func (rpo *RingpopMonitor) GetReachableMembers() ([]string, error) {
-	return rpo.ringpopWrapper.GetReachableMembers()
-}
-
-func (rpo *RingpopMonitor) GetMemberCount(service string) (int, error) {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return 0, err
-	}
-	return ring.MemberCount(), nil
 }

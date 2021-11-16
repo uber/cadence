@@ -272,7 +272,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
-	historyHost, err := adh.GetMembershipMonitor().Lookup(service.History, shardIDstr)
+	historyHost, err := adh.GetHistoryServiceResolver().Lookup(shardIDstr)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -595,13 +595,6 @@ func (adh *adminHandlerImpl) DescribeCluster(
 			Identity: currentHost.Identity(),
 		}
 
-		members, err := monitor.GetReachableMembers()
-		if err != nil {
-			return nil, adh.error(err, scope)
-		}
-
-		membershipInfo.ReachableMembers = members
-
 		var rings []*types.RingInfo
 		for _, role := range service.List {
 			resolver, err := monitor.GetResolver(role)
@@ -614,6 +607,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 				servers = append(servers, &types.HostInfo{
 					Identity: server.Identity(),
 				})
+				membershipInfo.ReachableMembers = append(membershipInfo.ReachableMembers, server.Identity())
 			}
 
 			rings = append(rings, &types.RingInfo{

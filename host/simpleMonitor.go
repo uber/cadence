@@ -21,8 +21,6 @@
 package host
 
 import (
-	"fmt"
-
 	"github.com/uber/cadence/common/membership"
 )
 
@@ -57,28 +55,4 @@ func (s *simpleMonitor) WhoAmI() (*membership.HostInfo, error) {
 
 func (s *simpleMonitor) GetResolver(service string) (membership.ServiceResolver, error) {
 	return s.resolvers[service], nil
-}
-
-func (s *simpleMonitor) Lookup(service string, key string) (*membership.HostInfo, error) {
-	resolver, ok := s.resolvers[service]
-	if !ok {
-		return nil, fmt.Errorf("cannot lookup host for service %v", service)
-	}
-	return resolver.Lookup(key)
-}
-
-func (s *simpleMonitor) AddListener(service string, name string, notifyChannel chan<- *membership.ChangedEvent) error {
-	return nil
-}
-
-func (s *simpleMonitor) RemoveListener(service string, name string) error {
-	return nil
-}
-
-func (s *simpleMonitor) GetReachableMembers() ([]string, error) {
-	return nil, nil
-}
-
-func (s *simpleMonitor) GetMemberCount(service string) (int, error) {
-	return 0, nil
 }
