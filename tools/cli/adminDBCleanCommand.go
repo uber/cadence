@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -49,14 +50,25 @@ func AdminDBDataDecodeThrift(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("input is not a valid hex string", err)
 	}
+	found := false
 	for typeName, t := range decodingTypes {
 		err = encoder.Decode(data, t)
 		if err == nil {
-			fmt.Printf("the input can be decoded into type %v \n", typeName)
-			fmt.Println(anyToString(t, true, 0))
-			fmt.Println("\n=============================")
+			// encoding back to confirm  
+			data2, err := encoder.Encode(t)
+			if err != nil {
+				ErrorAndExit("cannot encode back to confirm", err)
+			}
+			if bytes.Compare(data, data2) == 0 {
+				fmt.Printf("=======Decode into type %v ========\n", typeName)
+				fmt.Println(anyToString(t, true, 0))
+				fmt.Println("\n===================================")
+				found = true
+			}
 		}
-
+	}
+	if !found {
+		ErrorAndExit("input data cannot be decoded into any struct", nil)
 	}
 
 }
