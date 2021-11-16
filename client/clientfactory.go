@@ -115,11 +115,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
 	}
 
-	resolver, err := cf.monitor.GetResolver(service.History)
-	if err != nil {
-		return nil, err
-	}
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, resolver, addressMapper)
+	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.monitor, addressMapper)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
 	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)
@@ -164,11 +160,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
 	}
 
-	resolver, err := cf.monitor.GetResolver(service.Matching)
-	if err != nil {
-		return nil, err
-	}
-	peerResolver := matching.NewPeerResolver(resolver, addressMapper)
+	peerResolver := matching.NewPeerResolver(cf.monitor, addressMapper)
 
 	client := matching.NewClient(
 		timeout,

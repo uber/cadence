@@ -272,7 +272,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
-	historyHost, err := adh.GetHistoryServiceResolver().Lookup(shardIDstr)
+	historyHost, err := adh.GetMembershipMonitor().Lookup(service.History, shardIDstr)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -395,7 +395,7 @@ func (adh *adminHandlerImpl) DescribeShardDistribution(
 	offset := int(request.PageID * request.PageSize)
 	nextPageStart := offset + int(request.PageSize)
 	for shardID := offset; shardID < numShards && shardID < nextPageStart; shardID++ {
-		info, err := adh.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+		info, err := adh.GetMembershipMonitor().Lookup(service.History, string(rune(shardID)))
 		if err != nil {
 			resp.Shards[int32(shardID)] = "unknown"
 		} else {
@@ -597,24 +597,22 @@ func (adh *adminHandlerImpl) DescribeCluster(
 
 		var rings []*types.RingInfo
 		for _, role := range service.List {
-			resolver, err := monitor.GetResolver(role)
-			if err != nil {
-				return nil, adh.error(err, scope)
-			}
-
 			var servers []*types.HostInfo
-			for _, server := range resolver.Members() {
-				servers = append(servers, &types.HostInfo{
-					Identity: server.Identity(),
-				})
-				membershipInfo.ReachableMembers = append(membershipInfo.ReachableMembers, server.Identity())
-			}
+			members, err := monitor.Members(role)
+			if err == nil {
+				for _, server := range members {
+					servers = append(servers, &types.HostInfo{
+						Identity: server.Identity(),
+					})
+					membershipInfo.ReachableMembers = append(membershipInfo.ReachableMembers, server.Identity())
+				}
 
-			rings = append(rings, &types.RingInfo{
-				Role:        role,
-				MemberCount: int32(resolver.MemberCount()),
-				Members:     servers,
-			})
+				rings = append(rings, &types.RingInfo{
+					Role:        role,
+					MemberCount: int32(len(servers)),
+					Members:     servers,
+				})
+			}
 		}
 		membershipInfo.Rings = rings
 	}

@@ -27,6 +27,9 @@ import (
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
 
+	"go.uber.org/yarpc"
+	"go.uber.org/zap"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -47,10 +50,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
-	"github.com/uber/cadence/common/service"
-
-	"go.uber.org/yarpc"
-	"go.uber.org/zap"
 )
 
 type (
@@ -72,12 +71,7 @@ type (
 		BlobstoreClient         *blobstore.MockClient
 
 		// membership infos
-
-		MembershipMonitor       *membership.MockMonitor
-		FrontendServiceResolver *membership.MockServiceResolver
-		MatchingServiceResolver *membership.MockServiceResolver
-		HistoryServiceResolver  *membership.MockServiceResolver
-		WorkerServiceResolver   *membership.MockServiceResolver
+		MembershipMonitor *membership.MockMonitor
 
 		// internal services clients
 
@@ -155,14 +149,6 @@ func NewTest(
 	persistenceBean.EXPECT().GetExecutionManager(gomock.Any()).Return(executionMgr, nil).AnyTimes()
 
 	membershipMonitor := membership.NewMockMonitor(controller)
-	frontendServiceResolver := membership.NewMockServiceResolver(controller)
-	matchingServiceResolver := membership.NewMockServiceResolver(controller)
-	historyServiceResolver := membership.NewMockServiceResolver(controller)
-	workerServiceResolver := membership.NewMockServiceResolver(controller)
-	membershipMonitor.EXPECT().GetResolver(service.Frontend).Return(frontendServiceResolver, nil).AnyTimes()
-	membershipMonitor.EXPECT().GetResolver(service.Matching).Return(matchingServiceResolver, nil).AnyTimes()
-	membershipMonitor.EXPECT().GetResolver(service.History).Return(historyServiceResolver, nil).AnyTimes()
-	membershipMonitor.EXPECT().GetResolver(service.Worker).Return(workerServiceResolver, nil).AnyTimes()
 
 	scope := tally.NewTestScope("test", nil)
 
@@ -183,12 +169,7 @@ func NewTest(
 		BlobstoreClient:         &blobstore.MockClient{},
 
 		// membership infos
-
-		MembershipMonitor:       membershipMonitor,
-		FrontendServiceResolver: frontendServiceResolver,
-		MatchingServiceResolver: matchingServiceResolver,
-		HistoryServiceResolver:  historyServiceResolver,
-		WorkerServiceResolver:   workerServiceResolver,
+		MembershipMonitor: membershipMonitor,
 
 		// internal services clients
 
@@ -302,30 +283,9 @@ func (s *Test) GetArchiverProvider() provider.ArchiverProvider {
 }
 
 // membership infos
-
 // GetMembershipMonitor for testing
 func (s *Test) GetMembershipMonitor() membership.Monitor {
 	return s.MembershipMonitor
-}
-
-// GetFrontendServiceResolver for testing
-func (s *Test) GetFrontendServiceResolver() membership.ServiceResolver {
-	return s.FrontendServiceResolver
-}
-
-// GetMatchingServiceResolver for testing
-func (s *Test) GetMatchingServiceResolver() membership.ServiceResolver {
-	return s.MatchingServiceResolver
-}
-
-// GetHistoryServiceResolver for testing
-func (s *Test) GetHistoryServiceResolver() membership.ServiceResolver {
-	return s.HistoryServiceResolver
-}
-
-// GetWorkerServiceResolver for testing
-func (s *Test) GetWorkerServiceResolver() membership.ServiceResolver {
-	return s.WorkerServiceResolver
 }
 
 // internal services clients

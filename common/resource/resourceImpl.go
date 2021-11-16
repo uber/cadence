@@ -92,11 +92,7 @@ type (
 
 		// membership infos
 
-		membershipMonitor       membership.Monitor
-		frontendServiceResolver membership.ServiceResolver
-		matchingServiceResolver membership.ServiceResolver
-		historyServiceResolver  membership.ServiceResolver
-		workerServiceResolver   membership.ServiceResolver
+		membershipMonitor membership.Monitor
 
 		// internal services clients
 
@@ -170,33 +166,13 @@ func New(
 		return nil, err
 	}
 
-	frontendServiceResolver, err := membershipMonitor.GetResolver(service.Frontend)
-	if err != nil {
-		return nil, err
-	}
-
-	matchingServiceResolver, err := membershipMonitor.GetResolver(service.Matching)
-	if err != nil {
-		return nil, err
-	}
-
-	historyServiceResolver, err := membershipMonitor.GetResolver(service.History)
-	if err != nil {
-		return nil, err
-	}
-
-	workerServiceResolver, err := membershipMonitor.GetResolver(service.Worker)
-	if err != nil {
-		return nil, err
-	}
-
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
 			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
-				resolver, err := membershipMonitor.GetResolver(serviceName)
-				if err == nil && resolver.MemberCount() > 0 {
-					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/resolver.MemberCount(), 1)
+				members, err := membershipMonitor.MemberCount(serviceName)
+				if err == nil && members > 0 {
+					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/members, 1)
 					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
 				}
 			}
@@ -301,12 +277,7 @@ func New(
 		domainReplicationQueue:  domainReplicationQueue,
 
 		// membership infos
-
-		membershipMonitor:       membershipMonitor,
-		frontendServiceResolver: frontendServiceResolver,
-		matchingServiceResolver: matchingServiceResolver,
-		historyServiceResolver:  historyServiceResolver,
-		workerServiceResolver:   workerServiceResolver,
+		membershipMonitor: membershipMonitor,
 
 		// internal services clients
 
@@ -472,31 +443,9 @@ func (h *Impl) GetDomainReplicationQueue() domain.ReplicationQueue {
 	return h.domainReplicationQueue
 }
 
-// membership infos
-
 // GetMembershipMonitor return the membership monitor
 func (h *Impl) GetMembershipMonitor() membership.Monitor {
 	return h.membershipMonitor
-}
-
-// GetFrontendServiceResolver return frontend service resolver
-func (h *Impl) GetFrontendServiceResolver() membership.ServiceResolver {
-	return h.frontendServiceResolver
-}
-
-// GetMatchingServiceResolver return matching service resolver
-func (h *Impl) GetMatchingServiceResolver() membership.ServiceResolver {
-	return h.matchingServiceResolver
-}
-
-// GetHistoryServiceResolver return history service resolver
-func (h *Impl) GetHistoryServiceResolver() membership.ServiceResolver {
-	return h.historyServiceResolver
-}
-
-// GetWorkerServiceResolver return worker service resolver
-func (h *Impl) GetWorkerServiceResolver() membership.ServiceResolver {
-	return h.workerServiceResolver
 }
 
 // internal services clients

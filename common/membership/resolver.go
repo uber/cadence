@@ -68,8 +68,6 @@ type ringpopServiceResolver struct {
 	listeners    map[string]chan<- *ChangedEvent
 }
 
-var _ ServiceResolver = (*ringpopServiceResolver)(nil)
-
 func newRingpopServiceResolver(
 	service string,
 	rp *RingpopWrapper,

@@ -29,6 +29,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/service"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/client/history"
@@ -79,7 +81,7 @@ type (
 		lockableQueryTaskMap lockableQueryTaskMap
 		domainCache          cache.DomainCache
 		versionChecker       client.VersionChecker
-		keyResolver          membership.ServiceResolver
+		membershipMonitor    membership.Monitor
 	}
 )
 
@@ -109,7 +111,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
-	resolver membership.ServiceResolver,
+	monitor membership.Monitor,
 ) Engine {
 
 	return &matchingEngineImpl{
@@ -124,7 +126,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
 		versionChecker:       client.NewVersionChecker(),
-		keyResolver:          resolver,
+		membershipMonitor:    monitor,
 	}
 }
 
@@ -717,7 +719,7 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 }
 
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
-	host, err := e.keyResolver.Lookup(partitionKey)
+	host, err := e.membershipMonitor.Lookup(service.Matching, partitionKey)
 	if err != nil {
 		return "", err
 	}

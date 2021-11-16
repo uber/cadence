@@ -49,22 +49,17 @@ type (
 		// called, other members will discover that this node is no longer part of the
 		// ring. This primitive is useful to carry out graceful host shutdown during deployments.
 		EvictSelf() error
-		GetResolver(service string) (ServiceResolver, error)
-	}
 
-	// ServiceResolver provides membership information for a specific cadence service.
-	// It can be used to resolve which member host is responsible for serving a given key.
-	ServiceResolver interface {
-		Lookup(key string) (*HostInfo, error)
+		Lookup(service, key string) (*HostInfo, error)
 		// AddListener adds a listener which will get notified on the given
 		// channel, whenever membership changes.
-		AddListener(name string, notifyChannel chan<- *ChangedEvent) error
+		AddListener(service, name string, notifyChannel chan<- *ChangedEvent) error
 		// RemoveListener removes a listener for this service.
-		RemoveListener(name string) error
+		RemoveListener(service, name string) error
 		// MemberCount returns host count in a hashring
-		MemberCount() int
+		MemberCount(service string) (int, error)
 		// Members returns all host addresses in a hashring
-		Members() []*HostInfo
+		Members(service string) ([]*HostInfo, error)
 	}
 )
 
@@ -146,10 +141,50 @@ func (rpo *RingpopMonitor) EvictSelf() error {
 	return rpo.ringpopWrapper.SelfEvict()
 }
 
-func (rpo *RingpopMonitor) GetResolver(service string) (ServiceResolver, error) {
+func (rpo *RingpopMonitor) getRing(service string) (*ringpopServiceResolver, error) {
 	ring, found := rpo.rings[service]
 	if !found {
 		return nil, fmt.Errorf("service %q is not tracked by Monitor", service)
 	}
 	return ring, nil
+}
+
+func (rpo *RingpopMonitor) Lookup(service string, key string) (*HostInfo, error) {
+	ring, err := rpo.getRing(service)
+	if err != nil {
+		return nil, err
+	}
+	return ring.Lookup(key)
+}
+
+func (rpo *RingpopMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {
+	ring, err := rpo.getRing(service)
+	if err != nil {
+		return err
+	}
+	return ring.AddListener(name, notifyChannel)
+}
+
+func (rpo *RingpopMonitor) RemoveListener(service string, name string) error {
+	ring, err := rpo.getRing(service)
+	if err != nil {
+		return err
+	}
+	return ring.RemoveListener(name)
+}
+
+func (rpo *RingpopMonitor) Members(service string) ([]*HostInfo, error) {
+	ring, err := rpo.getRing(service)
+	if err != nil {
+		return nil, err
+	}
+	return ring.Members(), nil
+}
+
+func (rpo *RingpopMonitor) MemberCount(service string) (int, error) {
+	ring, err := rpo.getRing(service)
+	if err != nil {
+		return 0, err
+	}
+	return ring.MemberCount(), nil
 }

@@ -28,6 +28,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/service"
+
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -55,7 +57,7 @@ func newDomainReplicationProcessor(
 	metricsClient metrics.Client,
 	taskExecutor domain.ReplicationTaskExecutor,
 	hostInfo *membership.HostInfo,
-	serviceResolver membership.ServiceResolver,
+	membership membership.Monitor,
 	domainReplicationQueue domain.ReplicationQueue,
 	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
@@ -69,7 +71,7 @@ func newDomainReplicationProcessor(
 
 	return &domainReplicationProcessor{
 		hostInfo:               hostInfo,
-		serviceResolver:        serviceResolver,
+		membershipMonitor:      membership,
 		status:                 common.DaemonStatusInitialized,
 		sourceCluster:          sourceCluster,
 		currentCluster:         currentCluster,
@@ -88,7 +90,7 @@ func newDomainReplicationProcessor(
 type (
 	domainReplicationProcessor struct {
 		hostInfo               *membership.HostInfo
-		serviceResolver        membership.ServiceResolver
+		membershipMonitor      membership.Monitor
 		status                 int32
 		sourceCluster          string
 		currentCluster         string
@@ -133,7 +135,7 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 	// for a small period of time two or more workers think they are the owner and try to execute
 	// the processing logic. This will not result in correctness issue as domain replication task
 	// processing will be protected by version check.
-	info, err := p.serviceResolver.Lookup(p.sourceCluster)
+	info, err := p.membershipMonitor.Lookup(service.Worker, p.sourceCluster)
 	if err != nil {
 		p.logger.Info("Failed to lookup host info. Skip current run.")
 		return

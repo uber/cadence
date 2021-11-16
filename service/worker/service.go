@@ -336,7 +336,7 @@ func (s *Service) startReplicator() {
 		s.GetLogger(),
 		s.GetMetricsClient(),
 		s.GetHostInfo(),
-		s.GetWorkerServiceResolver(),
+		s.GetMembershipMonitor(),
 		s.GetDomainReplicationQueue(),
 		domainReplicationTaskExecutor,
 		s.config.DomainReplicationMaxRetryDuration(),
