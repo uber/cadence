@@ -55,7 +55,7 @@ func (s *RpoSuite) TestRingpopMonitor() {
 
 	listenCh := make(chan *ChangedEvent, 5)
 
-	err := rpm.AddListener("rpm-service-name", "test-listener", listenCh)
+	err := rpm.Subscribe("rpm-service-name", "test-listener", listenCh)
 	s.Nil(err, "AddListerener failed")
 
 	host, err := rpm.Lookup("rpm-service-name", "key")
@@ -79,8 +79,8 @@ func (s *RpoSuite) TestRingpopMonitor() {
 	s.Nil(err, "Ringpop monitor failed to find host for key")
 	s.NotEqual(testService.hostAddrs[1], host.GetAddress(), "Ringpop monitor assigned key to dead host")
 
-	err = rpm.RemoveListener("rpm-service-name", "test-listener")
-	s.Nil(err, "RemoveListener() failed")
+	err = rpm.Unsubscribe("rpm-service-name", "test-listener")
+	s.Nil(err, "Unsubscribe() failed")
 
 	rpm.Stop()
 	testService.Stop()
@@ -98,7 +98,7 @@ func (s *RpoSuite) TestCompareMembers() {
 }
 
 func (s *RpoSuite) testCompareMembers(curr []string, new []string, hasDiff bool) {
-	resolver := &ringpopServiceResolver{}
+	resolver := &ringpopHashring{}
 	currMembers := make(map[string]struct{}, len(curr))
 	for _, m := range curr {
 		currMembers[m] = struct{}{}

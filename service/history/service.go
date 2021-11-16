@@ -129,7 +129,7 @@ func (s *Service) Stop() {
 	remainingTime := s.config.ShutdownDrainDuration()
 
 	s.GetLogger().Info("ShutdownHandler: Evicting self from membership ring")
-	s.GetMembershipMonitor().EvictSelf()
+	s.GetMembershipResolver().EvictSelf()
 
 	s.GetLogger().Info("ShutdownHandler: Waiting for others to discover I am unhealthy")
 	remainingTime = common.SleepWithMinDuration(gossipPropagationDelay, remainingTime)

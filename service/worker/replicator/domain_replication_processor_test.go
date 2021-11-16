@@ -68,7 +68,7 @@ func (s *domainReplicationSuite) SetupTest() {
 	s.taskExecutor = domain.NewMockReplicationTaskExecutor(s.controller)
 	s.domainReplicationQueue = domain.NewMockReplicationQueue(s.controller)
 	s.remoteClient = resource.RemoteAdminClient
-	serviceResolver := resource.MembershipMonitor
+	serviceResolver := resource.MembershipResolver
 	serviceResolver.EXPECT().Lookup(service.Worker, s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
 	s.replicationProcessor = newDomainReplicationProcessor(
 		s.sourceCluster,

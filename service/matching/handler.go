@@ -101,7 +101,7 @@ func NewHandler(
 			resource.GetLogger(),
 			resource.GetMetricsClient(),
 			resource.GetDomainCache(),
-			resource.GetMembershipMonitor(),
+			resource.GetMembershipResolver(),
 		),
 	}
 	// prevent us from trying to serve requests before matching engine is started and ready

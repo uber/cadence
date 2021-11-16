@@ -29,14 +29,14 @@ import (
 // Those are deployed instances of Cadence matching services that participate in the cluster ring.
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 type PeerResolver struct {
-	membership    membership.Monitor
+	membership    membership.Resolver
 	addressMapper AddressMapperFn
 }
 
 type AddressMapperFn func(string) (string, error)
 
 // NewPeerResolver creates a new matching peer resolver.
-func NewPeerResolver(membership membership.Monitor, addressMapper AddressMapperFn) PeerResolver {
+func NewPeerResolver(membership membership.Resolver, addressMapper AddressMapperFn) PeerResolver {
 	return PeerResolver{membership, addressMapper}
 }
 

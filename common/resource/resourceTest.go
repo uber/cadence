@@ -71,7 +71,7 @@ type (
 		BlobstoreClient         *blobstore.MockClient
 
 		// membership infos
-		MembershipMonitor *membership.MockMonitor
+		MembershipResolver *membership.MockResolver
 
 		// internal services clients
 
@@ -148,8 +148,6 @@ func NewTest(
 	persistenceBean.EXPECT().GetShardManager().Return(shardMgr).AnyTimes()
 	persistenceBean.EXPECT().GetExecutionManager(gomock.Any()).Return(executionMgr, nil).AnyTimes()
 
-	membershipMonitor := membership.NewMockMonitor(controller)
-
 	scope := tally.NewTestScope("test", nil)
 
 	return &Test{
@@ -169,7 +167,7 @@ func NewTest(
 		BlobstoreClient:         &blobstore.MockClient{},
 
 		// membership infos
-		MembershipMonitor: membershipMonitor,
+		MembershipResolver: membership.NewMockResolver(controller),
 
 		// internal services clients
 
@@ -282,10 +280,9 @@ func (s *Test) GetArchiverProvider() provider.ArchiverProvider {
 	return s.ArchiverProvider
 }
 
-// membership infos
-// GetMembershipMonitor for testing
-func (s *Test) GetMembershipMonitor() membership.Monitor {
-	return s.MembershipMonitor
+// GetMembershipResolver for testing
+func (s *Test) GetMembershipResolver() membership.Resolver {
+	return s.MembershipResolver
 }
 
 // internal services clients

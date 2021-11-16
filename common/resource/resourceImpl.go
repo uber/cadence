@@ -92,7 +92,7 @@ type (
 
 		// membership infos
 
-		membershipMonitor membership.Monitor
+		membershipResolver membership.Resolver
 
 		// internal services clients
 
@@ -143,7 +143,7 @@ func New(
 
 	dispatcher := params.RPCFactory.GetDispatcher()
 
-	membershipMonitor := params.MembershipMonitor
+	membershipResolver := params.MembershipResolver
 
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
@@ -153,7 +153,7 @@ func New(
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(
 			params.RPCFactory,
-			membershipMonitor,
+			membershipResolver,
 			params.MetricsClient,
 			dynamicCollection,
 			numShards,
@@ -170,7 +170,7 @@ func New(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
 			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
-				members, err := membershipMonitor.MemberCount(serviceName)
+				members, err := membershipResolver.MemberCount(serviceName)
 				if err == nil && members > 0 {
 					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/members, 1)
 					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
@@ -277,7 +277,7 @@ func New(
 		domainReplicationQueue:  domainReplicationQueue,
 
 		// membership infos
-		membershipMonitor: membershipMonitor,
+		membershipResolver: membershipResolver,
 
 		// internal services clients
 
@@ -334,11 +334,11 @@ func (h *Impl) Start() {
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start dispatcher")
 	}
-	h.membershipMonitor.Start()
+	h.membershipResolver.Start()
 	h.domainCache.Start()
 	h.domainMetricsScopeCache.Start()
 
-	hostInfo, err := h.membershipMonitor.WhoAmI()
+	hostInfo, err := h.membershipResolver.WhoAmI()
 	if err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to get host info from membership monitor")
 	}
@@ -363,7 +363,7 @@ func (h *Impl) Stop() {
 
 	h.domainCache.Stop()
 	h.domainMetricsScopeCache.Stop()
-	h.membershipMonitor.Stop()
+	h.membershipResolver.Stop()
 	if err := h.dispatcher.Stop(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Error("failed to stop dispatcher")
 	}
@@ -443,9 +443,9 @@ func (h *Impl) GetDomainReplicationQueue() domain.ReplicationQueue {
 	return h.domainReplicationQueue
 }
 
-// GetMembershipMonitor return the membership monitor
-func (h *Impl) GetMembershipMonitor() membership.Monitor {
-	return h.membershipMonitor
+// GetMembershipResolver return the membership resolver
+func (h *Impl) GetMembershipResolver() membership.Resolver {
+	return h.membershipResolver
 }
 
 // internal services clients

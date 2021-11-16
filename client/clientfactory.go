@@ -67,7 +67,7 @@ type (
 
 	rpcClientFactory struct {
 		rpcFactory            common.RPCFactory
-		monitor               membership.Monitor
+		resolver              membership.Resolver
 		metricsClient         metrics.Client
 		dynConfig             *dynamicconfig.Collection
 		numberOfHistoryShards int
@@ -78,7 +78,7 @@ type (
 // NewRPCClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
 func NewRPCClientFactory(
 	rpcFactory common.RPCFactory,
-	monitor membership.Monitor,
+	resolver membership.Resolver,
 	metricsClient metrics.Client,
 	dc *dynamicconfig.Collection,
 	numberOfHistoryShards int,
@@ -86,7 +86,7 @@ func NewRPCClientFactory(
 ) Factory {
 	return &rpcClientFactory{
 		rpcFactory:            rpcFactory,
-		monitor:               monitor,
+		resolver:              resolver,
 		metricsClient:         metricsClient,
 		dynConfig:             dc,
 		numberOfHistoryShards: numberOfHistoryShards,
@@ -115,7 +115,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
 	}
 
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.monitor, addressMapper)
+	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, addressMapper)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
 	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)
@@ -160,7 +160,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
 	}
 
-	peerResolver := matching.NewPeerResolver(cf.monitor, addressMapper)
+	peerResolver := matching.NewPeerResolver(cf.resolver, addressMapper)
 
 	client := matching.NewClient(
 		timeout,

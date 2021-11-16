@@ -166,7 +166,7 @@ func NewWorkflowHandler(
 				return float64(config.RPS())
 			},
 			func(domain string) float64 {
-				memberCount, err := resource.GetMembershipMonitor().MemberCount(service.Frontend)
+				memberCount, err := resource.GetMembershipResolver().MemberCount(service.Frontend)
 				if err == nil && memberCount > 0 && config.GlobalDomainRPS(domain) > 0 {
 					avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/memberCount, 1)
 					return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))

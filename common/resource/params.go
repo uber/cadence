@@ -49,7 +49,7 @@ type (
 		ThrottledLogger log.Logger
 
 		MetricScope              tally.Scope
-		MembershipMonitor        membership.Monitor
+		MembershipResolver       membership.Resolver
 		RPCFactory               common.RPCFactory
 		PProfInitializer         common.PProfInitializer
 		PersistenceConfig        config.Persistence

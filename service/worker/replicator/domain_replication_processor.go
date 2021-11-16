@@ -49,48 +49,10 @@ const (
 	taskProcessorErrorRetryBackoffCoefficient = 1
 )
 
-func newDomainReplicationProcessor(
-	sourceCluster string,
-	currentCluster string,
-	logger log.Logger,
-	remotePeer admin.Client,
-	metricsClient metrics.Client,
-	taskExecutor domain.ReplicationTaskExecutor,
-	hostInfo *membership.HostInfo,
-	membership membership.Monitor,
-	domainReplicationQueue domain.ReplicationQueue,
-	replicationMaxRetry time.Duration,
-) *domainReplicationProcessor {
-	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
-	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
-	retryPolicy.SetExpirationInterval(replicationMaxRetry)
-	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(retryPolicy),
-		backoff.WithRetryableError(isTransientRetryableError),
-	)
-
-	return &domainReplicationProcessor{
-		hostInfo:               hostInfo,
-		membershipMonitor:      membership,
-		status:                 common.DaemonStatusInitialized,
-		sourceCluster:          sourceCluster,
-		currentCluster:         currentCluster,
-		logger:                 logger,
-		remotePeer:             remotePeer,
-		taskExecutor:           taskExecutor,
-		metricsClient:          metricsClient,
-		throttleRetry:          throttleRetry,
-		lastProcessedMessageID: -1,
-		lastRetrievedMessageID: -1,
-		done:                   make(chan struct{}),
-		domainReplicationQueue: domainReplicationQueue,
-	}
-}
-
 type (
 	domainReplicationProcessor struct {
 		hostInfo               *membership.HostInfo
-		membershipMonitor      membership.Monitor
+		membershipResolver     membership.Resolver
 		status                 int32
 		sourceCluster          string
 		currentCluster         string
@@ -105,6 +67,44 @@ type (
 		domainReplicationQueue domain.ReplicationQueue
 	}
 )
+
+func newDomainReplicationProcessor(
+	sourceCluster string,
+	currentCluster string,
+	logger log.Logger,
+	remotePeer admin.Client,
+	metricsClient metrics.Client,
+	taskExecutor domain.ReplicationTaskExecutor,
+	hostInfo *membership.HostInfo,
+	membership membership.Resolver,
+	domainReplicationQueue domain.ReplicationQueue,
+	replicationMaxRetry time.Duration,
+) *domainReplicationProcessor {
+	retryPolicy := backoff.NewExponentialRetryPolicy(taskProcessorErrorRetryWait)
+	retryPolicy.SetBackoffCoefficient(taskProcessorErrorRetryBackoffCoefficient)
+	retryPolicy.SetExpirationInterval(replicationMaxRetry)
+	throttleRetry := backoff.NewThrottleRetry(
+		backoff.WithRetryPolicy(retryPolicy),
+		backoff.WithRetryableError(isTransientRetryableError),
+	)
+
+	return &domainReplicationProcessor{
+		hostInfo:               hostInfo,
+		membershipResolver:     membership,
+		status:                 common.DaemonStatusInitialized,
+		sourceCluster:          sourceCluster,
+		currentCluster:         currentCluster,
+		logger:                 logger,
+		remotePeer:             remotePeer,
+		taskExecutor:           taskExecutor,
+		metricsClient:          metricsClient,
+		throttleRetry:          throttleRetry,
+		lastProcessedMessageID: -1,
+		lastRetrievedMessageID: -1,
+		done:                   make(chan struct{}),
+		domainReplicationQueue: domainReplicationQueue,
+	}
+}
 
 func (p *domainReplicationProcessor) Start() {
 	if !atomic.CompareAndSwapInt32(&p.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
@@ -135,7 +135,7 @@ func (p *domainReplicationProcessor) fetchDomainReplicationTasks() {
 	// for a small period of time two or more workers think they are the owner and try to execute
 	// the processing logic. This will not result in correctness issue as domain replication task
 	// processing will be protected by version check.
-	info, err := p.membershipMonitor.Lookup(service.Worker, p.sourceCluster)
+	info, err := p.membershipResolver.Lookup(service.Worker, p.sourceCluster)
 	if err != nil {
 		p.logger.Info("Failed to lookup host info. Skip current run.")
 		return

@@ -81,7 +81,7 @@ type (
 		lockableQueryTaskMap lockableQueryTaskMap
 		domainCache          cache.DomainCache
 		versionChecker       client.VersionChecker
-		membershipMonitor    membership.Monitor
+		membershipResolver   membership.Resolver
 	}
 )
 
@@ -111,7 +111,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
-	monitor membership.Monitor,
+	monitor membership.Resolver,
 ) Engine {
 
 	return &matchingEngineImpl{
@@ -126,7 +126,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
 		versionChecker:       client.NewVersionChecker(),
-		membershipMonitor:    monitor,
+		membershipResolver:   monitor,
 	}
 }
 
@@ -719,7 +719,7 @@ func (e *matchingEngineImpl) GetTaskListsByDomain(
 }
 
 func (e *matchingEngineImpl) getHostInfo(partitionKey string) (string, error) {
-	host, err := e.membershipMonitor.Lookup(service.Matching, partitionKey)
+	host, err := e.membershipResolver.Lookup(service.Matching, partitionKey)
 	if err != nil {
 		return "", err
 	}
