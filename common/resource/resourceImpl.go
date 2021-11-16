@@ -194,9 +194,9 @@ func New(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
 			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
-				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
-				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+				resolver, err := membershipMonitor.GetResolver(serviceName)
+				if err == nil && resolver.MemberCount() > 0 {
+					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/resolver.MemberCount(), 1)
 					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
 				}
 			}
