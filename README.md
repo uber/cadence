@@ -43,7 +43,7 @@ Cadence CLI can be used to operate workflows, tasklist, domain and even the clus
 You can use the following ways to install Cadence CLI:
 * Use brew to install CLI: `brew install cadence-workflow`
   * Follow the [instructions](https://github.com/uber/cadence/discussions/4457) if you need to install older versions of CLI via homebrew. Usually this is only needed when you are running a server of a too old version.
-* Use docker image for CLI: `docker run --rm ubercadence/cli:<releaseVersion>`  or `docker run --rm ubercadence/cli:master ` . Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
+* Use docker image for CLI: `docker run -it --rm ubercadence/cli:<releaseVersion>`  or `docker run -it --rm ubercadence/cli:master ` . Be sure to update your image when you want to try new features: `docker pull ubercadence/cli:master `
 * Build the CLI binary yourself, check out the repo and run `make cadence` to build all tools. See [CONTRIBUTING](CONTRIBUTING.md) for prerequisite of make command.
 * Build the CLI image yourself, see [instructions](docker/README.md#diy-building-an-image-for-any-tag-or-branch)
   
