@@ -34,7 +34,11 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/types"
 )
+
+// ErrInsufficientHosts is thrown when there are not enough hosts to serve the request
+var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
 
 const (
 	// RoleKey label is set by every single service as soon as it bootstraps its
