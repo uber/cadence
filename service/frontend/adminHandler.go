@@ -599,20 +599,22 @@ func (adh *adminHandlerImpl) DescribeCluster(
 		for _, role := range service.List {
 			var servers []*types.HostInfo
 			members, err := monitor.Members(role)
-			if err == nil {
-				for _, server := range members {
-					servers = append(servers, &types.HostInfo{
-						Identity: server.Identity(),
-					})
-					membershipInfo.ReachableMembers = append(membershipInfo.ReachableMembers, server.Identity())
-				}
-
-				rings = append(rings, &types.RingInfo{
-					Role:        role,
-					MemberCount: int32(len(servers)),
-					Members:     servers,
-				})
+			if err != nil {
+				return nil, adh.error(err, scope)
 			}
+
+			for _, server := range members {
+				servers = append(servers, &types.HostInfo{
+					Identity: server.Identity(),
+				})
+				membershipInfo.ReachableMembers = append(membershipInfo.ReachableMembers, server.Identity())
+			}
+
+			rings = append(rings, &types.RingInfo{
+				Role:        role,
+				MemberCount: int32(len(servers)),
+				Members:     servers,
+			})
 		}
 		membershipInfo.Rings = rings
 	}
