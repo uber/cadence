@@ -62,7 +62,6 @@ func AdminDBDataDecodeThrift(c *cli.Context) {
 			if bytes.Compare(data, data2) == 0 {
 				fmt.Printf("=======Decode into type %v ========\n", typeName)
 				fmt.Println(anyToString(t, true, 0))
-				fmt.Println("\n===================================")
 				found = true
 			}
 		}
