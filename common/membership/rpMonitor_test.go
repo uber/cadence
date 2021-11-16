@@ -44,7 +44,7 @@ func (s *RpoSuite) SetupTest() {
 }
 
 func (s *RpoSuite) TestRingpopMonitor() {
-	testService := NewTestRingpopCluster("rpm-test", 3, "127.0.0.1", "", "rpm-test")
+	testService := NewTestRingpopCluster("rpm-ring-app", 3, "127.0.0.1", "", "rpm-service-name")
 	s.NotNil(testService, "Failed to create test service")
 
 	logger := loggerimpl.NewNopLogger()
@@ -54,10 +54,15 @@ func (s *RpoSuite) TestRingpopMonitor() {
 	time.Sleep(time.Second)
 
 	listenCh := make(chan *ChangedEvent, 5)
-	err := rpm.AddListener("rpm-test", "test-listener", listenCh)
-	s.Nil(err, "AddListener failed")
+	resolver, err := rpm.GetResolver("rpm-test")
+	s.Error(err, "GetResolver should not exist")
+	s.Nil(resolver, "should return nil on non-existing resolver")
 
-	host, err := rpm.Lookup("rpm-test", "key")
+	resolver, err = rpm.GetResolver("rpm-service-name")
+	err = resolver.AddListener("test-listener", listenCh)
+	s.Nil(err, "AddListerener failed")
+
+	host, err := resolver.Lookup("key")
 	s.Nil(err, "Ringpop monitor failed to find host for key")
 	s.NotNil(host, "Ringpop monitor returned a nil host")
 
@@ -74,11 +79,11 @@ func (s *RpoSuite) TestRingpopMonitor() {
 		s.Fail("Timed out waiting for failure to be detected by ringpop")
 	}
 
-	host, err = rpm.Lookup("rpm-test", "key")
+	host, err = resolver.Lookup("key")
 	s.Nil(err, "Ringpop monitor failed to find host for key")
 	s.NotEqual(testService.hostAddrs[1], host.GetAddress(), "Ringpop monitor assigned key to dead host")
 
-	err = rpm.RemoveListener("rpm-test", "test-listener")
+	err = resolver.RemoveListener("test-listener")
 	s.Nil(err, "RemoveListener() failed")
 
 	rpm.Stop()
