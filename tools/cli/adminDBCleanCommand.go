@@ -23,6 +23,7 @@
 package cli
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,12 +32,34 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 )
+
+// AdminDBDataDecodeThrift is the command to decode thrift binary into JSON
+func AdminDBDataDecodeThrift(c *cli.Context) {
+	input := getRequiredOption(c, FlagInput)
+
+	encoder := codec.NewThriftRWEncoder()
+	data, err := hex.DecodeString(input)
+	if err != nil {
+		ErrorAndExit("input is not a valid hex string", err)
+	}
+	for typeName, t := range decodingTypes {
+		err = encoder.Decode(data, t)
+		if err == nil {
+			fmt.Printf("the input can be decoded into type %v \n", typeName)
+			fmt.Println(anyToString(t, true, 0))
+			fmt.Println("\n=============================")
+		}
+
+	}
+
+}
 
 // AdminDBClean is the command to clean up unhealthy executions.
 // Input is a JSON stream provided via STDIN or a file.
