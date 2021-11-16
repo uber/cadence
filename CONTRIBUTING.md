@@ -227,6 +227,9 @@ You have a few options for choosing when to submit:
 
 * For small changes where the approach seems obvious, you can open a PR with what you believe to be production-ready or near-production-ready code. As you get more experience with how we develop code, you'll find that more PRs will begin falling into this category.
 
+:warning: Note: 
+Please allow our maintainer to edit your PR. This repo requires rebase before merging. Without the permission, we cannot rebase when necessary.
+
 ### Commit Messages And Titles of Pull Requests
 
 Overcommit adds some requirements to your commit messages. At Uber, we follow the
