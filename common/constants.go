@@ -203,6 +203,8 @@ const (
 	DefaultESAnalyzerLimitToTypes = ""
 	// DefaultESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
 	DefaultESAnalyzerLimitToDomains = ""
+	// DefaultESAnalyzerWorkflowDurationWarnThreshold defines warning threshold for a workflow duration
+	DefaultESAnalyzerWorkflowDurationWarnThresholds = ""
 )
 
 // StickyTaskConditionFailedErrorMsg error msg for sticky task ConditionFailedError

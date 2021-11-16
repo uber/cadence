@@ -2240,6 +2240,7 @@ const (
 	ESAnalyzerNumStuckWorkflowsDiscovered
 	ESAnalyzerNumStuckWorkflowsRefreshed
 	ESAnalyzerNumStuckWorkflowsFailedToRefresh
+	ESAnalyzerNumLongRunningWorkflows
 
 	NumWorkerMetrics
 )
@@ -2766,6 +2767,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ESAnalyzerNumStuckWorkflowsDiscovered:         {metricName: "es_analyzer_num_stuck_workflows_discovered", metricType: Counter},
 		ESAnalyzerNumStuckWorkflowsRefreshed:          {metricName: "es_analyzer_num_stuck_workflows_refreshed", metricType: Counter},
 		ESAnalyzerNumStuckWorkflowsFailedToRefresh:    {metricName: "es_analyzer_num_stuck_workflows_failed_to_refresh", metricType: Counter},
+		ESAnalyzerNumLongRunningWorkflows:             {metricName: "es_analyzer_num_long_running_workflows", metricType: Counter},
 	},
 }
 

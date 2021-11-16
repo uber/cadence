@@ -2081,6 +2081,11 @@ const (
 	// Value type: Int
 	// Default value: "" => means no limitation
 	ESAnalyzerLimitToDomains
+	// ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types
+	// KeyName: worker.ESAnalyzerWorkflowDurationWarnThresholds
+	// Value type: string (json of a dictionary {"<domain>/<workflowType>":<value>,...})
+	// Default value: ""
+	ESAnalyzerWorkflowDurationWarnThresholds
 
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
@@ -2454,15 +2459,16 @@ var Keys = map[Key]string{
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 
-	ESAnalyzerPause:                 "worker.ESAnalyzerPause",
-	ESAnalyzerTimeWindow:            "worker.ESAnalyzerTimeWindow",
-	ESAnalyzerMaxNumDomains:         "worker.ESAnalyzerMaxNumDomains",
-	ESAnalyzerMaxNumWorkflowTypes:   "worker.ESAnalyzerMaxNumWorkflowTypes",
-	ESAnalyzerNumWorkflowsToRefresh: "worker.ESAnalyzerNumWorkflowsToRefresh",
-	ESAnalyzerBufferWaitTime:        "worker.ESAnalyzerBufferWaitTime",
-	ESAnalyzerMinNumWorkflowsForAvg: "worker.ESAnalyzerMinNumWorkflowsForAvg",
-	ESAnalyzerLimitToTypes:          "worker.ESAnalyzerLimitToTypes",
-	ESAnalyzerLimitToDomains:        "worker.ESAnalyzerLimitToDomains",
+	ESAnalyzerPause:                          "worker.ESAnalyzerPause",
+	ESAnalyzerTimeWindow:                     "worker.ESAnalyzerTimeWindow",
+	ESAnalyzerMaxNumDomains:                  "worker.ESAnalyzerMaxNumDomains",
+	ESAnalyzerMaxNumWorkflowTypes:            "worker.ESAnalyzerMaxNumWorkflowTypes",
+	ESAnalyzerNumWorkflowsToRefresh:          "worker.ESAnalyzerNumWorkflowsToRefresh",
+	ESAnalyzerBufferWaitTime:                 "worker.ESAnalyzerBufferWaitTime",
+	ESAnalyzerMinNumWorkflowsForAvg:          "worker.ESAnalyzerMinNumWorkflowsForAvg",
+	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
+	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 }
 
 var KeyNames map[string]Key
