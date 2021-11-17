@@ -10825,14 +10825,35 @@ func (v *ApplyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClos
 	return
 }
 
+type ApplyParentClosePolicyRequest struct {
+	Child     *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
+	Completed bool                              `json:"completed,omniempty"`
+}
+
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyRequest) GetParentClosePolicy() (o *ApplyParentClosePolicyAttributes) {
+	if v != nil {
+		return v.Child
+	}
+	return
+}
+
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyRequest) GetCompleted() (o bool) {
+	if v != nil {
+		return v.Completed
+	}
+	return
+}
+
 type CrossClusterApplyParentClosePolicyRequestAttributes struct {
-	ApplyParentClosePolicyAttributes []*ApplyParentClosePolicyAttributes `json:"appyParentClosePolicyAttributes,omitempty"`
+	Children []*ApplyParentClosePolicyRequest `json:"children,omitempty"`
 }
 
 // GetInitiatedEventID is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetAppyParentClosePolicyAttributes() (o []*ApplyParentClosePolicyAttributes) {
+func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetChildren() (o []*ApplyParentClosePolicyRequest) {
 	if v != nil {
-		return v.ApplyParentClosePolicyAttributes
+		return v.Children
 	}
 	return
 }
@@ -10860,13 +10881,13 @@ func (v *ApplyParentClosePolicyResult) GetFailedCause() (o CrossClusterTaskFaile
 
 // CrossClusterApplyParentClosePolicyResponseAttributes is an internal type (TBD...)
 type CrossClusterApplyParentClosePolicyResponseAttributes struct {
-	FailedChildren []*ApplyParentClosePolicyResult `json:"failedChildren,omitempty"`
+	ChildrenStatus []*ApplyParentClosePolicyResult `json:"childrenStatus,omitempty"`
 }
 
-// GetFailedChildren is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyResponseAttributes) GetFailedChildren() (o []*ApplyParentClosePolicyResult) {
-	if v != nil && v.FailedChildren != nil {
-		return v.FailedChildren
+// GetChildrenStatus is an internal getter (TBD...)
+func (v *CrossClusterApplyParentClosePolicyResponseAttributes) GetChildrenStatus() (o []*ApplyParentClosePolicyResult) {
+	if v != nil && v.ChildrenStatus != nil {
+		return v.ChildrenStatus
 	}
 	return
 }

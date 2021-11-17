@@ -551,13 +551,16 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
 		if targetCluster == t.targetCluster {
 
-			attributes.ApplyParentClosePolicyAttributes = append(
-				attributes.ApplyParentClosePolicyAttributes,
-				&types.ApplyParentClosePolicyAttributes{
-					ChildDomainID:     targetDomainEntry.GetInfo().ID,
-					ChildWorkflowID:   childInfo.StartedWorkflowID,
-					ChildRunID:        childInfo.StartedRunID,
-					ParentClosePolicy: &childInfo.ParentClosePolicy,
+			attributes.Children = append(
+				attributes.Children,
+				&types.ApplyParentClosePolicyRequest{
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     targetDomainEntry.GetInfo().ID,
+						ChildWorkflowID:   childInfo.StartedWorkflowID,
+						ChildRunID:        childInfo.StartedRunID,
+						ParentClosePolicy: &childInfo.ParentClosePolicy,
+					},
+					Completed: false,
 				},
 			)
 		}

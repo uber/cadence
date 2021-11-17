@@ -129,8 +129,13 @@ message ApplyParentClosePolicyAttributes {
   api.v1.ParentClosePolicy parent_close_policy = 4;
 }
 
+message ApplyParentClosePolicyRequest {
+  ApplyParentClosePolicyAttributes child = 1;
+  bool completed =2;
+}
+
 message CrossClusterApplyParentClosePolicyRequestAttributes {
-  repeated ApplyParentClosePolicyAttributes apply_parent_close_policy_attributes = 1;
+  repeated ApplyParentClosePolicyRequest children = 1;
 }
 
 message ApplyParentClosePolicyResult {
@@ -139,7 +144,7 @@ message ApplyParentClosePolicyResult {
 }
 
 message CrossClusterApplyParentClosePolicyResponseAttributes {
-  repeated ApplyParentClosePolicyResult failed_children = 1;
+  repeated ApplyParentClosePolicyResult children_status = 1;
 }
 
 message CrossClusterTaskRequest {

@@ -1465,10 +1465,13 @@ func FromCrossClusterApplyParentClosePolicyRequestAttributes(t *types.CrossClust
 		return nil
 	}
 	requestAttributes := &sharedv1.CrossClusterApplyParentClosePolicyRequestAttributes{}
-	for _, execution := range t.ApplyParentClosePolicyAttributes {
-		requestAttributes.ApplyParentClosePolicyAttributes = append(
-			requestAttributes.ApplyParentClosePolicyAttributes,
-			FromApplyParentClosePolicyAttributes(execution),
+	for _, execution := range t.Children {
+		requestAttributes.Children = append(
+			requestAttributes.Children,
+			&sharedv1.ApplyParentClosePolicyRequest{
+				Child:     FromApplyParentClosePolicyAttributes(execution.Child),
+				Completed: execution.Completed,
+			},
 		)
 	}
 	return requestAttributes
@@ -1480,10 +1483,13 @@ func ToCrossClusterApplyParentClosePolicyRequestAttributes(t *sharedv1.CrossClus
 		return nil
 	}
 	requestAttributes := &types.CrossClusterApplyParentClosePolicyRequestAttributes{}
-	for _, execution := range t.ApplyParentClosePolicyAttributes {
-		requestAttributes.ApplyParentClosePolicyAttributes = append(
-			requestAttributes.ApplyParentClosePolicyAttributes,
-			ToApplyParentClosePolicyAttributes(execution),
+	for _, execution := range t.Children {
+		requestAttributes.Children = append(
+			requestAttributes.Children,
+			&types.ApplyParentClosePolicyRequest{
+				Child:     ToApplyParentClosePolicyAttributes(execution.Child),
+				Completed: execution.Completed,
+			},
 		)
 	}
 	return requestAttributes
@@ -1495,9 +1501,9 @@ func FromCrossClusterApplyParentClosePolicyResponseAttributes(t *types.CrossClus
 		return nil
 	}
 	response := &sharedv1.CrossClusterApplyParentClosePolicyResponseAttributes{}
-	for _, childStatus := range t.FailedChildren {
-		response.FailedChildren = append(
-			response.FailedChildren,
+	for _, childStatus := range t.ChildrenStatus {
+		response.ChildrenStatus = append(
+			response.ChildrenStatus,
 			FromApplyParentClosePolicyResult(childStatus),
 		)
 	}
@@ -1510,9 +1516,9 @@ func ToCrossClusterApplyParentClosePolicyResponseAttributes(t *sharedv1.CrossClu
 		return nil
 	}
 	response := &types.CrossClusterApplyParentClosePolicyResponseAttributes{}
-	for _, childStatus := range t.FailedChildren {
-		response.FailedChildren = append(
-			response.FailedChildren,
+	for _, childStatus := range t.ChildrenStatus {
+		response.ChildrenStatus = append(
+			response.ChildrenStatus,
 			ToApplyParentClosePolicyResult(childStatus),
 		)
 	}

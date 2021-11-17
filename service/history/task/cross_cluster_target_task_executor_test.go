@@ -285,7 +285,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentPolicyTask() {
 
 func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentPolicyTaskWithRetriableFailures() {
 	expectedFailedCause := types.CrossClusterTaskFailedCauseDomainNotActive.Ptr()
-	s.testApplyParentPolicyTaskWithFailures(ErrTaskPendingActive, expectedFailedCause, true, 1)
+	s.testApplyParentPolicyTaskWithFailures(ErrTaskPendingActive, expectedFailedCause, true, 2)
 }
 func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentPolicyTaskWithNonRetriableFailures() {
 	expectedFailedCause := types.CrossClusterTaskFailedCauseDomainNotExists.Ptr()
@@ -301,13 +301,16 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 	task := s.getTestApplyParentPolicyTask(processingStateInitialized, types.ParentClosePolicyRequestCancel)
 	otherDomainID := fmt.Sprintf("%s-%d", constants.TestDomainID, 1)
 	policy := types.ParentClosePolicyRequestCancel
-	task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes = append(
-		task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes,
-		&types.ApplyParentClosePolicyAttributes{
-			ChildDomainID:     otherDomainID,
-			ChildWorkflowID:   "some random workflow id",
-			ChildRunID:        "some random run id",
-			ParentClosePolicy: &policy,
+	task.request.ApplyParentClosePolicyAttributes.Children = append(
+		task.request.ApplyParentClosePolicyAttributes.Children,
+		&types.ApplyParentClosePolicyRequest{
+			Child: &types.ApplyParentClosePolicyAttributes{
+				ChildDomainID:     otherDomainID,
+				ChildWorkflowID:   "some random workflow id",
+				ChildRunID:        "some random run id",
+				ParentClosePolicy: &policy,
+			},
+			Completed: false,
 		},
 	)
 
@@ -344,19 +347,21 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 	s.Equal(task.GetTaskID(), task.response.GetTaskID())
 	s.Equal(types.CrossClusterTaskTypeApplyParentPolicy, task.response.GetTaskType())
 	s.NotNil(task.response.ApplyParentClosePolicyAttributes)
-	s.Equal(1, len(task.response.ApplyParentClosePolicyAttributes.FailedChildren))
-	for _, failedChild := range task.response.ApplyParentClosePolicyAttributes.FailedChildren {
-		if failedChild.Child.ChildDomainID == otherDomainID {
-			s.Equal(expectedFailedCause, failedChild.FailedCause)
+	s.Equal(2, len(task.response.ApplyParentClosePolicyAttributes.ChildrenStatus))
+	for _, childStatus := range task.response.ApplyParentClosePolicyAttributes.ChildrenStatus {
+		if childStatus.Child.ChildDomainID == constants.TestDomainID {
+			s.Nil(childStatus.FailedCause)
+		} else if childStatus.Child.ChildDomainID == otherDomainID {
+			s.Equal(expectedFailedCause, childStatus.FailedCause)
 		} else {
-			panic(fmt.Sprintf("unexpected domain id: %v", failedChild.Child.ChildDomainID))
+			panic(fmt.Sprintf("unexpected domain id: %v", childStatus.Child.ChildDomainID))
 		}
 	}
 
 	// only one of those tasks failed, so we only have one of them in the retry request
 	s.Equal(
 		numExpectedChildrenInRequest,
-		len(task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes),
+		len(task.request.ApplyParentClosePolicyAttributes.Children),
 	)
 }
 
@@ -547,12 +552,15 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestApplyParentPolicyTask(
 		nil,
 		nil,
 		&types.CrossClusterApplyParentClosePolicyRequestAttributes{
-			ApplyParentClosePolicyAttributes: []*types.ApplyParentClosePolicyAttributes{
+			Children: []*types.ApplyParentClosePolicyRequest{
 				{
-					ChildDomainID:     constants.TestDomainID,
-					ChildWorkflowID:   "some random workflow id",
-					ChildRunID:        "some random run id",
-					ParentClosePolicy: &policy,
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestDomainID,
+						ChildWorkflowID:   "some random workflow id",
+						ChildRunID:        "some random run id",
+						ParentClosePolicy: &policy,
+					},
+					Completed: false,
 				},
 			},
 		},
