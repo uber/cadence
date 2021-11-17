@@ -952,6 +952,20 @@ func newDBCommands() []cli.Command {
 				AdminDBClean(c)
 			},
 		},
+		{
+			Name:  "decode_thrift",
+			Usage: "decode thrift object of HEX, print into JSON if the HEX data is matching with any supported struct",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   FlagInputWithAlias,
+					EnvVar: "Input",
+					Usage:  "HEX input of the binary data, you may get from database query like SELECT HEX(...) FROM ...",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDBDataDecodeThrift(c)
+			},
+		},
 	}
 }
 
