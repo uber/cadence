@@ -35,7 +35,7 @@ import (
 
 const (
 	// PluginName is the name of the plugin
-	PluginName            = "mongodb"
+	PluginName = "mongodb"
 )
 
 type plugin struct{}
@@ -75,5 +75,3 @@ func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*mdb, error) 
 		logger: logger,
 	}, err
 }
-
-
