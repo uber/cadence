@@ -123,7 +123,6 @@ type (
 
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		membershipFactory      MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
 )
@@ -148,10 +147,7 @@ func New(
 
 	dispatcher := params.RPCFactory.GetDispatcher()
 
-	membershipMonitor, err := params.MembershipFactory.GetMembershipMonitor()
-	if err != nil {
-		return nil, err
-	}
+	membershipMonitor := params.MembershipMonitor
 
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
@@ -198,9 +194,9 @@ func New(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
 			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
-				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
-				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+				resolver, err := membershipMonitor.GetResolver(serviceName)
+				if err == nil && resolver.MemberCount() > 0 {
+					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/resolver.MemberCount(), 1)
 					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
 				}
 			}
@@ -342,8 +338,7 @@ func New(
 			logger,
 			params.InstanceID,
 		),
-		membershipFactory: params.MembershipFactory,
-		rpcFactory:        params.RPCFactory,
+		rpcFactory: params.RPCFactory,
 	}
 	return impl, nil
 }

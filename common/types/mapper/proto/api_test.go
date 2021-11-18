@@ -25,7 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/testdata"
@@ -769,12 +769,17 @@ func TestParentExecutionInfo(t *testing.T) {
 }
 func TestParentExecutionInfoFields(t *testing.T) {
 	assert.Nil(t, FromParentExecutionInfoFields(nil, nil, nil, nil))
-	assert.Panics(t, func() { FromParentExecutionInfoFields(nil, &testdata.ParentExecutionInfo.Domain, nil, nil) })
-	info := FromParentExecutionInfoFields(nil,
+	info := FromParentExecutionInfoFields(nil, nil, testdata.ParentExecutionInfo.Execution, nil)
+	assert.Equal(t, "", *ToParentDomainID(info))
+	assert.Equal(t, "", *ToParentDomainName(info))
+	assert.Equal(t, testdata.ParentExecutionInfo.Execution, ToParentWorkflowExecution(info))
+	assert.Equal(t, int64(0), *ToParentInitiatedID(info))
+	info = FromParentExecutionInfoFields(
+		&testdata.ParentExecutionInfo.DomainUUID,
 		&testdata.ParentExecutionInfo.Domain,
 		testdata.ParentExecutionInfo.Execution,
 		&testdata.ParentExecutionInfo.InitiatedID)
-	assert.Equal(t, "", *ToParentDomainID(info))
+	assert.Equal(t, testdata.ParentExecutionInfo.DomainUUID, *ToParentDomainID(info))
 	assert.Equal(t, testdata.ParentExecutionInfo.Domain, *ToParentDomainName(info))
 	assert.Equal(t, testdata.ParentExecutionInfo.Execution, ToParentWorkflowExecution(info))
 	assert.Equal(t, testdata.ParentExecutionInfo.InitiatedID, *ToParentInitiatedID(info))

@@ -21,10 +21,14 @@
 package rpc
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/service"
 
 	"go.uber.org/yarpc"
 )
@@ -37,6 +41,9 @@ type Params struct {
 	GRPCMaxMsgSize    int
 	HostAddressMapper HostAddressMapper
 
+	InboundTLS  *tls.Config
+	OutboundTLS map[string]*tls.Config
+
 	InboundMiddleware  yarpc.InboundMiddleware
 	OutboundMiddleware yarpc.OutboundMiddleware
 
@@ -44,7 +51,7 @@ type Params struct {
 }
 
 // NewParams creates parameters for rpc.Factory from the given config
-func NewParams(serviceName string, config *config.Config) (Params, error) {
+func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Collection) (Params, error) {
 	serviceConfig, err := config.GetServiceConfig(serviceName)
 	if err != nil {
 		return Params{}, err
@@ -55,6 +62,24 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 		return Params{}, fmt.Errorf("get listen IP: %v", err)
 	}
 
+	inboundTLS, err := serviceConfig.RPC.TLS.ToTLSConfig()
+	if err != nil {
+		return Params{}, fmt.Errorf("inbound TLS config: %v", err)
+	}
+	outboundTLS := map[string]*tls.Config{}
+	for _, outboundServiceName := range service.List {
+		outboundServiceConfig, err := config.GetServiceConfig(outboundServiceName)
+		if err != nil {
+			continue
+		}
+		outboundTLS[outboundServiceName], err = outboundServiceConfig.RPC.TLS.ToTLSConfig()
+		if err != nil {
+			return Params{}, fmt.Errorf("outbound %s TLS config: %v", outboundServiceName, err)
+		}
+	}
+
+	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound, true)()
+
 	publicClientOutbound, err := newPublicClientOutbound(config)
 	if err != nil {
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
@@ -62,13 +87,22 @@ func NewParams(serviceName string, config *config.Config) (Params, error) {
 
 	return Params{
 		ServiceName:       serviceName,
-		TChannelAddress:   fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.Port),
-		GRPCAddress:       fmt.Sprintf("%v:%v", listenIP, serviceConfig.RPC.GRPCPort),
+		TChannelAddress:   net.JoinHostPort(listenIP.String(), strconv.Itoa(serviceConfig.RPC.Port)),
+		GRPCAddress:       net.JoinHostPort(listenIP.String(), strconv.Itoa(serviceConfig.RPC.GRPCPort)),
 		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
 		HostAddressMapper: NewGRPCPorts(config),
-		OutboundsBuilder:  publicClientOutbound,
+		OutboundsBuilder: CombineOutbounds(
+			NewDirectOutbound(service.History, enableGRPCOutbound, outboundTLS[service.History]),
+			NewDirectOutbound(service.Matching, enableGRPCOutbound, outboundTLS[service.Matching]),
+			publicClientOutbound,
+		),
+		InboundTLS:  inboundTLS,
+		OutboundTLS: outboundTLS,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &inboundMetricsMiddleware{},
+		},
+		OutboundMiddleware: yarpc.OutboundMiddleware{
+			Unary: &HeaderForwardingMiddleware{},
 		},
 	}, nil
 }
@@ -87,7 +121,10 @@ func getListenIP(config config.RPC) (net.IP, error) {
 		if ip != nil && ip.To4() != nil {
 			return ip.To4(), nil
 		}
-		return nil, fmt.Errorf("unable to parse bindOnIP value or it is not an IPv4 address: %s", config.BindOnIP)
+		if ip != nil && ip.To16() != nil {
+			return ip.To16(), nil
+		}
+		return nil, fmt.Errorf("unable to parse bindOnIP value or it is not an IPv4 or IPv6 address: %s", config.BindOnIP)
 	}
 	return ListenIP()
 }

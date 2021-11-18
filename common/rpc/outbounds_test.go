@@ -151,6 +151,21 @@ func TestCrossDCOutbounds(t *testing.T) {
 	assert.NotNil(t, outbounds["cluster-B"].Unary)
 }
 
+func TestDirectOutbound(t *testing.T) {
+	grpc := &grpc.Transport{}
+	tchannel := &tchannel.Transport{}
+
+	outbounds, err := NewDirectOutbound("cadence-history", false, nil).Build(grpc, tchannel)
+	assert.NoError(t, err)
+	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)
+	assert.NotNil(t, outbounds["cadence-history"].Unary)
+
+	outbounds, err = NewDirectOutbound("cadence-history", true, nil).Build(grpc, tchannel)
+	assert.NoError(t, err)
+	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)
+	assert.NotNil(t, outbounds["cadence-history"].Unary)
+}
+
 func tempFile(t *testing.T, content string) string {
 	f, err := ioutil.TempFile("", "")
 	require.NoError(t, err)

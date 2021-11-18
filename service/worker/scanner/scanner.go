@@ -34,7 +34,6 @@ import (
 	"go.uber.org/cadence/worker"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -42,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/scanner/shardscanner"
 	"github.com/uber/cadence/service/worker/scanner/tasklist"
+	"github.com/uber/cadence/service/worker/workercommon"
 )
 
 const (
@@ -168,7 +168,9 @@ func (s *Scanner) Start() error {
 }
 
 func (s *Scanner) startScanner(ctx context.Context, options client.StartWorkflowOptions, workflowName string) context.Context {
-	go s.startWorkflowWithRetry(options, workflowName, nil)
+	go workercommon.StartWorkflowWithRetry(workflowName, scannerStartUpDelay, s.context.resource, func(client client.Client) error {
+		return s.startWorkflow(client, options, workflowName, nil)
+	})
 	return NewScannerContext(ctx, workflowName, s.context)
 }
 
@@ -183,16 +185,19 @@ func (s *Scanner) startShardScanner(
 			config.ScannerWFTypeName,
 			shardscanner.NewShardScannerContext(s.context.resource, config),
 		)
-		go s.startWorkflowWithRetry(
-			config.StartWorkflowOptions,
+		go workercommon.StartWorkflowWithRetry(
 			config.ScannerWFTypeName,
-			shardscanner.ScannerWorkflowParams{
-				Shards: shardscanner.Shards{
-					Range: &shardscanner.ShardRange{
-						Min: 0,
-						Max: s.context.cfg.Persistence.NumHistoryShards,
+			scannerStartUpDelay,
+			s.context.resource,
+			func(client client.Client) error {
+				return s.startWorkflow(client, config.StartWorkflowOptions, config.ScannerWFTypeName, shardscanner.ScannerWorkflowParams{
+					Shards: shardscanner.Shards{
+						Range: &shardscanner.ShardRange{
+							Min: 0,
+							Max: s.context.cfg.Persistence.NumHistoryShards,
+						},
 					},
-				},
+				})
 			})
 
 		workerTaskListNames = append(workerTaskListNames, config.StartWorkflowOptions.TaskList)
@@ -204,48 +209,21 @@ func (s *Scanner) startShardScanner(
 			config.FixerWFTypeName,
 			shardscanner.NewShardFixerContext(s.context.resource, config),
 		)
-		go s.startWorkflowWithRetry(
-			config.StartFixerOptions,
+		go workercommon.StartWorkflowWithRetry(
 			config.FixerWFTypeName,
-			shardscanner.FixerWorkflowParams{
-				ScannerWorkflowWorkflowID: config.StartWorkflowOptions.ID,
-			},
-		)
+			scannerStartUpDelay,
+			s.context.resource,
+			func(client client.Client) error {
+				return s.startWorkflow(client, config.StartFixerOptions, config.FixerWFTypeName,
+					shardscanner.FixerWorkflowParams{
+						ScannerWorkflowWorkflowID: config.StartWorkflowOptions.ID,
+					})
+			})
 
 		workerTaskListNames = append(workerTaskListNames, config.StartFixerOptions.TaskList)
 	}
 
 	return ctx, workerTaskListNames
-}
-
-func (s *Scanner) startWorkflowWithRetry(
-	options client.StartWorkflowOptions,
-	workflowType string,
-	workflowArg interface{},
-) {
-	// let history / matching service warm up
-	time.Sleep(scannerStartUpDelay)
-	res := s.context.resource
-	sdkClient := client.NewClient(
-		res.GetSDKClient(),
-		common.SystemLocalDomainName,
-		nil, /* &client.Options{} */
-	)
-	policy := backoff.NewExponentialRetryPolicy(time.Second)
-	policy.SetMaximumInterval(time.Minute)
-	policy.SetExpirationInterval(backoff.NoInterval)
-	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(policy),
-		backoff.WithRetryableError(func(_ error) bool { return true }),
-	)
-	err := throttleRetry.Do(context.Background(), func() error {
-		return s.startWorkflow(sdkClient, options, workflowType, workflowArg)
-	})
-	if err != nil {
-		res.GetLogger().Fatal("unable to start scanner", tag.WorkflowType(workflowType), tag.Error(err))
-	} else {
-		res.GetLogger().Info("starting scanner", tag.WorkflowType(workflowType))
-	}
 }
 
 func (s *Scanner) startWorkflow(

@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/archiver"
 	"github.com/uber/cadence/service/worker/batcher"
+	"github.com/uber/cadence/service/worker/esanalyzer"
 	"github.com/uber/cadence/service/worker/failovermanager"
 	"github.com/uber/cadence/service/worker/indexer"
 	"github.com/uber/cadence/service/worker/parentclosepolicy"
@@ -72,6 +73,7 @@ type (
 		IndexerCfg                        *indexer.Config
 		ScannerCfg                        *scanner.Config
 		BatcherCfg                        *batcher.Config
+		ESAnalyzerCfg                     *esanalyzer.Config
 		failoverManagerCfg                *failovermanager.Config
 		ThrottledLogRPS                   dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS           dynamicconfig.IntPropertyFn
@@ -81,6 +83,7 @@ type (
 		EnableFailoverManager             dynamicconfig.BoolPropertyFn
 		EnableWorkflowShadower            dynamicconfig.BoolPropertyFn
 		DomainReplicationMaxRetryDuration dynamicconfig.DurationPropertyFn
+		EnableESAnalyzer                  dynamicconfig.BoolPropertyFn
 	}
 )
 
@@ -155,8 +158,20 @@ func NewConfig(params *resource.Params) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
+		ESAnalyzerCfg: &esanalyzer.Config{
+			ESAnalyzerPause:                 dc.GetBoolProperty(dynamicconfig.ESAnalyzerPause, common.DefaultESAnalyzerPause),
+			ESAnalyzerTimeWindow:            dc.GetDurationProperty(dynamicconfig.ESAnalyzerTimeWindow, common.DefaultESAnalyzerTimeWindow),
+			ESAnalyzerMaxNumDomains:         dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumDomains, common.DefaultESAnalyzerMaxNumDomains),
+			ESAnalyzerMaxNumWorkflowTypes:   dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumWorkflowTypes, common.DefaultESAnalyzerMaxNumWorkflowTypes),
+			ESAnalyzerLimitToTypes:          dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToTypes, common.DefaultESAnalyzerLimitToTypes),
+			ESAnalyzerLimitToDomains:        dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToDomains, common.DefaultESAnalyzerLimitToDomains),
+			ESAnalyzerNumWorkflowsToRefresh: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),
+			ESAnalyzerBufferWaitTime:        dc.GetDurationPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTime, common.DefaultESAnalyzerBufferWaitTime),
+			ESAnalyzerMinNumWorkflowsForAvg: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg, common.DefaultESAnalyzerMinNumWorkflowsForAvg),
+		},
 		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
 		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		EnableESAnalyzer:                  dc.GetBoolProperty(dynamicconfig.EnableESAnalyzer, false),
 		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
 		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
 		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
@@ -212,6 +227,9 @@ func (s *Service) Start() {
 	if s.config.EnableParentClosePolicyWorker() {
 		s.startParentClosePolicyProcessor()
 	}
+	if s.config.EnableESAnalyzer() {
+		s.startESAnalyzer()
+	}
 	if s.config.EnableFailoverManager() {
 		s.startFailoverManager()
 	}
@@ -249,6 +267,26 @@ func (s *Service) startParentClosePolicyProcessor() {
 	processor := parentclosepolicy.New(params)
 	if err := processor.Start(); err != nil {
 		s.GetLogger().Fatal("error starting parentclosepolicy processor", tag.Error(err))
+	}
+}
+
+func (s *Service) startESAnalyzer() {
+	analyzer := esanalyzer.New(
+		s.params.PublicClient,
+		s.GetFrontendClient(),
+		s.GetClientBean(),
+		s.params.ESClient,
+		s.params.ESConfig,
+		s.GetLogger(),
+		s.GetMetricsClient(),
+		s.params.MetricScope,
+		s.Resource,
+		s.GetDomainCache(),
+		s.config.ESAnalyzerCfg,
+	)
+
+	if err := analyzer.Start(); err != nil {
+		s.GetLogger().Fatal("error starting esanalyzer", tag.Error(err))
 	}
 }
 

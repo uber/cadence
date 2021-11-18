@@ -21,144 +21,57 @@
 package membership
 
 import (
-	"sync/atomic"
+	"fmt"
 
-	"github.com/uber/cadence/common"
+	"github.com/uber/ringpop-go"
+	"github.com/uber/ringpop-go/swim"
+	tcg "github.com/uber/tchannel-go"
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service"
 )
 
-type ringpopMonitor struct {
+type RingpopMonitor struct {
 	status int32
 
-	serviceName string
-	services    []string
-	rp          *RingPop
-	rings       map[string]*ringpopServiceResolver
-	logger      log.Logger
+	serviceName    string
+	ringpopWrapper *RingpopWrapper
+	rings          map[string]*ringpopServiceResolver
+	logger         log.Logger
 }
 
-var _ Monitor = (*ringpopMonitor)(nil)
+var _ Monitor = (*RingpopMonitor)(nil)
 
-// NewRingpopMonitor returns a ringpop-based membership monitor
-func NewRingpopMonitor(
+// NewMonitor builds a ringpop monitor conforming
+// to the underlying configuration
+func NewMonitor(
+	config *RingpopConfig,
+	channel tchannel.Channel,
 	serviceName string,
-	services []string,
-	rp *RingPop,
 	logger log.Logger,
-) Monitor {
+) (*RingpopMonitor, error) {
 
-	rpo := &ringpopMonitor{
-		status:      common.DaemonStatusInitialized,
-		serviceName: serviceName,
-		services:    services,
-		rp:          rp,
-		logger:      logger,
-		rings:       make(map[string]*ringpopServiceResolver),
-	}
-	for _, service := range services {
-		rpo.rings[service] = newRingpopServiceResolver(service, rp, logger)
-	}
-	return rpo
-}
-
-func (rpo *ringpopMonitor) Start() {
-	if !atomic.CompareAndSwapInt32(
-		&rpo.status,
-		common.DaemonStatusInitialized,
-		common.DaemonStatusStarted,
-	) {
-		return
-	}
-
-	rpo.rp.Start()
-
-	labels, err := rpo.rp.Labels()
-	if err != nil {
-		rpo.logger.Fatal("unable to get ring pop labels", tag.Error(err))
-	}
-
-	if err = labels.Set(RoleKey, rpo.serviceName); err != nil {
-		rpo.logger.Fatal("unable to set ring pop labels", tag.Error(err))
-	}
-
-	for _, ring := range rpo.rings {
-		ring.Start()
-	}
-}
-
-func (rpo *ringpopMonitor) Stop() {
-	if !atomic.CompareAndSwapInt32(
-		&rpo.status,
-		common.DaemonStatusStarted,
-		common.DaemonStatusStopped,
-	) {
-		return
-	}
-
-	for _, ring := range rpo.rings {
-		ring.Stop()
-	}
-
-	rpo.rp.Stop()
-}
-
-func (rpo *ringpopMonitor) WhoAmI() (*HostInfo, error) {
-	address, err := rpo.rp.WhoAmI()
-	if err != nil {
+	if err := config.validate(); err != nil {
 		return nil, err
 	}
-	labels, err := rpo.rp.Labels()
+
+	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ringpop creation failed: %v", err)
 	}
-	return NewHostInfo(address, labels.AsMap()), nil
-}
 
-func (rpo *ringpopMonitor) EvictSelf() error {
-	return rpo.rp.SelfEvict()
-}
-
-func (rpo *ringpopMonitor) GetResolver(service string) (ServiceResolver, error) {
-	ring, found := rpo.rings[service]
-	if !found {
-		return nil, ErrUnknownService
-	}
-	return ring, nil
-}
-
-func (rpo *ringpopMonitor) Lookup(service string, key string) (*HostInfo, error) {
-	ring, err := rpo.GetResolver(service)
+	discoveryProvider, err := newDiscoveryProvider(config, logger)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get discovery provider %v", err)
 	}
-	return ring.Lookup(key)
-}
 
-func (rpo *ringpopMonitor) AddListener(service string, name string, notifyChannel chan<- *ChangedEvent) error {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return err
+	bootstrapOpts := &swim.BootstrapOptions{
+		MaxJoinDuration:  config.MaxJoinDuration,
+		DiscoverProvider: discoveryProvider,
 	}
-	return ring.AddListener(name, notifyChannel)
-}
+	rpw := NewRingpopWraper(rp, bootstrapOpts, logger)
 
-func (rpo *ringpopMonitor) RemoveListener(service string, name string) error {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return err
-	}
-	return ring.RemoveListener(name)
-}
+	return NewRingpopMonitor(serviceName, service.List, rpw, logger), nil
 
-func (rpo *ringpopMonitor) GetReachableMembers() ([]string, error) {
-	return rpo.rp.GetReachableMembers()
-}
-
-func (rpo *ringpopMonitor) GetMemberCount(service string) (int, error) {
-	ring, err := rpo.GetResolver(service)
-	if err != nil {
-		return 0, err
-	}
-	return ring.MemberCount(), nil
 }
