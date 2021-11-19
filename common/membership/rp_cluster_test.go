@@ -40,7 +40,7 @@ type TestRingpopCluster struct {
 	hostUUIDs    []string
 	hostAddrs    []string
 	hostInfoList []HostInfo
-	rings        []Monitor
+	rings        []Resolver
 	channels     []*tchannel.Channel
 	seedNode     string
 }
@@ -55,7 +55,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 		hostUUIDs:    make([]string, size),
 		hostAddrs:    make([]string, size),
 		hostInfoList: make([]HostInfo, size),
-		rings:        make([]Monitor, size),
+		rings:        make([]Resolver, size),
 		channels:     make([]*tchannel.Channel, size),
 		seedNode:     seed,
 	}
@@ -94,7 +94,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 			logger.Error("failed to create ringpop instance", tag.Error(err))
 			return nil
 		}
-		cluster.rings[i] = NewRingpopMonitor(
+		cluster.rings[i] = NewRingpopResolver(
 			serviceName,
 			[]string{serviceName},
 			NewRingpopWraper(ringPop, bOptions, logger),

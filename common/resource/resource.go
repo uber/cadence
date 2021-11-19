@@ -72,12 +72,7 @@ type (
 		GetDomainReplicationQueue() domain.ReplicationQueue
 
 		// membership infos
-
-		GetMembershipMonitor() membership.Monitor
-		GetFrontendServiceResolver() membership.ServiceResolver
-		GetMatchingServiceResolver() membership.ServiceResolver
-		GetHistoryServiceResolver() membership.ServiceResolver
-		GetWorkerServiceResolver() membership.ServiceResolver
+		GetMembershipResolver() membership.Resolver
 
 		// internal services clients
 

@@ -67,7 +67,7 @@ type (
 
 	rpcClientFactory struct {
 		rpcFactory            common.RPCFactory
-		monitor               membership.Monitor
+		resolver              membership.Resolver
 		metricsClient         metrics.Client
 		dynConfig             *dynamicconfig.Collection
 		numberOfHistoryShards int
@@ -78,7 +78,7 @@ type (
 // NewRPCClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
 func NewRPCClientFactory(
 	rpcFactory common.RPCFactory,
-	monitor membership.Monitor,
+	resolver membership.Resolver,
 	metricsClient metrics.Client,
 	dc *dynamicconfig.Collection,
 	numberOfHistoryShards int,
@@ -86,7 +86,7 @@ func NewRPCClientFactory(
 ) Factory {
 	return &rpcClientFactory{
 		rpcFactory:            rpcFactory,
-		monitor:               monitor,
+		resolver:              resolver,
 		metricsClient:         metricsClient,
 		dynConfig:             dc,
 		numberOfHistoryShards: numberOfHistoryShards,
@@ -115,11 +115,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
 	}
 
-	resolver, err := cf.monitor.GetResolver(service.History)
-	if err != nil {
-		return nil, err
-	}
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, resolver, addressMapper)
+	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, addressMapper)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
 	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)
@@ -164,11 +160,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
 	}
 
-	resolver, err := cf.monitor.GetResolver(service.Matching)
-	if err != nil {
-		return nil, err
-	}
-	peerResolver := matching.NewPeerResolver(resolver, addressMapper)
+	peerResolver := matching.NewPeerResolver(cf.resolver, addressMapper)
 
 	client := matching.NewClient(
 		timeout,

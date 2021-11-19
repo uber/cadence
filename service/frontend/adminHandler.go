@@ -272,7 +272,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	shardIDstr := string(rune(shardID)) // originally `string(int_shard_id)`, but changing it will change the ring hashing
 	shardIDForOutput := strconv.Itoa(shardID)
 
-	historyHost, err := adh.GetHistoryServiceResolver().Lookup(shardIDstr)
+	historyHost, err := adh.GetMembershipResolver().Lookup(service.History, shardIDstr)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -395,7 +395,7 @@ func (adh *adminHandlerImpl) DescribeShardDistribution(
 	offset := int(request.PageID * request.PageSize)
 	nextPageStart := offset + int(request.PageSize)
 	for shardID := offset; shardID < numShards && shardID < nextPageStart; shardID++ {
-		info, err := adh.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+		info, err := adh.GetMembershipResolver().Lookup(service.History, string(rune(shardID)))
 		if err != nil {
 			resp.Shards[int32(shardID)] = "unknown"
 		} else {
@@ -585,7 +585,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 	}
 
 	membershipInfo := types.MembershipInfo{}
-	if monitor := adh.GetMembershipMonitor(); monitor != nil {
+	if monitor := adh.GetMembershipResolver(); monitor != nil {
 		currentHost, err := monitor.WhoAmI()
 		if err != nil {
 			return nil, adh.error(err, scope)
@@ -597,13 +597,13 @@ func (adh *adminHandlerImpl) DescribeCluster(
 
 		var rings []*types.RingInfo
 		for _, role := range service.List {
-			resolver, err := monitor.GetResolver(role)
+			var servers []*types.HostInfo
+			members, err := monitor.Members(role)
 			if err != nil {
 				return nil, adh.error(err, scope)
 			}
 
-			var servers []*types.HostInfo
-			for _, server := range resolver.Members() {
+			for _, server := range members {
 				servers = append(servers, &types.HostInfo{
 					Identity: server.Identity(),
 				})
@@ -612,7 +612,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 
 			rings = append(rings, &types.RingInfo{
 				Role:        role,
-				MemberCount: int32(resolver.MemberCount()),
+				MemberCount: int32(len(servers)),
 				Members:     servers,
 			})
 		}
