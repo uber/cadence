@@ -76,7 +76,7 @@ func newDomainReplicationProcessor(
 	metricsClient metrics.Client,
 	taskExecutor domain.ReplicationTaskExecutor,
 	hostInfo *membership.HostInfo,
-	membership membership.Resolver,
+	resolver membership.Resolver,
 	domainReplicationQueue domain.ReplicationQueue,
 	replicationMaxRetry time.Duration,
 ) *domainReplicationProcessor {
@@ -90,7 +90,7 @@ func newDomainReplicationProcessor(
 
 	return &domainReplicationProcessor{
 		hostInfo:               hostInfo,
-		membershipResolver:     membership,
+		membershipResolver:     resolver,
 		status:                 common.DaemonStatusInitialized,
 		sourceCluster:          sourceCluster,
 		currentCluster:         currentCluster,

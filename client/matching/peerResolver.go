@@ -29,7 +29,7 @@ import (
 // Those are deployed instances of Cadence matching services that participate in the cluster ring.
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 type PeerResolver struct {
-	membership    membership.Resolver
+	resolver      membership.Resolver
 	addressMapper AddressMapperFn
 }
 
@@ -44,7 +44,7 @@ func NewPeerResolver(membership membership.Resolver, addressMapper AddressMapper
 // It uses our membership provider to lookup which instance currently owns the given task list.
 // FromHostAddress is used for further resolving.
 func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
-	host, err := pr.membership.Lookup(service.Matching, taskListName)
+	host, err := pr.resolver.Lookup(service.Matching, taskListName)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +54,7 @@ func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
 
 // GetAllPeers returns all matching service peers in the cluster ring.
 func (pr PeerResolver) GetAllPeers() ([]string, error) {
-	hosts, err := pr.membership.Members(service.Matching)
+	hosts, err := pr.resolver.Members(service.Matching)
 	if err != nil {
 		return nil, err
 	}

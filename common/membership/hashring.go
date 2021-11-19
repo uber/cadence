@@ -266,7 +266,7 @@ func (r *ringpopHashring) emitEvent(
 		event.HostsUpdated = append(event.HostsUpdated, NewHostInfo(addr, r.getLabelsMap()))
 	}
 
-	// Notify listeners
+	// Notify subscribers
 	r.smu.RLock()
 	defer r.smu.RUnlock()
 
@@ -274,7 +274,7 @@ func (r *ringpopHashring) emitEvent(
 		select {
 		case ch <- event:
 		default:
-			r.logger.Error("Failed to send listener notification, channel full", tag.ListenerName(name))
+			r.logger.Error("Failed to send event to subscriber, channel full", tag.Subscriber(name))
 		}
 	}
 }

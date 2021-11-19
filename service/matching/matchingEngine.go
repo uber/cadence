@@ -111,7 +111,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	logger log.Logger,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
-	monitor membership.Resolver,
+	resolver membership.Resolver,
 ) Engine {
 
 	return &matchingEngineImpl{
@@ -126,7 +126,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		lockableQueryTaskMap: lockableQueryTaskMap{queryTaskMap: make(map[string]chan *queryResult)},
 		domainCache:          domainCache,
 		versionChecker:       client.NewVersionChecker(),
-		membershipResolver:   monitor,
+		membershipResolver:   resolver,
 	}
 }
 

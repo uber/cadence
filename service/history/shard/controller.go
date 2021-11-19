@@ -167,7 +167,7 @@ func (c *controller) Start() {
 
 	err := c.GetMembershipResolver().Subscribe(service.History, shardControllerMembershipUpdateListenerName, c.membershipUpdateCh)
 	if err != nil {
-		c.logger.Error("Error adding listener", tag.Error(err))
+		c.logger.Error("subscribing to membership resolver", tag.Error(err))
 	}
 
 	c.logger.Info("Shard controller state changed", tag.LifeCycleStarted)
@@ -181,7 +181,7 @@ func (c *controller) Stop() {
 	c.PrepareToStop()
 
 	if err := c.GetMembershipResolver().Unsubscribe(service.History, shardControllerMembershipUpdateListenerName); err != nil {
-		c.logger.Error("Error removing membership update listener", tag.Error(err), tag.OperationFailed)
+		c.logger.Error("unsubscribing from membership resolver", tag.Error(err), tag.OperationFailed)
 	}
 	close(c.shutdownCh)
 
