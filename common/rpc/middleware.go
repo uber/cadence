@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"context"
+	"io"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
@@ -65,6 +66,21 @@ type ResponseInfo struct {
 	Size int
 }
 
+type countingReadCloser struct {
+	reader    io.ReadCloser
+	bytesRead *int
+}
+
+func (r *countingReadCloser) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	*r.bytesRead += n
+	return n, err
+}
+
+func (r *countingReadCloser) Close() (err error) {
+	return r.reader.Close()
+}
+
 type responseInfoMiddleware struct{}
 
 func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
@@ -72,7 +88,9 @@ func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Re
 
 	if value := ctx.Value(_responseInfoContextKey); value != nil {
 		if responseInfo, ok := value.(*ResponseInfo); ok && response != nil {
-			responseInfo.Size = response.BodySize
+			// We can not use response.BodySize here, because it is not set on all transports.
+			// Instead wrap body reader with counter, that increments responseInfo.Size as it is read.
+			response.Body = &countingReadCloser{reader: response.Body, bytesRead: &responseInfo.Size}
 		}
 	}
 
