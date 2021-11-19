@@ -28,16 +28,17 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 func TestPeerResolver(t *testing.T) {
 	numShards := 123
 	controller := gomock.NewController(t)
-	serviceResolver := membership.NewMockServiceResolver(controller)
-	serviceResolver.EXPECT().Lookup(string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(membership.NewHostInfo("domainHost:thriftPort", nil), nil)
-	serviceResolver.EXPECT().Lookup(string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(membership.NewHostInfo("workflowHost:thriftPort", nil), nil)
-	serviceResolver.EXPECT().Lookup(string(rune(99))).Return(membership.NewHostInfo("shardHost:thriftPort", nil), nil)
-	serviceResolver.EXPECT().Lookup(string(rune(11))).Return(nil, assert.AnError)
+	serviceResolver := membership.NewMockResolver(controller)
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(membership.NewHostInfo("domainHost:thriftPort", nil), nil)
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(membership.NewHostInfo("workflowHost:thriftPort", nil), nil)
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(99))).Return(membership.NewHostInfo("shardHost:thriftPort", nil), nil)
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(11))).Return(nil, assert.AnError)
 
 	r := NewPeerResolver(numShards, serviceResolver, fakeAddressMapper)
 

@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -67,8 +68,8 @@ func (s *domainReplicationSuite) SetupTest() {
 	s.taskExecutor = domain.NewMockReplicationTaskExecutor(s.controller)
 	s.domainReplicationQueue = domain.NewMockReplicationQueue(s.controller)
 	s.remoteClient = resource.RemoteAdminClient
-	serviceResolver := resource.WorkerServiceResolver
-	serviceResolver.EXPECT().Lookup(s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
+	serviceResolver := resource.MembershipResolver
+	serviceResolver.EXPECT().Lookup(service.Worker, s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
 	s.replicationProcessor = newDomainReplicationProcessor(
 		s.sourceCluster,
 		s.currentCluster,
