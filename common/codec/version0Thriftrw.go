@@ -23,8 +23,7 @@ package codec
 import (
 	"bytes"
 
-	"go.uber.org/thriftrw/protocol"
-	"go.uber.org/thriftrw/wire"
+	"go.uber.org/thriftrw/protocol/binary"
 )
 
 type (
@@ -52,33 +51,27 @@ func (t *ThriftRWEncoder) Encode(obj ThriftObject) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	val, err := obj.ToWire()
-	if err != nil {
-		return nil, err
-	}
-	err = protocol.Binary.Encode(val, &writer)
-	if err != nil {
+
+	sw := binary.Default.Writer(&writer)
+	defer sw.Close()
+	if err := obj.Encode(sw); err != nil {
 		return nil, err
 	}
 	return writer.Bytes(), nil
 }
 
 // Decode decode the object
-func (t *ThriftRWEncoder) Decode(binary []byte, val ThriftObject) error {
-	if len(binary) < 1 {
+func (t *ThriftRWEncoder) Decode(b []byte, val ThriftObject) error {
+	if len(b) < 1 {
 		return MissingBinaryEncodingVersion
 	}
 
-	version := binary[0]
+	version := b[0]
 	if version != preambleVersion0 {
 		return InvalidBinaryEncodingVersion
 	}
 
-	reader := bytes.NewReader(binary[1:])
-	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
-	if err != nil {
-		return err
-	}
-
-	return val.FromWire(wireVal)
+	reader := bytes.NewReader(b[1:])
+	sr := binary.Default.Reader(reader)
+	return val.Decode(sr)
 }
