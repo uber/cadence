@@ -21,6 +21,7 @@
 package codec
 
 import (
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 
 	"github.com/uber/cadence/common/types"
@@ -37,6 +38,8 @@ type (
 	ThriftObject interface {
 		FromWire(w wire.Value) error
 		ToWire() (wire.Value, error)
+		Encode(stream.Writer) error
+		Decode(stream.Reader) error
 	}
 )
 

@@ -25,6 +25,7 @@ package serialization
 import (
 	"time"
 
+	"go.uber.org/thriftrw/protocol/stream"
 	"go.uber.org/thriftrw/wire"
 
 	"github.com/uber/cadence/.gen/go/sqlblobs"
@@ -391,5 +392,7 @@ type (
 	thriftRWType interface {
 		ToWire() (wire.Value, error)
 		FromWire(w wire.Value) error
+		Encode(stream.Writer) error
+		Decode(stream.Reader) error
 	}
 )
