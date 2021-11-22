@@ -1610,11 +1610,12 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 			TaskID:    taskID,
 			Execution: workflowExecution,
 			Data: &p.TaskInfo{
-				DomainID:   domainID,
-				WorkflowID: workflowExecution.WorkflowID,
-				RunID:      workflowExecution.RunID,
-				TaskID:     taskID,
-				ScheduleID: decisionScheduleID,
+				DomainID:    domainID,
+				WorkflowID:  workflowExecution.WorkflowID,
+				RunID:       workflowExecution.RunID,
+				TaskID:      taskID,
+				ScheduleID:  decisionScheduleID,
+				CreatedTime: time.Now(),
 			},
 		},
 	}
@@ -1663,6 +1664,7 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 					TaskID:                 taskID,
 					ScheduleID:             activityScheduleID,
 					ScheduleToStartTimeout: defaultScheduleToStartTimeout,
+					CreatedTime:            time.Now(),
 				},
 			},
 		}
