@@ -1,5 +1,7 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
-//
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,18 +9,18 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
-package membership
+package ringpopprovider
 
 import (
 	"fmt"
@@ -35,14 +37,18 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 )
 
+type HostInfo struct {
+	addr string
+}
+
 // TestRingpopCluster is a type that represents a test ringpop cluster
 type TestRingpopCluster struct {
 	hostUUIDs    []string
 	hostAddrs    []string
 	hostInfoList []HostInfo
-	rings        []Resolver
-	channels     []*tchannel.Channel
-	seedNode     string
+
+	channels []*tchannel.Channel
+	seedNode string
 }
 
 // NewTestRingpopCluster creates a new test cluster with the given name and cluster size
@@ -52,12 +58,10 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 
 	logger := loggerimpl.NewNopLogger()
 	cluster := &TestRingpopCluster{
-		hostUUIDs:    make([]string, size),
-		hostAddrs:    make([]string, size),
-		hostInfoList: make([]HostInfo, size),
-		rings:        make([]Resolver, size),
-		channels:     make([]*tchannel.Channel, size),
-		seedNode:     seed,
+		hostUUIDs: make([]string, size),
+		hostAddrs: make([]string, size),
+		channels:  make([]*tchannel.Channel, size),
+		seedNode:  seed,
 	}
 
 	for i := 0; i < size; i++ {
@@ -94,13 +98,9 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 			logger.Error("failed to create ringpop instance", tag.Error(err))
 			return nil
 		}
-		cluster.rings[i] = NewRingpopResolver(
-			serviceName,
-			[]string{serviceName},
-			NewRingpopWraper(ringPop, bOptions, logger),
-			logger,
-		)
-		cluster.rings[i].Start()
+
+		NewRingpopProvider(ringPopApp, ringPop, bOptions, logger)
+
 	}
 	return cluster
 }
@@ -108,28 +108,6 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 // GetSeedNode returns the seedNode for this cluster
 func (c *TestRingpopCluster) GetSeedNode() string {
 	return c.seedNode
-}
-
-// KillHost kills the given host within the cluster
-func (c *TestRingpopCluster) KillHost(uuid string) {
-	for i := 0; i < len(c.hostUUIDs); i++ {
-		if 0 == strings.Compare(c.hostUUIDs[i], uuid) {
-			c.rings[i].Stop()
-			c.channels[i].Close()
-			c.rings[i] = nil
-			c.channels[i] = nil
-		}
-	}
-}
-
-// Stop stops the cluster
-func (c *TestRingpopCluster) Stop() {
-	for i := 0; i < len(c.hostAddrs); i++ {
-		if c.rings[i] != nil {
-			c.rings[i].Stop()
-			c.channels[i].Close()
-		}
-	}
 }
 
 // GetHostInfoList returns the list of all hosts within the cluster

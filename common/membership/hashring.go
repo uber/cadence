@@ -27,9 +27,7 @@ import (
 	"time"
 
 	"github.com/dgryski/go-farm"
-	"github.com/uber/ringpop-go/events"
 	"github.com/uber/ringpop-go/hashring"
-	"github.com/uber/ringpop-go/swim"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -37,54 +35,68 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination peerprovider_mock.go github.com/uber/cadence/common/membership PeerProvider
+
 // ErrInsufficientHosts is thrown when there are not enough hosts to serve the request
 var ErrInsufficientHosts = &types.InternalServiceError{Message: "Not enough hosts to serve the request"}
 
 const (
-	// RoleKey label is set by every single service as soon as it bootstraps its
-	// ringpop instance. The data for this key is the service name
-	RoleKey                = "serviceName"
 	minRefreshInternal     = time.Second * 4
 	defaultRefreshInterval = time.Second * 10
 	replicaPoints          = 100
 )
 
-type ringpopHashring struct {
-	status      int32
-	service     string
-	rp          *RingpopWrapper
-	refreshChan chan struct{}
-	shutdownCh  chan struct{}
-	shutdownWG  sync.WaitGroup
-	logger      log.Logger
+// PeerProvider is used to retrieve membership information from provider
+type PeerProvider interface {
+	common.Daemon
 
-	ringValue atomic.Value // this stores the current hashring
+	GetMembers(service string) ([]string, error)
+	WhoAmI() (string, error)
+	SelfEvict() error
+	Subscribe(name string, notifyChannel chan<- *ChangedEvent) error
+}
+
+// HostInfo is a type that contains the info about a cadence host
+type HostInfo struct {
+	addr string // ip:port
+}
+
+type ring struct {
+	status       int32
+	service      string
+	peerProvider PeerProvider
+	refreshChan  chan *ChangedEvent
+	shutdownCh   chan struct{}
+	shutdownWG   sync.WaitGroup
+	logger       log.Logger
+
+	value atomic.Value // this stores the current hashring
 
 	refreshLock     sync.Mutex
 	lastRefreshTime time.Time
-	membersMap      map[string]struct{} // for de-duping change notifications
+
+	membersMap map[string]struct{} // for de-duping change notifications
 
 	smu         sync.RWMutex
 	subscribers map[string]chan<- *ChangedEvent
 }
 
-func newRingpopHashring(
+func newHashring(
 	service string,
-	rp *RingpopWrapper,
+	provider PeerProvider,
 	logger log.Logger,
-) *ringpopHashring {
-
-	hashring := &ringpopHashring{
-		status:      common.DaemonStatusInitialized,
-		service:     service,
-		rp:          rp,
-		refreshChan: make(chan struct{}),
-		shutdownCh:  make(chan struct{}),
-		logger:      logger.WithTags(tag.ComponentServiceResolver),
-		membersMap:  make(map[string]struct{}),
-		subscribers: make(map[string]chan<- *ChangedEvent),
+) *ring {
+	hashring := &ring{
+		status:       common.DaemonStatusInitialized,
+		service:      service,
+		peerProvider: provider,
+		shutdownCh:   make(chan struct{}),
+		logger:       logger.WithTags(tag.ComponentServiceResolver),
+		membersMap:   make(map[string]struct{}),
+		subscribers:  make(map[string]chan<- *ChangedEvent),
+		refreshChan:  make(chan *ChangedEvent),
 	}
-	hashring.ringValue.Store(emptyHashring())
+	hashring.value.Store(emptyHashring())
 	return hashring
 }
 
@@ -92,8 +104,8 @@ func emptyHashring() *hashring.HashRing {
 	return hashring.New(farm.Fingerprint32, replicaPoints)
 }
 
-// Start starts the oracle
-func (r *ringpopHashring) Start() {
+// Start starts the hashring
+func (r *ring) Start() {
 	if !atomic.CompareAndSwapInt32(
 		&r.status,
 		common.DaemonStatusInitialized,
@@ -101,10 +113,10 @@ func (r *ringpopHashring) Start() {
 	) {
 		return
 	}
+	r.peerProvider.Subscribe(r.service, r.refreshChan)
 
-	r.rp.AddListener(r)
 	if err := r.refresh(); err != nil {
-		r.logger.Fatal("unable to start ring pop service resolver", tag.Error(err))
+		r.logger.Fatal("failed to start service resolver", tag.Error(err))
 	}
 
 	r.shutdownWG.Add(1)
@@ -112,7 +124,7 @@ func (r *ringpopHashring) Start() {
 }
 
 // Stop stops the resolver
-func (r *ringpopHashring) Stop() {
+func (r *ring) Stop() {
 	if !atomic.CompareAndSwapInt32(
 		&r.status,
 		common.DaemonStatusStarted,
@@ -121,10 +133,11 @@ func (r *ringpopHashring) Stop() {
 		return
 	}
 
+	r.peerProvider.Stop()
+	r.value.Store(emptyHashring())
+
 	r.smu.Lock()
 	defer r.smu.Unlock()
-	r.rp.RemoveListener(r)
-	r.ringValue.Store(emptyHashring())
 	r.subscribers = make(map[string]chan<- *ChangedEvent)
 	close(r.shutdownCh)
 
@@ -134,40 +147,41 @@ func (r *ringpopHashring) Stop() {
 }
 
 // Lookup finds the host in the ring responsible for serving the given key
-func (r *ringpopHashring) Lookup(
+func (r *ring) Lookup(
 	key string,
 ) (*HostInfo, error) {
-
 	addr, found := r.ring().Lookup(key)
 	if !found {
 		select {
-		case r.refreshChan <- struct{}{}:
+		case r.refreshChan <- &ChangedEvent{}:
 		default:
 		}
 		return nil, ErrInsufficientHosts
 	}
-	return NewHostInfo(addr, r.getLabelsMap()), nil
+	return NewHostInfo(addr), nil
 }
 
-func (r *ringpopHashring) AddListener(
-	name string,
+// Subscribe registers callback watcher.
+// All subscribers are notified about ring change.
+func (r *ring) Subscribe(
+	service string,
 	notifyChannel chan<- *ChangedEvent,
 ) error {
-
 	r.smu.Lock()
 	defer r.smu.Unlock()
-	_, ok := r.subscribers[name]
+	_, ok := r.subscribers[service]
 	if ok {
-		return fmt.Errorf("listener already exist for service %q", name)
+		return fmt.Errorf("service %q already subscribed", service)
 	}
-	r.subscribers[name] = notifyChannel
+
+	r.subscribers[service] = notifyChannel
 	return nil
 }
 
-func (r *ringpopHashring) RemoveListener(
+// Unsubscribe removes subscriber
+func (r *ring) Unsubscribe(
 	name string,
 ) error {
-
 	r.smu.Lock()
 	defer r.smu.Unlock()
 	_, ok := r.subscribers[name]
@@ -178,56 +192,37 @@ func (r *ringpopHashring) RemoveListener(
 	return nil
 }
 
-func (r *ringpopHashring) MemberCount() int {
+// MemberCount returns number of hosts in a ring
+func (r *ring) MemberCount() int {
 	return r.ring().ServerCount()
 }
 
-func (r *ringpopHashring) Members() []*HostInfo {
+func (r *ring) Members() []*HostInfo {
 	var servers []*HostInfo
 	for _, s := range r.ring().Servers() {
-		servers = append(servers, NewHostInfo(s, r.getLabelsMap()))
+		servers = append(servers, NewHostInfo(s))
 	}
 
 	return servers
 }
 
-// HandleEvent handles updates from ringpop
-func (r *ringpopHashring) HandleEvent(
-	event events.Event,
-) {
-
-	// We only care about RingChangedEvent
-	e, ok := event.(events.RingChangedEvent)
-	if ok {
-		r.logger.Info("Received a ring changed event")
-		// Note that we receive events asynchronously, possibly out of order.
-		// We cannot rely on the content of the event, rather we load everything
-		// from ringpop when we get a notification that something changed.
-		if err := r.refresh(); err != nil {
-			r.logger.Error("error refreshing ring when receiving a ring changed event", tag.Error(err))
-		}
-		r.emitEvent(e)
-	}
-}
-
-func (r *ringpopHashring) refresh() error {
+func (r *ring) refresh() error {
 	r.refreshLock.Lock()
 	defer r.refreshLock.Unlock()
 	return r.refreshNoLock()
 }
 
-func (r *ringpopHashring) refreshWithBackoff() error {
-	r.refreshLock.Lock()
-	defer r.refreshLock.Unlock()
+func (r *ring) refreshWithBackoff() error {
 	if r.lastRefreshTime.After(time.Now().Add(-minRefreshInternal)) {
 		// refresh too frequently
 		return nil
 	}
-	return r.refreshNoLock()
+	return r.refresh()
 }
 
-func (r *ringpopHashring) refreshNoLock() error {
-	addrs, err := r.rp.GetReachableMembers(swim.MemberWithLabelAndValue(RoleKey, r.service))
+func (r *ring) refreshNoLock() error {
+	addrs, err := r.peerProvider.GetMembers(r.service)
+
 	if err != nil {
 		return err
 	}
@@ -239,79 +234,46 @@ func (r *ringpopHashring) refreshNoLock() error {
 
 	ring := emptyHashring()
 	for _, addr := range addrs {
-		host := NewHostInfo(addr, r.getLabelsMap())
+		host := NewHostInfo(addr)
 		ring.AddMembers(host)
 	}
 
 	r.membersMap = newMembersMap
 	r.lastRefreshTime = time.Now()
-	r.ringValue.Store(ring)
-	r.logger.Info("Current reachable members", tag.Addresses(addrs))
+	r.value.Store(ring)
+	r.logger.Info(
+		fmt.Sprintf("refreshed ring members for %s", r.service),
+		tag.Addresses(addrs),
+	)
 	return nil
 }
 
-func (r *ringpopHashring) emitEvent(
-	rpEvent events.RingChangedEvent,
-) {
-
-	// Marshall the event object into the required type
-	event := &ChangedEvent{}
-	for _, addr := range rpEvent.ServersAdded {
-		event.HostsAdded = append(event.HostsAdded, NewHostInfo(addr, r.getLabelsMap()))
-	}
-	for _, addr := range rpEvent.ServersRemoved {
-		event.HostsRemoved = append(event.HostsRemoved, NewHostInfo(addr, r.getLabelsMap()))
-	}
-	for _, addr := range rpEvent.ServersUpdated {
-		event.HostsUpdated = append(event.HostsUpdated, NewHostInfo(addr, r.getLabelsMap()))
-	}
-
-	// Notify subscribers
-	r.smu.RLock()
-	defer r.smu.RUnlock()
-
-	for name, ch := range r.subscribers {
-		select {
-		case ch <- event:
-		default:
-			r.logger.Error("Failed to send event to subscriber, channel full", tag.Subscriber(name))
-		}
-	}
-}
-
-func (r *ringpopHashring) refreshRingWorker() {
+func (r *ring) refreshRingWorker() {
 	defer r.shutdownWG.Done()
 
 	refreshTicker := time.NewTicker(defaultRefreshInterval)
 	defer refreshTicker.Stop()
-
 	for {
 		select {
 		case <-r.shutdownCh:
 			return
-		case <-r.refreshChan:
+		case <-r.refreshChan: // local signal or signal from provider
 			if err := r.refreshWithBackoff(); err != nil {
-				r.logger.Error("error periodically refreshing ring", tag.Error(err))
+				r.logger.Error("refreshing ring", tag.Error(err))
 			}
-		case <-refreshTicker.C:
+		case <-refreshTicker.C: // periodically refresh membership
 			if err := r.refreshWithBackoff(); err != nil {
-				r.logger.Error("error periodically refreshing ring", tag.Error(err))
+				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
 		}
 	}
 }
 
-func (r *ringpopHashring) ring() *hashring.HashRing {
-	return r.ringValue.Load().(*hashring.HashRing)
+func (r *ring) ring() *hashring.HashRing {
+	return r.value.Load().(*hashring.HashRing)
 }
 
-func (r *ringpopHashring) getLabelsMap() map[string]string {
-	labels := make(map[string]string)
-	labels[RoleKey] = r.service
-	return labels
-}
-
-func (r *ringpopHashring) compareMembers(addrs []string) (map[string]struct{}, bool) {
+func (r *ring) compareMembers(addrs []string) (map[string]struct{}, bool) {
 	changed := false
 	newMembersMap := make(map[string]struct{}, len(addrs))
 	for _, addr := range addrs {
@@ -327,4 +289,31 @@ func (r *ringpopHashring) compareMembers(addrs []string) (map[string]struct{}, b
 		}
 	}
 	return newMembersMap, changed
+}
+
+// NewHostInfo creates a new HostInfo instance
+func NewHostInfo(addr string) *HostInfo {
+	return &HostInfo{
+		addr: addr,
+	}
+}
+
+// GetAddress returns the ip:port address
+func (hi *HostInfo) GetAddress() string {
+	return hi.addr
+}
+
+// Identity implements ringpop's Membership interface
+func (hi *HostInfo) Identity() string {
+	// for now we just use the address as the identity
+	return hi.addr
+}
+
+// Label implements ringpop's Membership interface
+func (hi *HostInfo) Label(key string) (value string, has bool) {
+	return "", false
+}
+
+// SetLabel sets the label.
+func (hi *HostInfo) SetLabel(key string, value string) {
 }

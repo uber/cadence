@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package ringpopprovider
 
 import (
 	"context"
@@ -61,8 +61,8 @@ const (
 	defaultMaxJoinDuration = 10 * time.Second
 )
 
-// RingpopConfig contains the ringpop config items
-type RingpopConfig struct {
+// Config contains the ringpop config items
+type Config struct {
 	// Name to be used in ringpop advertisement
 	Name string `yaml:"name" validate:"nonzero"`
 	// BootstrapMode is a enum that defines the ringpop bootstrap method, currently supports: hosts, files, custom, dns, and dns-srv
@@ -77,7 +77,7 @@ type RingpopConfig struct {
 	DiscoveryProvider discovery.DiscoverProvider `yaml:"-"`
 }
 
-func (rpConfig *RingpopConfig) validate() error {
+func (rpConfig *Config) validate() error {
 	if len(rpConfig.Name) == 0 {
 		return fmt.Errorf("ringpop config missing `name` param")
 	}
@@ -125,7 +125,7 @@ func parseBootstrapMode(
 }
 
 func validateBootstrapMode(
-	rpConfig *RingpopConfig,
+	rpConfig *Config,
 ) error {
 
 	switch rpConfig.BootstrapMode {
@@ -283,7 +283,7 @@ func (provider *dnsSRVProvider) Hosts() ([]string, error) {
 }
 
 func newDiscoveryProvider(
-	cfg *RingpopConfig,
+	cfg *Config,
 	logger log.Logger,
 ) (discovery.DiscoverProvider, error) {
 

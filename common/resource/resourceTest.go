@@ -104,7 +104,7 @@ const (
 )
 
 var (
-	testHostInfo = membership.NewHostInfo(testHostName, nil)
+	testHostInfo = membership.NewHostInfo(testHostName)
 )
 
 // NewTest returns a new test resource instance

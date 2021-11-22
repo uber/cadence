@@ -32,7 +32,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
-	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -40,7 +40,7 @@ type (
 	// Config contains the configuration for a set of cadence services
 	Config struct {
 		// Ringpop is the ringpop related configuration
-		Ringpop membership.RingpopConfig `yaml:"ringpop"`
+		Ringpop ringpopprovider.Config `yaml:"ringpop"`
 		// Persistence contains the configuration for cadence datastores
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config

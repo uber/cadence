@@ -35,10 +35,12 @@ type simpleResolver struct {
 func NewSimpleResolver(serviceName string, hosts map[string][]string) membership.Resolver {
 	resolvers := make(map[string]*simpleHashring, len(hosts))
 	for service, hostList := range hosts {
-		resolvers[service] = newSimpleHashring(service, hostList)
+		resolvers[service] = newSimpleHashring(hostList)
 	}
-	hostInfo := membership.NewHostInfo(hosts[serviceName][0], map[string]string{membership.RoleKey: serviceName})
-	return &simpleResolver{hostInfo, resolvers}
+	return &simpleResolver{
+		hostInfo:  membership.NewHostInfo(hosts[serviceName][0]),
+		resolvers: resolvers,
+	}
 }
 
 func (s *simpleResolver) Start() {

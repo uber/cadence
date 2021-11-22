@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
@@ -156,10 +157,20 @@ func (s *server) startService() common.Daemon {
 	)
 	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
 	params.RPCFactory = rpcFactory
-	params.MembershipResolver, err = membership.NewResolver(
+
+	peerProvider, err := ringpopprovider.New(
+		params.Name,
 		&s.cfg.Ringpop,
 		rpcFactory.GetChannel(),
-		params.Name,
+		params.Logger,
+	)
+
+	if err != nil {
+		log.Fatalf("ringpop provider failed: %v", err)
+	}
+
+	params.MembershipResolver, err = membership.NewResolver(
+		peerProvider,
 		params.Logger,
 	)
 	if err != nil {

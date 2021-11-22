@@ -20,122 +20,97 @@
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination resolver_mock.go -self_package github.com/uber/cadence/common/membership
 
+// Package membership provides service discovery and membership information mechanism
 package membership
 
 import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/uber/ringpop-go"
-	"github.com/uber/ringpop-go/swim"
-	tcg "github.com/uber/tchannel-go"
-	"go.uber.org/yarpc/transport/tchannel"
-
-	"github.com/uber/cadence/common/service"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/service"
 )
 
 type (
 
-	// ChangedEvent describes a change in membership
+	// ChangedEvent describes a change in a membership ring
 	ChangedEvent struct {
-		HostsAdded   []*HostInfo
-		HostsUpdated []*HostInfo
-		HostsRemoved []*HostInfo
+		HostsAdded   []string
+		HostsUpdated []string
+		HostsRemoved []string
 	}
 
 	// Resolver provides membership information for all cadence services.
 	Resolver interface {
 		common.Daemon
-		// WhoAmI returns self address
+		// WhoAmI returns self address.
+		// To be consistent with peer provider, it is advised to use peer provider
+		// to return this information
 		WhoAmI() (*HostInfo, error)
+
 		// EvictSelf evicts this member from the membership ring. After this method is
-		// called, other members will discover that this node is no longer part of the
-		// ring. This primitive is useful to carry out graceful host shutdown during deployments.
+		// called, other members should discover that this node is no longer part of the
+		// ring.
+		//This primitive is useful to carry out graceful host shutdown during deployments.
 		EvictSelf() error
 
+		// Lookup will return host which is an owner for provided key.
 		Lookup(service, key string) (*HostInfo, error)
-		// AddListener adds a listener which will get notified on the given
+
+		// Subscribe adds a subscriber which will get detailed change data on the given
 		// channel, whenever membership changes.
 		Subscribe(service, name string, notifyChannel chan<- *ChangedEvent) error
-		// RemoveListener removes a listener for this service.
+
+		// Unsubscribe removes a subscriber for this service.
 		Unsubscribe(service, name string) error
-		// MemberCount returns host count in a hashring
+
+		// MemberCount returns host count in a service specific hashring
 		MemberCount(service string) (int, error)
-		// Members returns all host addresses in a hashring
+
+		// Members returns all host addresses in a service specific hashring
 		Members(service string) ([]*HostInfo, error)
 	}
 )
 
-type RingpopResolver struct {
+// MultiringResolver uses ring-per-service for membership information
+type MultiringResolver struct {
 	status int32
 
-	serviceName    string
-	ringpopWrapper *RingpopWrapper
-	rings          map[string]*ringpopHashring
-	logger         log.Logger
+	provider PeerProvider
+	rings    map[string]*ring
 }
 
-var _ Resolver = (*RingpopResolver)(nil)
+var _ Resolver = (*MultiringResolver)(nil)
 
-// NewResolver builds a ringpop monitor conforming
-// to the underlying configuration
+// NewResolver builds hashrings for all services
 func NewResolver(
-	config *RingpopConfig,
-	channel tchannel.Channel,
-	serviceName string,
+	provider PeerProvider,
 	logger log.Logger,
-) (*RingpopResolver, error) {
-
-	if err := config.validate(); err != nil {
-		return nil, err
-	}
-
-	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
-	if err != nil {
-		return nil, fmt.Errorf("ringpop creation failed: %v", err)
-	}
-
-	discoveryProvider, err := newDiscoveryProvider(config, logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get discovery provider %v", err)
-	}
-
-	bootstrapOpts := &swim.BootstrapOptions{
-		MaxJoinDuration:  config.MaxJoinDuration,
-		DiscoverProvider: discoveryProvider,
-	}
-	rpw := NewRingpopWraper(rp, bootstrapOpts, logger)
-
-	return NewRingpopResolver(serviceName, service.List, rpw, logger), nil
-
+) (*MultiringResolver, error) {
+	return NewMultiringResolver(service.List, provider, logger), nil
 }
 
-// NewRingpopResolver returns a ringpop-based membership monitor
-func NewRingpopResolver(
-	serviceName string,
+// NewMultiringResolver creates hashrings for all services
+func NewMultiringResolver(
 	services []string,
-	rp *RingpopWrapper,
+	provider PeerProvider,
 	logger log.Logger,
-) *RingpopResolver {
-
-	rpo := &RingpopResolver{
-		status:         common.DaemonStatusInitialized,
-		serviceName:    serviceName,
-		ringpopWrapper: rp,
-		logger:         logger,
-		rings:          make(map[string]*ringpopHashring),
+) *MultiringResolver {
+	rpo := &MultiringResolver{
+		status:   common.DaemonStatusInitialized,
+		provider: provider,
+		rings:    make(map[string]*ring),
 	}
+
 	for _, s := range services {
-		rpo.rings[s] = newRingpopHashring(s, rp, logger)
+		rpo.rings[s] = newHashring(s, provider, logger)
 	}
 	return rpo
 }
 
-func (rpo *RingpopResolver) Start() {
+// Start starts provider and all rings
+func (rpo *MultiringResolver) Start() {
 	if !atomic.CompareAndSwapInt32(
 		&rpo.status,
 		common.DaemonStatusInitialized,
@@ -144,23 +119,15 @@ func (rpo *RingpopResolver) Start() {
 		return
 	}
 
-	rpo.ringpopWrapper.Start()
-
-	labels, err := rpo.ringpopWrapper.Labels()
-	if err != nil {
-		rpo.logger.Fatal("unable to get ring pop labels", tag.Error(err))
-	}
-
-	if err = labels.Set(RoleKey, rpo.serviceName); err != nil {
-		rpo.logger.Fatal("unable to set ring pop labels", tag.Error(err))
-	}
+	rpo.provider.Start()
 
 	for _, ring := range rpo.rings {
 		ring.Start()
 	}
 }
 
-func (rpo *RingpopResolver) Stop() {
+// Stop stops all rings and membership provider
+func (rpo *MultiringResolver) Stop() {
 	if !atomic.CompareAndSwapInt32(
 		&rpo.status,
 		common.DaemonStatusStarted,
@@ -173,26 +140,25 @@ func (rpo *RingpopResolver) Stop() {
 		ring.Stop()
 	}
 
-	rpo.ringpopWrapper.Stop()
+	rpo.provider.Stop()
 }
 
-func (rpo *RingpopResolver) WhoAmI() (*HostInfo, error) {
-	address, err := rpo.ringpopWrapper.WhoAmI()
+// WhoAmI asks to provide current instance address
+func (rpo *MultiringResolver) WhoAmI() (*HostInfo, error) {
+	address, err := rpo.provider.WhoAmI()
 	if err != nil {
 		return nil, err
 	}
-	labels, err := rpo.ringpopWrapper.Labels()
-	if err != nil {
-		return nil, err
-	}
-	return NewHostInfo(address, labels.AsMap()), nil
+
+	return NewHostInfo(address), nil
 }
 
-func (rpo *RingpopResolver) EvictSelf() error {
-	return rpo.ringpopWrapper.SelfEvict()
+// EvictSelf is used to remove this host from membership ring
+func (rpo *MultiringResolver) EvictSelf() error {
+	return rpo.provider.SelfEvict()
 }
 
-func (rpo *RingpopResolver) getRing(service string) (*ringpopHashring, error) {
+func (rpo *MultiringResolver) getRing(service string) (*ring, error) {
 	ring, found := rpo.rings[service]
 	if !found {
 		return nil, fmt.Errorf("service %q is not tracked by Resolver", service)
@@ -200,7 +166,7 @@ func (rpo *RingpopResolver) getRing(service string) (*ringpopHashring, error) {
 	return ring, nil
 }
 
-func (rpo *RingpopResolver) Lookup(service string, key string) (*HostInfo, error) {
+func (rpo *MultiringResolver) Lookup(service string, key string) (*HostInfo, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
 		return nil, err
@@ -208,23 +174,23 @@ func (rpo *RingpopResolver) Lookup(service string, key string) (*HostInfo, error
 	return ring.Lookup(key)
 }
 
-func (rpo *RingpopResolver) Subscribe(service string, name string, notifyChannel chan<- *ChangedEvent) error {
+func (rpo *MultiringResolver) Subscribe(service string, name string, notifyChannel chan<- *ChangedEvent) error {
 	ring, err := rpo.getRing(service)
 	if err != nil {
 		return err
 	}
-	return ring.AddListener(name, notifyChannel)
+	return ring.Subscribe(name, notifyChannel)
 }
 
-func (rpo *RingpopResolver) Unsubscribe(service string, name string) error {
+func (rpo *MultiringResolver) Unsubscribe(service string, name string) error {
 	ring, err := rpo.getRing(service)
 	if err != nil {
 		return err
 	}
-	return ring.RemoveListener(name)
+	return ring.Unsubscribe(name)
 }
 
-func (rpo *RingpopResolver) Members(service string) ([]*HostInfo, error) {
+func (rpo *MultiringResolver) Members(service string) ([]*HostInfo, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
 		return nil, err
@@ -232,7 +198,7 @@ func (rpo *RingpopResolver) Members(service string) ([]*HostInfo, error) {
 	return ring.Members(), nil
 }
 
-func (rpo *RingpopResolver) MemberCount(service string) (int, error) {
+func (rpo *MultiringResolver) MemberCount(service string) (int, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
 		return 0, err
