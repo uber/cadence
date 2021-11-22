@@ -226,7 +226,6 @@ func (t *nosqlTaskStore) CreateTasks(
 	ctx context.Context,
 	request *p.InternalCreateTasksRequest,
 ) (*p.CreateTasksResponse, error) {
-	now := time.Now()
 	var tasks []*nosqlplugin.TaskRowForInsert
 	for _, t := range request.Tasks {
 		task := &nosqlplugin.TaskRow{
@@ -237,7 +236,7 @@ func (t *nosqlTaskStore) CreateTasks(
 			WorkflowID:   t.Execution.GetWorkflowID(),
 			RunID:        t.Execution.GetRunID(),
 			ScheduledID:  t.Data.ScheduleID,
-			CreatedTime:  now,
+			CreatedTime:  t.Data.CreatedTime,
 		}
 		ttl := int(t.Data.ScheduleToStartTimeout.Seconds())
 		tasks = append(tasks, &nosqlplugin.TaskRowForInsert{
