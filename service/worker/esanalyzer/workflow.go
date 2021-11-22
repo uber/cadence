@@ -250,7 +250,7 @@ func (w *Workflow) findLongRunningWorkflows(ctx context.Context) error {
 		// -1 no delimiter, 0 means the entry starts with /
 		if index < 1 || len(domainWFTypePair) <= (index+1) {
 			return types.InternalServiceError{
-				Message: fmt.Sprintf("Bad Workflow type entry '%v'", domainWFTypePair),
+				Message: fmt.Sprintf("Bad Workflow type entry %q", domainWFTypePair),
 			}
 		}
 		domainName := domainWFTypePair[:index]
@@ -293,12 +293,11 @@ func (w *Workflow) findLongRunningWorkflows(ctx context.Context) error {
 				zap.String("WorkflowType", wfType))
 		}
 
-		scope := w.analyzer.metricsClient.Scope(
-			metrics.ESAnalyzerScope,
+		tagged := w.analyzer.scopedMetricClient.Tagged(
 			metrics.DomainTag(domainName),
 			metrics.WorkflowTypeTag(wfType),
 		)
-		scope.AddCounter(
+		tagged.AddCounter(
 			metrics.ESAnalyzerNumLongRunningWorkflows,
 			response.Hits.TotalHits)
 	}
@@ -349,14 +348,14 @@ func (w *Workflow) refreshStuckWorkflowsFromSameWorkflowType(
 				zap.String("workflowID", workflow.WorkflowID),
 				zap.String("runID", workflow.RunID),
 			)
-			w.analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsFailedToRefresh)
+			w.analyzer.scopedMetricClient.IncCounter(metrics.ESAnalyzerNumStuckWorkflowsFailedToRefresh)
 		} else {
 			logger.Info("Refreshed stuck workflow",
 				zap.String("domainName", domainName),
 				zap.String("workflowID", workflow.WorkflowID),
 				zap.String("runID", workflow.RunID),
 			)
-			w.analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed)
+			w.analyzer.scopedMetricClient.IncCounter(metrics.ESAnalyzerNumStuckWorkflowsRefreshed)
 		}
 	}
 
@@ -482,8 +481,7 @@ func (w *Workflow) findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo
 	}
 
 	if len(workflows) > 0 {
-		w.analyzer.metricsClient.AddCounter(
-			metrics.ESAnalyzerScope,
+		w.analyzer.scopedMetricClient.AddCounter(
 			metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
 			int64(len(workflows)))
 	}
@@ -598,7 +596,7 @@ func (w *Workflow) getWorkflowTypesFromDynamicConfig(
 		// -1 no delimiter, 0 means the entry starts with /
 		if index < 1 || len(domainWFTypePair) <= (index+1) {
 			return nil, types.InternalServiceError{
-				Message: fmt.Sprintf("Bad Workflow type entry '%v'", domainWFTypePair),
+				Message: fmt.Sprintf("Bad Workflow type entry %q", domainWFTypePair),
 			}
 		}
 		domainName := domainWFTypePair[:index]

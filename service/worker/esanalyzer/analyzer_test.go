@@ -132,13 +132,13 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 
 	// SET UP ANALYZER
 	s.analyzer = &Analyzer{
-		svcClient:     s.resource.GetSDKClient(),
-		clientBean:    s.clientBean,
-		domainCache:   s.mockDomainCache,
-		logger:        s.logger,
-		metricsClient: s.mockMetricClient,
-		esClient:      s.mockESClient,
-		config:        &s.config,
+		svcClient:          s.resource.GetSDKClient(),
+		clientBean:         s.clientBean,
+		domainCache:        s.mockDomainCache,
+		logger:             s.logger,
+		scopedMetricClient: getScopedMetricsClient(s.mockMetricClient),
+		esClient:           s.mockESClient,
+		config:             &s.config,
 	}
 	s.activityEnv.SetTestTimeout(time.Second * 5)
 	s.activityEnv.SetWorkerOptions(worker.Options{BackgroundActivityContext: context.Background()})
