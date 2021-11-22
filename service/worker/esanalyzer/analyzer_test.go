@@ -64,7 +64,7 @@ type esanalyzerWorkflowTestSuite struct {
 	clientBean       *client.MockBean
 	logger           *log.MockLogger
 	mockMetricClient *mocks.Client
-	metricsScope     *mocks.Scope
+	scopedMetricClient *mocks.Scope
 	mockESClient     *esMocks.GenericClient
 	analyzer         *Analyzer
 	workflow         *Workflow
@@ -123,8 +123,11 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.clientBean = client.NewMockBean(s.controller)
 	s.logger = &log.MockLogger{}
 	s.mockMetricClient = &mocks.Client{}
-	s.metricsScope = &mocks.Scope{}
+	s.scopedMetricClient = &mocks.Scope{}
 	s.mockESClient = &esMocks.GenericClient{}
+
+	s.mockMetricClient.On("Scope", metrics.ESAnalyzerScope, mock.Anything).Return(s.scopedMetricClient).Once()
+	s.scopedMetricClient.On("Tagged", mock.Anything, mock.Anything).Return(s.scopedMetricClient).Once()
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
@@ -279,7 +282,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowT
 		},
 	}).Return(nil).Times(1)
 	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Once()
-	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Once()
+	s.scopedMetricClient.On("IncCounter", metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Once()
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.NoError(err)
@@ -313,7 +316,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowT
 		expectedRunIDs[request.Execution.RunID] = true
 	}).Times(2)
 	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Times(2)
-	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
+	s.scopedMetricClient.On("IncCounter", metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.NoError(err)
@@ -356,7 +359,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowI
 		expectedRunIDs[request.Execution.RunID] = true
 	}).Times(1)
 	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Times(2)
-	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
+	s.scopedMetricClient.On("IncCounter", metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.Error(err)
@@ -373,13 +376,7 @@ func (s *esanalyzerWorkflowTestSuite) TestFindLongRunningWorkflows() {
 		},
 		nil).Times(1)
 
-	s.mockMetricClient.On(
-		"Scope",
-		metrics.ESAnalyzerScope,
-		mock.Anything,
-		mock.Anything,
-	).Return(s.metricsScope).Times(1)
-	s.metricsScope.On(
+	s.scopedMetricClient.On(
 		"AddCounter",
 		metrics.ESAnalyzerNumLongRunningWorkflows,
 		int64(1234),
@@ -418,9 +415,8 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflows() {
 			},
 		},
 		nil).Times(1)
-	s.mockMetricClient.On(
+	s.scopedMetricClient.On(
 		"AddCounter",
-		metrics.ESAnalyzerScope,
 		metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
 		int64(2),
 	).Return().Times(1)
