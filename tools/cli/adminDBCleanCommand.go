@@ -54,7 +54,7 @@ func AdminDBDataDecodeThrift(c *cli.Context) {
 	for typeName, t := range decodingTypes {
 		err = encoder.Decode(data, t)
 		if err == nil {
-			// encoding back to confirm  
+			// encoding back to confirm
 			data2, err := encoder.Encode(t)
 			if err != nil {
 				ErrorAndExit("cannot encode back to confirm", err)
