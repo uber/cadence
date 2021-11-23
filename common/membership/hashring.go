@@ -115,7 +115,7 @@ func (r *ring) Start() {
 	}
 	r.peerProvider.Subscribe(r.service, r.refreshChan)
 
-	if err := r.refresh(); err != nil {
+	if err := r.refreshLocked(); err != nil {
 		r.logger.Fatal("failed to start service resolver", tag.Error(err))
 	}
 
@@ -206,21 +206,9 @@ func (r *ring) Members() []*HostInfo {
 	return servers
 }
 
-func (r *ring) refresh() error {
+func (r *ring) refreshLocked() error {
 	r.refreshLock.Lock()
 	defer r.refreshLock.Unlock()
-	return r.refreshNoLock()
-}
-
-func (r *ring) refreshWithBackoff() error {
-	if r.lastRefreshTime.After(time.Now().Add(-minRefreshInternal)) {
-		// refresh too frequently
-		return nil
-	}
-	return r.refresh()
-}
-
-func (r *ring) refreshNoLock() error {
 	addrs, err := r.peerProvider.GetMembers(r.service)
 
 	if err != nil {
@@ -248,6 +236,14 @@ func (r *ring) refreshNoLock() error {
 	return nil
 }
 
+func (r *ring) refreshWithBackoff() error {
+	if r.lastRefreshTime.After(time.Now().Add(-minRefreshInternal)) {
+		// refreshLocked too frequently
+		return nil
+	}
+	return r.refreshLocked()
+}
+
 func (r *ring) refreshRingWorker() {
 	defer r.shutdownWG.Done()
 
@@ -261,7 +257,7 @@ func (r *ring) refreshRingWorker() {
 			if err := r.refreshWithBackoff(); err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
-		case <-refreshTicker.C: // periodically refresh membership
+		case <-refreshTicker.C: // periodically refreshLocked membership
 			if err := r.refreshWithBackoff(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
