@@ -26,11 +26,12 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/uber/cadence/common/service"
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	"github.com/uber/cadence/common/service"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
