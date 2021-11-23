@@ -55,25 +55,25 @@ import (
 type esanalyzerWorkflowTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
-	activityEnv      *testsuite.TestActivityEnvironment
-	workflowEnv      *testsuite.TestWorkflowEnvironment
-	controller       *gomock.Controller
-	resource         *resource.Test
-	mockAdminClient  *admin.MockClient
-	mockDomainCache  *cache.MockDomainCache
-	clientBean       *client.MockBean
-	logger           *log.MockLogger
-	mockMetricClient *mocks.Client
+	activityEnv        *testsuite.TestActivityEnvironment
+	workflowEnv        *testsuite.TestWorkflowEnvironment
+	controller         *gomock.Controller
+	resource           *resource.Test
+	mockAdminClient    *admin.MockClient
+	mockDomainCache    *cache.MockDomainCache
+	clientBean         *client.MockBean
+	logger             *log.MockLogger
+	mockMetricClient   *mocks.Client
 	scopedMetricClient *mocks.Scope
-	mockESClient     *esMocks.GenericClient
-	analyzer         *Analyzer
-	workflow         *Workflow
-	config           Config
-	DomainID         string
-	DomainName       string
-	WorkflowType     string
-	WorkflowID       string
-	RunID            string
+	mockESClient       *esMocks.GenericClient
+	analyzer           *Analyzer
+	workflow           *Workflow
+	config             Config
+	DomainID           string
+	DomainName         string
+	WorkflowType       string
+	WorkflowID         string
+	RunID              string
 }
 
 func TestESAnalyzerWorkflowTestSuite(t *testing.T) {
