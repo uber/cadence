@@ -184,10 +184,6 @@ func (r *ring) Unsubscribe(
 ) error {
 	r.smu.Lock()
 	defer r.smu.Unlock()
-	_, ok := r.subscribers[name]
-	if !ok {
-		return nil
-	}
 	delete(r.subscribers, name)
 	return nil
 }
