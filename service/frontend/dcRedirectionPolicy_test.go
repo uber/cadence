@@ -144,10 +144,12 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	)
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
-	s.policy = NewSelectedAPIsForwardingPolicy(
+	s.policy = newSelectedOrAllAPIsForwardingPolicy(
 		s.currentClusterName,
 		s.mockConfig,
 		s.mockDomainCache,
+		false,
+		"",
 	)
 }
 

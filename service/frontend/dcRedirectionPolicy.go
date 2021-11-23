@@ -38,15 +38,18 @@ const (
 	DCRedirectionPolicyDefault = ""
 	// DCRedirectionPolicyNoop means no redirection
 	DCRedirectionPolicyNoop = "noop"
-	// DCRedirectionPolicySelectedAPIsForwarding means forwarding the following APIs based domain
+	// DCRedirectionPolicySelectedAPIsForwarding means forwarding the following non-worker APIs based domain
 	// 1. StartWorkflowExecution
 	// 2. SignalWithStartWorkflowExecution
 	// 3. SignalWorkflowExecution
 	// 4. RequestCancelWorkflowExecution
 	// 5. TerminateWorkflowExecution
 	// 6. QueryWorkflow
+	// 7. ResetWorkflow
 	// please also reference selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs
 	DCRedirectionPolicySelectedAPIsForwarding = "selected-apis-forwarding"
+	// DCRedirectionPolicyAllDomainAPIsForwarding means forwarding all the worker and non-worker APIs based domain
+	DCRedirectionPolicyAllDomainAPIsForwarding = "all-domain-apis-forwarding"
 )
 
 type (
@@ -67,6 +70,8 @@ type (
 		currentClusterName string
 		config             *Config
 		domainCache        cache.DomainCache
+		allDomainAPIs      bool
+		targetCluster      string
 	}
 )
 
@@ -92,7 +97,10 @@ func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config
 		return NewNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicySelectedAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return NewSelectedAPIsForwardingPolicy(currentClusterName, config, domainCache)
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false, "")
+	case DCRedirectionPolicyAllDomainAPIsForwarding:
+		currentClusterName := clusterMetadata.GetCurrentClusterName()
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true, policy.AllDomainApisForwardingTargetCluster)
 	default:
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
 	}
@@ -115,12 +123,14 @@ func (policy *NoopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context,
 	return call(policy.currentClusterName)
 }
 
-// NewSelectedAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
-func NewSelectedAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache) *SelectedAPIsForwardingRedirectionPolicy {
+// newSelectedOrAllAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
+func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool, targetCluster string) *SelectedAPIsForwardingRedirectionPolicy {
 	return &SelectedAPIsForwardingRedirectionPolicy{
 		currentClusterName: currentClusterName,
 		config:             config,
 		domainCache:        domainCache,
+		allDomainAPIs:      allDoaminAPIs,
+		targetCluster:      targetCluster,
 	}
 }
 
@@ -162,7 +172,10 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) isDomainNotActiveError(er
 	return domainNotActiveErr.ActiveCluster, true
 }
 
-func (policy *SelectedAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDomainNotActiveAutoForwarding(ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string) (string, bool) {
+// return two values: the target cluster name, and whether or not forwarding to the active cluster
+func (policy *SelectedAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDomainNotActiveAutoForwarding(
+	ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string,
+) (string, bool) {
 	if !domainEntry.IsGlobalDomain() {
 		return policy.currentClusterName, false
 	}
@@ -179,11 +192,23 @@ func (policy *SelectedAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDoma
 		return policy.currentClusterName, false
 	}
 
+	currentActiveCluster := domainEntry.GetReplicationConfig().ActiveClusterName
+	if policy.allDomainAPIs {
+		if policy.targetCluster == "" {
+			return currentActiveCluster, true
+		} else {
+			if policy.targetCluster == currentActiveCluster {
+				return currentActiveCluster, true
+			}
+			// fallback to selectedAPIsForwardingRedirectionPolicy if targetCluster is not empty and not the same as currentActiveCluster
+		}
+	}
+
 	_, ok := selectedAPIsForwardingRedirectionPolicyWhitelistedAPIs[apiName]
 	if !ok {
 		// do not do dc redirection if API is not whitelisted
 		return policy.currentClusterName, false
 	}
 
-	return domainEntry.GetReplicationConfig().ActiveClusterName, true
+	return currentActiveCluster, true
 }
