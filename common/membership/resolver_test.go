@@ -111,7 +111,7 @@ func TestNonExistingRingReturnsError(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCallsArePropagatedToProvider(t *testing.T) {
+func TestCallsAreForwardedToProvider(t *testing.T) {
 	a, mockedPeer := newTestResolver(t)
 
 	mockedPeer.EXPECT().WhoAmI().Times(1)

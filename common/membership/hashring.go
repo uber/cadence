@@ -72,13 +72,18 @@ type ring struct {
 
 	value atomic.Value // this stores the current hashring
 
-	refreshLock     sync.Mutex
-	lastRefreshTime time.Time
+	members struct {
+		refreshed time.Time
 
-	membersMap map[string]struct{} // for de-duping change notifications
+		sync.Mutex
+		keys map[string]struct{} // for de-duping change notifications
 
-	smu         sync.RWMutex
-	subscribers map[string]chan<- *ChangedEvent
+	}
+
+	subscribers struct {
+		sync.RWMutex
+		keys map[string]chan<- *ChangedEvent
+	}
 }
 
 func newHashring(
@@ -92,10 +97,12 @@ func newHashring(
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
 		logger:       logger.WithTags(tag.ComponentServiceResolver),
-		membersMap:   make(map[string]struct{}),
-		subscribers:  make(map[string]chan<- *ChangedEvent),
 		refreshChan:  make(chan *ChangedEvent),
 	}
+
+	hashring.members.keys = make(map[string]struct{})
+	hashring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
+
 	hashring.value.Store(emptyHashring())
 	return hashring
 }
@@ -136,9 +143,9 @@ func (r *ring) Stop() {
 	r.peerProvider.Stop()
 	r.value.Store(emptyHashring())
 
-	r.smu.Lock()
-	defer r.smu.Unlock()
-	r.subscribers = make(map[string]chan<- *ChangedEvent)
+	r.subscribers.Lock()
+	defer r.subscribers.Unlock()
+	r.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 	close(r.shutdownCh)
 
 	if success := common.AwaitWaitGroup(&r.shutdownWG, time.Minute); !success {
@@ -167,14 +174,15 @@ func (r *ring) Subscribe(
 	service string,
 	notifyChannel chan<- *ChangedEvent,
 ) error {
-	r.smu.Lock()
-	defer r.smu.Unlock()
-	_, ok := r.subscribers[service]
+	r.subscribers.Lock()
+	defer r.subscribers.Unlock()
+
+	_, ok := r.subscribers.keys[service]
 	if ok {
 		return fmt.Errorf("service %q already subscribed", service)
 	}
 
-	r.subscribers[service] = notifyChannel
+	r.subscribers.keys[service] = notifyChannel
 	return nil
 }
 
@@ -182,9 +190,9 @@ func (r *ring) Subscribe(
 func (r *ring) Unsubscribe(
 	name string,
 ) error {
-	r.smu.Lock()
-	defer r.smu.Unlock()
-	delete(r.subscribers, name)
+	r.subscribers.Lock()
+	defer r.subscribers.Unlock()
+	delete(r.subscribers.keys, name)
 	return nil
 }
 
@@ -203,8 +211,8 @@ func (r *ring) Members() []*HostInfo {
 }
 
 func (r *ring) refreshLocked() error {
-	r.refreshLock.Lock()
-	defer r.refreshLock.Unlock()
+	r.members.Lock()
+	defer r.members.Unlock()
 	addrs, err := r.peerProvider.GetMembers(r.service)
 
 	if err != nil {
@@ -222,8 +230,8 @@ func (r *ring) refreshLocked() error {
 		ring.AddMembers(host)
 	}
 
-	r.membersMap = newMembersMap
-	r.lastRefreshTime = time.Now()
+	r.members.keys = newMembersMap
+	r.members.refreshed = time.Now()
 	r.value.Store(ring)
 	r.logger.Info(
 		fmt.Sprintf("refreshed ring members for %s", r.service),
@@ -233,7 +241,7 @@ func (r *ring) refreshLocked() error {
 }
 
 func (r *ring) refreshWithBackoff() error {
-	if r.lastRefreshTime.After(time.Now().Add(-minRefreshInternal)) {
+	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
 		// refreshLocked too frequently
 		return nil
 	}
@@ -270,11 +278,11 @@ func (r *ring) compareMembers(addrs []string) (map[string]struct{}, bool) {
 	newMembersMap := make(map[string]struct{}, len(addrs))
 	for _, addr := range addrs {
 		newMembersMap[addr] = struct{}{}
-		if _, ok := r.membersMap[addr]; !ok {
+		if _, ok := r.members.keys[addr]; !ok {
 			changed = true
 		}
 	}
-	for addr := range r.membersMap {
+	for addr := range r.members.keys {
 		if _, ok := newMembersMap[addr]; !ok {
 			changed = true
 			break

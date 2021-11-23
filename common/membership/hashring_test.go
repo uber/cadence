@@ -39,7 +39,7 @@ func testCompareMembers(t *testing.T, curr []string, new []string, hasDiff bool)
 	for _, m := range curr {
 		currMembers[m] = struct{}{}
 	}
-	hashring.membersMap = currMembers
+	hashring.members.keys = currMembers
 	newMembers, changed := hashring.compareMembers(new)
 	assert.Equal(t, hasDiff, changed)
 	assert.Equal(t, len(new), len(newMembers))
@@ -99,9 +99,9 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	hr.Start()
 
 	hr.refreshLocked()
-	updatedAt := hr.lastRefreshTime
+	updatedAt := hr.members.refreshed
 	hr.refreshLocked()
-	assert.Equal(t, updatedAt, hr.lastRefreshTime)
+	assert.Equal(t, updatedAt, hr.members.refreshed)
 
 }
 
@@ -114,7 +114,7 @@ func TestSubscribeIgnoresDuplicates(t *testing.T) {
 
 	assert.NoError(t, hr.Subscribe("test-service", changeCh))
 	assert.Error(t, hr.Subscribe("test-service", changeCh))
-	assert.Equal(t, 1, len(hr.subscribers))
+	assert.Equal(t, 1, len(hr.subscribers.keys))
 }
 
 func TestUnsubcribeIgnoresDeletionOnEmpty(t *testing.T) {
@@ -122,7 +122,7 @@ func TestUnsubcribeIgnoresDeletionOnEmpty(t *testing.T) {
 	pp := NewMockPeerProvider(ctrl)
 
 	hr := newHashring("test-service", pp, log.NewNoop())
-	assert.Equal(t, 0, len(hr.subscribers))
+	assert.Equal(t, 0, len(hr.subscribers.keys))
 	assert.NoError(t, hr.Unsubscribe("test-service"))
 	assert.NoError(t, hr.Unsubscribe("test-service"))
 	assert.NoError(t, hr.Unsubscribe("test-service"))
@@ -135,13 +135,13 @@ func TestUnsubcribeDeletes(t *testing.T) {
 
 	hr := newHashring("test-service", pp, log.NewNoop())
 
-	assert.Equal(t, 0, len(hr.subscribers))
+	assert.Equal(t, 0, len(hr.subscribers.keys))
 	assert.NoError(t, hr.Subscribe("testservice1", changeCh))
-	assert.Equal(t, 1, len(hr.subscribers))
+	assert.Equal(t, 1, len(hr.subscribers.keys))
 	assert.NoError(t, hr.Unsubscribe("test-service"))
-	assert.Equal(t, 1, len(hr.subscribers))
+	assert.Equal(t, 1, len(hr.subscribers.keys))
 	assert.NoError(t, hr.Unsubscribe("testservice1"))
-	assert.Equal(t, 0, len(hr.subscribers))
+	assert.Equal(t, 0, len(hr.subscribers.keys))
 
 }
 
