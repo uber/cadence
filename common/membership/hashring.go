@@ -77,7 +77,6 @@ type ring struct {
 
 		sync.Mutex
 		keys map[string]struct{} // for de-duping change notifications
-
 	}
 
 	subscribers struct {
@@ -120,7 +119,9 @@ func (r *ring) Start() {
 	) {
 		return
 	}
-	r.peerProvider.Subscribe(r.service, r.refreshChan)
+	if err := r.peerProvider.Subscribe(r.service, r.refreshChan); err != nil {
+		r.logger.Fatal("subscribing to peer provider", tag.Error(err))
+	}
 
 	if err := r.refreshLocked(); err != nil {
 		r.logger.Fatal("failed to start service resolver", tag.Error(err))

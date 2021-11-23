@@ -198,6 +198,11 @@ func (r *Provider) Subscribe(name string, notifyChannel chan<- *membership.Chang
 	r.smu.RLock()
 	defer r.smu.RUnlock()
 
+	_, ok := r.subscribers[name]
+	if ok {
+		return fmt.Errorf("%q already subscribed to ringpop provider", name)
+	}
+
 	r.subscribers[name] = notifyChannel
 	return nil
 }
