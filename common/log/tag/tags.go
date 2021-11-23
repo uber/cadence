@@ -326,6 +326,11 @@ func shardupdate(shardupdate string) Tag {
 	return newPredefinedStringTag("shard-update", shardupdate)
 }
 
+// idType returns tag for idType
+func idType(idType string) Tag {
+	return newPredefinedStringTag("id-type", idType)
+}
+
 // general
 
 // Service returns tag for Service

@@ -389,3 +389,18 @@ var (
 	MatchingClientOperationListTaskListPartitions = clientOperation("matching-list-task-list-partitions")
 	MatchingClientOperationGetTaskListsByDomain   = clientOperation("get-task-list-for-domain")
 )
+
+// Pre-defined values for TagIDType
+var (
+	IDTypeDomainName   = idType("domainName")
+	IDTypeIdentity     = idType("identity")
+	IDTypeWorkflowID   = idType("workflowID")
+	IDTypeSignalName   = idType("signalName")
+	IDTypeWorkflowType = idType("workflowType")
+	IDTypeRequestID    = idType("requestID")
+	IDTypeTaskListName = idType("taskListName")
+	IDTypeActivityID   = idType("activityID")
+	IDTypeActivityType = idType("activityType")
+	IDTypeMarkerName   = idType("markerName")
+	IDTypeTimerID      = idType("timerID")
+)

@@ -44,6 +44,7 @@ type (
 		config                    *config.Config
 		domainCache               cache.DomainCache
 		metricsClient             metrics.Client
+		logger                    log.Logger
 		searchAttributesValidator *validator.SearchAttributesValidator
 	}
 
@@ -75,6 +76,7 @@ func newAttrValidator(
 		config:        config,
 		domainCache:   domainCache,
 		metricsClient: metricsClient,
+		logger:        logger,
 		searchAttributesValidator: validator.NewSearchAttributesValidator(
 			logger,
 			config.ValidSearchAttributes,
@@ -227,7 +229,10 @@ func (v *attrValidator) validateActivityScheduleAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.ActivityIDMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrActivityIDExceededWarnLimit) {
+		metrics.CadenceErrActivityIDExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeActivityID) {
 		return &types.BadRequestError{Message: "ActivityID exceeds length limit."}
 	}
 
@@ -236,7 +241,10 @@ func (v *attrValidator) validateActivityScheduleAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.ActivityTypeMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrActivityTypeExceededWarnLimit) {
+		metrics.CadenceErrActivityTypeExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeActivityType) {
 		return &types.BadRequestError{Message: "ActivityType exceeds length limit."}
 	}
 
@@ -245,7 +253,10 @@ func (v *attrValidator) validateActivityScheduleAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.DomainNameMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
@@ -359,7 +370,10 @@ func (v *attrValidator) validateTimerScheduleAttributes(
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
 		v.config.TimerIDMaxLength(domain),
-		metrics.CadenceErrTimerIDExceededWarnLimit) {
+		metrics.CadenceErrTimerIDExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeTimerID) {
 		return &types.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	if attributes.GetStartToFireTimeoutSeconds() <= 0 {
@@ -388,7 +402,10 @@ func (v *attrValidator) validateActivityCancelAttributes(
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
 		v.config.ActivityIDMaxLength(domain),
-		metrics.CadenceErrActivityIDExceededWarnLimit) {
+		metrics.CadenceErrActivityIDExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeActivityID) {
 		return &types.BadRequestError{Message: "ActivityId exceeds length limit."}
 	}
 	return nil
@@ -411,7 +428,10 @@ func (v *attrValidator) validateTimerCancelAttributes(
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
 		v.config.TimerIDMaxLength(domain),
-		metrics.CadenceErrTimerIDExceededWarnLimit) {
+		metrics.CadenceErrTimerIDExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeTimerID) {
 		return &types.BadRequestError{Message: "TimerId exceeds length limit."}
 	}
 	return nil
@@ -434,7 +454,10 @@ func (v *attrValidator) validateRecordMarkerAttributes(
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
 		v.config.MarkerNameMaxLength(domain),
-		metrics.CadenceErrMarkerNameExceededWarnLimit) {
+		metrics.CadenceErrMarkerNameExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeMarkerName) {
 		return &types.BadRequestError{Message: "MarkerName exceeds length limit."}
 	}
 
@@ -501,7 +524,10 @@ func (v *attrValidator) validateCancelExternalWorkflowExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.DomainNameMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
@@ -510,7 +536,10 @@ func (v *attrValidator) validateCancelExternalWorkflowExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.WorkflowIDMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 	runID := attributes.GetRunID()
@@ -551,7 +580,10 @@ func (v *attrValidator) validateSignalExternalWorkflowExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.DomainNameMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
@@ -560,7 +592,10 @@ func (v *attrValidator) validateSignalExternalWorkflowExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.WorkflowIDMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
@@ -616,7 +651,10 @@ func (v *attrValidator) validateContinueAsNewWorkflowExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
 		v.config.WorkflowTypeMaxLength(domain),
-		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeWorkflowType) {
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
@@ -682,7 +720,10 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.DomainNameMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 	if !common.ValidIDLength(
@@ -690,7 +731,10 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.WorkflowIDMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 
@@ -699,7 +743,10 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		v.metricsClient.Scope(metricsScope),
 		idLengthWarnLimit,
 		v.config.WorkflowTypeMaxLength(attributes.GetDomain()),
-		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		attributes.GetDomain(),
+		v.logger,
+		tag.IDTypeWorkflowType) {
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
@@ -756,7 +803,10 @@ func (v *attrValidator) validatedTaskList(
 		v.metricsClient.Scope(metricsScope),
 		v.config.MaxIDLengthWarnLimit(),
 		v.config.TaskListNameMaxLength(domain),
-		metrics.CadenceErrTaskListNameExceededWarnLimit) {
+		metrics.CadenceErrTaskListNameExceededWarnLimit,
+		domain,
+		v.logger,
+		tag.IDTypeTaskListName) {
 		return taskList, &types.BadRequestError{
 			Message: fmt.Sprintf("task list name exceeds length limit of %v", v.config.TaskListNameMaxLength(domain)),
 		}

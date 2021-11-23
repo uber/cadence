@@ -2830,7 +2830,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.DomainNameMaxLength(request.GetDomain()),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
@@ -2839,7 +2842,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.WorkflowIDMaxLength(request.GetDomain()),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 	if !common.ValidIDLength(
@@ -2847,7 +2853,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.TaskListNameMaxLength(request.GetDomain()),
-		metrics.CadenceErrTaskListNameExceededWarnLimit) {
+		metrics.CadenceErrTaskListNameExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeTaskListName) {
 		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
 	if !common.ValidIDLength(
@@ -2855,7 +2864,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.WorkflowTypeMaxLength(request.GetDomain()),
-		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeWorkflowType) {
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 
