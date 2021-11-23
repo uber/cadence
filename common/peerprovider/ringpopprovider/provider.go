@@ -55,9 +55,9 @@ type (
 )
 
 const (
-	// RoleKey label is set by every single service as soon as it bootstraps its
+	// roleKey label is set by every single service as soon as it bootstraps its
 	// ringpop instance. The data for this key is the service name
-	RoleKey = "serviceName"
+	roleKey = "serviceName"
 )
 
 var _ membership.PeerProvider = (*Provider)(nil)
@@ -129,7 +129,7 @@ func (r *Provider) Start() {
 		r.logger.Fatal("unable to get ring pop labels", tag.Error(err))
 	}
 
-	if err = labels.Set(RoleKey, r.service); err != nil {
+	if err = labels.Set(roleKey, r.service); err != nil {
 		r.logger.Fatal("unable to set ring pop labels", tag.Error(err))
 	}
 }
@@ -172,7 +172,7 @@ func (r *Provider) SelfEvict() error {
 
 // GetMembers returns all hosts with a specified role value
 func (r *Provider) GetMembers(service string) ([]string, error) {
-	return r.ringpop.GetReachableMembers(swim.MemberWithLabelAndValue(RoleKey, service))
+	return r.ringpop.GetReachableMembers(swim.MemberWithLabelAndValue(roleKey, service))
 }
 
 // WhoAmI returns address of this instance
