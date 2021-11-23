@@ -21,8 +21,10 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,9 +34,11 @@ import (
 func TestResponseInfoMiddleware(t *testing.T) {
 	m := ResponseInfoMiddleware{}
 	ctx, responseInfo := ContextWithResponseInfo(context.Background())
-	_, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{response: &transport.Response{BodySize: 12345}})
+	body := ioutil.NopCloser(bytes.NewReader([]byte{1, 2, 3, 4, 5}))
+	response, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{response: &transport.Response{Body: body}})
 	assert.NoError(t, err)
-	assert.Equal(t, 12345, responseInfo.Size)
+	ioutil.ReadAll(response.Body)
+	assert.Equal(t, 5, responseInfo.Size)
 }
 
 func TestResponseInfoMiddleware_Error(t *testing.T) {
