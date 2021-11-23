@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -805,7 +806,8 @@ func (c *clientImpl) GetReplicationMessages(
 
 	var wg sync.WaitGroup
 	wg.Add(len(requestsByPeer))
-	respChan := make(chan *getReplicationMessagesWithSize, len(requestsByPeer))
+	var responseMutex sync.Mutex
+	peerResponses := make([]*getReplicationMessagesWithSize, 0, len(requestsByPeer))
 	errChan := make(chan error, 1)
 
 	for peer, req := range requestsByPeer {
@@ -826,15 +828,16 @@ func (c *clientImpl) GetReplicationMessages(
 				}
 				return
 			}
-			respChan <- &getReplicationMessagesWithSize{
+			responseMutex.Lock()
+			peerResponses = append(peerResponses, &getReplicationMessagesWithSize{
 				response: resp,
 				size:     responseInfo.Size,
-			}
+			})
+			responseMutex.Unlock()
 		}(ctx, peer, req)
 	}
 
 	wg.Wait()
-	close(respChan)
 	close(errChan)
 
 	if len(errChan) > 0 {
@@ -842,10 +845,20 @@ func (c *clientImpl) GetReplicationMessages(
 		return nil, err
 	}
 
+	// Peers with largest responses can be slowest to return data.
+	// They end up in the end of array and have a possibility of not fitting in the response message.
+	// Skipped peers grow their responses even more and next they will be even slower and end up in the end again.
+	// This can lead to starving peers.
+	// Shuffle the slice of responses to prevent such scenario. All peer will have equal chance to be pick up first.
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := range peerResponses {
+		j := r.Intn(i + 1)
+		peerResponses[i], peerResponses[j] = peerResponses[j], peerResponses[i]
+	}
+
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
 	responseTotalSize := 0
-
-	for resp := range respChan {
+	for _, resp := range peerResponses {
 		// return partial response if the response size exceeded supported max size
 		responseTotalSize += resp.size
 		if responseTotalSize >= c.rpcMaxSizeInBytes() {
