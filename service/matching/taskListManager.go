@@ -236,18 +236,26 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return nil, err
 		}
 
+		isForwarded := params.forwardedFrom != ""
+
 		if domainEntry.GetDomainNotActiveErr() != nil {
-			r, err := c.taskWriter.appendTask(params.execution, params.taskInfo)
+			// standby task, only persist when task is not forwarded from child partition
 			syncMatch = false
+			if isForwarded {
+				return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
+			}
+
+			r, err := c.taskWriter.appendTask(params.execution, params.taskInfo)
 			return r, err
 		}
 
+		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
 		}
 
-		if params.forwardedFrom != "" {
+		if isForwarded {
 			// forwarded from child partition - only do sync match
 			// child partition will persist the task when sync match fails
 			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
