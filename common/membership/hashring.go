@@ -214,6 +214,12 @@ func (r *ring) Members() []*HostInfo {
 func (r *ring) refreshLocked() error {
 	r.members.Lock()
 	defer r.members.Unlock()
+
+	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
+		// refreshed too frequently
+		return nil
+	}
+
 	addrs, err := r.peerProvider.GetMembers(r.service)
 
 	if err != nil {
@@ -241,14 +247,6 @@ func (r *ring) refreshLocked() error {
 	return nil
 }
 
-func (r *ring) refreshWithBackoff() error {
-	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
-		// refreshLocked too frequently
-		return nil
-	}
-	return r.refreshLocked()
-}
-
 func (r *ring) refreshRingWorker() {
 	defer r.shutdownWG.Done()
 
@@ -259,11 +257,11 @@ func (r *ring) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case <-r.refreshChan: // local signal or signal from provider
-			if err := r.refreshWithBackoff(); err != nil {
+			if err := r.refreshLocked(); err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
-		case <-refreshTicker.C: // periodically refreshLocked membership
-			if err := r.refreshWithBackoff(); err != nil {
+		case <-refreshTicker.C: // periodically refresh membership
+			if err := r.refreshLocked(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
 		}

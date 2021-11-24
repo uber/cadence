@@ -66,7 +66,6 @@ func TestMethodsAreRoutedToARing(t *testing.T) {
 
 	r.value.Store(ring)
 
-	// the same ring will be picked here
 	hi, err := a.Lookup("test-worker", "key")
 	assert.Equal(t, "127", hi.GetAddress())
 

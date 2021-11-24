@@ -59,13 +59,14 @@ func Test_ring_compareMembers(t *testing.T) {
 		{curr: []string{}, new: []string{"a"}, hasDiff: true},
 		{curr: []string{}, new: []string{"a", "b"}, hasDiff: true},
 		{curr: []string{"a"}, new: []string{"a", "b"}, hasDiff: true},
-		{curr: []string{}, new: []string{"a"}, hasDiff: true},
-		{curr: []string{}, new: []string{"a", "b"}, hasDiff: true},
 		{curr: []string{}, new: []string{}, hasDiff: false},
 		{curr: []string{"a"}, new: []string{"a"}, hasDiff: false},
-		{curr: []string{"a", "b"}, new: []string{"a", "b"}, hasDiff: false},
+		// order doesn't matter.
+		{curr: []string{"b", "a"}, new: []string{"a", "b"}, hasDiff: false},
 		// member has left the ring
 		{curr: []string{"a", "b", "c"}, new: []string{"a", "b"}, hasDiff: true},
+		// ring becomes empty
+		{curr: []string{"a", "b", "c"}, new: []string{}, hasDiff: true},
 	}
 
 	for _, tt := range tests {
@@ -151,7 +152,6 @@ func TestMemberCountReturnsNumber(t *testing.T) {
 
 	hr := newHashring("test-service", pp, log.NewNoop())
 	assert.Equal(t, 0, hr.MemberCount())
-	hr.ring()
 
 	ring := emptyHashring()
 	for _, addr := range []string{"127", "128"} {

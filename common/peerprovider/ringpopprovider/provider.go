@@ -49,7 +49,7 @@ type (
 		bootParams *swim.BootstrapOptions
 		logger     log.Logger
 
-		smu         sync.RWMutex
+		mu          sync.RWMutex
 		subscribers map[string]chan<- *membership.ChangedEvent
 	}
 )
@@ -153,8 +153,8 @@ func (r *Provider) HandleEvent(
 	}
 
 	// Notify subscribers
-	r.smu.RLock()
-	defer r.smu.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	for name, ch := range r.subscribers {
 		select {
@@ -195,8 +195,8 @@ func (r *Provider) Stop() {
 
 // Subscribe allows to be subscribed for ring changes
 func (r *Provider) Subscribe(name string, notifyChannel chan<- *membership.ChangedEvent) error {
-	r.smu.RLock()
-	defer r.smu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	_, ok := r.subscribers[name]
 	if ok {
