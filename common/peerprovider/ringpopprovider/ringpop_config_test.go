@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package ringpopprovider
 
 import (
 	"context"
@@ -49,7 +49,7 @@ func (s *RingpopSuite) SetupTest() {
 }
 
 func (s *RingpopSuite) TestHostsMode() {
-	var cfg RingpopConfig
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getHostsConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -61,7 +61,7 @@ func (s *RingpopSuite) TestHostsMode() {
 }
 
 func (s *RingpopSuite) TestFileMode() {
-	var cfg RingpopConfig
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getJSONConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -73,7 +73,7 @@ func (s *RingpopSuite) TestFileMode() {
 }
 
 func (s *RingpopSuite) TestCustomMode() {
-	var cfg RingpopConfig
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getCustomConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -114,7 +114,7 @@ func (resolver *mockResolver) LookupSRV(ctx context.Context, service string, pro
 }
 
 func (s *RingpopSuite) TestDNSMode() {
-	var cfg RingpopConfig
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getDNSConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -173,7 +173,7 @@ func (s *RingpopSuite) TestDNSMode() {
 }
 
 func (s *RingpopSuite) TestDNSSRVMode() {
-	var cfg RingpopConfig
+	var cfg Config
 	err := yaml.Unmarshal([]byte(getDNSSRVConfig()), &cfg)
 	s.Nil(err)
 	s.Equal("test", cfg.Name)
@@ -265,7 +265,7 @@ func (s *RingpopSuite) TestDNSSRVMode() {
 }
 
 func (s *RingpopSuite) TestInvalidConfig() {
-	var cfg RingpopConfig
+	var cfg Config
 	s.NotNil(cfg.validate())
 	cfg.Name = "test"
 	s.NotNil(cfg.validate())

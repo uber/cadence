@@ -1,5 +1,7 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
-//
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,108 +9,128 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package membership
 
 import (
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 
-	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
 )
 
-type RpoSuite struct {
-	*require.Assertions // override suite.Suite.Assertions with require.Assertions; this means that s.NotNil(nil) will stop the test, not merely log an error
-	suite.Suite
+var testServices = []string{"test-worker", "test-services"}
+
+func TestSubscribeIsCalledOnPeerProvider(t *testing.T) {
+	r, pp := newTestResolver(t)
+	_, err := r.getRing("test-worker")
+	assert.NoError(t, err)
+
+	// After membership is started, we expect start, subscribe and GetMembers on PeerProvider
+	pp.EXPECT().Start().Times(1)
+	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(len(testServices))
+	pp.EXPECT().GetMembers(gomock.Any()).Times(len(testServices))
+
+	r.Start()
 }
 
-func TestRpoSuite(t *testing.T) {
-	suite.Run(t, new(RpoSuite))
+func TestNewCreatesAllRings(t *testing.T) {
+	a, _ := newTestResolver(t)
+	assert.Equal(t, len(testServices), len(a.rings))
+
 }
 
-func (s *RpoSuite) SetupTest() {
-	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
-}
-
-func (s *RpoSuite) TestRingpopMonitor() {
-	testService := NewTestRingpopCluster("rpm-ring-app", 3, "127.0.0.1", "", "rpm-service-name")
-	s.NotNil(testService, "Failed to create test service")
-
-	logger := loggerimpl.NewNopLogger()
-
-	rpm := testService.rings[0]
-
-	time.Sleep(time.Second)
-
-	listenCh := make(chan *ChangedEvent, 5)
-
-	err := rpm.Subscribe("rpm-service-name", "test-listener", listenCh)
-	s.Nil(err, "AddListerener failed")
-
-	host, err := rpm.Lookup("rpm-service-name", "key")
-	s.Nil(err, "Ringpop monitor failed to find host for key")
-	s.NotNil(host, "Ringpop monitor returned a nil host")
-
-	logger.Info("Killing host 1")
-	testService.KillHost(testService.hostUUIDs[1])
-
-	select {
-	case e := <-listenCh:
-		s.Equal(1, len(e.HostsRemoved), "ringpop monitor event does not report the removed host")
-		s.Equal(testService.hostAddrs[1], e.HostsRemoved[0].GetAddress(), "ringpop monitor reported that a wrong host was removed")
-		s.Nil(e.HostsAdded, "Unexpected host reported to be added by ringpop monitor")
-		s.Nil(e.HostsUpdated, "Unexpected host reported to be updated by ringpop monitor")
-	case <-time.After(time.Minute):
-		s.Fail("Timed out waiting for failure to be detected by ringpop")
+func TestMethodsAreRoutedToARing(t *testing.T) {
+	var changeCh = make(chan *ChangedEvent)
+	a, _ := newTestResolver(t)
+	// add members to this ring
+	r, _ := a.getRing("test-worker")
+	ring := emptyHashring()
+	for _, addr := range []string{"127", "128"} {
+		host := NewHostInfo(addr)
+		ring.AddMembers(host)
 	}
 
-	host, err = rpm.Lookup("rpm-service-name", "key")
-	s.Nil(err, "Ringpop monitor failed to find host for key")
-	s.NotEqual(testService.hostAddrs[1], host.GetAddress(), "Ringpop monitor assigned key to dead host")
+	r.value.Store(ring)
 
-	err = rpm.Unsubscribe("rpm-service-name", "test-listener")
-	s.Nil(err, "Unsubscribe() failed")
+	hi, err := a.Lookup("test-worker", "key")
+	assert.Equal(t, "127", hi.GetAddress())
 
-	rpm.Stop()
-	testService.Stop()
+	// the same ring will be picked here
+	nohi, err := a.Lookup("WRONG-RING-NAME", "key")
+	assert.Error(t, err)
+	assert.Nil(t, nohi)
+
+	members, err := a.Members("test-worker")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(members))
+
+	nomembers, err := a.Members("WRONG-RING-NAME")
+	assert.Error(t, err)
+	assert.Equal(t, 0, len(nomembers))
+
+	memcount, err := a.MemberCount("test-worker")
+	assert.NoError(t, err)
+	assert.Equal(t, 2, memcount)
+
+	nomemcount, err := a.MemberCount("WRONG-RING-NAME")
+	assert.Error(t, err)
+	assert.Equal(t, 0, nomemcount)
+
+	serr := a.Subscribe("test-worker", "sub1", changeCh)
+	assert.NoError(t, serr)
+
+	serr = a.Subscribe("WRONG-RING-NAME", "sub1", changeCh)
+	assert.Error(t, serr)
+
+	serr = a.Unsubscribe("test-worker", "sub1")
+	assert.NoError(t, serr)
+
+	serr = a.Unsubscribe("WRONG-RING-NAME", "sub1")
+	assert.Error(t, serr)
+
 }
 
-func (s *RpoSuite) TestCompareMembers() {
-	s.testCompareMembers([]string{}, []string{"a"}, true)
-	s.testCompareMembers([]string{}, []string{"a", "b"}, true)
-	s.testCompareMembers([]string{"a"}, []string{"a", "b"}, true)
-	s.testCompareMembers([]string{}, []string{"a"}, true)
-	s.testCompareMembers([]string{}, []string{"a", "b"}, true)
-	s.testCompareMembers([]string{}, []string{}, false)
-	s.testCompareMembers([]string{"a"}, []string{"a"}, false)
-	s.testCompareMembers([]string{"a", "b"}, []string{"a", "b"}, false)
+func TestNonExistingRingReturnsError(t *testing.T) {
+	a, _ := newTestResolver(t)
+	_, err := a.getRing("non-existing")
+	assert.Error(t, err)
 }
 
-func (s *RpoSuite) testCompareMembers(curr []string, new []string, hasDiff bool) {
-	resolver := &ringpopHashring{}
-	currMembers := make(map[string]struct{}, len(curr))
-	for _, m := range curr {
-		currMembers[m] = struct{}{}
-	}
-	resolver.membersMap = currMembers
-	newMembers, changed := resolver.compareMembers(new)
-	s.Equal(hasDiff, changed)
-	s.Equal(len(new), len(newMembers))
-	for _, m := range new {
-		_, ok := newMembers[m]
-		s.True(ok)
-	}
+func TestCallsAreForwardedToProvider(t *testing.T) {
+	a, mockedPeer := newTestResolver(t)
+
+	mockedPeer.EXPECT().WhoAmI().Times(1)
+	mockedPeer.EXPECT().SelfEvict().Times(1)
+	mockedPeer.EXPECT().Stop().Times(1)
+
+	a.status = common.DaemonStatusStarted
+	a.WhoAmI()
+	a.EvictSelf()
+	a.Stop()
+
+}
+
+func newTestResolver(t *testing.T) (*MultiringResolver, *MockPeerProvider) {
+
+	ctrl := gomock.NewController(t)
+	pp := NewMockPeerProvider(ctrl)
+	return NewMultiringResolver(
+		testServices,
+		pp,
+		log.NewNoop(),
+	), pp
 }
