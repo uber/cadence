@@ -99,9 +99,9 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	hr := newHashring("test-service", pp, log.NewNoop())
 	hr.Start()
 
-	hr.refreshLocked()
+	hr.refresh()
 	updatedAt := hr.members.refreshed
-	hr.refreshLocked()
+	hr.refresh()
 	assert.Equal(t, updatedAt, hr.members.refreshed)
 
 }
@@ -168,7 +168,7 @@ func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
 	pp.EXPECT().GetMembers(gomock.Any()).Return([]string{}, errors.New("error"))
 
 	hr := newHashring("test-service", pp, log.NewNoop())
-	assert.Error(t, hr.refreshLocked())
+	assert.Error(t, hr.refresh())
 }
 
 func TestStopWillStopProvider(t *testing.T) {

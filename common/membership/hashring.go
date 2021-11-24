@@ -73,10 +73,9 @@ type ring struct {
 	value atomic.Value // this stores the current hashring
 
 	members struct {
-		refreshed time.Time
-
 		sync.Mutex
-		keys map[string]struct{} // for de-duping change notifications
+		refreshed time.Time
+		keys      map[string]struct{} // for de-duping change notifications
 	}
 
 	subscribers struct {
@@ -123,7 +122,7 @@ func (r *ring) Start() {
 		r.logger.Fatal("subscribing to peer provider", tag.Error(err))
 	}
 
-	if err := r.refreshLocked(); err != nil {
+	if err := r.refresh(); err != nil {
 		r.logger.Fatal("failed to start service resolver", tag.Error(err))
 	}
 
@@ -211,7 +210,7 @@ func (r *ring) Members() []*HostInfo {
 	return servers
 }
 
-func (r *ring) refreshLocked() error {
+func (r *ring) refresh() error {
 	r.members.Lock()
 	defer r.members.Unlock()
 
@@ -257,11 +256,11 @@ func (r *ring) refreshRingWorker() {
 		case <-r.shutdownCh:
 			return
 		case <-r.refreshChan: // local signal or signal from provider
-			if err := r.refreshLocked(); err != nil {
+			if err := r.refresh(); err != nil {
 				r.logger.Error("refreshing ring", tag.Error(err))
 			}
 		case <-refreshTicker.C: // periodically refresh membership
-			if err := r.refreshLocked(); err != nil {
+			if err := r.refresh(); err != nil {
 				r.logger.Error("periodically refreshing ring", tag.Error(err))
 			}
 		}
