@@ -219,6 +219,8 @@ type Config struct {
 	EnableParentClosePolicy dynamicconfig.BoolPropertyFnWithDomainFilter
 	// whether or not enable system workers for processing parent close policy task
 	EnableParentClosePolicyWorker dynamicconfig.BoolPropertyFn
+	// whether to enable system workers for processing ElasticSearch Analyzer
+	EnableESAnalyzer dynamicconfig.BoolPropertyFn
 	// parent close policy will be processed by sys workers(if enabled) if
 	// the number of children greater than or equal to this threshold
 	ParentClosePolicyThreshold dynamicconfig.IntPropertyFnWithDomainFilter

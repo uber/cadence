@@ -71,6 +71,7 @@ bench:
 cadence:
   service: "cadence-frontend" # frontend service name
   host: "127.0.0.1:7933" # frontend address
+  #metrics: ... # optional detailed client side metrics like workflow latency  
 ```
 - **Metrics**: metrics configuration. Similar to server metric emitter, only M3/Statsd/Prometheus is supported. 
 - **Log**: logging configuration.  Similar to server logging configuration. 

@@ -59,7 +59,7 @@ type (
 		GetClientBean() client.Bean
 		GetTimeSource() clock.TimeSource
 		GetDispatcher() *yarpc.Dispatcher
-		GetMembershipMonitor() membership.Monitor
+		GetMembershipResolver() membership.Resolver
 		GetHostInfo() *membership.HostInfo
 		GetClusterMetadata() cluster.Metadata
 		GetMessagingClient() messaging.Client
@@ -76,8 +76,7 @@ type (
 		hostName              string
 		hostInfo              *membership.HostInfo
 		dispatcher            *yarpc.Dispatcher
-		membershipFactory     resource.MembershipMonitorFactory
-		membershipMonitor     membership.Monitor
+		membershipResolver    membership.Resolver
 		rpcFactory            common.RPCFactory
 		pprofInitializer      common.PProfInitializer
 		clientBean            client.Bean
@@ -111,7 +110,7 @@ func NewService(params *resource.Params) Service {
 		logger:                params.Logger,
 		throttledLogger:       params.ThrottledLogger,
 		rpcFactory:            params.RPCFactory,
-		membershipFactory:     params.MembershipFactory,
+		membershipResolver:    params.MembershipResolver,
 		pprofInitializer:      params.PProfInitializer,
 		timeSource:            clock.NewRealTimeSource(),
 		metricsScope:          params.MetricScope,
@@ -169,21 +168,16 @@ func (h *serviceImpl) Start() {
 		h.logger.WithTags(tag.Error(err)).Fatal("Failed to start yarpc dispatcher")
 	}
 
-	h.membershipMonitor, err = h.membershipFactory.GetMembershipMonitor()
-	if err != nil {
-		h.logger.WithTags(tag.Error(err)).Fatal("Membership monitor creation failed")
-	}
+	h.membershipResolver.Start()
 
-	h.membershipMonitor.Start()
-
-	hostInfo, err := h.membershipMonitor.WhoAmI()
+	hostInfo, err := h.membershipResolver.WhoAmI()
 	if err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("failed to get host info from membership monitor")
 	}
 	h.hostInfo = hostInfo
 
 	h.clientBean, err = client.NewClientBean(
-		client.NewRPCClientFactory(h.rpcFactory, h.membershipMonitor, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards, h.logger),
+		client.NewRPCClientFactory(h.rpcFactory, h.membershipResolver, h.metricsClient, h.dynamicCollection, h.numberOfHistoryShards, h.logger),
 		h.rpcFactory.GetDispatcher(),
 		h.clusterMetadata,
 	)
@@ -203,8 +197,8 @@ func (h *serviceImpl) Stop() {
 		return
 	}
 
-	if h.membershipMonitor != nil {
-		h.membershipMonitor.Stop()
+	if h.membershipResolver != nil {
+		h.membershipResolver.Stop()
 	}
 
 	if h.dispatcher != nil {
@@ -234,8 +228,8 @@ func (h *serviceImpl) GetTimeSource() clock.TimeSource {
 	return h.timeSource
 }
 
-func (h *serviceImpl) GetMembershipMonitor() membership.Monitor {
-	return h.membershipMonitor
+func (h *serviceImpl) GetMembershipResolver() membership.Resolver {
+	return h.membershipResolver
 }
 
 func (h *serviceImpl) GetHostInfo() *membership.HostInfo {

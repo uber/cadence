@@ -164,6 +164,12 @@ type BoolPropertyFnWithDomainIDAndWorkflowIDFilter func(domainID string, workflo
 // BoolPropertyFnWithTaskListInfoFilters is a wrapper to get bool property from dynamic config with three filters: domain, taskList, taskType
 type BoolPropertyFnWithTaskListInfoFilters func(domain string, taskList string, taskType int) bool
 
+// IntPropertyFnWithWorkflowTypeFilter is a wrapper to get int property from dynamic config with domain as filter
+type IntPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType string) int
+
+// DurationPropertyFnWithDomainFilter is a wrapper to get duration property from dynamic config with domain as filter
+type DurationPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType string) time.Duration
+
 // GetProperty gets a interface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
 	return func() interface{} {
@@ -206,6 +212,46 @@ func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) I
 			c.logError(key, filters, err)
 		}
 		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		return val
+	}
+}
+
+// GetIntPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's an integer
+func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue int) IntPropertyFnWithWorkflowTypeFilter {
+	return func(domainName string, workflowType string) int {
+		filters := c.toFilterMap(
+			DomainFilter(domainName),
+			WorkflowTypeFilter(workflowType),
+		)
+		val, err := c.client.GetIntValue(
+			key,
+			filters,
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+		}
+		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		return val
+	}
+}
+
+// GetDurationPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's a duration
+func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key Key, defaultValue time.Duration) DurationPropertyFnWithWorkflowTypeFilter {
+	return func(domainName string, workflowType string) time.Duration {
+		filters := c.toFilterMap(
+			DomainFilter(domainName),
+			WorkflowTypeFilter(workflowType),
+		)
+		val, err := c.client.GetDurationValue(
+			key,
+			filters,
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+		}
+		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
 }

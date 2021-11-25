@@ -1604,6 +1604,9 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 		return 0, err
 	}
 
+	// clearing this field since when creating task in matching we don't have the LastUpdate information
+	leaseResponse.TaskListInfo.LastUpdated = time.Time{}
+
 	taskID := s.GetNextSequenceNumber()
 	tasks := []*p.CreateTaskInfo{
 		{
@@ -1646,6 +1649,8 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 				return []int64{}, err
 			}
 			taskLists[tl] = resp.TaskListInfo
+			// clearing this field since when creating task in matching we don't have the LastUpdate information
+			taskLists[tl].LastUpdated = time.Time{}
 		}
 	}
 
@@ -1949,7 +1954,8 @@ func GenerateRandomDBName(n int) string {
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
-	return string(b)
+	ts := time.Now().Unix()
+	return fmt.Sprintf("%v_%v", ts, string(b))
 }
 
 func pickRandomEncoding() common.EncodingType {

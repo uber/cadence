@@ -44,6 +44,16 @@ func GetIntPropertyFilteredByShardID(value int) func(shardID int) int {
 	return func(shardID int) int { return value }
 }
 
+// GetIntPropertyFilteredByWorkflowType returns values as IntPropertyFnWithWorkflowTypeFilters
+func GetIntPropertyFilteredByWorkflowType(value int) func(domainName string, workflowType string) int {
+	return func(domainName string, workflowType string) int { return value }
+}
+
+// GetDurationPropertyFilteredByWorkflowType returns values as IntPropertyFnWithWorkflowTypeFilters
+func GetDurationPropertyFilteredByWorkflowType(value time.Duration) func(domainName string, workflowType string) time.Duration {
+	return func(domainName string, workflowType string) time.Duration { return value }
+}
+
 // GetFloatPropertyFn returns value as FloatPropertyFn
 func GetFloatPropertyFn(value float64) func(opts ...FilterOption) float64 {
 	return func(...FilterOption) float64 { return value }

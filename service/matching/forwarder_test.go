@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
@@ -82,7 +84,7 @@ func (t *ForwarderTestSuite) TestForwardDecisionTask() {
 
 	var request *types.AddDecisionTaskRequest
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
 	).Return(nil).Times(1)
@@ -106,7 +108,7 @@ func (t *ForwarderTestSuite) TestForwardActivityTask() {
 
 	var request *types.AddActivityTaskRequest
 	t.client.EXPECT().AddActivityTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *types.AddActivityTaskRequest) {
+		func(arg0 context.Context, arg1 *types.AddActivityTaskRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
 	).Return(nil).Times(1)
@@ -156,7 +158,7 @@ func (t *ForwarderTestSuite) TestForwardQueryTask() {
 	resp := &types.QueryWorkflowResponse{}
 	var request *types.MatchingQueryWorkflowRequest
 	t.client.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
 	).Return(resp, nil).Times(1)
@@ -204,7 +206,7 @@ func (t *ForwarderTestSuite) TestForwardPollForDecision() {
 
 	var request *types.MatchingPollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
 	).Return(resp, nil).Times(1)
@@ -232,7 +234,7 @@ func (t *ForwarderTestSuite) TestForwardPollForActivity() {
 
 	var request *types.MatchingPollForActivityTaskRequest
 	t.client.EXPECT().PollForActivityTask(gomock.Any(), gomock.Any()).Do(
-		func(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest) {
+		func(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest, option ...yarpc.CallOption) {
 			request = arg1
 		},
 	).Return(resp, nil).Times(1)

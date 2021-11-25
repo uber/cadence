@@ -4,8 +4,8 @@ This directory contains the cassandra schema for every keyspace that cadence own
 
 ```
 ./schema
-   - keyspace1/
-   - keyspace2/
+   - visibility/           -- Contains schema for visibility data models
+   - cadence/              -- Contains schema for default data models
         - keyspace.cql     -- Contains the keyspace definition
         - schema.cql       -- Contains the latest & greatest snapshot of the schema for the keyspace
         - versioned

@@ -166,12 +166,10 @@ func NewWorkflowHandler(
 				return float64(config.RPS())
 			},
 			func(domain string) float64 {
-				if monitor := resource.GetMembershipMonitor(); monitor != nil && config.GlobalDomainRPS(domain) > 0 {
-					ringSize, err := monitor.GetMemberCount(service.Frontend)
-					if err == nil && ringSize > 0 {
-						avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/ringSize, 1)
-						return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))
-					}
+				memberCount, err := resource.GetMembershipResolver().MemberCount(service.Frontend)
+				if err == nil && memberCount > 0 && config.GlobalDomainRPS(domain) > 0 {
+					avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/memberCount, 1)
+					return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))
 				}
 				return float64(config.MaxDomainRPSPerInstance(domain))
 			},
@@ -505,7 +503,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		scope,
 		idLengthWarnLimit,
 		wh.config.DomainNameMaxLength(domainName),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeDomainName) {
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
@@ -518,7 +519,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		scope,
 		idLengthWarnLimit,
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return nil, wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -603,7 +607,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		scope,
 		idLengthWarnLimit,
 		wh.config.DomainNameMaxLength(domainName),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeDomainName) {
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
@@ -612,7 +619,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		scope,
 		idLengthWarnLimit,
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return nil, wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -987,7 +997,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1091,7 +1104,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope)
 	}
 
@@ -1215,7 +1231,10 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1307,7 +1326,10 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(failedRequest.GetDomain()),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1422,7 +1444,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1526,7 +1551,10 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(cancelRequest.GetDomain()),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1650,7 +1678,10 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return nil, wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1757,7 +1788,10 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.IdentityMaxLength(domainName),
-		metrics.CadenceErrIdentityExceededWarnLimit) {
+		metrics.CadenceErrIdentityExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeIdentity) {
 		return wh.error(errIdentityTooLong, scope, tags...)
 	}
 
@@ -1924,7 +1958,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.DomainNameMaxLength(domainName),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeDomainName) {
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
@@ -1937,7 +1974,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.WorkflowIDMaxLength(domainName),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeWorkflowID) {
 		return nil, wh.error(errWorkflowIDTooLong, scope, tags...)
 	}
 
@@ -1962,7 +2002,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.WorkflowTypeMaxLength(domainName),
-		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeWorkflowType) {
 		return nil, wh.error(errWorkflowTypeTooLong, scope, tags...)
 	}
 
@@ -1991,7 +2034,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.RequestIDMaxLength(domainName),
-		metrics.CadenceErrRequestIDExceededWarnLimit) {
+		metrics.CadenceErrRequestIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeRequestID) {
 		return nil, wh.error(errRequestIDTooLong, scope, tags...)
 	}
 
@@ -2353,7 +2399,10 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.DomainNameMaxLength(domainName),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeDomainName) {
 		return wh.error(errDomainTooLong, scope, tags...)
 	}
 
@@ -2366,7 +2415,10 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.SignalNameMaxLength(domainName),
-		metrics.CadenceErrSignalNameExceededWarnLimit) {
+		metrics.CadenceErrSignalNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeSignalName) {
 		return wh.error(errSignalNameTooLong, scope, tags...)
 	}
 
@@ -2375,7 +2427,10 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.RequestIDMaxLength(domainName),
-		metrics.CadenceErrRequestIDExceededWarnLimit) {
+		metrics.CadenceErrRequestIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeRequestID) {
 		return wh.error(errRequestIDTooLong, scope, tags...)
 	}
 
@@ -2461,7 +2516,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.DomainNameMaxLength(domainName),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeDomainName) {
 		return nil, wh.error(errDomainTooLong, scope, tags...)
 	}
 
@@ -2470,7 +2528,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.WorkflowIDMaxLength(domainName),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeWorkflowID) {
 		return nil, wh.error(errWorkflowIDTooLong, scope, tags...)
 	}
 
@@ -2483,7 +2544,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.SignalNameMaxLength(domainName),
-		metrics.CadenceErrSignalNameExceededWarnLimit) {
+		metrics.CadenceErrSignalNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeSignalName) {
 		return nil, wh.error(errSignalNameTooLong, scope, tags...)
 	}
 
@@ -2496,7 +2560,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.WorkflowTypeMaxLength(domainName),
-		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeWorkflowType) {
 		return nil, wh.error(errWorkflowTypeTooLong, scope, tags...)
 	}
 
@@ -2509,7 +2576,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		scope,
 		idLengthWarnLimit,
 		wh.config.RequestIDMaxLength(domainName),
-		metrics.CadenceErrRequestIDExceededWarnLimit) {
+		metrics.CadenceErrRequestIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeRequestID) {
 		return nil, wh.error(errRequestIDTooLong, scope, tags...)
 	}
 
@@ -3864,7 +3934,10 @@ func (wh *WorkflowHandler) validateTaskList(t *types.TaskList, scope metrics.Sco
 		scope,
 		wh.config.MaxIDLengthWarnLimit(),
 		wh.config.TaskListNameMaxLength(domain),
-		metrics.CadenceErrTaskListNameExceededWarnLimit) {
+		metrics.CadenceErrTaskListNameExceededWarnLimit,
+		domain,
+		wh.GetLogger(),
+		tag.IDTypeTaskListName) {
 		return errTaskListTooLong
 	}
 	return nil

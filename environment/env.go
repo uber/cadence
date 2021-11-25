@@ -58,6 +58,13 @@ const (
 	// MySQLDefaultPassword is default password
 	MySQLDefaultPassword = "cadence"
 
+	// MongoSeeds env
+	MongoSeeds = "MONGO_SEEDS"
+	// MongoPort env
+	MongoPort = "MONGO_PORT"
+	// MongoDefaultPort is Mongo default port
+	MongoDefaultPort = "27017"
+
 	// KafkaSeeds env
 	KafkaSeeds = "KAFKA_SEEDS"
 	// KafkaPort env
@@ -268,4 +275,26 @@ func GetESVersion() string {
 		version = ESDefaultVersion
 	}
 	return version
+}
+
+// GetMongoAddress return the MySQL address
+func GetMongoAddress() string {
+	addr := os.Getenv(MongoSeeds)
+	if addr == "" {
+		addr = Localhost
+	}
+	return addr
+}
+
+// GetMongoPort return the MySQL port
+func GetMongoPort() int {
+	port := os.Getenv(MongoPort)
+	if port == "" {
+		port = MongoDefaultPort
+	}
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		panic(fmt.Sprintf("error getting env %v", MongoPort))
+	}
+	return p
 }

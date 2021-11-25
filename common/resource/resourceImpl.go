@@ -92,11 +92,7 @@ type (
 
 		// membership infos
 
-		membershipMonitor       membership.Monitor
-		frontendServiceResolver membership.ServiceResolver
-		matchingServiceResolver membership.ServiceResolver
-		historyServiceResolver  membership.ServiceResolver
-		workerServiceResolver   membership.ServiceResolver
+		membershipResolver membership.Resolver
 
 		// internal services clients
 
@@ -123,7 +119,6 @@ type (
 
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
-		membershipFactory      MembershipMonitorFactory
 		rpcFactory             common.RPCFactory
 	}
 )
@@ -148,10 +143,7 @@ func New(
 
 	dispatcher := params.RPCFactory.GetDispatcher()
 
-	membershipMonitor, err := params.MembershipFactory.GetMembershipMonitor()
-	if err != nil {
-		return nil, err
-	}
+	membershipResolver := params.MembershipResolver
 
 	dynamicCollection := dynamicconfig.NewCollection(
 		params.DynamicConfig,
@@ -161,7 +153,7 @@ func New(
 	clientBean, err := client.NewClientBean(
 		client.NewRPCClientFactory(
 			params.RPCFactory,
-			membershipMonitor,
+			membershipResolver,
 			params.MetricsClient,
 			dynamicCollection,
 			numShards,
@@ -174,33 +166,13 @@ func New(
 		return nil, err
 	}
 
-	frontendServiceResolver, err := membershipMonitor.GetResolver(service.Frontend)
-	if err != nil {
-		return nil, err
-	}
-
-	matchingServiceResolver, err := membershipMonitor.GetResolver(service.Matching)
-	if err != nil {
-		return nil, err
-	}
-
-	historyServiceResolver, err := membershipMonitor.GetResolver(service.History)
-	if err != nil {
-		return nil, err
-	}
-
-	workerServiceResolver, err := membershipMonitor.GetResolver(service.Worker)
-	if err != nil {
-		return nil, err
-	}
-
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
 			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
-				ringSize, err := membershipMonitor.GetMemberCount(serviceName)
-				if err == nil && ringSize > 0 {
-					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/ringSize, 1)
+				members, err := membershipResolver.MemberCount(serviceName)
+				if err == nil && members > 0 {
+					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/members, 1)
 					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
 				}
 			}
@@ -305,12 +277,7 @@ func New(
 		domainReplicationQueue:  domainReplicationQueue,
 
 		// membership infos
-
-		membershipMonitor:       membershipMonitor,
-		frontendServiceResolver: frontendServiceResolver,
-		matchingServiceResolver: matchingServiceResolver,
-		historyServiceResolver:  historyServiceResolver,
-		workerServiceResolver:   workerServiceResolver,
+		membershipResolver: membershipResolver,
 
 		// internal services clients
 
@@ -342,8 +309,7 @@ func New(
 			logger,
 			params.InstanceID,
 		),
-		membershipFactory: params.MembershipFactory,
-		rpcFactory:        params.RPCFactory,
+		rpcFactory: params.RPCFactory,
 	}
 	return impl, nil
 }
@@ -368,11 +334,11 @@ func (h *Impl) Start() {
 	if err := h.dispatcher.Start(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to start dispatcher")
 	}
-	h.membershipMonitor.Start()
+	h.membershipResolver.Start()
 	h.domainCache.Start()
 	h.domainMetricsScopeCache.Start()
 
-	hostInfo, err := h.membershipMonitor.WhoAmI()
+	hostInfo, err := h.membershipResolver.WhoAmI()
 	if err != nil {
 		h.logger.WithTags(tag.Error(err)).Fatal("fail to get host info from membership monitor")
 	}
@@ -397,7 +363,7 @@ func (h *Impl) Stop() {
 
 	h.domainCache.Stop()
 	h.domainMetricsScopeCache.Stop()
-	h.membershipMonitor.Stop()
+	h.membershipResolver.Stop()
 	if err := h.dispatcher.Stop(); err != nil {
 		h.logger.WithTags(tag.Error(err)).Error("failed to stop dispatcher")
 	}
@@ -477,31 +443,9 @@ func (h *Impl) GetDomainReplicationQueue() domain.ReplicationQueue {
 	return h.domainReplicationQueue
 }
 
-// membership infos
-
-// GetMembershipMonitor return the membership monitor
-func (h *Impl) GetMembershipMonitor() membership.Monitor {
-	return h.membershipMonitor
-}
-
-// GetFrontendServiceResolver return frontend service resolver
-func (h *Impl) GetFrontendServiceResolver() membership.ServiceResolver {
-	return h.frontendServiceResolver
-}
-
-// GetMatchingServiceResolver return matching service resolver
-func (h *Impl) GetMatchingServiceResolver() membership.ServiceResolver {
-	return h.matchingServiceResolver
-}
-
-// GetHistoryServiceResolver return history service resolver
-func (h *Impl) GetHistoryServiceResolver() membership.ServiceResolver {
-	return h.historyServiceResolver
-}
-
-// GetWorkerServiceResolver return worker service resolver
-func (h *Impl) GetWorkerServiceResolver() membership.ServiceResolver {
-	return h.workerServiceResolver
+// GetMembershipResolver return the membership resolver
+func (h *Impl) GetMembershipResolver() membership.Resolver {
+	return h.membershipResolver
 }
 
 // internal services clients

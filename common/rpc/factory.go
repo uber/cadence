@@ -21,12 +21,13 @@
 package rpc
 
 import (
+	"crypto/tls"
 	"net"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -36,13 +37,9 @@ const defaultGRPCSizeLimit = 4 * 1024 * 1024
 
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
-	maxMessageSize int
-
-	logger            log.Logger
+	maxMessageSize    int
 	hostAddressMapper HostAddressMapper
-	tchannel          *tchannel.Transport
 	channel           tchannel.Channel
-	grpc              *grpc.Transport
 	dispatcher        *yarpc.Dispatcher
 }
 
@@ -73,21 +70,26 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 		options = append(options, grpc.ServerMaxRecvMsgSize(p.GRPCMaxMsgSize))
 		options = append(options, grpc.ClientMaxRecvMsgSize(p.GRPCMaxMsgSize))
 	}
-	grpc := grpc.NewTransport(options...)
+	grpcTransport := grpc.NewTransport(options...)
 	if len(p.GRPCAddress) > 0 {
 		listener, err := net.Listen("tcp", p.GRPCAddress)
 		if err != nil {
 			logger.Fatal("Failed to listen on GRPC port", tag.Error(err))
 		}
 
-		inbounds = append(inbounds, grpc.NewInbound(listener))
+		var inboundOptions []grpc.InboundOption
+		if p.InboundTLS != nil {
+			inboundOptions = append(inboundOptions, grpc.InboundCredentials(credentials.NewTLS(p.InboundTLS)))
+		}
+
+		inbounds = append(inbounds, grpcTransport.NewInbound(listener, inboundOptions...))
 		logger.Info("Listening for GRPC requests", tag.Address(p.GRPCAddress))
 	}
 
 	// Create outbounds
 	outbounds := yarpc.Outbounds{}
 	if p.OutboundsBuilder != nil {
-		outbounds, err = p.OutboundsBuilder.Build(grpc, tchannel)
+		outbounds, err = p.OutboundsBuilder.Build(grpcTransport, tchannel)
 		if err != nil {
 			logger.Fatal("Failed to create outbounds", tag.Error(err))
 		}
@@ -103,10 +105,7 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 
 	return &Factory{
 		maxMessageSize:    p.GRPCMaxMsgSize,
-		logger:            logger,
 		hostAddressMapper: p.HostAddressMapper,
-		tchannel:          tchannel,
-		grpc:              grpc,
 		dispatcher:        dispatcher,
 		channel:           ch.Channel(),
 	}
@@ -122,24 +121,6 @@ func (d *Factory) GetChannel() tchannel.Channel {
 	return d.channel
 }
 
-// CreateDispatcherForOutbound creates a dispatcher for outbound connection
-func (d *Factory) CreateDispatcherForOutbound(
-	callerName string,
-	serviceName string,
-	hostName string,
-) (*yarpc.Dispatcher, error) {
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.tchannel.NewSingleOutbound(hostName))
-}
-
-// CreateGRPCDispatcherForOutbound creates a dispatcher for GRPC outbound connection
-func (d *Factory) CreateGRPCDispatcherForOutbound(
-	callerName string,
-	serviceName string,
-	hostName string,
-) (*yarpc.Dispatcher, error) {
-	return d.createOutboundDispatcher(callerName, serviceName, hostName, d.grpc.NewSingleOutbound(hostName))
-}
-
 // ReplaceGRPCPort replaces port in the address to grpc for a given service
 func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
 	return d.hostAddressMapper.GetGRPCAddress(serviceName, hostAddress)
@@ -152,27 +133,10 @@ func (d *Factory) GetMaxMessageSize() int {
 	return d.maxMessageSize
 }
 
-func (d *Factory) createOutboundDispatcher(
-	callerName string,
-	serviceName string,
-	hostName string,
-	outbound transport.UnaryOutbound,
-) (*yarpc.Dispatcher, error) {
-
-	// Setup dispatcher(outbound) for onebox
-	d.logger.Info("Created RPC dispatcher outbound", tag.Address(hostName))
-	dispatcher := yarpc.NewDispatcher(yarpc.Config{
-		Name: callerName,
-		Outbounds: yarpc.Outbounds{
-			serviceName: {Unary: outbound},
-		},
-		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: &responseInfoMiddleware{},
-		},
-	})
-	if err := dispatcher.Start(); err != nil {
-		d.logger.Error("Failed to create outbound transport channel", tag.Error(err))
-		return nil, err
+func createDialer(transport *grpc.Transport, tlsConfig *tls.Config) *grpc.Dialer {
+	var dialOptions []grpc.DialOption
+	if tlsConfig != nil {
+		dialOptions = append(dialOptions, grpc.DialerCredentials(credentials.NewTLS(tlsConfig)))
 	}
-	return dispatcher, nil
+	return transport.NewDialer(dialOptions...)
 }

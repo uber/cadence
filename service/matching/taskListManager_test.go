@@ -27,12 +27,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/golang/mock/gomock"
+	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -272,4 +273,62 @@ func TestCheckIdleTaskList(t *testing.T) {
 	require.Equal(t, int32(0), tlm.stopped)
 	tlm.Stop()
 	require.Equal(t, int32(1), tlm.stopped)
+}
+
+func TestAddTaskStandby(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	cfg := NewConfig(dynamicconfig.NewNopCollection())
+	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+
+	tlm := createTestTaskListManagerWithConfig(controller, cfg)
+	tlMgrStartWithoutNotifyEvent(tlm)
+	// stop taskWriter so that we can check if there's any call to it
+	// otherwise the task persist process is async and hard to test
+	tlm.taskWriter.Stop()
+
+	domainID := uuid.New()
+	workflowID := "some random workflowID"
+	runID := "some random runID"
+
+	addTaskParam := addTaskParams{
+		execution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+		taskInfo: &persistence.TaskInfo{
+			DomainID:               domainID,
+			WorkflowID:             workflowID,
+			RunID:                  runID,
+			ScheduleID:             2,
+			ScheduleToStartTimeout: 5,
+			CreatedTime:            time.Now(),
+		},
+	}
+
+	testStandbyDomainEntry := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: domainID, Name: "some random domain name"},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestAlternativeClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234,
+		cluster.GetTestClusterMetadata(true, true),
+	)
+	mockDomainCache := tlm.domainCache.(*cache.MockDomainCache)
+	mockDomainCache.EXPECT().GetDomainByID(domainID).Return(testStandbyDomainEntry, nil).AnyTimes()
+
+	syncMatch, err := tlm.AddTask(context.Background(), addTaskParam)
+	require.Equal(t, errShutdown, err) // task writer was stopped above
+	require.False(t, syncMatch)
+
+	addTaskParam.forwardedFrom = "from child partition"
+	syncMatch, err = tlm.AddTask(context.Background(), addTaskParam)
+	require.Error(t, errRemoteSyncMatchFailed) // should not persist the task
+	require.False(t, syncMatch)
 }

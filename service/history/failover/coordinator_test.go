@@ -34,6 +34,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -110,10 +112,11 @@ func (s *coordinatorSuite) TestNotifyFailoverMarkers() {
 				},
 			},
 		},
-	).DoAndReturn(func(ctx context.Context, request *types.NotifyFailoverMarkersRequest) error {
+	).DoAndReturn(func(ctx context.Context, request *types.NotifyFailoverMarkersRequest, opts ...yarpc.CallOption) error {
 		close(doneCh)
 		return nil
 	}).Times(1)
+
 	s.coordinator.NotifyFailoverMarkers(
 		1,
 		[]*types.FailoverMarkerAttributes{attributes},

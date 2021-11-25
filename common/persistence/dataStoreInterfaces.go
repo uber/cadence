@@ -629,6 +629,8 @@ type (
 
 	// InternalVisibilityWorkflowExecutionInfo is visibility info for internal response
 	InternalVisibilityWorkflowExecutionInfo struct {
+		DomainID         string
+		WorkflowType     string
 		WorkflowID       string
 		RunID            string
 		TypeName         string

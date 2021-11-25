@@ -326,6 +326,11 @@ func shardupdate(shardupdate string) Tag {
 	return newPredefinedStringTag("shard-update", shardupdate)
 }
 
+// idType returns tag for idType
+func idType(idType string) Tag {
+	return newPredefinedStringTag("id-type", idType)
+}
+
 // general
 
 // Service returns tag for Service
@@ -338,9 +343,9 @@ func Addresses(ads []string) Tag {
 	return newObjectTag("addresses", ads)
 }
 
-// ListenerName returns tag for ListenerName
-func ListenerName(name string) Tag {
-	return newStringTag("listener-name", name)
+// Subscriber returns tag for Subscriber
+func Subscriber(subscriber string) Tag {
+	return newStringTag("subscriber", subscriber)
 }
 
 // Address return tag for Address
@@ -607,6 +612,11 @@ func ESDocID(id string) Tag {
 	return newStringTag("es-doc-id", id)
 }
 
+// ESAggregationID returns tag for ESDocID
+func ESAggregationID(id string) Tag {
+	return newStringTag("es-agg-id", id)
+}
+
 // LoggingCallAtKey is reserved tag
 const LoggingCallAtKey = "logging-call-at"
 
@@ -808,4 +818,9 @@ func ArchivalBlobIntegrityCheckFailReason(blobIntegrityCheckFailReason string) T
 // ArchivalBlobstoreContextTimeout returns tag for ArchivalBlobstoreContextTimeout
 func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag {
 	return newDurationTag("archival-blobstore-context-timeout", blobstoreContextTimeout)
+}
+
+// VisibilityQuery returns tag for the query for getting visibility records
+func VisibilityQuery(query string) Tag {
+	return newStringTag("visibility-query", query)
 }
