@@ -3370,9 +3370,10 @@ func FromPendingChildExecutionInfo(t *types.PendingChildExecutionInfo) *shared.P
 		return nil
 	}
 	return &shared.PendingChildExecutionInfo{
+		Domain:            &t.Domain,
 		WorkflowID:        &t.WorkflowID,
 		RunID:             &t.RunID,
-		WorkflowTypName:   &t.WorkflowTypName,
+		WorkflowTypName:   &t.WorkflowTypeName,
 		InitiatedID:       &t.InitiatedID,
 		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
 	}
@@ -3384,9 +3385,10 @@ func ToPendingChildExecutionInfo(t *shared.PendingChildExecutionInfo) *types.Pen
 		return nil
 	}
 	return &types.PendingChildExecutionInfo{
+		Domain:            t.GetDomain(),
 		WorkflowID:        t.GetWorkflowID(),
 		RunID:             t.GetRunID(),
-		WorkflowTypName:   t.GetWorkflowTypName(),
+		WorkflowTypeName:  t.GetWorkflowTypName(),
 		InitiatedID:       t.GetInitiatedID(),
 		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
 	}

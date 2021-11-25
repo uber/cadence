@@ -5010,11 +5010,20 @@ const (
 
 // PendingChildExecutionInfo is an internal type (TBD...)
 type PendingChildExecutionInfo struct {
+	Domain            string             `json:"domain,omitempty"`
 	WorkflowID        string             `json:"workflowID,omitempty"`
 	RunID             string             `json:"runID,omitempty"`
-	WorkflowTypName   string             `json:"workflowTypName,omitempty"`
+	WorkflowTypeName  string             `json:"workflowTypeName,omitempty"`
 	InitiatedID       int64              `json:"initiatedID,omitempty"`
 	ParentClosePolicy *ParentClosePolicy `json:"parentClosePolicy,omitempty"`
+}
+
+// GetDomain is an internal getter (TBD...)
+func (v *PendingChildExecutionInfo) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
 }
 
 // GetWorkflowID is an internal getter (TBD...)
@@ -5033,10 +5042,10 @@ func (v *PendingChildExecutionInfo) GetRunID() (o string) {
 	return
 }
 
-// GetWorkflowTypName is an internal getter (TBD...)
-func (v *PendingChildExecutionInfo) GetWorkflowTypName() (o string) {
+// GetWorkflowTypeName is an internal getter (TBD...)
+func (v *PendingChildExecutionInfo) GetWorkflowTypeName() (o string) {
 	if v != nil {
-		return v.WorkflowTypName
+		return v.WorkflowTypeName
 	}
 	return
 }

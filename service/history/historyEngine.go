@@ -1491,9 +1491,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 
 	domainID := request.DomainUUID
-	execution := *request.Request.Execution
+	wfExecution := *request.Request.Execution
 
-	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
+	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, wfExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -1607,10 +1607,24 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	if len(mutableState.GetPendingChildExecutionInfos()) > 0 {
 		for _, ch := range mutableState.GetPendingChildExecutionInfos() {
+			childDomainName, err := execution.GetChildExecutionDomainName(
+				ch,
+				e.shard.GetDomainCache(),
+				mutableState.GetDomainEntry(),
+			)
+			if err != nil {
+				if !common.IsEntityNotExistsError(err) {
+					return nil, err
+				}
+				// child domain already deleted, instead of failing the request,
+				// return domainID instead since this field is only for information purpose
+				childDomainName = ch.DomainID
+			}
 			p := &types.PendingChildExecutionInfo{
+				Domain:            childDomainName,
 				WorkflowID:        ch.StartedWorkflowID,
 				RunID:             ch.StartedRunID,
-				WorkflowTypName:   ch.WorkflowTypeName,
+				WorkflowTypeName:  ch.WorkflowTypeName,
 				InitiatedID:       ch.InitiatedID,
 				ParentClosePolicy: &ch.ParentClosePolicy,
 			}

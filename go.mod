@@ -51,7 +51,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.6.1
 	github.com/uber-go/tally v3.3.15+incompatible
-	github.com/uber/cadence-idl v0.0.0-20211111093939-c54ab85c0e0a
+	github.com/uber/cadence-idl v0.0.0-20211125000611-a6d3e3393ba6
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.0
 	github.com/uber/tcheck v1.1.0

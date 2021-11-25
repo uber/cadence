@@ -1996,8 +1996,9 @@ func FromPendingChildExecutionInfo(t *types.PendingChildExecutionInfo) *apiv1.Pe
 		return nil
 	}
 	return &apiv1.PendingChildExecutionInfo{
+		Domain:            t.Domain,
 		WorkflowExecution: FromWorkflowRunPair(t.WorkflowID, t.RunID),
-		WorkflowTypeName:  t.WorkflowTypName,
+		WorkflowTypeName:  t.WorkflowTypeName,
 		InitiatedId:       t.InitiatedID,
 		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
 	}
@@ -2008,9 +2009,10 @@ func ToPendingChildExecutionInfo(t *apiv1.PendingChildExecutionInfo) *types.Pend
 		return nil
 	}
 	return &types.PendingChildExecutionInfo{
+		Domain:            t.Domain,
 		WorkflowID:        ToWorkflowID(t.WorkflowExecution),
 		RunID:             ToRunID(t.WorkflowExecution),
-		WorkflowTypName:   t.WorkflowTypeName,
+		WorkflowTypeName:  t.WorkflowTypeName,
 		InitiatedID:       t.InitiatedId,
 		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
 	}

@@ -379,9 +379,10 @@ var (
 		&PendingActivityInfo,
 	}
 	PendingChildExecutionInfo = types.PendingChildExecutionInfo{
+		Domain:            DomainName,
 		WorkflowID:        WorkflowID,
 		RunID:             RunID,
-		WorkflowTypName:   WorkflowTypeName,
+		WorkflowTypeName:  WorkflowTypeName,
 		InitiatedID:       EventID1,
 		ParentClosePolicy: &ParentClosePolicy,
 	}
