@@ -10786,6 +10786,36 @@ func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetI
 type CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes struct {
 }
 
+type ApplyParentClosePolicyStatus struct {
+	Completed   bool                         `json:"completed,omitempty"`
+	FailedCause *CrossClusterTaskFailedCause `json:"failedCause,omitempty"`
+	Retriable   bool                         `json:"retriable,omitempty"`
+}
+
+// GetDomainID is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyStatus) GetCompleted() (o bool) {
+	if v != nil {
+		return v.Completed
+	}
+	return
+}
+
+// GetFailedCause is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyStatus) GetFailedCause() (o CrossClusterTaskFailedCause) {
+	if v != nil && v.FailedCause != nil {
+		return *v.FailedCause
+	}
+	return
+}
+
+// GetRetriable is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyStatus) GetRetriable() (o bool) {
+	if v != nil {
+		return v.Retriable
+	}
+	return
+}
+
 type ApplyParentClosePolicyAttributes struct {
 	ChildDomainID     string             `json:"ChildDomainID,omitempty"`
 	ChildWorkflowID   string             `json:"ChildWorkflowID,omitempty"`
@@ -10826,8 +10856,8 @@ func (v *ApplyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClos
 }
 
 type ApplyParentClosePolicyRequest struct {
-	Child     *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
-	Completed bool                              `json:"completed,omniempty"`
+	Child  *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
+	Status *ApplyParentClosePolicyStatus     `json:"status,omniempty"`
 }
 
 // GetChild is an internal getter (TBD...)
@@ -10839,9 +10869,9 @@ func (v *ApplyParentClosePolicyRequest) GetParentClosePolicy() (o *ApplyParentCl
 }
 
 // GetChild is an internal getter (TBD...)
-func (v *ApplyParentClosePolicyRequest) GetCompleted() (o bool) {
+func (v *ApplyParentClosePolicyRequest) GetStatus() (o *ApplyParentClosePolicyStatus) {
 	if v != nil {
-		return v.Completed
+		return v.Status
 	}
 	return
 }

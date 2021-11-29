@@ -310,7 +310,9 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 				ChildRunID:        "some random run id",
 				ParentClosePolicy: &policy,
 			},
-			Completed: false,
+			Status: &types.ApplyParentClosePolicyStatus{
+				Completed: false,
+			},
 		},
 	)
 
@@ -560,7 +562,9 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestApplyParentPolicyTask(
 						ChildRunID:        "some random run id",
 						ParentClosePolicy: &policy,
 					},
-					Completed: false,
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 			},
 		},

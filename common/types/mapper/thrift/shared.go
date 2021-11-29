@@ -7396,6 +7396,36 @@ func ToApplyParentClosePolicyAttributes(
 	}
 }
 
+// FromApplyParentClosePolicyStatus converts thrift
+// ApplyParentClosePolicyStatus types to internal
+func FromApplyParentClosePolicyStatus(
+	t *types.ApplyParentClosePolicyStatus,
+) *shared.ApplyParentClosePolicyStatus {
+	if t == nil {
+		return nil
+	}
+	return &shared.ApplyParentClosePolicyStatus{
+		Completed:   &t.Completed,
+		FailedCause: FromCrossClusterTaskFailedCause(t.FailedCause),
+		Retriable:   &t.Retriable,
+	}
+}
+
+// ToApplyParentClosePolicyStatus converts thrift
+// ApplyParentClosePolicyStatus types to internal
+func ToApplyParentClosePolicyStatus(
+	t *shared.ApplyParentClosePolicyStatus,
+) *types.ApplyParentClosePolicyStatus {
+	if t == nil {
+		return nil
+	}
+	return &types.ApplyParentClosePolicyStatus{
+		Completed:   *t.Completed,
+		FailedCause: ToCrossClusterTaskFailedCause(t.FailedCause),
+		Retriable:   *t.Retriable,
+	}
+}
+
 // FromApplyParentClosePolicyRequestArray converts thrift
 // ApplyParentClosePolicyRequestArray types to internal
 func FromApplyParentClosePolicyRequestArray(
@@ -7407,7 +7437,7 @@ func FromApplyParentClosePolicyRequestArray(
 	v := make([]*shared.ApplyParentClosePolicyRequest, len(t))
 	for i := range t {
 		v[i].Child = FromApplyParentClosePolicyAttributes(t[i].Child)
-		v[i].Completed = &t[i].Completed
+		v[i].Status = FromApplyParentClosePolicyStatus(t[i].Status)
 	}
 	return v
 }
@@ -7423,7 +7453,7 @@ func ToApplyParentClosePolicyRequestArray(
 	v := make([]*types.ApplyParentClosePolicyRequest, len(t))
 	for i := range t {
 		v[i].Child = ToApplyParentClosePolicyAttributes(t[i].Child)
-		v[i].Completed = *t[i].Completed
+		v[i].Status = ToApplyParentClosePolicyStatus(t[i].Status)
 	}
 	return v
 }

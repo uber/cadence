@@ -1411,6 +1411,30 @@ func ToCrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes(t *sha
 	return &types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
 }
 
+// FromApplyParentClosePolicyStatus converts internal ApplyParentClosePolicyStatus type to proto
+func FromApplyParentClosePolicyStatus(t *types.ApplyParentClosePolicyStatus) *sharedv1.ApplyParentClosePolicyStatus {
+	if t == nil {
+		return nil
+	}
+	return &sharedv1.ApplyParentClosePolicyStatus{
+		Completed:   t.Completed,
+		FailedCause: FromCrossClusterTaskFailedCause(t.FailedCause),
+		Retriable:   t.Retriable,
+	}
+}
+
+// ToApplyParentClosePolicyStatus converts proto ApplyParentClosePolicyStatus type to internal
+func ToApplyParentClosePolicyStatus(t *sharedv1.ApplyParentClosePolicyStatus) *types.ApplyParentClosePolicyStatus {
+	if t == nil {
+		return nil
+	}
+	return &types.ApplyParentClosePolicyStatus{
+		Completed:   t.Completed,
+		FailedCause: ToCrossClusterTaskFailedCause(t.FailedCause),
+		Retriable:   t.Retriable,
+	}
+}
+
 // FromApplyParentClosePolicyAttributes converts internal ApplyParentClosePolicyAttributes type to proto
 func FromApplyParentClosePolicyAttributes(t *types.ApplyParentClosePolicyAttributes) *sharedv1.ApplyParentClosePolicyAttributes {
 	if t == nil {
@@ -1469,8 +1493,8 @@ func FromCrossClusterApplyParentClosePolicyRequestAttributes(t *types.CrossClust
 		requestAttributes.Children = append(
 			requestAttributes.Children,
 			&sharedv1.ApplyParentClosePolicyRequest{
-				Child:     FromApplyParentClosePolicyAttributes(execution.Child),
-				Completed: execution.Completed,
+				Child:  FromApplyParentClosePolicyAttributes(execution.Child),
+				Status: FromApplyParentClosePolicyStatus(execution.Status),
 			},
 		)
 	}
@@ -1487,8 +1511,8 @@ func ToCrossClusterApplyParentClosePolicyRequestAttributes(t *sharedv1.CrossClus
 		requestAttributes.Children = append(
 			requestAttributes.Children,
 			&types.ApplyParentClosePolicyRequest{
-				Child:     ToApplyParentClosePolicyAttributes(execution.Child),
-				Completed: execution.Completed,
+				Child:  ToApplyParentClosePolicyAttributes(execution.Child),
+				Status: ToApplyParentClosePolicyStatus(execution.Status),
 			},
 		)
 	}

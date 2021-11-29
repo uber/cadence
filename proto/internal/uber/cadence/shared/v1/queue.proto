@@ -129,9 +129,15 @@ message ApplyParentClosePolicyAttributes {
   api.v1.ParentClosePolicy parent_close_policy = 4;
 }
 
+message ApplyParentClosePolicyStatus {
+  bool completed = 1;
+  CrossClusterTaskFailedCause failed_cause = 2;
+  bool retriable = 3;
+}
+
 message ApplyParentClosePolicyRequest {
   ApplyParentClosePolicyAttributes child = 1;
-  bool completed =2;
+  ApplyParentClosePolicyStatus status =2;
 }
 
 message CrossClusterApplyParentClosePolicyRequestAttributes {

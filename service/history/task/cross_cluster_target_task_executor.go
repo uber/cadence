@@ -245,7 +245,7 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 	for _, child := range attributes.Children {
 		// DON'T RETURN ERROR INSIDE THIS LOOP, CONVERT THEM AND ASSIGN IT TO EACH CHILD'S FailedCause
 		childAttrs := child.Child
-		if child.Completed {
+		if child.Status != nil && child.Status.Completed {
 			// This means we are in retry and this child was already successfully processed before
 			response.ChildrenStatus = append(
 				response.ChildrenStatus,
@@ -253,8 +253,22 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 					Child:       childAttrs,
 					FailedCause: nil,
 				})
+			continue
 		}
-		child.Completed = false
+		if child.Status != nil && child.Status.FailedCause != nil && !child.Status.Retriable {
+			// This means child failed with a non-retriable error before, there's nothing to do
+			response.ChildrenStatus = append(
+				response.ChildrenStatus,
+				&types.ApplyParentClosePolicyResult{
+					Child:       childAttrs,
+					FailedCause: child.Status.FailedCause,
+				})
+			continue
+		}
+		if child.Status == nil {
+			child.Status = &types.ApplyParentClosePolicyStatus{}
+		}
+		child.Status.Completed = false
 		scope := t.metricsClient.Scope(metrics.CrossClusterSourceTaskApplyParentClosePolicyScope)
 		var failedCause *types.CrossClusterTaskFailedCause
 		retriable := false
@@ -282,13 +296,15 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			*types.CancellationAlreadyRequestedError:
 			// expected error, no-op
 			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
-			child.Completed = true
+			child.Status.Completed = true
 		case nil:
 			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
-			child.Completed = true
+			child.Status.Completed = true
 		default:
 			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 			failedCause, retriable = t.convertErrorToFailureCause(err)
+			child.Status.FailedCause = failedCause
+			child.Status.Retriable = retriable
 			// return error only if the error is retriable
 			if retriable {
 				anyErr = err

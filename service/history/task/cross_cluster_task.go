@@ -560,7 +560,9 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 						ChildRunID:        childInfo.StartedRunID,
 						ParentClosePolicy: &childInfo.ParentClosePolicy,
 					},
-					Completed: false,
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 			)
 		}
