@@ -208,13 +208,16 @@ func (m *StartWorkflowExecutionResponse) GetRunId() string {
 }
 
 type SignalWorkflowExecutionRequest struct {
-	Request                   *v1.SignalWorkflowExecutionRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	DomainId                  string                             `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	ExternalWorkflowExecution *v1.WorkflowExecution              `protobuf:"bytes,3,opt,name=external_workflow_execution,json=externalWorkflowExecution,proto3" json:"external_workflow_execution,omitempty"`
-	ChildWorkflowOnly         bool                               `protobuf:"varint,4,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
-	XXX_NoUnkeyedLiteral      struct{}                           `json:"-"`
-	XXX_unrecognized          []byte                             `json:"-"`
-	XXX_sizecache             int32                              `json:"-"`
+	Request  *v1.SignalWorkflowExecutionRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	DomainId string                             `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	// workflow execution that requests this signal, for making sure
+	// the workflow being signaled is actually a child of the workflow
+	// making the request
+	ExternalWorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=external_workflow_execution,json=externalWorkflowExecution,proto3" json:"external_workflow_execution,omitempty"`
+	ChildWorkflowOnly         bool                  `protobuf:"varint,4,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	XXX_NoUnkeyedLiteral      struct{}              `json:"-"`
+	XXX_unrecognized          []byte                `json:"-"`
+	XXX_sizecache             int32                 `json:"-"`
 }
 
 func (m *SignalWorkflowExecutionRequest) Reset()         { *m = SignalWorkflowExecutionRequest{} }
@@ -528,7 +531,7 @@ func (m *ResetWorkflowExecutionResponse) GetRunId() string {
 type TerminateWorkflowExecutionRequest struct {
 	Request  *v1.TerminateWorkflowExecutionRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
 	DomainId string                                `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	// workflow execution that requests this terminate, for making sure
+	// workflow execution that requests this termination, for making sure
 	// the workflow being terminated is actually a child of the workflow
 	// making the request
 	ExternalWorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=external_workflow_execution,json=externalWorkflowExecution,proto3" json:"external_workflow_execution,omitempty"`
@@ -2565,13 +2568,16 @@ func (m *RemoveSignalMutableStateResponse) XXX_DiscardUnknown() {
 var xxx_messageInfo_RemoveSignalMutableStateResponse proto.InternalMessageInfo
 
 type RequestCancelWorkflowExecutionRequest struct {
-	DomainId              string                                    `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	CancelRequest         *v1.RequestCancelWorkflowExecutionRequest `protobuf:"bytes,2,opt,name=cancel_request,json=cancelRequest,proto3" json:"cancel_request,omitempty"`
-	ExternalExecutionInfo *v1.ExternalExecutionInfo                 `protobuf:"bytes,3,opt,name=external_execution_info,json=externalExecutionInfo,proto3" json:"external_execution_info,omitempty"`
-	ChildWorkflowOnly     bool                                      `protobuf:"varint,4,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
-	XXX_NoUnkeyedLiteral  struct{}                                  `json:"-"`
-	XXX_unrecognized      []byte                                    `json:"-"`
-	XXX_sizecache         int32                                     `json:"-"`
+	DomainId      string                                    `protobuf:"bytes,1,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	CancelRequest *v1.RequestCancelWorkflowExecutionRequest `protobuf:"bytes,2,opt,name=cancel_request,json=cancelRequest,proto3" json:"cancel_request,omitempty"`
+	// workflow execution that requests this cancellation, for making sure
+	// the workflow being cancelled is actually a child of the workflow
+	// making the request
+	ExternalExecutionInfo *v1.ExternalExecutionInfo `protobuf:"bytes,3,opt,name=external_execution_info,json=externalExecutionInfo,proto3" json:"external_execution_info,omitempty"`
+	ChildWorkflowOnly     bool                      `protobuf:"varint,4,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	XXX_NoUnkeyedLiteral  struct{}                  `json:"-"`
+	XXX_unrecognized      []byte                    `json:"-"`
+	XXX_sizecache         int32                     `json:"-"`
 }
 
 func (m *RequestCancelWorkflowExecutionRequest) Reset()         { *m = RequestCancelWorkflowExecutionRequest{} }
