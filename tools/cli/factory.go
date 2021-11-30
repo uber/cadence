@@ -22,7 +22,9 @@ package cli
 
 import (
 	"context"
+	"time"
 
+	"github.com/olivere/elastic"
 	"github.com/urfave/cli"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
@@ -57,6 +59,8 @@ type ClientFactory interface {
 	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
 	ServerFrontendClient(c *cli.Context) frontend.Client
 	ServerAdminClient(c *cli.Context) admin.Client
+
+	ElasticSearchClient(c *cli.Context) *elastic.Client
 }
 
 type clientFactory struct {
@@ -93,6 +97,22 @@ func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
 	return admin.NewThriftClient(serverAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
+}
+
+// ElasticSearchClient builds an ElasticSearch client
+func (b *clientFactory) ElasticSearchClient(c *cli.Context) *elastic.Client {
+	url := getRequiredOption(c, FlagURL)
+	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))
+
+	client, err := elastic.NewClient(
+		elastic.SetURL(url),
+		elastic.SetRetrier(retrier),
+	)
+	if err != nil {
+		b.logger.Fatal("Unable to create ElasticSearch client", zap.Error(err))
+	}
+
+	return client
 }
 
 func (b *clientFactory) ensureDispatcher(c *cli.Context) {
