@@ -48,11 +48,11 @@ func (db *cdb) SetupTestDatabase(schemaBaseDir string) error {
 		return err
 	}
 	if schemaBaseDir == "" {
-		cadencePackageDir, err := getCadencePackageDir()
+		var err error
+		schemaBaseDir, err = nosqlplugin.GetDefaultTestSchemaDir(testSchemaDir)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		schemaBaseDir = cadencePackageDir + testSchemaDir
 	}
 
 	err = db.loadSchema([]string{"schema.cql"}, schemaBaseDir)
@@ -86,16 +86,6 @@ func (db *cdb) loadVisibilitySchema(fileNames []string, schemaBaseDir string) er
 		return err
 	}
 	return nil
-}
-
-func getCadencePackageDir() (string, error) {
-	cadencePackageDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	cadenceIndex := strings.LastIndex(cadencePackageDir, "/cadence/")
-	cadencePackageDir = cadencePackageDir[:cadenceIndex+len("/cadence/")]
-	return cadencePackageDir, err
 }
 
 func (db *cdb) TeardownTestDatabase() error {

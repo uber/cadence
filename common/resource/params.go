@@ -49,7 +49,7 @@ type (
 		ThrottledLogger log.Logger
 
 		MetricScope              tally.Scope
-		MembershipFactory        MembershipMonitorFactory
+		MembershipResolver       membership.Resolver
 		RPCFactory               common.RPCFactory
 		PProfInitializer         common.PProfInitializer
 		PersistenceConfig        config.Persistence
@@ -67,12 +67,6 @@ type (
 		ArchiverProvider         provider.ArchiverProvider
 		Authorizer               authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
 		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
-	}
-
-	// MembershipMonitorFactory provides a bootstrapped membership monitor
-	MembershipMonitorFactory interface {
-		// GetMembershipMonitor return a membership monitor
-		GetMembershipMonitor() (membership.Monitor, error)
 	}
 )
 

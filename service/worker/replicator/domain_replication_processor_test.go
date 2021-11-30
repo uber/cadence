@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -67,8 +68,8 @@ func (s *domainReplicationSuite) SetupTest() {
 	s.taskExecutor = domain.NewMockReplicationTaskExecutor(s.controller)
 	s.domainReplicationQueue = domain.NewMockReplicationQueue(s.controller)
 	s.remoteClient = resource.RemoteAdminClient
-	serviceResolver := resource.WorkerServiceResolver
-	serviceResolver.EXPECT().Lookup(s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
+	serviceResolver := resource.MembershipResolver
+	serviceResolver.EXPECT().Lookup(service.Worker, s.sourceCluster).Return(resource.GetHostInfo(), nil).AnyTimes()
 	s.replicationProcessor = newDomainReplicationProcessor(
 		s.sourceCluster,
 		s.currentCluster,
@@ -208,7 +209,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnExecuti
 func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 	domainID1 := uuid.New()
 	domainID2 := uuid.New()
-	lastMessageID := int64(1000)
+	lastMessageID := int64(1001)
 	resp := &types.GetDomainReplicationMessagesResponse{
 		Messages: &types.ReplicationMessages{
 			ReplicationTasks: []*types.ReplicationTask{
@@ -230,7 +231,7 @@ func (s *domainReplicationSuite) TestFetchDomainReplicationTasks_FailedOnDLQ() {
 	}
 	s.remoteClient.EXPECT().GetDomainReplicationMessages(gomock.Any(), gomock.Any()).Return(resp, nil)
 	s.taskExecutor.EXPECT().Execute(gomock.Any()).Return(nil).AnyTimes()
-	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(1)
+	s.domainReplicationQueue.EXPECT().PublishToDLQ(gomock.Any(), gomock.Any()).Return(errors.New("test")).Times(0)
 
 	s.replicationProcessor.fetchDomainReplicationTasks()
 	s.Equal(lastMessageID, s.replicationProcessor.lastProcessedMessageID)

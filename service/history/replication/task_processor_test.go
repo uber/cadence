@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -324,7 +326,7 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 	jsArray, err := json.Marshal(fixExecution)
 	s.NoError(err)
 	s.mockFrontendClient.EXPECT().SignalWithStartWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.SignalWithStartWorkflowExecutionRequest) {
+		func(_ context.Context, request *types.SignalWithStartWorkflowExecutionRequest, option ...yarpc.CallOption) {
 			s.Equal(common.SystemLocalDomainName, request.GetDomain())
 			s.Equal(reconciliation.CheckDataCorruptionWorkflowID, request.GetWorkflowID())
 			s.Equal(reconciliation.CheckDataCorruptionWorkflowType, request.GetWorkflowType().GetName())

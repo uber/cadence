@@ -22,6 +22,7 @@ package elasticsearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -58,6 +59,8 @@ type (
 		Search(ctx context.Context, request *SearchRequest) (*SearchResponse, error)
 		// SearchByQuery is the generic purpose searching
 		SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*SearchResponse, error)
+		// SearchRaw is for searching with raw json. Returns RawResult object which is subset of ESv6 and ESv7 response
+		SearchRaw(ctx context.Context, index, query string) (*RawResponse, error)
 		// ScanByQuery is also generic purpose searching, but implemented with ScrollService of ElasticSearch,
 		// which is more performant for pagination, but comes with some limitation of in-parallel requests.
 		ScanByQuery(ctx context.Context, request *ScanByQueryRequest) (*SearchResponse, error)
@@ -211,6 +214,7 @@ type (
 		WorkflowID    string
 		RunID         string
 		WorkflowType  string
+		DomainID      string
 		StartTime     int64
 		ExecutionTime int64
 		CloseTime     int64
@@ -222,5 +226,16 @@ type (
 		IsCron        bool
 		NumClusters   int16
 		Attr          map[string]interface{}
+	}
+
+	SearchHits struct {
+		TotalHits int64
+		Hits      []*p.InternalVisibilityWorkflowExecutionInfo
+	}
+
+	RawResponse struct {
+		TookInMillis int64
+		Hits         SearchHits
+		Aggregations map[string]json.RawMessage
 	}
 )
