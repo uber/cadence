@@ -26,6 +26,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/pborman/uuid"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/encoded"
@@ -257,6 +258,7 @@ func signalRemoteCluster(
 
 		_, err = remoteClient.SignalWithStartWorkflowExecution(signalCtx, &types.SignalWithStartWorkflowExecutionRequest{
 			Domain:                              common.SystemLocalDomainName,
+			RequestID:                           uuid.New(),
 			WorkflowID:                          fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(numWorkflows)),
 			WorkflowType:                        &types.WorkflowType{Name: processorWFTypeName},
 			TaskList:                            &types.TaskList{Name: processorTaskListName},
