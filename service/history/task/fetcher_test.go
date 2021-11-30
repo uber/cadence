@@ -224,6 +224,7 @@ func (s *fetcherSuite) TestAggregator() {
 }
 
 func (s *fetcherSuite) testFetchTaskFn(
+	ctx context.Context,
 	clientBean client.Bean,
 	sourceCluster string,
 	currentCluster string,
