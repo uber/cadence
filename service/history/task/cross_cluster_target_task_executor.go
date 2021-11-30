@@ -249,6 +249,10 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 		err = applyParentClosePolicy(
 			ctx,
 			t.historyClient,
+			&types.WorkflowExecution{
+				WorkflowID: task.GetWorkflowID(),
+				RunID:      task.GetRunID(),
+			},
 			childAttrs.ChildDomainID,
 			targetDomainName,
 			childAttrs.ChildWorkflowID,
@@ -256,7 +260,11 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			*childAttrs.ParentClosePolicy,
 		)
 		switch err.(type) {
-		case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
+		case nil:
+			continue
+		case *types.EntityNotExistsError,
+			*types.WorkflowExecutionAlreadyCompletedError,
+			*types.CancellationAlreadyRequestedError:
 			// expected error, no-op
 			break
 		default:

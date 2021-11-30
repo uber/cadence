@@ -1889,7 +1889,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 				continue
 			}
 
-			domainName, err := execution.GetChildExecutionDomainName(childInfo, t.shard.GetDomainCache(), parentDomainEntry)
+			domainEntry, err := execution.GetChildExecutionDomainEntry(childInfo, t.shard.GetDomainCache(), parentDomainEntry)
 			if common.IsEntityNotExistsError(err) {
 				continue
 			}
@@ -1898,7 +1898,8 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 			}
 
 			executions = append(executions, parentclosepolicy.RequestDetail{
-				DomainName: domainName,
+				DomainID:   domainEntry.GetInfo().ID,
+				DomainName: domainEntry.GetInfo().Name,
 				WorkflowID: childInfo.StartedWorkflowID,
 				RunID:      childInfo.StartedRunID,
 				Policy:     childInfo.ParentClosePolicy,
@@ -1910,6 +1911,10 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 		}
 
 		request := parentclosepolicy.Request{
+			ParentExecution: types.WorkflowExecution{
+				WorkflowID: task.WorkflowID,
+				RunID:      task.RunID,
+			},
 			Executions: executions,
 		}
 
@@ -1918,25 +1923,31 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 	}
 
 	for initiatedID, childDomainID := range sameClusterChildDomainIDs {
-		domainName, err := t.shard.GetDomainCache().GetDomainName(childDomainID)
+		childDomainName, err := t.shard.GetDomainCache().GetDomainName(childDomainID)
 		if err != nil {
 			// domainName is not actually used when applyParentClosePolicy is calling
 			// history service for terminating or cancelling workflow
-			domainName = childDomainID
+			childDomainName = childDomainID
 		}
 
 		childInfo := childInfos[initiatedID]
 		if err := applyParentClosePolicy(
 			ctx,
 			t.historyClient,
+			&types.WorkflowExecution{
+				WorkflowID: task.WorkflowID,
+				RunID:      task.RunID,
+			},
 			childDomainID,
-			domainName,
+			childDomainName,
 			childInfo.StartedWorkflowID,
 			childInfo.StartedRunID,
 			childInfo.ParentClosePolicy,
 		); err != nil {
 			switch err.(type) {
-			case *types.EntityNotExistsError, *types.WorkflowExecutionAlreadyCompletedError, *types.CancellationAlreadyRequestedError:
+			case *types.EntityNotExistsError,
+				*types.WorkflowExecutionAlreadyCompletedError,
+				*types.CancellationAlreadyRequestedError:
 				// expected error, no-op
 				break
 			default:
@@ -1952,6 +1963,7 @@ func (t *transferActiveTaskExecutor) processParentClosePolicy(
 func applyParentClosePolicy(
 	ctx context.Context,
 	historyClient history.Client,
+	parentWorkflowExecution *types.WorkflowExecution,
 	childDomainID string,
 	childDomainName string,
 	childStartedWorkflowID string,
@@ -1980,6 +1992,8 @@ func applyParentClosePolicy(
 				Reason:   "by parent close policy",
 				Identity: execution.IdentityHistoryService,
 			},
+			ExternalWorkflowExecution: parentWorkflowExecution,
+			ChildWorkflowOnly:         true,
 		})
 
 	case types.ParentClosePolicyRequestCancel:
@@ -1993,6 +2007,8 @@ func applyParentClosePolicy(
 				},
 				Identity: execution.IdentityHistoryService,
 			},
+			ExternalWorkflowExecution: parentWorkflowExecution,
+			ChildWorkflowOnly:         true,
 		})
 
 	default:
