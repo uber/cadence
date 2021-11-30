@@ -1419,7 +1419,6 @@ func FromApplyParentClosePolicyStatus(t *types.ApplyParentClosePolicyStatus) *sh
 	return &sharedv1.ApplyParentClosePolicyStatus{
 		Completed:   t.Completed,
 		FailedCause: FromCrossClusterTaskFailedCause(t.FailedCause),
-		Retriable:   t.Retriable,
 	}
 }
 
@@ -1431,7 +1430,6 @@ func ToApplyParentClosePolicyStatus(t *sharedv1.ApplyParentClosePolicyStatus) *t
 	return &types.ApplyParentClosePolicyStatus{
 		Completed:   t.Completed,
 		FailedCause: ToCrossClusterTaskFailedCause(t.FailedCause),
-		Retriable:   t.Retriable,
 	}
 }
 

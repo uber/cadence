@@ -215,8 +215,9 @@ func getWorkflowCloseTestCases() []struct {
 		},
 		// UNEXPECTED ERROR
 		{
-			targetError:         types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
-			expectedError:       errUnexpectedErrorFromTarget,
+			targetError: types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
+			// for unexpected errors we return errContinueExecution which is converted to nil
+			expectedError:       nil,
 			expectedTaskState:   ctask.TaskStatePending,
 			willGenerateNewTask: false,
 		},
@@ -398,7 +399,6 @@ func (s *crossClusterSourceTaskExecutorSuite) testApplyParentClosePolicy(
 		task *crossClusterSourceTask,
 	),
 ) {
-
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
 	s.NoError(err)
 
@@ -465,7 +465,7 @@ func (s *crossClusterSourceTaskExecutorSuite) testApplyParentClosePolicy(
 	setupMockFn(mutableState, workflowExecution, event)
 
 	err = s.executor.Execute(crossClusterTask, true)
-	s.Equal(err, expectedError)
+	s.Equal(expectedError, err)
 
 	if taskStateValidationFn != nil {
 		taskStateValidationFn(crossClusterTask)

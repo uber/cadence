@@ -313,11 +313,17 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 		return errContinueExecution
 	}
 
+	// When processing state = processingStateInitialized, there's nothing we need to do
+	// task is already complete, ack the task. All the other states are invalid
+	if processingState(task.response.TaskState) != processingStateInitialized {
+		return errUnknownTaskProcessingState
+	}
+
 	childrenStatus := task.response.ApplyParentClosePolicyAttributes.ChildrenStatus
 
-	err = nil
 	failedDomains := map[string]struct{}{}
 	domainsToRegenerateTask := map[string]struct{}{}
+	scope := t.metricsClient.Scope(metrics.CrossClusterSourceTaskApplyParentClosePolicyScope)
 
 	for _, result := range childrenStatus {
 		// handle common errors
@@ -326,16 +332,22 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 			switch *failedCause {
 			case types.CrossClusterTaskFailedCauseDomainNotActive:
 				domainsToRegenerateTask[result.Child.ChildDomainID] = struct{}{}
+				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 				continue
 			case types.CrossClusterTaskFailedCauseWorkflowNotExists,
 				types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
 				// Do nothing, these errors are expected if the target workflow is already closed
+				scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 			default:
-				// this error will be overriden if there are more than one. so we will use the first error as the failure
-				err = errUnexpectedErrorFromTarget
+				t.logger.Error(fmt.Sprintf(
+					"Unexpected CrossCluster ApplyParentClosePolicy Error: %#v",
+					failedCause.String()))
 				failedDomains[result.Child.ChildDomainID] = struct{}{}
+				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 				continue
 			}
+		} else {
+			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 		}
 	}
 
@@ -351,16 +363,11 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 	if len(failedDomains) > 0 {
 		taskInfo.TargetDomainIDs = failedDomains
 		t.setTaskState(task, ctask.TaskStatePending, processingStateInitialized)
-		return err
+
+		return errContinueExecution
 	}
 
-	// When processing state = processingStateInitialized, there's nothing we need to do
-	// task is already complete, ack the task. All the other states are invalid
-	if processingState(task.response.TaskState) != processingStateInitialized {
-		return errUnknownTaskProcessingState
-	}
-
-	return err // should be nil
+	return nil
 }
 
 func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(
@@ -397,7 +404,7 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
 			// Do nothing, these errors are expected if the target workflow is already closed
 		default:
-			return errUnexpectedErrorFromTarget
+			return errContinueExecution
 		}
 	}
 

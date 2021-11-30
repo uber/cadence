@@ -10789,7 +10789,6 @@ type CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes struct {
 type ApplyParentClosePolicyStatus struct {
 	Completed   bool                         `json:"completed,omitempty"`
 	FailedCause *CrossClusterTaskFailedCause `json:"failedCause,omitempty"`
-	Retriable   bool                         `json:"retriable,omitempty"`
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -10804,14 +10803,6 @@ func (v *ApplyParentClosePolicyStatus) GetCompleted() (o bool) {
 func (v *ApplyParentClosePolicyStatus) GetFailedCause() (o CrossClusterTaskFailedCause) {
 	if v != nil && v.FailedCause != nil {
 		return *v.FailedCause
-	}
-	return
-}
-
-// GetRetriable is an internal getter (TBD...)
-func (v *ApplyParentClosePolicyStatus) GetRetriable() (o bool) {
-	if v != nil {
-		return v.Retriable
 	}
 	return
 }
@@ -10860,7 +10851,7 @@ type ApplyParentClosePolicyRequest struct {
 	Status *ApplyParentClosePolicyStatus     `json:"status,omniempty"`
 }
 
-// GetChild is an internal getter (TBD...)
+// GetParentClosePolicy is an internal getter (TBD...)
 func (v *ApplyParentClosePolicyRequest) GetParentClosePolicy() (o *ApplyParentClosePolicyAttributes) {
 	if v != nil {
 		return v.Child

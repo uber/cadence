@@ -132,7 +132,6 @@ message ApplyParentClosePolicyAttributes {
 message ApplyParentClosePolicyStatus {
   bool completed = 1;
   CrossClusterTaskFailedCause failed_cause = 2;
-  bool retriable = 3;
 }
 
 message ApplyParentClosePolicyRequest {

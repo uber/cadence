@@ -251,16 +251,6 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 				response.ChildrenStatus,
 				&types.ApplyParentClosePolicyResult{
 					Child:       childAttrs,
-					FailedCause: nil,
-				})
-			continue
-		}
-		if child.Status != nil && child.Status.FailedCause != nil && !child.Status.Retriable {
-			// This means child failed with a non-retriable error before, there's nothing to do
-			response.ChildrenStatus = append(
-				response.ChildrenStatus,
-				&types.ApplyParentClosePolicyResult{
-					Child:       childAttrs,
 					FailedCause: child.Status.FailedCause,
 				})
 			continue
@@ -269,7 +259,6 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			child.Status = &types.ApplyParentClosePolicyStatus{}
 		}
 		child.Status.Completed = false
-		scope := t.metricsClient.Scope(metrics.CrossClusterSourceTaskApplyParentClosePolicyScope)
 		var failedCause *types.CrossClusterTaskFailedCause
 		retriable := false
 
@@ -295,16 +284,13 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 			*types.WorkflowExecutionAlreadyCompletedError,
 			*types.CancellationAlreadyRequestedError:
 			// expected error, no-op
-			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 			child.Status.Completed = true
 		case nil:
-			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 			child.Status.Completed = true
 		default:
-			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
 			failedCause, retriable = t.convertErrorToFailureCause(err)
 			child.Status.FailedCause = failedCause
-			child.Status.Retriable = retriable
+			child.Status.Completed = !retriable
 			// return error only if the error is retriable
 			if retriable {
 				anyErr = err
