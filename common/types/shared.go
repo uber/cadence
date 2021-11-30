@@ -10848,11 +10848,11 @@ func (v *ApplyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClos
 
 type ApplyParentClosePolicyRequest struct {
 	Child  *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
-	Status *ApplyParentClosePolicyStatus     `json:"status,omniempty"`
+	Status *ApplyParentClosePolicyStatus     `json:"status,omitempty"`
 }
 
-// GetParentClosePolicy is an internal getter (TBD...)
-func (v *ApplyParentClosePolicyRequest) GetParentClosePolicy() (o *ApplyParentClosePolicyAttributes) {
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyRequest) GetChild() (o *ApplyParentClosePolicyAttributes) {
 	if v != nil {
 		return v.Child
 	}

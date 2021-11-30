@@ -404,6 +404,7 @@ func (t *crossClusterSourceTaskExecutor) executeRecordChildWorkflowExecutionComp
 			types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
 			// Do nothing, these errors are expected if the target workflow is already closed
 		default:
+			t.setTaskState(task, ctask.TaskStatePending, processingState(task.response.TaskState))
 			return errContinueExecution
 		}
 	}
