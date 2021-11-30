@@ -274,6 +274,9 @@ message ResetWorkflowExecutionResponse {
 message TerminateWorkflowExecutionRequest {
   api.v1.TerminateWorkflowExecutionRequest request = 1;
   string domain_id = 2;
+  // workflow execution that requests this terminate, for making sure
+  // the workflow being terminated is actually a child of the workflow
+  // making the request
   api.v1.WorkflowExecution external_workflow_execution = 3;
   bool child_workflow_only = 4;
 }

@@ -526,13 +526,16 @@ func (m *ResetWorkflowExecutionResponse) GetRunId() string {
 }
 
 type TerminateWorkflowExecutionRequest struct {
-	Request                   *v1.TerminateWorkflowExecutionRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	DomainId                  string                                `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	ExternalWorkflowExecution *v1.WorkflowExecution                 `protobuf:"bytes,3,opt,name=external_workflow_execution,json=externalWorkflowExecution,proto3" json:"external_workflow_execution,omitempty"`
-	ChildWorkflowOnly         bool                                  `protobuf:"varint,4,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
-	XXX_NoUnkeyedLiteral      struct{}                              `json:"-"`
-	XXX_unrecognized          []byte                                `json:"-"`
-	XXX_sizecache             int32                                 `json:"-"`
+	Request  *v1.TerminateWorkflowExecutionRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	DomainId string                                `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	// workflow execution that requests this terminate, for making sure
+	// the workflow being terminated is actually a child of the workflow
+	// making the request
+	ExternalWorkflowExecution *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=external_workflow_execution,json=externalWorkflowExecution,proto3" json:"external_workflow_execution,omitempty"`
+	ChildWorkflowOnly         bool                  `protobuf:"varint,4,opt,name=child_workflow_only,json=childWorkflowOnly,proto3" json:"child_workflow_only,omitempty"`
+	XXX_NoUnkeyedLiteral      struct{}              `json:"-"`
+	XXX_unrecognized          []byte                `json:"-"`
+	XXX_sizecache             int32                 `json:"-"`
 }
 
 func (m *TerminateWorkflowExecutionRequest) Reset()         { *m = TerminateWorkflowExecutionRequest{} }

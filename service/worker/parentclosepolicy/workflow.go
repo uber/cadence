@@ -22,13 +22,13 @@ package parentclosepolicy
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/client"
@@ -243,13 +243,13 @@ func signalRemoteCluster(
 	for cluster, executions := range remoteExecutions {
 		remoteClient := clientBean.GetRemoteFrontendClient(cluster)
 		signalCtx, cancel := context.WithTimeout(ctx, signalTimeout)
-		// TODO: we may want to specify a custom data converter,
-		// instead of relying on the fact that the default data converter
-		// in client library is json
-		signalInput, err := json.Marshal(Request{
+		signalValue := Request{
 			ParentExecution: parentExecution,
 			Executions:      executions,
-		})
+		}
+
+		dc := encoded.GetDefaultDataConverter()
+		signalInput, err := dc.ToData(signalValue)
 		if err != nil {
 			cancel()
 			return err
