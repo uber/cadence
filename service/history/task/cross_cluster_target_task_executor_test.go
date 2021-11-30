@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
@@ -340,7 +341,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 		switch *childAttr.GetParentClosePolicy() {
 		case types.ParentClosePolicyRequestCancel:
 			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest) error {
+				func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest, option ...yarpc.CallOption) error {
 					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
 					s.Equal(childAttr.ChildWorkflowID, request.GetCancelRequest().GetWorkflowExecution().GetWorkflowID())
 					s.Equal(childAttr.ChildRunID, request.GetCancelRequest().GetWorkflowExecution().GetRunID())
@@ -351,7 +352,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 				}).Times(1)
 		case types.ParentClosePolicyTerminate:
 			s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest) error {
+				func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, option ...yarpc.CallOption) error {
 					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
 					s.Equal(childAttr.ChildWorkflowID, request.GetTerminateRequest().GetWorkflowExecution().GetWorkflowID())
 					s.Equal(childAttr.ChildRunID, request.GetTerminateRequest().GetWorkflowExecution().GetRunID())
