@@ -321,10 +321,13 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 
 	cancelRequest := func(domainID string) *types.HistoryRequestCancelWorkflowExecutionRequest {
 		return &types.HistoryRequestCancelWorkflowExecutionRequest{
-			DomainUUID:                domainID,
-			ExternalInitiatedEventID:  nil,
-			ExternalWorkflowExecution: nil,
-			ChildWorkflowOnly:         false,
+			DomainUUID:               domainID,
+			ExternalInitiatedEventID: nil,
+			ExternalWorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      constants.TestRunID,
+			},
+			ChildWorkflowOnly: true,
 			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
 				Domain: "some random domain name",
 				WorkflowExecution: &types.WorkflowExecution{
@@ -444,7 +447,8 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 	task := s.getTestApplyParentClosePolicyTask(processingStateInitialized)
 
 	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
-	for _, childAttr := range task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes {
+	for _, child := range task.request.ApplyParentClosePolicyAttributes.Children {
+		childAttr := child.Child
 		switch *childAttr.GetParentClosePolicy() {
 		case types.ParentClosePolicyRequestCancel:
 			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -606,24 +610,39 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestApplyParentClosePolicyTask(
 		nil,
 		nil,
 		&types.CrossClusterApplyParentClosePolicyRequestAttributes{
-			ApplyParentClosePolicyAttributes: []*types.ApplyParentClosePolicyAttributes{
+			Children: []*types.ApplyParentClosePolicyRequest{
 				{
-					ChildDomainID:     constants.TestTargetDomainID,
-					ChildWorkflowID:   "some random target workflowID",
-					ChildRunID:        "some random target runID",
-					ParentClosePolicy: types.ParentClosePolicyAbandon.Ptr(),
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestTargetDomainID,
+						ChildWorkflowID:   "some random target workflowID",
+						ChildRunID:        "some random target runID",
+						ParentClosePolicy: types.ParentClosePolicyAbandon.Ptr(),
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 				{
-					ChildDomainID:     constants.TestTargetDomainID,
-					ChildWorkflowID:   "some random target workflowID",
-					ChildRunID:        "some random target runID",
-					ParentClosePolicy: types.ParentClosePolicyRequestCancel.Ptr(),
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestTargetDomainID,
+						ChildWorkflowID:   "some random target workflowID",
+						ChildRunID:        "some random target runID",
+						ParentClosePolicy: types.ParentClosePolicyRequestCancel.Ptr(),
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 				{
-					ChildDomainID:     constants.TestTargetDomainID,
-					ChildWorkflowID:   "some random target workflowID",
-					ChildRunID:        "some random target runID",
-					ParentClosePolicy: types.ParentClosePolicyTerminate.Ptr(),
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestTargetDomainID,
+						ChildWorkflowID:   "some random target workflowID",
+						ChildRunID:        "some random target runID",
+						ParentClosePolicy: types.ParentClosePolicyTerminate.Ptr(),
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 			},
 		},

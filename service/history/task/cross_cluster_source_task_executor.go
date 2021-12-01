@@ -333,7 +333,6 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 			case types.CrossClusterTaskFailedCauseDomainNotActive:
 				domainsToRegenerateTask[result.Child.ChildDomainID] = struct{}{}
 				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
-				continue
 			case types.CrossClusterTaskFailedCauseWorkflowNotExists,
 				types.CrossClusterTaskFailedCauseWorkflowAlreadyCompleted:
 				// Do nothing, these errors are expected if the target workflow is already closed
@@ -344,7 +343,6 @@ func (t *crossClusterSourceTaskExecutor) executeApplyParentClosePolicyTask(
 					failedCause.String()))
 				failedDomains[result.Child.ChildDomainID] = struct{}{}
 				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
-				continue
 			}
 		} else {
 			scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
