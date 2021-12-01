@@ -544,23 +544,23 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 		return nil, t.processingState, err
 	}
 	for _, childInfo := range children {
-		targetDomainEntry, err := execution.GetChildExecutionDomainEntry(childInfo, t.shard.GetDomainCache(), domainEntry)
+		// we already filtered the children so that child domainID is in task.TargetDomainIDs
+		// don't check if child domain is active or not here,
+		// we need to send the request even if the child domain is not active in target cluster
+		targetDomainID, err := execution.GetChildExecutionDomainID(childInfo, t.shard.GetDomainCache(), domainEntry)
 		if err != nil {
 			return nil, t.processingState, err
 		}
-		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
-		if targetCluster == t.targetCluster {
 
-			attributes.ApplyParentClosePolicyAttributes = append(
-				attributes.ApplyParentClosePolicyAttributes,
-				&types.ApplyParentClosePolicyAttributes{
-					ChildDomainID:     targetDomainEntry.GetInfo().ID,
-					ChildWorkflowID:   childInfo.StartedWorkflowID,
-					ChildRunID:        childInfo.StartedRunID,
-					ParentClosePolicy: &childInfo.ParentClosePolicy,
-				},
-			)
-		}
+		attributes.ApplyParentClosePolicyAttributes = append(
+			attributes.ApplyParentClosePolicyAttributes,
+			&types.ApplyParentClosePolicyAttributes{
+				ChildDomainID:     targetDomainID,
+				ChildWorkflowID:   childInfo.StartedWorkflowID,
+				ChildRunID:        childInfo.StartedRunID,
+				ParentClosePolicy: &childInfo.ParentClosePolicy,
+			},
+		)
 	}
 	return attributes, t.processingState, nil
 }
