@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -93,7 +95,7 @@ func (s *fetcherSuite) TestCrossClusterTaskFetchers() {
 
 	mockResource := resource.NewTest(s.controller, metrics.History)
 	mockResource.RemoteAdminClient.EXPECT().GetCrossClusterTasks(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
+		func(_ context.Context, request *types.GetCrossClusterTasksRequest, option ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
 			s.Equal(currentCluster, request.GetTargetCluster())
 			resp := &types.GetCrossClusterTasksResponse{
 				TasksByShard: make(map[int32][]*types.CrossClusterTaskRequest),

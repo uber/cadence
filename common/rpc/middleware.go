@@ -22,11 +22,13 @@ package rpc
 
 import (
 	"context"
+	"io"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
+	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 )
 
@@ -64,6 +66,21 @@ type ResponseInfo struct {
 	Size int
 }
 
+type countingReadCloser struct {
+	reader    io.ReadCloser
+	bytesRead *int
+}
+
+func (r *countingReadCloser) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	*r.bytesRead += n
+	return n, err
+}
+
+func (r *countingReadCloser) Close() (err error) {
+	return r.reader.Close()
+}
+
 type responseInfoMiddleware struct{}
 
 func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
@@ -71,7 +88,9 @@ func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Re
 
 	if value := ctx.Value(_responseInfoContextKey); value != nil {
 		if responseInfo, ok := value.(*ResponseInfo); ok && response != nil {
-			responseInfo.Size = response.BodySize
+			// We can not use response.BodySize here, because it is not set on all transports.
+			// Instead wrap body reader with counter, that increments responseInfo.Size as it is read.
+			response.Body = &countingReadCloser{reader: response.Body, bytesRead: &responseInfo.Size}
 		}
 	}
 
@@ -94,5 +113,24 @@ type overrideCallerMiddleware struct {
 
 func (m *overrideCallerMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	request.Caller = m.caller
+	return out.Call(ctx, request)
+}
+
+// HeaderForwardingMiddleware forwards headers from current inbound RPC call that is being handled to new outbound calls being made.
+// If new value for the same header key is provided in the outbound request, keep it instead.
+type HeaderForwardingMiddleware struct{}
+
+func (m *HeaderForwardingMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+	if inboundCall := yarpc.CallFromContext(ctx); inboundCall != nil && request != nil {
+		outboundHeaders := request.Headers
+		for _, key := range inboundCall.HeaderNames() {
+			if _, exists := outboundHeaders.Get(key); !exists {
+				value := inboundCall.Header(key)
+				outboundHeaders = outboundHeaders.With(key, value)
+			}
+		}
+		request.Headers = outboundHeaders
+	}
+
 	return out.Call(ctx, request)
 }

@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/mock"
@@ -693,9 +695,14 @@ func (s *transferActiveTaskExecutorSuite) expectCancelRequest(childDomainName st
 	childDomainID, err := s.mockDomainCache.GetDomainID(childDomainName)
 	s.NoError(err)
 	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest) error {
-			s.Equal(request.DomainUUID, childDomainID)
-			s.Equal(request.CancelRequest.Domain, childDomainName)
+		func(
+			_ context.Context,
+			request *types.HistoryRequestCancelWorkflowExecutionRequest,
+			option ...yarpc.CallOption,
+		) error {
+			s.Equal(childDomainID, request.DomainUUID)
+			s.Equal(childDomainName, request.CancelRequest.Domain)
+			s.True(request.GetChildWorkflowOnly())
 			errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
 			return errors[rand.Intn(len(errors))]
 		},
@@ -706,9 +713,13 @@ func (s *transferActiveTaskExecutorSuite) expectTerminateRequest(childDomainName
 	childDomainID, err := s.mockDomainCache.GetDomainID(childDomainName)
 	s.NoError(err)
 	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest) error {
-			s.Equal(request.DomainUUID, childDomainID)
-			s.Equal(request.TerminateRequest.Domain, childDomainName)
+		func(
+			_ context.Context,
+			request *types.HistoryTerminateWorkflowExecutionRequest,
+			option ...yarpc.CallOption,
+		) error {
+			s.Equal(childDomainID, request.DomainUUID)
+			s.Equal(childDomainName, request.TerminateRequest.Domain)
 			errors := []error{nil, &types.EntityNotExistsError{}}
 			return errors[rand.Intn(len(errors))]
 		},

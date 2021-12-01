@@ -84,6 +84,7 @@ FRESH_ALL_SRC = $(shell \
 	find . \
 	\( \
 		-path './vendor/*' \
+		-o -path './idls/*' \
 		-o -path './.build/*' \
 		-o -path './.bin/*' \
 	\) \
@@ -225,7 +226,7 @@ $(THRIFT_GEN): $(THRIFT_FILES) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(
 PROTO_ROOT := proto
 # output location is defined by `option go_package` in the proto files, all must stay in sync with this
 PROTO_OUT := .gen/proto
-PROTO_FILES = $(shell find -L ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
+PROTO_FILES = $(shell find -L ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs" | grep -v public)
 PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 
 # protoc splits proto files into directories, otherwise protoc-gen-gogofast is complaining about inconsistent package

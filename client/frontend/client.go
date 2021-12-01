@@ -26,7 +26,6 @@ import (
 
 	"go.uber.org/yarpc"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -64,7 +63,6 @@ func (c *clientImpl) DeprecateDomain(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DeprecateDomain(ctx, request, opts...)
@@ -76,7 +74,6 @@ func (c *clientImpl) DescribeDomain(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeDomainResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeDomain(ctx, request, opts...)
@@ -88,7 +85,6 @@ func (c *clientImpl) DescribeTaskList(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeTaskListResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeTaskList(ctx, request, opts...)
@@ -100,7 +96,6 @@ func (c *clientImpl) DescribeWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (*types.DescribeWorkflowExecutionResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DescribeWorkflowExecution(ctx, request, opts...)
@@ -112,7 +107,6 @@ func (c *clientImpl) GetWorkflowExecutionHistory(
 	opts ...yarpc.CallOption,
 ) (*types.GetWorkflowExecutionHistoryResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetWorkflowExecutionHistory(ctx, request, opts...)
@@ -124,7 +118,6 @@ func (c *clientImpl) ListArchivedWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (*types.ListArchivedWorkflowExecutionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createLongPollContext(ctx)
 	defer cancel()
 	return c.client.ListArchivedWorkflowExecutions(ctx, request, opts...)
@@ -136,7 +129,6 @@ func (c *clientImpl) ListClosedWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (*types.ListClosedWorkflowExecutionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ListClosedWorkflowExecutions(ctx, request, opts...)
@@ -148,7 +140,6 @@ func (c *clientImpl) ListDomains(
 	opts ...yarpc.CallOption,
 ) (*types.ListDomainsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ListDomains(ctx, request, opts...)
@@ -160,7 +151,6 @@ func (c *clientImpl) ListOpenWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (*types.ListOpenWorkflowExecutionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
@@ -172,7 +162,6 @@ func (c *clientImpl) ListWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (*types.ListWorkflowExecutionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ListWorkflowExecutions(ctx, request, opts...)
@@ -184,7 +173,6 @@ func (c *clientImpl) ScanWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (*types.ListWorkflowExecutionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ScanWorkflowExecutions(ctx, request, opts...)
@@ -196,7 +184,6 @@ func (c *clientImpl) CountWorkflowExecutions(
 	opts ...yarpc.CallOption,
 ) (*types.CountWorkflowExecutionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.CountWorkflowExecutions(ctx, request, opts...)
@@ -207,7 +194,6 @@ func (c *clientImpl) GetSearchAttributes(
 	opts ...yarpc.CallOption,
 ) (*types.GetSearchAttributesResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetSearchAttributes(ctx, opts...)
@@ -219,7 +205,6 @@ func (c *clientImpl) PollForActivityTask(
 	opts ...yarpc.CallOption,
 ) (*types.PollForActivityTaskResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createLongPollContext(ctx)
 	defer cancel()
 	return c.client.PollForActivityTask(ctx, request, opts...)
@@ -231,7 +216,6 @@ func (c *clientImpl) PollForDecisionTask(
 	opts ...yarpc.CallOption,
 ) (*types.PollForDecisionTaskResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createLongPollContext(ctx)
 	defer cancel()
 	return c.client.PollForDecisionTask(ctx, request, opts...)
@@ -243,7 +227,6 @@ func (c *clientImpl) QueryWorkflow(
 	opts ...yarpc.CallOption,
 ) (*types.QueryWorkflowResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.QueryWorkflow(ctx, request, opts...)
@@ -255,7 +238,6 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 	opts ...yarpc.CallOption,
 ) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RecordActivityTaskHeartbeat(ctx, request, opts...)
@@ -267,7 +249,6 @@ func (c *clientImpl) RecordActivityTaskHeartbeatByID(
 	opts ...yarpc.CallOption,
 ) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RecordActivityTaskHeartbeatByID(ctx, request, opts...)
@@ -279,7 +260,6 @@ func (c *clientImpl) RegisterDomain(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RegisterDomain(ctx, request, opts...)
@@ -291,7 +271,6 @@ func (c *clientImpl) RequestCancelWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RequestCancelWorkflowExecution(ctx, request, opts...)
@@ -303,7 +282,6 @@ func (c *clientImpl) ResetStickyTaskList(
 	opts ...yarpc.CallOption,
 ) (*types.ResetStickyTaskListResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ResetStickyTaskList(ctx, request, opts...)
@@ -315,7 +293,6 @@ func (c *clientImpl) ResetWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (*types.ResetWorkflowExecutionResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ResetWorkflowExecution(ctx, request, opts...)
@@ -327,7 +304,6 @@ func (c *clientImpl) RespondActivityTaskCanceled(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondActivityTaskCanceled(ctx, request, opts...)
@@ -339,7 +315,6 @@ func (c *clientImpl) RespondActivityTaskCanceledByID(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondActivityTaskCanceledByID(ctx, request, opts...)
@@ -351,7 +326,6 @@ func (c *clientImpl) RespondActivityTaskCompleted(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondActivityTaskCompleted(ctx, request, opts...)
@@ -363,7 +337,6 @@ func (c *clientImpl) RespondActivityTaskCompletedByID(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondActivityTaskCompletedByID(ctx, request, opts...)
@@ -375,7 +348,6 @@ func (c *clientImpl) RespondActivityTaskFailed(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondActivityTaskFailed(ctx, request, opts...)
@@ -387,7 +359,6 @@ func (c *clientImpl) RespondActivityTaskFailedByID(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondActivityTaskFailedByID(ctx, request, opts...)
@@ -399,7 +370,6 @@ func (c *clientImpl) RespondDecisionTaskCompleted(
 	opts ...yarpc.CallOption,
 ) (*types.RespondDecisionTaskCompletedResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondDecisionTaskCompleted(ctx, request, opts...)
@@ -411,7 +381,6 @@ func (c *clientImpl) RespondDecisionTaskFailed(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondDecisionTaskFailed(ctx, request, opts...)
@@ -423,7 +392,6 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
@@ -435,7 +403,6 @@ func (c *clientImpl) SignalWithStartWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.SignalWithStartWorkflowExecution(ctx, request, opts...)
@@ -447,7 +414,6 @@ func (c *clientImpl) SignalWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.SignalWorkflowExecution(ctx, request, opts...)
@@ -459,7 +425,6 @@ func (c *clientImpl) StartWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) (*types.StartWorkflowExecutionResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.StartWorkflowExecution(ctx, request, opts...)
@@ -471,7 +436,6 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	opts ...yarpc.CallOption,
 ) error {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.TerminateWorkflowExecution(ctx, request, opts...)
@@ -483,7 +447,6 @@ func (c *clientImpl) UpdateDomain(
 	opts ...yarpc.CallOption,
 ) (*types.UpdateDomainResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.UpdateDomain(ctx, request, opts...)
@@ -508,7 +471,6 @@ func (c *clientImpl) GetClusterInfo(
 	opts ...yarpc.CallOption,
 ) (*types.ClusterInfo, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.GetClusterInfo(ctx, opts...)
@@ -520,7 +482,6 @@ func (c *clientImpl) ListTaskListPartitions(
 	opts ...yarpc.CallOption,
 ) (*types.ListTaskListPartitionsResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 
@@ -533,7 +494,6 @@ func (c *clientImpl) GetTaskListsByDomain(
 	opts ...yarpc.CallOption,
 ) (*types.GetTaskListsByDomainResponse, error) {
 
-	opts = common.AggregateYarpcOptions(ctx, opts...)
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 

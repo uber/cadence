@@ -78,10 +78,7 @@ func (s *testCluster) Config() config.Persistence {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
-	// the keyspace is not created yet, so use empty and let the NoSQL DB to decide how to connect
-	s.cfg.Keyspace = ""
 	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
-	s.cfg.Keyspace = s.keyspace // change it back
 
 	if err != nil {
 		log.Fatal(err)

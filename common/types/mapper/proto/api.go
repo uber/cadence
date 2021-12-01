@@ -21,7 +21,7 @@
 package proto
 
 import (
-	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
@@ -1996,8 +1996,9 @@ func FromPendingChildExecutionInfo(t *types.PendingChildExecutionInfo) *apiv1.Pe
 		return nil
 	}
 	return &apiv1.PendingChildExecutionInfo{
+		Domain:            t.Domain,
 		WorkflowExecution: FromWorkflowRunPair(t.WorkflowID, t.RunID),
-		WorkflowTypeName:  t.WorkflowTypName,
+		WorkflowTypeName:  t.WorkflowTypeName,
 		InitiatedId:       t.InitiatedID,
 		ParentClosePolicy: FromParentClosePolicy(t.ParentClosePolicy),
 	}
@@ -2008,9 +2009,10 @@ func ToPendingChildExecutionInfo(t *apiv1.PendingChildExecutionInfo) *types.Pend
 		return nil
 	}
 	return &types.PendingChildExecutionInfo{
+		Domain:            t.Domain,
 		WorkflowID:        ToWorkflowID(t.WorkflowExecution),
 		RunID:             ToRunID(t.WorkflowExecution),
-		WorkflowTypName:   t.WorkflowTypeName,
+		WorkflowTypeName:  t.WorkflowTypeName,
 		InitiatedID:       t.InitiatedId,
 		ParentClosePolicy: ToParentClosePolicy(t.ParentClosePolicy),
 	}
@@ -4558,25 +4560,17 @@ func FromParentExecutionInfoFields(domainID, domainName *string, we *types.Workf
 	if domainID == nil && domainName == nil && we == nil && initiatedID == nil {
 		return nil
 	}
-	if domainName == nil || we == nil || initiatedID == nil {
-		panic("either all or none parent execution info must be set")
-	}
 
-	// Domain ID was added to unify parent execution info in several places.
-	// However it may not be present:
+	// ParentExecutionInfo wrapper was added to unify parent related fields.
+	// However some fields may not be present:
 	// - on older histories
 	// - if conversion involves thrift data types
-	// Fallback to empty string in those cases
-	parentDomainID := ""
-	if domainID != nil {
-		parentDomainID = *domainID
-	}
-
+	// Fallback to zero values in those cases
 	return &apiv1.ParentExecutionInfo{
-		DomainId:          parentDomainID,
-		DomainName:        *domainName,
+		DomainId:          common.StringDefault(domainID),
+		DomainName:        common.StringDefault(domainName),
 		WorkflowExecution: FromWorkflowExecution(we),
-		InitiatedId:       *initiatedID,
+		InitiatedId:       common.Int64Default(initiatedID),
 	}
 }
 

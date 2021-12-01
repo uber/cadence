@@ -36,6 +36,7 @@ var (
 	HistoryEventFilterType                     = types.HistoryEventFilterTypeCloseEvent
 	IndexedValueType                           = types.IndexedValueTypeInt
 	ParentClosePolicy                          = types.ParentClosePolicyTerminate
+	ParentClosePolicy2                         = types.ParentClosePolicyRequestCancel
 	PendingActivityState                       = types.PendingActivityStateCancelRequested
 	PendingDecisionState                       = types.PendingDecisionStateStarted
 	QueryConsistencyLevel                      = types.QueryConsistencyLevelStrong

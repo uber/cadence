@@ -1,0 +1,21 @@
+[
+  {
+    "create": "cluster_config"
+  },
+  {
+    "createIndexes": "cluster_config",
+    "indexes": [
+      {
+        "key": {
+          "rowtype": 1,
+          "version": -1
+        },
+        "name": "rowtype_version",
+        "unique": true
+      }
+    ],
+    "writeConcern": {
+      "w": "majority"
+    }
+  }
+]

@@ -109,7 +109,7 @@ func (s *Service) Stop() {
 
 	// remove self from membership ring and wait for traffic to drain
 	s.GetLogger().Info("ShutdownHandler: Evicting self from membership ring")
-	s.GetMembershipMonitor().EvictSelf()
+	s.GetMembershipResolver().EvictSelf()
 	s.GetLogger().Info("ShutdownHandler: Waiting for others to discover I am unhealthy")
 	time.Sleep(s.config.ShutdownDrainDuration())
 

@@ -21,6 +21,7 @@
 package rpc
 
 import (
+	"crypto/tls"
 	"fmt"
 
 	"github.com/uber/cadence/common/authorization"
@@ -31,6 +32,7 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/middleware"
 	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 )
@@ -135,7 +137,11 @@ func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport
 			}
 			outbound = tchannelTransport.NewOutbound(peerChooser)
 		case grpc.TransportName:
-			peerChooser, err := b.pcf.CreatePeerChooser(grpcTransport, clusterInfo.RPCAddress)
+			tlsConfig, err := clusterInfo.TLS.ToTLSConfig()
+			if err != nil {
+				return nil, err
+			}
+			peerChooser, err := b.pcf.CreatePeerChooser(createDialer(grpcTransport, tlsConfig), clusterInfo.RPCAddress)
 			if err != nil {
 				return nil, err
 			}
@@ -162,4 +168,38 @@ func (b crossDCOutbounds) Build(grpcTransport *grpc.Transport, tchannelTransport
 		}
 	}
 	return outbounds, nil
+}
+
+type directOutbound struct {
+	serviceName string
+	grpcEnabled bool
+	tlsConfig   *tls.Config
+}
+
+func NewDirectOutbound(serviceName string, grpcEnabled bool, tlsConfig *tls.Config) OutboundsBuilder {
+	return directOutbound{serviceName, grpcEnabled, tlsConfig}
+}
+
+func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+	var outbound transport.UnaryOutbound
+	if o.grpcEnabled {
+		directChooser, err := direct.New(direct.Configuration{}, createDialer(grpc, o.tlsConfig))
+		if err != nil {
+			return nil, err
+		}
+		outbound = grpc.NewOutbound(directChooser)
+	} else {
+		directChooser, err := direct.New(direct.Configuration{}, tchannel)
+		if err != nil {
+			return nil, err
+		}
+		outbound = tchannel.NewOutbound(directChooser)
+	}
+
+	return yarpc.Outbounds{
+		o.serviceName: {
+			ServiceName: o.serviceName,
+			Unary:       middleware.ApplyUnaryOutbound(outbound, &responseInfoMiddleware{}),
+		},
+	}, nil
 }

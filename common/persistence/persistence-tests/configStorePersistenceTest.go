@@ -32,11 +32,18 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 	"github.com/uber/cadence/common/types"
 )
 
-//Currently you cannot clear or remove any entries in cluster_config table
-//Therefore, Teardown and Setup of Test DB is required before every test.
+var supportedPlugins = map[string]bool{
+	cassandra.PluginName: true,
+	mongodb.PluginName:   true,
+}
+
+// Currently you cannot clear or remove any entries in cluster_config table
+// Therefore, Teardown and Setup of Test DB is required before every test.
 
 type (
 	// ConfigStorePersistenceSuite contains config store persistence tests
@@ -66,7 +73,7 @@ func (s *ConfigStorePersistenceSuite) TearDownSuite() {
 	s.TearDownWorkflowStore()
 }
 
-//Tests if error is returned when trying to fetch dc values from empty table
+// Tests if error is returned when trying to fetch dc values from empty table
 func (s *ConfigStorePersistenceSuite) TestFetchFromEmptyTable() {
 	if !validDatabaseCheck(s.Config()) {
 		s.T().Skip()
@@ -197,8 +204,8 @@ func generateRandomSnapshot(version int64) *p.DynamicConfigSnapshot {
 
 func validDatabaseCheck(cfg config.Persistence) bool {
 	if datastore, ok := cfg.DataStores[cfg.DefaultStore]; ok {
-		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == config.StoreTypeCassandra {
-			return true
+		if datastore.NoSQL != nil {
+			return supportedPlugins[datastore.NoSQL.PluginName]
 		}
 	}
 	return false

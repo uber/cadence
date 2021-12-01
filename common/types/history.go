@@ -1787,8 +1787,10 @@ func (v *SyncShardStatusRequest) GetTimestamp() (o int64) {
 
 // HistoryTerminateWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryTerminateWorkflowExecutionRequest struct {
-	DomainUUID       string                             `json:"domainUUID,omitempty"`
-	TerminateRequest *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
+	DomainUUID                string                             `json:"domainUUID,omitempty"`
+	TerminateRequest          *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
+	ExternalWorkflowExecution *WorkflowExecution                 `json:"externalWorkflowExecution,omitempty"`
+	ChildWorkflowOnly         bool                               `json:"childWorkflowOnly,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -1803,6 +1805,22 @@ func (v *HistoryTerminateWorkflowExecutionRequest) GetDomainUUID() (o string) {
 func (v *HistoryTerminateWorkflowExecutionRequest) GetTerminateRequest() (o *TerminateWorkflowExecutionRequest) {
 	if v != nil && v.TerminateRequest != nil {
 		return v.TerminateRequest
+	}
+	return
+}
+
+// GetExternalWorkflowExecution is an internal getter (TBD...)
+func (v *HistoryTerminateWorkflowExecutionRequest) GetExternalWorkflowExecution() (o *WorkflowExecution) {
+	if v != nil && v.ExternalWorkflowExecution != nil {
+		return v.ExternalWorkflowExecution
+	}
+	return
+}
+
+// GetChildWorkflowOnly is an internal getter (TBD...)
+func (v *HistoryTerminateWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) {
+	if v != nil {
+		return v.ChildWorkflowOnly
 	}
 	return
 }

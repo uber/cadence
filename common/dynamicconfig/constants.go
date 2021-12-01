@@ -1886,12 +1886,18 @@ const (
 	// Default value: true
 	// Allowed filters: N/A
 	EnableBatcher
-	// EnableParentClosePolicyWorker is decides whether or not enable system workers for processing parent close policy task
+	// EnableParentClosePolicyWorker decides whether or not enable system workers for processing parent close policy task
 	// KeyName: system.enableParentClosePolicyWorker
 	// Value type: Bool
 	// Default value: true
 	// Allowed filters: N/A
 	EnableParentClosePolicyWorker
+	// EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer
+	// KeyName: system.enableESAnalyzer
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableESAnalyzer
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
@@ -2030,6 +2036,57 @@ const (
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
 
+	// ESAnalyzerPause defines if we want to dynamically pause the analyzer workflow
+	// KeyName: worker.ESAnalyzerPause
+	// Value type: bool
+	// Default value: false
+	ESAnalyzerPause
+	// ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages
+	// KeyName: worker.ESAnalyzerTimeWindow
+	// Value type: Duration
+	// Default value: 30 days
+	ESAnalyzerTimeWindow
+	// ESAnalyzerMaxNumDomains defines how many domains to check
+	// KeyName: worker.ESAnalyzerMaxNumDomains
+	// Value type: int
+	// Default value: 500
+	ESAnalyzerMaxNumDomains
+	// ESAnalyzerMaxNumWorkflowTypes defines how many workflow types to check per domain
+	// KeyName: worker.ESAnalyzerMaxNumWorkflowTypes
+	// Value type: int
+	// Default value: 100
+	ESAnalyzerMaxNumWorkflowTypes
+	// ESAnalyzerNumWorkflowsToRefresh controls how many workflows per workflow type should be refreshed per workflow type
+	// KeyName: worker.ESAnalyzerNumWorkflowsToRefresh
+	// Value type: Int
+	// Default value: 100
+	ESAnalyzerNumWorkflowsToRefresh
+	// ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck
+	// KeyName: worker.ESAnalyzerBufferWaitTime
+	// Value type: Duration
+	// Default value: 30 minutes
+	ESAnalyzerBufferWaitTime
+	// ESAnalyzerMinNumWorkflowsForAvg controls how many workflows to have at least to rely on workflow run time avg per type
+	// KeyName: worker.ESAnalyzerMinNumWorkflowsForAvg
+	// Value type: Int
+	// Default value: 100
+	ESAnalyzerMinNumWorkflowsForAvg
+	// ESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types
+	// KeyName: worker.ESAnalyzerLimitToTypes
+	// Value type: Int
+	// Default value: "" => means no limitation
+	ESAnalyzerLimitToTypes
+	// ESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
+	// KeyName: worker.ESAnalyzerLimitToDomains
+	// Value type: Int
+	// Default value: "" => means no limitation
+	ESAnalyzerLimitToDomains
+	// ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types
+	// KeyName: worker.ESAnalyzerWorkflowDurationWarnThresholds
+	// Value type: string (json of a dictionary {"<domainName>/<workflowType>":<value>,...})
+	// Default value: ""
+	ESAnalyzerWorkflowDurationWarnThresholds
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2073,6 +2130,7 @@ var Keys = map[Key]string{
 	DisallowQuery:                       "system.disallowQuery",
 	EnableBatcher:                       "worker.enableBatcher",
 	EnableParentClosePolicyWorker:       "system.enableParentClosePolicyWorker",
+	EnableESAnalyzer:                    "system.enableESAnalyzer",
 	EnableFailoverManager:               "system.enableFailoverManager",
 	EnableWorkflowShadower:              "system.enableWorkflowShadower",
 	EnableStickyQuery:                   "system.enableStickyQuery",
@@ -2400,6 +2458,17 @@ var Keys = map[Key]string{
 	EnableArchivalCompression:                       "worker.EnableArchivalCompression",
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
+
+	ESAnalyzerPause:                          "worker.ESAnalyzerPause",
+	ESAnalyzerTimeWindow:                     "worker.ESAnalyzerTimeWindow",
+	ESAnalyzerMaxNumDomains:                  "worker.ESAnalyzerMaxNumDomains",
+	ESAnalyzerMaxNumWorkflowTypes:            "worker.ESAnalyzerMaxNumWorkflowTypes",
+	ESAnalyzerNumWorkflowsToRefresh:          "worker.ESAnalyzerNumWorkflowsToRefresh",
+	ESAnalyzerBufferWaitTime:                 "worker.ESAnalyzerBufferWaitTime",
+	ESAnalyzerMinNumWorkflowsForAvg:          "worker.ESAnalyzerMinNumWorkflowsForAvg",
+	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
+	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 }
 
 var KeyNames map[string]Key

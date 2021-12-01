@@ -46,6 +46,8 @@ func ParseFilter(filterName string) Filter {
 		return ClusterName
 	case "workflowID":
 		return WorkflowID
+	case "workflowType":
+		return WorkflowType
 	default:
 		return UnknownFilter
 	}
@@ -60,6 +62,7 @@ var filters = []string{
 	"shardID",
 	"clusterName",
 	"workflowID",
+	"workflowType",
 }
 
 const (
@@ -78,6 +81,8 @@ const (
 	ClusterName
 	// WorkflowID is the workflow id
 	WorkflowID
+	// WorkflowType is the workflow type name
+	WorkflowType
 
 	// LastFilterTypeForTest must be the last one in this const group for testing purpose
 	LastFilterTypeForTest
@@ -132,5 +137,12 @@ func ClusterNameFilter(clusterName string) FilterOption {
 func WorkflowIDFilter(workflowID string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[WorkflowID] = workflowID
+	}
+}
+
+// WorkflowType filters by workflow type name
+func WorkflowTypeFilter(name string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[WorkflowType] = name
 	}
 }

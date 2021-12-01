@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -51,19 +50,6 @@ const (
 	versionTypeExternal = "external"
 )
 
-const (
-	headerSource      = "rpc-caller"
-	headerDestination = "rpc-service"
-)
-
-// muttleyTransport wraps around default http.Transport to add muttley specific headers to all requests
-type muttleyTransport struct {
-	http.Transport
-
-	source      string
-	destination string
-}
-
 var timeKeys = map[string]bool{
 	"StartTime":     true,
 	"CloseTime":     true,
@@ -87,44 +73,9 @@ func timeValProcess(timeStr string) (string, error) {
 	return fmt.Sprintf("%v", parsedTime.UnixNano()), nil
 }
 
-func (t *muttleyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	r.Header.Set(headerSource, t.source)
-	r.Header.Set(headerDestination, t.destination)
-	return t.Transport.RoundTrip(r)
-}
-
-func getESClient(c *cli.Context) *elastic.Client {
-	url := getRequiredOption(c, FlagURL)
-	var client *elastic.Client
-	var err error
-	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))
-	if c.IsSet(FlagMuttleyDestination) {
-		httpClient := &http.Client{
-			Transport: &muttleyTransport{
-				source:      "cadence-cli",
-				destination: c.String(FlagMuttleyDestination),
-			},
-		}
-		client, err = elastic.NewClient(
-			elastic.SetHttpClient(httpClient),
-			elastic.SetURL(url),
-			elastic.SetRetrier(retrier),
-		)
-	} else {
-		client, err = elastic.NewClient(
-			elastic.SetURL(url),
-			elastic.SetRetrier(retrier),
-		)
-	}
-	if err != nil {
-		ErrorAndExit("Unable to create ElasticSearch client", err)
-	}
-	return client
-}
-
 // AdminCatIndices cat indices for ES cluster
 func AdminCatIndices(c *cli.Context) {
-	esClient := getESClient(c)
+	esClient := cFactory.ElasticSearchClient(c)
 
 	ctx := context.Background()
 	resp, err := esClient.CatIndices().Do(ctx)
@@ -153,7 +104,7 @@ func AdminCatIndices(c *cli.Context) {
 
 // AdminIndex used to bulk insert message from kafka parse
 func AdminIndex(c *cli.Context) {
-	esClient := getESClient(c)
+	esClient := cFactory.ElasticSearchClient(c)
 	indexName := getRequiredOption(c, FlagIndex)
 	inputFileName := getRequiredOption(c, FlagInputFile)
 	batchSize := c.Int(FlagBatchSize)
@@ -209,7 +160,7 @@ func AdminIndex(c *cli.Context) {
 
 // AdminDelete used to delete documents from ElasticSearch with input of list result
 func AdminDelete(c *cli.Context) {
-	esClient := getESClient(c)
+	esClient := cFactory.ElasticSearchClient(c)
 	indexName := getRequiredOption(c, FlagIndex)
 	inputFileName := getRequiredOption(c, FlagInputFile)
 	batchSize := c.Int(FlagBatchSize)

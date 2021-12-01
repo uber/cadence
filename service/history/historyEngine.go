@@ -1491,9 +1491,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	}
 
 	domainID := request.DomainUUID
-	execution := *request.Request.Execution
+	wfExecution := *request.Request.Execution
 
-	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
+	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, wfExecution)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -1607,10 +1607,24 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 
 	if len(mutableState.GetPendingChildExecutionInfos()) > 0 {
 		for _, ch := range mutableState.GetPendingChildExecutionInfos() {
+			childDomainName, err := execution.GetChildExecutionDomainName(
+				ch,
+				e.shard.GetDomainCache(),
+				mutableState.GetDomainEntry(),
+			)
+			if err != nil {
+				if !common.IsEntityNotExistsError(err) {
+					return nil, err
+				}
+				// child domain already deleted, instead of failing the request,
+				// return domainID instead since this field is only for information purpose
+				childDomainName = ch.DomainID
+			}
 			p := &types.PendingChildExecutionInfo{
+				Domain:            childDomainName,
 				WorkflowID:        ch.StartedWorkflowID,
 				RunID:             ch.StartedRunID,
-				WorkflowTypName:   ch.WorkflowTypeName,
+				WorkflowTypeName:  ch.WorkflowTypeName,
 				InitiatedID:       ch.InitiatedID,
 				ParentClosePolicy: &ch.ParentClosePolicy,
 			}
@@ -2420,6 +2434,8 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	domainID := domainEntry.GetInfo().ID
 
 	request := terminateRequest.TerminateRequest
+	parentExecution := terminateRequest.ExternalWorkflowExecution
+	childWorkflowOnly := terminateRequest.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: request.WorkflowExecution.WorkflowID,
 		RunID:      request.WorkflowExecution.RunID,
@@ -2435,6 +2451,16 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, workflow.ErrAlreadyCompleted
+			}
+
+			if childWorkflowOnly {
+				executionInfo := mutableState.GetExecutionInfo()
+				parentWorkflowID := executionInfo.ParentWorkflowID
+				parentRunID := executionInfo.ParentRunID
+				if parentExecution.GetWorkflowID() != parentWorkflowID ||
+					parentExecution.GetRunID() != parentRunID {
+					return nil, workflow.ErrParentMismatch
+				}
 			}
 
 			eventBatchFirstEventID := mutableState.GetNextEventID()
@@ -2838,7 +2864,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.DomainNameMaxLength(request.GetDomain()),
-		metrics.CadenceErrDomainNameExceededWarnLimit) {
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeDomainName) {
 		return &types.BadRequestError{Message: "Domain exceeds length limit."}
 	}
 
@@ -2847,7 +2876,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.WorkflowIDMaxLength(request.GetDomain()),
-		metrics.CadenceErrWorkflowIDExceededWarnLimit) {
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeWorkflowID) {
 		return &types.BadRequestError{Message: "WorkflowId exceeds length limit."}
 	}
 	if !common.ValidIDLength(
@@ -2855,7 +2887,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.TaskListNameMaxLength(request.GetDomain()),
-		metrics.CadenceErrTaskListNameExceededWarnLimit) {
+		metrics.CadenceErrTaskListNameExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeTaskListName) {
 		return &types.BadRequestError{Message: "TaskList exceeds length limit."}
 	}
 	if !common.ValidIDLength(
@@ -2863,7 +2898,10 @@ func (e *historyEngineImpl) validateStartWorkflowExecutionRequest(
 		e.metricsClient.Scope(metricsScope),
 		e.config.MaxIDLengthWarnLimit(),
 		e.config.WorkflowTypeMaxLength(request.GetDomain()),
-		metrics.CadenceErrWorkflowTypeExceededWarnLimit) {
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		request.GetDomain(),
+		e.logger,
+		tag.IDTypeWorkflowType) {
 		return &types.BadRequestError{Message: "WorkflowType exceeds length limit."}
 	}
 

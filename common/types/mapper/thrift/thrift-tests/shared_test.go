@@ -157,3 +157,47 @@ func TestFailoverInfo(t *testing.T) {
 		assert.Equal(t, item, thrift.ToFailoverInfo(thrift.FromFailoverInfo(item)))
 	}
 }
+
+func TestCrossClusterApplyParentClosePolicyRequestAttributes(t *testing.T) {
+	item := testdata.CrossClusterApplyParentClosePolicyRequestAttributes
+	assert.Equal(
+		t,
+		&item,
+		thrift.ToCrossClusterApplyParentClosePolicyRequestAttributes(
+			thrift.FromCrossClusterApplyParentClosePolicyRequestAttributes(&item),
+		),
+	)
+}
+
+func TestApplyParentClosePolicyAttributes(t *testing.T) {
+	item := testdata.ApplyParentClosePolicyAttributes
+	assert.Equal(
+		t,
+		&item,
+		thrift.ToApplyParentClosePolicyAttributes(
+			thrift.FromApplyParentClosePolicyAttributes(&item),
+		),
+	)
+}
+
+func TestApplyParentClosePolicyResult(t *testing.T) {
+	item := testdata.ApplyParentClosePolicyResult
+	assert.Equal(
+		t,
+		&item,
+		thrift.ToApplyParentClosePolicyResult(
+			thrift.FromApplyParentClosePolicyResult(&item),
+		),
+	)
+}
+
+func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
+	item := testdata.CrossClusterApplyParentClosePolicyResponseWithChildren
+	assert.Equal(
+		t,
+		&item,
+		thrift.ToCrossClusterApplyParentClosePolicyResponseAttributes(
+			thrift.FromCrossClusterApplyParentClosePolicyResponseAttributes(&item),
+		),
+	)
+}

@@ -22,12 +22,19 @@ package parentclosepolicy
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"time"
 
+	"github.com/pborman/uuid"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/activity"
+	"go.uber.org/cadence/encoded"
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/client"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -52,6 +59,7 @@ const (
 type (
 	// RequestDetail defines detail of each workflow to process
 	RequestDetail struct {
+		DomainID   string
 		DomainName string
 		WorkflowID string
 		RunID      string
@@ -60,7 +68,8 @@ type (
 
 	// Request defines the request for parent close policy
 	Request struct {
-		Executions []RequestDetail
+		ParentExecution types.WorkflowExecution
+		Executions      []RequestDetail
 
 		// DEPRECATED: the following field is deprecated since childworkflow
 		// might in a different domain, use the DomainName field in RequestDetail
@@ -107,52 +116,167 @@ func ProcessorWorkflow(ctx workflow.Context) error {
 // ProcessorActivity is activity for processing batch operation
 func ProcessorActivity(ctx context.Context, request Request) error {
 	processor := ctx.Value(processorContextKey).(*Processor)
+	domainCache := processor.domainCache
+	historyClient := processor.clientBean.GetHistoryClient()
+	logger := getActivityLogger(ctx)
+	scope := processor.metricsClient.Scope(metrics.ParentClosePolicyProcessorScope)
+
+	childWorkflowOnly := false
+	if request.ParentExecution.WorkflowID != "" && request.ParentExecution.RunID != "" {
+		// this is for backward compatibility
+		// ideally we should always set childWorkflowOnly = true
+		// however if ParentExecution is not specified, setting it to true
+		// will cause terminate or cancel request to return mismatch error
+		childWorkflowOnly = true
+	}
+
+	remoteExecutions := make(map[string][]RequestDetail)
 	for _, execution := range request.Executions {
 		domainName := execution.DomainName
 		if domainName == "" {
 			// for backward compatibility
 			domainName = request.DomainName
 		}
+
 		var err error
+		domainID := execution.DomainID
+		if domainID == "" {
+			// for backward compatibility
+			domainID, err = domainCache.GetDomainID(domainName)
+			if err != nil {
+				if common.IsEntityNotExistsError(err) {
+					scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
+					continue
+				}
+				scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
+				logger.Error("Failed to process parent close policy", tag.Error(err))
+				return err
+			}
+		}
+
 		switch execution.Policy {
 		case types.ParentClosePolicyAbandon:
 			//no-op
 			continue
 		case types.ParentClosePolicyTerminate:
-			err = processor.frontendClient.TerminateWorkflowExecution(ctx, &types.TerminateWorkflowExecutionRequest{
-				Domain: domainName,
-				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: execution.WorkflowID,
-					RunID:      execution.RunID,
+			terminateReq := &types.HistoryTerminateWorkflowExecutionRequest{
+				DomainUUID: domainID,
+				TerminateRequest: &types.TerminateWorkflowExecutionRequest{
+					Domain: domainName,
+					WorkflowExecution: &types.WorkflowExecution{
+						WorkflowID: execution.WorkflowID,
+						RunID:      execution.RunID,
+					},
+					Reason:   "by parent close policy",
+					Identity: processorWFTypeName,
 				},
-				Reason:   "by parent close policy",
-				Identity: processorWFTypeName,
-			})
+			}
+			if childWorkflowOnly {
+				terminateReq.ChildWorkflowOnly = true
+				terminateReq.ExternalWorkflowExecution = &request.ParentExecution
+			}
+			err = historyClient.TerminateWorkflowExecution(ctx, terminateReq)
 		case types.ParentClosePolicyRequestCancel:
-			err = processor.frontendClient.RequestCancelWorkflowExecution(ctx, &types.RequestCancelWorkflowExecutionRequest{
-				Domain: domainName,
-				WorkflowExecution: &types.WorkflowExecution{
-					WorkflowID: execution.WorkflowID,
-					RunID:      execution.RunID,
+			cancelReq := &types.HistoryRequestCancelWorkflowExecutionRequest{
+				DomainUUID: domainID,
+				CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+					Domain: domainName,
+					WorkflowExecution: &types.WorkflowExecution{
+						WorkflowID: execution.WorkflowID,
+						RunID:      execution.RunID,
+					},
+					Identity: processorWFTypeName,
 				},
-				Identity: processorWFTypeName,
-			})
+			}
+			if childWorkflowOnly {
+				cancelReq.ChildWorkflowOnly = true
+				cancelReq.ExternalWorkflowExecution = &request.ParentExecution
+			}
+			err = historyClient.RequestCancelWorkflowExecution(ctx, cancelReq)
+		default:
+			err = fmt.Errorf("unknown parent close policy: %v", execution.Policy)
 		}
-
 		if err != nil {
 			switch err.(type) {
-			case *types.EntityNotExistsError, *types.CancellationAlreadyRequestedError:
+			case *types.EntityNotExistsError,
+				*types.WorkflowExecutionAlreadyCompletedError,
+				*types.CancellationAlreadyRequestedError:
 				err = nil
+			case *types.DomainNotActiveError:
+				var domainEntry *cache.DomainCacheEntry
+				if domainEntry, err = domainCache.GetDomainByID(domainID); err == nil {
+					cluster := domainEntry.GetReplicationConfig().ActiveClusterName
+					remoteExecutions[cluster] = append(remoteExecutions[cluster], execution)
+				}
 			}
 		}
 
 		if err != nil {
-			processor.metricsClient.IncCounter(metrics.ParentClosePolicyProcessorScope, metrics.ParentClosePolicyProcessorFailures)
-			getActivityLogger(ctx).Error("failed to process parent close policy", tag.Error(err))
+			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
+			logger.Error("Failed to process parent close policy", tag.Error(err))
 			return err
 		}
-		processor.metricsClient.IncCounter(metrics.ParentClosePolicyProcessorScope, metrics.ParentClosePolicyProcessorSuccess)
+		scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
 	}
+
+	if err := signalRemoteCluster(
+		ctx,
+		processor.clientBean,
+		request.ParentExecution,
+		remoteExecutions,
+		processor.numWorkflows,
+	); err != nil {
+		scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
+		logger.Error("Failed to signal remote parent close policy workflow", tag.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func signalRemoteCluster(
+	ctx context.Context,
+	clientBean client.Bean,
+	parentExecution types.WorkflowExecution,
+	remoteExecutions map[string][]RequestDetail,
+	numWorkflows int,
+) error {
+	for cluster, executions := range remoteExecutions {
+		remoteClient := clientBean.GetRemoteFrontendClient(cluster)
+		signalCtx, cancel := context.WithTimeout(ctx, signalTimeout)
+		signalValue := Request{
+			ParentExecution: parentExecution,
+			Executions:      executions,
+		}
+
+		dc := encoded.GetDefaultDataConverter()
+		signalInput, err := dc.ToData(signalValue)
+		if err != nil {
+			cancel()
+			return err
+		}
+
+		_, err = remoteClient.SignalWithStartWorkflowExecution(signalCtx, &types.SignalWithStartWorkflowExecutionRequest{
+			Domain:                              common.SystemLocalDomainName,
+			RequestID:                           uuid.New(),
+			WorkflowID:                          fmt.Sprintf("%v-%v", workflowIDPrefix, rand.Intn(numWorkflows)),
+			WorkflowType:                        &types.WorkflowType{Name: processorWFTypeName},
+			TaskList:                            &types.TaskList{Name: processorTaskListName},
+			Input:                               nil,
+			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(infiniteDuration.Seconds())),
+			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(60),
+			Identity:                            "cadence-worker",
+			WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+			SignalName:                          processorChannelName,
+			SignalInput:                         signalInput,
+		})
+		cancel()
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

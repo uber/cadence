@@ -1789,6 +1789,10 @@ func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 	workflowType := &types.WorkflowType{Name: wt}
 	taskList := &types.TaskList{Name: tl}
 
+	childID := id + "-child"
+	childType := wt + "-child"
+	childTaskList := tl + "-child"
+
 	// Start workflow execution
 	request := &types.StartWorkflowExecutionRequest{
 		RequestID:                           uuid.New(),
@@ -1831,19 +1835,33 @@ func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 			signalSent = true
 
 			s.NoError(err)
-			return nil, []*types.Decision{{
-				DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
-				ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
-					ActivityID:                    "1",
-					ActivityType:                  &types.ActivityType{Name: "test-activity-type"},
-					TaskList:                      &types.TaskList{Name: tl},
-					Input:                         []byte("test-input"),
-					ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-					ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
-					StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-					HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+			return nil, []*types.Decision{
+				{
+					DecisionType: types.DecisionTypeScheduleActivityTask.Ptr(),
+					ScheduleActivityTaskDecisionAttributes: &types.ScheduleActivityTaskDecisionAttributes{
+						ActivityID:                    "1",
+						ActivityType:                  &types.ActivityType{Name: "test-activity-type"},
+						TaskList:                      &types.TaskList{Name: tl},
+						Input:                         []byte("test-input"),
+						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+						ScheduleToStartTimeoutSeconds: common.Int32Ptr(2),
+						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+						HeartbeatTimeoutSeconds:       common.Int32Ptr(5),
+					},
 				},
-			}}, nil
+				{
+					DecisionType: types.DecisionTypeStartChildWorkflowExecution.Ptr(),
+					StartChildWorkflowExecutionDecisionAttributes: &types.StartChildWorkflowExecutionDecisionAttributes{
+						WorkflowID:                          childID,
+						WorkflowType:                        &types.WorkflowType{Name: childType},
+						TaskList:                            &types.TaskList{Name: childTaskList},
+						Input:                               []byte("child-workflow-input"),
+						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(200),
+						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(2),
+						Control:                             nil,
+					},
+				},
+			}, nil
 		}
 
 		workflowComplete = true
@@ -1876,13 +1894,27 @@ func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
-	dweResponse, err = describeWorkflowExecution()
-	s.Nil(err)
+	// wait for child workflow to start
+	for i := 0; i != 10; i++ {
+		dweResponse, err = describeWorkflowExecution()
+		s.Nil(err)
+		if len(dweResponse.PendingChildren) == 1 &&
+			dweResponse.PendingChildren[0].GetRunID() != "" {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	s.NotEmpty(dweResponse.PendingChildren[0].GetRunID(), "unable to start child workflow")
 	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(5), dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, ActivityScheduled
+	// DecisionStarted, DecisionCompleted, ActivityScheduled, ChildWorkflowInit, ChildWorkflowStarted, DecisionTaskScheduled
+	s.Equal(int64(8), dweResponse.WorkflowExecutionInfo.HistoryLength)
 	s.Equal(1, len(dweResponse.PendingActivities))
 	s.Equal("test-activity-type", dweResponse.PendingActivities[0].ActivityType.GetName())
 	s.Equal(int64(0), dweResponse.PendingActivities[0].GetLastHeartbeatTimestamp())
+	s.Equal(1, len(dweResponse.PendingChildren))
+	s.Equal(s.domainName, dweResponse.PendingChildren[0].GetDomain())
+	s.Equal(childID, dweResponse.PendingChildren[0].GetWorkflowID())
+	s.Equal(childType, dweResponse.PendingChildren[0].GetWorkflowTypeName())
 
 	// process activity task
 	err = poller.PollAndProcessActivityTask(false)
@@ -1890,7 +1922,7 @@ func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 	dweResponse, err = describeWorkflowExecution()
 	s.Nil(err)
 	s.True(nil == dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(8), dweResponse.WorkflowExecutionInfo.HistoryLength) // ActivityTaskStarted, ActivityTaskCompleted, DecisionTaskScheduled
+	s.Equal(int64(10), dweResponse.WorkflowExecutionInfo.HistoryLength) // ActivityTaskStarted, ActivityTaskCompleted
 	s.Equal(0, len(dweResponse.PendingActivities))
 
 	// Process signal in decider
@@ -1901,7 +1933,7 @@ func (s *IntegrationSuite) TestDescribeWorkflowExecution() {
 	dweResponse, err = describeWorkflowExecution()
 	s.Nil(err)
 	s.Equal(types.WorkflowExecutionCloseStatusCompleted, *dweResponse.WorkflowExecutionInfo.CloseStatus)
-	s.Equal(int64(11), dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, WorkflowCompleted
+	s.Equal(int64(13), dweResponse.WorkflowExecutionInfo.HistoryLength) // DecisionStarted, DecisionCompleted, WorkflowCompleted
 }
 
 func (s *IntegrationSuite) TestVisibility() {
