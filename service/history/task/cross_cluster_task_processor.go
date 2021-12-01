@@ -293,6 +293,13 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 
 			var taskResponse types.CrossClusterTaskResponse
 			if err := taskFuture.Get(taskWaitContext, &taskResponse); err != nil {
+				if p.ctx.Err() != nil {
+					// root context is no-longer valid, component is being shutdown,
+					// we can return directly
+					cancel()
+					return
+				}
+
 				if err == context.DeadlineExceeded {
 					// switch to a valid context here, otherwise Get() will always return an error.
 					// using context.Background() is fine since we will only be calling Get() with it
@@ -313,10 +320,6 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 			respondRequest.TaskResponses = append(respondRequest.TaskResponses, &taskResponse)
 		}
 		cancel()
-
-		if p.ctx.Err() != nil {
-			return
-		}
 
 		successfullyRespondedTaskIDs := make(map[int64]struct{})
 		var respondResponse *types.RespondCrossClusterTasksCompletedResponse
