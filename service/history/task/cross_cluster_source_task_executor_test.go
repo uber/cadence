@@ -213,7 +213,9 @@ func getWorkflowCloseTestCases() []struct {
 			expectedTaskState:   ctask.TaskStateAcked,
 			willGenerateNewTask: false,
 		},
-		// UNEXPECTED ERROR
+		// UNEXPECTED ERROR for target,
+		// no error should be returned otherwise task will retry forever,
+		// task should still in pending state so it can be fetched again
 		{
 			targetError: types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
 			// for unexpected errors we return errContinueExecution which is converted to nil

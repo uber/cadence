@@ -195,7 +195,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 				TargetDomainID:   executionInfo.ParentDomainID,
 				TargetWorkflowID: executionInfo.ParentWorkflowID,
 				TargetRunID:      executionInfo.ParentRunID,
-				InitiatedID:      executionInfo.InitiatedID,
 				Version:          closeEvent.GetVersion(),
 			}
 
@@ -642,7 +641,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateCrossClusterRecordChildCompleted
 				TargetDomainID:      parentInfo.DomainUUID,
 				TargetWorkflowID:    parentInfo.GetExecution().GetWorkflowID(),
 				TargetRunID:         parentInfo.GetExecution().GetRunID(),
-				InitiatedID:         parentInfo.GetInitiatedID(),
 				Version:             task.Version,
 			},
 		})
@@ -884,7 +882,6 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 			TargetDomainID:   task.TargetDomainID,
 			TargetWorkflowID: task.TargetWorkflowID,
 			TargetRunID:      task.TargetRunID,
-			InitiatedID:      task.ScheduleID,
 		}
 		if generateTransferTask {
 			newTask = recordChildExecutionCompletedTask

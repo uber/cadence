@@ -41,7 +41,6 @@ var (
 	errUnknownTaskProcessingState   = errors.New("unknown cross cluster task processing state")
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
-	errUnexpectedErrorFromTarget    = errors.New("unexpected target error")
 )
 
 type (
