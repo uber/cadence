@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence"
@@ -49,6 +51,7 @@ type (
 		controller        *gomock.Controller
 		mockShard         *shard.TestContext
 		mockHistoryClient *history.MockClient
+		mockDomainCache   *cache.MockDomainCache
 
 		executor Executor
 	}
@@ -73,10 +76,10 @@ func (s *crossClusterTargetTaskExecutorSuite) SetupTest() {
 		config,
 	)
 	s.mockHistoryClient = s.mockShard.Resource.HistoryClient
-	mockDomainCache := s.mockShard.Resource.DomainCache
-	mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
-	mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
-	mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
+	s.mockDomainCache = s.mockShard.Resource.DomainCache
+	s.mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
 	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
 	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
@@ -260,6 +263,113 @@ func (s *crossClusterTargetTaskExecutorSuite) TestCancelExecutionTask_CancelFail
 	s.Nil(task.response.CancelExecutionAttributes)
 }
 
+func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentPolicyTask() {
+	task := s.getTestApplyParentPolicyTask(processingStateInitialized, types.ParentClosePolicyRequestCancel)
+
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).Times(1)
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Do(func(
+		ctx context.Context,
+		request *types.HistoryRequestCancelWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) {
+		s.Equal(request.DomainUUID, constants.TestDomainID)
+	}).Return(nil).Times(1)
+
+	err := s.executor.Execute(task, true)
+	s.NoError(err)
+	s.Equal(task.GetTaskID(), task.response.GetTaskID())
+	s.Equal(types.CrossClusterTaskTypeApplyParentPolicy, task.response.GetTaskType())
+	s.Nil(task.response.FailedCause)
+	s.NotNil(task.response.ApplyParentClosePolicyAttributes)
+}
+
+func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentPolicyTaskWithRetriableFailures() {
+	expectedFailedCause := types.CrossClusterTaskFailedCauseDomainNotActive.Ptr()
+	s.testApplyParentPolicyTaskWithFailures(ErrTaskPendingActive, expectedFailedCause, true, 2)
+}
+func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentPolicyTaskWithNonRetriableFailures() {
+	expectedFailedCause := types.CrossClusterTaskFailedCauseDomainNotExists.Ptr()
+	s.testApplyParentPolicyTaskWithFailures(errDomainNotExists, expectedFailedCause, false, 2)
+}
+
+func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailures(
+	applyPolicyError error,
+	expectedFailedCause *types.CrossClusterTaskFailedCause,
+	retriable bool,
+	numExpectedChildrenInRequest int,
+) {
+	task := s.getTestApplyParentPolicyTask(processingStateInitialized, types.ParentClosePolicyRequestCancel)
+	otherDomainID := fmt.Sprintf("%s-%d", constants.TestDomainID, 1)
+	policy := types.ParentClosePolicyRequestCancel
+	task.request.ApplyParentClosePolicyAttributes.Children = append(
+		task.request.ApplyParentClosePolicyAttributes.Children,
+		&types.ApplyParentClosePolicyRequest{
+			Child: &types.ApplyParentClosePolicyAttributes{
+				ChildDomainID:     otherDomainID,
+				ChildWorkflowID:   "some random workflow id",
+				ChildRunID:        "some random run id",
+				ParentClosePolicy: &policy,
+			},
+			Status: &types.ApplyParentClosePolicyStatus{
+				Completed: false,
+			},
+		},
+	)
+
+	s.mockDomainCache.EXPECT().GetDomainByID(otherDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
+
+	cancelRequest := func(domainID string) *types.HistoryRequestCancelWorkflowExecutionRequest {
+		return &types.HistoryRequestCancelWorkflowExecutionRequest{
+			DomainUUID:               domainID,
+			ExternalInitiatedEventID: nil,
+			ExternalWorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: constants.TestWorkflowID,
+				RunID:      constants.TestRunID,
+			},
+			ChildWorkflowOnly: true,
+			CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+				Domain: "some random domain name",
+				WorkflowExecution: &types.WorkflowExecution{
+					WorkflowID: "some random workflow id",
+					RunID:      "some random run id",
+				},
+				Identity:  "history-service",
+				RequestID: "",
+			},
+		}
+	}
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), cancelRequest(constants.TestDomainID)).Return(nil).Times(1)
+	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), cancelRequest(otherDomainID)).Return(applyPolicyError).Times(1)
+
+	err := s.executor.Execute(task, true)
+	if retriable {
+		s.Equal(applyPolicyError, err)
+	} else {
+		s.Nil(err)
+	}
+
+	s.Equal(task.GetTaskID(), task.response.GetTaskID())
+	s.Equal(types.CrossClusterTaskTypeApplyParentPolicy, task.response.GetTaskType())
+	s.NotNil(task.response.ApplyParentClosePolicyAttributes)
+	s.Equal(2, len(task.response.ApplyParentClosePolicyAttributes.ChildrenStatus))
+	for _, childStatus := range task.response.ApplyParentClosePolicyAttributes.ChildrenStatus {
+		if childStatus.Child.ChildDomainID == constants.TestDomainID {
+			s.Nil(childStatus.FailedCause)
+		} else if childStatus.Child.ChildDomainID == otherDomainID {
+			s.Equal(expectedFailedCause, childStatus.FailedCause)
+		} else {
+			panic(fmt.Sprintf("unexpected domain id: %v", childStatus.Child.ChildDomainID))
+		}
+	}
+
+	// only one of those tasks failed, so we only have one of them in the retry request
+	s.Equal(
+		numExpectedChildrenInRequest,
+		len(task.request.ApplyParentClosePolicyAttributes.Children),
+	)
+}
+
 func (s *crossClusterTargetTaskExecutorSuite) TestSignalExecutionTask_SignalSuccess() {
 	task := s.getTestSignalExecutionTask(processingStateInitialized)
 
@@ -337,7 +447,8 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 	task := s.getTestApplyParentClosePolicyTask(processingStateInitialized)
 
 	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)
-	for _, childAttr := range task.request.ApplyParentClosePolicyAttributes.ApplyParentClosePolicyAttributes {
+	for _, child := range task.request.ApplyParentClosePolicyAttributes.Children {
+		childAttr := child.Child
 		switch *childAttr.GetParentClosePolicy() {
 		case types.ParentClosePolicyRequestCancel:
 			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -410,6 +521,7 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestStartChildExecutionTask(
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }
 
@@ -430,6 +542,36 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCancelExecutionTask(
 		},
 		nil,
 		nil,
+		nil,
+	)
+}
+
+func (s *crossClusterTargetTaskExecutorSuite) getTestApplyParentPolicyTask(
+	processingState processingState,
+	policy types.ParentClosePolicy,
+) *crossClusterTargetTask {
+	return s.getTestCrossClusterTargetTask(
+		types.CrossClusterTaskTypeApplyParentPolicy,
+		processingState,
+		nil,
+		nil,
+		nil,
+		nil,
+		&types.CrossClusterApplyParentClosePolicyRequestAttributes{
+			Children: []*types.ApplyParentClosePolicyRequest{
+				{
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestDomainID,
+						ChildWorkflowID:   "some random workflow id",
+						ChildRunID:        "some random run id",
+						ParentClosePolicy: &policy,
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
+				},
+			},
+		},
 	)
 }
 
@@ -453,6 +595,7 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestSignalExecutionTask(
 			Control:           []byte("some random control"),
 		},
 		nil,
+		nil,
 	)
 }
 
@@ -465,25 +608,41 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestApplyParentClosePolicyTask(
 		nil,
 		nil,
 		nil,
+		nil,
 		&types.CrossClusterApplyParentClosePolicyRequestAttributes{
-			ApplyParentClosePolicyAttributes: []*types.ApplyParentClosePolicyAttributes{
+			Children: []*types.ApplyParentClosePolicyRequest{
 				{
-					ChildDomainID:     constants.TestTargetDomainID,
-					ChildWorkflowID:   "some random target workflowID",
-					ChildRunID:        "some random target runID",
-					ParentClosePolicy: types.ParentClosePolicyAbandon.Ptr(),
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestTargetDomainID,
+						ChildWorkflowID:   "some random target workflowID",
+						ChildRunID:        "some random target runID",
+						ParentClosePolicy: types.ParentClosePolicyAbandon.Ptr(),
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 				{
-					ChildDomainID:     constants.TestTargetDomainID,
-					ChildWorkflowID:   "some random target workflowID",
-					ChildRunID:        "some random target runID",
-					ParentClosePolicy: types.ParentClosePolicyRequestCancel.Ptr(),
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestTargetDomainID,
+						ChildWorkflowID:   "some random target workflowID",
+						ChildRunID:        "some random target runID",
+						ParentClosePolicy: types.ParentClosePolicyRequestCancel.Ptr(),
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 				{
-					ChildDomainID:     constants.TestTargetDomainID,
-					ChildWorkflowID:   "some random target workflowID",
-					ChildRunID:        "some random target runID",
-					ParentClosePolicy: types.ParentClosePolicyTerminate.Ptr(),
+					Child: &types.ApplyParentClosePolicyAttributes{
+						ChildDomainID:     constants.TestTargetDomainID,
+						ChildWorkflowID:   "some random target workflowID",
+						ChildRunID:        "some random target runID",
+						ParentClosePolicy: types.ParentClosePolicyTerminate.Ptr(),
+					},
+					Status: &types.ApplyParentClosePolicyStatus{
+						Completed: false,
+					},
 				},
 			},
 		},
@@ -496,7 +655,8 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCrossClusterTargetTask(
 	startChildAttributes *types.CrossClusterStartChildExecutionRequestAttributes,
 	cancelAttributes *types.CrossClusterCancelExecutionRequestAttributes,
 	signalAttributes *types.CrossClusterSignalExecutionRequestAttributes,
-	parentClosePolicyAttributes *types.CrossClusterApplyParentClosePolicyRequestAttributes,
+	recordChildCompletionAttributes *types.CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes,
+	applyParentPolicyAttributes *types.CrossClusterApplyParentClosePolicyRequestAttributes,
 ) *crossClusterTargetTask {
 	task, _ := NewCrossClusterTargetTask(
 		s.mockShard,
@@ -510,10 +670,11 @@ func (s *crossClusterTargetTaskExecutorSuite) getTestCrossClusterTargetTask(
 				TaskID:              int64(1234),
 				VisibilityTimestamp: common.Int64Ptr(time.Now().UnixNano()),
 			},
-			StartChildExecutionAttributes:    startChildAttributes,
-			CancelExecutionAttributes:        cancelAttributes,
-			SignalExecutionAttributes:        signalAttributes,
-			ApplyParentClosePolicyAttributes: parentClosePolicyAttributes,
+			StartChildExecutionAttributes:                  startChildAttributes,
+			CancelExecutionAttributes:                      cancelAttributes,
+			SignalExecutionAttributes:                      signalAttributes,
+			RecordChildWorkflowExecutionCompleteAttributes: recordChildCompletionAttributes,
+			ApplyParentClosePolicyAttributes:               applyParentPolicyAttributes,
 		},
 		s.executor,
 		nil,

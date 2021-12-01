@@ -10786,6 +10786,27 @@ func (v *CrossClusterRecordChildWorkflowExecutionCompleteRequestAttributes) GetI
 type CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes struct {
 }
 
+type ApplyParentClosePolicyStatus struct {
+	Completed   bool                         `json:"completed,omitempty"`
+	FailedCause *CrossClusterTaskFailedCause `json:"failedCause,omitempty"`
+}
+
+// GetDomainID is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyStatus) GetCompleted() (o bool) {
+	if v != nil {
+		return v.Completed
+	}
+	return
+}
+
+// GetFailedCause is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyStatus) GetFailedCause() (o CrossClusterTaskFailedCause) {
+	if v != nil && v.FailedCause != nil {
+		return *v.FailedCause
+	}
+	return
+}
+
 type ApplyParentClosePolicyAttributes struct {
 	ChildDomainID     string             `json:"ChildDomainID,omitempty"`
 	ChildWorkflowID   string             `json:"ChildWorkflowID,omitempty"`
@@ -10825,20 +10846,71 @@ func (v *ApplyParentClosePolicyAttributes) GetParentClosePolicy() (o *ParentClos
 	return
 }
 
+type ApplyParentClosePolicyRequest struct {
+	Child  *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
+	Status *ApplyParentClosePolicyStatus     `json:"status,omitempty"`
+}
+
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyRequest) GetChild() (o *ApplyParentClosePolicyAttributes) {
+	if v != nil {
+		return v.Child
+	}
+	return
+}
+
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyRequest) GetStatus() (o *ApplyParentClosePolicyStatus) {
+	if v != nil {
+		return v.Status
+	}
+	return
+}
+
 type CrossClusterApplyParentClosePolicyRequestAttributes struct {
-	ApplyParentClosePolicyAttributes []*ApplyParentClosePolicyAttributes `json:"appyParentClosePolicyAttributes,omitempty"`
+	Children []*ApplyParentClosePolicyRequest `json:"children,omitempty"`
 }
 
 // GetInitiatedEventID is an internal getter (TBD...)
-func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetAppyParentClosePolicyAttributes() (o []*ApplyParentClosePolicyAttributes) {
+func (v *CrossClusterApplyParentClosePolicyRequestAttributes) GetChildren() (o []*ApplyParentClosePolicyRequest) {
 	if v != nil {
-		return v.ApplyParentClosePolicyAttributes
+		return v.Children
+	}
+	return
+}
+
+type ApplyParentClosePolicyResult struct {
+	Child       *ApplyParentClosePolicyAttributes `json:"child,omitempty"`
+	FailedCause *CrossClusterTaskFailedCause      `json:"failedCause,omitempty"`
+}
+
+// GetChild is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyResult) GetChild() (o *ApplyParentClosePolicyAttributes) {
+	if v != nil && v.Child != nil {
+		return v.Child
+	}
+	return
+}
+
+// GetFailedCause is an internal getter (TBD...)
+func (v *ApplyParentClosePolicyResult) GetFailedCause() (o CrossClusterTaskFailedCause) {
+	if v != nil && v.FailedCause != nil {
+		return *v.FailedCause
 	}
 	return
 }
 
 // CrossClusterApplyParentClosePolicyResponseAttributes is an internal type (TBD...)
 type CrossClusterApplyParentClosePolicyResponseAttributes struct {
+	ChildrenStatus []*ApplyParentClosePolicyResult `json:"childrenStatus,omitempty"`
+}
+
+// GetChildrenStatus is an internal getter (TBD...)
+func (v *CrossClusterApplyParentClosePolicyResponseAttributes) GetChildrenStatus() (o []*ApplyParentClosePolicyResult) {
+	if v != nil && v.ChildrenStatus != nil {
+		return v.ChildrenStatus
+	}
+	return
 }
 
 // CrossClusterTaskRequest is an internal type (TBD...)

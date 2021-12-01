@@ -41,7 +41,6 @@ var (
 	errUnknownTaskProcessingState   = errors.New("unknown cross cluster task processing state")
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")
-	errUnexpectedErrorFromTarget    = errors.New("unexpected target error")
 )
 
 type (
@@ -239,45 +238,73 @@ func (t *crossClusterTargetTaskExecutor) executeApplyParentClosePolicyTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
-	for _, childAttrs := range attributes.ApplyParentClosePolicyAttributes {
+	response := types.CrossClusterApplyParentClosePolicyResponseAttributes{}
+	var anyErr error
+
+	for _, child := range attributes.Children {
+		// DON'T RETURN ERROR INSIDE THIS LOOP, CONVERT THEM AND ASSIGN IT TO EACH CHILD'S FailedCause
+		childAttrs := child.Child
+		if child.Status != nil && child.Status.Completed {
+			// This means we are in retry and this child was already successfully processed before
+			response.ChildrenStatus = append(
+				response.ChildrenStatus,
+				&types.ApplyParentClosePolicyResult{
+					Child:       childAttrs,
+					FailedCause: child.Status.FailedCause,
+				})
+			continue
+		}
+		if child.Status == nil {
+			child.Status = &types.ApplyParentClosePolicyStatus{}
+		}
+		child.Status.Completed = false
+		var failedCause *types.CrossClusterTaskFailedCause
+		retriable := false
+
 		targetDomainName, err := t.verifyDomainActive(childAttrs.ChildDomainID)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			err = applyParentClosePolicy(
+				ctx,
+				t.historyClient,
+				&types.WorkflowExecution{
+					WorkflowID: task.GetWorkflowID(),
+					RunID:      task.GetRunID(),
+				},
+				childAttrs.ChildDomainID,
+				targetDomainName,
+				childAttrs.ChildWorkflowID,
+				childAttrs.ChildRunID,
+				*childAttrs.ParentClosePolicy,
+			)
 		}
 
-		scope := t.metricsClient.Scope(metrics.CrossClusterSourceTaskApplyParentClosePolicyScope)
-		err = applyParentClosePolicy(
-			ctx,
-			t.historyClient,
-			&types.WorkflowExecution{
-				WorkflowID: task.GetWorkflowID(),
-				RunID:      task.GetRunID(),
-			},
-			childAttrs.ChildDomainID,
-			targetDomainName,
-			childAttrs.ChildWorkflowID,
-			childAttrs.ChildRunID,
-			*childAttrs.ParentClosePolicy,
-		)
 		switch err.(type) {
-		case nil:
-			continue
 		case *types.EntityNotExistsError,
 			*types.WorkflowExecutionAlreadyCompletedError,
 			*types.CancellationAlreadyRequestedError:
 			// expected error, no-op
-			break
+			child.Status.Completed = true
+		case nil:
+			child.Status.Completed = true
 		default:
-			scope.IncCounter(metrics.ParentClosePolicyProcessorFailures)
-			return nil, err
+			failedCause, retriable = t.convertErrorToFailureCause(err)
+			child.Status.FailedCause = failedCause
+			child.Status.Completed = !retriable
+			// return error only if the error is retriable
+			if retriable {
+				anyErr = err
+			}
 		}
-		scope.IncCounter(metrics.ParentClosePolicyProcessorSuccess)
+		// Optimize SOURCE SIDE RETRIES by returning each child status separately
+		response.ChildrenStatus = append(
+			response.ChildrenStatus,
+			&types.ApplyParentClosePolicyResult{
+				Child:       childAttrs,
+				FailedCause: failedCause,
+			})
 	}
 
-	// TODO: Consider going through all the children, even if some fail to apply the parent policy,
-	// and add the policy application status by a child identifier (domain-wf-run id)
-	// Right now, return value is all or none even if we were able apply the policy on some children successfuly
-	return &types.CrossClusterApplyParentClosePolicyResponseAttributes{}, nil
+	return &response, anyErr
 }
 
 func (t *crossClusterTargetTaskExecutor) executeRecordChildWorkflowExecutionCompleteTask(

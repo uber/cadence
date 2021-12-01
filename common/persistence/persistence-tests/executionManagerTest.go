@@ -2429,7 +2429,6 @@ func (s *ExecutionManagerSuite) validateCrossClusterTasks(
 			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
-			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
 		case *p.CrossClusterApplyParentClosePolicyTask:
 			s.Equal(task.TargetDomainIDs, loadedTaskInfo[index].GetTargetDomainIDs())
 		default:
@@ -2493,7 +2492,7 @@ func (s *ExecutionManagerSuite) TestTransferTasksComplete() {
 		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
 		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
 		&p.RecordWorkflowClosedTask{now, currentTransferID + 10007, 777},
-		&p.RecordChildExecutionCompletedTask{now, currentTransferID + 10008, targetDomainID, targetWorkflowID, targetRunID, scheduleID, 888},
+		&p.RecordChildExecutionCompletedTask{now, currentTransferID + 10008, targetDomainID, targetWorkflowID, targetRunID, 888},
 		&p.ApplyParentClosePolicyTask{now, currentTransferID + 10009, map[string]struct{}{targetDomainID: {}}, 999},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
