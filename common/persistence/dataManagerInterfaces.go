@@ -594,7 +594,6 @@ type (
 		TargetDomainID      string
 		TargetWorkflowID    string
 		TargetRunID         string
-		InitiatedID         int64
 		Version             int64
 	}
 

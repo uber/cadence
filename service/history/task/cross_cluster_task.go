@@ -544,23 +544,28 @@ func (t *crossClusterSourceTask) getRequestForApplyParentPolicy(
 		return nil, t.processingState, err
 	}
 	for _, childInfo := range children {
-		targetDomainEntry, err := execution.GetChildExecutionDomainEntry(childInfo, t.shard.GetDomainCache(), domainEntry)
+		// we already filtered the children so that child domainID is in task.TargetDomainIDs
+		// don't check if child domain is active or not here,
+		// we need to send the request even if the child domain is not active in target cluster
+		targetDomainID, err := execution.GetChildExecutionDomainID(childInfo, t.shard.GetDomainCache(), domainEntry)
 		if err != nil {
 			return nil, t.processingState, err
 		}
-		targetCluster := targetDomainEntry.GetReplicationConfig().ActiveClusterName
-		if targetCluster == t.targetCluster {
 
-			attributes.ApplyParentClosePolicyAttributes = append(
-				attributes.ApplyParentClosePolicyAttributes,
-				&types.ApplyParentClosePolicyAttributes{
-					ChildDomainID:     targetDomainEntry.GetInfo().ID,
+		attributes.Children = append(
+			attributes.Children,
+			&types.ApplyParentClosePolicyRequest{
+				Child: &types.ApplyParentClosePolicyAttributes{
+					ChildDomainID:     targetDomainID,
 					ChildWorkflowID:   childInfo.StartedWorkflowID,
 					ChildRunID:        childInfo.StartedRunID,
 					ParentClosePolicy: &childInfo.ParentClosePolicy,
 				},
-			)
-		}
+				Status: &types.ApplyParentClosePolicyStatus{
+					Completed: false,
+				},
+			},
+		)
 	}
 	return attributes, t.processingState, nil
 }
@@ -781,6 +786,8 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	case persistence.CrossClusterTaskTypeApplyParentClosePolicy:
 		taskTypeMatch = response.GetTaskType() == types.CrossClusterTaskTypeApplyParentPolicy
 		emptyResponse = response.ApplyParentClosePolicyAttributes == nil
+	default:
+		return fmt.Errorf("unknown task type: %v", t.GetTaskType())
 	}
 
 	if !taskTypeMatch {
@@ -788,7 +795,7 @@ func (t *crossClusterSourceTask) RecordResponse(response *types.CrossClusterTask
 	}
 
 	if emptyResponse && response.FailedCause == nil {
-		return errors.New("empty cross cluster task response")
+		return fmt.Errorf("empty cross cluster task response, task type: %v", t.GetTaskType())
 	}
 
 	if response.FailedCause != nil {

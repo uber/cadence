@@ -1476,6 +1476,10 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_Start_WorkflowAlread
 	s.NotNil(err)
 }
 
+func (s *engine2Suite) TestTerminateWorkflowExecution_Success() {
+
+}
+
 func (s *engine2Suite) TestNewChildContext() {
 	ctx := context.Background()
 	childCtx, childCancel := s.historyEngine.newChildContext(ctx)

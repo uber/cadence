@@ -252,3 +252,47 @@ func TestGetTaskFailedCauseMap(t *testing.T) {
 		assert.Equal(t, item, ToGetTaskFailedCauseMap(FromGetTaskFailedCauseMap(item)))
 	}
 }
+
+func TestCrossClusterApplyParentClosePolicyRequestAttributes(t *testing.T) {
+	item := testdata.CrossClusterApplyParentClosePolicyRequestAttributes
+	assert.Equal(
+		t,
+		&item,
+		ToCrossClusterApplyParentClosePolicyRequestAttributes(
+			FromCrossClusterApplyParentClosePolicyRequestAttributes(&item),
+		),
+	)
+}
+
+func TestApplyParentClosePolicyAttributes(t *testing.T) {
+	item := testdata.ApplyParentClosePolicyAttributes
+	assert.Equal(
+		t,
+		&item,
+		ToApplyParentClosePolicyAttributes(
+			FromApplyParentClosePolicyAttributes(&item),
+		),
+	)
+}
+
+func TestApplyParentClosePolicyResult(t *testing.T) {
+	item := testdata.ApplyParentClosePolicyResult
+	assert.Equal(
+		t,
+		&item,
+		ToApplyParentClosePolicyResult(
+			FromApplyParentClosePolicyResult(&item),
+		),
+	)
+}
+
+func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
+	item := testdata.CrossClusterApplyParentClosePolicyResponseWithChildren
+	assert.Equal(
+		t,
+		&item,
+		ToCrossClusterApplyParentClosePolicyResponseAttributes(
+			FromCrossClusterApplyParentClosePolicyResponseAttributes(&item),
+		),
+	)
+}

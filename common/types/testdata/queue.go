@@ -69,14 +69,21 @@ var (
 		InitiatedEventID: EventID1,
 		CompletionEvent:  &HistoryEvent_ChildWorkflowExecutionCompleted,
 	}
+
 	CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes = types.CrossClusterRecordChildWorkflowExecutionCompleteResponseAttributes{}
 	CrossClusterApplyParentClosePolicyRequestAttributes                = types.CrossClusterApplyParentClosePolicyRequestAttributes{
-		ApplyParentClosePolicyAttributes: []*types.ApplyParentClosePolicyAttributes{
+		Children: []*types.ApplyParentClosePolicyRequest{
 			{
-				ChildDomainID:     DomainID,
-				ChildWorkflowID:   WorkflowID,
-				ChildRunID:        RunID,
-				ParentClosePolicy: &ParentClosePolicy,
+				Child: &types.ApplyParentClosePolicyAttributes{
+					ChildDomainID:     DomainID,
+					ChildWorkflowID:   WorkflowID,
+					ChildRunID:        RunID,
+					ParentClosePolicy: &ParentClosePolicy,
+				},
+				Status: &types.ApplyParentClosePolicyStatus{
+					Completed:   false,
+					FailedCause: types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+				},
 			},
 		},
 	}
@@ -171,6 +178,31 @@ var (
 	}
 	RespondCrossClusterTasksCompletedResponse = types.RespondCrossClusterTasksCompletedResponse{
 		Tasks: CrossClusterTaskRequestArray,
+	}
+	ApplyParentClosePolicyAttributes = types.ApplyParentClosePolicyAttributes{
+		ChildDomainID:     "testDomain",
+		ChildWorkflowID:   "testChildWorkflowID",
+		ChildRunID:        "testChildRunID",
+		ParentClosePolicy: &ParentClosePolicy,
+	}
+	ApplyParentClosePolicyResult = types.ApplyParentClosePolicyResult{
+		Child:       &ApplyParentClosePolicyAttributes,
+		FailedCause: types.CrossClusterTaskFailedCauseDomainNotActive.Ptr(),
+	}
+	ApplyParentClosePolicyResult2 = types.ApplyParentClosePolicyResult{
+		Child: &types.ApplyParentClosePolicyAttributes{
+			ChildDomainID:     "testDomain2",
+			ChildWorkflowID:   "testChildWorkflowID2",
+			ChildRunID:        "testChildRunID2",
+			ParentClosePolicy: &ParentClosePolicy2,
+		},
+		FailedCause: types.CrossClusterTaskFailedCauseWorkflowAlreadyRunning.Ptr(),
+	}
+	CrossClusterApplyParentClosePolicyResponseWithChildren = types.CrossClusterApplyParentClosePolicyResponseAttributes{
+		ChildrenStatus: []*types.ApplyParentClosePolicyResult{
+			&ApplyParentClosePolicyResult,
+			&ApplyParentClosePolicyResult2,
+		},
 	}
 )
 

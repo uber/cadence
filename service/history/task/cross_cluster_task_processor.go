@@ -56,6 +56,8 @@ type (
 	crossClusterTaskProcessors []*crossClusterTaskProcessor
 
 	crossClusterTaskProcessor struct {
+		ctx               context.Context
+		ctxCancel         context.CancelFunc
 		shard             shard.Context
 		taskProcessor     Processor
 		taskExecutor      Executor
@@ -117,6 +119,7 @@ func newCrossClusterTaskProcessor(
 	taskFetcher Fetcher,
 	options *CrossClusterTaskProcessorOptions,
 ) *crossClusterTaskProcessor {
+	ctx, cancel := context.WithCancel(context.Background())
 	sourceCluster := taskFetcher.GetSourceCluster()
 	logger := shard.GetLogger().WithTags(
 		tag.ComponentCrossClusterTaskProcessor,
@@ -130,6 +133,8 @@ func newCrossClusterTaskProcessor(
 	retryPolicy.SetMaximumInterval(time.Second)
 	retryPolicy.SetExpirationInterval(options.TaskWaitInterval())
 	return &crossClusterTaskProcessor{
+		ctx:           ctx,
+		ctxCancel:     cancel,
 		shard:         shard,
 		taskProcessor: taskProcessor,
 		taskExecutor: NewCrossClusterTargetTaskExecutor(
@@ -190,6 +195,7 @@ func (p *crossClusterTaskProcessor) Stop() {
 	}
 
 	close(p.shutdownCh)
+	p.ctxCancel()
 	p.redispatcher.Stop()
 
 	if success := common.AwaitWaitGroup(&p.shutdownWG, time.Minute); !success {
@@ -219,9 +225,13 @@ func (p *crossClusterTaskProcessor) processLoop() {
 		sw := p.metricsScope.StartTimer(metrics.CrossClusterFetchLatency)
 
 		var taskRequests []*types.CrossClusterTaskRequest
-		err := p.taskFetcher.Fetch(p.shard.GetShardID()).Get(context.Background(), &taskRequests)
+		err := p.taskFetcher.Fetch(p.shard.GetShardID()).Get(p.ctx, &taskRequests)
 		sw.Stop()
 		if err != nil {
+			if err == errTaskFetcherShutdown {
+				return
+			}
+
 			p.logger.Error("Unable to fetch cross cluster tasks", tag.Error(err))
 			if common.IsServiceBusyError(err) {
 				p.metricsScope.IncCounter(metrics.CrossClusterFetchServiceBusyFailures)
@@ -231,6 +241,7 @@ func (p *crossClusterTaskProcessor) processLoop() {
 				))
 			} else {
 				p.metricsScope.IncCounter(metrics.CrossClusterFetchFailures)
+				// note we rely on the aggregation interval in task fetcher as the backoff
 			}
 			continue
 		}
@@ -273,7 +284,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 			TargetCluster: p.shard.GetClusterMetadata().GetCurrentClusterName(),
 			FetchNewTasks: p.numPendingTasks() < p.options.MaxPendingTasks(),
 		}
-		taskWaitContext, cancel := context.WithTimeout(context.Background(), p.options.TaskWaitInterval())
+		taskWaitContext, cancel := context.WithTimeout(p.ctx, p.options.TaskWaitInterval())
 		deadlineExceeded := false
 		for taskID, taskFuture := range taskFutures {
 			if deadlineExceeded && !taskFuture.IsReady() {
@@ -282,6 +293,13 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 
 			var taskResponse types.CrossClusterTaskResponse
 			if err := taskFuture.Get(taskWaitContext, &taskResponse); err != nil {
+				if p.ctx.Err() != nil {
+					// root context is no-longer valid, component is being shutdown,
+					// we can return directly
+					cancel()
+					return
+				}
+
 				if err == context.DeadlineExceeded {
 					// switch to a valid context here, otherwise Get() will always return an error.
 					// using context.Background() is fine since we will only be calling Get() with it
@@ -361,7 +379,13 @@ func (p *crossClusterTaskProcessor) respondPendingTaskLoop() {
 			for taskID, taskFuture := range p.pendingTasks {
 				if taskFuture.IsReady() {
 					var taskResponse types.CrossClusterTaskResponse
-					if err := taskFuture.Get(context.Background(), &taskResponse); err != nil {
+					if err := taskFuture.Get(p.ctx, &taskResponse); err != nil {
+						if p.ctx.Err() != nil {
+							// we are in shutdown logic
+							p.taskLock.Unlock()
+							return
+						}
+
 						// this case should not happen,
 						// task failure should be converted to FailCause in the response by the processing logic
 						taskResponse = types.CrossClusterTaskResponse{
@@ -433,7 +457,7 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 
 	var response *types.RespondCrossClusterTasksCompletedResponse
 	op := func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), respondCrossClusterTaskTimeout)
+		ctx, cancel := context.WithTimeout(p.ctx, respondCrossClusterTaskTimeout)
 		defer cancel()
 		var err error
 		response, err = p.sourceAdminClient.RespondCrossClusterTasksCompleted(ctx, request)
@@ -443,7 +467,7 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 		}
 		return err
 	}
-	err := p.throttleRetry.Do(context.Background(), op)
+	err := p.throttleRetry.Do(p.ctx, op)
 
 	return response, err
 }
