@@ -94,7 +94,7 @@ Canary Test Cases & Starter
 
 ### Cron Canary (periodically running the Sanity/starter suite) 
 
-The Cron workflow is not a test case. It's a top-level workflow to kick off the Sanity suite(described below) periodically.  
+The Cron workflow is not a test case. The workflowID is fixed: `"cadence.canary.cron"` It's a top-level workflow to kick off the Sanity suite(described below) periodically.  
 To start the cron canary:
 ```
  ./cadence-canary start -mode cronCanary
@@ -106,10 +106,14 @@ For local development, you can also start the cron canary workflows along with t
  ```
 
 The Cron Schedule is from the Configuration. 
-However, changing the schedule requires you manually terminate the existing cron workflow to take into effect.
-It can be [improved](https://github.com/uber/cadence/issues/4469) in the future.
+However, changing the schedule in config doesn't work directly because of the nature of cron workflow.
+Cron workflow will only stop when terminated or canceled.
+So it requires terminating the existing cron workflow to take into effect.
 
-The workflowID is fixed: `"cadence.canary.cron"`   
+A better way is using CLI to update the schedule, using `terminateIfRunning` policy: 
+```
+cadence --address  <>  --do cadence-canary wf start -w 'cadence.canary.cron' --tl canary-task-queue --et 1080 --wt 'workflow.cron' -i '"workflow.sanity"' --cron "@every 300s" --workflowidreusepolicy 3
+```   
 
 ### Sanity suite (Starter for all test cases) 
 The sanity workflow is test suite workflow. It will kick off a bunch of childWorkflows for all the test to verify that Cadence server is operating correctly. 
