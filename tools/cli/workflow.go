@@ -476,6 +476,14 @@ func newBatchCommands() []cli.Command {
 					Name:  FlagInputWithAlias,
 					Usage: "Optional input of signal",
 				},
+				cli.StringFlag{
+					Name:  FlagSourceClusterWithAlias,
+					Usage: "Required for batch replicate",
+				},
+				cli.StringFlag{
+					Name:  FlagTargetClusterWithAlias,
+					Usage: "Required for batch replicate",
+				},
 				cli.IntFlag{
 					Name:  FlagRPS,
 					Value: batcher.DefaultRPS,
