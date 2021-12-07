@@ -394,7 +394,10 @@ func (handler *taskHandlerImpl) handleDecisionCompleteWorkflow(
 	)
 
 	if handler.hasUnhandledEventsBeforeDecisions {
-		return handler.handlerFailDecision(types.DecisionTaskFailedCauseUnhandledDecision, "")
+		return handler.handlerFailDecision(
+			types.DecisionTaskFailedCauseUnhandledDecision,
+			"cannot complete workflow, new pending decisions were scheduled while this decision was processing",
+		)
 	}
 
 	if err := handler.validateDecisionAttr(
@@ -472,7 +475,10 @@ func (handler *taskHandlerImpl) handleDecisionFailWorkflow(
 	)
 
 	if handler.hasUnhandledEventsBeforeDecisions {
-		return handler.handlerFailDecision(types.DecisionTaskFailedCauseUnhandledDecision, "")
+		return handler.handlerFailDecision(
+			types.DecisionTaskFailedCauseUnhandledDecision,
+			"cannot complete workflow, new pending decisions were scheduled while this decision was processing",
+		)
 	}
 
 	if err := handler.validateDecisionAttr(
@@ -602,7 +608,10 @@ func (handler *taskHandlerImpl) handleDecisionCancelWorkflow(
 		metrics.DecisionTypeCancelWorkflowCounter)
 
 	if handler.hasUnhandledEventsBeforeDecisions {
-		return handler.handlerFailDecision(types.DecisionTaskFailedCauseUnhandledDecision, "")
+		return handler.handlerFailDecision(
+			types.DecisionTaskFailedCauseUnhandledDecision,
+			"cannot process cancellation, new pending decisions were scheduled while this decision was processing",
+		)
 	}
 
 	if err := handler.validateDecisionAttr(
@@ -723,7 +732,10 @@ func (handler *taskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 	)
 
 	if handler.hasUnhandledEventsBeforeDecisions {
-		return handler.handlerFailDecision(types.DecisionTaskFailedCauseUnhandledDecision, "")
+		return handler.handlerFailDecision(
+			types.DecisionTaskFailedCauseUnhandledDecision,
+			"cannot complete workflow, new pending decisions were scheduled while this decision was processing",
+		)
 	}
 
 	executionInfo := handler.mutableState.GetExecutionInfo()
