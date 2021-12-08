@@ -195,6 +195,10 @@ var (
 			Name:  FlagDomainID,
 			Usage: "Domain UUID (required if not specify domainName)",
 		},
+		cli.BoolFlag{
+			Name:  FlagPrintJSONWithAlias,
+			Usage: "Print in raw JSON format",
+		},
 	}
 
 	adminDomainCommonFlags = []cli.Flag{
