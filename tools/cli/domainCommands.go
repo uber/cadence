@@ -388,6 +388,7 @@ func (d *domainCLIImpl) failover(c *cli.Context, domainName string, targetCluste
 func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	domainName := c.GlobalString(FlagDomain)
 	domainID := c.String(FlagDomainID)
+	printJSON := c.Bool(FlagPrintJSON)
 
 	if domainID == "" && domainName == "" {
 		ErrorAndExit("At least domainID or domainName must be provided.", nil)
@@ -403,6 +404,15 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
 		}
 		ErrorAndExit(fmt.Sprintf("Domain %s does not exist.", domainName), err)
+	}
+
+	if printJSON {
+		output, err := json.Marshal(resp)
+		if err != nil {
+			ErrorAndExit("Failed to encode domain response into JSON.", err)
+		}
+		fmt.Println(string(output))
+		return
 	}
 
 	clusters := "N/A, Not a global domain"
