@@ -6,8 +6,9 @@ bench:
 cadence:
   service: "cadence-frontend"
   host: "127.0.0.1:7933"
-  metrics:
-    statsd: ~
-    prometheus:
-      timerType: "histogram"
-      listenAddress: "127.0.0.1:8004"
+
+metrics:
+  statsd: ~
+  prometheus:
+    timerType: "histogram"
+    listenAddress: "127.0.0.1:8004"
