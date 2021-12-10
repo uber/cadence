@@ -209,6 +209,8 @@ type (
 		User string `yaml:"user"`
 		// Password is the cassandra password used for authentication by gocql client
 		Password string `yaml:"password"`
+		// AllowedAuthenticators informs the cassandra client to expect a custom authenticator
+		AllowedAuthenticators []string `yaml:"allowedAuthenticators"`
 		// Keyspace is the cassandra keyspace
 		Keyspace string `yaml:"keyspace"`
 		// Region is the region filter arg for cassandra

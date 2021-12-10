@@ -36,6 +36,16 @@ const (
 	CassandraPort = "CASSANDRA_DB_PORT"
 	// CassandraDefaultPort Cassandra default port
 	CassandraDefaultPort = "9042"
+	// CassandraUsername env
+	CassandraUsername = "CASSANDRA_DB_USERNAME"
+	// CassandraUsername env
+	CassandraDefaultUsername = "cassandra"
+	// CassandraPassword env
+	CassandraPassword = "CASSANDRA_DB_PASSWORD"
+	// CassandraPassword env
+	CassandraDefaultPassword = "cassandra"
+	// CassandraPassword env
+	CassandraAllowedAuthenticators = "CASSANDRA_DB_ALLOWEDAUTHENTICATORS"
 	// CassandraProtoVersion env
 	CassandraProtoVersion = "CASSANDRA_PROTO_VERSION"
 	// CassandraDefaultProtoVersion Cassandra default protocol version
@@ -191,6 +201,36 @@ func GetCassandraPort() int {
 		panic(fmt.Sprintf("error getting env %v", CassandraPort))
 	}
 	return p
+}
+
+// GetCassandraUsername return the cassandra username
+func GetCassandraUsername() string {
+	user := os.Getenv(CassandraUsername)
+	if user == "" {
+		user = CassandraDefaultUsername
+	}
+	return user
+}
+
+// GetCassandraPassword return the cassandra password
+func GetCassandraPassword() string {
+	pass := os.Getenv(CassandraPassword)
+	if pass == "" {
+		pass = CassandraDefaultPassword
+	}
+	return pass
+}
+
+// GetCassandraAllowedAuthenticators return the cassandra allowed authenticators
+func GetCassandraAllowedAuthenticators() []string {
+	var authenticators []string
+	configuredAuthenticators := os.Getenv(CassandraAllowedAuthenticators)
+	if configuredAuthenticators == "" {
+		return authenticators
+	}
+
+	authenticators = append(authenticators, configuredAuthenticators)
+	return authenticators
 }
 
 // GetCassandraProtoVersion return the cassandra protocol version

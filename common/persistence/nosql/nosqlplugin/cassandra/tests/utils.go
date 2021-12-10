@@ -30,12 +30,29 @@ const rootRelativePath = "../../../../../../"
 
 func NewTestCQLClient(keyspace string) (*cassandra.CqlClient, error) {
 	return cassandra.NewCQLClient(&cassandra.CQLClientConfig{
-		Hosts:        environment.GetCassandraAddress(),
-		Port:         cassandra.DefaultCassandraPort,
-		Keyspace:     keyspace,
-		Timeout:      cassandra.DefaultTimeout,
-		NumReplicas:  1,
-		ProtoVersion: environment.GetCassandraProtoVersion(),
+		Hosts:                 environment.GetCassandraAddress(),
+		Port:                  cassandra.DefaultCassandraPort,
+		Keyspace:              keyspace,
+		Timeout:               cassandra.DefaultTimeout,
+		User:                  environment.GetCassandraUsername(),
+		Password:              environment.GetCassandraPassword(),
+		AllowedAuthenticators: environment.GetCassandraAllowedAuthenticators(),
+		NumReplicas:           1,
+		ProtoVersion:          environment.GetCassandraProtoVersion(),
+	})
+}
+
+func NewTestCQLClientWithCustomAuthenticator(keyspace string) (*cassandra.CqlClient, error) {
+	return cassandra.NewCQLClient(&cassandra.CQLClientConfig{
+		Hosts:                 environment.GetCassandraAddress(),
+		Port:                  cassandra.DefaultCassandraPort,
+		Keyspace:              keyspace,
+		Timeout:               cassandra.DefaultTimeout,
+		User:                  environment.GetCassandraUsername(),
+		Password:              environment.GetCassandraPassword(),
+		AllowedAuthenticators: append(make([]string, 1), "org.apache.cassandra.auth.FakeCustomAuthenticator"),
+		NumReplicas:           1,
+		ProtoVersion:          environment.GetCassandraProtoVersion(),
 	})
 }
 

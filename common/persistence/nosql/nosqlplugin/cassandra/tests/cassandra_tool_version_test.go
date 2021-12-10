@@ -74,8 +74,8 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		PluginName: cassandra_db.PluginName,
 		Hosts:      environment.GetCassandraAddress(),
 		Port:       cassandra.DefaultCassandraPort,
-		User:       "",
-		Password:   "",
+		User:       environment.GetCassandraUsername(),
+		Password:   environment.GetCassandraPassword(),
 		Keyspace:   keyspace,
 	}
 	visibilityCfg := defaultCfg
@@ -164,8 +164,8 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		PluginName: cassandra_db.PluginName,
 		Hosts:      environment.GetCassandraAddress(),
 		Port:       cassandra.DefaultCassandraPort,
-		User:       "",
-		Password:   "",
+		User:       environment.GetCassandraUsername(),
+		Password:   environment.GetCassandraPassword(),
 		Keyspace:   keyspace,
 	}
 	err = cassandra.CheckCompatibleVersion(cfg, expected)
