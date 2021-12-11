@@ -380,6 +380,8 @@ type (
 		Tags map[string]string `yaml:"tags"`
 		// Prefix sets the prefix to all outgoing metrics
 		Prefix string `yaml:"prefix"`
+		// ReportingInterval is the interval of metrics reporter
+		ReportingInterval time.Duration `yaml:"reportingInterval"` // defaults to 1s
 	}
 
 	// Statsd contains the config items for statsd metrics reporter
