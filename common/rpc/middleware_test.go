@@ -54,7 +54,7 @@ func TestAuthOubboundMiddleware(t *testing.T) {
 }
 
 func TestResponseInfoMiddleware(t *testing.T) {
-	m := responseInfoMiddleware{}
+	m := ResponseInfoMiddleware{}
 	ctx, responseInfo := ContextWithResponseInfo(context.Background())
 	body := ioutil.NopCloser(bytes.NewReader([]byte{1, 2, 3, 4, 5}))
 	response, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{response: &transport.Response{Body: body}})
@@ -64,7 +64,7 @@ func TestResponseInfoMiddleware(t *testing.T) {
 }
 
 func TestResponseInfoMiddleware_Error(t *testing.T) {
-	m := responseInfoMiddleware{}
+	m := ResponseInfoMiddleware{}
 	ctx, responseInfo := ContextWithResponseInfo(context.Background())
 	_, err := m.Call(ctx, &transport.Request{}, &fakeOutbound{err: fmt.Errorf("test")})
 	assert.Error(t, err)
@@ -72,7 +72,7 @@ func TestResponseInfoMiddleware_Error(t *testing.T) {
 }
 
 func TestInboundMetricsMiddleware(t *testing.T) {
-	m := inboundMetricsMiddleware{}
+	m := InboundMetricsMiddleware{}
 	h := &fakeHandler{}
 	err := m.Handle(context.Background(), &transport.Request{Transport: "grpc", Caller: "x-caller"}, nil, h)
 	assert.NoError(t, err)

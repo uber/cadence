@@ -208,7 +208,7 @@ func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 	return yarpc.Outbounds{
 		o.serviceName: {
 			ServiceName: o.serviceName,
-			Unary:       middleware.ApplyUnaryOutbound(outbound, &responseInfoMiddleware{}),
+			Unary:       middleware.ApplyUnaryOutbound(outbound, &ResponseInfoMiddleware{}),
 		},
 	}, nil
 }

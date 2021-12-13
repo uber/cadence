@@ -99,7 +99,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		InboundTLS:  inboundTLS,
 		OutboundTLS: outboundTLS,
 		InboundMiddleware: yarpc.InboundMiddleware{
-			Unary: &inboundMetricsMiddleware{},
+			Unary: &InboundMetricsMiddleware{},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
 			Unary: &HeaderForwardingMiddleware{},
