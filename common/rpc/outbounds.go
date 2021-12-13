@@ -81,7 +81,7 @@ func (b multiOutbounds) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 
 type publicClientOutbound struct {
 	address        string
-	isGrpc         bool
+	isGRPC         bool
 	authMiddleware middleware.UnaryOutbound
 }
 
@@ -108,7 +108,7 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 
 func (b publicClientOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
 	var outbound transport.UnaryOutbound
-	if b.isGrpc {
+	if b.isGRPC {
 		outbound = grpc.NewSingleOutbound(b.address)
 	} else {
 		outbound = tchannel.NewSingleOutbound(b.address)

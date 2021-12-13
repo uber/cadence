@@ -104,17 +104,18 @@ func TestPublicClientOutbound(t *testing.T) {
 	require.NotNil(t, builder)
 	require.Equal(t, "localhost:1234", builder.address)
 	require.Equal(t, nil, builder.authMiddleware)
-	require.False(t, builder.isGrpc)
+	require.False(t, builder.isGRPC)
 
 	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", "tchannel", true, "invalid"))
 	require.EqualError(t, err, "create AuthProvider: invalid private key path invalid")
+	require.False(t, builder.isGRPC)
 
 	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", "grpc", true, tempFile(t, "private-key")))
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 	require.Equal(t, "localhost:1234", builder.address)
 	require.NotNil(t, builder.authMiddleware)
-	require.True(t, builder.isGrpc)
+	require.True(t, builder.isGRPC)
 
 	grpc := &grpc.Transport{}
 	tchannel := &tchannel.Transport{}
