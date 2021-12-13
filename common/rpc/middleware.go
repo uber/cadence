@@ -81,9 +81,11 @@ func (r *countingReadCloser) Close() (err error) {
 	return r.reader.Close()
 }
 
-type responseInfoMiddleware struct{}
+// ResponseInfoMiddleware populates context with ResponseInfo structure which contains info about response that was received.
+// In particular, it counts the size of the response in bytes. Such information can be useful down the line, where payload are deserialized and no longer have their size.
+type ResponseInfoMiddleware struct{}
 
-func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (m *ResponseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	response, err := out.Call(ctx, request)
 
 	if value := ctx.Value(_responseInfoContextKey); value != nil {
@@ -97,9 +99,10 @@ func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Re
 	return response, err
 }
 
-type inboundMetricsMiddleware struct{}
+// InboundMetricsMiddleware tags context with additional metric tags from incoming request.
+type InboundMetricsMiddleware struct{}
 
-func (m *inboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+func (m *InboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	ctx = metrics.TagContext(ctx,
 		metrics.CallerTag(req.Caller),
 		metrics.TransportTag(req.Transport),
