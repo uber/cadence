@@ -38,14 +38,14 @@ const (
 	CassandraDefaultPort = "9042"
 	// CassandraUsername env
 	CassandraUsername = "CASSANDRA_DB_USERNAME"
-	// CassandraUsername env
-	CassandraDefaultUsername = "cassandra"
+	// CassandraDefaultUsername Cassandra default username
+	CassandraDefaultUsername = ""
 	// CassandraPassword env
 	CassandraPassword = "CASSANDRA_DB_PASSWORD"
-	// CassandraPassword env
-	CassandraDefaultPassword = "cassandra"
-	// CassandraPassword env
-	CassandraAllowedAuthenticators = "CASSANDRA_DB_ALLOWEDAUTHENTICATORS"
+	// CassandraDefaultPassword Cassandra default password
+	CassandraDefaultPassword = ""
+	// CassandraAllowedAuthenticators env
+	CassandraAllowedAuthenticators = "CASSANDRA_DB_ALLOWED_AUTHENTICATORS"
 	// CassandraProtoVersion env
 	CassandraProtoVersion = "CASSANDRA_PROTO_VERSION"
 	// CassandraDefaultProtoVersion Cassandra default protocol version

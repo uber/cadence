@@ -72,10 +72,3 @@ func (s *CQLClientTestSuite) TestCQLClient() {
 	s.RunDropTest(client)
 	client.Close()
 }
-
-// Verifies the configured custom authenticator correctly gets passed to the client
-// In this case, the expected authenticator is not returned, so we expect an error
-func (s *CQLClientTestSuite) TestCQLClientWithCustomAuthenticator() {
-	_, err := NewTestCQLClientWithCustomAuthenticator(s.DBName)
-	s.Error(err)
-}

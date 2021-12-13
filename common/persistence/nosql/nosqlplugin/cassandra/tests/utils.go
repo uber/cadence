@@ -42,20 +42,6 @@ func NewTestCQLClient(keyspace string) (*cassandra.CqlClient, error) {
 	})
 }
 
-func NewTestCQLClientWithCustomAuthenticator(keyspace string) (*cassandra.CqlClient, error) {
-	return cassandra.NewCQLClient(&cassandra.CQLClientConfig{
-		Hosts:                 environment.GetCassandraAddress(),
-		Port:                  cassandra.DefaultCassandraPort,
-		Keyspace:              keyspace,
-		Timeout:               cassandra.DefaultTimeout,
-		User:                  environment.GetCassandraUsername(),
-		Password:              environment.GetCassandraPassword(),
-		AllowedAuthenticators: append(make([]string, 1), "org.apache.cassandra.auth.FakeCustomAuthenticator"),
-		NumReplicas:           1,
-		ProtoVersion:          environment.GetCassandraProtoVersion(),
-	})
-}
-
 func CreateTestCQLFileContent() string {
 	return `
 -- test cql file content

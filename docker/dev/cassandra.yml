@@ -2,7 +2,5 @@ version: '3'
 services:
   cassandra:
     image: cassandra:3.11
-    volumes:
-      - ./cassandra-config.yml:/etc/cassandra/cassandra.yaml
     ports:
       - "9042:9042"
