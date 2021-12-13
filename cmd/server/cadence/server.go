@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/cadence/compatibility"
+
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -225,7 +228,17 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	params.PublicClient = workflowserviceclient.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
+	publicClientConfig := params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient)
+	if rpc.IsGRPCOutbound(publicClientConfig) {
+		params.PublicClient = compatibility.NewThrift2ProtoAdapter(
+			apiv1.NewDomainAPIYARPCClient(publicClientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(publicClientConfig),
+			apiv1.NewWorkerAPIYARPCClient(publicClientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(publicClientConfig),
+		)
+	} else {
+		params.PublicClient = workflowserviceclient.New(publicClientConfig)
+	}
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,

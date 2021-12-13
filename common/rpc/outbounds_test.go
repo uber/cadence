@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/peer"
+	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/peer/direct"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
@@ -78,9 +79,9 @@ func TestCombineOutbounds(t *testing.T) {
 }
 
 func TestPublicClientOutbound(t *testing.T) {
-	makeConfig := func(hostPort string, enableAuth bool, keyPath string) *config.Config {
+	makeConfig := func(hostPort string, transport string, enableAuth bool, keyPath string) *config.Config {
 		return &config.Config{
-			PublicClient:  config.PublicClient{HostPort: hostPort},
+			PublicClient:  config.PublicClient{HostPort: hostPort, Transport: transport},
 			Authorization: config.Authorization{OAuthAuthorizer: config.OAuthAuthorizer{Enable: enableAuth}},
 			ClusterGroupMetadata: &config.ClusterGroupMetadata{
 				CurrentClusterName: "cluster-A",
@@ -98,20 +99,22 @@ func TestPublicClientOutbound(t *testing.T) {
 	_, err := newPublicClientOutbound(&config.Config{})
 	require.EqualError(t, err, "need to provide an endpoint config for PublicClient")
 
-	builder, err := newPublicClientOutbound(makeConfig("localhost:1234", false, ""))
+	builder, err := newPublicClientOutbound(makeConfig("localhost:1234", "tchannel", false, ""))
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 	require.Equal(t, "localhost:1234", builder.address)
 	require.Equal(t, nil, builder.authMiddleware)
+	require.False(t, builder.isGrpc)
 
-	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", true, "invalid"))
+	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", "tchannel", true, "invalid"))
 	require.EqualError(t, err, "create AuthProvider: invalid private key path invalid")
 
-	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", true, tempFile(t, "private-key")))
+	builder, err = newPublicClientOutbound(makeConfig("localhost:1234", "grpc", true, tempFile(t, "private-key")))
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 	require.Equal(t, "localhost:1234", builder.address)
 	require.NotNil(t, builder.authMiddleware)
+	require.True(t, builder.isGrpc)
 
 	grpc := &grpc.Transport{}
 	tchannel := &tchannel.Transport{}
@@ -164,6 +167,14 @@ func TestDirectOutbound(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "cadence-history", outbounds["cadence-history"].ServiceName)
 	assert.NotNil(t, outbounds["cadence-history"].Unary)
+}
+
+func TestIsGRPCOutboud(t *testing.T) {
+	assert.True(t, IsGRPCOutbound(&transport.OutboundConfig{Outbounds: transport.Outbounds{Unary: (&grpc.Transport{}).NewSingleOutbound("localhost:1234")}}))
+	assert.False(t, IsGRPCOutbound(&transport.OutboundConfig{Outbounds: transport.Outbounds{Unary: (&tchannel.Transport{}).NewSingleOutbound("localhost:1234")}}))
+	assert.Panics(t, func() {
+		IsGRPCOutbound(&transport.OutboundConfig{Outbounds: transport.Outbounds{Unary: fakeOutbound{}}})
+	})
 }
 
 func tempFile(t *testing.T, content string) string {
