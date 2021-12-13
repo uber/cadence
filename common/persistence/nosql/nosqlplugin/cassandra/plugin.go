@@ -83,18 +83,19 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 		cfg.ProtoVersion = environment.GetCassandraProtoVersion()
 	}
 	return gocql.ClusterConfig{
-		Hosts:             cfg.Hosts,
-		Port:              cfg.Port,
-		User:              cfg.User,
-		Password:          cfg.Password,
-		Keyspace:          cfg.Keyspace,
-		Region:            cfg.Region,
-		Datacenter:        cfg.Datacenter,
-		MaxConns:          cfg.MaxConns,
-		TLS:               cfg.TLS,
-		ProtoVersion:      cfg.ProtoVersion,
-		Consistency:       gocql.LocalQuorum,
-		SerialConsistency: gocql.LocalSerial,
-		Timeout:           defaultSessionTimeout,
+		Hosts:                 cfg.Hosts,
+		Port:                  cfg.Port,
+		User:                  cfg.User,
+		Password:              cfg.Password,
+		AllowedAuthenticators: cfg.AllowedAuthenticators,
+		Keyspace:              cfg.Keyspace,
+		Region:                cfg.Region,
+		Datacenter:            cfg.Datacenter,
+		MaxConns:              cfg.MaxConns,
+		TLS:                   cfg.TLS,
+		ProtoVersion:          cfg.ProtoVersion,
+		Consistency:           gocql.LocalQuorum,
+		SerialConsistency:     gocql.LocalSerial,
+		Timeout:               defaultSessionTimeout,
 	}
 }

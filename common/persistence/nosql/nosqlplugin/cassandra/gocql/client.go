@@ -62,8 +62,9 @@ func newCassandraCluster(cfg ClusterConfig) *gocql.ClusterConfig {
 	}
 	if cfg.User != "" && cfg.Password != "" {
 		cluster.Authenticator = gocql.PasswordAuthenticator{
-			Username: cfg.User,
-			Password: cfg.Password,
+			Username:              cfg.User,
+			Password:              cfg.Password,
+			AllowedAuthenticators: cfg.AllowedAuthenticators,
 		}
 	}
 	if cfg.Keyspace != "" {
