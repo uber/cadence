@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/grpc"
 
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
@@ -46,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -106,7 +106,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	var rawClient history.Client
 	var addressMapper history.AddressMapperFn
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
-	if isGRPCOutbound(outboundConfig) {
+	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		addressMapper = func(address string) (string, error) {
 			return cf.rpcFactory.ReplaceGRPCPort(service.History, address)
@@ -151,7 +151,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	var rawClient matching.Client
 	var addressMapper matching.AddressMapperFn
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
-	if isGRPCOutbound(outboundConfig) {
+	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
 		addressMapper = func(address string) (string, error) {
 			return cf.rpcFactory.ReplaceGRPCPort(service.Matching, address)
@@ -185,7 +185,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	largeTimeout time.Duration,
 ) (admin.Client, error) {
 	var client admin.Client
-	if isGRPCOutbound(config) {
+	if rpc.IsGRPCOutbound(config) {
 		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
 	} else {
 		client = admin.NewThriftClient(adminserviceclient.New(config))
@@ -207,7 +207,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
 	var client frontend.Client
-	if isGRPCOutbound(config) {
+	if rpc.IsGRPCOutbound(config) {
 		client = frontend.NewGRPCClient(
 			apiv1.NewDomainAPIYARPCClient(config),
 			apiv1.NewWorkflowAPIYARPCClient(config),
@@ -226,13 +226,4 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
 	return client, nil
-}
-
-func isGRPCOutbound(config transport.ClientConfig) bool {
-	namer, ok := config.GetUnaryOutbound().(transport.Namer)
-	if !ok {
-		// This should not happen, unless yarpc older than v1.43.0 is used
-		panic("Outbound does not implement transport.Namer")
-	}
-	return namer.TransportName() == grpc.TransportName
 }

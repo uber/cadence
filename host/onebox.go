@@ -33,10 +33,13 @@ import (
 	"github.com/uber-go/tally"
 
 	cwsc "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	frontendClient "github.com/uber/cadence/client/frontend"
@@ -465,7 +468,7 @@ func (c *cadenceImpl) startHistory(
 		integrationClient := newIntegrationConfigClient(dynamicconfig.NewNopClient())
 		c.overrideHistoryDynamicConfig(integrationClient)
 		params.DynamicConfig = integrationClient
-		params.PublicClient = cwsc.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
+		params.PublicClient = newPublicClient(params.RPCFactory.GetDispatcher())
 		params.ArchivalMetadata = c.archiverMetadata
 		params.ArchiverProvider = c.archiverProvider
 		params.ESConfig = c.esConfig
@@ -578,7 +581,7 @@ func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitG
 	if err != nil {
 		c.logger.Fatal("Failed to copy persistence config for worker", tag.Error(err))
 	}
-	params.PublicClient = cwsc.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
+	params.PublicClient = newPublicClient(params.RPCFactory.GetDispatcher())
 	service := NewService(params)
 	service.Start()
 
@@ -761,11 +764,26 @@ func newPProfInitializerImpl(logger log.Logger, port int) common.PProfInitialize
 	}
 }
 
+func newPublicClient(dispatcher *yarpc.Dispatcher) cwsc.Interface {
+	config := dispatcher.ClientConfig(rpc.OutboundPublicClient)
+	return compatibility.NewThrift2ProtoAdapter(
+		apiv1.NewDomainAPIYARPCClient(config),
+		apiv1.NewWorkflowAPIYARPCClient(config),
+		apiv1.NewWorkerAPIYARPCClient(config),
+		apiv1.NewVisibilityAPIYARPCClient(config),
+	)
+}
+
 func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string) common.RPCFactory {
 	grpcPortResolver := grpcPortResolver{}
 	grpcHostPort, err := grpcPortResolver.GetGRPCAddress("", tchannelHostPort)
 	if err != nil {
 		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+	}
+
+	frontendGRPCAddress, err := grpcPortResolver.GetGRPCAddress("", c.FrontendAddress())
+	if err != nil {
+		c.logger.Fatal("Failed to obtain frontend GRPC address", tag.Error(err))
 	}
 
 	return rpc.NewFactory(c.logger, rpc.Params{
@@ -778,8 +796,8 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string)
 		},
 		// For integration tests to generate client out of the same outbound.
 		OutboundsBuilder: rpc.CombineOutbounds(
-			&singleTChannelOutbound{testOutboundName(serviceName), serviceName, tchannelHostPort},
-			&singleTChannelOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendAddress()},
+			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, grpcHostPort},
+			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, frontendGRPCAddress},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
 			rpc.NewDirectOutbound(service.History, true, nil),
 			rpc.NewDirectOutbound(service.Matching, true, nil),
@@ -792,17 +810,17 @@ func testOutboundName(name string) string {
 	return "test-" + name
 }
 
-type singleTChannelOutbound struct {
+type singleGRPCOutbound struct {
 	outboundName string
 	serviceName  string
 	address      string
 }
 
-func (b singleTChannelOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+func (b singleGRPCOutbound) Build(grpc *grpc.Transport, _ *tchannel.Transport) (yarpc.Outbounds, error) {
 	return yarpc.Outbounds{
 		b.outboundName: {
 			ServiceName: b.serviceName,
-			Unary:       tchannel.NewSingleOutbound(b.address),
+			Unary:       grpc.NewSingleOutbound(b.address),
 		},
 	}, nil
 }

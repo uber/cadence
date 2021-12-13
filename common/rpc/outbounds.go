@@ -81,6 +81,7 @@ func (b multiOutbounds) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 
 type publicClientOutbound struct {
 	address        string
+	isGRPC         bool
 	authMiddleware middleware.UnaryOutbound
 }
 
@@ -100,14 +101,22 @@ func newPublicClientOutbound(config *config.Config) (publicClientOutbound, error
 		authMiddleware = &authOutboundMiddleware{authProvider}
 	}
 
-	return publicClientOutbound{config.PublicClient.HostPort, authMiddleware}, nil
+	isGrpc := config.PublicClient.Transport == grpc.TransportName
+
+	return publicClientOutbound{config.PublicClient.HostPort, isGrpc, authMiddleware}, nil
 }
 
-func (b publicClientOutbound) Build(_ *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+func (b publicClientOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport) (yarpc.Outbounds, error) {
+	var outbound transport.UnaryOutbound
+	if b.isGRPC {
+		outbound = grpc.NewSingleOutbound(b.address)
+	} else {
+		outbound = tchannel.NewSingleOutbound(b.address)
+	}
 	return yarpc.Outbounds{
 		OutboundPublicClient: {
 			ServiceName: service.Frontend,
-			Unary:       middleware.ApplyUnaryOutbound(tchannel.NewSingleOutbound(b.address), b.authMiddleware),
+			Unary:       middleware.ApplyUnaryOutbound(outbound, b.authMiddleware),
 		},
 	}, nil
 }
@@ -202,4 +211,13 @@ func (o directOutbound) Build(grpc *grpc.Transport, tchannel *tchannel.Transport
 			Unary:       middleware.ApplyUnaryOutbound(outbound, &responseInfoMiddleware{}),
 		},
 	}, nil
+}
+
+func IsGRPCOutbound(config transport.ClientConfig) bool {
+	namer, ok := config.GetUnaryOutbound().(transport.Namer)
+	if !ok {
+		// This should not happen, unless yarpc older than v1.43.0 is used
+		panic("Outbound does not implement transport.Namer")
+	}
+	return namer.TransportName() == grpc.TransportName
 }

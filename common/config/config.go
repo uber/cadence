@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -463,6 +462,11 @@ type (
 		// HostPort is the host port to connect on. Host can be DNS name
 		// Default to currentCluster's RPCAddress in ClusterInformation
 		HostPort string `yaml:"hostPort"`
+		// Transport is the tranport to use when communicating using the SDK client.
+		// Defaults to:
+		// - currentCluster's RPCTransport in ClusterInformation (if HostPort is not provided)
+		// - grpc (if HostPort is provided)
+		Transport string `yaml:"transport"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
@@ -533,18 +537,12 @@ func (c *Config) fillDefaults() {
 	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
 		name := c.ClusterGroupMetadata.CurrentClusterName
 		currentCluster := c.ClusterGroupMetadata.ClusterGroup[name]
-		if currentCluster.RPCTransport != "grpc" {
-			c.PublicClient.HostPort = currentCluster.RPCAddress
-		} else {
-			// public client cannot use gRPC because GoSDK hasn't supported it. we need to fallback to Thrift
-			// TODO: remove this fallback after GoSDK supporting gRPC
-			thriftPort := c.Services["frontend"].RPC.Port // use the Thrift port from RPC config
-			host, _, err := net.SplitHostPort(currentCluster.RPCAddress)
-			if err != nil {
-				log.Fatalf("RPCAddress is invalid for cluster %v", name)
-			}
-			c.PublicClient.HostPort = fmt.Sprintf("%v:%v", host, thriftPort)
-		}
+		c.PublicClient.HostPort = currentCluster.RPCAddress
+		c.PublicClient.Transport = currentCluster.RPCTransport
+
+	}
+	if c.PublicClient.Transport == "" {
+		c.PublicClient.Transport = "grpc"
 	}
 
 	if c.ClusterGroupMetadata.ClusterRedirectionPolicy == nil && c.DCRedirectionPolicy != nil {
