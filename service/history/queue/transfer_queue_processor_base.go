@@ -22,6 +22,7 @@ package queue
 
 import (
 	"context"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -62,9 +63,10 @@ type (
 		processCh chan struct{}
 
 		// for managing if a processing queue collection should be processed
-		processingLock sync.Mutex
-		backoffTimer   map[int]*time.Timer
-		shouldProcess  map[int]bool
+		startJitterTimer *time.Timer
+		processingLock   sync.Mutex
+		backoffTimer     map[int]*time.Timer
+		shouldProcess    map[int]bool
 
 		// for estimating the look ahead taskID during split
 		lastSplitTime           time.Time
@@ -157,8 +159,17 @@ func (t *transferQueueProcessorBase) Start() {
 
 	t.redispatcher.Start()
 
-	// trigger an initial load of tasks
-	t.notifyAllQueueCollections()
+	// trigger an initial (maybe delayed) load of tasks
+	if startJitter := t.options.MaxStartJitterInterval(); startJitter > 0 {
+		t.startJitterTimer = time.AfterFunc(
+			time.Duration(rand.Int63n(int64(startJitter))),
+			func() {
+				t.notifyAllQueueCollections()
+			},
+		)
+	} else {
+		t.notifyAllQueueCollections()
+	}
 
 	t.shutdownWG.Add(1)
 	go t.processorPump()
@@ -173,6 +184,9 @@ func (t *transferQueueProcessorBase) Stop() {
 	defer t.logger.Info("Transfer queue processor state changed", tag.LifeCycleStopped)
 
 	close(t.shutdownCh)
+	if t.startJitterTimer != nil {
+		t.startJitterTimer.Stop()
+	}
 	t.processingLock.Lock()
 	for _, timer := range t.backoffTimer {
 		timer.Stop()
@@ -564,6 +578,8 @@ func newTransferQueueProcessorOptions(
 		// disable persist and load processing queue states for failover processor as it will never be split
 		options.EnablePersistQueueStates = dynamicconfig.GetBoolPropertyFn(false)
 		options.EnableLoadQueueStates = dynamicconfig.GetBoolPropertyFn(false)
+
+		options.MaxStartJitterInterval = config.TransferProcessorFailoverMaxStartJitterInterval
 	} else {
 		options.EnableSplit = config.QueueProcessorEnableSplit
 		options.SplitMaxLevel = config.QueueProcessorSplitMaxLevel
@@ -577,6 +593,8 @@ func newTransferQueueProcessorOptions(
 
 		options.EnablePersistQueueStates = config.QueueProcessorEnablePersistQueueStates
 		options.EnableLoadQueueStates = config.QueueProcessorEnableLoadQueueStates
+
+		options.MaxStartJitterInterval = dynamicconfig.GetDurationPropertyFn(0)
 	}
 
 	if isActive {
