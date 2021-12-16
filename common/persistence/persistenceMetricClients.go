@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -32,8 +33,9 @@ import (
 
 type (
 	persistenceMetricsClientBase struct {
-		metricClient metrics.Client
-		logger       log.Logger
+		metricClient                  metrics.Client
+		logger                        log.Logger
+		enableLatencyHistogramMetrics bool
 	}
 
 	shardPersistenceClient struct {
@@ -91,12 +93,14 @@ func NewShardPersistenceMetricsClient(
 	persistence ShardManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) ShardManager {
 	return &shardPersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -106,12 +110,14 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 	persistence ExecutionManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger.WithTags(tag.ShardID(persistence.GetShardID())),
+			metricClient:                  metricClient,
+			logger:                        logger.WithTags(tag.ShardID(persistence.GetShardID())),
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -121,12 +127,14 @@ func NewTaskPersistenceMetricsClient(
 	persistence TaskManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) TaskManager {
 	return &taskPersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -136,12 +144,14 @@ func NewHistoryPersistenceMetricsClient(
 	persistence HistoryManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) HistoryManager {
 	return &historyPersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -151,12 +161,14 @@ func NewDomainPersistenceMetricsClient(
 	persistence DomainManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) DomainManager {
 	return &metadataPersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -166,12 +178,14 @@ func NewVisibilityPersistenceMetricsClient(
 	persistence VisibilityManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) VisibilityManager {
 	return &visibilityPersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -181,12 +195,14 @@ func NewQueuePersistenceMetricsClient(
 	persistence QueueManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) QueueManager {
 	return &queuePersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -196,12 +212,14 @@ func NewConfigStorePersistenceMetricsClient(
 	persistence ConfigStoreManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	cfg *config.Persistence,
 ) ConfigStoreManager {
 	return &configStorePersistenceClient{
 		persistence: persistence,
 		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient: metricClient,
-			logger:       logger,
+			metricClient:                  metricClient,
+			logger:                        logger,
+			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 		},
 	}
 }
@@ -242,7 +260,9 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
 	err := op()
 	duration := time.Now().Sub(before)
 	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
-	p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyV2, duration)
+	if p.enableLatencyHistogramMetrics {
+		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
+	}
 
 	if err != nil {
 		p.updateErrorMetric(scope, err)

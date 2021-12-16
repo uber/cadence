@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	_defaultInterval = time.Second
+	_defaultReportingInterval = time.Second
 )
 
 // tally sanitizer options that satisfy both Prometheus and M3 restrictions.
@@ -71,7 +71,7 @@ var (
 // Only one reporter type is allowed
 func (c *Metrics) NewScope(logger log.Logger, service string) tally.Scope {
 	if c.ReportingInterval <= 0 {
-		c.ReportingInterval = _defaultInterval
+		c.ReportingInterval = _defaultReportingInterval
 	}
 	rootScope := tally.NoopScope
 	if c.M3 != nil {

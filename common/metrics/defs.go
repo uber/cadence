@@ -1769,7 +1769,7 @@ const (
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
-	PersistenceLatencyV2
+	PersistenceLatencyHistogram
 	PersistenceErrShardExistsCounter
 	PersistenceErrShardOwnershipLostCounter
 	PersistenceErrConditionFailedCounter
@@ -2291,7 +2291,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceRequests:                                 {metricName: "persistence_requests", metricType: Counter},
 		PersistenceFailures:                                 {metricName: "persistence_errors", metricType: Counter},
 		PersistenceLatency:                                  {metricName: "persistence_latency", metricType: Timer},
-		PersistenceLatencyV2:                                {metricName: "persistence_latency_v2", metricType: Histogram, buckets: PersistenceLatencyBuckets},
+		PersistenceLatencyHistogram:                         {metricName: "persistence_latency_histogram", metricType: Histogram, buckets: PersistenceLatencyBuckets},
 		PersistenceErrShardExistsCounter:                    {metricName: "persistence_errors_shard_exists", metricType: Counter},
 		PersistenceErrShardOwnershipLostCounter:             {metricName: "persistence_errors_shard_ownership_lost", metricType: Counter},
 		PersistenceErrConditionFailedCounter:                {metricName: "persistence_errors_condition_failed", metricType: Counter},

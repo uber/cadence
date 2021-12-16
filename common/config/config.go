@@ -165,6 +165,8 @@ type (
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
 		HistoryMaxConns int `yaml:"historyMaxConns"`
+		// EnablePersistenceLatencyHistogramMetrics is to enable latency histogram metrics for persistence layer
+		EnablePersistenceLatencyHistogramMetrics bool `yaml:"enablePersistenceLatencyHistogramMetrics"`
 		// NumHistoryShards is the desired number of history shards. It's for computing the historyShardID from workflowID into [0, NumHistoryShards)
 		// Therefore, the value cannot be changed once set.
 		// TODO This config doesn't belong here, needs refactoring
