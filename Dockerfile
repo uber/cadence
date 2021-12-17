@@ -4,7 +4,7 @@ ARG TARGET=server
 ARG GOPROXY
 
 # Build tcheck binary
-FROM golang:1.17-alpine3.13 AS tcheck
+FROM golang:1.17-alpine3.15 AS tcheck
 
 WORKDIR /go/src/github.com/uber/tcheck
 
@@ -38,7 +38,7 @@ RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence
 
 
 # Download dockerize
-FROM alpine:3.11 AS dockerize
+FROM alpine:3.15 AS dockerize
 
 RUN apk add --no-cache openssl
 
