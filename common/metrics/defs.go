@@ -20,7 +20,11 @@
 
 package metrics
 
-import "github.com/uber-go/tally"
+import (
+	"time"
+
+	"github.com/uber-go/tally"
+)
 
 // types used/defined by the package
 type (
@@ -54,6 +58,7 @@ const (
 	Counter MetricType = iota
 	Timer
 	Gauge
+	Histogram
 )
 
 // Service names for all services that emit metrics.
@@ -1764,6 +1769,7 @@ const (
 	PersistenceRequests
 	PersistenceFailures
 	PersistenceLatency
+	PersistenceLatencyHistogram
 	PersistenceErrShardExistsCounter
 	PersistenceErrShardOwnershipLostCounter
 	PersistenceErrConditionFailedCounter
@@ -2285,6 +2291,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceRequests:                                 {metricName: "persistence_requests", metricType: Counter},
 		PersistenceFailures:                                 {metricName: "persistence_errors", metricType: Counter},
 		PersistenceLatency:                                  {metricName: "persistence_latency", metricType: Timer},
+		PersistenceLatencyHistogram:                         {metricName: "persistence_latency_histogram", metricType: Histogram, buckets: PersistenceLatencyBuckets},
 		PersistenceErrShardExistsCounter:                    {metricName: "persistence_errors_shard_exists", metricType: Counter},
 		PersistenceErrShardOwnershipLostCounter:             {metricName: "persistence_errors_shard_ownership_lost", metricType: Counter},
 		PersistenceErrConditionFailedCounter:                {metricName: "persistence_errors_condition_failed", metricType: Counter},
@@ -2770,6 +2777,65 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ESAnalyzerNumLongRunningWorkflows:             {metricName: "es_analyzer_num_long_running_workflows", metricType: Counter},
 	},
 }
+
+// PersistenceLatencyBuckets contains duration buckets for measuring persistence latency
+var PersistenceLatencyBuckets = tally.DurationBuckets([]time.Duration{
+	1 * time.Millisecond,
+	2 * time.Millisecond,
+	3 * time.Millisecond,
+	4 * time.Millisecond,
+	5 * time.Millisecond,
+	6 * time.Millisecond,
+	7 * time.Millisecond,
+	8 * time.Millisecond,
+	9 * time.Millisecond,
+	10 * time.Millisecond,
+	12 * time.Millisecond,
+	15 * time.Millisecond,
+	17 * time.Millisecond,
+	20 * time.Millisecond,
+	25 * time.Millisecond,
+	30 * time.Millisecond,
+	35 * time.Millisecond,
+	40 * time.Millisecond,
+	50 * time.Millisecond,
+	60 * time.Millisecond,
+	70 * time.Millisecond,
+	80 * time.Millisecond,
+	90 * time.Millisecond,
+	100 * time.Millisecond,
+	120 * time.Millisecond,
+	150 * time.Millisecond,
+	170 * time.Millisecond,
+	200 * time.Millisecond,
+	250 * time.Millisecond,
+	300 * time.Millisecond,
+	400 * time.Millisecond,
+	500 * time.Millisecond,
+	600 * time.Millisecond,
+	700 * time.Millisecond,
+	800 * time.Millisecond,
+	900 * time.Millisecond,
+	1 * time.Second,
+	2 * time.Second,
+	3 * time.Second,
+	4 * time.Second,
+	5 * time.Second,
+	6 * time.Second,
+	7 * time.Second,
+	8 * time.Second,
+	9 * time.Second,
+	10 * time.Second,
+	12 * time.Second,
+	15 * time.Second,
+	20 * time.Second,
+	25 * time.Second,
+	30 * time.Second,
+	35 * time.Second,
+	40 * time.Second,
+	50 * time.Second,
+	60 * time.Second,
+})
 
 // ErrorClass is an enum to help with classifying SLA vs. non-SLA errors (SLA = "service level agreement")
 type ErrorClass uint8

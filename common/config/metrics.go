@@ -36,6 +36,10 @@ import (
 	statsdreporter "github.com/uber/cadence/common/metrics/tally/statsd"
 )
 
+const (
+	_defaultReportingInterval = time.Second
+)
+
 // tally sanitizer options that satisfy both Prometheus and M3 restrictions.
 // This will rename metrics at the tally emission level, so metrics name we
 // use maybe different from what gets emitted. In the current implementation
@@ -66,6 +70,9 @@ var (
 // NewScope builds a new tally scope for this metrics configuration
 // Only one reporter type is allowed
 func (c *Metrics) NewScope(logger log.Logger, service string) tally.Scope {
+	if c.ReportingInterval <= 0 {
+		c.ReportingInterval = _defaultReportingInterval
+	}
 	rootScope := tally.NoopScope
 	if c.M3 != nil {
 		rootScope = c.newM3Scope(logger)
@@ -98,7 +105,7 @@ func (c *Metrics) newM3Scope(logger log.Logger) tally.Scope {
 		CachedReporter: reporter,
 		Prefix:         c.Prefix,
 	}
-	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
+	scope, _ := tally.NewRootScope(scopeOpts, c.ReportingInterval)
 	return scope
 }
 
@@ -121,7 +128,7 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 		Reporter: reporter,
 		Prefix:   c.Prefix,
 	}
-	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
+	scope, _ := tally.NewRootScope(scopeOpts, c.ReportingInterval)
 	return scope
 }
 
@@ -149,6 +156,6 @@ func (c *Metrics) newPrometheusScope(logger log.Logger) tally.Scope {
 		SanitizeOptions: &sanitizeOptions,
 		Prefix:          c.Prefix,
 	}
-	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
+	scope, _ := tally.NewRootScope(scopeOpts, c.ReportingInterval)
 	return scope
 }

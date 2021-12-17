@@ -39,6 +39,9 @@ type (
 		// RecordTimer starts a timer for the given
 		// metric name
 		RecordTimer(scope int, timer int, d time.Duration)
+		// RecordHistogramDuration records a histogram duration value for the given
+		// metric name
+		RecordHistogramDuration(scope int, timer int, d time.Duration)
 		// UpdateGauge reports Gauge type absolute value metric
 		UpdateGauge(scope int, gauge int, value float64)
 		// Scope return an internal scope that can be used to add additional
