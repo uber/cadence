@@ -57,6 +57,7 @@ type (
 		RedispatchInterval                   dynamicconfig.DurationPropertyFn
 		RedispatchIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
 		MaxRedispatchQueueSize               dynamicconfig.IntPropertyFn
+		MaxStartJitterInterval               dynamicconfig.DurationPropertyFn
 		SplitQueueInterval                   dynamicconfig.DurationPropertyFn
 		SplitQueueIntervalJitterCoefficient  dynamicconfig.FloatPropertyFn
 		EnableSplit                          dynamicconfig.BoolPropertyFn
