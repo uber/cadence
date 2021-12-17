@@ -159,6 +159,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecute_DomainNotActive() {
 				s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 				s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 					func(req *p.UpdateWorkflowExecutionRequest) bool {
+						if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+							return false
+						}
 						if len(req.UpdateWorkflowMutation.CrossClusterTasks) != 0 || len(req.UpdateWorkflowMutation.TransferTasks) != 1 {
 							return false
 						}
@@ -253,8 +256,8 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteRecordChildCompleteExec
 				if tc.willGenerateNewTask {
 					s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 						func(request *p.UpdateWorkflowExecutionRequest) bool {
-							if true {
-								return true
+							if request.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+								return false
 							}
 							crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 							s.Len(crossClusterTasks, 1)
@@ -370,6 +373,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
 					if tc.willGenerateNewTask {
 						s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 							func(request *p.UpdateWorkflowExecutionRequest) bool {
+								if request.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+									return false
+								}
 								crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 								s.Len(crossClusterTasks, 1)
 								s.Equal(p.CrossClusterTaskTypeApplyParentClosePolicy, crossClusterTasks[0].GetType())
@@ -577,6 +583,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicyPartialR
 
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 		func(request *p.UpdateWorkflowExecutionRequest) bool {
+			if request.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+				return false
+			}
 			crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 			matches := len(crossClusterTasks) == 1 &&
 				p.CrossClusterTaskTypeApplyParentClosePolicy == crossClusterTasks[0].GetType()
@@ -643,6 +652,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Success
 			)).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 				func(req *p.UpdateWorkflowExecutionRequest) bool {
+					if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+						return false
+					}
 					return len(req.UpdateWorkflowMutation.CrossClusterTasks) == 0 &&
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
@@ -681,6 +693,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Failure
 			)).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 				func(req *p.UpdateWorkflowExecutionRequest) bool {
+					if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+						return false
+					}
 					return len(req.UpdateWorkflowMutation.CrossClusterTasks) == 0 &&
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
@@ -810,6 +825,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 			)).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 				func(req *p.UpdateWorkflowExecutionRequest) bool {
+					if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+						return false
+					}
 					return len(req.UpdateWorkflowMutation.CrossClusterTasks) == 0 &&
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
@@ -849,6 +867,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 			)).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 				func(req *p.UpdateWorkflowExecutionRequest) bool {
+					if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+						return false
+					}
 					return len(req.UpdateWorkflowMutation.CrossClusterTasks) == 0 &&
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
@@ -1011,6 +1032,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			)).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 				func(req *p.UpdateWorkflowExecutionRequest) bool {
+					if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+						return false
+					}
 					return len(req.UpdateWorkflowMutation.CrossClusterTasks) == 0 &&
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
@@ -1050,6 +1074,9 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			)).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 				func(req *p.UpdateWorkflowExecutionRequest) bool {
+					if req.Mode != p.UpdateWorkflowModeIgnoreCurrent {
+						return false
+					}
 					return len(req.UpdateWorkflowMutation.CrossClusterTasks) == 0 &&
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},

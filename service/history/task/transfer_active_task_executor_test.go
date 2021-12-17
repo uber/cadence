@@ -475,6 +475,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParentCro
 			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(common.EmptyVersion)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted, crossClusterTasks[0].GetType())
@@ -698,6 +699,7 @@ func (s *transferActiveTaskExecutorSuite) expectTerminateRequest(childDomainName
 
 func (s *transferActiveTaskExecutorSuite) expectCrossClusterApplyParentPolicyCalls() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+		s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 		crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 		s.Len(crossClusterTasks, 1)
 		s.Equal(persistence.CrossClusterTaskTypeApplyParentClosePolicy, crossClusterTasks[0].GetType())
@@ -963,6 +965,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_CrossCluste
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeCancelExecution, crossClusterTasks[0].GetType())
@@ -1158,6 +1161,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_CrossCluste
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeSignalExecution, crossClusterTasks[0].GetType())
@@ -1446,6 +1450,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_CrossCl
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeStartChildExecution, crossClusterTasks[0].GetType())
@@ -1476,6 +1481,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_CrossCl
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeStartChildExecution, crossClusterTasks[0].GetType())

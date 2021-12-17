@@ -131,6 +131,10 @@ type (
 			currentWorkflowTransactionPolicy TransactionPolicy,
 			newWorkflowTransactionPolicy *TransactionPolicy,
 		) error
+		UpdateWorkflowExecutionTasks(
+			ctx context.Context,
+			now time.Time,
+		) error
 	}
 )
 
@@ -599,6 +603,62 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNewAsPassive(
 		TransactionPolicyPassive,
 		TransactionPolicyPassive.Ptr(),
 	)
+}
+
+func (c *contextImpl) UpdateWorkflowExecutionTasks(
+	ctx context.Context,
+	now time.Time,
+) (retError error) {
+
+	defer func() {
+		if retError != nil {
+			c.Clear()
+		}
+	}()
+
+	currentWorkflow, currentWorkflowEventsSeq, err := c.mutableState.CloseTransactionAsMutation(
+		now,
+		TransactionPolicyPassive,
+	)
+	if err != nil {
+		return err
+	}
+
+	if len(currentWorkflowEventsSeq) != 0 {
+		return types.InternalServiceError{
+			Message: "UpdateWorkflowExecutionTask can only be used for persisting new workflow tasks, but found new history events",
+		}
+	}
+	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
+		HistorySize: c.GetHistorySize(),
+	}
+
+	resp, err := c.updateWorkflowExecutionWithRetry(ctx, &persistence.UpdateWorkflowExecutionRequest{
+		// RangeID , this is set by shard context
+		Mode:                   persistence.UpdateWorkflowModeIgnoreCurrent,
+		UpdateWorkflowMutation: *currentWorkflow,
+		// Encoding, this is set by shard context
+	})
+	if err != nil {
+		if c.isPersistenceTimeoutError(err) {
+			c.notifyTasksFromWorkflowMutation(currentWorkflow)
+		}
+		return err
+	}
+
+	// TODO remove updateCondition in favor of condition in mutable state
+	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
+
+	// notify current workflow tasks
+	c.notifyTasksFromWorkflowMutation(currentWorkflow)
+
+	emitSessionUpdateStats(
+		c.metricsClient,
+		c.GetDomainName(),
+		resp.MutableStateUpdateSessionStats,
+	)
+
+	return nil
 }
 
 func (c *contextImpl) UpdateWorkflowExecutionWithNew(

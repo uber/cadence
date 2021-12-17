@@ -3332,7 +3332,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 
-	err = wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now())
+	err = wfContext.UpdateWorkflowExecutionTasks(ctx, e.shard.GetTimeSource().Now())
 	if err != nil {
 		return err
 	}

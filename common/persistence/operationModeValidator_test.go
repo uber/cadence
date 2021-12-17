@@ -209,6 +209,24 @@ func (s *validateOperationWorkflowModeStateSuite) TestUpdateMode_BypassCurrent()
 	}
 }
 
+func (s *validateOperationWorkflowModeStateSuite) TestUpdateMode_IgnoreCurrent() {
+	testMutation := s.newTestWorkflowMutation(WorkflowStateCompleted)
+	err := ValidateUpdateWorkflowModeState(
+		UpdateWorkflowModeIgnoreCurrent,
+		testMutation,
+		nil,
+	)
+	s.NoError(err)
+
+	testNewSnapshot := s.newTestWorkflowSnapshot(WorkflowStateRunning)
+	err = ValidateUpdateWorkflowModeState(
+		UpdateWorkflowModeIgnoreCurrent,
+		testMutation,
+		&testNewSnapshot,
+	)
+	s.Error(err)
+}
+
 func (s *validateOperationWorkflowModeStateSuite) TestConflictResolveMode_UpdateCurrent() {
 
 	// only reset workflow
