@@ -1185,10 +1185,15 @@ func (s *contextImpl) persistShardInfoLocked(
 
 func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 	currentCluster := s.GetClusterMetadata().GetCurrentClusterName()
+	clusterInfo := s.GetClusterMetadata().GetAllClusterInfo()
 
 	minTransferLevel := s.shardInfo.ClusterTransferAckLevel[currentCluster]
 	maxTransferLevel := s.shardInfo.ClusterTransferAckLevel[currentCluster]
-	for _, v := range s.shardInfo.ClusterTransferAckLevel {
+	for clusterName, v := range s.shardInfo.ClusterTransferAckLevel {
+		if !clusterInfo[clusterName].Enabled {
+			continue
+		}
+
 		if v < minTransferLevel {
 			minTransferLevel = v
 		}
@@ -1200,7 +1205,11 @@ func (s *contextImpl) emitShardInfoMetricsLogsLocked() {
 
 	minTimerLevel := s.shardInfo.ClusterTimerAckLevel[currentCluster]
 	maxTimerLevel := s.shardInfo.ClusterTimerAckLevel[currentCluster]
-	for _, v := range s.shardInfo.ClusterTimerAckLevel {
+	for clusterName, v := range s.shardInfo.ClusterTimerAckLevel {
+		if !clusterInfo[clusterName].Enabled {
+			continue
+		}
+
 		if v.Before(minTimerLevel) {
 			minTimerLevel = v
 		}

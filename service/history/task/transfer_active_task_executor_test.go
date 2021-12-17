@@ -606,7 +606,7 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_SameClusterChild
 	)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChild_Abandon() {
+func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterAbandonedChild_Abandon() {
 	s.testProcessCloseExecutionNoParentHasFewChildren(
 		map[string]string{
 			"child_abandon":   s.remoteTargetDomainName,
@@ -614,15 +614,6 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.domainName,
 		},
 		func() {
-			// s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-			// 	func(request parentclosepolicy.Request) bool {
-			// 		fmt.Println(request.Executions)
-			// 		return len(request.Executions) == 3
-			// 	},
-			// )).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
 			s.expectCancelRequest(s.domainName)
 			s.expectTerminateRequest(s.domainName)
 		},
@@ -637,15 +628,8 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.childDomainName,
 		},
 		func() {
-			s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-				func(request parentclosepolicy.Request) bool {
-					return len(request.Executions) == 2
-				},
-			)).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
-			// s.expectCancelRequest(s.childDomainName)
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectCancelRequest(s.childDomainName)
 		},
 	)
 }
@@ -658,15 +642,8 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.remoteTargetDomainName,
 		},
 		func() {
-			s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-				func(request parentclosepolicy.Request) bool {
-					return len(request.Executions) == 2
-				},
-			)).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
-			// s.expectTerminateRequest(s.domainName)
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectTerminateRequest(s.domainName)
 		},
 	)
 }
@@ -679,14 +656,7 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.remoteTargetDomainName,
 		},
 		func() {
-			s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-				func(request parentclosepolicy.Request) bool {
-					return len(request.Executions) == 2
-				},
-			)).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectCrossClusterApplyParentPolicyCalls()
 		},
 	)
 }

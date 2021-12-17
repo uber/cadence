@@ -1818,7 +1818,10 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 	sameClusterChildDomainIDs := make(map[int64]string) // child init eventID -> child domainID
 	remoteClusters := make(map[string]map[string]struct{})
 	parentClosePolicyWorkerEnabled := t.shard.GetConfig().EnableParentClosePolicyWorker()
-	if parentClosePolicyWorkerEnabled && len(childInfos) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
+	if parentClosePolicyWorkerEnabled &&
+		len(childInfos) >= t.shard.GetConfig().ParentClosePolicyThreshold(domainName) {
+		// only signal parent close policy workflow when # of child workflow exceeds threshold
+		// the system workflow can handle the case where child domain is active in a different cluster
 		return nil, nil, true, nil
 	}
 
@@ -1852,19 +1855,14 @@ func (t *transferActiveTaskExecutor) applyParentClosePolicyDomainActiveCheck(
 	}
 
 	generators := []generatorF{}
-	if !parentClosePolicyWorkerEnabled {
-		for remoteCluster, targetDomainIDs := range remoteClusters {
-			generators = append(
-				generators,
-				func(taskGenerator execution.MutableStateTaskGenerator) error {
-					return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster, targetDomainIDs)
-				})
-		}
-		return generators, sameClusterChildDomainIDs, false, nil
+	for remoteCluster, targetDomainIDs := range remoteClusters {
+		generators = append(
+			generators,
+			func(taskGenerator execution.MutableStateTaskGenerator) error {
+				return taskGenerator.GenerateCrossClusterApplyParentClosePolicyTask(task, remoteCluster, targetDomainIDs)
+			})
 	}
-	// if enabled, those cross cluster children will be handled by system workflow
-
-	return generators, sameClusterChildDomainIDs, len(remoteClusters) != 0, nil
+	return generators, sameClusterChildDomainIDs, false, nil
 }
 
 func (t *transferActiveTaskExecutor) processParentClosePolicy(
