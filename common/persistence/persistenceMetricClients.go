@@ -37,6 +37,7 @@ type (
 	persistenceMetricsClientBase struct {
 		metricClient                  metrics.Client
 		logger                        log.Logger
+		throttledLogger               log.Logger
 		enableLatencyHistogramMetrics bool
 		maxExpectedLatency            dynamicconfig.DurationPropertyFnWithOperationFilter
 	}
@@ -91,22 +92,40 @@ var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ QueueManager = (*queuePersistenceClient)(nil)
 var _ ConfigStoreManager = (*configStorePersistenceClient)(nil)
 
+func newPersistenceMetricsClientBase(
+	metricClient metrics.Client,
+	logger log.Logger,
+	throttledLogger log.Logger,
+	enableLatencyHistogramMetrics bool,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
+) persistenceMetricsClientBase {
+	return persistenceMetricsClientBase{
+		metricClient:                  metricClient,
+		logger:                        logger,
+		throttledLogger:               throttledLogger.WithTags(tag.ComponentPersistence),
+		enableLatencyHistogramMetrics: enableLatencyHistogramMetrics,
+		maxExpectedLatency:            maxExpectedLatency,
+	}
+}
+
 // NewShardPersistenceMetricsClient creates a client to manage shards
 func NewShardPersistenceMetricsClient(
 	persistence ShardManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
 	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) ShardManager {
 	return &shardPersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-			maxExpectedLatency:            maxExpectedLatency,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -115,17 +134,19 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 	persistence ExecutionManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
 	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger.WithTags(tag.ShardID(persistence.GetShardID())),
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-			maxExpectedLatency:            maxExpectedLatency,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger.WithTags(tag.ShardID(persistence.GetShardID())),
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -134,15 +155,19 @@ func NewTaskPersistenceMetricsClient(
 	persistence TaskManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) TaskManager {
 	return &taskPersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -151,15 +176,19 @@ func NewHistoryPersistenceMetricsClient(
 	persistence HistoryManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) HistoryManager {
 	return &historyPersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -168,15 +197,19 @@ func NewDomainPersistenceMetricsClient(
 	persistence DomainManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) DomainManager {
 	return &metadataPersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -185,15 +218,19 @@ func NewVisibilityPersistenceMetricsClient(
 	persistence VisibilityManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) VisibilityManager {
 	return &visibilityPersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -202,15 +239,19 @@ func NewQueuePersistenceMetricsClient(
 	persistence QueueManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) QueueManager {
 	return &queuePersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -219,15 +260,19 @@ func NewConfigStorePersistenceMetricsClient(
 	persistence ConfigStoreManager,
 	metricClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) ConfigStoreManager {
 	return &configStorePersistenceClient{
 		persistence: persistence,
-		persistenceMetricsClientBase: persistenceMetricsClientBase{
-			metricClient:                  metricClient,
-			logger:                        logger,
-			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
-		},
+		persistenceMetricsClientBase: newPersistenceMetricsClientBase(
+			metricClient,
+			logger,
+			throttledLogger,
+			cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency,
+		),
 	}
 }
 
@@ -267,13 +312,16 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
 	err := op()
 	duration := time.Now().Sub(before)
 	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
-	operation := p.metricClient.GetOperation(scope)
-	if operation != nil {
-		maxExpectedLatency := p.maxExpectedLatency(*operation)
-		if duration > maxExpectedLatency {
-			// todo: throttle here
-			p.logger.Warn(fmt.Sprintf("Operation took longer (%v) than expected (%v)", duration, maxExpectedLatency),
-				tag.OperationName(*operation))
+	if p.maxExpectedLatency != nil {
+		operation := p.metricClient.GetOperation(scope)
+		if operation != nil {
+			maxExpectedLatency := p.maxExpectedLatency(*operation)
+			if duration > maxExpectedLatency {
+				p.throttledLogger.Warn(
+					fmt.Sprintf("Operation took longer (%v ms) than expected (%v ms)",
+						duration.Milliseconds(), maxExpectedLatency.Milliseconds()),
+					tag.OperationName(*operation))
+			}
 		}
 	}
 

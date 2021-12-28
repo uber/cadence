@@ -98,6 +98,7 @@ type (
 		config             *config.Persistence
 		metricsClient      metrics.Client
 		logger             log.Logger
+		throttledLogger    log.Logger
 		datastores         map[storeType]Datastore
 		clusterName        string
 		maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter
@@ -142,11 +143,13 @@ func NewFactory(
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
+	throttledLogger log.Logger,
 ) Factory {
 	factory := &factoryImpl{
 		config:             cfg,
 		metricsClient:      metricsClient,
 		logger:             logger,
+		throttledLogger:    throttledLogger,
 		clusterName:        clusterName,
 		maxExpectedLatency: maxExpectedLatency,
 	}
@@ -170,7 +173,7 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }
@@ -191,7 +194,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 	}
 	if f.metricsClient != nil {
 		result = p.NewShardPersistenceMetricsClient(
-			result, f.metricsClient, f.logger, f.config, f.maxExpectedLatency)
+			result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }
@@ -211,7 +214,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }
@@ -233,7 +236,7 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 		result = p.NewDomainPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }
@@ -253,7 +256,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.maxExpectedLatency)
+		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }
@@ -356,7 +359,7 @@ func (f *factoryImpl) newDBVisibilityManager(
 		}, f.metricsClient, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 
 	return result, nil
@@ -376,7 +379,7 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 
 	return result, nil
@@ -396,7 +399,7 @@ func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
 		result = p.NewConfigStorePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger, f.throttledLogger, f.config, f.maxExpectedLatency)
 	}
 
 	return result, nil

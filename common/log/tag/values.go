@@ -131,6 +131,7 @@ var (
 	ComponentCrossClusterTaskFetcher    = component("cross-cluster-task-fetcher")
 	ComponentShardScanner               = component("shardscanner-scanner")
 	ComponentShardFixer                 = component("shardscanner-fixer")
+	ComponentPersistence                = component("persistence")
 )
 
 // Pre-defined values for TagSysLifecycle

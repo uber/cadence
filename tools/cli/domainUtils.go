@@ -334,6 +334,7 @@ func initializeDomainMgr(
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
 		logger,
+		logger,
 	)
 	metadata, err := pFactory.NewDomainManager()
 	if err != nil {
