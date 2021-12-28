@@ -95,11 +95,12 @@ type (
 	}
 	factoryImpl struct {
 		sync.RWMutex
-		config        *config.Persistence
-		metricsClient metrics.Client
-		logger        log.Logger
-		datastores    map[storeType]Datastore
-		clusterName   string
+		config             *config.Persistence
+		metricsClient      metrics.Client
+		logger             log.Logger
+		datastores         map[storeType]Datastore
+		clusterName        string
+		maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter
 	}
 
 	storeType int
@@ -137,15 +138,17 @@ var storeTypes = []storeType{
 func NewFactory(
 	cfg *config.Persistence,
 	persistenceMaxQPS dynamicconfig.IntPropertyFn,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) Factory {
 	factory := &factoryImpl{
-		config:        cfg,
-		metricsClient: metricsClient,
-		logger:        logger,
-		clusterName:   clusterName,
+		config:             cfg,
+		metricsClient:      metricsClient,
+		logger:             logger,
+		clusterName:        clusterName,
+		maxExpectedLatency: maxExpectedLatency,
 	}
 	limiters := buildRatelimiters(cfg, persistenceMaxQPS)
 	factory.init(clusterName, limiters)
@@ -187,7 +190,8 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewShardPersistenceMetricsClient(
+			result, f.metricsClient, f.logger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }
@@ -249,7 +253,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.maxExpectedLatency)
 	}
 	return result, nil
 }

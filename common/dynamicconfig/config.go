@@ -140,6 +140,9 @@ type DurationPropertyFnWithTaskListInfoFilters func(domain string, taskList stri
 // DurationPropertyFnWithShardIDFilter is a wrapper to get duration property from dynamic config with shardID as filter
 type DurationPropertyFnWithShardIDFilter func(shardID int) time.Duration
 
+// DurationPropertyFnWithOperationFilter is a wrapper to get int property from dynamic config with operation as filter
+type DurationPropertyFnWithOperationFilter func(operation string) time.Duration
+
 // BoolPropertyFn is a wrapper to get bool property from dynamic config
 type BoolPropertyFn func(opts ...FilterOption) bool
 
@@ -413,6 +416,23 @@ func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue 
 			c.logError(key, filters, err)
 		}
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		return val
+	}
+}
+
+// GetDurationPropertyFilteredByOperation gets property with operation filter and asserts that it's an integer
+func (c *Collection) GetDurationPropertyFilteredByOperation(key Key, defaultValue time.Duration) DurationPropertyFnWithOperationFilter {
+	return func(operation string) time.Duration {
+		filters := c.toFilterMap(OperationFilter(operation))
+		val, err := c.client.GetDurationValue(
+			key,
+			filters,
+			defaultValue,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+		}
+		c.logValue(key, filters, val, defaultValue, intCompareEquals)
 		return val
 	}
 }

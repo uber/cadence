@@ -475,6 +475,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	FrontendEmitSignalNameMetricsTag
+	// FrontendPersistenceMaxExpectedLatency is the max duration expected for a persistence operation
+	// KeyName: frontend.persistenceMaxExpectedLatency
+	// Value type: Duration
+	// Default value: 10s (10*time.Second)
+	// Allowed filters: N/A
+	FrontendPersistenceMaxExpectedLatency
 
 	// key for matching
 
@@ -622,6 +628,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
+	// MatchingPersistenceMaxExpectedLatency is the max duration expected for a persistence operation
+	// KeyName: matchng.persistenceMaxExpectedLatency
+	// Value type: Duration
+	// Default value: 10s (10*time.Second)
+	// Allowed filters: N/A
+	MatchingPersistenceMaxExpectedLatency
 
 	// key for history
 
@@ -685,6 +697,12 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	HistoryShutdownDrainDuration
+	// HistoryPersistenceMaxExpectedLatency is the max duration expected for a persistence operation
+	// KeyName: history.persistenceMaxExpectedLatency
+	// Value type: Duration
+	// Default value: 10s (10*time.Second)
+	// Allowed filters: N/A
+	HistoryPersistenceMaxExpectedLatency
 	// EventsCacheInitialCount is initial count of events cache
 	// KeyName: history.eventsCacheInitialSize
 	// Value type: Int
@@ -1771,6 +1789,12 @@ const (
 	// Default value: 20
 	// Allowed filters: N/A
 	WorkerThrottledLogRPS
+	// WorkerPersistenceMaxExpectedLatency is the max duration expected for a persistence operation
+	// KeyName: worker.persistenceMaxExpectedLatency
+	// Value type: Duration
+	// Default value: 10s (10*time.Second)
+	// Allowed filters: N/A
+	WorkerPersistenceMaxExpectedLatency
 	// ScannerPersistenceMaxQPS is the maximum rate of persistence calls from worker.Scanner
 	// KeyName: worker.scannerPersistenceMaxQPS
 	// Value type: Int

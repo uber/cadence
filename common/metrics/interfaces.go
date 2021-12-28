@@ -47,6 +47,8 @@ type (
 		// Scope return an internal scope that can be used to add additional
 		// information to metrics
 		Scope(scope int, tags ...Tag) Scope
+
+		GetOperation(scopeId int) *string
 	}
 
 	// Scope is an interface for metrics

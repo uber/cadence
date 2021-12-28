@@ -83,6 +83,8 @@ const (
 	WorkflowID
 	// WorkflowType is the workflow type name
 	WorkflowType
+	// OperationName is the persistence operation tag passed to metrics scope (e.g. GetWorkflowExecution)
+	OperationName
 
 	// LastFilterTypeForTest must be the last one in this const group for testing purpose
 	LastFilterTypeForTest
@@ -144,5 +146,12 @@ func WorkflowIDFilter(workflowID string) FilterOption {
 func WorkflowTypeFilter(name string) FilterOption {
 	return func(filterMap map[Filter]interface{}) {
 		filterMap[WorkflowType] = name
+	}
+}
+
+// OperationFilter filters by operation name
+func OperationFilter(name string) FilterOption {
+	return func(filterMap map[Filter]interface{}) {
+		filterMap[OperationName] = name
 	}
 }

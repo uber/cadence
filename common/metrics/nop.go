@@ -66,6 +66,10 @@ func (n noopClientImpl) Scope(scope int, tags ...Tag) Scope {
 	return NoopScope(Common)
 }
 
+func (n noopClientImpl) GetOperation(scopeId int) *string {
+	return nil
+}
+
 // NewNoopMetricsClient initialize new no-op metrics client
 func NewNoopMetricsClient() Client {
 	return &noopClientImpl{}

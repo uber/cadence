@@ -25,9 +25,10 @@ import "github.com/uber/cadence/common/dynamicconfig"
 type (
 	// Config is a subset of the service dynamic config for single service
 	Config struct {
-		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
-		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
-		ThrottledLoggerMaxRPS   dynamicconfig.IntPropertyFn
+		PersistenceMaxQPS             dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS       dynamicconfig.IntPropertyFn
+		ThrottledLoggerMaxRPS         dynamicconfig.IntPropertyFn
+		PersistenceMaxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter
 
 		// EnableReadVisibilityFromES is the read mode of visibility
 		EnableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter

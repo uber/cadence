@@ -166,6 +166,7 @@ func New(
 		return nil, err
 	}
 
+	// todo: here pass the dynamic config
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
 		func(...dynamicconfig.FilterOption) int {
@@ -178,6 +179,7 @@ func New(
 			}
 			return serviceConfig.PersistenceMaxQPS()
 		},
+		serviceConfig.PersistenceMaxExpectedLatency,
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,

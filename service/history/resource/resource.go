@@ -89,9 +89,10 @@ func New(
 		params,
 		serviceName,
 		&service.Config{
-			PersistenceMaxQPS:       config.PersistenceMaxQPS,
-			PersistenceGlobalMaxQPS: config.PersistenceGlobalMaxQPS,
-			ThrottledLoggerMaxRPS:   config.ThrottledLogRPS,
+			PersistenceMaxQPS:             config.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS:       config.PersistenceGlobalMaxQPS,
+			PersistenceMaxExpectedLatency: config.PersistenceMaxExpectedLatency,
+			ThrottledLoggerMaxRPS:         config.ThrottledLogRPS,
 
 			EnableReadVisibilityFromES:    nil, // history service never read,
 			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,

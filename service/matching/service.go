@@ -57,9 +57,10 @@ func NewService(
 		params,
 		service.Matching,
 		&service.Config{
-			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
-			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
-			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+			PersistenceMaxQPS:             serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS:       serviceConfig.PersistenceGlobalMaxQPS,
+			PersistenceMaxExpectedLatency: serviceConfig.PersistenceMaxExpectedLatency,
+			ThrottledLoggerMaxRPS:         serviceConfig.ThrottledLogRPS,
 			// matching doesn't need visibility config as it never read or write visibility
 		},
 	)

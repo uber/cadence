@@ -31,12 +31,13 @@ import (
 type (
 	// Config represents configuration for cadence-matching service
 	Config struct {
-		PersistenceMaxQPS       dynamicconfig.IntPropertyFn
-		PersistenceGlobalMaxQPS dynamicconfig.IntPropertyFn
-		EnableSyncMatch         dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
-		RPS                     dynamicconfig.IntPropertyFn
-		DomainRPS               dynamicconfig.IntPropertyFnWithDomainFilter
-		ShutdownDrainDuration   dynamicconfig.DurationPropertyFn
+		PersistenceMaxQPS             dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS       dynamicconfig.IntPropertyFn
+		PersistenceMaxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter
+		EnableSyncMatch               dynamicconfig.BoolPropertyFnWithTaskListInfoFilters
+		RPS                           dynamicconfig.IntPropertyFn
+		DomainRPS                     dynamicconfig.IntPropertyFnWithDomainFilter
+		ShutdownDrainDuration         dynamicconfig.DurationPropertyFn
 
 		// taskListManager configuration
 		RangeSize                    int64
@@ -99,6 +100,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 	return &Config{
 		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS, 3000),
 		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS, 0),
+		PersistenceMaxExpectedLatency:   dc.GetDurationPropertyFilteredByOperation(dynamicconfig.MatchingPersistenceMaxExpectedLatency, 10*time.Second),
 		EnableSyncMatch:                 dc.GetBoolPropertyFilteredByTaskListInfo(dynamicconfig.MatchingEnableSyncMatch, true),
 		RPS:                             dc.GetIntProperty(dynamicconfig.MatchingRPS, 1200),
 		DomainRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.MatchingDomainRPS, 0),

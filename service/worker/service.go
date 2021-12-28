@@ -77,6 +77,7 @@ type (
 		failoverManagerCfg                  *failovermanager.Config
 		ThrottledLogRPS                     dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS             dynamicconfig.IntPropertyFn
+		PersistenceMaxExpectedLatency       dynamicconfig.DurationPropertyFnWithOperationFilter
 		PersistenceMaxQPS                   dynamicconfig.IntPropertyFn
 		EnableBatcher                       dynamicconfig.BoolPropertyFn
 		EnableParentClosePolicyWorker       dynamicconfig.BoolPropertyFn
@@ -99,9 +100,10 @@ func NewService(
 		params,
 		service.Worker,
 		&service.Config{
-			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
-			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
-			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+			PersistenceMaxQPS:             serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS:       serviceConfig.PersistenceGlobalMaxQPS,
+			PersistenceMaxExpectedLatency: serviceConfig.PersistenceMaxExpectedLatency,
+			ThrottledLoggerMaxRPS:         serviceConfig.ThrottledLogRPS,
 			// worker service doesn't need visibility config as it never call visibilityManager API
 		},
 	)
@@ -159,6 +161,7 @@ func NewConfig(params *resource.Params) *Config {
 			AdminOperationToken: dc.GetStringProperty(dynamicconfig.AdminOperationToken, common.DefaultAdminOperationToken),
 			ClusterMetadata:     params.ClusterMetadata,
 		},
+		// todo: remove this comment
 		ESAnalyzerCfg: &esanalyzer.Config{
 			ESAnalyzerPause:                          dc.GetBoolProperty(dynamicconfig.ESAnalyzerPause, common.DefaultESAnalyzerPause),
 			ESAnalyzerTimeWindow:                     dc.GetDurationProperty(dynamicconfig.ESAnalyzerTimeWindow, common.DefaultESAnalyzerTimeWindow),
@@ -179,6 +182,7 @@ func NewConfig(params *resource.Params) *Config {
 		EnableWorkflowShadower:              dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
 		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
 		PersistenceGlobalMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
+		PersistenceMaxExpectedLatency:       dc.GetDurationPropertyFilteredByOperation(dynamicconfig.WorkerPersistenceMaxExpectedLatency, 10*time.Second),
 		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
 		DomainReplicationMaxRetryDuration:   dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration, 10*time.Minute),
 	}

@@ -22,9 +22,11 @@ package persistence
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -36,6 +38,7 @@ type (
 		metricClient                  metrics.Client
 		logger                        log.Logger
 		enableLatencyHistogramMetrics bool
+		maxExpectedLatency            dynamicconfig.DurationPropertyFnWithOperationFilter
 	}
 
 	shardPersistenceClient struct {
@@ -94,6 +97,7 @@ func NewShardPersistenceMetricsClient(
 	metricClient metrics.Client,
 	logger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) ShardManager {
 	return &shardPersistenceClient{
 		persistence: persistence,
@@ -101,6 +105,7 @@ func NewShardPersistenceMetricsClient(
 			metricClient:                  metricClient,
 			logger:                        logger,
 			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency:            maxExpectedLatency,
 		},
 	}
 }
@@ -111,6 +116,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 	metricClient metrics.Client,
 	logger log.Logger,
 	cfg *config.Persistence,
+	maxExpectedLatency dynamicconfig.DurationPropertyFnWithOperationFilter,
 ) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence: persistence,
@@ -118,6 +124,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 			metricClient:                  metricClient,
 			logger:                        logger.WithTags(tag.ShardID(persistence.GetShardID())),
 			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
+			maxExpectedLatency:            maxExpectedLatency,
 		},
 	}
 }
@@ -260,6 +267,16 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
 	err := op()
 	duration := time.Now().Sub(before)
 	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
+	operation := p.metricClient.GetOperation(scope)
+	if operation != nil {
+		maxExpectedLatency := p.maxExpectedLatency(*operation)
+		if duration > maxExpectedLatency {
+			// todo: throttle here
+			p.logger.Warn(fmt.Sprintf("Operation took longer (%v) than expected (%v)", duration, maxExpectedLatency),
+				tag.OperationName(*operation))
+		}
+	}
+
 	if p.enableLatencyHistogramMetrics {
 		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
 	}

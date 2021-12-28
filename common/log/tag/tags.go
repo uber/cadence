@@ -153,6 +153,11 @@ func BlobSizeViolationOperation(operation string) Tag {
 	return newStringTag("blob-size-violation-operation", operation)
 }
 
+// OperationName returns tag for OperationName
+func OperationName(operationName string) Tag {
+	return newStringTag("operation-name", operationName)
+}
+
 // domain related
 
 // WorkflowDomainID returns tag for WorkflowDomainID

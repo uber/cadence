@@ -42,6 +42,7 @@ type Config struct {
 	domainConfig                    domain.Config
 	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
 	PersistenceGlobalMaxQPS         dynamicconfig.IntPropertyFn
+	PersistenceMaxExpectedLatency   dynamicconfig.DurationPropertyFnWithOperationFilter
 	VisibilityMaxPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
@@ -113,6 +114,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		NumHistoryShards:                            numHistoryShards,
 		PersistenceMaxQPS:                           dc.GetIntProperty(dynamicconfig.FrontendPersistenceMaxQPS, 2000),
 		PersistenceGlobalMaxQPS:                     dc.GetIntProperty(dynamicconfig.FrontendPersistenceGlobalMaxQPS, 0),
+		PersistenceMaxExpectedLatency:               dc.GetDurationPropertyFilteredByOperation(dynamicconfig.FrontendPersistenceMaxExpectedLatency, 10*time.Second),
 		VisibilityMaxPageSize:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityMaxPageSize, 1000),
 		EnableVisibilitySampling:                    dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, true),
 		EnableReadFromClosedExecutionV2:             dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),
@@ -209,9 +211,10 @@ func NewService(
 		params,
 		service.Frontend,
 		&service.Config{
-			PersistenceMaxQPS:       serviceConfig.PersistenceMaxQPS,
-			PersistenceGlobalMaxQPS: serviceConfig.PersistenceGlobalMaxQPS,
-			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
+			PersistenceMaxQPS:             serviceConfig.PersistenceMaxQPS,
+			PersistenceGlobalMaxQPS:       serviceConfig.PersistenceGlobalMaxQPS,
+			PersistenceMaxExpectedLatency: serviceConfig.PersistenceMaxExpectedLatency,
+			ThrottledLoggerMaxRPS:         serviceConfig.ThrottledLogRPS,
 
 			EnableReadVisibilityFromES:    serviceConfig.EnableReadVisibilityFromES,
 			AdvancedVisibilityWritingMode: nil, // frontend service never write

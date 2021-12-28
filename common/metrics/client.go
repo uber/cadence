@@ -67,6 +67,18 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 	return metricsClient
 }
 
+func (m *ClientImpl) GetOperation(scopeId int) *string {
+	service, serviceFound := ScopeDefs[m.serviceIdx]
+	if !serviceFound {
+		return nil
+	}
+
+	if scopeDef, ok := service[scopeId]; ok {
+		return &scopeDef.operation
+	}
+	return nil
+}
+
 // IncCounter increments one for a counter and emits
 // to metrics backend
 func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
@@ -111,7 +123,7 @@ func (m *ClientImpl) UpdateGauge(scopeIdx int, gaugeIdx int, value float64) {
 // information to the metrics emitted
 func (m *ClientImpl) Scope(scopeIdx int, tags ...Tag) Scope {
 	scope := m.childScopes[scopeIdx]
-	return newMetricsScope(scope, scope, m.metricDefs, false).Tagged(tags...)
+	return newMetricsScope(scope, scope, m.metricDefs, false, m.serviceIdx).Tagged(tags...)
 }
 
 func (m *ClientImpl) getBuckets(id int) tally.Buckets {

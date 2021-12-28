@@ -48,6 +48,7 @@ type Config struct {
 	TimerIDMaxLength                dynamicconfig.IntPropertyFnWithDomainFilter
 	PersistenceMaxQPS               dynamicconfig.IntPropertyFn
 	PersistenceGlobalMaxQPS         dynamicconfig.IntPropertyFn
+	PersistenceMaxExpectedLatency   dynamicconfig.DurationPropertyFnWithOperationFilter
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
 	VisibilityOpenMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
@@ -356,6 +357,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TimerIDMaxLength:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.TimerIDMaxLength, common.DefaultIDLengthErrorLimit),
 		PersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS, 9000),
 		PersistenceGlobalMaxQPS:              dc.GetIntProperty(dynamicconfig.HistoryPersistenceGlobalMaxQPS, 0),
+		PersistenceMaxExpectedLatency:        dc.GetDurationPropertyFilteredByOperation(dynamicconfig.HistoryPersistenceMaxExpectedLatency, 10*time.Second),
 		ShutdownDrainDuration:                dc.GetDurationProperty(dynamicconfig.HistoryShutdownDrainDuration, 0),
 		EnableVisibilitySampling:             dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling, false),
 		EnableReadFromClosedExecutionV2:      dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2, false),

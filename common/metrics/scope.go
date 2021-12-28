@@ -31,6 +31,7 @@ type metricsScope struct {
 	rootScope      tally.Scope
 	defs           map[int]metricDefinition
 	isDomainTagged bool
+	serviceIdx     ServiceIdx
 }
 
 func newMetricsScope(
@@ -38,21 +39,24 @@ func newMetricsScope(
 	scope tally.Scope,
 	defs map[int]metricDefinition,
 	isDomain bool,
+	serviceIdx ServiceIdx,
 ) Scope {
 	return &metricsScope{
 		scope:          scope,
 		rootScope:      rootScope,
 		defs:           defs,
 		isDomainTagged: isDomain,
+		serviceIdx:     serviceIdx,
 	}
 }
 
 // NoopScope returns a noop scope of metrics
 func NoopScope(serviceIdx ServiceIdx) Scope {
 	return &metricsScope{
-		scope:     tally.NoopScope,
-		rootScope: tally.NoopScope,
-		defs:      getMetricDefs(serviceIdx),
+		scope:      tally.NoopScope,
+		rootScope:  tally.NoopScope,
+		defs:       getMetricDefs(serviceIdx),
+		serviceIdx: serviceIdx,
 	}
 }
 
@@ -128,7 +132,19 @@ func (m *metricsScope) Tagged(tags ...Tag) Scope {
 		}
 		tagMap[tag.Key()] = tag.Value()
 	}
-	return newMetricsScope(m.rootScope, m.scope.Tagged(tagMap), m.defs, domainTagged)
+	return newMetricsScope(m.rootScope, m.scope.Tagged(tagMap), m.defs, domainTagged, m.serviceIdx)
+}
+
+func (m *metricsScope) GetOperation(scopeId int) *string {
+	service, serviceFound := ScopeDefs[m.serviceIdx]
+	if !serviceFound {
+		return nil
+	}
+
+	if scopeDef, ok := service[scopeId]; ok {
+		return &scopeDef.operation
+	}
+	return nil
 }
 
 func (m *metricsScope) getBuckets(id int) tally.Buckets {

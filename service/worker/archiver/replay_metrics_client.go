@@ -73,6 +73,10 @@ func (r *replayMetricsClient) StartTimer(scope int, timer int) tally.Stopwatch {
 	return r.client.StartTimer(scope, timer)
 }
 
+func (r *replayMetricsClient) GetOperation(scopeId int) *string {
+	return r.client.GetOperation(scopeId)
+}
+
 // RecordTimer starts a timer for the given metric name
 func (r *replayMetricsClient) RecordTimer(scope int, timer int, d time.Duration) {
 	if workflow.IsReplaying(r.ctx) {
