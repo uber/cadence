@@ -27,7 +27,7 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.5.1
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.22
     ports:
       - "9200:9200"
     environment:
