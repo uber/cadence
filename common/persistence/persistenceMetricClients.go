@@ -92,6 +92,10 @@ var _ VisibilityManager = (*visibilityPersistenceClient)(nil)
 var _ QueueManager = (*queuePersistenceClient)(nil)
 var _ ConfigStoreManager = (*configStorePersistenceClient)(nil)
 
+var emptyTags = func() []tag.Tag {
+	return []tag.Tag{}
+}
+
 func newPersistenceMetricsClientBase(
 	metricClient metrics.Client,
 	logger log.Logger,
@@ -306,7 +310,7 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
 	}
 }
 
-func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
+func (p *persistenceMetricsClientBase) call(scope int, op func() error, tagsF func() []tag.Tag) error {
 	p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
 	before := time.Now()
 	err := op()
@@ -317,10 +321,11 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
 		if operation != nil {
 			maxExpectedLatency := p.maxExpectedLatency(*operation)
 			if duration > maxExpectedLatency {
+				tags := append(tagsF(), tag.OperationName(*operation))
 				p.throttledLogger.Warn(
 					fmt.Sprintf("Operation took longer (%v ms) than expected (%v ms)",
 						duration.Milliseconds(), maxExpectedLatency.Milliseconds()),
-					tag.OperationName(*operation))
+					tags...)
 			}
 		}
 	}
@@ -346,7 +351,14 @@ func (p *shardPersistenceClient) CreateShard(
 	op := func() error {
 		return p.persistence.CreateShard(ctx, request)
 	}
-	return p.call(metrics.PersistenceCreateShardScope, op)
+	tags := func() []tag.Tag {
+		tags := []tag.Tag{}
+		if request != nil && request.ShardInfo != nil {
+			tags = append(tags, tag.ShardID(request.ShardInfo.ShardID))
+		}
+		return tags
+	}
+	return p.call(metrics.PersistenceCreateShardScope, op, tags)
 }
 
 func (p *shardPersistenceClient) GetShard(
@@ -359,7 +371,15 @@ func (p *shardPersistenceClient) GetShard(
 		resp, err = p.persistence.GetShard(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetShardScope, op)
+	tags := func() []tag.Tag {
+		if request != nil {
+			return []tag.Tag{
+				tag.ShardID(request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceGetShardScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +393,14 @@ func (p *shardPersistenceClient) UpdateShard(
 	op := func() error {
 		return p.persistence.UpdateShard(ctx, request)
 	}
-	return p.call(metrics.PersistenceUpdateShardScope, op)
+	tags := func() []tag.Tag {
+		tags := []tag.Tag{}
+		if request != nil && request.ShardInfo != nil {
+			tags = append(tags, tag.ShardID(request.ShardInfo.ShardID))
+		}
+		return tags
+	}
+	return p.call(metrics.PersistenceUpdateShardScope, op, tags)
 }
 
 func (p *shardPersistenceClient) Close() {
@@ -398,7 +425,21 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		tags := []tag.Tag{
+			tag.WorkflowEndingRunID(request.PreviousRunID),
+		}
+		if request != nil && request.NewWorkflowSnapshot.ExecutionInfo != nil {
+			tags = append(tags, tag.WorkflowDomainID(request.NewWorkflowSnapshot.ExecutionInfo.DomainID))
+			tags = append(tags, tag.WorkflowID(request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID))
+			tags = append(tags, tag.WorkflowRunID(request.NewWorkflowSnapshot.ExecutionInfo.RunID))
+		}
+		return tags
+	}
+	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +456,17 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(
 		resp, err = p.persistence.GetWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.WorkflowID(request.Execution.WorkflowID),
+			tag.WorkflowRunID(request.Execution.RunID),
+		}
+	}
+	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +483,17 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.UpdateWorkflowMutation.ExecutionInfo != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.UpdateWorkflowMutation.ExecutionInfo.DomainID),
+				tag.WorkflowID(request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID),
+				tag.WorkflowRunID(request.UpdateWorkflowMutation.ExecutionInfo.RunID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -449,7 +510,19 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 		resp, err = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request != nil &&
+			request.CurrentWorkflowMutation != nil &&
+			request.CurrentWorkflowMutation.ExecutionInfo != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.CurrentWorkflowMutation.ExecutionInfo.DomainID),
+				tag.WorkflowID(request.CurrentWorkflowMutation.ExecutionInfo.WorkflowID),
+				tag.WorkflowRunID(request.CurrentWorkflowMutation.ExecutionInfo.RunID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -463,7 +536,17 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.WorkflowID(request.WorkflowID),
+			tag.WorkflowRunID(request.RunID),
+		}
+	}
+	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, tags)
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
@@ -473,7 +556,17 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.WorkflowID(request.WorkflowID),
+			tag.WorkflowRunID(request.RunID),
+		}
+	}
+	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, tags)
 }
 
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
@@ -486,7 +579,16 @@ func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
 		resp, err = p.persistence.GetCurrentExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.WorkflowID(request.WorkflowID),
+		}
+	}
+	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -503,7 +605,7 @@ func (p *workflowExecutionPersistenceClient) ListCurrentExecutions(
 		resp, err = p.persistence.ListCurrentExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListCurrentExecutionsScope, op)
+	err := p.call(metrics.PersistenceListCurrentExecutionsScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -520,7 +622,17 @@ func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(
 		resp, err = p.persistence.IsWorkflowExecutionExists(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.WorkflowID(request.WorkflowID),
+			tag.WorkflowRunID(request.RunID),
+		}
+	}
+	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +649,7 @@ func (p *workflowExecutionPersistenceClient) ListConcreteExecutions(
 		resp, err = p.persistence.ListConcreteExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListConcreteExecutionsScope, op)
+	err := p.call(metrics.PersistenceListConcreteExecutionsScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -554,7 +666,7 @@ func (p *workflowExecutionPersistenceClient) GetTransferTasks(
 		resp, err = p.persistence.GetTransferTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetTransferTasksScope, op)
+	err := p.call(metrics.PersistenceGetTransferTasksScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -571,7 +683,7 @@ func (p *workflowExecutionPersistenceClient) GetCrossClusterTasks(
 		resp, err = p.persistence.GetCrossClusterTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetCrossClusterTasksScope, op)
+	err := p.call(metrics.PersistenceGetCrossClusterTasksScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +700,7 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 		resp, err = p.persistence.GetReplicationTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetReplicationTasksScope, op)
+	err := p.call(metrics.PersistenceGetReplicationTasksScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +714,7 @@ func (p *workflowExecutionPersistenceClient) CompleteTransferTask(
 	op := func() error {
 		return p.persistence.CompleteTransferTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteTransferTaskScope, op)
+	return p.call(metrics.PersistenceCompleteTransferTaskScope, op, emptyTags)
 }
 
 func (p *workflowExecutionPersistenceClient) RangeCompleteTransferTask(
@@ -615,7 +727,7 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteTransferTask(
 		resp, err = p.persistence.RangeCompleteTransferTask(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceRangeCompleteTransferTaskScope, op)
+	err := p.call(metrics.PersistenceRangeCompleteTransferTaskScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -629,7 +741,7 @@ func (p *workflowExecutionPersistenceClient) CompleteCrossClusterTask(
 	op := func() error {
 		return p.persistence.CompleteCrossClusterTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteCrossClusterTaskScope, op)
+	return p.call(metrics.PersistenceCompleteCrossClusterTaskScope, op, emptyTags)
 }
 
 func (p *workflowExecutionPersistenceClient) RangeCompleteCrossClusterTask(
@@ -642,7 +754,7 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteCrossClusterTask(
 		resp, err = p.persistence.RangeCompleteCrossClusterTask(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceRangeCompleteCrossClusterTaskScope, op)
+	err := p.call(metrics.PersistenceRangeCompleteCrossClusterTaskScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -656,7 +768,7 @@ func (p *workflowExecutionPersistenceClient) CompleteReplicationTask(
 	op := func() error {
 		return p.persistence.CompleteReplicationTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteReplicationTaskScope, op)
+	return p.call(metrics.PersistenceCompleteReplicationTaskScope, op, emptyTags)
 }
 
 func (p *workflowExecutionPersistenceClient) RangeCompleteReplicationTask(
@@ -669,7 +781,7 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteReplicationTask(
 		resp, err = p.persistence.RangeCompleteReplicationTask(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceRangeCompleteReplicationTaskScope, op)
+	err := p.call(metrics.PersistenceRangeCompleteReplicationTaskScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +795,17 @@ func (p *workflowExecutionPersistenceClient) PutReplicationTaskToDLQ(
 	op := func() error {
 		return p.persistence.PutReplicationTaskToDLQ(ctx, request)
 	}
-	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.TaskInfo != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.TaskInfo.DomainID),
+				tag.WorkflowID(request.TaskInfo.WorkflowID),
+				tag.WorkflowRunID(request.TaskInfo.RunID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op, tags)
 }
 
 func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
@@ -696,7 +818,7 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
 		resp, err = p.persistence.GetReplicationTasksFromDLQ(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetReplicationTasksFromDLQScope, op)
+	err := p.call(metrics.PersistenceGetReplicationTasksFromDLQScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -713,7 +835,7 @@ func (p *workflowExecutionPersistenceClient) GetReplicationDLQSize(
 		resp, err = p.persistence.GetReplicationDLQSize(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetReplicationDLQSizeScope, op)
+	err := p.call(metrics.PersistenceGetReplicationDLQSizeScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -727,7 +849,7 @@ func (p *workflowExecutionPersistenceClient) DeleteReplicationTaskFromDLQ(
 	op := func() error {
 		return p.persistence.DeleteReplicationTaskFromDLQ(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteReplicationTaskFromDLQScope, op)
+	return p.call(metrics.PersistenceDeleteReplicationTaskFromDLQScope, op, emptyTags)
 }
 
 func (p *workflowExecutionPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
@@ -740,7 +862,7 @@ func (p *workflowExecutionPersistenceClient) RangeDeleteReplicationTaskFromDLQ(
 		resp, err = p.persistence.RangeDeleteReplicationTaskFromDLQ(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, op)
+	err := p.call(metrics.PersistenceRangeDeleteReplicationTaskFromDLQScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -754,7 +876,7 @@ func (p *workflowExecutionPersistenceClient) CreateFailoverMarkerTasks(
 	op := func() error {
 		return p.persistence.CreateFailoverMarkerTasks(ctx, request)
 	}
-	return p.call(metrics.PersistenceCreateFailoverMarkerTasksScope, op)
+	return p.call(metrics.PersistenceCreateFailoverMarkerTasksScope, op, emptyTags)
 }
 
 func (p *workflowExecutionPersistenceClient) GetTimerIndexTasks(
@@ -767,7 +889,7 @@ func (p *workflowExecutionPersistenceClient) GetTimerIndexTasks(
 		resp, err = p.persistence.GetTimerIndexTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetTimerIndexTasksScope, op)
+	err := p.call(metrics.PersistenceGetTimerIndexTasksScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -781,7 +903,7 @@ func (p *workflowExecutionPersistenceClient) CompleteTimerTask(
 	op := func() error {
 		return p.persistence.CompleteTimerTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteTimerTaskScope, op)
+	return p.call(metrics.PersistenceCompleteTimerTaskScope, op, emptyTags)
 }
 
 func (p *workflowExecutionPersistenceClient) RangeCompleteTimerTask(
@@ -794,7 +916,7 @@ func (p *workflowExecutionPersistenceClient) RangeCompleteTimerTask(
 		resp, err = p.persistence.RangeCompleteTimerTask(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceRangeCompleteTimerTaskScope, op)
+	err := p.call(metrics.PersistenceRangeCompleteTimerTaskScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -819,7 +941,16 @@ func (p *taskPersistenceClient) CreateTasks(
 		resp, err = p.persistence.CreateTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateTaskScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.TaskListInfo != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.TaskListInfo.DomainID),
+				tag.NumberProcessed(len(request.Tasks)),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceCreateTaskScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -836,7 +967,18 @@ func (p *taskPersistenceClient) GetTasks(
 		resp, err = p.persistence.GetTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetTasksScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.ReadLevel(request.ReadLevel),
+			tag.MaxLevel(*request.MaxReadLevel),
+			tag.NumberRequested(request.BatchSize),
+		}
+	}
+	err := p.call(metrics.PersistenceGetTasksScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -850,7 +992,15 @@ func (p *taskPersistenceClient) CompleteTask(
 	op := func() error {
 		return p.persistence.CompleteTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteTaskScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.TaskList != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.TaskList.DomainID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	return p.call(metrics.PersistenceCompleteTaskScope, op, tags)
 }
 
 func (p *taskPersistenceClient) CompleteTasksLessThan(
@@ -863,7 +1013,15 @@ func (p *taskPersistenceClient) CompleteTasksLessThan(
 		resp, err = p.persistence.CompleteTasksLessThan(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCompleteTasksLessThanScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+		}
+	}
+	err := p.call(metrics.PersistenceCompleteTasksLessThanScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -877,7 +1035,7 @@ func (p *taskPersistenceClient) GetOrphanTasks(ctx context.Context, request *Get
 		resp, err = p.persistence.GetOrphanTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetOrphanTasksScope, op)
+	err := p.call(metrics.PersistenceGetOrphanTasksScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -894,7 +1052,15 @@ func (p *taskPersistenceClient) LeaseTaskList(
 		resp, err = p.persistence.LeaseTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceLeaseTaskListScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+		}
+	}
+	err := p.call(metrics.PersistenceLeaseTaskListScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -911,7 +1077,7 @@ func (p *taskPersistenceClient) ListTaskList(
 		resp, err = p.persistence.ListTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListTaskListScope, op)
+	err := p.call(metrics.PersistenceListTaskListScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -925,7 +1091,15 @@ func (p *taskPersistenceClient) DeleteTaskList(
 	op := func() error {
 		return p.persistence.DeleteTaskList(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteTaskListScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+		}
+	}
+	return p.call(metrics.PersistenceDeleteTaskListScope, op, tags)
 }
 
 func (p *taskPersistenceClient) UpdateTaskList(
@@ -938,7 +1112,15 @@ func (p *taskPersistenceClient) UpdateTaskList(
 		resp, err = p.persistence.UpdateTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateTaskListScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.TaskListInfo != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.TaskListInfo.DomainID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceUpdateTaskListScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -963,7 +1145,15 @@ func (p *metadataPersistenceClient) CreateDomain(
 		resp, err = p.persistence.CreateDomain(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateDomainScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.Info != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.Info.ID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceCreateDomainScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -980,7 +1170,16 @@ func (p *metadataPersistenceClient) GetDomain(
 		resp, err = p.persistence.GetDomain(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetDomainScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.ID),
+			tag.WorkflowDomainName(request.Name),
+		}
+	}
+	err := p.call(metrics.PersistenceGetDomainScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -994,7 +1193,16 @@ func (p *metadataPersistenceClient) UpdateDomain(
 	op := func() error {
 		return p.persistence.UpdateDomain(ctx, request)
 	}
-	return p.call(metrics.PersistenceUpdateDomainScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.Info != nil {
+			return []tag.Tag{
+				tag.WorkflowDomainID(request.Info.ID),
+				tag.WorkflowDomainName(request.Info.Name),
+			}
+		}
+		return []tag.Tag{}
+	}
+	return p.call(metrics.PersistenceUpdateDomainScope, op, tags)
 }
 
 func (p *metadataPersistenceClient) DeleteDomain(
@@ -1004,7 +1212,15 @@ func (p *metadataPersistenceClient) DeleteDomain(
 	op := func() error {
 		return p.persistence.DeleteDomain(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteDomainScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.ID),
+		}
+	}
+	return p.call(metrics.PersistenceDeleteDomainScope, op, tags)
 }
 
 func (p *metadataPersistenceClient) DeleteDomainByName(
@@ -1014,7 +1230,15 @@ func (p *metadataPersistenceClient) DeleteDomainByName(
 	op := func() error {
 		return p.persistence.DeleteDomainByName(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteDomainByNameScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainName(request.Name),
+		}
+	}
+	return p.call(metrics.PersistenceDeleteDomainByNameScope, op, tags)
 }
 
 func (p *metadataPersistenceClient) ListDomains(
@@ -1027,7 +1251,7 @@ func (p *metadataPersistenceClient) ListDomains(
 		resp, err = p.persistence.ListDomains(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListDomainScope, op)
+	err := p.call(metrics.PersistenceListDomainScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1043,7 +1267,7 @@ func (p *metadataPersistenceClient) GetMetadata(
 		resp, err = p.persistence.GetMetadata(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetMetadataScope, op)
+	err := p.call(metrics.PersistenceGetMetadataScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1065,7 +1289,17 @@ func (p *visibilityPersistenceClient) RecordWorkflowExecutionStarted(
 	op := func() error {
 		return p.persistence.RecordWorkflowExecutionStarted(ctx, request)
 	}
-	return p.call(metrics.PersistenceRecordWorkflowExecutionStartedScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+			tag.WorkflowID(request.Execution.WorkflowID),
+			tag.WorkflowRunID(request.Execution.RunID),
+		}
+	}
+	return p.call(metrics.PersistenceRecordWorkflowExecutionStartedScope, op, tags)
 }
 
 func (p *visibilityPersistenceClient) RecordWorkflowExecutionClosed(
@@ -1075,7 +1309,17 @@ func (p *visibilityPersistenceClient) RecordWorkflowExecutionClosed(
 	op := func() error {
 		return p.persistence.RecordWorkflowExecutionClosed(ctx, request)
 	}
-	return p.call(metrics.PersistenceRecordWorkflowExecutionClosedScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+			tag.WorkflowID(request.Execution.WorkflowID),
+			tag.WorkflowRunID(request.Execution.RunID),
+		}
+	}
+	return p.call(metrics.PersistenceRecordWorkflowExecutionClosedScope, op, tags)
 }
 
 func (p *visibilityPersistenceClient) UpsertWorkflowExecution(
@@ -1085,7 +1329,17 @@ func (p *visibilityPersistenceClient) UpsertWorkflowExecution(
 	op := func() error {
 		return p.persistence.UpsertWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceUpsertWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+			tag.WorkflowID(request.Execution.WorkflowID),
+			tag.WorkflowRunID(request.Execution.RunID),
+		}
+	}
+	return p.call(metrics.PersistenceUpsertWorkflowExecutionScope, op, tags)
 }
 
 func (p *visibilityPersistenceClient) ListOpenWorkflowExecutions(
@@ -1098,7 +1352,15 @@ func (p *visibilityPersistenceClient) ListOpenWorkflowExecutions(
 		resp, err = p.persistence.ListOpenWorkflowExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListOpenWorkflowExecutionsScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListOpenWorkflowExecutionsScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1115,7 +1377,15 @@ func (p *visibilityPersistenceClient) ListClosedWorkflowExecutions(
 		resp, err = p.persistence.ListClosedWorkflowExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1132,7 +1402,15 @@ func (p *visibilityPersistenceClient) ListOpenWorkflowExecutionsByType(
 		resp, err = p.persistence.ListOpenWorkflowExecutionsByType(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListOpenWorkflowExecutionsByTypeScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListOpenWorkflowExecutionsByTypeScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1149,7 +1427,15 @@ func (p *visibilityPersistenceClient) ListClosedWorkflowExecutionsByType(
 		resp, err = p.persistence.ListClosedWorkflowExecutionsByType(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsByTypeScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsByTypeScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1166,7 +1452,15 @@ func (p *visibilityPersistenceClient) ListOpenWorkflowExecutionsByWorkflowID(
 		resp, err = p.persistence.ListOpenWorkflowExecutionsByWorkflowID(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListOpenWorkflowExecutionsByWorkflowIDScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListOpenWorkflowExecutionsByWorkflowIDScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1183,7 +1477,15 @@ func (p *visibilityPersistenceClient) ListClosedWorkflowExecutionsByWorkflowID(
 		resp, err = p.persistence.ListClosedWorkflowExecutionsByWorkflowID(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsByWorkflowIDScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsByWorkflowIDScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1200,7 +1502,15 @@ func (p *visibilityPersistenceClient) ListClosedWorkflowExecutionsByStatus(
 		resp, err = p.persistence.ListClosedWorkflowExecutionsByStatus(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsByStatusScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListClosedWorkflowExecutionsByStatusScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1217,7 +1527,17 @@ func (p *visibilityPersistenceClient) GetClosedWorkflowExecution(
 		resp, err = p.persistence.GetClosedWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetClosedWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+			tag.WorkflowID(request.Execution.WorkflowID),
+			tag.WorkflowRunID(request.Execution.RunID),
+		}
+	}
+	err := p.call(metrics.PersistenceGetClosedWorkflowExecutionScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1231,7 +1551,17 @@ func (p *visibilityPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceVisibilityDeleteWorkflowExecutionScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainID),
+			tag.WorkflowID(request.WorkflowID),
+			tag.WorkflowRunID(request.RunID),
+		}
+	}
+	return p.call(metrics.PersistenceVisibilityDeleteWorkflowExecutionScope, op, tags)
 }
 
 func (p *visibilityPersistenceClient) ListWorkflowExecutions(
@@ -1244,7 +1574,15 @@ func (p *visibilityPersistenceClient) ListWorkflowExecutions(
 		resp, err = p.persistence.ListWorkflowExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceListWorkflowExecutionsScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceListWorkflowExecutionsScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1261,7 +1599,15 @@ func (p *visibilityPersistenceClient) ScanWorkflowExecutions(
 		resp, err = p.persistence.ScanWorkflowExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceScanWorkflowExecutionsScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceScanWorkflowExecutionsScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1278,7 +1624,15 @@ func (p *visibilityPersistenceClient) CountWorkflowExecutions(
 		resp, err = p.persistence.CountWorkflowExecutions(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCountWorkflowExecutionsScope, op)
+	tags := func() []tag.Tag {
+		if request == nil {
+			return []tag.Tag{}
+		}
+		return []tag.Tag{
+			tag.WorkflowDomainID(request.DomainUUID),
+		}
+	}
+	err := p.call(metrics.PersistenceCountWorkflowExecutionsScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1308,7 +1662,15 @@ func (p *historyPersistenceClient) AppendHistoryNodes(
 		resp, err = p.persistence.AppendHistoryNodes(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1326,7 +1688,15 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 		resp, err = p.persistence.ReadHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1344,7 +1714,15 @@ func (p *historyPersistenceClient) ReadHistoryBranchByBatch(
 		resp, err = p.persistence.ReadHistoryBranchByBatch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1362,7 +1740,15 @@ func (p *historyPersistenceClient) ReadRawHistoryBranch(
 		resp, err = p.persistence.ReadRawHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1380,7 +1766,15 @@ func (p *historyPersistenceClient) ForkHistoryBranch(
 		resp, err = p.persistence.ForkHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceForkHistoryBranchScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceForkHistoryBranchScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1395,7 +1789,15 @@ func (p *historyPersistenceClient) DeleteHistoryBranch(
 	op := func() error {
 		return p.persistence.DeleteHistoryBranch(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op, tags)
 }
 
 func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
@@ -1408,7 +1810,7 @@ func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
 		resp, err = p.persistence.GetAllHistoryTreeBranches(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetAllHistoryTreeBranchesScope, op)
+	err := p.call(metrics.PersistenceGetAllHistoryTreeBranchesScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1426,7 +1828,15 @@ func (p *historyPersistenceClient) GetHistoryTree(
 		resp, err = p.persistence.GetHistoryTree(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetHistoryTreeScope, op)
+	tags := func() []tag.Tag {
+		if request != nil && request.ShardID != nil {
+			return []tag.Tag{
+				tag.ShardID(*request.ShardID),
+			}
+		}
+		return []tag.Tag{}
+	}
+	err := p.call(metrics.PersistenceGetHistoryTreeScope, op, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -1440,7 +1850,7 @@ func (p *queuePersistenceClient) EnqueueMessage(
 	op := func() error {
 		return p.persistence.EnqueueMessage(ctx, message)
 	}
-	return p.call(metrics.PersistenceEnqueueMessageScope, op)
+	return p.call(metrics.PersistenceEnqueueMessageScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) ReadMessages(
@@ -1454,7 +1864,7 @@ func (p *queuePersistenceClient) ReadMessages(
 		resp, err = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadQueueMessagesScope, op)
+	err := p.call(metrics.PersistenceReadQueueMessagesScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1469,7 +1879,7 @@ func (p *queuePersistenceClient) UpdateAckLevel(
 	op := func() error {
 		return p.persistence.UpdateAckLevel(ctx, messageID, clusterName)
 	}
-	return p.call(metrics.PersistenceUpdateAckLevelScope, op)
+	return p.call(metrics.PersistenceUpdateAckLevelScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) GetAckLevels(
@@ -1481,7 +1891,7 @@ func (p *queuePersistenceClient) GetAckLevels(
 		resp, err = p.persistence.GetAckLevels(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetAckLevelScope, op)
+	err := p.call(metrics.PersistenceGetAckLevelScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1495,7 +1905,7 @@ func (p *queuePersistenceClient) DeleteMessagesBefore(
 	op := func() error {
 		return p.persistence.DeleteMessagesBefore(ctx, messageID)
 	}
-	return p.call(metrics.PersistenceDeleteQueueMessagesScope, op)
+	return p.call(metrics.PersistenceDeleteQueueMessagesScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) EnqueueMessageToDLQ(
@@ -1505,7 +1915,7 @@ func (p *queuePersistenceClient) EnqueueMessageToDLQ(
 	op := func() error {
 		return p.persistence.EnqueueMessageToDLQ(ctx, message)
 	}
-	return p.call(metrics.PersistenceEnqueueMessageToDLQScope, op)
+	return p.call(metrics.PersistenceEnqueueMessageToDLQScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) ReadMessagesFromDLQ(
@@ -1522,7 +1932,7 @@ func (p *queuePersistenceClient) ReadMessagesFromDLQ(
 		result, token, err = p.persistence.ReadMessagesFromDLQ(ctx, firstMessageID, lastMessageID, pageSize, pageToken)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadQueueMessagesFromDLQScope, op)
+	err := p.call(metrics.PersistenceReadQueueMessagesFromDLQScope, op, emptyTags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1536,7 +1946,7 @@ func (p *queuePersistenceClient) DeleteMessageFromDLQ(
 	op := func() error {
 		return p.persistence.DeleteMessageFromDLQ(ctx, messageID)
 	}
-	return p.call(metrics.PersistenceDeleteQueueMessageFromDLQScope, op)
+	return p.call(metrics.PersistenceDeleteQueueMessageFromDLQScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(
@@ -1547,7 +1957,7 @@ func (p *queuePersistenceClient) RangeDeleteMessagesFromDLQ(
 	op := func() error {
 		return p.persistence.RangeDeleteMessagesFromDLQ(ctx, firstMessageID, lastMessageID)
 	}
-	return p.call(metrics.PersistenceRangeDeleteMessagesFromDLQScope, op)
+	return p.call(metrics.PersistenceRangeDeleteMessagesFromDLQScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) UpdateDLQAckLevel(
@@ -1558,7 +1968,7 @@ func (p *queuePersistenceClient) UpdateDLQAckLevel(
 	op := func() error {
 		return p.persistence.UpdateDLQAckLevel(ctx, messageID, clusterName)
 	}
-	return p.call(metrics.PersistenceUpdateDLQAckLevelScope, op)
+	return p.call(metrics.PersistenceUpdateDLQAckLevelScope, op, emptyTags)
 }
 
 func (p *queuePersistenceClient) GetDLQAckLevels(
@@ -1570,7 +1980,7 @@ func (p *queuePersistenceClient) GetDLQAckLevels(
 		resp, err = p.persistence.GetDLQAckLevels(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetDLQAckLevelScope, op)
+	err := p.call(metrics.PersistenceGetDLQAckLevelScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1586,7 +1996,7 @@ func (p *queuePersistenceClient) GetDLQSize(
 		resp, err = p.persistence.GetDLQSize(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetDLQSizeScope, op)
+	err := p.call(metrics.PersistenceGetDLQSizeScope, op, emptyTags)
 	if err != nil {
 		return 0, err
 	}
@@ -1604,7 +2014,7 @@ func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (
 		resp, err = p.persistence.FetchDynamicConfig(ctx)
 		return err
 	}
-	err := p.call(metrics.PersistenceFetchDynamicConfigScope, op)
+	err := p.call(metrics.PersistenceFetchDynamicConfigScope, op, emptyTags)
 	if err != nil {
 		return nil, err
 	}
@@ -1615,7 +2025,7 @@ func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, 
 	op := func() error {
 		return p.persistence.UpdateDynamicConfig(ctx, request)
 	}
-	return p.call(metrics.PersistenceUpdateDynamicConfigScope, op)
+	return p.call(metrics.PersistenceUpdateDynamicConfigScope, op, emptyTags)
 }
 
 func (p *configStorePersistenceClient) Close() {

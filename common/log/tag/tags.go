@@ -532,6 +532,11 @@ func TaskVisibilityTimestamp(timestamp int64) Tag {
 	return newInt64("queue-task-visibility-timestamp", timestamp)
 }
 
+// NumberRequested returns tag for NumberRequested
+func NumberRequested(n int) Tag {
+	return newInt("number-requested", n)
+}
+
 // NumberProcessed returns tag for NumberProcessed
 func NumberProcessed(n int) Tag {
 	return newInt("number-processed", n)
