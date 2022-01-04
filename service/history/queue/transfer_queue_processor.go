@@ -529,6 +529,11 @@ func newTransferQueueStandbyProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
+		if task.TaskType == persistence.TransferTaskTypeCloseExecution ||
+			task.TaskType == persistence.TransferTaskTypeRecordChildExecutionCompleted {
+			// guarantee the processing of workflow execution close
+			return true, nil
+		}
 		return taskAllocator.VerifyStandbyTask(clusterName, task.DomainID, task)
 	}
 

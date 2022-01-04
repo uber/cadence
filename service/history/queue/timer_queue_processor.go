@@ -519,6 +519,11 @@ func newTimerQueueStandbyProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
+		if timer.TaskType == persistence.TaskTypeWorkflowTimeout ||
+			timer.TaskType == persistence.TaskTypeDeleteHistoryEvent {
+			// guarantee the processing of workflow execution history deletion
+			return true, nil
+		}
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 

@@ -79,10 +79,7 @@ func (t *transferStandbyTaskExecutor) Execute(
 		return errUnexpectedTask
 	}
 
-	if !shouldProcessTask &&
-		transferTask.TaskType != persistence.TransferTaskTypeCloseExecution &&
-		transferTask.TaskType != persistence.TransferTaskTypeRecordWorkflowClosed {
-		// guarantee the processing of workflow execution close
+	if !shouldProcessTask {
 		return nil
 	}
 
