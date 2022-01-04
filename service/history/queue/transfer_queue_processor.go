@@ -530,9 +530,23 @@ func newTransferQueueStandbyProcessor(
 			return false, errUnexpectedQueueTask
 		}
 		if task.TaskType == persistence.TransferTaskTypeCloseExecution ||
-			task.TaskType == persistence.TransferTaskTypeRecordChildExecutionCompleted {
-			// guarantee the processing of workflow execution close
-			return true, nil
+			task.TaskType == persistence.TransferTaskTypeRecordWorkflowClosed {
+			domainEntry, err := shard.GetDomainCache().GetDomainByID(task.DomainID)
+			if err == nil {
+				if domainEntry.HasReplicationCluster(clusterName) {
+					// guarantee the processing of workflow execution close
+					return true, nil
+				}
+			} else {
+				if _, ok := err.(*types.EntityNotExistsError); !ok {
+					// retry the task if failed to find the domain
+					logger.Warn("Cannot find domain", tag.WorkflowDomainID(task.DomainID))
+					return false, err
+				} else {
+					logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(task.DomainID), tag.Value(task))
+					return false, nil
+				}
+			}
 		}
 		return taskAllocator.VerifyStandbyTask(clusterName, task.DomainID, task)
 	}
