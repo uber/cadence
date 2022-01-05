@@ -53,6 +53,10 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 	}
 
 	if !applied {
+		requestConditionalRunID := ""
+		if currentWorkflowRequest.Condition != nil {
+			requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
+		}
 		// There can be two reasons why the query does not get applied. Either the RangeID has changed, or
 		// the workflow is already started. Check the row info returned by Cassandra to figure out which one it is.
 	GetFailureReasonLoop:
@@ -107,7 +111,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 
 				}
 
-				if prevRunID := previous["current_run_id"].(gocql.UUID).String(); prevRunID != currentWorkflowRequest.Condition.GetCurrentRunID() {
+				if prevRunID := previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && prevRunID != requestConditionalRunID {
 					// currentRunID on previous run has been changed, return to caller to handle
 					msg := fmt.Sprintf("Workflow execution creation condition failed by mismatch runID. WorkflowId: %v, Expected Current RunID: %v, Actual Current RunID: %v",
 						execution.WorkflowID, currentWorkflowRequest.Condition.GetCurrentRunID(), prevRunID)
@@ -176,7 +180,10 @@ func (db *cdb) executeUpdateWorkflowBatchTransaction(
 		requestRunID := currentWorkflowRequest.Row.RunID
 		requestCondition := PreviousNextEventIDCondition
 		requestRangeID := shardCondition.RangeID
-		requestConditionalRunID := *currentWorkflowRequest.Condition.CurrentRunID
+		requestConditionalRunID := ""
+		if currentWorkflowRequest.Condition != nil {
+			requestConditionalRunID = currentWorkflowRequest.Condition.GetCurrentRunID()
+		}
 
 		// There can be three reasons why the query does not get applied: the RangeID has changed, or the next_event_id or current_run_id check failed.
 		// Check the row info returned by Cassandra to figure out which one it is.
@@ -210,7 +217,7 @@ func (db *cdb) executeUpdateWorkflowBatchTransaction(
 				}
 			} else if rowType == rowTypeExecution && runID == permanentRunID {
 				// UpdateWorkflowExecution failed because current_run_id is unexpected
-				if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); actualCurrRunID != requestConditionalRunID {
+				if actualCurrRunID = previous["current_run_id"].(gocql.UUID).String(); requestConditionalRunID != "" && actualCurrRunID != requestConditionalRunID {
 					// UpdateWorkflowExecution failed because next event ID is unexpected
 					runIDUnmatch = true
 				}
