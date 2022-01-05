@@ -62,7 +62,7 @@ require (
 	go.mongodb.org/mongo-driver v1.7.3
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
-	go.uber.org/cadence v0.17.1-0.20211207091621-4cd144b0b16d
+	go.uber.org/cadence v0.19.0
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0
