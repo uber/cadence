@@ -852,6 +852,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 				printDateTime,
 				printMemo,
 				printSearchAttr,
+				nil,
 			)
 		}
 		postPrintFn = func() { table.Render() }
@@ -1148,6 +1149,26 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	return table
 }
 
+func getAllWorkflowIDsByQuery(c *cli.Context, query string) map[string]bool {
+	wfClient := getWorkflowClient(c)
+	pageSize := 1000
+	var nextPageToken []byte
+	var info []*s.WorkflowExecutionInfo
+	result := map[string]bool{}
+	for {
+		info, nextPageToken = scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
+		for _, we := range info {
+			wid := we.Execution.GetWorkflowId()
+			result[wid] = true
+		}
+
+		if nextPageToken == nil {
+			break
+		}
+	}
+	return result
+}
+
 func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int) {
 	wfClient := getWorkflowClient(c)
 
@@ -1178,6 +1199,12 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
+	excludeWIDs := map[string]bool{}
+	if c.IsSet(FlagListQuery) && c.IsSet(FlagExcludeWorkflowIDByQuery) {
+		excludeQuery := c.String(FlagExcludeWorkflowIDByQuery)
+		excludeWIDs = getAllWorkflowIDsByQuery(c, excludeQuery)
+		fmt.Printf("found %d workflowIDs to exclude\n", len(excludeWIDs))
+	}
 	prepareTable := func(next []byte) ([]byte, int) {
 		var result []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
@@ -1198,6 +1225,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			printDateTime,
 			printMemo,
 			printSearchAttr,
+			excludeWIDs,
 		)
 
 		return nextPageToken, len(result)
@@ -1213,8 +1241,13 @@ func appendWorkflowExecutionsToTable(
 	printDateTime bool,
 	printMemo bool,
 	printSearchAttr bool,
+	excludeWIDs map[string]bool,
 ) {
 	for _, e := range executions {
+		if excludeWIDs[e.GetExecution().GetWorkflowId()] {
+			continue
+		}
+
 		var startTime, executionTime, closeTime string
 		if printRawTime {
 			startTime = fmt.Sprintf("%d", e.GetStartTime())
