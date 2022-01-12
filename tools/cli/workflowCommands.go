@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"os"
 	"regexp"
@@ -1524,6 +1525,11 @@ func ResetWorkflow(c *cli.Context) {
 	}
 	eventID := c.Int64(FlagEventID)
 	resetType := c.String(FlagResetType)
+	decisionOffset := c.Int(FlagDecisionOffset)
+	if decisionOffset > 0 {
+		ErrorAndExit("Only decision offset <=0 is supported", nil)
+	}
+
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok && eventID <= 0 {
 		ErrorAndExit("Must specify valid eventID or valid resetType", nil)
@@ -1548,7 +1554,7 @@ func ResetWorkflow(c *cli.Context) {
 	resetBaseRunID := rid
 	decisionFinishID := eventID
 	if resetType != "" {
-		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, domain, wid, rid, frontendClient)
+		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, decisionOffset, domain, wid, rid, frontendClient)
 		if err != nil {
 			ErrorAndExit("getResetEventIDByType failed", err)
 		}
@@ -1607,6 +1613,7 @@ type batchResetParamsType struct {
 	skipBaseNotCurrent   bool
 	dryRun               bool
 	resetType            string
+	decisionOffset       int
 	skipSignalReapply    bool
 }
 
@@ -1614,6 +1621,10 @@ type batchResetParamsType struct {
 func ResetInBatch(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	resetType := getRequiredOption(c, FlagResetType)
+	decisionOffset := c.Int(FlagDecisionOffset)
+	if decisionOffset > 0 {
+		ErrorAndExit("Only decision offset <=0 is supported", nil)
+	}
 
 	inFileName := c.String(FlagInputFile)
 	query := c.String(FlagListQuery)
@@ -1635,6 +1646,7 @@ func ResetInBatch(c *cli.Context) {
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
 		dryRun:               c.Bool(FlagDryRun),
 		resetType:            resetType,
+		decisionOffset:       decisionOffset,
 		skipSignalReapply:    c.Bool(FlagSkipSignalReapply),
 	}
 
@@ -1812,7 +1824,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 		}
 	}
 
-	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, domain, wid, rid, frontendClient)
+	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, params.decisionOffset, domain, wid, rid, frontendClient)
 	if err != nil {
 		return printErrorAndReturn("getResetEventIDByType failed", err)
 	}
@@ -1891,7 +1903,8 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 func getResetEventIDByType(
 	ctx context.Context,
 	c *cli.Context,
-	resetType, domain, wid, rid string,
+	resetType string, decisionOffset int,
+	domain, wid, rid string,
 	frontendClient frontend.Client,
 ) (resetBaseRunID string, decisionFinishID int64, err error) {
 	// default to the same runID
@@ -1900,7 +1913,7 @@ func getResetEventIDByType(
 	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case resetTypeLastDecisionCompleted:
-		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted, decisionOffset)
 		if err != nil {
 			return
 		}
@@ -1935,7 +1948,7 @@ func getResetEventIDByType(
 		// decisionFinishID is exclusive in reset API
 		decisionFinishID++
 	case resetTypeLastDecisionScheduled:
-		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled, decisionOffset)
 		if err != nil {
 			return
 		}
@@ -2038,7 +2051,12 @@ func getLastDecisionTaskByType(
 	runID string,
 	frontendClient frontend.Client,
 	decisionType types.EventType,
-) (decisionFinishID int64, err error) {
+	decisionOffset int,
+) (int64, error) {
+
+	// this fixedSizeQueue is for remembering the offset decision eventID
+	fixedSizeQueue := make([]int64, 0)
+	size := int(math.Abs(float64(decisionOffset))) + 1
 
 	req := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: domain,
@@ -2058,7 +2076,11 @@ func getLastDecisionTaskByType(
 
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
-				decisionFinishID = e.GetEventID()
+				decisionEventID := e.GetEventID()
+				fixedSizeQueue = append(fixedSizeQueue, decisionEventID)
+				if len(fixedSizeQueue) > size {
+					fixedSizeQueue = fixedSizeQueue[1:]
+				}
 			}
 		}
 
@@ -2068,10 +2090,10 @@ func getLastDecisionTaskByType(
 			break
 		}
 	}
-	if decisionFinishID == 0 {
+	if len(fixedSizeQueue) == 0 {
 		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
-	return
+	return fixedSizeQueue[0], nil
 }
 
 func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, frontendClient frontend.Client) (resetBaseRunID string, decisionFinishID int64, err error) {

@@ -231,6 +231,10 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
 				cli.StringFlag{
+					Name:  FlagDecisionOffset,
+					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decisionCompletion. Currently only negative number is supported.",
+				},
+				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
 				},
@@ -305,6 +309,11 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagResetType,
 					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
+				cli.StringFlag{
+					Name: FlagDecisionOffset,
+					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decisionCompletion. " +
+						"Limitation: currently only negative number is supported, and only works with LastDecisionCompleted.",
 				},
 				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
