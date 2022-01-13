@@ -862,6 +862,16 @@ func (entry *DomainCacheEntry) GetDomainNotActiveErr() error {
 	)
 }
 
+// HasReplicationCluster returns true if the domain has replication in the cluster
+func (entry *DomainCacheEntry) HasReplicationCluster(clusterName string) bool {
+	for _, cluster := range entry.GetReplicationConfig().Clusters {
+		if cluster.ClusterName == clusterName {
+			return true
+		}
+	}
+	return false
+}
+
 // Len return length
 func (t DomainCacheEntries) Len() int {
 	return len(t)

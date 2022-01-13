@@ -966,6 +966,15 @@ const (
 	// Default value: 60s (60*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorCompleteTimerInterval
+	// TimerProcessorFailoverMaxStartJitterInterval is the max jitter interval for starting timer
+	// failover queue processing. The actual jitter interval used will be a random duration between
+	// 0 and the max interval so that timer failover queue across different shards won't start at
+	// the same time
+	// KeyName: history.timerProcessorFailoverMaxStartJitterInterval
+	// Value type: Duration
+	// Default value: 0s (0*time.Second)
+	// Allowed filters: N/A
+	TimerProcessorFailoverMaxStartJitterInterval
 	// TimerProcessorFailoverMaxPollRPS is max poll rate per second for timer processor
 	// KeyName: history.timerProcessorFailoverMaxPollRPS
 	// Value type: Int
@@ -1039,6 +1048,15 @@ const (
 	// Default value: 4000
 	// Allowed filters: N/A
 	TransferTaskDeleteBatchSize
+	// TransferProcessorFailoverMaxStartJitterInterval is the max jitter interval for starting transfer
+	// failover queue processing. The actual jitter interval used will be a random duration between
+	// 0 and the max interval so that timer failover queue across different shards won't start at
+	// the same time
+	// KeyName: history.transferProcessorFailoverMaxStartJitterInterval
+	// Value type: Duration
+	// Default value: 0s (0*time.Second)
+	// Allowed filters: N/A
+	TransferProcessorFailoverMaxStartJitterInterval
 	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor
 	// KeyName: history.transferProcessorFailoverMaxPollRPS
 	// Value type: Int
@@ -2278,6 +2296,7 @@ var Keys = map[Key]string{
 	TimerProcessorUpdateAckInterval:                   "history.timerProcessorUpdateAckInterval",
 	TimerProcessorUpdateAckIntervalJitterCoefficient:  "history.timerProcessorUpdateAckIntervalJitterCoefficient",
 	TimerProcessorCompleteTimerInterval:               "history.timerProcessorCompleteTimerInterval",
+	TimerProcessorFailoverMaxStartJitterInterval:      "history.timerProcessorFailoverMaxStartJitterInterval",
 	TimerProcessorFailoverMaxPollRPS:                  "history.timerProcessorFailoverMaxPollRPS",
 	TimerProcessorMaxPollRPS:                          "history.timerProcessorMaxPollRPS",
 	TimerProcessorMaxPollInterval:                     "history.timerProcessorMaxPollInterval",
@@ -2291,6 +2310,7 @@ var Keys = map[Key]string{
 
 	TransferTaskBatchSize:                                "history.transferTaskBatchSize",
 	TransferTaskDeleteBatchSize:                          "history.transferTaskDeleteBatchSize",
+	TransferProcessorFailoverMaxStartJitterInterval:      "history.transferProcessorFailoverMaxStartJitterInterval",
 	TransferProcessorFailoverMaxPollRPS:                  "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                          "history.transferProcessorMaxPollRPS",
 	TransferProcessorCompleteTransferFailureRetryCount:   "history.transferProcessorCompleteTransferFailureRetryCount",

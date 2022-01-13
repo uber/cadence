@@ -167,7 +167,7 @@ func (f *factoryImpl) NewTaskManager() (p.TaskManager, error) {
 		result = p.NewTaskPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewTaskPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 	return result, nil
 }
@@ -187,7 +187,7 @@ func (f *factoryImpl) NewShardManager() (p.ShardManager, error) {
 		result = p.NewShardPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewShardPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 	return result, nil
 }
@@ -207,7 +207,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 	return result, nil
 }
@@ -229,7 +229,7 @@ func (f *factoryImpl) NewDomainManager() (p.DomainManager, error) {
 		result = p.NewDomainPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewDomainPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 	return result, nil
 }
@@ -249,7 +249,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 	return result, nil
 }
@@ -352,7 +352,7 @@ func (f *factoryImpl) newDBVisibilityManager(
 		}, f.metricsClient, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewVisibilityPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 
 	return result, nil
@@ -372,7 +372,7 @@ func (f *factoryImpl) NewDomainReplicationQueueManager() (p.QueueManager, error)
 		result = p.NewQueuePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewQueuePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 
 	return result, nil
@@ -392,7 +392,7 @@ func (f *factoryImpl) NewConfigStoreManager() (p.ConfigStoreManager, error) {
 		result = p.NewConfigStorePersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger)
+		result = p.NewConfigStorePersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
 	}
 
 	return result, nil
