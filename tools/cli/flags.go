@@ -91,6 +91,7 @@ const (
 	FlagScanType                          = "scan_type"
 	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"
+	FlagSkipCurrentCompleted              = "skip_current_completed"
 	FlagSkipBaseIsNotCurrent              = "skip_base_is_not_current"
 	FlagDryRun                            = "dry_run"
 	FlagNonDeterministicOnly              = "only_non_deterministic"

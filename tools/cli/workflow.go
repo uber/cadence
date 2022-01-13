@@ -288,6 +288,10 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Skip the workflow if the current run is open for the same workflowID as base.",
 				},
 				cli.BoolFlag{
+					Name:  FlagSkipCurrentCompleted,
+					Usage: "Skip the workflow if the current run is completed for the same workflowID as base.",
+				},
+				cli.BoolFlag{
 					Name: FlagSkipBaseIsNotCurrent,
 					// TODO https://github.com/uber/cadence/issues/2930
 					// The right way to prevent needs server side implementation .
