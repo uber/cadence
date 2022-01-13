@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"os"
 	"regexp"
@@ -852,6 +853,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 				printDateTime,
 				printMemo,
 				printSearchAttr,
+				nil,
 			)
 		}
 		postPrintFn = func() { table.Render() }
@@ -1148,6 +1150,26 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	return table
 }
 
+func getAllWorkflowIDsByQuery(c *cli.Context, query string) map[string]bool {
+	wfClient := getWorkflowClient(c)
+	pageSize := 1000
+	var nextPageToken []byte
+	var info []*s.WorkflowExecutionInfo
+	result := map[string]bool{}
+	for {
+		info, nextPageToken = scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
+		for _, we := range info {
+			wid := we.Execution.GetWorkflowId()
+			result[wid] = true
+		}
+
+		if nextPageToken == nil {
+			break
+		}
+	}
+	return result
+}
+
 func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int) {
 	wfClient := getWorkflowClient(c)
 
@@ -1178,6 +1200,12 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
+	excludeWIDs := map[string]bool{}
+	if c.IsSet(FlagListQuery) && c.IsSet(FlagExcludeWorkflowIDByQuery) {
+		excludeQuery := c.String(FlagExcludeWorkflowIDByQuery)
+		excludeWIDs = getAllWorkflowIDsByQuery(c, excludeQuery)
+		fmt.Printf("found %d workflowIDs to exclude\n", len(excludeWIDs))
+	}
 	prepareTable := func(next []byte) ([]byte, int) {
 		var result []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
@@ -1198,6 +1226,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			printDateTime,
 			printMemo,
 			printSearchAttr,
+			excludeWIDs,
 		)
 
 		return nextPageToken, len(result)
@@ -1213,8 +1242,13 @@ func appendWorkflowExecutionsToTable(
 	printDateTime bool,
 	printMemo bool,
 	printSearchAttr bool,
+	excludeWIDs map[string]bool,
 ) {
 	for _, e := range executions {
+		if excludeWIDs[e.GetExecution().GetWorkflowId()] {
+			continue
+		}
+
 		var startTime, executionTime, closeTime string
 		if printRawTime {
 			startTime = fmt.Sprintf("%d", e.GetStartTime())
@@ -1524,6 +1558,11 @@ func ResetWorkflow(c *cli.Context) {
 	}
 	eventID := c.Int64(FlagEventID)
 	resetType := c.String(FlagResetType)
+	decisionOffset := c.Int(FlagDecisionOffset)
+	if decisionOffset > 0 {
+		ErrorAndExit("Only decision offset <=0 is supported", nil)
+	}
+
 	extraForResetType, ok := resetTypesMap[resetType]
 	if !ok && eventID <= 0 {
 		ErrorAndExit("Must specify valid eventID or valid resetType", nil)
@@ -1548,7 +1587,7 @@ func ResetWorkflow(c *cli.Context) {
 	resetBaseRunID := rid
 	decisionFinishID := eventID
 	if resetType != "" {
-		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, domain, wid, rid, frontendClient)
+		resetBaseRunID, decisionFinishID, err = getResetEventIDByType(ctx, c, resetType, decisionOffset, domain, wid, rid, frontendClient)
 		if err != nil {
 			ErrorAndExit("getResetEventIDByType failed", err)
 		}
@@ -1602,11 +1641,13 @@ func processResets(c *cli.Context, domain string, wes chan types.WorkflowExecuti
 
 type batchResetParamsType struct {
 	reason               string
-	skipOpen             bool
+	skipCurrentOpen      bool
+	skipCurrentCompleted bool
 	nonDeterministicOnly bool
 	skipBaseNotCurrent   bool
 	dryRun               bool
 	resetType            string
+	decisionOffset       int
 	skipSignalReapply    bool
 }
 
@@ -1614,10 +1655,15 @@ type batchResetParamsType struct {
 func ResetInBatch(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	resetType := getRequiredOption(c, FlagResetType)
+	decisionOffset := c.Int(FlagDecisionOffset)
+	if decisionOffset > 0 {
+		ErrorAndExit("Only decision offset <=0 is supported", nil)
+	}
 
 	inFileName := c.String(FlagInputFile)
 	query := c.String(FlagListQuery)
-	excFileName := c.String(FlagExcludeFile)
+	excludeFileName := c.String(FlagExcludeFile)
+	excludeQuery := c.String(FlagExcludeWorkflowIDByQuery)
 	separator := c.String(FlagInputSeparator)
 	parallel := c.Int(FlagParallism)
 
@@ -1628,13 +1674,19 @@ func ResetInBatch(c *cli.Context) {
 		getRequiredOption(c, extraForResetType)
 	}
 
+	if excludeFileName != "" && excludeQuery != "" {
+		ErrorAndExit("Only one of the excluding option is allowed", nil)
+	}
+
 	batchResetParams := batchResetParamsType{
 		reason:               getRequiredOption(c, FlagReason),
-		skipOpen:             c.Bool(FlagSkipCurrentOpen),
+		skipCurrentOpen:      c.Bool(FlagSkipCurrentOpen),
+		skipCurrentCompleted: c.Bool(FlagSkipCurrentCompleted),
 		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
 		dryRun:               c.Bool(FlagDryRun),
 		resetType:            resetType,
+		decisionOffset:       decisionOffset,
 		skipSignalReapply:    c.Bool(FlagSkipSignalReapply),
 	}
 
@@ -1651,35 +1703,16 @@ func ResetInBatch(c *cli.Context) {
 		go processResets(c, domain, wes, done, wg, batchResetParams)
 	}
 
-	// read exclude
-	excludes := map[string]string{}
-	if len(excFileName) > 0 {
-		// This code is only used in the CLI. The input provided is from a trusted user.
-		// #nosec
-		excFile, err := os.Open(excFileName)
-		if err != nil {
-			ErrorAndExit("Open failed2", err)
-		}
-		defer excFile.Close()
-		scanner := bufio.NewScanner(excFile)
-		idx := 0
-		for scanner.Scan() {
-			idx++
-			line := strings.TrimSpace(scanner.Text())
-			if len(line) == 0 {
-				fmt.Printf("line %v is empty, skipped\n", idx)
-				continue
-			}
-			cols := strings.Split(line, separator)
-			if len(cols) < 1 {
-				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
-			}
-			wid := strings.TrimSpace(cols[0])
-			rid := "not-needed"
-			excludes[wid] = rid
-		}
+	// read excluded workflowIDs
+	excludeWIDs := map[string]bool{}
+	if excludeFileName != "" {
+		excludeWIDs = loadWorkflowIDsFromFile(excludeFileName, separator)
 	}
-	fmt.Println("num of excludes:", len(excludes))
+	if excludeQuery != "" {
+		excludeWIDs = getAllWorkflowIDsByQuery(c, excludeQuery)
+	}
+
+	fmt.Println("num of excluded WorkflowIDs:", len(excludeWIDs))
 
 	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
@@ -1707,8 +1740,7 @@ func ResetInBatch(c *cli.Context) {
 				rid = strings.TrimSpace(cols[1])
 			}
 
-			_, ok := excludes[wid]
-			if ok {
+			if excludeWIDs[wid] {
 				fmt.Println("skip by exclude file: ", wid, rid)
 				continue
 			}
@@ -1728,8 +1760,7 @@ func ResetInBatch(c *cli.Context) {
 			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
-				_, ok := excludes[wid]
-				if ok {
+				if excludeWIDs[wid] {
 					fmt.Println("skip by exclude file: ", wid, rid)
 					continue
 				}
@@ -1749,6 +1780,36 @@ func ResetInBatch(c *cli.Context) {
 	close(done)
 	fmt.Println("wait for all goroutines...")
 	wg.Wait()
+}
+
+func loadWorkflowIDsFromFile(excludeFileName, separator string) map[string]bool {
+	excludeWIDs := map[string]bool{}
+	if len(excludeFileName) > 0 {
+		// This code is only used in the CLI. The input provided is from a trusted user.
+		// #nosec
+		excFile, err := os.Open(excludeFileName)
+		if err != nil {
+			ErrorAndExit("Open failed2", err)
+		}
+		defer excFile.Close()
+		scanner := bufio.NewScanner(excFile)
+		idx := 0
+		for scanner.Scan() {
+			idx++
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 {
+				fmt.Printf("line %v is empty, skipped\n", idx)
+				continue
+			}
+			cols := strings.Split(line, separator)
+			if len(cols) < 1 {
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+			}
+			wid := strings.TrimSpace(cols[0])
+			excludeWIDs[wid] = true
+		}
+	}
+	return excludeWIDs
 }
 
 // sort helper for search attributes
@@ -1794,9 +1855,15 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	}
 
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
-		if params.skipOpen {
+		if params.skipCurrentOpen {
 			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
-			//skip and not terminate current if open
+			return nil
+		}
+	}
+
+	if resp.WorkflowExecutionInfo.GetCloseStatus() == types.WorkflowExecutionCloseStatusCompleted {
+		if params.skipCurrentCompleted {
+			fmt.Println("skip because current run is completed: ", wid, rid, currentRunID)
 			return nil
 		}
 	}
@@ -1812,7 +1879,7 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 		}
 	}
 
-	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, domain, wid, rid, frontendClient)
+	resetBaseRunID, decisionFinishID, err := getResetEventIDByType(ctx, c, params.resetType, params.decisionOffset, domain, wid, rid, frontendClient)
 	if err != nil {
 		return printErrorAndReturn("getResetEventIDByType failed", err)
 	}
@@ -1891,7 +1958,8 @@ func isLastEventDecisionTaskFailedWithNonDeterminism(ctx context.Context, domain
 func getResetEventIDByType(
 	ctx context.Context,
 	c *cli.Context,
-	resetType, domain, wid, rid string,
+	resetType string, decisionOffset int,
+	domain, wid, rid string,
 	frontendClient frontend.Client,
 ) (resetBaseRunID string, decisionFinishID int64, err error) {
 	// default to the same runID
@@ -1900,7 +1968,7 @@ func getResetEventIDByType(
 	fmt.Println("resetType:", resetType)
 	switch resetType {
 	case resetTypeLastDecisionCompleted:
-		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskCompleted, decisionOffset)
 		if err != nil {
 			return
 		}
@@ -1935,7 +2003,7 @@ func getResetEventIDByType(
 		// decisionFinishID is exclusive in reset API
 		decisionFinishID++
 	case resetTypeLastDecisionScheduled:
-		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled)
+		decisionFinishID, err = getLastDecisionTaskByType(ctx, domain, wid, rid, frontendClient, types.EventTypeDecisionTaskScheduled, decisionOffset)
 		if err != nil {
 			return
 		}
@@ -2038,7 +2106,12 @@ func getLastDecisionTaskByType(
 	runID string,
 	frontendClient frontend.Client,
 	decisionType types.EventType,
-) (decisionFinishID int64, err error) {
+	decisionOffset int,
+) (int64, error) {
+
+	// this fixedSizeQueue is for remembering the offset decision eventID
+	fixedSizeQueue := make([]int64, 0)
+	size := int(math.Abs(float64(decisionOffset))) + 1
 
 	req := &types.GetWorkflowExecutionHistoryRequest{
 		Domain: domain,
@@ -2058,7 +2131,11 @@ func getLastDecisionTaskByType(
 
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
-				decisionFinishID = e.GetEventID()
+				decisionEventID := e.GetEventID()
+				fixedSizeQueue = append(fixedSizeQueue, decisionEventID)
+				if len(fixedSizeQueue) > size {
+					fixedSizeQueue = fixedSizeQueue[1:]
+				}
 			}
 		}
 
@@ -2068,10 +2145,10 @@ func getLastDecisionTaskByType(
 			break
 		}
 	}
-	if decisionFinishID == 0 {
+	if len(fixedSizeQueue) == 0 {
 		return 0, printErrorAndReturn("Get DecisionFinishID failed", fmt.Errorf("no DecisionFinishID"))
 	}
-	return
+	return fixedSizeQueue[0], nil
 }
 
 func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, frontendClient frontend.Client) (resetBaseRunID string, decisionFinishID int64, err error) {

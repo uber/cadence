@@ -91,6 +91,7 @@ const (
 	FlagScanType                          = "scan_type"
 	FlagInvariantCollection               = "invariant_collection"
 	FlagSkipCurrentOpen                   = "skip_current_open"
+	FlagSkipCurrentCompleted              = "skip_current_completed"
 	FlagSkipBaseIsNotCurrent              = "skip_base_is_not_current"
 	FlagDryRun                            = "dry_run"
 	FlagNonDeterministicOnly              = "only_non_deterministic"
@@ -203,11 +204,13 @@ const (
 	FlagAddBadBinary                      = "add_bad_binary"
 	FlagRemoveBadBinary                   = "remove_bad_binary"
 	FlagResetType                         = "reset_type"
+	FlagDecisionOffset                    = "decision_offset"
 	FlagResetPointsOnly                   = "reset_points_only"
 	FlagResetBadBinaryChecksum            = "reset_bad_binary_checksum"
 	FlagSkipSignalReapply                 = "skip_signal_reapply"
 	FlagListQuery                         = "query"
 	FlagListQueryWithAlias                = FlagListQuery + ", q"
+	FlagExcludeWorkflowIDByQuery          = "exclude_query"
 	FlagBatchType                         = "batch_type"
 	FlagBatchTypeWithAlias                = FlagBatchType + ", bt"
 	FlagSignalName                        = "signal_name"
@@ -604,6 +607,11 @@ func getFlagsForListAll() []cli.Flag {
 			Name: FlagListQueryWithAlias,
 			Usage: "Optional SQL like query for use of search attributes. NOTE: using query will ignore all other filter flags including: " +
 				"[open, earliest_time, latest_time, workflow_id, workflow_type]",
+		},
+		cli.StringFlag{
+			Name: FlagExcludeWorkflowIDByQuery,
+			Usage: "Another optional SQL like query, but for excluding the results by workflowIDs. This is useful because a single query cannot do join operation. One use case is to " +
+				"find failed workflows excluding any workflow that has another run that is open or completed.",
 		},
 	}
 	flagsForListAll = append(getCommonFlagsForVisibility(), flagsForListAll...)
