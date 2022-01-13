@@ -853,6 +853,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 				printDateTime,
 				printMemo,
 				printSearchAttr,
+				nil,
 			)
 		}
 		postPrintFn = func() { table.Render() }
@@ -1149,6 +1150,26 @@ func createTableForListWorkflow(c *cli.Context, listAll bool, queryOpen bool) *t
 	return table
 }
 
+func getAllWorkflowIDsByQuery(c *cli.Context, query string) map[string]bool {
+	wfClient := getWorkflowClient(c)
+	pageSize := 1000
+	var nextPageToken []byte
+	var info []*s.WorkflowExecutionInfo
+	result := map[string]bool{}
+	for {
+		info, nextPageToken = scanWorkflowExecutions(wfClient, pageSize, nextPageToken, query, c)
+		for _, we := range info {
+			wid := we.Execution.GetWorkflowId()
+			result[wid] = true
+		}
+
+		if nextPageToken == nil {
+			break
+		}
+	}
+	return result
+}
+
 func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func([]byte) ([]byte, int) {
 	wfClient := getWorkflowClient(c)
 
@@ -1179,6 +1200,12 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 		ErrorAndExit(optionErr, errors.New("you can filter on workflow_id or workflow_type, but not on both"))
 	}
 
+	excludeWIDs := map[string]bool{}
+	if c.IsSet(FlagListQuery) && c.IsSet(FlagExcludeWorkflowIDByQuery) {
+		excludeQuery := c.String(FlagExcludeWorkflowIDByQuery)
+		excludeWIDs = getAllWorkflowIDsByQuery(c, excludeQuery)
+		fmt.Printf("found %d workflowIDs to exclude\n", len(excludeWIDs))
+	}
 	prepareTable := func(next []byte) ([]byte, int) {
 		var result []*s.WorkflowExecutionInfo
 		var nextPageToken []byte
@@ -1199,6 +1226,7 @@ func listWorkflow(c *cli.Context, table *tablewriter.Table, queryOpen bool) func
 			printDateTime,
 			printMemo,
 			printSearchAttr,
+			excludeWIDs,
 		)
 
 		return nextPageToken, len(result)
@@ -1214,8 +1242,13 @@ func appendWorkflowExecutionsToTable(
 	printDateTime bool,
 	printMemo bool,
 	printSearchAttr bool,
+	excludeWIDs map[string]bool,
 ) {
 	for _, e := range executions {
+		if excludeWIDs[e.GetExecution().GetWorkflowId()] {
+			continue
+		}
+
 		var startTime, executionTime, closeTime string
 		if printRawTime {
 			startTime = fmt.Sprintf("%d", e.GetStartTime())
@@ -1629,7 +1662,8 @@ func ResetInBatch(c *cli.Context) {
 
 	inFileName := c.String(FlagInputFile)
 	query := c.String(FlagListQuery)
-	excFileName := c.String(FlagExcludeFile)
+	excludeFileName := c.String(FlagExcludeFile)
+	excludeQuery := c.String(FlagExcludeWorkflowIDByQuery)
 	separator := c.String(FlagInputSeparator)
 	parallel := c.Int(FlagParallism)
 
@@ -1638,6 +1672,10 @@ func ResetInBatch(c *cli.Context) {
 		ErrorAndExit("Not supported reset type", nil)
 	} else if len(extraForResetType) > 0 {
 		getRequiredOption(c, extraForResetType)
+	}
+
+	if excludeFileName != "" && excludeQuery != "" {
+		ErrorAndExit("Only one of the excluding option is allowed", nil)
 	}
 
 	batchResetParams := batchResetParamsType{
@@ -1665,35 +1703,16 @@ func ResetInBatch(c *cli.Context) {
 		go processResets(c, domain, wes, done, wg, batchResetParams)
 	}
 
-	// read exclude
-	excludes := map[string]string{}
-	if len(excFileName) > 0 {
-		// This code is only used in the CLI. The input provided is from a trusted user.
-		// #nosec
-		excFile, err := os.Open(excFileName)
-		if err != nil {
-			ErrorAndExit("Open failed2", err)
-		}
-		defer excFile.Close()
-		scanner := bufio.NewScanner(excFile)
-		idx := 0
-		for scanner.Scan() {
-			idx++
-			line := strings.TrimSpace(scanner.Text())
-			if len(line) == 0 {
-				fmt.Printf("line %v is empty, skipped\n", idx)
-				continue
-			}
-			cols := strings.Split(line, separator)
-			if len(cols) < 1 {
-				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
-			}
-			wid := strings.TrimSpace(cols[0])
-			rid := "not-needed"
-			excludes[wid] = rid
-		}
+	// read excluded workflowIDs
+	excludeWIDs := map[string]bool{}
+	if excludeFileName != "" {
+		excludeWIDs = loadWorkflowIDsFromFile(excludeFileName, separator)
 	}
-	fmt.Println("num of excludes:", len(excludes))
+	if excludeQuery != "" {
+		excludeWIDs = getAllWorkflowIDsByQuery(c, excludeQuery)
+	}
+
+	fmt.Println("num of excluded WorkflowIDs:", len(excludeWIDs))
 
 	if len(inFileName) > 0 {
 		inFile, err := os.Open(inFileName)
@@ -1721,8 +1740,7 @@ func ResetInBatch(c *cli.Context) {
 				rid = strings.TrimSpace(cols[1])
 			}
 
-			_, ok := excludes[wid]
-			if ok {
+			if excludeWIDs[wid] {
 				fmt.Println("skip by exclude file: ", wid, rid)
 				continue
 			}
@@ -1742,8 +1760,7 @@ func ResetInBatch(c *cli.Context) {
 			for _, we := range result {
 				wid := we.Execution.GetWorkflowId()
 				rid := we.Execution.GetRunId()
-				_, ok := excludes[wid]
-				if ok {
+				if excludeWIDs[wid] {
 					fmt.Println("skip by exclude file: ", wid, rid)
 					continue
 				}
@@ -1763,6 +1780,36 @@ func ResetInBatch(c *cli.Context) {
 	close(done)
 	fmt.Println("wait for all goroutines...")
 	wg.Wait()
+}
+
+func loadWorkflowIDsFromFile(excludeFileName, separator string) map[string]bool {
+	excludeWIDs := map[string]bool{}
+	if len(excludeFileName) > 0 {
+		// This code is only used in the CLI. The input provided is from a trusted user.
+		// #nosec
+		excFile, err := os.Open(excludeFileName)
+		if err != nil {
+			ErrorAndExit("Open failed2", err)
+		}
+		defer excFile.Close()
+		scanner := bufio.NewScanner(excFile)
+		idx := 0
+		for scanner.Scan() {
+			idx++
+			line := strings.TrimSpace(scanner.Text())
+			if len(line) == 0 {
+				fmt.Printf("line %v is empty, skipped\n", idx)
+				continue
+			}
+			cols := strings.Split(line, separator)
+			if len(cols) < 1 {
+				ErrorAndExit("Split failed", fmt.Errorf("line %v has less than 1 cols separated by comma, only %v ", idx, len(cols)))
+			}
+			wid := strings.TrimSpace(cols[0])
+			excludeWIDs[wid] = true
+		}
+	}
+	return excludeWIDs
 }
 
 // sort helper for search attributes

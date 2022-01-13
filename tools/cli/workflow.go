@@ -274,6 +274,11 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Another input file to use for excluding from resetting, only workflowID is needed.",
 				},
 				cli.StringFlag{
+					Name: FlagExcludeWorkflowIDByQuery,
+					Usage: "Another visibility SQL like query, but for excluding the results by workflowIDs. This is useful because a single query cannot do join operation. One use case is to " +
+						"find failed workflows excluding any workflow that has another run that is open or completed.",
+				},
+				cli.StringFlag{
 					Name:  FlagInputSeparator,
 					Value: "\t",
 					Usage: "Separator for input file(default to tab)",
