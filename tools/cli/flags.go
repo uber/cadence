@@ -204,6 +204,7 @@ const (
 	FlagAddBadBinary                      = "add_bad_binary"
 	FlagRemoveBadBinary                   = "remove_bad_binary"
 	FlagResetType                         = "reset_type"
+	FlagDecisionOffset                    = "decision_offset"
 	FlagResetPointsOnly                   = "reset_points_only"
 	FlagResetBadBinaryChecksum            = "reset_bad_binary_checksum"
 	FlagSkipSignalReapply                 = "skip_signal_reapply"
