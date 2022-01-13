@@ -87,10 +87,7 @@ func (t *timerStandbyTaskExecutor) Execute(
 		return errUnexpectedTask
 	}
 
-	if !shouldProcessTask &&
-		timerTask.TaskType != persistence.TaskTypeWorkflowTimeout &&
-		timerTask.TaskType != persistence.TaskTypeDeleteHistoryEvent {
-		// guarantee the processing of workflow execution history deletion
+	if !shouldProcessTask {
 		return nil
 	}
 
