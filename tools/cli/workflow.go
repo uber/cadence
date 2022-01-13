@@ -232,7 +232,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  FlagDecisionOffset,
-					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decisionCompletion. Currently only negative number is supported.",
+					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decision. Currently only negative number is supported, and only works with LastDecisionCompleted.",
 				},
 				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
@@ -312,7 +312,7 @@ func newWorkflowCommands() []cli.Command {
 				},
 				cli.StringFlag{
 					Name: FlagDecisionOffset,
-					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decisionCompletion. " +
+					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decision. " +
 						"Limitation: currently only negative number is supported, and only works with LastDecisionCompleted.",
 				},
 				cli.StringFlag{
