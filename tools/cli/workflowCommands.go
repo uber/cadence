@@ -1635,7 +1635,8 @@ func processResets(c *cli.Context, domain string, wes chan types.WorkflowExecuti
 
 type batchResetParamsType struct {
 	reason               string
-	skipOpen             bool
+	skipCurrentOpen      bool
+	skipCurrentCompleted bool
 	nonDeterministicOnly bool
 	skipBaseNotCurrent   bool
 	dryRun               bool
@@ -1668,7 +1669,8 @@ func ResetInBatch(c *cli.Context) {
 
 	batchResetParams := batchResetParamsType{
 		reason:               getRequiredOption(c, FlagReason),
-		skipOpen:             c.Bool(FlagSkipCurrentOpen),
+		skipCurrentOpen:      c.Bool(FlagSkipCurrentOpen),
+		skipCurrentCompleted: c.Bool(FlagSkipCurrentCompleted),
 		nonDeterministicOnly: c.Bool(FlagNonDeterministicOnly),
 		skipBaseNotCurrent:   c.Bool(FlagSkipBaseIsNotCurrent),
 		dryRun:               c.Bool(FlagDryRun),
@@ -1841,9 +1843,15 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	}
 
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
-		if params.skipOpen {
+		if params.skipCurrentOpen {
 			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
-			//skip and not terminate current if open
+			return nil
+		}
+	}
+
+	if resp.WorkflowExecutionInfo.GetCloseStatus() == types.WorkflowExecutionCloseStatusCompleted {
+		if params.skipCurrentCompleted {
+			fmt.Println("skip because current run is completed: ", wid, rid, currentRunID)
 			return nil
 		}
 	}
