@@ -1798,7 +1798,6 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	if resp.WorkflowExecutionInfo.CloseStatus == nil || resp.WorkflowExecutionInfo.CloseTime == nil {
 		if params.skipCurrentOpen {
 			fmt.Println("skip because current run is open: ", wid, rid, currentRunID)
-			// skip and not terminate current if open
 			return nil
 		}
 	}
@@ -1806,7 +1805,6 @@ func doReset(c *cli.Context, domain, wid, rid string, params batchResetParamsTyp
 	if resp.WorkflowExecutionInfo.GetCloseStatus() == types.WorkflowExecutionCloseStatusCompleted {
 		if params.skipCurrentCompleted {
 			fmt.Println("skip because current run is completed: ", wid, rid, currentRunID)
-			// skip and not terminate current if open
 			return nil
 		}
 	}
