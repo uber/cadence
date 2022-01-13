@@ -3301,7 +3301,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	domainUUID string,
 	workflowExecution types.WorkflowExecution,
 ) (retError error) {
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
+	domainEntry, err := e.shard.GetDomainCache().GetDomainByID(domainUUID)
 	if err != nil {
 		return err
 	}
@@ -3332,7 +3332,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		return err
 	}
 
-	err = wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now())
+	err = wfContext.UpdateWorkflowExecutionTasks(ctx, e.shard.GetTimeSource().Now())
 	if err != nil {
 		return err
 	}

@@ -427,6 +427,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 		if err := t.generateCrossClusterTasks(
 			ctx,
 			wfContext,
+			mutableState,
 			task,
 			crossClusterTaskGenerators,
 		); err != nil {
@@ -556,7 +557,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 	}
 
 	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, task, targetCluster)
+		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, mutableState, task, targetCluster)
 	}
 
 	targetDomainName := targetDomainEntry.GetInfo().Name
@@ -666,7 +667,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 	}
 
 	if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, task, targetCluster)
+		return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, mutableState, task, targetCluster)
 	}
 
 	targetDomainName := targetDomainEntry.GetInfo().Name
@@ -800,7 +801,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		targetDomainName = task.TargetDomainID
 	} else {
 		if targetCluster, isCrossCluster := t.isCrossClusterTask(task.DomainID, targetDomainEntry); isCrossCluster {
-			return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, task, targetCluster)
+			return t.generateCrossClusterTaskFromTransferTask(ctx, wfContext, mutableState, task, targetCluster)
 		}
 
 		targetDomainName = targetDomainEntry.GetInfo().Name
@@ -1422,58 +1423,55 @@ func (t *transferActiveTaskExecutor) isCrossClusterTask(
 func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 	ctx context.Context,
 	wfContext execution.Context,
+	mutableState execution.MutableState,
 	task *persistence.TransferTaskInfo,
 	generators []generatorF,
 ) error {
-	return updateWorkflowExecution(
-		ctx,
-		wfContext,
-		false,
-		func(ctx context.Context, mutableState execution.MutableState) error {
-			// TODO: we don't have to do this check here, as we hold the mutable state lock
-			// during the update and we already checked the workflow status after acquiring the lock.
-			if task.TaskType == persistence.TransferTaskTypeCloseExecution {
-				// IsWorkflowCompleted only returns true when the workflow is completed,
-				// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
-				if !mutableState.IsWorkflowCompleted() {
-					t.logger.Error("generateCrossClusterTasks", tag.Error(types.BadRequestError{
-						Message: "Workflow has an invalid state for recordChildClose cross cluster task",
-					}))
-					// Returning nil to avoid infinite retry loop
-					return nil
-				}
-			} else if task.TaskType != persistence.TransferTaskTypeStartChildExecution &&
-				!mutableState.IsWorkflowExecutionRunning() {
-				return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
-			}
 
-			taskGenerator := execution.NewMutableStateTaskGenerator(
-				t.shard.GetClusterMetadata(),
-				t.shard.GetDomainCache(),
-				t.logger,
-				mutableState,
-			)
-			for _, generator := range generators {
-				err := generator(taskGenerator)
-				if err != nil {
-					return err
-				}
-			}
+	// TODO: we don't have to do this check here, as we hold the mutable state lock
+	// during the update and we already checked the workflow status after acquiring the lock.
+	if task.TaskType == persistence.TransferTaskTypeCloseExecution {
+		// IsWorkflowCompleted only returns true when the workflow is completed,
+		// !IsWorkflowExecutionRunning below returns true when the wf is zombie or corrupted too
+		if !mutableState.IsWorkflowCompleted() {
+			t.logger.Error("generateCrossClusterTasks", tag.Error(types.BadRequestError{
+				Message: "Workflow has an invalid state for recordChildClose cross cluster task",
+			}))
+			// Returning nil to avoid infinite retry loop
 			return nil
-		},
-		t.shard.GetTimeSource().Now(),
+		}
+	} else if task.TaskType != persistence.TransferTaskTypeStartChildExecution &&
+		!mutableState.IsWorkflowExecutionRunning() {
+		return &types.WorkflowExecutionAlreadyCompletedError{Message: "Workflow execution already completed."}
+	}
+
+	taskGenerator := execution.NewMutableStateTaskGenerator(
+		t.shard.GetClusterMetadata(),
+		t.shard.GetDomainCache(),
+		t.logger,
+		mutableState,
 	)
+	for _, generator := range generators {
+		err := generator(taskGenerator)
+		if err != nil {
+			return err
+		}
+	}
+
+	return wfContext.UpdateWorkflowExecutionTasks(ctx, t.shard.GetTimeSource().Now())
 }
 
 func (t *transferActiveTaskExecutor) generateCrossClusterTaskFromTransferTask(
 	ctx context.Context,
 	wfContext execution.Context,
+	mutableState execution.MutableState,
 	task *persistence.TransferTaskInfo,
 	targetCluster string,
 ) error {
 	return t.generateCrossClusterTasks(
 		ctx,
 		wfContext,
+		mutableState,
 		task,
 		[]generatorF{
 			func(taskGenerator execution.MutableStateTaskGenerator) error {

@@ -531,16 +531,7 @@ func (t *crossClusterSourceTaskExecutor) generateNewTask(
 		return err
 	}
 
-	now := t.shard.GetTimeSource().Now()
-	isActive := clusterMetadata.ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()) ==
-		clusterMetadata.GetCurrentClusterName()
-
-	var err error
-	if isActive {
-		err = wfContext.UpdateWorkflowExecutionAsActive(ctx, now)
-	} else {
-		err = wfContext.UpdateWorkflowExecutionAsPassive(ctx, now)
-	}
+	err := wfContext.UpdateWorkflowExecutionTasks(ctx, t.shard.GetTimeSource().Now())
 	if err != nil {
 		return err
 	}

@@ -149,6 +149,16 @@ func ValidateUpdateWorkflowModeState(
 		}
 		return nil
 
+	case UpdateWorkflowModeIgnoreCurrent:
+		if newWorkflowState != nil {
+			return newInvalidUpdateWorkflowWithNewMode(
+				mode,
+				currentWorkflowState,
+				*newWorkflowState,
+			)
+		}
+		return nil
+
 	default:
 		return &types.InternalServiceError{
 			Message: fmt.Sprintf("unknown mode: %v", mode),

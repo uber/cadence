@@ -378,3 +378,17 @@ func (mr *MockContextMockRecorder) UpdateWorkflowExecutionWithNew(ctx, now, upda
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithNew", reflect.TypeOf((*MockContext)(nil).UpdateWorkflowExecutionWithNew), ctx, now, updateMode, newContext, newMutableState, currentWorkflowTransactionPolicy, newWorkflowTransactionPolicy)
 }
+
+// UpdateWorkflowExecutionTasks mocks base method
+func (m *MockContext) UpdateWorkflowExecutionTasks(ctx context.Context, now time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionTasks", ctx, now)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateWorkflowExecutionTasks indicates an expected call of UpdateWorkflowExecutionTasks
+func (mr *MockContextMockRecorder) UpdateWorkflowExecutionTasks(ctx, now interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionTasks", reflect.TypeOf((*MockContext)(nil).UpdateWorkflowExecutionTasks), ctx, now)
+}

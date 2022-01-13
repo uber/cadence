@@ -211,6 +211,10 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	var currentWorkflowWriteReq *nosqlplugin.CurrentWorkflowWriteRequest
 
 	switch request.Mode {
+	case p.UpdateWorkflowModeIgnoreCurrent:
+		currentWorkflowWriteReq = &nosqlplugin.CurrentWorkflowWriteRequest{
+			WriteMode: nosqlplugin.CurrentWorkflowWriteModeNoop,
+		}
 	case p.UpdateWorkflowModeBypassCurrent:
 		if err := d.assertNotCurrentExecution(
 			ctx,

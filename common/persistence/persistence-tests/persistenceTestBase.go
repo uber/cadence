@@ -1083,6 +1083,33 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 	return err
 }
 
+// UpdateWorkflowExecutionTasks is a utility method to update workflow tasks
+// with IgnoreCurrent update mode.
+func (s *TestBase) UpdateWorkflowExecutionTasks(
+	ctx context.Context,
+	updatedInfo *p.WorkflowExecutionInfo,
+	updatedStats *p.ExecutionStats,
+	condition int64,
+	transferTasks []p.Task,
+	timerTasks []p.Task,
+	crossClusterTasks []p.Task,
+) error {
+	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &p.UpdateWorkflowExecutionRequest{
+		Mode: persistence.UpdateWorkflowModeIgnoreCurrent,
+		UpdateWorkflowMutation: p.WorkflowMutation{
+			ExecutionInfo:     updatedInfo,
+			ExecutionStats:    updatedStats,
+			TransferTasks:     transferTasks,
+			TimerTasks:        timerTasks,
+			CrossClusterTasks: crossClusterTasks,
+			Condition:         condition,
+		},
+		RangeID:  s.ShardInfo.RangeID,
+		Encoding: pickRandomEncoding(),
+	})
+	return err
+}
+
 // UpdateWorkflowExecutionWithTransferTasks is a utility method to update workflow execution
 func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 	ctx context.Context,
