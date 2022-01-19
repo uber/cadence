@@ -22,6 +22,7 @@ package history
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"sync"
 	"time"
@@ -820,9 +821,10 @@ func (c *clientImpl) GetReplicationMessages(
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
 				// Returns service busy error to notify replication
-				if _, ok := err.(*types.ServiceBusyError); ok {
+				var e *types.ServiceBusyError
+				if errors.As(err, &e) {
 					select {
-					case errChan <- err:
+					case errChan <- e:
 					default:
 					}
 				}

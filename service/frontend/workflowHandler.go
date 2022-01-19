@@ -3869,6 +3869,12 @@ func frontendInternalServiceError(fmtStr string, args ...interface{}) error {
 }
 
 func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog ...tag.Tag) error {
+
+	if common.IsServiceBusyError(err) {
+		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
+		return err
+	}
+
 	switch err := err.(type) {
 	case *types.InternalServiceError:
 		wh.GetLogger().WithTags(tagsForErrorLog...).Error("Internal service error", tag.Error(err))
@@ -3879,9 +3885,6 @@ func (wh *WorkflowHandler) error(err error, scope metrics.Scope, tagsForErrorLog
 		return err
 	case *types.DomainNotActiveError:
 		scope.IncCounter(metrics.CadenceErrBadRequestCounter)
-		return err
-	case *types.ServiceBusyError:
-		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 		return err
 	case *types.EntityNotExistsError:
 		scope.IncCounter(metrics.CadenceErrEntityNotExistsCounter)

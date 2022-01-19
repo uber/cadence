@@ -24,9 +24,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
 )
 
 var retryForeverPolicy = newRetryForeverPolicy()
@@ -116,8 +116,7 @@ func (s *Scavenger) deleteTaskList(info *p.TaskListInfo) error {
 	throttleRetry := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(retryForeverPolicy),
 		backoff.WithRetryableError(func(err error) bool {
-			_, ok := err.(*types.ServiceBusyError)
-			return ok
+			return common.IsServiceBusyError(err)
 		}),
 	)
 	return throttleRetry.Do(context.Background(), op)

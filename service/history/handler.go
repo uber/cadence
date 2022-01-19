@@ -2039,6 +2039,11 @@ func (h *handlerImpl) updateErrorMetric(
 		return
 	}
 
+	if common.IsServiceBusyError(err) {
+		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
+		return
+	}
+
 	switch err := err.(type) {
 	case *types.ShardOwnershipLostError:
 		scope.IncCounter(metrics.CadenceErrShardOwnershipLostCounter)
@@ -2060,8 +2065,6 @@ func (h *handlerImpl) updateErrorMetric(
 		scope.IncCounter(metrics.CadenceErrLimitExceededCounter)
 	case *types.RetryTaskV2Error:
 		scope.IncCounter(metrics.CadenceErrRetryTaskCounter)
-	case *types.ServiceBusyError:
-		scope.IncCounter(metrics.CadenceErrServiceBusyCounter)
 	case *yarpcerrors.Status:
 		if err.Code() == yarpcerrors.CodeDeadlineExceeded {
 			scope.IncCounter(metrics.CadenceErrContextTimeoutCounter)

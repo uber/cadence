@@ -224,7 +224,7 @@ func (f *taskFetcherImpl) fetchTasks() {
 			// When timer fires, we collect all the requests we have so far and attempt to send them to remote.
 			err := f.fetchAndDistributeTasks(requestByShard)
 			if err != nil {
-				if _, ok := err.(*types.ServiceBusyError); ok {
+				if common.IsServiceBusyError(err) {
 					// slow down replication when source cluster is busy
 					timer.Reset(f.config.ReplicationTaskFetcherServiceBusyWait())
 				} else {
@@ -255,7 +255,7 @@ func (f *taskFetcherImpl) fetchAndDistributeTasks(requestByShard map[int32]*requ
 
 	messagesByShard, err := f.getMessages(requestByShard)
 	if err != nil {
-		if _, ok := err.(*types.ServiceBusyError); !ok {
+		if common.IsServiceBusyError(err) {
 			f.logger.Error("Failed to get replication tasks", tag.Error(err))
 			return err
 		}

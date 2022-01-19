@@ -33,6 +33,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/common/log"
+	mmocks "github.com/uber/cadence/common/metrics/mocks"
+
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -671,4 +674,58 @@ func (s *adminHandlerSuite) Test_GetDynamicConfig_FilterMatch() {
 	encTrue, err := json.Marshal(true)
 	s.NoError(err)
 	s.Equal(resp.Value.Data, encTrue)
+}
+
+func TestAdminHandlingOfErrors(t *testing.T) {
+	tests := map[string]struct {
+		in            error
+		expectedRes   error
+		expectCounter int
+	}{
+		"generic error": {
+			in:            errors.New("an error"),
+			expectedRes:   errors.New("an error"),
+			expectCounter: 1,
+		},
+		"internal service error": {
+			in:            &types.InternalServiceError{},
+			expectedRes:   &types.InternalServiceError{},
+			expectCounter: int(metrics.CadenceFailures),
+		},
+		"service busy error": {
+			in:            &types.ServiceBusyError{},
+			expectedRes:   &types.ServiceBusyError{},
+			expectCounter: metrics.CadenceErrServiceBusyCounter,
+		},
+		"bad request error": {
+			in:            &types.BadRequestError{},
+			expectedRes:   &types.BadRequestError{},
+			expectCounter: metrics.CadenceErrBadRequestCounter,
+		},
+		"entity not exists error": {
+			in:          &types.EntityNotExistsError{},
+			expectedRes: &types.EntityNotExistsError{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			ctrl := gomock.NewController(t)
+			res := resource.NewTest(ctrl, metrics.Frontend)
+
+			ah := adminHandlerImpl{
+				Resource: res,
+				params: &resource.Params{
+					Logger: log.NewNoop(),
+				},
+			}
+			scope := mmocks.Scope{}
+			defer scope.AssertExpectations(t)
+			if td.expectCounter > 0 {
+				scope.On("IncCounter", td.expectCounter).Return(nil)
+			}
+			require.True(t, errors.As(ah.error(td.in, &scope), &td.expectedRes))
+		})
+	}
 }

@@ -23,6 +23,7 @@ package elasticsearch
 import (
 	"context"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -307,12 +308,15 @@ func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 }
 
 func (p *visibilityMetricsClient) updateErrorMetric(scope int, err error) {
+	if common.IsServiceBusyError(err) {
+		p.metricClient.IncCounter(scope, metrics.ElasticsearchErrBusyCounter)
+		p.metricClient.IncCounter(scope, metrics.ElasticsearchFailures)
+		return
+	}
+
 	switch err.(type) {
 	case *types.BadRequestError:
 		p.metricClient.IncCounter(scope, metrics.ElasticsearchErrBadRequestCounter)
-		p.metricClient.IncCounter(scope, metrics.ElasticsearchFailures)
-	case *types.ServiceBusyError:
-		p.metricClient.IncCounter(scope, metrics.ElasticsearchErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.ElasticsearchFailures)
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.MetricScope(scope), tag.Error(err))

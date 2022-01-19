@@ -23,6 +23,7 @@ package common
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -265,13 +266,20 @@ func CheckDecisionResultLimit(
 
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
+	var internalSvcErr *types.InternalServiceError
+	if errors.As(err, &internalSvcErr) {
+		return true
+	}
+	var svcBusyErr *types.ServiceBusyError
+	if errors.As(err, &svcBusyErr) {
+		return true
+	}
+	var shardLostOwnershipErr *types.ShardOwnershipLostError
+	if errors.As(err, &shardLostOwnershipErr) {
+		return true
+	}
+
 	switch err.(type) {
-	case *types.InternalServiceError:
-		return true
-	case *types.ServiceBusyError:
-		return true
-	case *types.ShardOwnershipLostError:
-		return true
 	case *yarpcerrors.Status:
 		// We only selectively retry the following yarpc errors client can safe retry with a backoff
 		if yarpcerrors.IsUnavailable(err) ||
@@ -293,11 +301,8 @@ func IsEntityNotExistsError(err error) bool {
 
 // IsServiceBusyError checks if the error is a service busy error.
 func IsServiceBusyError(err error) bool {
-	switch err.(type) {
-	case *types.ServiceBusyError:
-		return true
-	}
-	return false
+	var e *types.ServiceBusyError
+	return errors.As(err, &e)
 }
 
 // IsContextTimeoutError checks if the error is context timeout error

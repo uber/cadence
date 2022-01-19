@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -225,6 +226,12 @@ func NewConfigStorePersistenceMetricsClient(
 }
 
 func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
+
+	if common.IsServiceBusyError(err) {
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	}
+
 	switch err.(type) {
 	case *types.DomainAlreadyExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrDomainAlreadyExistsCounter)
@@ -244,9 +251,6 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
 	case *TimeoutError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *types.ServiceBusyError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))

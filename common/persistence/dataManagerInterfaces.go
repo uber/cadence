@@ -2969,8 +2969,11 @@ func NewGetReplicationTasksFromDLQRequest(
 
 // IsTransientError checks if the error is a transient persistence error
 func IsTransientError(err error) bool {
+	if common.IsServiceBusyError(err) {
+		return true
+	}
 	switch err.(type) {
-	case *types.InternalServiceError, *types.ServiceBusyError, *TimeoutError:
+	case *types.InternalServiceError, *TimeoutError:
 		return true
 	}
 

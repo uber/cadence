@@ -645,10 +645,12 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 }
 
 func isTransientRetryableError(err error) bool {
+	if common.IsServiceBusyError(err) {
+		return false
+	}
+
 	switch err.(type) {
 	case *types.BadRequestError:
-		return false
-	case *types.ServiceBusyError:
 		return false
 	default:
 		return true

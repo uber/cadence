@@ -22,6 +22,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -51,8 +52,8 @@ func GetActivityServiceConfig(ctx context.Context) *lib.RuntimeContext {
 
 // IsServiceBusyError returns if the err is a ServiceBusyError
 func IsServiceBusyError(err error) bool {
-	_, ok := err.(*shared.ServiceBusyError)
-	return ok
+	var e *shared.ServiceBusyError
+	return errors.As(err, &e)
 }
 
 // IsCancellationAlreadyRequestedError returns if the err is a CancellationAlreadyRequestedError

@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 
 	"github.com/uber/cadence/client/matching"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
@@ -267,7 +268,7 @@ func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit 
 }
 
 func (fwdr *Forwarder) handleErr(err error) error {
-	if _, ok := err.(*types.ServiceBusyError); ok {
+	if common.IsServiceBusyError(err) {
 		return errForwarderSlowDown
 	}
 	return err

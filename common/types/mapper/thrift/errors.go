@@ -21,6 +21,8 @@
 package thrift
 
 import (
+	"errors"
+
 	"github.com/uber/cadence/.gen/go/history"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
@@ -30,6 +32,11 @@ import (
 func FromError(err error) error {
 	if err == nil {
 		return nil
+	}
+
+	var e *types.ServiceBusyError
+	if errors.As(err, &e) {
+		return FromServiceBusyError(e)
 	}
 
 	switch e := err.(type) {
@@ -65,8 +72,6 @@ func FromError(err error) error {
 		return FromRemoteSyncMatchedError(e)
 	case *types.RetryTaskV2Error:
 		return FromRetryTaskV2Error(e)
-	case *types.ServiceBusyError:
-		return FromServiceBusyError(e)
 	case *types.WorkflowExecutionAlreadyStartedError:
 		return FromWorkflowExecutionAlreadyStartedError(e)
 	case *types.ShardOwnershipLostError:
@@ -82,6 +87,11 @@ func FromError(err error) error {
 func ToError(err error) error {
 	if err == nil {
 		return nil
+	}
+
+	var e *shared.ServiceBusyError
+	if errors.As(err, &e) {
+		return ToServiceBusyError(e)
 	}
 
 	switch e := err.(type) {
@@ -117,8 +127,6 @@ func ToError(err error) error {
 		return ToRemoteSyncMatchedError(e)
 	case *shared.RetryTaskV2Error:
 		return ToRetryTaskV2Error(e)
-	case *shared.ServiceBusyError:
-		return ToServiceBusyError(e)
 	case *shared.WorkflowExecutionAlreadyStartedError:
 		return ToWorkflowExecutionAlreadyStartedError(e)
 	case *history.ShardOwnershipLostError:

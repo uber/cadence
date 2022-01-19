@@ -22,6 +22,7 @@ package matching
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -32,6 +33,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/client/matching"
@@ -345,5 +347,32 @@ func (t *ForwarderTestSuite) newTaskInfo() *persistence.TaskInfo {
 		TaskID:                 rand.Int63(),
 		ScheduleID:             rand.Int63(),
 		ScheduleToStartTimeout: rand.Int31(),
+	}
+}
+
+func TestForwardingForServiceBusy(t *testing.T) {
+	tests := map[string]struct {
+		in          error
+		expectedErr error
+	}{
+		"a service busy error should be returned in a slowdown err": {
+			in:          &types.ServiceBusyError{},
+			expectedErr: errForwarderSlowDown,
+		},
+		"a wrapped service busy error should be returned in a slowdown err": {
+			in:          fmt.Errorf("something's going down: %w", &types.ServiceBusyError{}),
+			expectedErr: errForwarderSlowDown,
+		},
+		"a random error should not result in throttling": {
+			in:          assert.AnError,
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			fwdr := Forwarder{}
+			assert.Equal(t, td.expectedErr, fwdr.handleErr(td.in))
+		})
 	}
 }

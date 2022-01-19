@@ -38,23 +38,61 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func TestIsServiceTransientError_ContextTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+func TestIsServiceTransientError(t *testing.T) {
+	expiredCtx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	time.Sleep(100 * time.Millisecond)
 
-	require.False(t, IsServiceTransientError(ctx.Err()))
-}
-
-func TestIsServiceTransientError_YARPCDeadlineExceeded(t *testing.T) {
-	yarpcErr := yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded")
-	require.False(t, IsServiceTransientError(yarpcErr))
-}
-
-func TestIsServiceTransientError_ContextCancel(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	cancelledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
-	require.False(t, IsServiceTransientError(ctx.Err()))
+
+	tests := map[string]struct {
+		in          error
+		expectedOut bool
+	}{
+		"Context Timeout is not a transient error": {
+			in:          expiredCtx.Err(),
+			expectedOut: false,
+		},
+		"Cancelled timeout is not a transient error": {
+			in:          cancelledCtx.Err(),
+			expectedOut: false,
+		},
+		"YARPC timeout exceeded is not a transient error": {
+			in:          yarpcerrors.DeadlineExceededErrorf("yarpc deadline exceeded"),
+			expectedOut: false,
+		},
+		"Internal service error is a transient error": {
+			in:          &types.InternalServiceError{},
+			expectedOut: true,
+		},
+		"ServiceBusyError is a transient error": {
+			in:          &types.ServiceBusyError{},
+			expectedOut: true,
+		},
+		"ShardOwnershipLostError is a transient error": {
+			in:          &types.ShardOwnershipLostError{},
+			expectedOut: true,
+		},
+		"YARPC Unknown eror is probably a transient error": {
+			in:          yarpcerrors.UnknownErrorf("some error"),
+			expectedOut: true,
+		},
+		"YARPC Internal error is probably a transient error": {
+			in:          yarpcerrors.InternalErrorf("some error"),
+			expectedOut: true,
+		},
+		"YARPC unavaailable error is probably a transient error": {
+			in:          yarpcerrors.UnavailableErrorf("some error"),
+			expectedOut: true,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, td.expectedOut, IsServiceTransientError(td.in), name)
+		})
+	}
 }
 
 func TestIsContextTimeoutError(t *testing.T) {

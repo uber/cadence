@@ -36,6 +36,12 @@ func FromError(err error) error {
 		return protobuf.NewError(yarpcerrors.CodeOK, "")
 	}
 
+	var e *types.ServiceBusyError
+	if errors.As(err, &e) {
+		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.ServiceBusyError{}))
+	}
+	// todo (david.porter) switch the remaining of these to the errors.Is/As format
+
 	switch e := err.(type) {
 	case *types.AccessDeniedError:
 		return protobuf.NewError(yarpcerrors.CodePermissionDenied, e.Message)
@@ -98,8 +104,6 @@ func FromError(err error) error {
 		return protobuf.NewError(yarpcerrors.CodeDataLoss, e.Message, protobuf.WithErrorDetails(&sharedv1.InternalDataInconsistencyError{}))
 	case *types.LimitExceededError:
 		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.LimitExceededError{}))
-	case *types.ServiceBusyError:
-		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.ServiceBusyError{}))
 	case *types.RemoteSyncMatchedError:
 		return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&sharedv1.RemoteSyncMatchedError{}))
 	}

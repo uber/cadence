@@ -24,6 +24,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -89,6 +90,11 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 
 	scope := reqCtx.scope
 
+	if common.IsServiceBusyError(err) {
+		scope.IncCounter(metrics.CadenceErrServiceBusyPerTaskListCounter)
+		return err
+	}
+
 	switch err.(type) {
 	case *types.InternalServiceError:
 		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
@@ -111,9 +117,6 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 		return err
 	case *types.LimitExceededError:
 		scope.IncCounter(metrics.CadenceErrLimitExceededPerTaskListCounter)
-		return err
-	case *types.ServiceBusyError:
-		scope.IncCounter(metrics.CadenceErrServiceBusyPerTaskListCounter)
 		return err
 	case *types.DomainNotActiveError:
 		scope.IncCounter(metrics.CadenceErrDomainNotActivePerTaskListCounter)
