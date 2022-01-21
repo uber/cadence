@@ -56,9 +56,14 @@ type PeerProvider interface {
 	Subscribe(name string, notifyChannel chan<- *ChangedEvent) error
 }
 
+// PortMap is a map of port names to port numbers.
+type PortMap map[string]uint16
+
 // HostInfo is a type that contains the info about a cadence host
 type HostInfo struct {
-	addr string // ip:port
+	addr     string // ip:port
+	identity string
+	portMap  PortMap // ports host is listening to
 }
 
 type ring struct {
@@ -220,9 +225,8 @@ func (r *ring) refresh() error {
 	}
 
 	addrs, err := r.peerProvider.GetMembers(r.service)
-
 	if err != nil {
-		return err
+		return fmt.Errorf("getting members from peer provider: %w", err)
 	}
 
 	newMembersMap, changed := r.compareMembers(addrs)
@@ -239,10 +243,8 @@ func (r *ring) refresh() error {
 	r.members.keys = newMembersMap
 	r.members.refreshed = time.Now()
 	r.value.Store(ring)
-	r.logger.Info(
-		fmt.Sprintf("refreshed ring members for %s", r.service),
-		tag.Addresses(addrs),
-	)
+	r.logger.Info("refreshed ring members", tag.Service(r.service), tag.Addresses(addrs))
+
 	return nil
 }
 
