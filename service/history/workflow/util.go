@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -55,6 +56,7 @@ func LoadOnce(
 	domainID string,
 	workflowID string,
 	runID string,
+	callerScope int,
 ) (Context, error) {
 
 	wfContext, release, err := cache.GetOrCreateWorkflowExecution(
@@ -64,6 +66,7 @@ func LoadOnce(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
+		callerScope,
 	)
 	if err != nil {
 		return nil, err
@@ -85,15 +88,16 @@ func Load(
 	domainID string,
 	workflowID string,
 	runID string,
+	callerScope int,
 ) (Context, error) {
 
 	if runID != "" {
-		return LoadOnce(ctx, cache, domainID, workflowID, runID)
+		return LoadOnce(ctx, cache, domainID, workflowID, runID, callerScope)
 	}
 
 	for attempt := 0; attempt < ConditionalRetryCount; attempt++ {
 
-		workflowContext, err := LoadOnce(ctx, cache, domainID, workflowID, "")
+		workflowContext, err := LoadOnce(ctx, cache, domainID, workflowID, "", callerScope)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +142,7 @@ func UpdateWithActionFunc(
 	action UpdateActionFunc,
 ) (retError error) {
 
-	workflowContext, err := LoadOnce(ctx, cache, domainID, execution.GetWorkflowID(), execution.GetRunID())
+	workflowContext, err := LoadOnce(ctx, cache, domainID, execution.GetWorkflowID(), execution.GetRunID(), metrics.PersistenceUpdateWorkflowExecutionScope)
 	if err != nil {
 		return err
 	}
@@ -160,7 +164,7 @@ func UpdateCurrentWithActionFunc(
 	action UpdateActionFunc,
 ) (retError error) {
 
-	workflowContext, err := Load(ctx, cache, executionManager, domainID, execution.GetWorkflowID(), execution.GetRunID())
+	workflowContext, err := Load(ctx, cache, executionManager, domainID, execution.GetWorkflowID(), execution.GetRunID(), metrics.PersistenceUpdateWorkflowExecutionScope)
 	if err != nil {
 		return err
 	}

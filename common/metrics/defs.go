@@ -2041,6 +2041,8 @@ const (
 	CacheRequests
 	CacheFailures
 	CacheLatency
+	LockWaitLatency
+	LockHoldLatency
 	CacheMissCounter
 	AcquireLockFailedCounter
 	WorkflowContextCleared
@@ -2577,6 +2579,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CacheRequests:                                     {metricName: "cache_requests", metricType: Counter},
 		CacheFailures:                                     {metricName: "cache_errors", metricType: Counter},
 		CacheLatency:                                      {metricName: "cache_latency", metricType: Timer},
+		LockWaitLatency:                                   {metricName: "lock_wait_latency", metricType: Timer},
+		LockHoldLatency:                                   {metricName: "lock_hold_latency", metricType: Timer},
 		CacheMissCounter:                                  {metricName: "cache_miss", metricType: Counter},
 		AcquireLockFailedCounter:                          {metricName: "acquire_lock_failed", metricType: Counter},
 		WorkflowContextCleared:                            {metricName: "workflow_context_cleared", metricType: Counter},

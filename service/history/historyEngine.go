@@ -711,7 +711,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 		prevRunID = t.RunID
 		if shouldTerminateAndStart(startRequest, t.State) {
-			runningWFCtx, err := workflow.LoadOnce(ctx, e.executionCache, domainID, workflowID, prevRunID)
+			runningWFCtx, err := workflow.LoadOnce(ctx, e.executionCache, domainID, workflowID, prevRunID, metricsScope)
 			if err != nil {
 				return nil, err
 			}
@@ -908,7 +908,7 @@ func (e *historyEngineImpl) GetMutableState(
 	request *types.GetMutableStateRequest,
 ) (*types.GetMutableStateResponse, error) {
 
-	return e.getMutableStateOrPolling(ctx, request)
+	return e.getMutableStateOrPolling(ctx, request, metrics.HistoryGetMutableStateScope)
 }
 
 // PollMutableState retrieves the mutable state of the workflow execution with long polling
@@ -921,7 +921,7 @@ func (e *historyEngineImpl) PollMutableState(
 		DomainUUID:          request.DomainUUID,
 		Execution:           request.Execution,
 		ExpectedNextEventID: request.ExpectedNextEventID,
-		CurrentBranchToken:  request.CurrentBranchToken})
+		CurrentBranchToken:  request.CurrentBranchToken}, metrics.HistoryPollMutableStateScope)
 
 	if err != nil {
 		return nil, e.updateEntityNotExistsErrorOnPassiveCluster(err, request.GetDomainUUID())
@@ -969,6 +969,7 @@ func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error
 func (e *historyEngineImpl) getMutableStateOrPolling(
 	ctx context.Context,
 	request *types.GetMutableStateRequest,
+	callerScope int,
 ) (*types.GetMutableStateResponse, error) {
 
 	if err := common.ValidateDomainUUID(request.DomainUUID); err != nil {
@@ -979,7 +980,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		WorkflowID: request.Execution.WorkflowID,
 		RunID:      request.Execution.RunID,
 	}
-	response, err := e.getMutableState(ctx, domainID, execution)
+	response, err := e.getMutableState(ctx, domainID, execution, callerScope)
 	if err != nil {
 		return nil, err
 	}
@@ -1009,7 +1010,7 @@ func (e *historyEngineImpl) getMutableStateOrPolling(
 		}
 		defer e.historyEventNotifier.UnwatchHistoryEvent(definition.NewWorkflowIdentifier(domainID, execution.GetWorkflowID(), execution.GetRunID()), subscriberID) //nolint:errcheck
 		// check again in case the next event ID is updated
-		response, err = e.getMutableState(ctx, domainID, execution)
+		response, err = e.getMutableState(ctx, domainID, execution, callerScope)
 		if err != nil {
 			return nil, err
 		}
@@ -1088,7 +1089,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	execution := *request.GetRequest().GetExecution()
 
-	mutableStateResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
+	mutableStateResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution, metrics.HistoryQueryWorkflowScope)
 	if err != nil {
 		return nil, err
 	}
@@ -1121,7 +1122,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	deadline := time.Now().Add(queryFirstDecisionTaskWaitTime)
 	for mutableStateResp.GetPreviousStartedEventID() <= 0 && time.Now().Before(deadline) {
 		<-time.After(queryFirstDecisionTaskCheckInterval)
-		mutableStateResp, err = e.getMutableState(ctx, request.GetDomainUUID(), execution)
+		mutableStateResp, err = e.getMutableState(ctx, request.GetDomainUUID(), execution, metrics.HistoryQueryWorkflowScope)
 		if err != nil {
 			return nil, err
 		}
@@ -1137,7 +1138,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		return nil, err
 	}
 
-	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), execution)
+	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, request.GetDomainUUID(), execution, metrics.HistoryQueryWorkflowScope)
 	if err != nil {
 		return nil, err
 	}
@@ -1164,7 +1165,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 		(!mutableState.HasPendingDecision() && !mutableState.HasInFlightDecision())
 	if safeToDispatchDirectly {
 		release(nil)
-		msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
+		msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution, metrics.HistoryQueryWorkflowScope)
 		if err != nil {
 			return nil, err
 		}
@@ -1208,7 +1209,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 				return nil, workflow.ErrQueryEnteredInvalidState
 			}
 		case query.TerminationTypeUnblocked:
-			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution)
+			msResp, err := e.getMutableState(ctx, request.GetDomainUUID(), execution, metrics.HistoryQueryWorkflowScope)
 			if err != nil {
 				return nil, err
 			}
@@ -1345,9 +1346,10 @@ func (e *historyEngineImpl) getMutableState(
 	ctx context.Context,
 	domainID string,
 	execution types.WorkflowExecution,
+	callerScope int,
 ) (retResp *types.GetMutableStateResponse, retError error) {
 
-	wfContext, release, retError := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution)
+	wfContext, release, retError := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, execution, callerScope)
 	if retError != nil {
 		return
 	}
@@ -1493,7 +1495,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	domainID := request.DomainUUID
 	wfExecution := *request.Request.Execution
 
-	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, wfExecution)
+	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, wfExecution, metrics.HistoryDescribeWorkflowExecutionScope)
 	if err0 != nil {
 		return nil, err0
 	}
@@ -2290,7 +2292,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	var prevMutableState execution.MutableState
 	attempt := 0
 
-	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	wfContext, release, err0 := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution, metrics.HistorySignalWithStartWorkflowExecutionScope)
 
 	if err0 == nil {
 		defer func() { release(retError) }()
@@ -2585,6 +2587,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			WorkflowID: workflowID,
 			RunID:      baseRunID,
 		},
+		metrics.HistoryResetWorkflowExecutionScope,
 	)
 	if err != nil {
 		return nil, err
@@ -2631,6 +2634,7 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 				WorkflowID: workflowID,
 				RunID:      currentRunID,
 			},
+			metrics.HistoryResetWorkflowExecutionScope,
 		)
 		if err != nil {
 			return nil, err
@@ -3307,7 +3311,7 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 	}
 	domainID := domainEntry.GetInfo().ID
 
-	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	wfContext, release, err := e.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution, metrics.HistoryRefreshWorkflowTasksScope)
 	if err != nil {
 		return err
 	}

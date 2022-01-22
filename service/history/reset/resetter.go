@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
@@ -481,6 +482,7 @@ func (r *workflowResetterImpl) reapplyResetAndContinueAsNewWorkflowEvents(
 				WorkflowID: workflowID,
 				RunID:      runID,
 			},
+			metrics.HistoryResetWorkflowExecutionScope,
 		)
 		if err != nil {
 			return 0, nil, err

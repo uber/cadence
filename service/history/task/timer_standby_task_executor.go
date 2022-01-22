@@ -110,7 +110,7 @@ func (t *timerStandbyTaskExecutor) Execute(
 	case persistence.TaskTypeWorkflowBackoffTimer:
 		return t.executeWorkflowBackoffTimerTask(ctx, timerTask)
 	case persistence.TaskTypeDeleteHistoryEvent:
-		return t.executeDeleteHistoryEventTask(ctx, timerTask)
+		return t.executeDeleteHistoryEventTask(ctx, timerTask, metrics.TimerStandbyTaskDeleteHistoryEventScope)
 	default:
 		return errUnknownTimerTask
 	}
@@ -160,6 +160,7 @@ func (t *timerStandbyTaskExecutor) executeUserTimerTimeoutTask(
 			t.fetchHistoryFromRemote,
 			standbyTimerTaskPostActionTaskDiscarded,
 		),
+		metrics.TimerStandbyTaskUserTimerScope,
 	)
 }
 
@@ -264,6 +265,7 @@ func (t *timerStandbyTaskExecutor) executeActivityTimeoutTask(
 			t.fetchHistoryFromRemote,
 			standbyTimerTaskPostActionTaskDiscarded,
 		),
+		metrics.TimerStandbyTaskActivityTimeoutScope,
 	)
 }
 
@@ -312,6 +314,7 @@ func (t *timerStandbyTaskExecutor) executeDecisionTimeoutTask(
 			t.fetchHistoryFromRemote,
 			standbyTimerTaskPostActionTaskDiscarded,
 		),
+		metrics.TimerStandbyTaskDecisionTimeoutScope,
 	)
 }
 
@@ -353,6 +356,7 @@ func (t *timerStandbyTaskExecutor) executeWorkflowBackoffTimerTask(
 			t.fetchHistoryFromRemote,
 			standbyTimerTaskPostActionTaskDiscarded,
 		),
+		metrics.TimerStandbyTaskWorkflowBackoffTimerScope,
 	)
 }
 
@@ -390,6 +394,7 @@ func (t *timerStandbyTaskExecutor) executeWorkflowTimeoutTask(
 			t.fetchHistoryFromRemote,
 			standbyTimerTaskPostActionTaskDiscarded,
 		),
+		metrics.TimerStandbyTaskWorkflowTimeoutScope,
 	)
 }
 
@@ -404,12 +409,14 @@ func (t *timerStandbyTaskExecutor) processTimer(
 	timerTask *persistence.TimerTaskInfo,
 	actionFn standbyActionFn,
 	postActionFn standbyPostActionFn,
+	callerScope int,
 ) (retError error) {
 
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		timerTask.DomainID,
 		getWorkflowExecution(timerTask),
 		taskGetExecutionContextTimeout,
+		callerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {

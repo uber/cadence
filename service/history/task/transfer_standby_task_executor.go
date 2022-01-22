@@ -158,6 +158,7 @@ func (t *transferStandbyTaskExecutor) processActivityTask(
 			t.pushActivity,
 			t.pushActivity,
 		),
+		metrics.TransferStandbyTaskActivityScope,
 	)
 }
 
@@ -206,6 +207,7 @@ func (t *transferStandbyTaskExecutor) processDecisionTask(
 			t.pushDecision,
 			t.pushDecision,
 		),
+		metrics.TransferStandbyTaskDecisionScope,
 	)
 }
 
@@ -286,6 +288,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		transferTask,
 		actionFn,
 		standbyTaskPostActionNoOp,
+		metrics.TransferStandbyTaskCloseExecutionScope,
 	) // no op post action, since the entire workflow is finished
 }
 
@@ -323,6 +326,7 @@ func (t *transferStandbyTaskExecutor) processCancelExecution(
 			t.fetchHistoryFromRemote,
 			standbyTransferTaskPostActionTaskDiscarded,
 		),
+		metrics.TransferStandbyTaskCancelExecutionScope,
 	)
 }
 
@@ -360,6 +364,7 @@ func (t *transferStandbyTaskExecutor) processSignalExecution(
 			t.fetchHistoryFromRemote,
 			standbyTransferTaskPostActionTaskDiscarded,
 		),
+		metrics.TransferStandbyTaskSignalExecutionScope,
 	)
 }
 
@@ -401,6 +406,7 @@ func (t *transferStandbyTaskExecutor) processStartChildExecution(
 			t.fetchHistoryFromRemote,
 			standbyTransferTaskPostActionTaskDiscarded,
 		),
+		metrics.TransferStandbyTaskStartChildExecutionScope,
 	)
 }
 
@@ -418,6 +424,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStarted(
 			return nil, t.processRecordWorkflowStartedOrUpsertHelper(ctx, transferTask, mutableState, true)
 		},
 		standbyTaskPostActionNoOp,
+		metrics.TransferStandbyTaskRecordWorkflowStartedScope,
 	)
 }
 
@@ -435,6 +442,7 @@ func (t *transferStandbyTaskExecutor) processUpsertWorkflowSearchAttributes(
 			return nil, t.processRecordWorkflowStartedOrUpsertHelper(ctx, transferTask, mutableState, false)
 		},
 		standbyTaskPostActionNoOp,
+		metrics.TransferStandbyTaskUpsertWorkflowSearchAttributesScope,
 	)
 }
 
@@ -520,6 +528,7 @@ func (t *transferStandbyTaskExecutor) processTransfer(
 	taskInfo Info,
 	actionFn standbyActionFn,
 	postActionFn standbyPostActionFn,
+	callerScope int,
 ) (retError error) {
 
 	transferTask := taskInfo.(*persistence.TransferTaskInfo)
@@ -527,6 +536,7 @@ func (t *transferStandbyTaskExecutor) processTransfer(
 		transferTask.DomainID,
 		getWorkflowExecution(transferTask),
 		taskGetExecutionContextTimeout,
+		callerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {

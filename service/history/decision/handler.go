@@ -309,7 +309,7 @@ func (handler *handlerImpl) HandleDecisionTaskCompleted(
 	clientFeatureVersion := call.Header(common.FeatureVersionHeaderName)
 	clientImpl := call.Header(common.ClientImplHeaderName)
 
-	wfContext, release, err := handler.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	wfContext, release, err := handler.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution, metrics.HistoryRespondDecisionTaskCompletedScope)
 	if err != nil {
 		return nil, err
 	}

@@ -446,6 +446,7 @@ func (r *transactionManagerImpl) loadNDCWorkflow(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
+		metrics.HistoryReapplyEventsScope,
 	)
 	if err != nil {
 		return nil, err

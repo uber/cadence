@@ -955,6 +955,7 @@ func loadWorkflowForCrossClusterTask(
 		taskInfo.GetDomainID(),
 		getWorkflowExecution(taskInfo),
 		taskGetExecutionContextTimeout,
+		metrics.CrossClusterTaskProcessorScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {

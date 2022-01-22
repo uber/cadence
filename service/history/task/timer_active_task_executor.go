@@ -106,7 +106,7 @@ func (t *timerActiveTaskExecutor) Execute(
 	case persistence.TaskTypeWorkflowBackoffTimer:
 		return t.executeWorkflowBackoffTimerTask(ctx, timerTask)
 	case persistence.TaskTypeDeleteHistoryEvent:
-		return t.executeDeleteHistoryEventTask(ctx, timerTask)
+		return t.executeDeleteHistoryEventTask(ctx, timerTask, metrics.TimerActiveTaskDeleteHistoryEventScope)
 	default:
 		return errUnknownTimerTask
 	}
@@ -121,6 +121,7 @@ func (t *timerActiveTaskExecutor) executeUserTimerTimeoutTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TimerActiveTaskUserTimerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -223,6 +224,7 @@ func (t *timerActiveTaskExecutor) executeActivityTimeoutTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TimerActiveTaskActivityTimeoutScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -385,6 +387,7 @@ func (t *timerActiveTaskExecutor) executeDecisionTimeoutTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TimerActiveTaskDecisionTimeoutScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -481,6 +484,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowBackoffTimerTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TimerActiveTaskWorkflowBackoffTimerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -522,6 +526,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TimerActiveTaskActivityRetryTimerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -612,6 +617,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TimerActiveTaskWorkflowTimeoutScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {

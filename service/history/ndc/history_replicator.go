@@ -209,6 +209,7 @@ func (r *historyReplicatorImpl) applyEvents(
 		ctx,
 		task.getDomainID(),
 		*task.getExecution(),
+		metrics.ReplicateHistoryEventsScope,
 	)
 	if err != nil {
 		// for get workflow execution context, with valid run id

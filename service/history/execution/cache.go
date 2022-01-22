@@ -110,6 +110,7 @@ func (c *Cache) GetOrCreateCurrentWorkflowExecution(
 		execution,
 		scope,
 		true,
+		scope,
 	)
 }
 
@@ -145,7 +146,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 			c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.AcquireLockFailedCounter)
 			return nil, nil, nil, false, err
 		}
-		releaseFunc = c.makeReleaseFunc(key, contextFromCache, false)
+		releaseFunc = c.makeReleaseFunc(key, contextFromCache, false, metrics.HistoryCacheGetAndCreateScope)
 	} else {
 		c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.CacheMissCounter)
 	}
@@ -162,7 +163,7 @@ func (c *Cache) GetOrCreateWorkflowExecutionForBackground(
 	execution types.WorkflowExecution,
 ) (Context, ReleaseFunc, error) {
 
-	return c.GetOrCreateWorkflowExecution(context.Background(), domainID, execution)
+	return c.GetOrCreateWorkflowExecution(context.Background(), domainID, execution, metrics.HistoryCacheGetOrCreateScope)
 }
 
 // GetOrCreateWorkflowExecutionWithTimeout gets or creates workflow execution context with timeout
@@ -170,12 +171,13 @@ func (c *Cache) GetOrCreateWorkflowExecutionWithTimeout(
 	domainID string,
 	execution types.WorkflowExecution,
 	timeout time.Duration,
+	callerScope int,
 ) (Context, ReleaseFunc, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	return c.GetOrCreateWorkflowExecution(ctx, domainID, execution)
+	return c.GetOrCreateWorkflowExecution(ctx, domainID, execution, callerScope)
 }
 
 // GetOrCreateWorkflowExecution gets or creates workflow execution context
@@ -183,6 +185,7 @@ func (c *Cache) GetOrCreateWorkflowExecution(
 	ctx context.Context,
 	domainID string,
 	execution types.WorkflowExecution,
+	callerScope int,
 ) (Context, ReleaseFunc, error) {
 
 	scope := metrics.HistoryCacheGetOrCreateScope
@@ -201,6 +204,7 @@ func (c *Cache) GetOrCreateWorkflowExecution(
 		execution,
 		scope,
 		false,
+		callerScope,
 	)
 }
 
@@ -210,6 +214,7 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 	execution types.WorkflowExecution,
 	scope int,
 	forceClearContext bool,
+	callerScope int,
 ) (Context, ReleaseFunc, error) {
 
 	// Test hook for disabling the cache
@@ -231,10 +236,8 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 		workflowCtx = elem.(Context)
 	}
 
-	// TODO This will create a closure on every request.
-	//  Consider revisiting this if it causes too much GC activity
-	releaseFunc := c.makeReleaseFunc(key, workflowCtx, forceClearContext)
-
+	sw := c.metricsClient.StartTimer(callerScope, metrics.LockWaitLatency)
+	defer sw.Stop()
 	if err := workflowCtx.Lock(ctx); err != nil {
 		// ctx is done before lock can be acquired
 		c.Release(key)
@@ -242,6 +245,9 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 		c.metricsClient.IncCounter(scope, metrics.AcquireLockFailedCounter)
 		return nil, nil, err
 	}
+	// TODO This will create a closure on every request.
+	//  Consider revisiting this if it causes too much GC activity
+	releaseFunc := c.makeReleaseFunc(key, workflowCtx, forceClearContext, callerScope)
 	return workflowCtx, releaseFunc, nil
 }
 
@@ -277,15 +283,18 @@ func (c *Cache) makeReleaseFunc(
 	key definition.WorkflowIdentifier,
 	context Context,
 	forceClearContext bool,
+	callerScope int,
 ) func(error) {
 
 	status := cacheNotReleased
+	start := time.Now()
 	return func(err error) {
 		defer func() {
 			if atomic.CompareAndSwapInt32(&status, cacheNotReleased, cacheReleased) {
 				if rec := recover(); rec != nil {
 					context.Clear()
 					context.Unlock()
+					c.metricsClient.RecordTimer(callerScope, metrics.LockHoldLatency, time.Since(start))
 					c.Release(key)
 					panic(rec)
 				} else {
@@ -294,6 +303,7 @@ func (c *Cache) makeReleaseFunc(
 						context.Clear()
 					}
 					context.Unlock()
+					c.metricsClient.RecordTimer(callerScope, metrics.LockHoldLatency, time.Since(start))
 					c.Release(key)
 				}
 			}

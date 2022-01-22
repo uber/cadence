@@ -78,12 +78,14 @@ func newTimerTaskExecutorBase(
 func (t *timerTaskExecutorBase) executeDeleteHistoryEventTask(
 	ctx context.Context,
 	task *persistence.TimerTaskInfo,
+	callerScope int,
 ) (retError error) {
 
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		callerScope,
 	)
 	if err != nil {
 		return err

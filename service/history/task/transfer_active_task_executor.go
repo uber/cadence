@@ -161,6 +161,7 @@ func (t *transferActiveTaskExecutor) processActivityTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TransferActiveTaskActivityScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -204,6 +205,7 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TransferActiveTaskDecisionScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -268,28 +270,28 @@ func (t *transferActiveTaskExecutor) processCloseExecution(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 ) error {
-	return t.processCloseExecutionTaskHelper(ctx, task, true, true, true)
+	return t.processCloseExecutionTaskHelper(ctx, task, true, true, true, metrics.TransferActiveTaskCloseExecutionScope)
 }
 
 func (t *transferActiveTaskExecutor) processRecordWorkflowClosed(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 ) error {
-	return t.processCloseExecutionTaskHelper(ctx, task, true, false, false)
+	return t.processCloseExecutionTaskHelper(ctx, task, true, false, false, metrics.TransferActiveTaskRecordWorkflowClosedScope)
 }
 
 func (t *transferActiveTaskExecutor) processRecordChildExecutionCompleted(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 ) error {
-	return t.processCloseExecutionTaskHelper(ctx, task, false, true, false)
+	return t.processCloseExecutionTaskHelper(ctx, task, false, true, false, metrics.TransferActiveTaskRecordChildExecutionCompletedScope)
 }
 
 func (t *transferActiveTaskExecutor) processApplyParentClosePolicy(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 ) error {
-	return t.processCloseExecutionTaskHelper(ctx, task, false, false, true)
+	return t.processCloseExecutionTaskHelper(ctx, task, false, false, true, metrics.TransferActiveTaskApplyParentClosePolicyScope)
 }
 
 // TODO: this helper function performs three operations:
@@ -305,12 +307,14 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	recordWorkflowClosed bool,
 	replyToParentWorkflow bool,
 	applyParentClosePolicy bool,
+	callerScope int,
 ) (retError error) {
 
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		callerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -523,6 +527,7 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TransferActiveTaskCancelExecutionScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -630,6 +635,7 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TransferActiveTaskSignalExecutionScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -751,6 +757,7 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TransferActiveTaskStartChildExecutionScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -889,7 +896,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStarted(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	return t.processRecordWorkflowStartedOrUpsertHelper(ctx, task, true)
+	return t.processRecordWorkflowStartedOrUpsertHelper(ctx, task, true, metrics.TransferActiveTaskRecordWorkflowStartedScope)
 }
 
 func (t *transferActiveTaskExecutor) processUpsertWorkflowSearchAttributes(
@@ -897,19 +904,21 @@ func (t *transferActiveTaskExecutor) processUpsertWorkflowSearchAttributes(
 	task *persistence.TransferTaskInfo,
 ) (retError error) {
 
-	return t.processRecordWorkflowStartedOrUpsertHelper(ctx, task, false)
+	return t.processRecordWorkflowStartedOrUpsertHelper(ctx, task, false, metrics.TransferActiveTaskUpsertWorkflowSearchAttributesScope)
 }
 
 func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	recordStart bool,
+	callerScope int,
 ) (retError error) {
 
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		callerScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -1008,6 +1017,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		task.DomainID,
 		getWorkflowExecution(task),
 		taskGetExecutionContextTimeout,
+		metrics.TransferStandbyTaskResetWorkflowScope,
 	)
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -1095,6 +1105,7 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 			task.DomainID,
 			baseExecution,
 			taskGetExecutionContextTimeout,
+			metrics.TransferStandbyTaskResetWorkflowScope,
 		)
 		if err != nil {
 			return err

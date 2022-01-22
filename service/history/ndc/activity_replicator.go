@@ -30,6 +30,7 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -90,7 +91,7 @@ func (r *activityReplicatorImpl) SyncActivity(
 		RunID:      request.RunID,
 	}
 
-	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution)
+	context, release, err := r.executionCache.GetOrCreateWorkflowExecution(ctx, domainID, workflowExecution, metrics.HistorySyncActivityScope)
 	if err != nil {
 		// for get workflow execution context, with valid run id
 		// err will not be of type EntityNotExistsError

@@ -292,7 +292,7 @@ func (t *taskAckManagerImpl) processReplication(
 		RunID:      taskInfo.GetRunID(),
 	}
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution)
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution, metrics.ReplicatorQueueProcessorScope)
 	if err != nil {
 		return nil, err
 	}
@@ -384,6 +384,7 @@ func (t *taskAckManagerImpl) isNewRunNDCEnabled(
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
+		metrics.ReplicatorQueueProcessorScope,
 	)
 	if err != nil {
 		return false, err
