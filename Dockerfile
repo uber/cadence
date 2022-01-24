@@ -94,13 +94,10 @@ CMD /start-cadence.sh
 # All-in-one Cadence server
 FROM cadence-server AS cadence-auto-setup
 
-RUN apk add --update --no-cache ca-certificates py-pip mysql-client python3
-RUN pip3 install cqlsh
+RUN apk add --update --no-cache ca-certificates py3-pip mysql-client
+RUN pip3 install cqlsh && cqlsh --version
 
 COPY docker/start.sh /start.sh
-
-# test installed applications
-RUN cqlsh --version
 
 CMD /start.sh
 
