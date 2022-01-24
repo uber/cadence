@@ -44,7 +44,7 @@ type (
 	// Resolver provides membership information for all cadence services.
 	Resolver interface {
 		common.Daemon
-		// WhoAmI returns self address.
+		// WhoAmI returns self host details.
 		// To be consistent with peer provider, it is advised to use peer provider
 		// to return this information
 		WhoAmI() (*HostInfo, error)
@@ -145,12 +145,12 @@ func (rpo *MultiringResolver) Stop() {
 
 // WhoAmI asks to provide current instance address
 func (rpo *MultiringResolver) WhoAmI() (*HostInfo, error) {
-	address, err := rpo.provider.WhoAmI()
+	host, err := rpo.provider.WhoAmI()
 	if err != nil {
 		return nil, err
 	}
 
-	return NewHostInfo(address), nil
+	return host, nil
 }
 
 // EvictSelf is used to remove this host from membership ring
