@@ -146,7 +146,7 @@ func (c *Cache) GetAndCreateWorkflowExecution(
 			c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.AcquireLockFailedCounter)
 			return nil, nil, nil, false, err
 		}
-		releaseFunc = c.makeReleaseFunc(key, contextFromCache, false, metrics.HistoryCacheGetAndCreateScope)
+		releaseFunc = c.makeReleaseFunc(key, contextFromCache, false, metrics.HistoryCacheGetAndCreateScope, "")
 	} else {
 		c.metricsClient.IncCounter(metrics.HistoryCacheGetAndCreateScope, metrics.CacheMissCounter)
 	}
@@ -236,7 +236,11 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 		workflowCtx = elem.(Context)
 	}
 
-	sw := c.metricsClient.StartTimer(callerScope, metrics.LockWaitLatency)
+	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		domainName = ""
+	}
+	sw := c.metricsClient.Scope(callerScope, metrics.DomainTag(domainName)).StartTimer(metrics.LockWaitLatency)
 	defer sw.Stop()
 	if err := workflowCtx.Lock(ctx); err != nil {
 		// ctx is done before lock can be acquired
@@ -247,7 +251,7 @@ func (c *Cache) getOrCreateWorkflowExecutionInternal(
 	}
 	// TODO This will create a closure on every request.
 	//  Consider revisiting this if it causes too much GC activity
-	releaseFunc := c.makeReleaseFunc(key, workflowCtx, forceClearContext, callerScope)
+	releaseFunc := c.makeReleaseFunc(key, workflowCtx, forceClearContext, callerScope, domainName)
 	return workflowCtx, releaseFunc, nil
 }
 
@@ -284,6 +288,7 @@ func (c *Cache) makeReleaseFunc(
 	context Context,
 	forceClearContext bool,
 	callerScope int,
+	domainName string,
 ) func(error) {
 
 	status := cacheNotReleased
@@ -294,7 +299,7 @@ func (c *Cache) makeReleaseFunc(
 				if rec := recover(); rec != nil {
 					context.Clear()
 					context.Unlock()
-					c.metricsClient.RecordTimer(callerScope, metrics.LockHoldLatency, time.Since(start))
+					c.metricsClient.Scope(callerScope, metrics.DomainTag(domainName)).RecordTimer(metrics.LockHoldLatency, time.Since(start))
 					c.Release(key)
 					panic(rec)
 				} else {
