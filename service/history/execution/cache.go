@@ -308,7 +308,7 @@ func (c *Cache) makeReleaseFunc(
 						context.Clear()
 					}
 					context.Unlock()
-					c.metricsClient.RecordTimer(callerScope, metrics.LockHoldLatency, time.Since(start))
+					c.metricsClient.Scope(callerScope, metrics.DomainTag(domainName)).RecordTimer(metrics.LockHoldLatency, time.Since(start))
 					c.Release(key)
 				}
 			}
