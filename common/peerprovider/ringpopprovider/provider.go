@@ -31,15 +31,14 @@ import (
 
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/ringpop-go"
-	"github.com/uber/ringpop-go/events"
-	"github.com/uber/ringpop-go/swim"
-	tcg "github.com/uber/tchannel-go"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/ringpop-go"
+	"github.com/uber/ringpop-go/events"
+	"github.com/uber/ringpop-go/swim"
+	tcg "github.com/uber/tchannel-go"
 )
 
 type (
@@ -52,7 +51,6 @@ type (
 		logger     log.Logger
 		channel    tchannel.Channel
 
-		name        string
 		mu          sync.RWMutex
 		subscribers map[string]chan<- *membership.ChangedEvent
 	}
@@ -87,16 +85,29 @@ func New(
 		MaxJoinDuration:  config.MaxJoinDuration,
 		DiscoverProvider: discoveryProvider,
 	}
+	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
+	if err != nil {
+		logger.Fatal("ringpop creation failed")
+	}
+	return NewRingpopProvider(service, rp, bootstrapOpts, channel, logger), nil
+}
 
+// NewRingpopProvider sets up ringpop based peer provider
+func NewRingpopProvider(service string,
+	rp *ringpop.Ringpop,
+	bootstrapOpts *swim.BootstrapOptions,
+	channel tchannel.Channel,
+	logger log.Logger,
+) *Provider {
 	return &Provider{
 		service:     service,
 		status:      common.DaemonStatusInitialized,
 		bootParams:  bootstrapOpts,
 		logger:      logger,
-		name:        config.Name,
 		channel:     channel,
+		ringpop:     rp,
 		subscribers: map[string]chan<- *membership.ChangedEvent{},
-	}, nil
+	}
 }
 
 // Start starts ringpop
@@ -107,11 +118,6 @@ func (r *Provider) Start() {
 		common.DaemonStatusStarted,
 	) {
 		return
-	}
-	if rp, err := ringpop.New(r.name, ringpop.Channel(r.channel.(*tcg.Channel))); err != nil {
-		r.logger.Fatal("ringpop creation failed")
-	} else {
-		r.ringpop = rp
 	}
 
 	_, err := r.ringpop.Bootstrap(r.bootParams)
