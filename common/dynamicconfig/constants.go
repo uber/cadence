@@ -1940,6 +1940,12 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableESAnalyzer
+	// EnableWatchDog decides whether to enable watchdog system worker
+	// KeyName: system.enableWatchdog
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableWatchDog
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool

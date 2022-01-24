@@ -1197,6 +1197,8 @@ const (
 	CheckDataCorruptionWorkflowScope
 	// ESAnalyzerScope is scope used by ElasticSearch Analyzer (esanalyzer) workflow
 	ESAnalyzerScope
+	// WatchDogScope is scope used by WatchDog workflow
+	WatchDogScope
 
 	NumWorkerScopes
 )
