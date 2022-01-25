@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olivere/elastic"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli"
@@ -56,6 +57,10 @@ func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client
 
 func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 	return m.serverAdminClient
+}
+
+func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) *elastic.Client {
+	panic("not implemented")
 }
 
 // this is the mock for yarpcCallOptions, make sure length are the same

@@ -18,43 +18,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package membership
+package host
 
-// HostInfo is a type that contains the info about a cadence host
-type HostInfo struct {
-	addr   string // ip:port
-	labels map[string]string
+import (
+	"github.com/dgryski/go-farm"
+
+	"github.com/uber/cadence/common/membership"
+)
+
+type simpleHashring struct {
+	hosts    []*membership.HostInfo
+	hashfunc func([]byte) uint32
 }
 
-// NewHostInfo creates a new HostInfo instance
-func NewHostInfo(addr string, labels map[string]string) *HostInfo {
-	if labels == nil {
-		labels = make(map[string]string)
+// newSimpleHashring returns a service resolver that maintains static mapping
+// between services and host info
+func newSimpleHashring(hosts []string) *simpleHashring {
+	hostInfos := make([]*membership.HostInfo, 0, len(hosts))
+	for _, host := range hosts {
+		hostInfos = append(hostInfos, membership.NewHostInfo(host))
 	}
-	return &HostInfo{
-		addr:   addr,
-		labels: labels,
-	}
+	return &simpleHashring{hostInfos, farm.Fingerprint32}
 }
 
-// GetAddress returns the ip:port address
-func (hi *HostInfo) GetAddress() string {
-	return hi.addr
+func (s *simpleHashring) Lookup(key string) (*membership.HostInfo, error) {
+	hash := int(s.hashfunc([]byte(key)))
+	idx := hash % len(s.hosts)
+	return s.hosts[idx], nil
 }
 
-// Identity implements ringpop's Membership interface
-func (hi *HostInfo) Identity() string {
-	// for now we just use the address as the identity
-	return hi.addr
+func (s *simpleHashring) AddListener(name string, notifyChannel chan<- *membership.ChangedEvent) error {
+	return nil
 }
 
-// Label implements ringpop's Membership interface
-func (hi *HostInfo) Label(key string) (value string, has bool) {
-	value, has = hi.labels[key]
-	return
+func (s *simpleHashring) RemoveListener(name string) error {
+	return nil
 }
 
-// SetLabel sets the label.
-func (hi *HostInfo) SetLabel(key string, value string) {
-	hi.labels[key] = value
+func (s *simpleHashring) MemberCount() int {
+	return len(s.hosts)
+}
+
+func (s *simpleHashring) Members() []*membership.HostInfo {
+	return s.hosts
 }

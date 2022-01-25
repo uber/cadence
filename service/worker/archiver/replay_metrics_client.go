@@ -81,6 +81,14 @@ func (r *replayMetricsClient) RecordTimer(scope int, timer int, d time.Duration)
 	r.client.RecordTimer(scope, timer, d)
 }
 
+// RecordHistogramDuration record and emit a duration
+func (r *replayMetricsClient) RecordHistogramDuration(scope int, timer int, d time.Duration) {
+	if workflow.IsReplaying(r.ctx) {
+		return
+	}
+	r.client.RecordHistogramDuration(scope, timer, d)
+}
+
 // UpdateGauge reports Gauge type absolute value metric
 func (r *replayMetricsClient) UpdateGauge(scope int, gauge int, value float64) {
 	if workflow.IsReplaying(r.ctx) {

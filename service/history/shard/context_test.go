@@ -179,6 +179,7 @@ func (s *contextTestSuite) TestGetAndUpdateProcessingQueueStates() {
 
 	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
 	s.mockResource.ClusterMetadata.EXPECT().GetCurrentClusterName().Return(clusterName).AnyTimes()
+	s.mockResource.ClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	updatedTransferQueueStates := []*types.ProcessingQueueState{
 		{
 			Level:    common.Int32Ptr(0),

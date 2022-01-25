@@ -21,7 +21,7 @@ require (
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v1.10.0
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/gocql/gocql v0.0.0-20191126110522-1982a06ad6b9
+	github.com/gocql/gocql v0.0.0-20211015133455-b225f9b53fa1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.4.3 // indirect
@@ -51,6 +51,7 @@ require (
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.6.1
 	github.com/uber-go/tally v3.3.15+incompatible
+	github.com/uber/cadence-idl v0.0.0-20211125000611-a6d3e3393ba6
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.0
 	github.com/uber/tcheck v1.1.0
@@ -61,7 +62,7 @@ require (
 	go.mongodb.org/mongo-driver v1.7.3
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/atomic v1.7.0
-	go.uber.org/cadence v0.17.1-0.20210820042115-b09692f6838f
+	go.uber.org/cadence v0.19.0
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.13.1
 	go.uber.org/multierr v1.6.0

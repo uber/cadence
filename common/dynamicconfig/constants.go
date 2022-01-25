@@ -966,6 +966,15 @@ const (
 	// Default value: 60s (60*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorCompleteTimerInterval
+	// TimerProcessorFailoverMaxStartJitterInterval is the max jitter interval for starting timer
+	// failover queue processing. The actual jitter interval used will be a random duration between
+	// 0 and the max interval so that timer failover queue across different shards won't start at
+	// the same time
+	// KeyName: history.timerProcessorFailoverMaxStartJitterInterval
+	// Value type: Duration
+	// Default value: 0s (0*time.Second)
+	// Allowed filters: N/A
+	TimerProcessorFailoverMaxStartJitterInterval
 	// TimerProcessorFailoverMaxPollRPS is max poll rate per second for timer processor
 	// KeyName: history.timerProcessorFailoverMaxPollRPS
 	// Value type: Int
@@ -1039,6 +1048,15 @@ const (
 	// Default value: 4000
 	// Allowed filters: N/A
 	TransferTaskDeleteBatchSize
+	// TransferProcessorFailoverMaxStartJitterInterval is the max jitter interval for starting transfer
+	// failover queue processing. The actual jitter interval used will be a random duration between
+	// 0 and the max interval so that timer failover queue across different shards won't start at
+	// the same time
+	// KeyName: history.transferProcessorFailoverMaxStartJitterInterval
+	// Value type: Duration
+	// Default value: 0s (0*time.Second)
+	// Allowed filters: N/A
+	TransferProcessorFailoverMaxStartJitterInterval
 	// TransferProcessorFailoverMaxPollRPS is max poll rate per second for transferQueueProcessor
 	// KeyName: history.transferProcessorFailoverMaxPollRPS
 	// Value type: Int
@@ -2081,6 +2099,11 @@ const (
 	// Value type: Int
 	// Default value: "" => means no limitation
 	ESAnalyzerLimitToDomains
+	// ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types
+	// KeyName: worker.ESAnalyzerWorkflowDurationWarnThresholds
+	// Value type: string (json of a dictionary {"<domainName>/<workflowType>":<value>,...})
+	// Default value: ""
+	ESAnalyzerWorkflowDurationWarnThresholds
 
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
@@ -2273,6 +2296,7 @@ var Keys = map[Key]string{
 	TimerProcessorUpdateAckInterval:                   "history.timerProcessorUpdateAckInterval",
 	TimerProcessorUpdateAckIntervalJitterCoefficient:  "history.timerProcessorUpdateAckIntervalJitterCoefficient",
 	TimerProcessorCompleteTimerInterval:               "history.timerProcessorCompleteTimerInterval",
+	TimerProcessorFailoverMaxStartJitterInterval:      "history.timerProcessorFailoverMaxStartJitterInterval",
 	TimerProcessorFailoverMaxPollRPS:                  "history.timerProcessorFailoverMaxPollRPS",
 	TimerProcessorMaxPollRPS:                          "history.timerProcessorMaxPollRPS",
 	TimerProcessorMaxPollInterval:                     "history.timerProcessorMaxPollInterval",
@@ -2286,6 +2310,7 @@ var Keys = map[Key]string{
 
 	TransferTaskBatchSize:                                "history.transferTaskBatchSize",
 	TransferTaskDeleteBatchSize:                          "history.transferTaskDeleteBatchSize",
+	TransferProcessorFailoverMaxStartJitterInterval:      "history.transferProcessorFailoverMaxStartJitterInterval",
 	TransferProcessorFailoverMaxPollRPS:                  "history.transferProcessorFailoverMaxPollRPS",
 	TransferProcessorMaxPollRPS:                          "history.transferProcessorMaxPollRPS",
 	TransferProcessorCompleteTransferFailureRetryCount:   "history.transferProcessorCompleteTransferFailureRetryCount",
@@ -2454,15 +2479,16 @@ var Keys = map[Key]string{
 	WorkerDeterministicConstructionCheckProbability: "worker.DeterministicConstructionCheckProbability",
 	WorkerBlobIntegrityCheckProbability:             "worker.BlobIntegrityCheckProbability",
 
-	ESAnalyzerPause:                 "worker.ESAnalyzerPause",
-	ESAnalyzerTimeWindow:            "worker.ESAnalyzerTimeWindow",
-	ESAnalyzerMaxNumDomains:         "worker.ESAnalyzerMaxNumDomains",
-	ESAnalyzerMaxNumWorkflowTypes:   "worker.ESAnalyzerMaxNumWorkflowTypes",
-	ESAnalyzerNumWorkflowsToRefresh: "worker.ESAnalyzerNumWorkflowsToRefresh",
-	ESAnalyzerBufferWaitTime:        "worker.ESAnalyzerBufferWaitTime",
-	ESAnalyzerMinNumWorkflowsForAvg: "worker.ESAnalyzerMinNumWorkflowsForAvg",
-	ESAnalyzerLimitToTypes:          "worker.ESAnalyzerLimitToTypes",
-	ESAnalyzerLimitToDomains:        "worker.ESAnalyzerLimitToDomains",
+	ESAnalyzerPause:                          "worker.ESAnalyzerPause",
+	ESAnalyzerTimeWindow:                     "worker.ESAnalyzerTimeWindow",
+	ESAnalyzerMaxNumDomains:                  "worker.ESAnalyzerMaxNumDomains",
+	ESAnalyzerMaxNumWorkflowTypes:            "worker.ESAnalyzerMaxNumWorkflowTypes",
+	ESAnalyzerNumWorkflowsToRefresh:          "worker.ESAnalyzerNumWorkflowsToRefresh",
+	ESAnalyzerBufferWaitTime:                 "worker.ESAnalyzerBufferWaitTime",
+	ESAnalyzerMinNumWorkflowsForAvg:          "worker.ESAnalyzerMinNumWorkflowsForAvg",
+	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
+	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 }
 
 var KeyNames map[string]Key

@@ -28,6 +28,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/service"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -163,9 +165,9 @@ func (c *controller) Start() {
 	c.shutdownWG.Add(1)
 	go c.shardManagementPump()
 
-	err := c.GetHistoryServiceResolver().AddListener(shardControllerMembershipUpdateListenerName, c.membershipUpdateCh)
+	err := c.GetMembershipResolver().Subscribe(service.History, shardControllerMembershipUpdateListenerName, c.membershipUpdateCh)
 	if err != nil {
-		c.logger.Error("Error adding listener", tag.Error(err))
+		c.logger.Error("subscribing to membership resolver", tag.Error(err))
 	}
 
 	c.logger.Info("Shard controller state changed", tag.LifeCycleStarted)
@@ -178,8 +180,8 @@ func (c *controller) Stop() {
 
 	c.PrepareToStop()
 
-	if err := c.GetHistoryServiceResolver().RemoveListener(shardControllerMembershipUpdateListenerName); err != nil {
-		c.logger.Error("Error removing membership update listener", tag.Error(err), tag.OperationFailed)
+	if err := c.GetMembershipResolver().Unsubscribe(service.History, shardControllerMembershipUpdateListenerName); err != nil {
+		c.logger.Error("unsubscribing from membership resolver", tag.Error(err), tag.OperationFailed)
 	}
 	close(c.shutdownCh)
 
@@ -292,7 +294,7 @@ func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsIte
 	if c.isShuttingDown() || atomic.LoadInt32(&c.status) == common.DaemonStatusStopped {
 		return nil, fmt.Errorf("controller for host '%v' shutting down", c.GetHostInfo().Identity())
 	}
-	info, err := c.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+	info, err := c.GetMembershipResolver().Lookup(service.History, string(rune(shardID)))
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +394,7 @@ func (c *controller) acquireShards() {
 				if c.isShuttingDown() {
 					return
 				}
-				info, err := c.GetHistoryServiceResolver().Lookup(string(rune(shardID)))
+				info, err := c.GetMembershipResolver().Lookup(service.History, string(rune(shardID)))
 				if err != nil {
 					c.logger.Error("Error looking up host for shardID", tag.Error(err), tag.OperationFailed, tag.ShardID(shardID))
 				} else {

@@ -93,6 +93,11 @@ const (
 	// Update workflow, without current record
 	// NOTE: current record CANNOT point to the workflow to be updated
 	UpdateWorkflowModeBypassCurrent
+	// Update workflow, ignoring current record
+	// NOTE: current record may or may not point to the workflow
+	// this mode should only be used for (re-)generating workflow tasks
+	// and there's no other changes to the workflow
+	UpdateWorkflowModeIgnoreCurrent
 )
 
 // ConflictResolveWorkflowMode conflict resolve mode
@@ -594,7 +599,6 @@ type (
 		TargetDomainID      string
 		TargetWorkflowID    string
 		TargetRunID         string
-		InitiatedID         int64
 		Version             int64
 	}
 

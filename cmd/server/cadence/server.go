@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
+	"go.uber.org/cadence/compatibility"
+
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -40,6 +43,7 @@ import (
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging/kafka"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
@@ -156,10 +160,20 @@ func (s *server) startService() common.Daemon {
 	)
 	rpcFactory := rpc.NewFactory(params.Logger, rpcParams)
 	params.RPCFactory = rpcFactory
-	params.MembershipMonitor, err = membership.NewMonitor(
+
+	peerProvider, err := ringpopprovider.New(
+		params.Name,
 		&s.cfg.Ringpop,
 		rpcFactory.GetChannel(),
-		params.Name,
+		params.Logger,
+	)
+
+	if err != nil {
+		log.Fatalf("ringpop provider failed: %v", err)
+	}
+
+	params.MembershipResolver, err = membership.NewResolver(
+		peerProvider,
 		params.Logger,
 	)
 	if err != nil {
@@ -214,7 +228,17 @@ func (s *server) startService() common.Daemon {
 		}
 	}
 
-	params.PublicClient = workflowserviceclient.New(params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient))
+	publicClientConfig := params.RPCFactory.GetDispatcher().ClientConfig(rpc.OutboundPublicClient)
+	if rpc.IsGRPCOutbound(publicClientConfig) {
+		params.PublicClient = compatibility.NewThrift2ProtoAdapter(
+			apiv1.NewDomainAPIYARPCClient(publicClientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(publicClientConfig),
+			apiv1.NewWorkerAPIYARPCClient(publicClientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(publicClientConfig),
+		)
+	} else {
+		params.PublicClient = workflowserviceclient.New(publicClientConfig)
+	}
 
 	params.ArchivalMetadata = archiver.NewArchivalMetadata(
 		dc,

@@ -25,15 +25,14 @@ import (
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/grpc"
 
 	"github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
-	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
 
@@ -46,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/rpc"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -67,7 +67,7 @@ type (
 
 	rpcClientFactory struct {
 		rpcFactory            common.RPCFactory
-		monitor               membership.Monitor
+		resolver              membership.Resolver
 		metricsClient         metrics.Client
 		dynConfig             *dynamicconfig.Collection
 		numberOfHistoryShards int
@@ -78,7 +78,7 @@ type (
 // NewRPCClientFactory creates an instance of client factory that knows how to dispatch RPC calls.
 func NewRPCClientFactory(
 	rpcFactory common.RPCFactory,
-	monitor membership.Monitor,
+	resolver membership.Resolver,
 	metricsClient metrics.Client,
 	dc *dynamicconfig.Collection,
 	numberOfHistoryShards int,
@@ -86,7 +86,7 @@ func NewRPCClientFactory(
 ) Factory {
 	return &rpcClientFactory{
 		rpcFactory:            rpcFactory,
-		monitor:               monitor,
+		resolver:              resolver,
 		metricsClient:         metricsClient,
 		dynConfig:             dc,
 		numberOfHistoryShards: numberOfHistoryShards,
@@ -106,7 +106,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	var rawClient history.Client
 	var addressMapper history.AddressMapperFn
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
-	if isGRPCOutbound(outboundConfig) {
+	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		addressMapper = func(address string) (string, error) {
 			return cf.rpcFactory.ReplaceGRPCPort(service.History, address)
@@ -115,11 +115,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
 	}
 
-	resolver, err := cf.monitor.GetResolver(service.History)
-	if err != nil {
-		return nil, err
-	}
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, resolver, addressMapper)
+	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, addressMapper)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
 	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)
@@ -155,7 +151,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	var rawClient matching.Client
 	var addressMapper matching.AddressMapperFn
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
-	if isGRPCOutbound(outboundConfig) {
+	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
 		addressMapper = func(address string) (string, error) {
 			return cf.rpcFactory.ReplaceGRPCPort(service.Matching, address)
@@ -164,11 +160,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
 	}
 
-	resolver, err := cf.monitor.GetResolver(service.Matching)
-	if err != nil {
-		return nil, err
-	}
-	peerResolver := matching.NewPeerResolver(resolver, addressMapper)
+	peerResolver := matching.NewPeerResolver(cf.resolver, addressMapper)
 
 	client := matching.NewClient(
 		timeout,
@@ -193,7 +185,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	largeTimeout time.Duration,
 ) (admin.Client, error) {
 	var client admin.Client
-	if isGRPCOutbound(config) {
+	if rpc.IsGRPCOutbound(config) {
 		client = admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(config))
 	} else {
 		client = admin.NewThriftClient(adminserviceclient.New(config))
@@ -215,7 +207,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 	longPollTimeout time.Duration,
 ) (frontend.Client, error) {
 	var client frontend.Client
-	if isGRPCOutbound(config) {
+	if rpc.IsGRPCOutbound(config) {
 		client = frontend.NewGRPCClient(
 			apiv1.NewDomainAPIYARPCClient(config),
 			apiv1.NewWorkflowAPIYARPCClient(config),
@@ -234,13 +226,4 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 		client = frontend.NewMetricClient(client, cf.metricsClient)
 	}
 	return client, nil
-}
-
-func isGRPCOutbound(config transport.ClientConfig) bool {
-	namer, ok := config.GetUnaryOutbound().(transport.Namer)
-	if !ok {
-		// This should not happen, unless yarpc older than v1.43.0 is used
-		panic("Outbound does not implement transport.Namer")
-	}
-	return namer.TransportName() == grpc.TransportName
 }

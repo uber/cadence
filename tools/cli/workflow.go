@@ -231,6 +231,10 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
 				},
 				cli.StringFlag{
+					Name:  FlagDecisionOffset,
+					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decision. Currently only negative number is supported, and only works with LastDecisionCompleted.",
+				},
+				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
 					Usage: "Binary checksum for resetType of BadBinary",
 				},
@@ -270,6 +274,11 @@ func newWorkflowCommands() []cli.Command {
 					Usage: "Another input file to use for excluding from resetting, only workflowID is needed.",
 				},
 				cli.StringFlag{
+					Name: FlagExcludeWorkflowIDByQuery,
+					Usage: "Another visibility SQL like query, but for excluding the results by workflowIDs. This is useful because a single query cannot do join operation. One use case is to " +
+						"find failed workflows excluding any workflow that has another run that is open or completed.",
+				},
+				cli.StringFlag{
 					Name:  FlagInputSeparator,
 					Value: "\t",
 					Usage: "Separator for input file(default to tab)",
@@ -286,6 +295,10 @@ func newWorkflowCommands() []cli.Command {
 				cli.BoolFlag{
 					Name:  FlagSkipCurrentOpen,
 					Usage: "Skip the workflow if the current run is open for the same workflowID as base.",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipCurrentCompleted,
+					Usage: "Skip the workflow if the current run is completed for the same workflowID as base.",
 				},
 				cli.BoolFlag{
 					Name: FlagSkipBaseIsNotCurrent,
@@ -305,6 +318,11 @@ func newWorkflowCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagResetType,
 					Usage: "where to reset. Support one of these: " + strings.Join(mapKeysToArray(resetTypesMap), ","),
+				},
+				cli.StringFlag{
+					Name: FlagDecisionOffset,
+					Usage: "based on the reset point calculated by resetType, this offset will move/offset the point by decision. " +
+						"Limitation: currently only negative number is supported, and only works with LastDecisionCompleted.",
 				},
 				cli.StringFlag{
 					Name:  FlagResetBadBinaryChecksum,
@@ -475,6 +493,14 @@ func newBatchCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagInputWithAlias,
 					Usage: "Optional input of signal",
+				},
+				cli.StringFlag{
+					Name:  FlagSourceClusterWithAlias,
+					Usage: "Required for batch replicate",
+				},
+				cli.StringFlag{
+					Name:  FlagTargetClusterWithAlias,
+					Usage: "Required for batch replicate",
 				},
 				cli.IntFlag{
 					Name:  FlagRPS,

@@ -56,6 +56,7 @@ type (
 	}
 
 	fetchTaskFunc func(
+		ctx context.Context,
 		clientBean client.Bean,
 		sourceCluster string,
 		currentCluster string,
@@ -76,7 +77,9 @@ type (
 		shutdownCh  chan struct{}
 		requestChan chan fetchRequest
 
-		fetchTaskFunc fetchTaskFunc
+		fetchCtx       context.Context
+		fetchCtxCancel context.CancelFunc
+		fetchTaskFunc  fetchTaskFunc
 	}
 )
 
@@ -111,6 +114,7 @@ func NewCrossClusterTaskFetchers(
 }
 
 func crossClusterTaskFetchFn(
+	ctx context.Context,
 	clientBean client.Bean,
 	sourceCluster string,
 	currentCluster string,
@@ -128,7 +132,7 @@ func crossClusterTaskFetchFn(
 		ShardIDs:      shardIDs,
 		TargetCluster: currentCluster,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), defaultFetchTimeout)
+	ctx, cancel := context.WithTimeout(ctx, defaultFetchTimeout)
 	defer cancel()
 	resp, err := adminClient.GetCrossClusterTasks(ctx, request)
 	if err != nil {
@@ -199,6 +203,7 @@ func newTaskFetcher(
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) *fetcherImpl {
+	fetchCtx, fetchCtxCancel := context.WithCancel(context.Background())
 	return &fetcherImpl{
 		status:         common.DaemonStatusInitialized,
 		currentCluster: currentCluster,
@@ -213,9 +218,11 @@ func newTaskFetcher(
 			tag.ComponentCrossClusterTaskFetcher,
 			tag.SourceCluster(sourceCluster),
 		),
-		shutdownCh:    make(chan struct{}),
-		requestChan:   make(chan fetchRequest, defaultRequestChanBufferSize),
-		fetchTaskFunc: fetchTaskFunc,
+		shutdownCh:     make(chan struct{}),
+		requestChan:    make(chan fetchRequest, defaultRequestChanBufferSize),
+		fetchCtx:       fetchCtx,
+		fetchCtxCancel: fetchCtxCancel,
+		fetchTaskFunc:  fetchTaskFunc,
 	}
 }
 
@@ -239,6 +246,7 @@ func (f *fetcherImpl) Stop() {
 	}
 
 	close(f.shutdownCh)
+	f.fetchCtxCancel()
 	if success := common.AwaitWaitGroup(&f.shutdownWG, time.Minute); !success {
 		f.logger.Warn("Task fetcher timedout on shutdown.", tag.LifeCycleStopTimedout)
 	}
@@ -338,7 +346,13 @@ func (f *fetcherImpl) fetch(
 	sw := f.metricsScope.StartTimer(metrics.CrossClusterFetchLatency)
 	defer sw.Stop()
 
-	responseByShard, err := f.fetchTaskFunc(f.clientBean, f.sourceCluster, f.currentCluster, outstandingRequests)
+	responseByShard, err := f.fetchTaskFunc(
+		f.fetchCtx,
+		f.clientBean,
+		f.sourceCluster,
+		f.currentCluster,
+		outstandingRequests,
+	)
 	if err != nil {
 		return err
 	}

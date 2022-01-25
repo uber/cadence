@@ -26,59 +26,57 @@ import (
 	"github.com/uber/cadence/common/membership"
 )
 
-type simpleMonitor struct {
+type simpleResolver struct {
 	hostInfo  *membership.HostInfo
-	resolvers map[string]membership.ServiceResolver
+	resolvers map[string]*simpleHashring
 }
 
-// NewSimpleMonitor returns a simple monitor interface
-func newSimpleMonitor(serviceName string, hosts map[string][]string) membership.Monitor {
-	resolvers := make(map[string]membership.ServiceResolver, len(hosts))
+// NewSimpleResolver returns a membership resolver interface
+func NewSimpleResolver(serviceName string, hosts map[string][]string) membership.Resolver {
+	resolvers := make(map[string]*simpleHashring, len(hosts))
 	for service, hostList := range hosts {
-		resolvers[service] = newSimpleResolver(service, hostList)
+		resolvers[service] = newSimpleHashring(hostList)
 	}
-	hostInfo := membership.NewHostInfo(hosts[serviceName][0], map[string]string{membership.RoleKey: serviceName})
-	return &simpleMonitor{hostInfo, resolvers}
+	return &simpleResolver{
+		hostInfo:  membership.NewHostInfo(hosts[serviceName][0]),
+		resolvers: resolvers,
+	}
 }
 
-func (s *simpleMonitor) Start() {
+func (s *simpleResolver) Start() {
 }
 
-func (s *simpleMonitor) Stop() {
+func (s *simpleResolver) Stop() {
 }
 
-func (s *simpleMonitor) EvictSelf() error {
+func (s *simpleResolver) EvictSelf() error {
 	return nil
 }
 
-func (s *simpleMonitor) WhoAmI() (*membership.HostInfo, error) {
+func (s *simpleResolver) WhoAmI() (*membership.HostInfo, error) {
 	return s.hostInfo, nil
 }
 
-func (s *simpleMonitor) GetResolver(service string) (membership.ServiceResolver, error) {
-	return s.resolvers[service], nil
+func (s *simpleResolver) Subscribe(service string, name string, notifyChannel chan<- *membership.ChangedEvent) error {
+	return nil
 }
 
-func (s *simpleMonitor) Lookup(service string, key string) (*membership.HostInfo, error) {
+func (s *simpleResolver) Unsubscribe(service string, name string) error {
+	return nil
+}
+
+func (s *simpleResolver) Lookup(service string, key string) (*membership.HostInfo, error) {
 	resolver, ok := s.resolvers[service]
 	if !ok {
-		return nil, fmt.Errorf("cannot lookup host for service %v", service)
+		return nil, fmt.Errorf("cannot lookup host for service %q", service)
 	}
 	return resolver.Lookup(key)
 }
 
-func (s *simpleMonitor) AddListener(service string, name string, notifyChannel chan<- *membership.ChangedEvent) error {
-	return nil
-}
-
-func (s *simpleMonitor) RemoveListener(service string, name string) error {
-	return nil
-}
-
-func (s *simpleMonitor) GetReachableMembers() ([]string, error) {
-	return nil, nil
-}
-
-func (s *simpleMonitor) GetMemberCount(service string) (int, error) {
+func (s *simpleResolver) MemberCount(service string) (int, error) {
 	return 0, nil
+}
+
+func (s *simpleResolver) Members(service string) ([]*membership.HostInfo, error) {
+	return nil, nil
 }

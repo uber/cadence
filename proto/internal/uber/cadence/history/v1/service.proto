@@ -246,6 +246,9 @@ message StartWorkflowExecutionResponse {
 message SignalWorkflowExecutionRequest {
   api.v1.SignalWorkflowExecutionRequest request = 1;
   string domain_id = 2;
+  // workflow execution that requests this signal, for making sure
+  // the workflow being signaled is actually a child of the workflow
+  // making the request
   api.v1.WorkflowExecution external_workflow_execution = 3;
   bool child_workflow_only = 4;
 }
@@ -274,6 +277,11 @@ message ResetWorkflowExecutionResponse {
 message TerminateWorkflowExecutionRequest {
   api.v1.TerminateWorkflowExecutionRequest request = 1;
   string domain_id = 2;
+  // workflow execution that requests this termination, for making sure
+  // the workflow being terminated is actually a child of the workflow
+  // making the request
+  api.v1.WorkflowExecution external_workflow_execution = 3;
+  bool child_workflow_only = 4;
 }
 
 message TerminateWorkflowExecutionResponse {
@@ -472,6 +480,9 @@ message RemoveSignalMutableStateResponse {
 message RequestCancelWorkflowExecutionRequest {
   string domain_id = 1;
   api.v1.RequestCancelWorkflowExecutionRequest cancel_request = 2;
+  // workflow execution that requests this cancellation, for making sure
+  // the workflow being cancelled is actually a child of the workflow
+  // making the request
   api.v1.ExternalExecutionInfo external_execution_info = 3;
   bool child_workflow_only = 4;
 }

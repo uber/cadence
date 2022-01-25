@@ -373,7 +373,7 @@ func (db *cdb) InsertTasks(
 				task.WorkflowID,
 				task.RunID,
 				scheduleID,
-				tasklistCondition.LastUpdatedTime,
+				task.CreatedTime,
 				ttl)
 		}
 	}

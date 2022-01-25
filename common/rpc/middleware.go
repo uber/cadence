@@ -22,6 +22,7 @@ package rpc
 
 import (
 	"context"
+	"io"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/metrics"
@@ -65,23 +66,43 @@ type ResponseInfo struct {
 	Size int
 }
 
-type responseInfoMiddleware struct{}
+type countingReadCloser struct {
+	reader    io.ReadCloser
+	bytesRead *int
+}
 
-func (m *responseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
+func (r *countingReadCloser) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	*r.bytesRead += n
+	return n, err
+}
+
+func (r *countingReadCloser) Close() (err error) {
+	return r.reader.Close()
+}
+
+// ResponseInfoMiddleware populates context with ResponseInfo structure which contains info about response that was received.
+// In particular, it counts the size of the response in bytes. Such information can be useful down the line, where payload are deserialized and no longer have their size.
+type ResponseInfoMiddleware struct{}
+
+func (m *ResponseInfoMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	response, err := out.Call(ctx, request)
 
 	if value := ctx.Value(_responseInfoContextKey); value != nil {
 		if responseInfo, ok := value.(*ResponseInfo); ok && response != nil {
-			responseInfo.Size = response.BodySize
+			// We can not use response.BodySize here, because it is not set on all transports.
+			// Instead wrap body reader with counter, that increments responseInfo.Size as it is read.
+			response.Body = &countingReadCloser{reader: response.Body, bytesRead: &responseInfo.Size}
 		}
 	}
 
 	return response, err
 }
 
-type inboundMetricsMiddleware struct{}
+// InboundMetricsMiddleware tags context with additional metric tags from incoming request.
+type InboundMetricsMiddleware struct{}
 
-func (m *inboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
+func (m *InboundMetricsMiddleware) Handle(ctx context.Context, req *transport.Request, resw transport.ResponseWriter, h transport.UnaryHandler) error {
 	ctx = metrics.TagContext(ctx,
 		metrics.CallerTag(req.Caller),
 		metrics.TransportTag(req.Transport),

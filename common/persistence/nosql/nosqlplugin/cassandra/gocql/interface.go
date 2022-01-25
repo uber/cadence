@@ -99,18 +99,19 @@ type (
 
 	// ClusterConfig is the config for cassandra connection
 	ClusterConfig struct {
-		Hosts             string
-		Port              int
-		User              string
-		Password          string
-		Keyspace          string
-		Region            string
-		Datacenter        string
-		MaxConns          int
-		TLS               *config.TLS
-		ProtoVersion      int
-		Consistency       Consistency
-		SerialConsistency SerialConsistency
-		Timeout           time.Duration
+		Hosts                 string
+		Port                  int
+		User                  string
+		Password              string
+		AllowedAuthenticators []string
+		Keyspace              string
+		Region                string
+		Datacenter            string
+		MaxConns              int
+		TLS                   *config.TLS
+		ProtoVersion          int
+		Consistency           Consistency
+		SerialConsistency     SerialConsistency
+		Timeout               time.Duration
 	}
 )

@@ -22,20 +22,21 @@ package cli
 
 import (
 	"context"
+	"time"
 
 	"go.uber.org/yarpc/transport/grpc"
-
 	"go.uber.org/yarpc/transport/tchannel"
 
+	"github.com/olivere/elastic"
 	"github.com/urfave/cli"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
 	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
-	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -60,6 +61,8 @@ const (
 type ClientFactory interface {
 	ServerFrontendClient(c *cli.Context) frontend.Client
 	ServerAdminClient(c *cli.Context) admin.Client
+
+	ElasticSearchClient(c *cli.Context) *elastic.Client
 }
 
 type clientFactory struct {
@@ -103,6 +106,22 @@ func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
 	}
 	return admin.NewThriftClient(serverAdmin.New(clientConfig))
+}
+
+// ElasticSearchClient builds an ElasticSearch client
+func (b *clientFactory) ElasticSearchClient(c *cli.Context) *elastic.Client {
+	url := getRequiredOption(c, FlagURL)
+	retrier := elastic.NewBackoffRetrier(elastic.NewExponentialBackoff(128*time.Millisecond, 513*time.Millisecond))
+
+	client, err := elastic.NewClient(
+		elastic.SetURL(url),
+		elastic.SetRetrier(retrier),
+	)
+	if err != nil {
+		b.logger.Fatal("Unable to create ElasticSearch client", zap.Error(err))
+	}
+
+	return client
 }
 
 func (b *clientFactory) ensureDispatcher(c *cli.Context) {

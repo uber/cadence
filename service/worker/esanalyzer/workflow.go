@@ -42,12 +42,13 @@ const (
 	wfTypesAggKey = "wfTypes"
 
 	// workflow constants
-	esAnalyzerWFID                = "cadence-sys-tl-esanalyzer"
-	taskListName                  = "cadence-sys-es-analyzer"
-	esanalyzerWFTypeName          = "cadence-sys-es-analyzer-workflow"
-	getWorkflowTypesActivity      = "cadence-sys-es-analyzer-get-workflow-types"
-	findStuckWorkflowsActivity    = "cadence-sys-es-analyzer-find-stuck-workflows"
-	refreshStuckWorkflowsActivity = "cadence-sys-es-analyzer-refresh-stuck-workflows"
+	esAnalyzerWFID                   = "cadence-sys-tl-esanalyzer"
+	taskListName                     = "cadence-sys-es-analyzer"
+	esanalyzerWFTypeName             = "cadence-sys-es-analyzer-workflow"
+	getWorkflowTypesActivity         = "cadence-sys-es-analyzer-get-workflow-types"
+	findStuckWorkflowsActivity       = "cadence-sys-es-analyzer-find-stuck-workflows"
+	refreshStuckWorkflowsActivity    = "cadence-sys-es-analyzer-refresh-stuck-workflows"
+	findLongRunningWorkflowsActivity = "cadence-sys-es-analyzer-find-long-running-workflows"
 )
 
 type (
@@ -105,6 +106,11 @@ var (
 		StartToCloseTimeout:    10 * time.Minute,
 		RetryPolicy:            &retryPolicy,
 	}
+	findLongRunningWorkflowsOptions = workflow.ActivityOptions{
+		ScheduleToStartTimeout: time.Minute,
+		StartToCloseTimeout:    15 * time.Minute,
+		RetryPolicy:            &retryPolicy,
+	}
 
 	wfOptions = cclient.StartWorkflowOptions{
 		ID:                           esAnalyzerWFID,
@@ -121,8 +127,10 @@ func initWorkflow(a *Analyzer) {
 	activity.RegisterWithOptions(w.findStuckWorkflows, activity.RegisterOptions{Name: findStuckWorkflowsActivity})
 	activity.RegisterWithOptions(
 		w.refreshStuckWorkflowsFromSameWorkflowType,
-		activity.RegisterOptions{Name: refreshStuckWorkflowsActivity},
-	)
+		activity.RegisterOptions{Name: refreshStuckWorkflowsActivity})
+	activity.RegisterWithOptions(
+		w.findLongRunningWorkflows,
+		activity.RegisterOptions{Name: findLongRunningWorkflowsActivity})
 }
 
 // workflowFunc queries ElasticSearch to detect issues and mitigates them
@@ -166,6 +174,134 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 			return err
 		}
 	}
+
+	err = workflow.ExecuteActivity(
+		workflow.WithActivityOptions(ctx, findLongRunningWorkflowsOptions),
+		findLongRunningWorkflowsActivity,
+	).Get(ctx, nil)
+
+	return err
+}
+
+func getLongRunningWorkflowsQuery(
+	maxWorkflowStartTime int64,
+	domainID string,
+	workflowType string,
+) (string, error) {
+	wfTypeMarshaled, err := json.Marshal(workflowType)
+	if err != nil {
+		return "", err
+	}
+	// No need to marshal domainID: it comes from domainEntry and its type is uuid
+	return fmt.Sprintf(`
+    {
+      "query": {
+          "bool": {
+              "must": [
+                  {
+                      "range" : {
+                          "StartTime" : {
+                              "lte" : "%d"
+                          }
+                      }
+                  },
+                  {
+                      "match" : {
+                          "DomainID" : "%s"
+                      }
+                  },
+                  {
+                      "match" : {
+                          "WorkflowType" : %s
+                      }
+                  }
+              ],
+              "must_not": {
+                "exists": {
+                  "field": "CloseTime"
+                }
+              }
+          }
+      },
+      "size": 0
+    }
+    `, maxWorkflowStartTime, domainID, string(wfTypeMarshaled)), nil
+}
+
+// findLongRunningWorkflows is activity to find long running workflows
+func (w *Workflow) findLongRunningWorkflows(ctx context.Context) error {
+	logger := activity.GetLogger(ctx)
+
+	workflowThresholds := w.analyzer.config.ESAnalyzerWorkflowDurationWarnThresholds()
+	if len(workflowThresholds) == 0 {
+		logger.Info("No workflow execution time thresholds defined")
+		return nil
+	}
+
+	var entries map[string]string
+	err := json.Unmarshal([]byte(workflowThresholds), &entries)
+	if err != nil {
+		return err
+	}
+
+	domainNameToID := map[string]string{}
+	for domainWFTypePair, threshold := range entries {
+		index := strings.Index(domainWFTypePair, "/")
+		// -1 no delimiter, 0 means the entry starts with /
+		if index < 1 || len(domainWFTypePair) <= (index+1) {
+			return types.InternalServiceError{
+				Message: fmt.Sprintf("Bad Workflow type entry %q", domainWFTypePair),
+			}
+		}
+		domainName := domainWFTypePair[:index]
+		wfType := domainWFTypePair[index+1:]
+		var domainID string
+		if _, ok := domainNameToID[domainName]; !ok {
+			domainEntry, err := w.analyzer.domainCache.GetDomain(domainName)
+			if err != nil {
+				logger.Error("Failed to get domain entry",
+					zap.Error(err),
+					zap.String("DomainName", domainName))
+				return err
+			}
+			domainID = domainEntry.GetInfo().ID
+			domainNameToID[domainName] = domainID
+		}
+
+		durVal, err := time.ParseDuration(threshold)
+		if err != nil {
+			return err
+		}
+		maxWorkflowStartTime := time.Now().Add(-durVal).UnixNano()
+
+		query, err := getLongRunningWorkflowsQuery(maxWorkflowStartTime, domainID, wfType)
+		if err != nil {
+			return err
+		}
+		response, err := w.analyzer.esClient.SearchRaw(ctx, w.analyzer.visibilityIndexName, query)
+		if err != nil {
+			logger.Error("Failed to query ElasticSearch for stuck workflows",
+				zap.Error(err),
+				zap.String("VisibilityQuery", query),
+			)
+			return err
+		}
+
+		if response.Hits.TotalHits > 0 {
+			logger.Warn("Slow running workflows detected",
+				zap.String("DomainName", domainName),
+				zap.String("WorkflowType", wfType))
+		}
+
+		tagged := w.analyzer.scopedMetricClient.Tagged(
+			metrics.DomainTag(domainName),
+			metrics.WorkflowTypeTag(wfType),
+		)
+		tagged.AddCounter(
+			metrics.ESAnalyzerNumLongRunningWorkflows,
+			response.Hits.TotalHits)
+	}
+
 	return nil
 }
 
@@ -212,14 +348,14 @@ func (w *Workflow) refreshStuckWorkflowsFromSameWorkflowType(
 				zap.String("workflowID", workflow.WorkflowID),
 				zap.String("runID", workflow.RunID),
 			)
-			w.analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsFailedToRefresh)
+			w.analyzer.scopedMetricClient.IncCounter(metrics.ESAnalyzerNumStuckWorkflowsFailedToRefresh)
 		} else {
 			logger.Info("Refreshed stuck workflow",
 				zap.String("domainName", domainName),
 				zap.String("workflowID", workflow.WorkflowID),
 				zap.String("runID", workflow.RunID),
 			)
-			w.analyzer.metricsClient.IncCounter(metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed)
+			w.analyzer.scopedMetricClient.IncCounter(metrics.ESAnalyzerNumStuckWorkflowsRefreshed)
 		}
 	}
 
@@ -345,8 +481,7 @@ func (w *Workflow) findStuckWorkflows(ctx context.Context, info WorkflowTypeInfo
 	}
 
 	if len(workflows) > 0 {
-		w.analyzer.metricsClient.AddCounter(
-			metrics.ESAnalyzerScope,
+		w.analyzer.scopedMetricClient.AddCounter(
 			metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
 			int64(len(workflows)))
 	}
@@ -461,7 +596,7 @@ func (w *Workflow) getWorkflowTypesFromDynamicConfig(
 		// -1 no delimiter, 0 means the entry starts with /
 		if index < 1 || len(domainWFTypePair) <= (index+1) {
 			return nil, types.InternalServiceError{
-				Message: fmt.Sprintf("Bad Workflow type entry '%v'", domainWFTypePair),
+				Message: fmt.Sprintf("Bad Workflow type entry %q", domainWFTypePair),
 			}
 		}
 		domainName := domainWFTypePair[:index]

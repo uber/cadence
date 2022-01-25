@@ -519,6 +519,25 @@ func newTimerQueueStandbyProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
+		if timer.TaskType == persistence.TaskTypeWorkflowTimeout ||
+			timer.TaskType == persistence.TaskTypeDeleteHistoryEvent {
+			domainEntry, err := shard.GetDomainCache().GetDomainByID(timer.DomainID)
+			if err == nil {
+				if domainEntry.HasReplicationCluster(clusterName) {
+					// guarantee the processing of workflow execution history deletion
+					return true, nil
+				}
+			} else {
+				if _, ok := err.(*types.EntityNotExistsError); !ok {
+					// retry the task if failed to find the domain
+					logger.Warn("Cannot find domain", tag.WorkflowDomainID(timer.DomainID))
+					return false, err
+				} else {
+					logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(timer.DomainID), tag.Value(timer))
+					return false, nil
+				}
+			}
+		}
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
 	}
 

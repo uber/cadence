@@ -69,21 +69,22 @@ type (
 
 	// Config contains all the service config for worker
 	Config struct {
-		ArchiverConfig                    *archiver.Config
-		IndexerCfg                        *indexer.Config
-		ScannerCfg                        *scanner.Config
-		BatcherCfg                        *batcher.Config
-		ESAnalyzerCfg                     *esanalyzer.Config
-		failoverManagerCfg                *failovermanager.Config
-		ThrottledLogRPS                   dynamicconfig.IntPropertyFn
-		PersistenceGlobalMaxQPS           dynamicconfig.IntPropertyFn
-		PersistenceMaxQPS                 dynamicconfig.IntPropertyFn
-		EnableBatcher                     dynamicconfig.BoolPropertyFn
-		EnableParentClosePolicyWorker     dynamicconfig.BoolPropertyFn
-		EnableFailoverManager             dynamicconfig.BoolPropertyFn
-		EnableWorkflowShadower            dynamicconfig.BoolPropertyFn
-		DomainReplicationMaxRetryDuration dynamicconfig.DurationPropertyFn
-		EnableESAnalyzer                  dynamicconfig.BoolPropertyFn
+		ArchiverConfig                      *archiver.Config
+		IndexerCfg                          *indexer.Config
+		ScannerCfg                          *scanner.Config
+		BatcherCfg                          *batcher.Config
+		ESAnalyzerCfg                       *esanalyzer.Config
+		failoverManagerCfg                  *failovermanager.Config
+		ThrottledLogRPS                     dynamicconfig.IntPropertyFn
+		PersistenceGlobalMaxQPS             dynamicconfig.IntPropertyFn
+		PersistenceMaxQPS                   dynamicconfig.IntPropertyFn
+		EnableBatcher                       dynamicconfig.BoolPropertyFn
+		EnableParentClosePolicyWorker       dynamicconfig.BoolPropertyFn
+		NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
+		EnableFailoverManager               dynamicconfig.BoolPropertyFn
+		EnableWorkflowShadower              dynamicconfig.BoolPropertyFn
+		DomainReplicationMaxRetryDuration   dynamicconfig.DurationPropertyFn
+		EnableESAnalyzer                    dynamicconfig.BoolPropertyFn
 	}
 )
 
@@ -159,25 +160,27 @@ func NewConfig(params *resource.Params) *Config {
 			ClusterMetadata:     params.ClusterMetadata,
 		},
 		ESAnalyzerCfg: &esanalyzer.Config{
-			ESAnalyzerPause:                 dc.GetBoolProperty(dynamicconfig.ESAnalyzerPause, common.DefaultESAnalyzerPause),
-			ESAnalyzerTimeWindow:            dc.GetDurationProperty(dynamicconfig.ESAnalyzerTimeWindow, common.DefaultESAnalyzerTimeWindow),
-			ESAnalyzerMaxNumDomains:         dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumDomains, common.DefaultESAnalyzerMaxNumDomains),
-			ESAnalyzerMaxNumWorkflowTypes:   dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumWorkflowTypes, common.DefaultESAnalyzerMaxNumWorkflowTypes),
-			ESAnalyzerLimitToTypes:          dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToTypes, common.DefaultESAnalyzerLimitToTypes),
-			ESAnalyzerLimitToDomains:        dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToDomains, common.DefaultESAnalyzerLimitToDomains),
-			ESAnalyzerNumWorkflowsToRefresh: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),
-			ESAnalyzerBufferWaitTime:        dc.GetDurationPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTime, common.DefaultESAnalyzerBufferWaitTime),
-			ESAnalyzerMinNumWorkflowsForAvg: dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg, common.DefaultESAnalyzerMinNumWorkflowsForAvg),
+			ESAnalyzerPause:                          dc.GetBoolProperty(dynamicconfig.ESAnalyzerPause, common.DefaultESAnalyzerPause),
+			ESAnalyzerTimeWindow:                     dc.GetDurationProperty(dynamicconfig.ESAnalyzerTimeWindow, common.DefaultESAnalyzerTimeWindow),
+			ESAnalyzerMaxNumDomains:                  dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumDomains, common.DefaultESAnalyzerMaxNumDomains),
+			ESAnalyzerMaxNumWorkflowTypes:            dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumWorkflowTypes, common.DefaultESAnalyzerMaxNumWorkflowTypes),
+			ESAnalyzerLimitToTypes:                   dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToTypes, common.DefaultESAnalyzerLimitToTypes),
+			ESAnalyzerLimitToDomains:                 dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToDomains, common.DefaultESAnalyzerLimitToDomains),
+			ESAnalyzerNumWorkflowsToRefresh:          dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),
+			ESAnalyzerBufferWaitTime:                 dc.GetDurationPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTime, common.DefaultESAnalyzerBufferWaitTime),
+			ESAnalyzerMinNumWorkflowsForAvg:          dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg, common.DefaultESAnalyzerMinNumWorkflowsForAvg),
+			ESAnalyzerWorkflowDurationWarnThresholds: dc.GetStringProperty(dynamicconfig.ESAnalyzerWorkflowDurationWarnThresholds, common.DefaultESAnalyzerWorkflowDurationWarnThresholds),
 		},
-		EnableBatcher:                     dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
-		EnableParentClosePolicyWorker:     dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
-		EnableESAnalyzer:                  dc.GetBoolProperty(dynamicconfig.EnableESAnalyzer, false),
-		EnableFailoverManager:             dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
-		EnableWorkflowShadower:            dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
-		ThrottledLogRPS:                   dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
-		PersistenceGlobalMaxQPS:           dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
-		PersistenceMaxQPS:                 dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
-		DomainReplicationMaxRetryDuration: dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration, 10*time.Minute),
+		EnableBatcher:                       dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
+		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
+		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
+		EnableESAnalyzer:                    dc.GetBoolProperty(dynamicconfig.EnableESAnalyzer, false),
+		EnableFailoverManager:               dc.GetBoolProperty(dynamicconfig.EnableFailoverManager, true),
+		EnableWorkflowShadower:              dc.GetBoolProperty(dynamicconfig.EnableWorkflowShadower, true),
+		ThrottledLogRPS:                     dc.GetIntProperty(dynamicconfig.WorkerThrottledLogRPS, 20),
+		PersistenceGlobalMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS, 0),
+		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS, 500),
+		DomainReplicationMaxRetryDuration:   dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration, 10*time.Minute),
 	}
 	advancedVisWritingMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
@@ -258,11 +261,13 @@ func (s *Service) Stop() {
 
 func (s *Service) startParentClosePolicyProcessor() {
 	params := &parentclosepolicy.BootstrapParams{
-		ServiceClient:  s.params.PublicClient,
-		MetricsClient:  s.GetMetricsClient(),
-		Logger:         s.GetLogger(),
-		TallyScope:     s.params.MetricScope,
-		FrontendClient: s.GetFrontendClient(), // frontend client with retry
+		ServiceClient: s.params.PublicClient,
+		MetricsClient: s.GetMetricsClient(),
+		Logger:        s.GetLogger(),
+		TallyScope:    s.params.MetricScope,
+		ClientBean:    s.GetClientBean(),
+		DomainCache:   s.GetDomainCache(),
+		NumWorkflows:  s.config.NumParentClosePolicySystemWorkflows(),
 	}
 	processor := parentclosepolicy.New(params)
 	if err := processor.Start(); err != nil {
@@ -336,7 +341,7 @@ func (s *Service) startReplicator() {
 		s.GetLogger(),
 		s.GetMetricsClient(),
 		s.GetHostInfo(),
-		s.GetWorkerServiceResolver(),
+		s.GetMembershipResolver(),
 		s.GetDomainReplicationQueue(),
 		domainReplicationTaskExecutor,
 		s.config.DomainReplicationMaxRetryDuration(),

@@ -53,7 +53,7 @@ type (
 		clientBean          client.Bean
 		esClient            es.GenericClient
 		logger              log.Logger
-		metricsClient       metrics.Client
+		scopedMetricClient  metrics.Scope
 		tallyScope          tally.Scope
 		visibilityIndexName string
 		resource            resource.Resource
@@ -63,15 +63,16 @@ type (
 
 	// Config contains all configs for ElasticSearch Analyzer
 	Config struct {
-		ESAnalyzerPause                 dynamicconfig.BoolPropertyFn
-		ESAnalyzerTimeWindow            dynamicconfig.DurationPropertyFn
-		ESAnalyzerMaxNumDomains         dynamicconfig.IntPropertyFn
-		ESAnalyzerMaxNumWorkflowTypes   dynamicconfig.IntPropertyFn
-		ESAnalyzerLimitToTypes          dynamicconfig.StringPropertyFn
-		ESAnalyzerLimitToDomains        dynamicconfig.StringPropertyFn
-		ESAnalyzerNumWorkflowsToRefresh dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
-		ESAnalyzerBufferWaitTime        dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
-		ESAnalyzerMinNumWorkflowsForAvg dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerPause                          dynamicconfig.BoolPropertyFn
+		ESAnalyzerTimeWindow                     dynamicconfig.DurationPropertyFn
+		ESAnalyzerMaxNumDomains                  dynamicconfig.IntPropertyFn
+		ESAnalyzerMaxNumWorkflowTypes            dynamicconfig.IntPropertyFn
+		ESAnalyzerLimitToTypes                   dynamicconfig.StringPropertyFn
+		ESAnalyzerLimitToDomains                 dynamicconfig.StringPropertyFn
+		ESAnalyzerNumWorkflowsToRefresh          dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerBufferWaitTime                 dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerMinNumWorkflowsForAvg          dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
+		ESAnalyzerWorkflowDurationWarnThresholds dynamicconfig.StringPropertyFn
 	}
 )
 
@@ -97,13 +98,17 @@ func New(
 		clientBean:          clientBean,
 		esClient:            esClient,
 		logger:              logger,
-		metricsClient:       metricsClient,
+		scopedMetricClient:  getScopedMetricsClient(metricsClient),
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 		resource:            resource,
 		domainCache:         domainCache,
 		config:              config,
 	}
+}
+
+func getScopedMetricsClient(metricsClient metrics.Client) metrics.Scope {
+	return metricsClient.Scope(metrics.ESAnalyzerScope)
 }
 
 // Start starts the scanner

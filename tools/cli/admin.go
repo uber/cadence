@@ -534,10 +534,6 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Name:  FlagURL,
 					Usage: "URL of ElasticSearch cluster",
 				},
-				cli.StringFlag{
-					Name:  FlagMuttleyDestinationWithAlias,
-					Usage: "Optional muttely destination to ElasticSearch cluster",
-				},
 			},
 			Action: func(c *cli.Context) {
 				AdminCatIndices(c)
@@ -551,10 +547,6 @@ func newAdminElasticSearchCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagURL,
 					Usage: "URL of ElasticSearch cluster",
-				},
-				cli.StringFlag{
-					Name:  FlagMuttleyDestinationWithAlias,
-					Usage: "Optional muttely destination to ElasticSearch cluster",
 				},
 				cli.StringFlag{
 					Name:  FlagIndex,
@@ -582,10 +574,6 @@ func newAdminElasticSearchCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagURL,
 					Usage: "URL of ElasticSearch cluster",
-				},
-				cli.StringFlag{
-					Name:  FlagMuttleyDestinationWithAlias,
-					Usage: "Optional muttely destination to ElasticSearch cluster",
 				},
 				cli.StringFlag{
 					Name:  FlagIndex,
@@ -950,6 +938,20 @@ func newDBCommands() []cli.Command {
 			),
 			Action: func(c *cli.Context) {
 				AdminDBClean(c)
+			},
+		},
+		{
+			Name:  "decode_thrift",
+			Usage: "decode thrift object of HEX, print into JSON if the HEX data is matching with any supported struct",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   FlagInputWithAlias,
+					EnvVar: "Input",
+					Usage:  "HEX input of the binary data, you may get from database query like SELECT HEX(...) FROM ...",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminDBDataDecodeThrift(c)
 			},
 		},
 	}

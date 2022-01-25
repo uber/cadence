@@ -54,6 +54,10 @@ func (n noopClientImpl) RecordTimer(scope int, timer int, d time.Duration) {
 	return
 }
 
+func (m *noopClientImpl) RecordHistogramDuration(scope int, timer int, d time.Duration) {
+	return
+}
+
 func (n noopClientImpl) UpdateGauge(scope int, gauge int, value float64) {
 	return
 }

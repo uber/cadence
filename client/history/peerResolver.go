@@ -23,6 +23,7 @@ package history
 import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 // PeerResolver is used to resolve history peers.
@@ -30,17 +31,17 @@ import (
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 type PeerResolver struct {
 	numberOfShards int
-	membership     membership.ServiceResolver
+	resolver       membership.Resolver
 	addressMapper  AddressMapperFn
 }
 
 type AddressMapperFn func(string) (string, error)
 
 // NewPeerResolver creates a new history peer resolver.
-func NewPeerResolver(numberOfShards int, membership membership.ServiceResolver, addressMapper AddressMapperFn) PeerResolver {
+func NewPeerResolver(numberOfShards int, resolver membership.Resolver, addressMapper AddressMapperFn) PeerResolver {
 	return PeerResolver{
 		numberOfShards: numberOfShards,
-		membership:     membership,
+		resolver:       resolver,
 		addressMapper:  addressMapper,
 	}
 }
@@ -66,7 +67,7 @@ func (pr PeerResolver) FromDomainID(domainID string) (string, error) {
 // FromHostAddress is used for further resolving.
 func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 	shardIDString := string(rune(shardID))
-	host, err := pr.membership.Lookup(shardIDString)
+	host, err := pr.resolver.Lookup(service.History, shardIDString)
 	if err != nil {
 		return "", err
 	}

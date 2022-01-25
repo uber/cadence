@@ -55,24 +55,25 @@ import (
 type esanalyzerWorkflowTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
-	activityEnv      *testsuite.TestActivityEnvironment
-	workflowEnv      *testsuite.TestWorkflowEnvironment
-	controller       *gomock.Controller
-	resource         *resource.Test
-	mockAdminClient  *admin.MockClient
-	mockDomainCache  *cache.MockDomainCache
-	clientBean       *client.MockBean
-	logger           *log.MockLogger
-	mockMetricClient *mocks.Client
-	mockESClient     *esMocks.GenericClient
-	analyzer         *Analyzer
-	workflow         *Workflow
-	config           Config
-	DomainID         string
-	DomainName       string
-	WorkflowType     string
-	WorkflowID       string
-	RunID            string
+	activityEnv        *testsuite.TestActivityEnvironment
+	workflowEnv        *testsuite.TestWorkflowEnvironment
+	controller         *gomock.Controller
+	resource           *resource.Test
+	mockAdminClient    *admin.MockClient
+	mockDomainCache    *cache.MockDomainCache
+	clientBean         *client.MockBean
+	logger             *log.MockLogger
+	mockMetricClient   *mocks.Client
+	scopedMetricClient *mocks.Scope
+	mockESClient       *esMocks.GenericClient
+	analyzer           *Analyzer
+	workflow           *Workflow
+	config             Config
+	DomainID           string
+	DomainName         string
+	WorkflowType       string
+	WorkflowID         string
+	RunID              string
 }
 
 func TestESAnalyzerWorkflowTestSuite(t *testing.T) {
@@ -101,15 +102,16 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	)
 
 	s.config = Config{
-		ESAnalyzerPause:                 dynamicconfig.GetBoolPropertyFn(false),
-		ESAnalyzerTimeWindow:            dynamicconfig.GetDurationPropertyFn(time.Hour * 24 * 30),
-		ESAnalyzerMaxNumDomains:         dynamicconfig.GetIntPropertyFn(500),
-		ESAnalyzerMaxNumWorkflowTypes:   dynamicconfig.GetIntPropertyFn(100),
-		ESAnalyzerLimitToTypes:          dynamicconfig.GetStringPropertyFn(""),
-		ESAnalyzerLimitToDomains:        dynamicconfig.GetStringPropertyFn(""),
-		ESAnalyzerNumWorkflowsToRefresh: dynamicconfig.GetIntPropertyFilteredByWorkflowType(2),
-		ESAnalyzerBufferWaitTime:        dynamicconfig.GetDurationPropertyFilteredByWorkflowType(time.Minute * 30),
-		ESAnalyzerMinNumWorkflowsForAvg: dynamicconfig.GetIntPropertyFilteredByWorkflowType(100),
+		ESAnalyzerPause:                          dynamicconfig.GetBoolPropertyFn(false),
+		ESAnalyzerTimeWindow:                     dynamicconfig.GetDurationPropertyFn(time.Hour * 24 * 30),
+		ESAnalyzerMaxNumDomains:                  dynamicconfig.GetIntPropertyFn(500),
+		ESAnalyzerMaxNumWorkflowTypes:            dynamicconfig.GetIntPropertyFn(100),
+		ESAnalyzerLimitToTypes:                   dynamicconfig.GetStringPropertyFn(""),
+		ESAnalyzerLimitToDomains:                 dynamicconfig.GetStringPropertyFn(""),
+		ESAnalyzerNumWorkflowsToRefresh:          dynamicconfig.GetIntPropertyFilteredByWorkflowType(2),
+		ESAnalyzerBufferWaitTime:                 dynamicconfig.GetDurationPropertyFilteredByWorkflowType(time.Minute * 30),
+		ESAnalyzerMinNumWorkflowsForAvg:          dynamicconfig.GetIntPropertyFilteredByWorkflowType(100),
+		ESAnalyzerWorkflowDurationWarnThresholds: dynamicconfig.GetStringPropertyFn(""),
 	}
 
 	s.activityEnv = s.NewTestActivityEnvironment()
@@ -121,7 +123,11 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.clientBean = client.NewMockBean(s.controller)
 	s.logger = &log.MockLogger{}
 	s.mockMetricClient = &mocks.Client{}
+	s.scopedMetricClient = &mocks.Scope{}
 	s.mockESClient = &esMocks.GenericClient{}
+
+	s.mockMetricClient.On("Scope", metrics.ESAnalyzerScope, mock.Anything).Return(s.scopedMetricClient).Once()
+	s.scopedMetricClient.On("Tagged", mock.Anything, mock.Anything).Return(s.scopedMetricClient).Once()
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
@@ -129,13 +135,13 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 
 	// SET UP ANALYZER
 	s.analyzer = &Analyzer{
-		svcClient:     s.resource.GetSDKClient(),
-		clientBean:    s.clientBean,
-		domainCache:   s.mockDomainCache,
-		logger:        s.logger,
-		metricsClient: s.mockMetricClient,
-		esClient:      s.mockESClient,
-		config:        &s.config,
+		svcClient:          s.resource.GetSDKClient(),
+		clientBean:         s.clientBean,
+		domainCache:        s.mockDomainCache,
+		logger:             s.logger,
+		scopedMetricClient: getScopedMetricsClient(s.mockMetricClient),
+		esClient:           s.mockESClient,
+		config:             &s.config,
 	}
 	s.activityEnv.SetTestTimeout(time.Second * 5)
 	s.activityEnv.SetWorkerOptions(worker.Options{BackgroundActivityContext: context.Background()})
@@ -156,6 +162,10 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		s.workflow.refreshStuckWorkflowsFromSameWorkflowType,
 		activity.RegisterOptions{Name: refreshStuckWorkflowsActivity},
 	)
+	s.workflowEnv.RegisterActivityWithOptions(
+		s.workflow.findLongRunningWorkflows,
+		activity.RegisterOptions{Name: findLongRunningWorkflowsActivity},
+	)
 
 	s.activityEnv.RegisterActivityWithOptions(
 		s.workflow.getWorkflowTypes,
@@ -166,6 +176,10 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.activityEnv.RegisterActivityWithOptions(
 		s.workflow.refreshStuckWorkflowsFromSameWorkflowType,
 		activity.RegisterOptions{Name: refreshStuckWorkflowsActivity},
+	)
+	s.activityEnv.RegisterActivityWithOptions(
+		s.workflow.findLongRunningWorkflows,
+		activity.RegisterOptions{Name: findLongRunningWorkflowsActivity},
 	)
 }
 
@@ -196,6 +210,8 @@ func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflow() {
 	}
 	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[0]).
 		Return(workflows, nil).Times(1)
+	s.workflowEnv.OnActivity(findLongRunningWorkflowsActivity, mock.Anything).
+		Return(nil).Times(1)
 
 	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows).Return(nil).Times(1)
 
@@ -238,6 +254,8 @@ func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflowMultipleWorkflowTypes()
 		Return(workflows1, nil).Times(1)
 	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[1]).
 		Return(workflows2, nil).Times(1)
+	s.workflowEnv.OnActivity(findLongRunningWorkflowsActivity, mock.Anything).
+		Return(nil).Times(1)
 
 	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows1).Return(nil).Times(1)
 	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows2).Return(nil).Times(1)
@@ -264,7 +282,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowT
 		},
 	}).Return(nil).Times(1)
 	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Once()
-	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Once()
+	s.scopedMetricClient.On("IncCounter", metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Once()
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.NoError(err)
@@ -298,7 +316,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowT
 		expectedRunIDs[request.Execution.RunID] = true
 	}).Times(2)
 	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Times(2)
-	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
+	s.scopedMetricClient.On("IncCounter", metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.NoError(err)
@@ -341,11 +359,32 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowI
 		expectedRunIDs[request.Execution.RunID] = true
 	}).Times(1)
 	s.logger.On("Info", "Refreshed stuck workflow", mock.Anything).Return().Times(2)
-	s.mockMetricClient.On("IncCounter", metrics.ESAnalyzerScope, metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
+	s.scopedMetricClient.On("IncCounter", metrics.ESAnalyzerNumStuckWorkflowsRefreshed).Return().Times(2)
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.Error(err)
 	s.EqualError(err, "InternalServiceError{Message: Inconsistent worklow. Expected domainID: deadbeef-0123-4567-890a-bcdef0123460, actual: another-domain-id}")
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestFindLongRunningWorkflows() {
+	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
+		&elasticsearch.RawResponse{
+			TookInMillis: 12,
+			Hits: elasticsearch.SearchHits{
+				TotalHits: 1234,
+			},
+		},
+		nil).Times(1)
+
+	s.scopedMetricClient.On(
+		"AddCounter",
+		metrics.ESAnalyzerNumLongRunningWorkflows,
+		int64(1234),
+	).Return().Times(1)
+
+	s.config.ESAnalyzerWorkflowDurationWarnThresholds = dynamicconfig.GetStringPropertyFn(`{"test-domain/workflow1":"1m"}`)
+	_, err := s.activityEnv.ExecuteActivity(s.workflow.findLongRunningWorkflows)
+	s.NoError(err)
 }
 
 func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflows() {
@@ -376,9 +415,8 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflows() {
 			},
 		},
 		nil).Times(1)
-	s.mockMetricClient.On(
+	s.scopedMetricClient.On(
 		"AddCounter",
-		metrics.ESAnalyzerScope,
 		metrics.ESAnalyzerNumStuckWorkflowsDiscovered,
 		int64(2),
 	).Return().Times(1)

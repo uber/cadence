@@ -27,17 +27,18 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/service"
 )
 
 func TestPeerResolver(t *testing.T) {
 	controller := gomock.NewController(t)
-	serviceResolver := membership.NewMockServiceResolver(controller)
-	serviceResolver.EXPECT().Lookup("taskListA").Return(membership.NewHostInfo("taskListA:thriftPort", nil), nil)
-	serviceResolver.EXPECT().Lookup("invalid").Return(nil, assert.AnError)
-	serviceResolver.EXPECT().Members().Return([]*membership.HostInfo{
-		membership.NewHostInfo("taskListA:thriftPort", nil),
-		membership.NewHostInfo("taskListB:thriftPort", nil),
-	})
+	serviceResolver := membership.NewMockResolver(controller)
+	serviceResolver.EXPECT().Lookup(service.Matching, "taskListA").Return(membership.NewHostInfo("taskListA:thriftPort"), nil)
+	serviceResolver.EXPECT().Lookup(service.Matching, "invalid").Return(nil, assert.AnError)
+	serviceResolver.EXPECT().Members(service.Matching).Return([]*membership.HostInfo{
+		membership.NewHostInfo("taskListA:thriftPort"),
+		membership.NewHostInfo("taskListB:thriftPort"),
+	}, nil)
 
 	r := NewPeerResolver(serviceResolver, fakeAddressMapper)
 

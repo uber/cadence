@@ -475,6 +475,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParentCro
 			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
 			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(common.EmptyVersion)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeRecordChildExeuctionCompleted, crossClusterTasks[0].GetType())
@@ -606,7 +607,7 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_SameClusterChild
 	)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChild_Abandon() {
+func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterAbandonedChild_Abandon() {
 	s.testProcessCloseExecutionNoParentHasFewChildren(
 		map[string]string{
 			"child_abandon":   s.remoteTargetDomainName,
@@ -614,15 +615,6 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.domainName,
 		},
 		func() {
-			// s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-			// 	func(request parentclosepolicy.Request) bool {
-			// 		fmt.Println(request.Executions)
-			// 		return len(request.Executions) == 3
-			// 	},
-			// )).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
 			s.expectCancelRequest(s.domainName)
 			s.expectTerminateRequest(s.domainName)
 		},
@@ -637,15 +629,8 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.childDomainName,
 		},
 		func() {
-			s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-				func(request parentclosepolicy.Request) bool {
-					return len(request.Executions) == 2
-				},
-			)).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
-			// s.expectCancelRequest(s.childDomainName)
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectCancelRequest(s.childDomainName)
 		},
 	)
 }
@@ -658,15 +643,8 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.remoteTargetDomainName,
 		},
 		func() {
-			s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-				func(request parentclosepolicy.Request) bool {
-					return len(request.Executions) == 2
-				},
-			)).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
-			// s.expectTerminateRequest(s.domainName)
+			s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectTerminateRequest(s.domainName)
 		},
 	)
 }
@@ -679,14 +657,7 @@ func (s *transferActiveTaskExecutorSuite) TestApplyParentPolicy_CrossClusterChil
 			"child_cancel":    s.remoteTargetDomainName,
 		},
 		func() {
-			s.mockParentClosePolicyClient.On("SendParentClosePolicyRequest", mock.Anything, mock.MatchedBy(
-				func(request parentclosepolicy.Request) bool {
-					return len(request.Executions) == 2
-				},
-			)).Return(nil).Times(1)
-			// TODO: uncomment the following and remove ParentClosePolicyClient mock after
-			// cross cluster apply parent close task is fixed
-			// s.expectCrossClusterApplyParentPolicyCalls()
+			s.expectCrossClusterApplyParentPolicyCalls()
 		},
 	)
 }
@@ -695,10 +666,14 @@ func (s *transferActiveTaskExecutorSuite) expectCancelRequest(childDomainName st
 	childDomainID, err := s.mockDomainCache.GetDomainID(childDomainName)
 	s.NoError(err)
 	s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest, option ...yarpc.CallOption,
+		func(
+			_ context.Context,
+			request *types.HistoryRequestCancelWorkflowExecutionRequest,
+			option ...yarpc.CallOption,
 		) error {
-			s.Equal(request.DomainUUID, childDomainID)
-			s.Equal(request.CancelRequest.Domain, childDomainName)
+			s.Equal(childDomainID, request.DomainUUID)
+			s.Equal(childDomainName, request.CancelRequest.Domain)
+			s.True(request.GetChildWorkflowOnly())
 			errors := []error{nil, &types.CancellationAlreadyRequestedError{}, &types.EntityNotExistsError{}}
 			return errors[rand.Intn(len(errors))]
 		},
@@ -709,10 +684,13 @@ func (s *transferActiveTaskExecutorSuite) expectTerminateRequest(childDomainName
 	childDomainID, err := s.mockDomainCache.GetDomainID(childDomainName)
 	s.NoError(err)
 	s.mockHistoryClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, option ...yarpc.CallOption,
+		func(
+			_ context.Context,
+			request *types.HistoryTerminateWorkflowExecutionRequest,
+			option ...yarpc.CallOption,
 		) error {
-			s.Equal(request.DomainUUID, childDomainID)
-			s.Equal(request.TerminateRequest.Domain, childDomainName)
+			s.Equal(childDomainID, request.DomainUUID)
+			s.Equal(childDomainName, request.TerminateRequest.Domain)
 			errors := []error{nil, &types.EntityNotExistsError{}}
 			return errors[rand.Intn(len(errors))]
 		},
@@ -721,6 +699,7 @@ func (s *transferActiveTaskExecutorSuite) expectTerminateRequest(childDomainName
 
 func (s *transferActiveTaskExecutorSuite) expectCrossClusterApplyParentPolicyCalls() {
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+		s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 		crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 		s.Len(crossClusterTasks, 1)
 		s.Equal(persistence.CrossClusterTaskTypeApplyParentClosePolicy, crossClusterTasks[0].GetType())
@@ -986,6 +965,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_CrossCluste
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeCancelExecution, crossClusterTasks[0].GetType())
@@ -1181,6 +1161,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_CrossCluste
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeSignalExecution, crossClusterTasks[0].GetType())
@@ -1469,6 +1450,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_CrossCl
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeStartChildExecution, crossClusterTasks[0].GetType())
@@ -1499,6 +1481,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_CrossCl
 			s.NoError(err)
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
+				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
 				s.Len(crossClusterTasks, 1)
 				s.Equal(persistence.CrossClusterTaskTypeStartChildExecution, crossClusterTasks[0].GetType())

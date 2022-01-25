@@ -168,6 +168,11 @@ func StartBatchJob(c *cli.Context) {
 		sigName = getRequiredOption(c, FlagSignalName)
 		sigVal = getRequiredOption(c, FlagInput)
 	}
+	var sourceCluster, targetCluster string
+	if batchType == batcher.BatchTypeReplicate {
+		sourceCluster = getRequiredOption(c, FlagSourceCluster)
+		targetCluster = getRequiredOption(c, FlagTargetCluster)
+	}
 	rps := c.Int(FlagRPS)
 
 	svcClient := cFactory.ServerFrontendClient(c)
@@ -213,6 +218,10 @@ func StartBatchJob(c *cli.Context) {
 		SignalParams: batcher.SignalParams{
 			SignalName: sigName,
 			Input:      sigVal,
+		},
+		ReplicateParams: batcher.ReplicateParams{
+			SourceCluster: sourceCluster,
+			TargetCluster: targetCluster,
 		},
 		RPS: rps,
 	}

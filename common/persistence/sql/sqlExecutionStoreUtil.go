@@ -817,7 +817,6 @@ func createCrossClusterTasks(
 			if targetRunID := task.(*p.CrossClusterRecordChildExecutionCompletedTask).TargetRunID; targetRunID != "" {
 				info.TargetRunID = serialization.MustParseUUID(targetRunID)
 			}
-			info.ScheduleID = task.(*p.CrossClusterRecordChildExecutionCompletedTask).InitiatedID
 
 		case p.CrossClusterTaskTypeApplyParentClosePolicy:
 			crossClusterTasksRows[i].TargetCluster = task.(*p.CrossClusterApplyParentClosePolicyTask).TargetCluster
@@ -932,7 +931,6 @@ func createTransferTasks(
 			if targetRunID := task.(*p.RecordChildExecutionCompletedTask).TargetRunID; targetRunID != "" {
 				info.TargetRunID = serialization.MustParseUUID(targetRunID)
 			}
-			info.ScheduleID = task.(*p.RecordChildExecutionCompletedTask).InitiatedID
 
 		case p.TransferTaskTypeApplyParentClosePolicy:
 			for targetDomainID := range task.(*p.ApplyParentClosePolicyTask).TargetDomainIDs {

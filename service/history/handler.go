@@ -41,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
@@ -1907,7 +1908,7 @@ func (h *handlerImpl) GetCrossClusterTasks(
 			if err != nil {
 				logger.Error("History engine not found for shard", tag.Error(err))
 				var owner string
-				if info, err := h.GetHistoryServiceResolver().Lookup(strconv.Itoa(int(shardID))); err == nil {
+				if info, err := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(int(shardID))); err == nil {
 					owner = info.GetAddress()
 				}
 				settable.Set(nil, shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), owner))
@@ -2007,7 +2008,7 @@ func (h *handlerImpl) convertError(err error) error {
 	switch err.(type) {
 	case *persistence.ShardOwnershipLostError:
 		shardID := err.(*persistence.ShardOwnershipLostError).ShardID
-		info, err := h.GetHistoryServiceResolver().Lookup(strconv.Itoa(shardID))
+		info, err := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(shardID))
 		if err == nil {
 			return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
 		}

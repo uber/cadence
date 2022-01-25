@@ -23,6 +23,8 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,12 +33,52 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
 	"github.com/uber/cadence/service/worker/scanner/executions"
 )
+
+// AdminDBDataDecodeThrift is the command to decode thrift binary into JSON
+func AdminDBDataDecodeThrift(c *cli.Context) {
+	input := getRequiredOption(c, FlagInput)
+
+	encoder := codec.NewThriftRWEncoder()
+	dataInput, err := hex.DecodeString(input)
+	if err != nil {
+		ErrorAndExit("input is not a valid hex string", err)
+	}
+	// this is an inconsistency in the code base, some place use ThriftRWEncoder(version0Thriftrw.go) some use thriftEncoder(thrift_encoder.go)
+	dataWithPrepend := []byte{0x59}
+	dataWithPrepend = append(dataWithPrepend, dataInput...)
+	datas := [][]byte{dataInput, dataWithPrepend}
+
+	found := false
+	for _, data := range datas {
+		for typeName, t := range decodingTypes {
+			err = encoder.Decode(data, t)
+			if err == nil {
+				// encoding back to confirm
+				data2, err := encoder.Encode(t)
+				if err != nil {
+					ErrorAndExit("cannot encode back to confirm", err)
+				}
+				if bytes.Compare(data, data2) == 0 {
+					fmt.Printf("=======Decode into type %v ========\n", typeName)
+					fmt.Println(anyToString(t, true, 0))
+					found = true
+				}
+			}
+		}
+	}
+
+	if !found {
+		ErrorAndExit("input data cannot be decoded into any struct", nil)
+	}
+
+}
 
 // AdminDBClean is the command to clean up unhealthy executions.
 // Input is a JSON stream provided via STDIN or a file.

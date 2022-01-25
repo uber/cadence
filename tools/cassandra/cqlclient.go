@@ -40,15 +40,16 @@ type (
 
 	// CQLClientConfig contains the configuration for cql client
 	CQLClientConfig struct {
-		Hosts        string
-		Port         int
-		User         string
-		Password     string
-		Keyspace     string
-		Timeout      int
-		NumReplicas  int
-		ProtoVersion int
-		TLS          *config.TLS
+		Hosts                 string
+		Port                  int
+		User                  string
+		Password              string
+		AllowedAuthenticators []string
+		Keyspace              string
+		Timeout               int
+		NumReplicas           int
+		ProtoVersion          int
+		TLS                   *config.TLS
 	}
 )
 
@@ -97,15 +98,16 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
 	cqlClient.session, err = gocql.GetRegisteredClient().CreateSession(gocql.ClusterConfig{
-		Hosts:        cfg.Hosts,
-		Port:         cfg.Port,
-		User:         cfg.User,
-		Password:     cfg.Password,
-		Keyspace:     cfg.Keyspace,
-		TLS:          cfg.TLS,
-		Timeout:      time.Duration(cfg.Timeout) * time.Second,
-		ProtoVersion: cfg.ProtoVersion,
-		Consistency:  gocql.All,
+		Hosts:                 cfg.Hosts,
+		Port:                  cfg.Port,
+		User:                  cfg.User,
+		Password:              cfg.Password,
+		AllowedAuthenticators: cfg.AllowedAuthenticators,
+		Keyspace:              cfg.Keyspace,
+		TLS:                   cfg.TLS,
+		Timeout:               time.Duration(cfg.Timeout) * time.Second,
+		ProtoVersion:          cfg.ProtoVersion,
+		Consistency:           gocql.All,
 	})
 	if err != nil {
 		return nil, err

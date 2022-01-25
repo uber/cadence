@@ -741,6 +741,87 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 	s.Equal(workflowExecutionRunning.GetRunID(), currentRunID)
 }
 
+// TestUpdateWorkflowExecutionTasks test
+func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTasks() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	domainID := "b0a8571c-0257-40ea-afcd-3a14eae181c0"
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "update-workflow-tasks-test",
+		RunID:      "5ba5e531-e46b-48d9-b4b3-859919839553",
+	}
+	task0, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil)
+	s.NoError(err0)
+	s.NotNil(task0, "Expected non empty task identifier.")
+
+	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.Equal(1, len(taskD), "Expected 1 decision task.")
+	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
+	s.NoError(err)
+
+	state1, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	s.NoError(err)
+	info1 := state1.ExecutionInfo
+	s.NotNil(info1, "Valid Workflow info expected.")
+	updatedInfo1 := copyWorkflowExecutionInfo(info1)
+	updatedStats1 := copyExecutionStats(state1.ExecutionStats)
+
+	now := time.Now()
+	remoteClusterName := "remote-cluster"
+	transferTasks := []p.Task{
+		&p.ActivityTask{
+			VisibilityTimestamp: now,
+			TaskID:              s.GetNextSequenceNumber(),
+			DomainID:            domainID,
+			TaskList:            "some randome tasklist name",
+			ScheduleID:          123,
+			Version:             common.EmptyVersion,
+		},
+	}
+	timerTasks := []p.Task{
+		&p.UserTimerTask{
+			VisibilityTimestamp: now.Add(time.Minute),
+			TaskID:              s.GetNextSequenceNumber(),
+			EventID:             124,
+			Version:             common.EmptyVersion,
+		},
+	}
+	crossClusterTasks := []p.Task{
+		&p.CrossClusterApplyParentClosePolicyTask{
+			ApplyParentClosePolicyTask: p.ApplyParentClosePolicyTask{
+				VisibilityTimestamp: now,
+				TaskID:              s.GetNextSequenceNumber(),
+				Version:             common.EmptyVersion,
+			},
+			TargetCluster: remoteClusterName,
+		},
+	}
+
+	err = s.UpdateWorkflowExecutionTasks(
+		ctx,
+		updatedInfo1,
+		updatedStats1,
+		int64(3),
+		transferTasks,
+		timerTasks,
+		crossClusterTasks,
+	)
+	s.NoError(err)
+
+	loadedTransferTasks, err := s.GetTransferTasks(ctx, 10, true)
+	s.NoError(err)
+	s.Len(loadedTransferTasks, len(transferTasks))
+
+	loadedTimerTasks, err := s.GetTimerIndexTasks(ctx, 10, true)
+	s.NoError(err)
+	s.Len(loadedTimerTasks, len(timerTasks))
+
+	loadedCrossClusterTasks, err := s.GetCrossClusterTasks(ctx, remoteClusterName, 0, 10, true)
+	s.NoError(err)
+	s.Len(loadedCrossClusterTasks, len(crossClusterTasks))
+}
+
 // TestCreateWorkflowExecutionBrandNew test
 func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -2016,7 +2097,7 @@ func (s *ExecutionManagerSuite) TestCancelTransferTaskTasks() {
 		TargetDomainID:          targetDomainID,
 		TargetWorkflowID:        targetWorkflowID,
 		TargetRunID:             targetRunID,
-		TargetChildWorkflowOnly: false,
+		TargetChildWorkflowOnly: targetChildWorkflowOnly,
 		InitiatedID:             1,
 	}}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -2429,7 +2510,6 @@ func (s *ExecutionManagerSuite) validateCrossClusterTasks(
 			s.Equal(task.TargetDomainID, loadedTaskInfo[index].TargetDomainID)
 			s.Equal(task.TargetWorkflowID, loadedTaskInfo[index].TargetWorkflowID)
 			s.Equal(task.TargetRunID, loadedTaskInfo[index].TargetRunID)
-			s.Equal(task.InitiatedID, loadedTaskInfo[index].ScheduleID)
 		case *p.CrossClusterApplyParentClosePolicyTask:
 			s.Equal(task.TargetDomainIDs, loadedTaskInfo[index].GetTargetDomainIDs())
 		default:
@@ -2493,7 +2573,7 @@ func (s *ExecutionManagerSuite) TestTransferTasksComplete() {
 		&p.SignalExecutionTask{now, currentTransferID + 10005, targetDomainID, targetWorkflowID, targetRunID, true, scheduleID, 555},
 		&p.StartChildExecutionTask{now, currentTransferID + 10006, targetDomainID, targetWorkflowID, scheduleID, 666},
 		&p.RecordWorkflowClosedTask{now, currentTransferID + 10007, 777},
-		&p.RecordChildExecutionCompletedTask{now, currentTransferID + 10008, targetDomainID, targetWorkflowID, targetRunID, scheduleID, 888},
+		&p.RecordChildExecutionCompletedTask{now, currentTransferID + 10008, targetDomainID, targetWorkflowID, targetRunID, 888},
 		&p.ApplyParentClosePolicyTask{now, currentTransferID + 10009, map[string]struct{}{targetDomainID: {}}, 999},
 	}
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{

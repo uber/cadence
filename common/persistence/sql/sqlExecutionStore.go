@@ -405,6 +405,8 @@ func (m *sqlExecutionStore) updateWorkflowExecutionTx(
 	}
 
 	switch request.Mode {
+	case p.UpdateWorkflowModeIgnoreCurrent:
+		// no-op
 	case p.UpdateWorkflowModeBypassCurrent:
 		if err := assertNotCurrentExecution(
 			ctx,

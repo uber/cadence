@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -32,7 +31,7 @@ import (
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	c "github.com/uber/cadence/common/dynamicconfig/configstore/config"
-	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/peerprovider/ringpopprovider"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -40,7 +39,7 @@ type (
 	// Config contains the configuration for a set of cadence services
 	Config struct {
 		// Ringpop is the ringpop related configuration
-		Ringpop membership.RingpopConfig `yaml:"ringpop"`
+		Ringpop ringpopprovider.Config `yaml:"ringpop"`
 		// Persistence contains the configuration for cadence datastores
 		Persistence Persistence `yaml:"persistence"`
 		// Log is the logging config
@@ -166,6 +165,8 @@ type (
 		// HistoryMaxConns is the desired number of conns to history store. Value specified
 		// here overrides the MaxConns config specified as part of datastore
 		HistoryMaxConns int `yaml:"historyMaxConns"`
+		// EnablePersistenceLatencyHistogramMetrics is to enable latency histogram metrics for persistence layer
+		EnablePersistenceLatencyHistogramMetrics bool `yaml:"enablePersistenceLatencyHistogramMetrics"`
 		// NumHistoryShards is the desired number of history shards. It's for computing the historyShardID from workflowID into [0, NumHistoryShards)
 		// Therefore, the value cannot be changed once set.
 		// TODO This config doesn't belong here, needs refactoring
@@ -209,6 +210,8 @@ type (
 		User string `yaml:"user"`
 		// Password is the cassandra password used for authentication by gocql client
 		Password string `yaml:"password"`
+		// AllowedAuthenticators informs the cassandra client to expect a custom authenticator
+		AllowedAuthenticators []string `yaml:"allowedAuthenticators"`
 		// Keyspace is the cassandra keyspace
 		Keyspace string `yaml:"keyspace"`
 		// Region is the region filter arg for cassandra
@@ -379,6 +382,8 @@ type (
 		Tags map[string]string `yaml:"tags"`
 		// Prefix sets the prefix to all outgoing metrics
 		Prefix string `yaml:"prefix"`
+		// ReportingInterval is the interval of metrics reporter
+		ReportingInterval time.Duration `yaml:"reportingInterval"` // defaults to 1s
 	}
 
 	// Statsd contains the config items for statsd metrics reporter
@@ -461,6 +466,11 @@ type (
 		// HostPort is the host port to connect on. Host can be DNS name
 		// Default to currentCluster's RPCAddress in ClusterInformation
 		HostPort string `yaml:"hostPort"`
+		// Transport is the tranport to use when communicating using the SDK client.
+		// Defaults to:
+		// - currentCluster's RPCTransport in ClusterInformation (if HostPort is not provided)
+		// - grpc (if HostPort is provided)
+		Transport string `yaml:"transport"`
 		// interval to refresh DNS. Default to 10s
 		RefreshInterval time.Duration `yaml:"RefreshInterval"`
 	}
@@ -531,18 +541,12 @@ func (c *Config) fillDefaults() {
 	if c.PublicClient.HostPort == "" && c.ClusterGroupMetadata != nil {
 		name := c.ClusterGroupMetadata.CurrentClusterName
 		currentCluster := c.ClusterGroupMetadata.ClusterGroup[name]
-		if currentCluster.RPCTransport != "grpc" {
-			c.PublicClient.HostPort = currentCluster.RPCAddress
-		} else {
-			// public client cannot use gRPC because GoSDK hasn't supported it. we need to fallback to Thrift
-			// TODO: remove this fallback after GoSDK supporting gRPC
-			thriftPort := c.Services["frontend"].RPC.Port // use the Thrift port from RPC config
-			host, _, err := net.SplitHostPort(currentCluster.RPCAddress)
-			if err != nil {
-				log.Fatalf("RPCAddress is invalid for cluster %v", name)
-			}
-			c.PublicClient.HostPort = fmt.Sprintf("%v:%v", host, thriftPort)
-		}
+		c.PublicClient.HostPort = currentCluster.RPCAddress
+		c.PublicClient.Transport = currentCluster.RPCTransport
+
+	}
+	if c.PublicClient.Transport == "" {
+		c.PublicClient.Transport = "grpc"
 	}
 
 	if c.ClusterGroupMetadata.ClusterRedirectionPolicy == nil && c.DCRedirectionPolicy != nil {

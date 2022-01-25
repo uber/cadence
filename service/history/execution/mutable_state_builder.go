@@ -4027,7 +4027,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	}
 
 	e.checksum = checksum
-	if err := e.cleanupTransaction(transactionPolicy); err != nil {
+	if err := e.cleanupTransaction(); err != nil {
 		return nil, nil, err
 	}
 	return workflowMutation, workflowEventsSeq, nil
@@ -4105,7 +4105,7 @@ func (e *mutableStateBuilder) CloseTransactionAsSnapshot(
 	}
 
 	e.checksum = checksum
-	if err := e.cleanupTransaction(transactionPolicy); err != nil {
+	if err := e.cleanupTransaction(); err != nil {
 		return nil, nil, err
 	}
 	return workflowSnapshot, workflowEventsSeq, nil
@@ -4165,9 +4165,7 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 	)
 }
 
-func (e *mutableStateBuilder) cleanupTransaction(
-	transactionPolicy TransactionPolicy,
-) error {
+func (e *mutableStateBuilder) cleanupTransaction() error {
 
 	// Clear all updates to prepare for the next session
 	e.hBuilder = NewHistoryBuilder(e, e.logger)

@@ -6,8 +6,9 @@ cadence:
   service: "cadence-frontend"
   address: "127.0.0.1:7833"
   #host: "127.0.0.1:7933" # replace address with host if using Thrift for compatibility
-  metrics:
-    statsd: ~
-    prometheus:
-      timerType: "histogram"
-      listenAddress: "127.0.0.1:8005"
+
+metrics:
+  statsd: ~
+  prometheus:
+    timerType: "histogram"
+    listenAddress: "127.0.0.1:8005"

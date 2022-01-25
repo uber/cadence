@@ -172,11 +172,8 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) isDomainNotActiveErr
 // return two values: the target cluster name, and whether or not forwarding to the active cluster
 func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndIsDomainNotActiveAutoForwarding(ctx context.Context, domainEntry *cache.DomainCacheEntry, apiName string) (string, bool) {
 	if !domainEntry.IsGlobalDomain() {
-		return policy.currentClusterName, false
-	}
-
-	if len(domainEntry.GetReplicationConfig().Clusters) == 1 {
-		// do not do dc redirection if domain is only targeting at 1 dc (effectively local domain)
+		// do not do dc redirection if domain is local domain,
+		// for global domains with 1 dc, it's still useful to do auto-forwarding during cluster migration
 		return policy.currentClusterName, false
 	}
 
