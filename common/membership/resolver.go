@@ -146,12 +146,7 @@ func (rpo *MultiringResolver) Stop() {
 
 // WhoAmI asks to provide current instance address
 func (rpo *MultiringResolver) WhoAmI() (*HostInfo, error) {
-	host, err := rpo.provider.WhoAmI()
-	if err != nil {
-		return nil, err
-	}
-
-	return host, nil
+	return rpo.provider.WhoAmI()
 }
 
 // EvictSelf is used to remove this host from membership ring

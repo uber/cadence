@@ -138,10 +138,12 @@ func (r *Provider) Start() {
 
 	// set tchannel port to labels
 	_, port, err := net.SplitHostPort(r.channel.PeerInfo().HostPort)
-	if err == nil {
-		if err = labels.Set(portTchannel, port); err != nil {
-			r.logger.Fatal("unable to set ringpop tchannel label", tag.Error(err))
-		}
+	if err != nil {
+		r.logger.Fatal("unable get tchannel port", tag.Error(err))
+	}
+
+	if err = labels.Set(portTchannel, port); err != nil {
+		r.logger.Fatal("unable to set ringpop tchannel label", tag.Error(err))
 	}
 
 	if err = labels.Set(roleKey, r.service); err != nil {
@@ -199,7 +201,7 @@ func (r *Provider) GetMembers(service string) ([]*membership.HostInfo, error) {
 		if v, ok := member.Label(portTchannel); ok {
 			port, err := labelToPort(v)
 			if err != nil {
-				r.logger.Warn("port cannot be converted", tag.Error(err), tag.Value(v))
+				r.logger.Warn("tchannel port cannot be converted", tag.Error(err), tag.Value(v))
 			} else {
 				portMap[portTchannel] = port
 			}
@@ -208,7 +210,7 @@ func (r *Provider) GetMembers(service string) ([]*membership.HostInfo, error) {
 		if v, ok := member.Label(portgRPC); ok {
 			port, err := labelToPort(v)
 			if err != nil {
-				r.logger.Warn("port cannot be converted", tag.Error(err), tag.Value(v))
+				r.logger.Warn("grpc port cannot be converted", tag.Error(err), tag.Value(v))
 			} else {
 				portMap[portgRPC] = port
 			}
