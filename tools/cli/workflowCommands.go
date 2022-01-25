@@ -41,7 +41,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
-	s "go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -1549,7 +1548,7 @@ func getWorkflowStatus(statusStr string) types.WorkflowExecutionCloseStatus {
 }
 
 func getWorkflowIDReusePolicy(value int) *types.WorkflowIDReusePolicy {
-	if value >= 0 && value <= len(s.WorkflowIdReusePolicy_Values()) {
+	if value >= 0 && types.WorkflowIDReusePolicy(value) <= types.WorkflowIDReusePolicyTerminateIfRunning {
 		return types.WorkflowIDReusePolicy(value).Ptr()
 	}
 	// At this point, the policy should return if the value is valid

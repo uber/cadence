@@ -34,8 +34,6 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common/types"
 
-	"go.uber.org/cadence/.gen/go/shared"
-
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
@@ -296,9 +294,9 @@ func failoverStart(c *cli.Context, params *startParams) {
 		// block if there is an on-going failover drill
 		if err := executePauseOrResume(c, failovermanager.DrillWorkflowID, true); err != nil {
 			switch err.(type) {
-			case *shared.EntityNotExistsError:
+			case *types.EntityNotExistsError:
 				break
-			case *shared.WorkflowExecutionAlreadyCompletedError:
+			case *types.WorkflowExecutionAlreadyCompletedError:
 				break
 			default:
 				ErrorAndExit("Failed to send pase signal to drill workflow", err)
