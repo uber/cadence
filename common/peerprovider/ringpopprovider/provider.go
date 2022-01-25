@@ -78,22 +78,25 @@ func New(
 
 	discoveryProvider, err := newDiscoveryProvider(config, logger)
 	if err != nil {
-		return nil, fmt.Errorf("ringpop discovery provider: %v", err)
+		return nil, fmt.Errorf("ringpop discovery provider: %w", err)
 	}
 
 	bootstrapOpts := &swim.BootstrapOptions{
 		MaxJoinDuration:  config.MaxJoinDuration,
 		DiscoverProvider: discoveryProvider,
 	}
+
 	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
 	if err != nil {
-		logger.Fatal("ringpop creation failed")
+		return nil, fmt.Errorf("ringpop instance creation: %w", err)
 	}
+
 	return NewRingpopProvider(service, rp, bootstrapOpts, channel, logger), nil
 }
 
 // NewRingpopProvider sets up ringpop based peer provider
-func NewRingpopProvider(service string,
+func NewRingpopProvider(
+	service string,
 	rp *ringpop.Ringpop,
 	bootstrapOpts *swim.BootstrapOptions,
 	channel tchannel.Channel,
@@ -186,7 +189,7 @@ func (r *Provider) SelfEvict() error {
 func (r *Provider) GetMembers(service string) ([]*membership.HostInfo, error) {
 	var res []*membership.HostInfo
 
-	// add ports also
+	// filter member by service name, add port info to Hostinfo if they are present
 	memberData := func(member swim.Member) bool {
 		portMap := make(membership.PortMap)
 		if v, ok := member.Label(roleKey); !ok || v != service {
@@ -194,18 +197,18 @@ func (r *Provider) GetMembers(service string) ([]*membership.HostInfo, error) {
 		}
 
 		if v, ok := member.Label(portTchannel); ok {
-			port, err := portFromLabel(v)
+			port, err := labelToPort(v)
 			if err != nil {
-				r.logger.Warn("port cannot be converted", tag.Error(err))
+				r.logger.Warn("port cannot be converted", tag.Error(err), tag.Value(v))
 			} else {
 				portMap[portTchannel] = port
 			}
 		}
 
 		if v, ok := member.Label(portgRPC); ok {
-			port, err := portFromLabel(v)
+			port, err := labelToPort(v)
 			if err != nil {
-				r.logger.Warn("port cannot be converted", tag.Error(err))
+				r.logger.Warn("port cannot be converted", tag.Error(err), tag.Value(v))
 			} else {
 				portMap[portgRPC] = port
 			}
@@ -259,10 +262,10 @@ func (r *Provider) Subscribe(name string, notifyChannel chan<- *membership.Chang
 	return nil
 }
 
-func portFromLabel(port string) (uint16, error) {
-	parsed, err := strconv.ParseInt(port, 0, 16)
+func labelToPort(label string) (uint16, error) {
+	port, err := strconv.ParseInt(label, 0, 16)
 	if err != nil {
 		return 0, err
 	}
-	return uint16(parsed), nil
+	return uint16(port), nil
 }
