@@ -70,7 +70,7 @@ type ring struct {
 	members struct {
 		sync.Mutex
 		refreshed time.Time
-		keys      map[string]struct{} // for de-duping change notifications
+		keys      map[string]*HostInfo // for mapping ip:port to HostInfo
 	}
 
 	subscribers struct {
@@ -89,11 +89,11 @@ func newHashring(
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
-		logger:       logger.WithTags(tag.ComponentServiceResolver),
+		logger:       logger,
 		refreshChan:  make(chan *ChangedEvent),
 	}
 
-	hashring.members.keys = make(map[string]struct{})
+	hashring.members.keys = make(map[string]*HostInfo)
 	hashring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 
 	hashring.value.Store(emptyHashring())
@@ -160,7 +160,11 @@ func (r *ring) Lookup(
 		}
 		return nil, ErrInsufficientHosts
 	}
-	return NewHostInfo(addr), nil
+	host, ok := r.members.keys[addr]
+	if !ok {
+		return nil, fmt.Errorf("host not found in member keys, host: %q", addr)
+	}
+	return host, nil
 }
 
 // Subscribe registers callback watcher.
@@ -197,12 +201,19 @@ func (r *ring) MemberCount() int {
 }
 
 func (r *ring) Members() []*HostInfo {
-	var servers []*HostInfo
-	for _, s := range r.ring().Servers() {
-		servers = append(servers, NewHostInfo(s))
+	servers := r.ring().Servers()
+
+	var hosts = make([]*HostInfo, 0, len(servers))
+	for _, s := range servers {
+		host, ok := r.members.keys[s]
+		if !ok {
+			r.logger.Warn("host not found in hashring keys", tag.Address(s))
+			continue
+		}
+		hosts = append(hosts, host)
 	}
 
-	return servers
+	return hosts
 }
 
 func (r *ring) refresh() error {
@@ -232,7 +243,7 @@ func (r *ring) refresh() error {
 	r.members.keys = newMembersMap
 	r.members.refreshed = time.Now()
 	r.value.Store(ring)
-	r.logger.Info("refreshed ring members", tag.Service(r.service), tag.Value(members))
+	r.logger.Info("refreshed ring members", tag.Value(members))
 
 	return nil
 }
@@ -262,11 +273,11 @@ func (r *ring) ring() *hashring.HashRing {
 	return r.value.Load().(*hashring.HashRing)
 }
 
-func (r *ring) compareMembers(members []*HostInfo) (map[string]struct{}, bool) {
+func (r *ring) compareMembers(members []*HostInfo) (map[string]*HostInfo, bool) {
 	changed := false
-	newMembersMap := make(map[string]struct{}, len(members))
+	newMembersMap := make(map[string]*HostInfo, len(members))
 	for _, member := range members {
-		newMembersMap[member.GetAddress()] = struct{}{}
+		newMembersMap[member.GetAddress()] = member
 		if _, ok := r.members.keys[member.GetAddress()]; !ok {
 			changed = true
 		}

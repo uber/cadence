@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -88,7 +89,7 @@ func NewResolver(
 	provider PeerProvider,
 	logger log.Logger,
 ) (*MultiringResolver, error) {
-	return NewMultiringResolver(service.List, provider, logger), nil
+	return NewMultiringResolver(service.List, provider, logger.WithTags(tag.ComponentServiceResolver)), nil
 }
 
 // NewMultiringResolver creates hashrings for all services
