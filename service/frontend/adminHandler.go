@@ -32,9 +32,11 @@ import (
 
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -312,6 +314,115 @@ func (adh *adminHandlerImpl) RemoveTask(
 	if err := adh.GetHistoryClient().RemoveTask(ctx, request); err != nil {
 		return adh.error(err, scope)
 	}
+	return nil
+}
+
+// DeleteWorkflow delete a workflow execution for admin
+func (h *adminHandlerImpl) DeleteWorkflow(
+	ctx context.Context,
+	domainName string,
+	workflowId string,
+	runId string,
+	skipError bool,
+) error {
+	logger := h.GetLogger()
+	resp, err := h.DescribeWorkflowExecution(
+		ctx,
+		&types.AdminDescribeWorkflowExecutionRequest{
+			Domain: domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: workflowId,
+				RunID:      runId,
+			},
+		})
+	if err != nil {
+		return err
+	}
+
+	msStr := resp.GetMutableStateInDatabase()
+	ms := persistence.WorkflowMutableState{}
+	err = json.Unmarshal([]byte(msStr), &ms)
+	if err != nil {
+		return err
+	}
+	domainID := ms.ExecutionInfo.DomainID
+	shardID := resp.GetShardID()
+	shardIDInt, err := strconv.Atoi(shardID)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	histV2 := h.GetHistoryManager()
+	exeStore, err := h.GetExecutionManager(shardIDInt)
+	if err != nil {
+		return err
+	}
+
+	branchInfo := shared.HistoryBranch{}
+	thriftrwEncoder := codec.NewThriftRWEncoder()
+	branchTokens := [][]byte{ms.ExecutionInfo.BranchToken}
+	if ms.VersionHistories != nil {
+		// if VersionHistories is set, then all branch infos are stored in VersionHistories
+		branchTokens = [][]byte{}
+		for _, versionHistory := range ms.VersionHistories.ToInternalType().Histories {
+			branchTokens = append(branchTokens, versionHistory.BranchToken)
+		}
+	}
+
+	for _, branchToken := range branchTokens {
+		err = thriftrwEncoder.Decode(branchToken, &branchInfo)
+		if err != nil {
+			return err
+		}
+		logger.Error(fmt.Sprintf("Deleting history events for %#v", branchInfo))
+		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+			ShardID:     &shardIDInt,
+		})
+		if err != nil {
+			if skipError {
+				logger.Error(fmt.Sprintf("Failed to delete history %#v", err))
+				continue
+			} else {
+				return err
+			}
+		}
+	}
+
+	req := &persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowId,
+		RunID:      runId,
+	}
+
+	err = exeStore.DeleteWorkflowExecution(ctx, req)
+	if err != nil {
+		if skipError {
+			logger.Error(fmt.Sprintf("Delete mutableState row failed: %#v", err))
+		} else {
+			return err
+		}
+	}
+	fmt.Println("delete mutableState row successfully")
+
+	deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowId,
+		RunID:      runId,
+	}
+
+	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
+	if err != nil {
+		if skipError {
+			logger.Error(fmt.Sprintf("Delete current row failed: %#v", err))
+		} else {
+			return err
+		}
+	}
+	logger.Info(fmt.Sprintf("Deleted current row successfully %#v", deleteCurrentReq))
+
 	return nil
 }
 
