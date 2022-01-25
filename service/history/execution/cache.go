@@ -307,6 +307,27 @@ func (c *Cache) makeReleaseFunc(
 						// TODO see issue #668, there are certain type or errors which can bypass the clear
 						context.Clear()
 					}
+					if domainName == "cadence-canary" {
+						if callerScope == metrics.TimerActiveTaskDeleteHistoryEventScope {
+							time.Sleep(67 * time.Millisecond)
+						} else if callerScope == metrics.TransferActiveTaskStartChildExecutionScope {
+							time.Sleep(32 * time.Millisecond)
+						} else if callerScope == metrics.HistoryCacheGetOrCreateCurrentScope {
+							time.Sleep(29 * time.Millisecond)
+						} else if callerScope == metrics.TransferActiveTaskSignalExecutionScope {
+							time.Sleep(20 * time.Millisecond)
+						} else if callerScope == metrics.TransferActiveTaskCancelExecutionScope {
+							time.Sleep(18 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRespondDecisionTaskCompletedScope {
+							time.Sleep(18 * time.Millisecond)
+						} else if callerScope == metrics.HistoryResetWorkflowExecutionScope {
+							time.Sleep(17 * time.Millisecond)
+						} else if callerScope == metrics.PersistenceUpdateWorkflowExecutionScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.TimerActiveTaskActivityTimeoutScope {
+							time.Sleep(5 * time.Millisecond)
+						}
+					}
 					context.Unlock()
 					c.metricsClient.Scope(callerScope, metrics.DomainTag(domainName)).RecordTimer(metrics.LockHoldLatency, time.Since(start))
 					c.Release(key)
