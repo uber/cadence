@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/elasticsearch"
 	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -53,7 +54,7 @@ type esProcessorSuite struct {
 
 var (
 	testIndex     = "test-index"
-	testType      = esDocType
+	testType      = elasticsearch.GetESDocType()
 	testID        = "test-doc-id"
 	testStopWatch = metrics.NopStopwatch()
 	testScope     = metrics.ESProcessorScope

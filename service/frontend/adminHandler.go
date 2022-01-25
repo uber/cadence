@@ -426,6 +426,36 @@ func (h *adminHandlerImpl) DeleteWorkflow(
 	return nil
 }
 
+// ElasticSearchDelete used to delete documents from ElasticSearch with input of list result
+func (adh *adminHandlerImpl) ElasticSearchDeleteWorkflow(
+	ctx context.Context,
+	domainName string,
+	workflowId string,
+	runId string,
+) error {
+	logger := adh.GetLogger()
+	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
+		logger.Info(fmt.Sprintf("ElasticSearch isn't configured for this Cadence cluster: %#v", err))
+		return nil
+	}
+
+	esClient := adh.params.ESClient
+	indexName := adh.params.ESConfig.GetVisibilityIndex()
+	err := esClient.DeleteWorkflow(ctx, indexName, workflowId, runId)
+	if err != nil {
+		logger.Error("Failed to delete corrupt workflow visibility record.",
+			tag.WorkflowDomainName(domainName),
+			tag.WorkflowID(workflowId),
+			tag.WorkflowRunID(runId))
+	} else {
+		logger.Info("Corrupt workflow visibility record successfully deleted.",
+			tag.WorkflowDomainName(domainName),
+			tag.WorkflowID(workflowId),
+			tag.WorkflowRunID(runId))
+	}
+	return err
+}
+
 // CloseShard returns information about the internal states of a history host
 func (adh *adminHandlerImpl) CloseShard(
 	ctx context.Context,

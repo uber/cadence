@@ -760,3 +760,10 @@ func (c *elasticV6) getSearchResult(
 
 	return c.search(ctx, params)
 }
+
+func (c *elasticV6) DeleteWorkflow(ctx context.Context, indexName string, workflowID string, runID string) error {
+	docID := GenerateDocID(workflowID, runID)
+	_, err := c.client.Delete().Index(indexName).Type(GetESDocType()).
+		Id(docID).Refresh("true").Do(ctx)
+	return err
+}
