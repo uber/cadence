@@ -55,18 +55,24 @@ func TestNewCreatesAllRings(t *testing.T) {
 
 func TestMethodsAreRoutedToARing(t *testing.T) {
 	var changeCh = make(chan *ChangedEvent)
-	a, _ := newTestResolver(t)
+	a, pp := newTestResolver(t)
+
 	// add members to this ring
-	r, _ := a.getRing("test-worker")
-	ring := emptyHashring()
+	//ring := emptyHashring()
+	hosts := []*HostInfo{}
 	for _, addr := range []string{"127", "128"} {
-		host := NewHostInfo(addr)
-		ring.AddMembers(host)
+		hosts = append(hosts, NewHostInfo(addr))
 	}
 
-	r.value.Store(ring)
+	pp.EXPECT().GetMembers("test-worker").Return(hosts, nil).Times(1)
 
-	hi, err := a.Lookup("test-worker", "key")
+	r, err := a.getRing("test-worker")
+	r.refresh()
+
+	assert.NoError(t, err)
+
+	hi, err := r.Lookup("key")
+	assert.NoError(t, err)
 	assert.Equal(t, "127", hi.GetAddress())
 
 	// the same ring will be picked here

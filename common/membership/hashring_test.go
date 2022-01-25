@@ -35,9 +35,9 @@ import (
 
 func testCompareMembers(t *testing.T, curr []*HostInfo, new []*HostInfo, hasDiff bool) {
 	hashring := &ring{}
-	currMembers := make(map[string]struct{}, len(curr))
+	currMembers := make(map[string]*HostInfo, len(curr))
 	for _, m := range curr {
-		currMembers[m.GetAddress()] = struct{}{}
+		currMembers[m.GetAddress()] = m
 	}
 	hashring.members.keys = currMembers
 	newMembers, changed := hashring.compareMembers(new)
@@ -180,25 +180,5 @@ func TestStopWillStopProvider(t *testing.T) {
 	hr := newHashring("test-service", pp, log.NewNoop())
 	hr.status = common.DaemonStatusStarted
 	hr.Stop()
-
-}
-
-func TestMembersUseOnlyLocalRing(t *testing.T) {
-
-	hr := newHashring("test-service",
-		nil, /* provider */
-		log.NewNoop(),
-	)
-	assert.Nil(t, hr.Members())
-
-	ring := emptyHashring()
-	for _, addr := range []string{"127", "128"} {
-		host := NewHostInfo(addr)
-		ring.AddMembers(host)
-	}
-	hr.value.Store(ring)
-
-	assert.Equal(t, 2, len(hr.Members()))
-	assert.Equal(t, 2, hr.MemberCount())
 
 }
