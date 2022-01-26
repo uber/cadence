@@ -309,9 +309,9 @@ func (c *Cache) makeReleaseFunc(
 					}
 					if domainName == "cadence-canary" {
 						if callerScope == metrics.TimerActiveTaskDeleteHistoryEventScope {
-							time.Sleep(67 * time.Millisecond)
-						} else if callerScope == metrics.TransferActiveTaskStartChildExecutionScope {
-							time.Sleep(32 * time.Millisecond)
+							//	time.Sleep(67 * time.Millisecond)
+							//} else if callerScope == metrics.TransferActiveTaskStartChildExecutionScope {
+							//	time.Sleep(32 * time.Millisecond)
 						} else if callerScope == metrics.HistoryCacheGetOrCreateCurrentScope {
 							time.Sleep(29 * time.Millisecond)
 							//} else if callerScope == metrics.TransferActiveTaskSignalExecutionScope {
