@@ -230,7 +230,7 @@ func StartBatchJob(c *cli.Context) {
 		ErrorAndExit("Failed to encode batch job parameters", err)
 	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
-		"Reason": []byte(reason),
+		"Reason": reason,
 	})
 	if err != nil {
 		ErrorAndExit("Failed to encode batch job memo", err)
