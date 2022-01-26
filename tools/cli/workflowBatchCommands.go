@@ -48,7 +48,7 @@ func TerminateBatchJob(c *cli.Context) {
 	err := svcClient.TerminateWorkflowExecution(
 		tcCtx,
 		&types.TerminateWorkflowExecutionRequest{
-			Domain: getBatchWorkflowDomainName(),
+			Domain: common.BatcherLocalDomainName,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: jobID,
 				RunID:      "",
@@ -78,7 +78,7 @@ func DescribeBatchJob(c *cli.Context) {
 	wf, err := svcClient.DescribeWorkflowExecution(
 		tcCtx,
 		&types.DescribeWorkflowExecutionRequest{
-			Domain: getBatchWorkflowDomainName(),
+			Domain: common.BatcherLocalDomainName,
 			Execution: &types.WorkflowExecution{
 				WorkflowID: jobID,
 				RunID:      "",
@@ -123,7 +123,7 @@ func ListBatchJobs(c *cli.Context) {
 	resp, err := svcClient.ListWorkflowExecutions(
 		tcCtx,
 		&types.ListWorkflowExecutionsRequest{
-			Domain:   getBatchWorkflowDomainName(),
+			Domain:   common.BatcherLocalDomainName,
 			PageSize: int32(pageSize),
 			Query:    fmt.Sprintf("CustomDomain = '%v'", domain),
 		},
@@ -241,7 +241,7 @@ func StartBatchJob(c *cli.Context) {
 	}
 	workflowId := uuid.NewRandom().String()
 	request := &types.StartWorkflowExecutionRequest{
-		Domain:                              getBatchWorkflowDomainName(),
+		Domain:                              common.BatcherLocalDomainName,
 		RequestID:                           uuid.New(),
 		WorkflowID:                          workflowId,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(batcher.InfiniteDuration.Seconds())),
@@ -269,8 +269,4 @@ func validateBatchType(bt string) bool {
 		}
 	}
 	return false
-}
-
-func getBatchWorkflowDomainName() string {
-	return common.BatcherLocalDomainName
 }
