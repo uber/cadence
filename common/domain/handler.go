@@ -510,7 +510,7 @@ func (d *handlerImpl) UpdateDomain(
 	if configurationChanged || activeClusterChanged {
 		now := d.timeSource.Now()
 		// Check the failover cool down time
-		if lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
+		if activeClusterChanged && lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
 			return nil, errFailoverTooFrequent
 		}
 
