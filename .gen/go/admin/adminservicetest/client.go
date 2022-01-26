@@ -130,6 +130,37 @@ func (mr *_MockClientRecorder) CloseShard(
 	return mr.mock.ctrl.RecordCall(mr.mock, "CloseShard", args...)
 }
 
+// DeleteWorkflow responds to a DeleteWorkflow call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DeleteWorkflow(gomock.Any(), ...).Return(...)
+// 	... := client.DeleteWorkflow(...)
+func (m *MockClient) DeleteWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DeleteWorkflow", args...)
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DeleteWorkflow(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DeleteWorkflow", args...)
+}
+
 // DescribeCluster responds to a DescribeCluster call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

@@ -112,6 +112,9 @@ service AdminAPI {
 
   // ListDynamicConfig returns all dynamic config parameters and associated values.
   rpc ListDynamicConfig(ListDynamicConfigRequest) returns (ListDynamicConfigResponse);
+
+  // DeleteWorkflow is used to delete a workflow with given domainName, workflowID and runID
+  rpc DeleteWorkflow(AdminDeleteWorkflowRequest) returns (DeleteWorkflowResponse);
 }
 
 message DescribeWorkflowExecutionRequest {
@@ -371,6 +374,15 @@ message RestoreDynamicConfigRequest {
 }
 
 message RestoreDynamicConfigResponse {
+}
+
+message AdminDeleteWorkflowRequest {
+  string domain = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+  bool skip_errors = 3;
+}
+
+message DeleteWorkflowResponse {
 }
 
 message ListDynamicConfigRequest {

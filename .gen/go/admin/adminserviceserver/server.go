@@ -51,6 +51,11 @@ type Interface interface {
 		Request *shared.CloseShardRequest,
 	) error
 
+	DeleteWorkflow(
+		ctx context.Context,
+		Request *admin.AdminDeleteWorkflowRequest,
+	) error
+
 	DescribeCluster(
 		ctx context.Context,
 	) (*admin.DescribeClusterResponse, error)
@@ -198,6 +203,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					NoWire: closeshard_NoWireHandler{impl},
 				},
 				Signature:    "CloseShard(Request *shared.CloseShardRequest)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
+				Name: "DeleteWorkflow",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.DeleteWorkflow),
+					NoWire: deleteworkflow_NoWireHandler{impl},
+				},
+				Signature:    "DeleteWorkflow(Request *admin.AdminDeleteWorkflowRequest)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -479,7 +496,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 25)
+	procedures := make([]transport.Procedure, 0, 26)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -531,6 +548,36 @@ func (h handler) CloseShard(ctx context.Context, body wire.Value) (thrift.Respon
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_CloseShard_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) DeleteWorkflow(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_DeleteWorkflow_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'DeleteWorkflow': %w", err)
+	}
+
+	appErr := h.impl.DeleteWorkflow(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DeleteWorkflow_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -1296,6 +1343,43 @@ func (h closeshard_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_CloseShard_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type deleteworkflow_NoWireHandler struct{ impl Interface }
+
+func (h deleteworkflow_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_DeleteWorkflow_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DeleteWorkflow': %w", err)
+	}
+
+	appErr := h.impl.DeleteWorkflow(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_DeleteWorkflow_Helper.WrapResponse(appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

@@ -91,6 +91,7 @@ type (
 		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
 		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
 		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
+		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) error
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -320,11 +321,16 @@ func (adh *adminHandlerImpl) RemoveTask(
 // DeleteWorkflow delete a workflow execution for admin
 func (adh *adminHandlerImpl) DeleteWorkflow(
 	ctx context.Context,
-	domainName string,
-	workflowID string,
-	runID string,
-	skipError bool,
+	request *types.AdminDeleteWorkflowRequest,
 ) error {
+	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
+	if request.GetExecution() == nil {
+		return adh.error(errRequestNotSet, scope)
+	}
+	domainName := request.GetDomain()
+	workflowID := request.GetExecution().GetWorkflowID()
+	runID := request.GetExecution().GetRunID()
+	skipError := request.GetSkipErrors()
 	logger := adh.GetLogger()
 	resp, err := adh.DescribeWorkflowExecution(
 		ctx,
@@ -336,20 +342,20 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 			},
 		})
 	if err != nil {
-		return err
+		return adh.error(err, scope)
 	}
 
 	msStr := resp.GetMutableStateInDatabase()
 	ms := persistence.WorkflowMutableState{}
 	err = json.Unmarshal([]byte(msStr), &ms)
 	if err != nil {
-		return err
+		return adh.error(err, scope)
 	}
 	domainID := ms.ExecutionInfo.DomainID
 	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
-		return err
+		return adh.error(err, scope)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -357,7 +363,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	histV2 := adh.GetHistoryManager()
 	exeStore, err := adh.GetExecutionManager(shardIDInt)
 	if err != nil {
-		return err
+		return adh.error(err, scope)
 	}
 
 	branchInfo := shared.HistoryBranch{}
@@ -374,7 +380,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	for _, branchToken := range branchTokens {
 		err = thriftrwEncoder.Decode(branchToken, &branchInfo)
 		if err != nil {
-			return err
+			return adh.error(err, scope)
 		}
 		logger.Error(fmt.Sprintf("Deleting history events for %#v", branchInfo))
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
@@ -386,7 +392,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 				logger.Error(fmt.Sprintf("Failed to delete history %#v", err))
 				continue
 			} else {
-				return err
+				return adh.error(err, scope)
 			}
 		}
 	}
@@ -402,7 +408,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		if skipError {
 			logger.Error(fmt.Sprintf("Delete mutableState row failed: %#v", err))
 		} else {
-			return err
+			return adh.error(err, scope)
 		}
 	}
 	fmt.Println("delete mutableState row successfully")
@@ -418,7 +424,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		if skipError {
 			logger.Error(fmt.Sprintf("Delete current row failed: %#v", err))
 		} else {
-			return err
+			return adh.error(err, scope)
 		}
 	}
 	logger.Info(fmt.Sprintf("Deleted current row successfully %#v", deleteCurrentReq))
@@ -433,6 +439,7 @@ func (adh *adminHandlerImpl) ElasticSearchDeleteWorkflow(
 	workflowID string,
 	runID string,
 ) error {
+	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
 	logger := adh.GetLogger()
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
 		logger.Info(fmt.Sprintf("ElasticSearch isn't configured for this Cadence cluster: %#v", err))
@@ -447,13 +454,13 @@ func (adh *adminHandlerImpl) ElasticSearchDeleteWorkflow(
 			tag.WorkflowDomainName(domainName),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID))
-	} else {
-		logger.Info("Corrupt workflow visibility record successfully deleted.",
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID))
+		return adh.error(err, scope)
 	}
-	return err
+	logger.Info("Corrupt workflow visibility record successfully deleted.",
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID))
+	return nil
 }
 
 // CloseShard returns information about the internal states of a history host

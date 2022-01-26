@@ -312,6 +312,16 @@ func (c *clientImpl) RestoreDynamicConfig(
 	return c.client.RestoreDynamicConfig(ctx, request, opts...)
 }
 
+func (c *clientImpl) DeleteWorkflow(
+	ctx context.Context,
+	request *types.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) error {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.DeleteWorkflow(ctx, request, opts...)
+}
+
 func (c *clientImpl) ListDynamicConfig(
 	ctx context.Context,
 	request *types.ListDynamicConfigRequest,

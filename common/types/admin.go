@@ -473,6 +473,35 @@ func (v *RestoreDynamicConfigRequest) GetFilters() (o []*DynamicConfigFilter) {
 	return
 }
 
+// AdminDeleteWorkflowRequest is an internal type (TBD...)
+type AdminDeleteWorkflowRequest struct {
+	Domain     string             `json:"domain,omitempty"`
+	Execution  *WorkflowExecution `json:"execution,omitempty"`
+	SkipErrors bool               `json:"skipErrors,omitempty"`
+}
+
+func (v *AdminDeleteWorkflowRequest) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetExecution is an internal getter (TBD...)
+func (v *AdminDeleteWorkflowRequest) GetExecution() (o *WorkflowExecution) {
+	if v != nil && v.Execution != nil {
+		return v.Execution
+	}
+	return
+}
+
+func (v *AdminDeleteWorkflowRequest) GetSkipErrors() (o bool) {
+	if v != nil {
+		return v.SkipErrors
+	}
+	return
+}
+
 type ListDynamicConfigRequest struct {
 	ConfigName string `json:"configName,omitempty"`
 }

@@ -855,6 +855,30 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 	}
 }
 
+//FromAdminDeleteWorkflowRequest converts internal AdminDeleteWorkflowRequest type to proto
+func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv1.AdminDeleteWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminDeleteWorkflowRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.Execution),
+		SkipErrors:        t.SkipErrors,
+	}
+}
+
+//ToAdminDeleteWorkflowRequest converts proto AdminDeleteWorkflowRequest type to internal
+func ToAdminDeleteWorkflowRequest(t *adminv1.AdminDeleteWorkflowRequest) *types.AdminDeleteWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminDeleteWorkflowRequest{
+		Domain:     t.Domain,
+		Execution:  ToWorkflowExecution(t.WorkflowExecution),
+		SkipErrors: t.SkipErrors,
+	}
+}
+
 //FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
 func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
 	if t == nil {

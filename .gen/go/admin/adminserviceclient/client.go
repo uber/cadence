@@ -53,6 +53,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	DeleteWorkflow(
+		ctx context.Context,
+		Request *admin.AdminDeleteWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	DescribeCluster(
 		ctx context.Context,
 		opts ...yarpc.CallOption,
@@ -273,6 +279,34 @@ func (c client) CloseShard(
 	}
 
 	err = admin.AdminService_CloseShard_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DeleteWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	var result admin.AdminService_DeleteWorkflow_Result
+	args := admin.AdminService_DeleteWorkflow_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	err = admin.AdminService_DeleteWorkflow_Helper.UnwrapResponse(&result)
 	return
 }
 

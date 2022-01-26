@@ -554,6 +554,30 @@ func ToRestoreDynamicConfigRequest(t *admin.RestoreDynamicConfigRequest) *types.
 	}
 }
 
+// FromAdminDeleteWorkflowRequest converts internal AdminDeleteWorkflowRequest type to thrift
+func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *admin.AdminDeleteWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.AdminDeleteWorkflowRequest{
+		Domain:     &t.Domain,
+		Execution:  FromWorkflowExecution(t.Execution),
+		SkipErrors: &t.SkipErrors,
+	}
+}
+
+// ToAdminDeleteWorkflowRequest converts thrift AdminDeleteWorkflowRequest type to internal
+func ToAdminDeleteWorkflowRequest(t *admin.AdminDeleteWorkflowRequest) *types.AdminDeleteWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminDeleteWorkflowRequest{
+		Domain:     t.GetDomain(),
+		Execution:  ToWorkflowExecution(t.Execution),
+		SkipErrors: t.GetSkipErrors(),
+	}
+}
+
 //FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
 func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.ListDynamicConfigResponse {
 	if t == nil {
