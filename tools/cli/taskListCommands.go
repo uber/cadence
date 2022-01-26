@@ -46,7 +46,7 @@ func DescribeTaskList(c *cli.Context) {
 		TaskList: &types.TaskList{
 			Name: taskList,
 		},
-		TaskListType: taskListType,
+		TaskListType: &taskListType,
 	}
 	response, err := wfClient.DescribeTaskList(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {

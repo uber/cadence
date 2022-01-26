@@ -794,11 +794,11 @@ func parseTimeDuration(duration string) (dur time.Duration, err error) {
 	return
 }
 
-func strToTaskListType(str string) *types.TaskListType {
+func strToTaskListType(str string) types.TaskListType {
 	if strings.ToLower(str) == "activity" {
-		return types.TaskListTypeActivity.Ptr()
+		return types.TaskListTypeActivity
 	}
-	return types.TaskListTypeDecision.Ptr()
+	return types.TaskListTypeDecision
 }
 
 func getCliIdentity() string {
