@@ -283,6 +283,8 @@ const (
 	FlagDynamicConfigName                 = "dynamic_config_name"
 	FlagDynamicConfigFilter               = "dynamic_config_filter"
 	FlagDynamicConfigValue                = "dynamic_config_value"
+	FlagTransport                         = "transport"
+	FlagTransportWithAlias                = FlagTransport + ", t"
 )
 
 var flagsForExecution = []cli.Flag{
