@@ -640,28 +640,28 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 		queryRequest.Query.QueryArgs = []byte(input)
 	}
 	if c.IsSet(FlagQueryRejectCondition) {
-		var rejectCondition *types.QueryRejectCondition
+		var rejectCondition types.QueryRejectCondition
 		switch c.String(FlagQueryRejectCondition) {
 		case "not_open":
-			rejectCondition = types.QueryRejectConditionNotOpen.Ptr()
+			rejectCondition = types.QueryRejectConditionNotOpen
 		case "not_completed_cleanly":
-			rejectCondition = types.QueryRejectConditionNotCompletedCleanly.Ptr()
+			rejectCondition = types.QueryRejectConditionNotCompletedCleanly
 		default:
 			ErrorAndExit(fmt.Sprintf("invalid reject condition %v, valid values are \"not_open\" and \"not_completed_cleanly\"", c.String(FlagQueryRejectCondition)), nil)
 		}
-		queryRequest.QueryRejectCondition = rejectCondition
+		queryRequest.QueryRejectCondition = &rejectCondition
 	}
 	if c.IsSet(FlagQueryConsistencyLevel) {
-		var consistencyLevel *types.QueryConsistencyLevel
+		var consistencyLevel types.QueryConsistencyLevel
 		switch c.String(FlagQueryConsistencyLevel) {
 		case "eventual":
-			consistencyLevel = types.QueryConsistencyLevelEventual.Ptr()
+			consistencyLevel = types.QueryConsistencyLevelEventual
 		case "strong":
-			consistencyLevel = types.QueryConsistencyLevelStrong.Ptr()
+			consistencyLevel = types.QueryConsistencyLevelStrong
 		default:
 			ErrorAndExit(fmt.Sprintf("invalid query consistency level %v, valid values are \"eventual\" and \"strong\"", c.String(FlagQueryConsistencyLevel)), nil)
 		}
-		queryRequest.QueryConsistencyLevel = consistencyLevel
+		queryRequest.QueryConsistencyLevel = &consistencyLevel
 	}
 	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
