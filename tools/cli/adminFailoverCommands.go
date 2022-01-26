@@ -102,7 +102,7 @@ func AdminFailoverQuery(c *cli.Context) {
 	runID := getRunID(c)
 	result := query(tcCtx, client, workflowID, runID)
 	request := &types.DescribeWorkflowExecutionRequest{
-		Domain: getSystemLocalDomainName(),
+		Domain: common.SystemLocalDomainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
@@ -132,7 +132,7 @@ func AdminFailoverAbort(c *cli.Context) {
 	workflowID := getFailoverWorkflowID(c)
 	runID := getRunID(c)
 	request := &types.TerminateWorkflowExecutionRequest{
-		Domain: getSystemLocalDomainName(),
+		Domain: common.SystemLocalDomainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
@@ -159,7 +159,7 @@ func AdminFailoverRollback(c *cli.Context) {
 	queryResult := query(tcCtx, client, failovermanager.FailoverWorkflowID, runID)
 	if isWorkflowRunning(queryResult) {
 		request := &types.TerminateWorkflowExecutionRequest{
-			Domain: getSystemLocalDomainName(),
+			Domain: common.SystemLocalDomainName,
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: failovermanager.FailoverWorkflowID,
 				RunID:      runID,
@@ -206,7 +206,7 @@ func query(
 	runID string) *failovermanager.QueryResult {
 
 	request := &types.QueryWorkflowRequest{
-		Domain: getSystemLocalDomainName(),
+		Domain: common.SystemLocalDomainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
@@ -274,7 +274,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 		ErrorAndExit("Failed to serialize memo", err)
 	}
 	request := &types.StartWorkflowExecutionRequest{
-		Domain:                              getSystemLocalDomainName(),
+		Domain:                              common.SystemLocalDomainName,
 		RequestID:                           uuid.New(),
 		WorkflowID:                          workflowId,
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
@@ -363,7 +363,7 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 	}
 
 	request := &types.SignalWorkflowExecutionRequest{
-		Domain: getSystemLocalDomainName(),
+		Domain: common.SystemLocalDomainName,
 		WorkflowExecution: &types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
@@ -394,8 +394,4 @@ func validateStartParams(params *startParams) {
 	if params.failoverWorkflowTimeout <= 0 {
 		params.failoverWorkflowTimeout = defaultFailoverWorkflowTimeoutInSeconds
 	}
-}
-
-func getSystemLocalDomainName() string {
-	return common.SystemLocalDomainName
 }
