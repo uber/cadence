@@ -58,7 +58,6 @@ func TestMethodsAreRoutedToARing(t *testing.T) {
 	a, pp := newTestResolver(t)
 
 	// add members to this ring
-	//ring := emptyHashring()
 	hosts := []HostInfo{}
 	for _, addr := range []string{"127", "128"} {
 		hosts = append(hosts, NewHostInfo(addr))
