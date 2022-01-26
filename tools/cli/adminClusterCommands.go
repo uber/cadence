@@ -87,7 +87,7 @@ func AdminRebalanceStart(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	workflowId := failovermanager.RebalanceWorkflowID
+	workflowID := failovermanager.RebalanceWorkflowID
 	rbParams := &failovermanager.RebalanceParams{
 		BatchFailoverSize:              100,
 		BatchFailoverWaitTimeInSeconds: 10,
@@ -104,7 +104,7 @@ func AdminRebalanceStart(c *cli.Context) {
 	}
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
-		WorkflowID:                          failovermanager.RebalanceWorkflowID,
+		WorkflowID:                          workflowID,
 		RequestID:                           uuid.New(),
 		Identity:                            getCliIdentity(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
@@ -125,7 +125,7 @@ func AdminRebalanceStart(c *cli.Context) {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
 	fmt.Println("Rebalance workflow started")
-	fmt.Println("wid: " + workflowId)
+	fmt.Println("wid: " + workflowID)
 	fmt.Println("rid: " + resp.GetRunID())
 }
 

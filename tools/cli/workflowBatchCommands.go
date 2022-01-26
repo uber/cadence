@@ -242,11 +242,11 @@ func StartBatchJob(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to encode batch job search attributes", err)
 	}
-	workflowId := uuid.NewRandom().String()
+	workflowID := uuid.NewRandom().String()
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.BatcherLocalDomainName,
 		RequestID:                           uuid.New(),
-		WorkflowID:                          workflowId,
+		WorkflowID:                          workflowID,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(batcher.InfiniteDuration.Seconds())),
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(defaultDecisionTimeoutInSeconds)),
 		TaskList:                            &types.TaskList{Name: batcher.BatcherTaskListName},
@@ -261,7 +261,7 @@ func StartBatchJob(c *cli.Context) {
 	}
 	output := map[string]interface{}{
 		"msg":   "batch job is started",
-		"jobID": workflowId,
+		"jobID": workflowID,
 	}
 	prettyPrintJSONObject(output)
 }

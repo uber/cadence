@@ -248,7 +248,7 @@ func getRunID(c *cli.Context) string {
 func failoverStart(c *cli.Context, params *startParams) {
 	validateStartParams(params)
 
-	workflowId := failovermanager.FailoverWorkflowID
+	workflowID := failovermanager.FailoverWorkflowID
 	targetCluster := params.targetCluster
 	sourceCluster := params.sourceCluster
 	batchFailoverSize := params.batchFailoverSize
@@ -273,7 +273,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 	request := &types.StartWorkflowExecutionRequest{
 		Domain:                              common.SystemLocalDomainName,
 		RequestID:                           uuid.New(),
-		WorkflowID:                          workflowId,
+		WorkflowID:                          workflowID,
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		TaskList:                            &types.TaskList{Name: failovermanager.TaskListName},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeout),
@@ -323,7 +323,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
 	fmt.Println("Failover workflow started")
-	fmt.Println("wid: " + workflowId)
+	fmt.Println("wid: " + workflowID)
 	fmt.Println("rid: " + wf.GetRunID())
 }
 
