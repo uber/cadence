@@ -59,7 +59,7 @@ func TestMethodsAreRoutedToARing(t *testing.T) {
 
 	// add members to this ring
 	//ring := emptyHashring()
-	hosts := []*HostInfo{}
+	hosts := []HostInfo{}
 	for _, addr := range []string{"127", "128"} {
 		hosts = append(hosts, NewHostInfo(addr))
 	}
@@ -76,9 +76,8 @@ func TestMethodsAreRoutedToARing(t *testing.T) {
 	assert.Equal(t, "127", hi.GetAddress())
 
 	// the same ring will be picked here
-	nohi, err := a.Lookup("WRONG-RING-NAME", "key")
+	_, err = a.Lookup("WRONG-RING-NAME", "key")
 	assert.Error(t, err)
-	assert.Nil(t, nohi)
 
 	members, err := a.Members("test-worker")
 	assert.NoError(t, err)

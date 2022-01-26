@@ -34,7 +34,7 @@ func TestPeerResolver(t *testing.T) {
 	controller := gomock.NewController(t)
 	serviceResolver := membership.NewMockResolver(controller)
 	serviceResolver.EXPECT().Lookup(service.Matching, "taskListA").Return(membership.NewHostInfo("taskListA:thriftPort"), nil)
-	serviceResolver.EXPECT().Lookup(service.Matching, "invalid").Return(nil, assert.AnError)
+	serviceResolver.EXPECT().Lookup(service.Matching, "invalid").Return(membership.HostInfo{}, assert.AnError)
 	serviceResolver.EXPECT().Members(service.Matching).Return([]membership.HostInfo{
 		membership.NewHostInfo("taskListA:thriftPort"),
 		membership.NewHostInfo("taskListB:thriftPort"),

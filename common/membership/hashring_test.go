@@ -33,9 +33,9 @@ import (
 	"github.com/uber/cadence/common/log"
 )
 
-func testCompareMembers(t *testing.T, curr []*HostInfo, new []*HostInfo, hasDiff bool) {
+func testCompareMembers(t *testing.T, curr []HostInfo, new []HostInfo, hasDiff bool) {
 	hashring := &ring{}
-	currMembers := make(map[string]*HostInfo, len(curr))
+	currMembers := make(map[string]HostInfo, len(curr))
 	for _, m := range curr {
 		currMembers[m.GetAddress()] = m
 	}
@@ -52,21 +52,21 @@ func testCompareMembers(t *testing.T, curr []*HostInfo, new []*HostInfo, hasDiff
 func Test_ring_compareMembers(t *testing.T) {
 
 	tests := []struct {
-		curr    []*HostInfo
-		new     []*HostInfo
+		curr    []HostInfo
+		new     []HostInfo
 		hasDiff bool
 	}{
-		{curr: []*HostInfo{}, new: []*HostInfo{NewHostInfo("a")}, hasDiff: true},
-		{curr: []*HostInfo{}, new: []*HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
-		{curr: []*HostInfo{NewHostInfo("a")}, new: []*HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
-		{curr: []*HostInfo{}, new: []*HostInfo{}, hasDiff: false},
-		{curr: []*HostInfo{NewHostInfo("a")}, new: []*HostInfo{NewHostInfo("a")}, hasDiff: false},
+		{curr: []HostInfo{}, new: []HostInfo{NewHostInfo("a")}, hasDiff: true},
+		{curr: []HostInfo{}, new: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
+		{curr: []HostInfo{NewHostInfo("a")}, new: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
+		{curr: []HostInfo{}, new: []HostInfo{}, hasDiff: false},
+		{curr: []HostInfo{NewHostInfo("a")}, new: []HostInfo{NewHostInfo("a")}, hasDiff: false},
 		// order doesn't matter.
-		{curr: []*HostInfo{NewHostInfo("a"), NewHostInfo("b")}, new: []*HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: false},
+		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, new: []HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: false},
 		// member has left the ring
-		{curr: []*HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []*HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: true},
+		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: true},
 		// ring becomes empty
-		{curr: []*HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []*HostInfo{}, hasDiff: true},
+		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []HostInfo{}, hasDiff: true},
 	}
 
 	for _, tt := range tests {
