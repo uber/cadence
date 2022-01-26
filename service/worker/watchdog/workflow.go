@@ -71,7 +71,7 @@ var (
 		ExpirationInterval: time.Hour,
 	}
 
-	handleCorruptedWorkflowOptions = workflow.ActivityOptions{
+	handleCorruptWorkflowOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
 		RetryPolicy:            &retryPolicy,
@@ -123,7 +123,7 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 			logger.Warn("Corrupt workflow execution is paused. Enable to continue processing")
 			continue
 		}
-		opt := workflow.WithActivityOptions(ctx, handleCorruptedWorkflowOptions)
+		opt := workflow.WithActivityOptions(ctx, handleCorruptWorkflowOptions)
 		_ = workflow.ExecuteActivity(opt, handleCorrputedWorkflowActivity, request).Get(ctx, nil)
 	}
 }
