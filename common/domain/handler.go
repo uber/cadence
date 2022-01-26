@@ -43,7 +43,7 @@ import (
 )
 
 var (
-	errFailoverTooFrequent = &types.ServiceBusyError{Message: "The domain failovers too frequent."}
+	errDomainUpdateTooFrequent = &types.ServiceBusyError{Message: "Domain update too frequent."}
 )
 
 type (
@@ -510,8 +510,8 @@ func (d *handlerImpl) UpdateDomain(
 	if configurationChanged || activeClusterChanged {
 		now := d.timeSource.Now()
 		// Check the failover cool down time
-		if activeClusterChanged && lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
-			return nil, errFailoverTooFrequent
+		if lastUpdatedTime.Add(d.config.FailoverCoolDown(info.Name)).After(now) {
+			return nil, errDomainUpdateTooFrequent
 		}
 
 		// set the versions
