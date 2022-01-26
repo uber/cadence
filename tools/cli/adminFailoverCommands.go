@@ -136,7 +136,7 @@ func AdminFailoverAbort(c *cli.Context) {
 		},
 		Reason: reason,
 	}
-	// do we need to pass call options
+
 	err := client.TerminateWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to abort failover workflow", err)
@@ -216,7 +216,7 @@ func query(
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
 	}
-	// test for empty byte array?
+
 	if queryResp.GetQueryResult() == nil {
 		ErrorAndExit("QueryResult has no value", nil)
 	}
