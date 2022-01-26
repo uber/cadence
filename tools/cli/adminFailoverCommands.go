@@ -277,6 +277,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		TaskList:                            &types.TaskList{Name: failovermanager.TaskListName},
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(workflowTimeout),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(defaultDecisionTimeoutInSeconds),
 		Memo:                                memo,
 		WorkflowType:                        &types.WorkflowType{Name: failovermanager.FailoverWorkflowTypeName},
 	}
