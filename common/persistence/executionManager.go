@@ -341,6 +341,7 @@ func (m *executionManagerImpl) UpdateWorkflowExecution(
 	if err != nil {
 		return nil, err
 	}
+	time.Sleep(14 * time.Millisecond)
 	return &UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: msuss}, nil
 }
 
