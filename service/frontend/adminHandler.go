@@ -429,6 +429,9 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	}
 	logger.Info(fmt.Sprintf("Deleted current row successfully %#v", deleteCurrentReq))
 
+	// Delete the visibility record
+	adh.ElasticSearchDeleteWorkflow(ctx, domainName, workflowID, runID)
+
 	return nil
 }
 

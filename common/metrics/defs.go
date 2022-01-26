@@ -2265,6 +2265,8 @@ const (
 	ESAnalyzerNumStuckWorkflowsRefreshed
 	ESAnalyzerNumStuckWorkflowsFailedToRefresh
 	ESAnalyzerNumLongRunningWorkflows
+	WatchDogNumDeletedCorruptWorkflows
+	WatchDogNumFailedToDeleteCorruptWorkflows
 
 	NumWorkerMetrics
 )
@@ -2796,6 +2798,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ESAnalyzerNumStuckWorkflowsRefreshed:          {metricName: "es_analyzer_num_stuck_workflows_refreshed", metricType: Counter},
 		ESAnalyzerNumStuckWorkflowsFailedToRefresh:    {metricName: "es_analyzer_num_stuck_workflows_failed_to_refresh", metricType: Counter},
 		ESAnalyzerNumLongRunningWorkflows:             {metricName: "es_analyzer_num_long_running_workflows", metricType: Counter},
+		WatchDogNumDeletedCorruptWorkflows:            {metricName: "es_analyzer_num_deleted_corrupt_workflows", metricType: Counter},
+		WatchDogNumFailedToDeleteCorruptWorkflows:     {metricName: "es_analyzer_num_failed_to_delete_corrupt_workflows", metricType: Counter},
 	},
 }
 

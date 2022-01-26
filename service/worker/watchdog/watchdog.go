@@ -57,10 +57,9 @@ type (
 		config             *Config
 	}
 
-	// TODO: delete or update
 	// Config contains all configs for ElasticSearch WatchDog
 	Config struct {
-		ESAnalyzerPause dynamicconfig.BoolPropertyFn
+		CorruptWorkflowPause dynamicconfig.BoolPropertyFn
 	}
 )
 
