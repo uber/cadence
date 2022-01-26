@@ -31,7 +31,6 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/service/worker/batcher"
 
 	"github.com/uber/cadence/common/types"
@@ -56,7 +55,6 @@ func TerminateBatchJob(c *cli.Context) {
 			Reason:   reason,
 			Identity: getCliIdentity(),
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...,
 	)
 	if err != nil {
 		ErrorAndExit("Failed to terminate batch job", err)
@@ -84,7 +82,7 @@ func DescribeBatchJob(c *cli.Context) {
 				RunID:      "",
 			},
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...)
+	)
 	if err != nil {
 		ErrorAndExit("Failed to describe batch job", err)
 	}
@@ -127,7 +125,7 @@ func ListBatchJobs(c *cli.Context) {
 			PageSize: int32(pageSize),
 			Query:    fmt.Sprintf("CustomDomain = '%v'", domain),
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...)
+	)
 	if err != nil {
 		ErrorAndExit("Failed to list batch jobs", err)
 	}
@@ -185,7 +183,7 @@ func StartBatchJob(c *cli.Context) {
 			Domain: domain,
 			Query:  query,
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...)
+	)
 	if err != nil {
 		ErrorAndExit("Failed to count impacting workflows for starting a batch job", err)
 	}
@@ -255,7 +253,7 @@ func StartBatchJob(c *cli.Context) {
 		WorkflowType:                        &types.WorkflowType{Name: batcher.BatchWFTypeName},
 		Input:                               input,
 	}
-	_, err = svcClient.StartWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	_, err = svcClient.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to start batch job", err)
 	}

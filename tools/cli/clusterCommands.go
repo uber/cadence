@@ -24,8 +24,6 @@ import (
 	"os"
 	"sort"
 
-	cc "github.com/uber/cadence/common/client"
-
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
@@ -36,7 +34,7 @@ func GetSearchAttributes(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := wfClient.GetSearchAttributes(ctx, cc.GetDefaultCLIYarpcCallOptions()...)
+	resp, err := wfClient.GetSearchAttributes(ctx)
 	if err != nil {
 		ErrorAndExit("Failed to get search attributes.", err)
 	}

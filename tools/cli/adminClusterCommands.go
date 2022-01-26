@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/service/worker/failovermanager"
 
-	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -61,7 +60,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		SecurityToken: c.String(FlagSecurityToken),
 	}
 
-	err := adminClient.AddSearchAttribute(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	err := adminClient.AddSearchAttribute(ctx, request)
 	if err != nil {
 		ErrorAndExit("Add search attribute failed.", err)
 	}
@@ -120,7 +119,7 @@ func AdminRebalanceStart(c *cli.Context) {
 		},
 	}
 
-	resp, err := client.StartWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	resp, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}

@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
-	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/failovermanager"
 )
@@ -106,7 +105,7 @@ func AdminFailoverQuery(c *cli.Context) {
 		},
 	}
 
-	descResp, err := client.DescribeWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	descResp, err := client.DescribeWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to describe workflow", err)
 	}
@@ -137,7 +136,7 @@ func AdminFailoverAbort(c *cli.Context) {
 		Reason: reason,
 	}
 
-	err := client.TerminateWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	err := client.TerminateWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to abort failover workflow", err)
 	}
@@ -165,7 +164,7 @@ func AdminFailoverRollback(c *cli.Context) {
 			Identity: getCliIdentity(),
 		}
 
-		err := client.TerminateWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+		err := client.TerminateWorkflowExecution(tcCtx, request)
 		if err != nil {
 			ErrorAndExit("Failed to terminate failover workflow", err)
 		}
@@ -212,7 +211,7 @@ func query(
 			QueryType: failovermanager.QueryType,
 		},
 	}
-	queryResp, err := client.QueryWorkflow(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	queryResp, err := client.QueryWorkflow(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to query failover workflow", err)
 	}
@@ -318,7 +317,7 @@ func failoverStart(c *cli.Context, params *startParams) {
 		ErrorAndExit("Failed to serialize Failover Params", err)
 	}
 	request.Input = input
-	wf, err := client.StartWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	wf, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
@@ -370,7 +369,7 @@ func executePauseOrResume(c *cli.Context, workflowID string, isPause bool) error
 		Identity:   getCliIdentity(),
 	}
 
-	return client.SignalWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	return client.SignalWorkflowExecution(tcCtx, request)
 }
 
 func validateStartParams(params *startParams) {

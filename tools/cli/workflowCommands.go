@@ -44,7 +44,6 @@ import (
 
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
-	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -204,7 +203,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	startFn := func() {
 		tcCtx, cancel := newContext(c)
 		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest, cc.GetDefaultCLIYarpcCallOptions()...)
+		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
 			ErrorAndExit("Failed to create workflow.", err)
@@ -216,7 +215,7 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 	runFn := func() {
 		tcCtx, cancel := newContextForLongPoll(c)
 		defer cancel()
-		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest, cc.GetDefaultCLIYarpcCallOptions()...)
+		resp, err := serviceClient.StartWorkflowExecution(tcCtx, startRequest)
 
 		if err != nil {
 			ErrorAndExit("Failed to run workflow.", err)
@@ -483,7 +482,7 @@ func TerminateWorkflow(c *cli.Context) {
 				RunID:      rid,
 			}, Identity: getCliIdentity(),
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...)
+	)
 
 	if err != nil {
 		ErrorAndExit("Terminate workflow failed.", err)
@@ -513,7 +512,7 @@ func CancelWorkflow(c *cli.Context) {
 			},
 			Identity: getCliIdentity(),
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...)
+	)
 	if err != nil {
 		ErrorAndExit("Cancel workflow failed.", err)
 	} else {
@@ -546,7 +545,6 @@ func SignalWorkflow(c *cli.Context) {
 			Identity:   getCliIdentity(),
 			RequestID:  uuid.New(),
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...,
 	)
 
 	if err != nil {
@@ -565,7 +563,7 @@ func SignalWithStartWorkflowExecution(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest, cc.GetDefaultCLIYarpcCallOptions()...)
+	resp, err := serviceClient.SignalWithStartWorkflowExecution(tcCtx, signalWithStartRequest)
 	if err != nil {
 		ErrorAndExit("SignalWithStart workflow failed.", err)
 	} else {
@@ -663,7 +661,7 @@ func queryWorkflowHelper(c *cli.Context, queryType string) {
 		}
 		queryRequest.QueryConsistencyLevel = &consistencyLevel
 	}
-	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest, cc.GetDefaultCLIYarpcCallOptions()...)
+	queryResponse, err := serviceClient.QueryWorkflow(tcCtx, queryRequest)
 	if err != nil {
 		ErrorAndExit("Query workflow failed.", err)
 		return
@@ -807,7 +805,7 @@ func CountWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := wfClient.CountWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	response, err := wfClient.CountWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to count workflow.", err)
 	}
@@ -847,7 +845,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 		// so keep calling the API until some results are returned (query completed)
 		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
 
-		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request)
 		if err != nil {
 			cancel()
 			ErrorAndExit("Failed to list archived workflow.", err)
@@ -902,7 +900,7 @@ func ListArchivedWorkflow(c *cli.Context) {
 		request.NextPageToken = result.NextPageToken
 		// create a new context for each new request as each request may take a long time
 		ctx, cancel := context.WithTimeout(context.Background(), contextTimeout)
-		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+		result, err = wfClient.ListArchivedWorkflowExecutions(ctx, request)
 		if err != nil {
 			cancel()
 			ErrorAndExit("Failed to list archived workflow", err)
@@ -1356,7 +1354,7 @@ func listWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken 
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	response, err := client.ListWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to list workflow.", err)
 	}
@@ -1384,7 +1382,7 @@ func listOpenWorkflow(client frontend.Client, pageSize int, earliestTime, latest
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListOpenWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	response, err := client.ListOpenWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to list open workflow.", err)
 	}
@@ -1415,7 +1413,7 @@ func listClosedWorkflow(client frontend.Client, pageSize int, earliestTime, late
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ListClosedWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	response, err := client.ListClosedWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to list closed workflow.", err)
 	}
@@ -1484,7 +1482,7 @@ func scanWorkflowExecutions(client frontend.Client, pageSize int, nextPageToken 
 	}
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	response, err := client.ScanWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	response, err := client.ScanWorkflowExecutions(ctx, request)
 	if err != nil {
 		ErrorAndExit("Failed to list workflow.", err)
 	}
