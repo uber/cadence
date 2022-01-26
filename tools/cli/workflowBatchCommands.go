@@ -27,30 +27,37 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
-	"go.uber.org/cadence/.gen/go/shared"
-	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
 	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/service/worker/batcher"
-)
 
-var (
-	DefaultClientOptions = cclient.Options{
-		FeatureFlags: cc.ToClientFeatureFlags(&cc.DefaultCLIFeatureFlags),
-	}
+	"github.com/uber/cadence/common/types"
 )
 
 // TerminateBatchJob stops abatch job
 func TerminateBatchJob(c *cli.Context) {
 	jobID := getRequiredOption(c, FlagJobID)
 	reason := getRequiredOption(c, FlagReason)
-	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
+	svcClient := cFactory.ServerFrontendClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	err := client.TerminateWorkflow(tcCtx, jobID, "", reason, nil)
+
+	err := svcClient.TerminateWorkflowExecution(
+		tcCtx,
+		&types.TerminateWorkflowExecutionRequest{
+			Domain: common.BatcherLocalDomainName,
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: jobID,
+				RunID:      "",
+			},
+			Reason:   reason,
+			Identity: getCliIdentity(),
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...,
+	)
 	if err != nil {
 		ErrorAndExit("Failed to terminate batch job", err)
 	}
@@ -64,18 +71,27 @@ func TerminateBatchJob(c *cli.Context) {
 func DescribeBatchJob(c *cli.Context) {
 	jobID := getRequiredOption(c, FlagJobID)
 
-	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
+	svcClient := cFactory.ServerFrontendClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	wf, err := client.DescribeWorkflowExecution(tcCtx, jobID, "")
+
+	wf, err := svcClient.DescribeWorkflowExecution(
+		tcCtx,
+		&types.DescribeWorkflowExecutionRequest{
+			Domain: common.BatcherLocalDomainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: jobID,
+				RunID:      "",
+			},
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to describe batch job", err)
 	}
 
 	output := map[string]interface{}{}
 	if wf.WorkflowExecutionInfo.CloseStatus != nil {
-		if wf.WorkflowExecutionInfo.GetCloseStatus() != shared.WorkflowExecutionCloseStatusCompleted {
+		if wf.WorkflowExecutionInfo.GetCloseStatus() != types.WorkflowExecutionCloseStatusCompleted {
 			output["msg"] = "batch job stopped status: " + wf.WorkflowExecutionInfo.GetCloseStatus().String()
 		} else {
 			output["msg"] = "batch job is finished successfully"
@@ -99,22 +115,26 @@ func DescribeBatchJob(c *cli.Context) {
 func ListBatchJobs(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	pageSize := c.Int(FlagPageSize)
-	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
+	svcClient := cFactory.ServerFrontendClient(c)
+
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	resp, err := client.ListWorkflow(tcCtx, &shared.ListWorkflowExecutionsRequest{
-		Domain:   common.StringPtr(common.BatcherLocalDomainName),
-		PageSize: common.Int32Ptr(int32(pageSize)),
-		Query:    common.StringPtr(fmt.Sprintf("CustomDomain = '%v'", domain)),
-	})
+
+	resp, err := svcClient.ListWorkflowExecutions(
+		tcCtx,
+		&types.ListWorkflowExecutionsRequest{
+			Domain:   common.BatcherLocalDomainName,
+			PageSize: int32(pageSize),
+			Query:    fmt.Sprintf("CustomDomain = '%v'", domain),
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to list batch jobs", err)
 	}
 	output := make([]interface{}, 0, len(resp.Executions))
 	for _, wf := range resp.Executions {
 		job := map[string]string{
-			"jobID":     wf.Execution.GetWorkflowId(),
+			"jobID":     wf.Execution.GetWorkflowID(),
 			"startTime": convertTime(wf.GetStartTime(), false),
 			"reason":    string(wf.Memo.Fields["Reason"]),
 			"operator":  string(wf.SearchAttributes.IndexedFields["Operator"]),
@@ -138,6 +158,7 @@ func StartBatchJob(c *cli.Context) {
 	query := getRequiredOption(c, FlagListQuery)
 	reason := getRequiredOption(c, FlagReason)
 	batchType := getRequiredOption(c, FlagBatchType)
+
 	if !validateBatchType(batchType) {
 		ErrorAndExit("batchType is not valid, supported:"+strings.Join(batcher.AllBatchTypes, ","), nil)
 	}
@@ -154,14 +175,17 @@ func StartBatchJob(c *cli.Context) {
 	}
 	rps := c.Int(FlagRPS)
 
-	svcClient := cFactory.ClientFrontendClient(c)
-	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
+	svcClient := cFactory.ServerFrontendClient(c)
 	tcCtx, cancel := newContext(c)
 	defer cancel()
-	resp, err := client.CountWorkflow(tcCtx, &shared.CountWorkflowExecutionsRequest{
-		Domain: common.StringPtr(domain),
-		Query:  common.StringPtr(query),
-	})
+
+	resp, err := svcClient.CountWorkflowExecutions(
+		tcCtx,
+		&types.CountWorkflowExecutionsRequest{
+			Domain: domain,
+			Query:  query,
+		},
+		cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to count impacting workflows for starting a batch job", err)
 	}
@@ -185,17 +209,7 @@ func StartBatchJob(c *cli.Context) {
 	}
 	tcCtx, cancel = newContext(c)
 	defer cancel()
-	options := cclient.StartWorkflowOptions{
-		TaskList:                     batcher.BatcherTaskListName,
-		ExecutionStartToCloseTimeout: batcher.InfiniteDuration,
-		Memo: map[string]interface{}{
-			"Reason": reason,
-		},
-		SearchAttributes: map[string]interface{}{
-			"CustomDomain": domain,
-			"Operator":     operator,
-		},
-	}
+
 	params := batcher.BatchParams{
 		DomainName: domain,
 		Query:      query,
@@ -211,13 +225,43 @@ func StartBatchJob(c *cli.Context) {
 		},
 		RPS: rps,
 	}
-	wf, err := client.StartWorkflow(tcCtx, options, batcher.BatchWFTypeName, params)
+	input, err := json.Marshal(params)
+	if err != nil {
+		ErrorAndExit("Failed to encode batch job parameters", err)
+	}
+	memo, err := getWorkflowMemo(map[string]interface{}{
+		"Reason": reason,
+	})
+	if err != nil {
+		ErrorAndExit("Failed to encode batch job memo", err)
+	}
+	searchAttributes, err := serializeSearchAttributes(map[string]interface{}{
+		"CustomDomain": domain,
+		"Operator":     operator,
+	})
+	if err != nil {
+		ErrorAndExit("Failed to encode batch job search attributes", err)
+	}
+	workflowID := uuid.NewRandom().String()
+	request := &types.StartWorkflowExecutionRequest{
+		Domain:                              common.BatcherLocalDomainName,
+		RequestID:                           uuid.New(),
+		WorkflowID:                          workflowID,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(batcher.InfiniteDuration.Seconds())),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(defaultDecisionTimeoutInSeconds)),
+		TaskList:                            &types.TaskList{Name: batcher.BatcherTaskListName},
+		Memo:                                memo,
+		SearchAttributes:                    searchAttributes,
+		WorkflowType:                        &types.WorkflowType{Name: batcher.BatchWFTypeName},
+		Input:                               input,
+	}
+	_, err = svcClient.StartWorkflowExecution(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to start batch job", err)
 	}
 	output := map[string]interface{}{
 		"msg":   "batch job is started",
-		"jobID": wf.ID,
+		"jobID": workflowID,
 	}
 	prettyPrintJSONObject(output)
 }
