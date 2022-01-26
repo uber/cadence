@@ -39,7 +39,7 @@ import (
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/dynamicconfig"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -203,7 +203,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 
 	searchAttr := request.GetSearchAttribute()
 	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
-		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
+		dc.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
 	if err != nil {
 		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
@@ -222,7 +222,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
-	err = adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
+	err = adh.params.DynamicConfig.UpdateValue(dc.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
 		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
@@ -318,21 +318,21 @@ func (adh *adminHandlerImpl) RemoveTask(
 }
 
 // DeleteWorkflow delete a workflow execution for admin
-func (h *adminHandlerImpl) DeleteWorkflow(
+func (adh *adminHandlerImpl) DeleteWorkflow(
 	ctx context.Context,
 	domainName string,
-	workflowId string,
-	runId string,
+	workflowID string,
+	runID string,
 	skipError bool,
 ) error {
-	logger := h.GetLogger()
-	resp, err := h.DescribeWorkflowExecution(
+	logger := adh.GetLogger()
+	resp, err := adh.DescribeWorkflowExecution(
 		ctx,
 		&types.AdminDescribeWorkflowExecutionRequest{
 			Domain: domainName,
 			Execution: &types.WorkflowExecution{
-				WorkflowID: workflowId,
-				RunID:      runId,
+				WorkflowID: workflowID,
+				RunID:      runID,
 			},
 		})
 	if err != nil {
@@ -354,8 +354,8 @@ func (h *adminHandlerImpl) DeleteWorkflow(
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	histV2 := h.GetHistoryManager()
-	exeStore, err := h.GetExecutionManager(shardIDInt)
+	histV2 := adh.GetHistoryManager()
+	exeStore, err := adh.GetExecutionManager(shardIDInt)
 	if err != nil {
 		return err
 	}
@@ -393,8 +393,8 @@ func (h *adminHandlerImpl) DeleteWorkflow(
 
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
-		WorkflowID: workflowId,
-		RunID:      runId,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	err = exeStore.DeleteWorkflowExecution(ctx, req)
@@ -409,8 +409,8 @@ func (h *adminHandlerImpl) DeleteWorkflow(
 
 	deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   domainID,
-		WorkflowID: workflowId,
-		RunID:      runId,
+		WorkflowID: workflowID,
+		RunID:      runID,
 	}
 
 	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
@@ -430,8 +430,8 @@ func (h *adminHandlerImpl) DeleteWorkflow(
 func (adh *adminHandlerImpl) ElasticSearchDeleteWorkflow(
 	ctx context.Context,
 	domainName string,
-	workflowId string,
-	runId string,
+	workflowID string,
+	runID string,
 ) error {
 	logger := adh.GetLogger()
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
@@ -441,17 +441,17 @@ func (adh *adminHandlerImpl) ElasticSearchDeleteWorkflow(
 
 	esClient := adh.params.ESClient
 	indexName := adh.params.ESConfig.GetVisibilityIndex()
-	err := esClient.DeleteWorkflow(ctx, indexName, workflowId, runId)
+	err := esClient.DeleteWorkflow(ctx, indexName, workflowID, runID)
 	if err != nil {
 		logger.Error("Failed to delete corrupt workflow visibility record.",
 			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(workflowId),
-			tag.WorkflowRunID(runId))
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID))
 	} else {
 		logger.Info("Corrupt workflow visibility record successfully deleted.",
 			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(workflowId),
-			tag.WorkflowRunID(runId))
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID))
 	}
 	return err
 }
@@ -1536,10 +1536,10 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	}, nil
 }
 
-func checkValidKey(keyName string) (dynamicconfig.Key, error) {
-	keyVal, ok := dynamicconfig.KeyNames[keyName]
-	if !ok || keyVal == dynamicconfig.UnknownKey {
-		return dynamicconfig.UnknownKey, errors.New("invalid dynamic config parameter name")
+func checkValidKey(keyName string) (dc.Key, error) {
+	keyVal, ok := dc.KeyNames[keyName]
+	if !ok || keyVal == dc.UnknownKey {
+		return dc.UnknownKey, errors.New("invalid dynamic config parameter name")
 	}
 	return keyVal, nil
 }
