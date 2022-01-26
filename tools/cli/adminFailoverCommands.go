@@ -27,16 +27,13 @@ import (
 	"os/user"
 	"time"
 
-	cc "github.com/uber/cadence/common/client"
-
 	"github.com/pborman/uuid"
-
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/types"
-
 	"github.com/urfave/cli"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	cc "github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/worker/failovermanager"
 )
 
