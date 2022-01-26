@@ -313,7 +313,7 @@ func (c *Cache) makeReleaseFunc(
 							//} else if callerScope == metrics.TransferActiveTaskStartChildExecutionScope {
 							//	time.Sleep(32 * time.Millisecond)
 						} else if callerScope == metrics.HistoryCacheGetOrCreateCurrentScope {
-							time.Sleep(29 * time.Millisecond)
+							//time.Sleep(29 * time.Millisecond)
 							//} else if callerScope == metrics.TransferActiveTaskSignalExecutionScope {
 							//	time.Sleep(20 * time.Millisecond)
 							//} else if callerScope == metrics.TransferActiveTaskCancelExecutionScope {
