@@ -327,9 +327,9 @@ func (c *Cache) makeReleaseFunc(
 						} else if callerScope == metrics.TimerActiveTaskActivityTimeoutScope {
 							//time.Sleep(5 * time.Millisecond)
 						} else if callerScope == metrics.HistoryClientScheduleDecisionTaskScope {
-							time.Sleep(14 * time.Millisecond)
+							//time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.HistoryClientRecordDecisionTaskStartedScope {
-							time.Sleep(14 * time.Millisecond)
+							//time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.HistoryClientRespondDecisionTaskFailedScope {
 							//time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.HistoryRecordActivityTaskStartedScope {
