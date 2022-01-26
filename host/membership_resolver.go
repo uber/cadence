@@ -68,7 +68,7 @@ func (s *simpleResolver) Unsubscribe(service string, name string) error {
 func (s *simpleResolver) Lookup(service string, key string) (membership.HostInfo, error) {
 	resolver, ok := s.resolvers[service]
 	if !ok {
-		return nil, fmt.Errorf("cannot lookup host for service %q", service)
+		return membership.HostInfo{}, fmt.Errorf("cannot lookup host for service %q", service)
 	}
 	return resolver.Lookup(key)
 }
