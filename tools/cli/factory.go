@@ -24,17 +24,20 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/yarpc/transport/grpc"
+	"go.uber.org/yarpc/transport/tchannel"
+
 	"github.com/olivere/elastic"
 	"github.com/urfave/cli"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
-	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
 
-	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
+
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
@@ -56,7 +59,6 @@ const (
 
 // ClientFactory is used to construct rpc clients
 type ClientFactory interface {
-	ClientFrontendClient(c *cli.Context) clientFrontend.Interface
 	ServerFrontendClient(c *cli.Context) frontend.Client
 	ServerAdminClient(c *cli.Context) admin.Client
 
@@ -81,22 +83,29 @@ func NewClientFactory() ClientFactory {
 	}
 }
 
-// ClientFrontendClient builds a frontend client
-func (b *clientFactory) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
-	b.ensureDispatcher(c)
-	return clientFrontend.New(b.dispatcher.ClientConfig(cadenceFrontendService))
-}
-
 // ServerFrontendClient builds a frontend client (based on server side thrift interface)
 func (b *clientFactory) ServerFrontendClient(c *cli.Context) frontend.Client {
 	b.ensureDispatcher(c)
-	return frontend.NewThriftClient(serverFrontend.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
+	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
+	if c.GlobalString(FlagTransport) == grpcTransport {
+		return frontend.NewGRPCClient(
+			apiv1.NewDomainAPIYARPCClient(clientConfig),
+			apiv1.NewWorkflowAPIYARPCClient(clientConfig),
+			apiv1.NewWorkerAPIYARPCClient(clientConfig),
+			apiv1.NewVisibilityAPIYARPCClient(clientConfig),
+		)
+	}
+	return frontend.NewThriftClient(serverFrontend.New(clientConfig))
 }
 
 // ServerAdminClient builds an admin client (based on server side thrift interface)
 func (b *clientFactory) ServerAdminClient(c *cli.Context) admin.Client {
 	b.ensureDispatcher(c)
-	return admin.NewThriftClient(serverAdmin.New(b.dispatcher.ClientConfig(cadenceFrontendService)))
+	clientConfig := b.dispatcher.ClientConfig(cadenceFrontendService)
+	if c.GlobalString(FlagTransport) == grpcTransport {
+		return admin.NewGRPCClient(adminv1.NewAdminAPIYARPCClient(clientConfig))
+	}
+	return admin.NewThriftClient(serverAdmin.New(clientConfig))
 }
 
 // ElasticSearchClient builds an ElasticSearch client
@@ -119,22 +128,28 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if b.dispatcher != nil {
 		return
 	}
+	shouldUseGrpc := c.GlobalString(FlagTransport) == grpcTransport
 
-	b.hostPort = localHostPort
+	b.hostPort = tchannelPort
+	if shouldUseGrpc {
+		b.hostPort = grpcPort
+	}
 	if addr := c.GlobalString(FlagAddress); addr != "" {
 		b.hostPort = addr
 	}
 
-	ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
-	if err != nil {
-		b.logger.Fatal("Failed to create transport channel", zap.Error(err))
+	outbounds := transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(b.hostPort)}
+	if !shouldUseGrpc {
+		ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
+		if err != nil {
+			b.logger.Fatal("Failed to create transport channel", zap.Error(err))
+		}
+		outbounds = transport.Outbounds{Unary: ch.NewSingleOutbound(b.hostPort)}
 	}
 
 	b.dispatcher = yarpc.NewDispatcher(yarpc.Config{
-		Name: cadenceClientName,
-		Outbounds: yarpc.Outbounds{
-			cadenceFrontendService: {Unary: ch.NewSingleOutbound(b.hostPort)},
-		},
+		Name:      cadenceClientName,
+		Outbounds: yarpc.Outbounds{cadenceFrontendService: outbounds},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
 			Unary: &versionMiddleware{},
 		},

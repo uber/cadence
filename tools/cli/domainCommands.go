@@ -286,12 +286,12 @@ func (d *domainCLIImpl) DeprecateDomain(c *cli.Context) {
 
 	if !force {
 		// check if there is any workflow in this domain, if exists, do not deprecate
-		wfs, _ := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", workflowStatusNotSet, nil, c)
+		wfs, _ := listClosedWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), domainName, "", "", workflowStatusNotSet, nil, c)
 		if len(wfs) > 0 {
 			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("workflow history not cleared in this domain"))
 			return
 		}
-		wfs, _ = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), "", "", nil, c)
+		wfs, _ = listOpenWorkflow(getWorkflowClient(c), 1, 0, time.Now().UnixNano(), domainName, "", "", nil, c)
 		if len(wfs) > 0 {
 			ErrorAndExit("Operation DeprecateDomain failed.", errors.New("workflow still running in this domain"))
 			return
@@ -390,15 +390,20 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	domainID := c.String(FlagDomainID)
 	printJSON := c.Bool(FlagPrintJSON)
 
+	request := types.DescribeDomainRequest{}
+	if domainID != "" {
+		request.UUID = &domainID
+	}
+	if domainName != "" {
+		request.Name = &domainName
+	}
 	if domainID == "" && domainName == "" {
 		ErrorAndExit("At least domainID or domainName must be provided.", nil)
 	}
+
 	ctx, cancel := newContext(c)
 	defer cancel()
-	resp, err := d.describeDomain(ctx, &types.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-		UUID: common.StringPtr(domainID),
-	})
+	resp, err := d.describeDomain(ctx, &request)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
