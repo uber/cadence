@@ -390,15 +390,20 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	domainID := c.String(FlagDomainID)
 	printJSON := c.Bool(FlagPrintJSON)
 
+	request := types.DescribeDomainRequest{}
+	if domainID != "" {
+		request.UUID = &domainID
+	}
+	if domainName != "" {
+		request.Name = &domainName
+	}
 	if domainID == "" && domainName == "" {
 		ErrorAndExit("At least domainID or domainName must be provided.", nil)
 	}
+
 	ctx, cancel := newContext(c)
 	defer cancel()
-	resp, err := d.describeDomain(ctx, &types.DescribeDomainRequest{
-		Name: common.StringPtr(domainName),
-		UUID: common.StringPtr(domainID),
-	})
+	resp, err := d.describeDomain(ctx, &request)
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); !ok {
 			ErrorAndExit("Operation DescribeDomain failed.", err)
