@@ -35,7 +35,7 @@ func TestPeerResolver(t *testing.T) {
 	serviceResolver := membership.NewMockResolver(controller)
 	serviceResolver.EXPECT().Lookup(service.Matching, "taskListA").Return(membership.NewHostInfo("taskListA:thriftPort"), nil)
 	serviceResolver.EXPECT().Lookup(service.Matching, "invalid").Return(nil, assert.AnError)
-	serviceResolver.EXPECT().Members(service.Matching).Return([]*membership.HostInfo{
+	serviceResolver.EXPECT().Members(service.Matching).Return([]membership.HostInfo{
 		membership.NewHostInfo("taskListA:thriftPort"),
 		membership.NewHostInfo("taskListB:thriftPort"),
 	}, nil)

@@ -38,8 +38,8 @@ type HostInfo struct {
 }
 
 // NewHostInfo creates a new HostInfo instance
-func NewHostInfo(addr string) *HostInfo {
-	return &HostInfo{
+func NewHostInfo(addr string) HostInfo {
+	return HostInfo{
 		addr: addr,
 	}
 }
@@ -54,8 +54,8 @@ func (m PortMap) String() string {
 }
 
 // NewDetailedHostInfo creates a new HostInfo instance with identity and portmap information
-func NewDetailedHostInfo(addr string, identity string, portMap PortMap) *HostInfo {
-	return &HostInfo{
+func NewDetailedHostInfo(addr string, identity string, portMap PortMap) HostInfo {
+	return HostInfo{
 		addr:     addr,
 		identity: identity,
 		portMap:  portMap,
@@ -63,23 +63,23 @@ func NewDetailedHostInfo(addr string, identity string, portMap PortMap) *HostInf
 }
 
 // GetAddress returns the ip:port address
-func (hi *HostInfo) GetAddress() string {
+func (hi HostInfo) GetAddress() string {
 	return hi.addr
 }
 
 // Identity implements ringpop's Membership interface
-func (hi *HostInfo) Identity() string {
+func (hi HostInfo) Identity() string {
 	// for now we just use the address as the identity
 	return hi.addr
 }
 
 // Label is a noop function to conform to ringpop hashring member interface
-func (hi *HostInfo) Label(key string) (value string, has bool) {
+func (hi HostInfo) Label(key string) (value string, has bool) {
 	return "", false
 }
 
 // SetLabel is a noop function to conform to ringpop hashring member interface
-func (hi *HostInfo) SetLabel(key string, value string) {
+func (hi HostInfo) SetLabel(key string, value string) {
 }
 
 // String will return a human-readable host details

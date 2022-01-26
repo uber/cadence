@@ -59,7 +59,7 @@ type (
 		mockClusterMetadata    *cluster.MockMetadata
 		mockMembershipResolver *membership.MockResolver
 
-		hostInfo          *membership.HostInfo
+		hostInfo          membership.HostInfo
 		mockShardManager  *mmocks.ShardManager
 		mockEngineFactory *MockEngineFactory
 

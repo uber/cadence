@@ -48,7 +48,7 @@ type (
 		// WhoAmI returns self host details.
 		// To be consistent with peer provider, it is advised to use peer provider
 		// to return this information
-		WhoAmI() (*HostInfo, error)
+		WhoAmI() (HostInfo, error)
 
 		// EvictSelf evicts this member from the membership ring. After this method is
 		// called, other members should discover that this node is no longer part of the
@@ -57,7 +57,7 @@ type (
 		EvictSelf() error
 
 		// Lookup will return host which is an owner for provided key.
-		Lookup(service, key string) (*HostInfo, error)
+		Lookup(service, key string) (HostInfo, error)
 
 		// Subscribe adds a subscriber which will get detailed change data on the given
 		// channel, whenever membership changes.
@@ -70,7 +70,7 @@ type (
 		MemberCount(service string) (int, error)
 
 		// Members returns all host addresses in a service specific hashring
-		Members(service string) ([]*HostInfo, error)
+		Members(service string) ([]HostInfo, error)
 	}
 )
 
@@ -145,7 +145,7 @@ func (rpo *MultiringResolver) Stop() {
 }
 
 // WhoAmI asks to provide current instance address
-func (rpo *MultiringResolver) WhoAmI() (*HostInfo, error) {
+func (rpo *MultiringResolver) WhoAmI() (HostInfo, error) {
 	return rpo.provider.WhoAmI()
 }
 
@@ -162,10 +162,10 @@ func (rpo *MultiringResolver) getRing(service string) (*ring, error) {
 	return ring, nil
 }
 
-func (rpo *MultiringResolver) Lookup(service string, key string) (*HostInfo, error) {
+func (rpo *MultiringResolver) Lookup(service string, key string) (HostInfo, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
-		return nil, err
+		return HostInfo{}, err
 	}
 	return ring.Lookup(key)
 }
@@ -186,7 +186,7 @@ func (rpo *MultiringResolver) Unsubscribe(service string, name string) error {
 	return ring.Unsubscribe(name)
 }
 
-func (rpo *MultiringResolver) Members(service string) ([]*HostInfo, error) {
+func (rpo *MultiringResolver) Members(service string) ([]HostInfo, error) {
 	ring, err := rpo.getRing(service)
 	if err != nil {
 		return nil, err

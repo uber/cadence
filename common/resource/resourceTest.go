@@ -218,7 +218,7 @@ func (s *Test) GetHostName() string {
 }
 
 // GetHostInfo for testing
-func (s *Test) GetHostInfo() *membership.HostInfo {
+func (s *Test) GetHostInfo() membership.HostInfo {
 	return testHostInfo
 }
 

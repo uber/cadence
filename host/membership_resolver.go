@@ -27,7 +27,7 @@ import (
 )
 
 type simpleResolver struct {
-	hostInfo  *membership.HostInfo
+	hostInfo  membership.HostInfo
 	resolvers map[string]*simpleHashring
 }
 
@@ -53,7 +53,7 @@ func (s *simpleResolver) EvictSelf() error {
 	return nil
 }
 
-func (s *simpleResolver) WhoAmI() (*membership.HostInfo, error) {
+func (s *simpleResolver) WhoAmI() (membership.HostInfo, error) {
 	return s.hostInfo, nil
 }
 
@@ -65,7 +65,7 @@ func (s *simpleResolver) Unsubscribe(service string, name string) error {
 	return nil
 }
 
-func (s *simpleResolver) Lookup(service string, key string) (*membership.HostInfo, error) {
+func (s *simpleResolver) Lookup(service string, key string) (membership.HostInfo, error) {
 	resolver, ok := s.resolvers[service]
 	if !ok {
 		return nil, fmt.Errorf("cannot lookup host for service %q", service)
@@ -77,6 +77,6 @@ func (s *simpleResolver) MemberCount(service string) (int, error) {
 	return 0, nil
 }
 
-func (s *simpleResolver) Members(service string) ([]*membership.HostInfo, error) {
+func (s *simpleResolver) Members(service string) ([]membership.HostInfo, error) {
 	return nil, nil
 }

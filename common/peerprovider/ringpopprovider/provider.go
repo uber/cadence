@@ -31,14 +31,15 @@ import (
 
 	"go.uber.org/yarpc/transport/tchannel"
 
-	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/membership"
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/events"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
+
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 )
 
 type (
@@ -188,8 +189,8 @@ func (r *Provider) SelfEvict() error {
 }
 
 // GetMembers returns all hosts with a specified role value
-func (r *Provider) GetMembers(service string) ([]*membership.HostInfo, error) {
-	var res []*membership.HostInfo
+func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
+	var res []membership.HostInfo
 
 	// filter member by service name, add port info to Hostinfo if they are present
 	memberData := func(member swim.Member) bool {
@@ -229,10 +230,10 @@ func (r *Provider) GetMembers(service string) ([]*membership.HostInfo, error) {
 }
 
 // WhoAmI returns address of this instance
-func (r *Provider) WhoAmI() (*membership.HostInfo, error) {
+func (r *Provider) WhoAmI() (membership.HostInfo, error) {
 	address, err := r.ringpop.WhoAmI()
 	if err != nil {
-		return nil, fmt.Errorf("ringpop doesn't know Who Am I: %w", err)
+		return membership.HostInfo{}, fmt.Errorf("ringpop doesn't know Who Am I: %w", err)
 	}
 	return membership.NewHostInfo(address), nil
 }

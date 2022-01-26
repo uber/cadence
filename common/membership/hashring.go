@@ -50,8 +50,8 @@ const (
 type PeerProvider interface {
 	common.Daemon
 
-	GetMembers(service string) ([]*HostInfo, error)
-	WhoAmI() (*HostInfo, error)
+	GetMembers(service string) ([]HostInfo, error)
+	WhoAmI() (HostInfo, error)
 	SelfEvict() error
 	Subscribe(name string, notifyChannel chan<- *ChangedEvent) error
 }
@@ -70,7 +70,7 @@ type ring struct {
 	members struct {
 		sync.Mutex
 		refreshed time.Time
-		keys      map[string]*HostInfo // for mapping ip:port to HostInfo
+		keys      map[string]HostInfo // for mapping ip:port to HostInfo
 	}
 
 	subscribers struct {
@@ -93,7 +93,7 @@ func newHashring(
 		refreshChan:  make(chan *ChangedEvent),
 	}
 
-	hashring.members.keys = make(map[string]*HostInfo)
+	hashring.members.keys = make(map[string]HostInfo)
 	hashring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 
 	hashring.value.Store(emptyHashring())
@@ -151,18 +151,18 @@ func (r *ring) Stop() {
 // Lookup finds the host in the ring responsible for serving the given key
 func (r *ring) Lookup(
 	key string,
-) (*HostInfo, error) {
+) (HostInfo, error) {
 	addr, found := r.ring().Lookup(key)
 	if !found {
 		select {
 		case r.refreshChan <- &ChangedEvent{}:
 		default:
 		}
-		return nil, ErrInsufficientHosts
+		return HostInfo{}, ErrInsufficientHosts
 	}
 	host, ok := r.members.keys[addr]
 	if !ok {
-		return nil, fmt.Errorf("host not found in member keys, host: %q", addr)
+		return HostInfo{}, fmt.Errorf("host not found in member keys, host: %q", addr)
 	}
 	return host, nil
 }
@@ -200,10 +200,10 @@ func (r *ring) MemberCount() int {
 	return r.ring().ServerCount()
 }
 
-func (r *ring) Members() []*HostInfo {
+func (r *ring) Members() []HostInfo {
 	servers := r.ring().Servers()
 
-	var hosts = make([]*HostInfo, 0, len(servers))
+	var hosts = make([]HostInfo, 0, len(servers))
 	for _, s := range servers {
 		host, ok := r.members.keys[s]
 		if !ok {
@@ -273,9 +273,9 @@ func (r *ring) ring() *hashring.HashRing {
 	return r.value.Load().(*hashring.HashRing)
 }
 
-func (r *ring) compareMembers(members []*HostInfo) (map[string]*HostInfo, bool) {
+func (r *ring) compareMembers(members []HostInfo) (map[string]HostInfo, bool) {
 	changed := false
-	newMembersMap := make(map[string]*HostInfo, len(members))
+	newMembersMap := make(map[string]HostInfo, len(members))
 	for _, member := range members {
 		newMembersMap[member.GetAddress()] = member
 		if _, ok := r.members.keys[member.GetAddress()]; !ok {
