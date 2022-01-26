@@ -227,17 +227,20 @@ func StartBatchJob(c *cli.Context) {
 	}
 	input, err := json.Marshal(params)
 	if err != nil {
+		ErrorAndExit("Failed to encode batch job parameters", err)
 	}
 	memo, err := getWorkflowMemo(map[string]interface{}{
 		"Reason": []byte(reason),
 	})
 	if err != nil {
+		ErrorAndExit("Failed to encode batch job memo", err)
 	}
 	searchAttributes, err := serializeSearchAttributes(map[string]interface{}{
 		"CustomDomain": domain,
 		"Operator":     operator,
 	})
 	if err != nil {
+		ErrorAndExit("Failed to encode batch job search attributes", err)
 	}
 	workflowId := uuid.NewRandom().String()
 	request := &types.StartWorkflowExecutionRequest{
