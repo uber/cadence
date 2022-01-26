@@ -248,6 +248,7 @@ func StartBatchJob(c *cli.Context) {
 		RequestID:                           uuid.New(),
 		WorkflowID:                          workflowId,
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(int32(batcher.InfiniteDuration.Seconds())),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(defaultDecisionTimeoutInSeconds)),
 		TaskList:                            &types.TaskList{Name: batcher.BatcherTaskListName},
 		Memo:                                memo,
 		SearchAttributes:                    searchAttributes,
