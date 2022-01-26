@@ -144,6 +144,7 @@ func (handler *handlerImpl) HandleDecisionTaskScheduled(
 
 			return &workflow.UpdateAction{}, nil
 		},
+		metrics.HistoryClientScheduleDecisionTaskScope,
 	)
 }
 
@@ -234,6 +235,7 @@ func (handler *handlerImpl) HandleDecisionTaskStarted(
 			}
 			return updateAction, nil
 		},
+		metrics.HistoryClientRecordDecisionTaskStartedScope,
 	)
 
 	if err != nil {
@@ -279,7 +281,7 @@ func (handler *handlerImpl) HandleDecisionTaskFailed(
 			_, err := mutableState.AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, request.GetCause(), request.Details,
 				request.GetIdentity(), "", request.GetBinaryChecksum(), "", "", 0)
 			return err
-		})
+		}, metrics.HistoryClientRespondDecisionTaskFailedScope)
 }
 
 func (handler *handlerImpl) HandleDecisionTaskCompleted(

@@ -1474,6 +1474,7 @@ func (e *historyEngineImpl) ResetStickyTaskList(
 			mutableState.ClearStickyness()
 			return nil
 		},
+		metrics.HistoryResetStickyTaskListScope,
 	)
 
 	if err != nil {
@@ -1740,7 +1741,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
 
 			return nil
-		})
+		}, metrics.HistoryRecordActivityTaskStartedScope)
 
 	if err != nil {
 		return nil, err
@@ -1848,7 +1849,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
 			return nil
-		})
+		}, metrics.HistoryRespondActivityTaskCompletedScope)
 	if err == nil && !activityStartedTime.IsZero() {
 		scope := e.metricsClient.Scope(metrics.HistoryRespondActivityTaskCompletedScope).
 			Tagged(
@@ -1944,7 +1945,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
 			return postActions, nil
-		},
+		}, metrics.HistoryRespondActivityTaskFailedScope,
 	)
 	if err == nil && !activityStartedTime.IsZero() {
 		scope := e.metricsClient.Scope(metrics.HistoryRespondActivityTaskFailedScope).
@@ -2032,7 +2033,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
 			return nil
-		})
+		}, metrics.HistoryRespondActivityTaskCanceledScope)
 	if err == nil && !activityStartedTime.IsZero() {
 		scope := e.metricsClient.Scope(metrics.HistoryClientRespondActivityTaskCanceledScope).
 			Tagged(
@@ -2117,7 +2118,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 			mutableState.UpdateActivityProgress(ai, request)
 
 			return nil
-		})
+		}, metrics.HistoryRecordActivityTaskHeartbeatScope)
 
 	if err != nil {
 		return &types.RecordActivityTaskHeartbeatResponse{}, err
@@ -2421,7 +2422,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 			mutableState.DeleteSignalRequested(request.GetRequestID())
 
 			return nil
-		})
+		}, metrics.HistoryRemoveSignalMutableStateScope)
 }
 
 func (e *historyEngineImpl) TerminateWorkflowExecution(
@@ -2531,7 +2532,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 			}
 
 			return err
-		})
+		}, metrics.HistoryRecordChildExecutionCompletedScope)
 }
 
 func (e *historyEngineImpl) ReplicateEventsV2(
@@ -3242,6 +3243,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 			}
 			return postActions, nil
 		},
+		metrics.HistoryReapplyEventsScope,
 	)
 }
 

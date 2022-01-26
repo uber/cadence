@@ -323,9 +323,33 @@ func (c *Cache) makeReleaseFunc(
 							//} else if callerScope == metrics.HistoryResetWorkflowExecutionScope {
 							//	time.Sleep(17 * time.Millisecond)
 						} else if callerScope == metrics.PersistenceUpdateWorkflowExecutionScope {
-							time.Sleep(10 * time.Millisecond)
+							//time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.TimerActiveTaskActivityTimeoutScope {
 							//time.Sleep(5 * time.Millisecond)
+						} else if callerScope == metrics.HistoryClientScheduleDecisionTaskScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryClientRecordDecisionTaskStartedScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryClientRespondDecisionTaskFailedScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRecordActivityTaskStartedScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRespondActivityTaskCompletedScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRespondActivityTaskFailedScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRespondActivityTaskCanceledScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRecordActivityTaskHeartbeatScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryResetStickyTaskListScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRemoveSignalMutableStateScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryRecordChildExecutionCompletedScope {
+							time.Sleep(14 * time.Millisecond)
+						} else if callerScope == metrics.HistoryReapplyEventsScope {
+							time.Sleep(14 * time.Millisecond)
 						}
 					}
 					context.Unlock()

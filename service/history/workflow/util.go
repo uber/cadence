@@ -140,9 +140,10 @@ func UpdateWithActionFunc(
 	execution types.WorkflowExecution,
 	now time.Time,
 	action UpdateActionFunc,
+	callerScope int,
 ) (retError error) {
 
-	workflowContext, err := LoadOnce(ctx, cache, domainID, execution.GetWorkflowID(), execution.GetRunID(), metrics.PersistenceUpdateWorkflowExecutionScope)
+	workflowContext, err := LoadOnce(ctx, cache, domainID, execution.GetWorkflowID(), execution.GetRunID(), callerScope)
 	if err != nil {
 		return err
 	}
@@ -182,6 +183,7 @@ func UpdateWithAction(
 	createDecisionTask bool,
 	now time.Time,
 	action func(wfContext execution.Context, mutableState execution.MutableState) error,
+	callerScope int,
 ) error {
 
 	return UpdateWithActionFunc(
@@ -191,6 +193,7 @@ func UpdateWithAction(
 		execution,
 		now,
 		getUpdateActionFunc(createDecisionTask, action),
+		callerScope,
 	)
 }
 
