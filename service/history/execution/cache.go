@@ -325,7 +325,7 @@ func (c *Cache) makeReleaseFunc(
 						} else if callerScope == metrics.PersistenceUpdateWorkflowExecutionScope {
 							time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.TimerActiveTaskActivityTimeoutScope {
-							time.Sleep(5 * time.Millisecond)
+							//time.Sleep(5 * time.Millisecond)
 						}
 					}
 					context.Unlock()
