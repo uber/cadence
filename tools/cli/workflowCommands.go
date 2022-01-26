@@ -807,7 +807,6 @@ func CountWorkflow(c *cli.Context) {
 
 	ctx, cancel := newContextForLongPoll(c)
 	defer cancel()
-	//set options?
 	response, err := wfClient.CountWorkflowExecutions(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
 	if err != nil {
 		ErrorAndExit("Failed to count workflow.", err)
