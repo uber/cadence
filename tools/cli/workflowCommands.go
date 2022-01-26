@@ -2303,17 +2303,14 @@ func FailActivity(c *cli.Context) {
 
 // ObserveHistoryWithID show the process of running workflow
 func ObserveHistoryWithID(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
 	if !c.Args().Present() {
 		ErrorAndExit("Argument workflow_id is required.", nil)
 	}
 	wid := c.Args().First()
 	rid := ""
-	domain := ""
 	if c.NArg() >= 2 {
 		rid = c.Args().Get(1)
-	}
-	if c.NArg() >= 3 {
-		domain = c.Args().Get(2)
 	}
 
 	printWorkflowProgress(c, domain, wid, rid)
