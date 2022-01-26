@@ -1739,7 +1739,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			}
 
 			response.StartedTimestamp = common.Int64Ptr(ai.StartedTime.UnixNano())
-
+			time.Sleep(14 * time.Millisecond)
 			return nil
 		}, metrics.HistoryRecordActivityTaskStartedScope)
 
@@ -1848,6 +1848,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 			}
 			activityStartedTime = ai.StartedTime
 			taskList = ai.TaskList
+			time.Sleep(14 * time.Millisecond)
 			return nil
 		}, metrics.HistoryRespondActivityTaskCompletedScope)
 	if err == nil && !activityStartedTime.IsZero() {
