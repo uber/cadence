@@ -109,6 +109,7 @@ func AdminRebalanceStart(c *cli.Context) {
 		Identity:                            getCliIdentity(),
 		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
 		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(defaultDecisionTimeoutInSeconds)),
 		Input:                               input,
 		TaskList: &types.TaskList{
 			Name: failovermanager.TaskListName,
