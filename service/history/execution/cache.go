@@ -333,7 +333,7 @@ func (c *Cache) makeReleaseFunc(
 						} else if callerScope == metrics.HistoryClientRespondDecisionTaskFailedScope {
 							//time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.HistoryRecordActivityTaskStartedScope {
-							time.Sleep(14 * time.Millisecond)
+							//time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.HistoryRespondActivityTaskCompletedScope {
 							time.Sleep(14 * time.Millisecond)
 						} else if callerScope == metrics.HistoryRespondActivityTaskFailedScope {
