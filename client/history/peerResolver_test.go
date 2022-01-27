@@ -38,7 +38,7 @@ func TestPeerResolver(t *testing.T) {
 	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(membership.NewHostInfo("domainHost:thriftPort"), nil)
 	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(membership.NewHostInfo("workflowHost:thriftPort"), nil)
 	serviceResolver.EXPECT().Lookup(service.History, string(rune(99))).Return(membership.NewHostInfo("shardHost:thriftPort"), nil)
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(11))).Return(nil, assert.AnError)
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(11))).Return(membership.HostInfo{}, assert.AnError)
 
 	r := NewPeerResolver(numShards, serviceResolver, fakeAddressMapper)
 

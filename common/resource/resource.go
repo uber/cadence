@@ -55,7 +55,7 @@ type (
 
 		GetServiceName() string
 		GetHostName() string
-		GetHostInfo() *membership.HostInfo
+		GetHostInfo() membership.HostInfo
 		GetArchivalMetadata() archiver.ArchivalMetadata
 		GetClusterMetadata() cluster.Metadata
 
