@@ -32,6 +32,7 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/log/tag"
@@ -215,7 +216,9 @@ func (s *IntegrationSuite) TestSignalWorkflow() {
 	s.IsType(&types.EntityNotExistsError{}, err)
 
 	// Send signal by enabling WorkflowExecutionAlreadyCompletedError feature
-	err = signal(we.RunID, "failed signal 1.", nil, client.GetDefaultCLIYarpcCallOptions()...)
+	err = signal(we.RunID, "failed signal 1.", nil, yarpc.WithHeader(common.ClientFeatureFlagsHeaderName, client.FeatureFlagsHeader(shared.FeatureFlags{
+		WorkflowExecutionAlreadyCompletedErrorEnabled: common.BoolPtr(true),
+	})))
 	s.NotNil(err)
 	s.IsType(&types.WorkflowExecutionAlreadyCompletedError{}, err)
 }

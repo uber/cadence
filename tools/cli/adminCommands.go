@@ -35,7 +35,6 @@ import (
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
-	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -187,7 +186,7 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 				RunID:      rid,
 			},
 		},
-		cc.GetDefaultCLIYarpcCallOptions()...)
+	)
 	if err != nil {
 		ErrorAndExit("Get workflow mutableState failed", err)
 	}

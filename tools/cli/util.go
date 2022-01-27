@@ -38,8 +38,6 @@ import (
 	"strings"
 	"time"
 
-	cc "github.com/uber/cadence/common/client"
-
 	"github.com/uber/cadence/common/pagination"
 
 	"github.com/uber/cadence/client/frontend"
@@ -122,7 +120,7 @@ func GetWorkflowHistoryIterator(
 		var err error
 	Loop:
 		for {
-			resp, err = workflowClient.GetWorkflowExecutionHistory(tcCtx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+			resp, err = workflowClient.GetWorkflowExecutionHistory(tcCtx, request)
 			if err != nil {
 				return pagination.Page{}, err
 			}

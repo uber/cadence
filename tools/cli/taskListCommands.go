@@ -23,8 +23,6 @@ package cli
 import (
 	"os"
 
-	cc "github.com/uber/cadence/common/client"
-
 	"github.com/uber/cadence/common/types"
 
 	"github.com/olekukonko/tablewriter"
@@ -48,7 +46,7 @@ func DescribeTaskList(c *cli.Context) {
 		},
 		TaskListType: &taskListType,
 	}
-	response, err := wfClient.DescribeTaskList(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	response, err := wfClient.DescribeTaskList(ctx, request)
 	if err != nil {
 		ErrorAndExit("Operation DescribeTaskList failed.", err)
 	}

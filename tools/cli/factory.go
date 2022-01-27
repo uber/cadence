@@ -167,7 +167,8 @@ type versionMiddleware struct {
 func (vm *versionMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
 	request.Headers = request.Headers.
 		With(common.ClientImplHeaderName, cc.CLI).
-		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion)
+		With(common.FeatureVersionHeaderName, cc.SupportedCLIVersion).
+		With(common.ClientFeatureFlagsHeaderName, cc.FeatureFlagsHeader(cc.DefaultCLIFeatureFlags))
 	if jwtKey, ok := ctx.Value(CtxKeyJWT).(string); ok {
 		request.Headers = request.Headers.With(common.AuthorizationTokenHeaderName, jwtKey)
 	}
