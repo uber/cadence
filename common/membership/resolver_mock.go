@@ -70,10 +70,10 @@ func (mr *MockResolverMockRecorder) EvictSelf() *gomock.Call {
 }
 
 // Lookup mocks base method.
-func (m *MockResolver) Lookup(service, key string) (*HostInfo, error) {
+func (m *MockResolver) Lookup(service, key string) (HostInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Lookup", service, key)
-	ret0, _ := ret[0].(*HostInfo)
+	ret0, _ := ret[0].(HostInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -100,10 +100,10 @@ func (mr *MockResolverMockRecorder) MemberCount(service interface{}) *gomock.Cal
 }
 
 // Members mocks base method.
-func (m *MockResolver) Members(service string) ([]*HostInfo, error) {
+func (m *MockResolver) Members(service string) ([]HostInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Members", service)
-	ret0, _ := ret[0].([]*HostInfo)
+	ret0, _ := ret[0].([]HostInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -167,10 +167,10 @@ func (mr *MockResolverMockRecorder) Unsubscribe(service, name interface{}) *gomo
 }
 
 // WhoAmI mocks base method.
-func (m *MockResolver) WhoAmI() (*HostInfo, error) {
+func (m *MockResolver) WhoAmI() (HostInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WhoAmI")
-	ret0, _ := ret[0].(*HostInfo)
+	ret0, _ := ret[0].(HostInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

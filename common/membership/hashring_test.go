@@ -33,18 +33,18 @@ import (
 	"github.com/uber/cadence/common/log"
 )
 
-func testCompareMembers(t *testing.T, curr []string, new []string, hasDiff bool) {
+func testCompareMembers(t *testing.T, curr []HostInfo, new []HostInfo, hasDiff bool) {
 	hashring := &ring{}
-	currMembers := make(map[string]struct{}, len(curr))
+	currMembers := make(map[string]HostInfo, len(curr))
 	for _, m := range curr {
-		currMembers[m] = struct{}{}
+		currMembers[m.GetAddress()] = m
 	}
 	hashring.members.keys = currMembers
 	newMembers, changed := hashring.compareMembers(new)
 	assert.Equal(t, hasDiff, changed)
 	assert.Equal(t, len(new), len(newMembers))
 	for _, m := range new {
-		_, ok := newMembers[m]
+		_, ok := newMembers[m.GetAddress()]
 		assert.True(t, ok)
 	}
 }
@@ -52,21 +52,21 @@ func testCompareMembers(t *testing.T, curr []string, new []string, hasDiff bool)
 func Test_ring_compareMembers(t *testing.T) {
 
 	tests := []struct {
-		curr    []string
-		new     []string
+		curr    []HostInfo
+		new     []HostInfo
 		hasDiff bool
 	}{
-		{curr: []string{}, new: []string{"a"}, hasDiff: true},
-		{curr: []string{}, new: []string{"a", "b"}, hasDiff: true},
-		{curr: []string{"a"}, new: []string{"a", "b"}, hasDiff: true},
-		{curr: []string{}, new: []string{}, hasDiff: false},
-		{curr: []string{"a"}, new: []string{"a"}, hasDiff: false},
+		{curr: []HostInfo{}, new: []HostInfo{NewHostInfo("a")}, hasDiff: true},
+		{curr: []HostInfo{}, new: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
+		{curr: []HostInfo{NewHostInfo("a")}, new: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, hasDiff: true},
+		{curr: []HostInfo{}, new: []HostInfo{}, hasDiff: false},
+		{curr: []HostInfo{NewHostInfo("a")}, new: []HostInfo{NewHostInfo("a")}, hasDiff: false},
 		// order doesn't matter.
-		{curr: []string{"b", "a"}, new: []string{"a", "b"}, hasDiff: false},
+		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b")}, new: []HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: false},
 		// member has left the ring
-		{curr: []string{"a", "b", "c"}, new: []string{"a", "b"}, hasDiff: true},
+		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []HostInfo{NewHostInfo("b"), NewHostInfo("a")}, hasDiff: true},
 		// ring becomes empty
-		{curr: []string{"a", "b", "c"}, new: []string{}, hasDiff: true},
+		{curr: []HostInfo{NewHostInfo("a"), NewHostInfo("b"), NewHostInfo("c")}, new: []HostInfo{}, hasDiff: true},
 	}
 
 	for _, tt := range tests {
@@ -165,7 +165,7 @@ func TestMemberCountReturnsNumber(t *testing.T) {
 func TestErrorIsPropagatedWhenProviderFails(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pp := NewMockPeerProvider(ctrl)
-	pp.EXPECT().GetMembers(gomock.Any()).Return([]string{}, errors.New("error"))
+	pp.EXPECT().GetMembers(gomock.Any()).Return(nil, errors.New("error"))
 
 	hr := newHashring("test-service", pp, log.NewNoop())
 	assert.Error(t, hr.refresh())
@@ -180,25 +180,5 @@ func TestStopWillStopProvider(t *testing.T) {
 	hr := newHashring("test-service", pp, log.NewNoop())
 	hr.status = common.DaemonStatusStarted
 	hr.Stop()
-
-}
-
-func TestMembersUseOnlyLocalRing(t *testing.T) {
-
-	hr := newHashring("test-service",
-		nil, /* provider */
-		log.NewNoop(),
-	)
-	assert.Nil(t, hr.Members())
-
-	ring := emptyHashring()
-	for _, addr := range []string{"127", "128"} {
-		host := NewHostInfo(addr)
-		ring.AddMembers(host)
-	}
-	hr.value.Store(ring)
-
-	assert.Equal(t, 2, len(hr.Members()))
-	assert.Equal(t, 2, hr.MemberCount())
 
 }

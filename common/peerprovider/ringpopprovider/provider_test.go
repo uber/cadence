@@ -99,7 +99,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 			return nil
 		}
 
-		NewRingpopProvider(ringPopApp, ringPop, bOptions, logger)
+		NewRingpopProvider(ringPopApp, ringPop, bOptions, cluster.channels[i], logger)
 
 	}
 	return cluster
