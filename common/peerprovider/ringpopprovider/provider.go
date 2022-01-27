@@ -24,6 +24,8 @@ package ringpopprovider
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
@@ -48,6 +50,7 @@ type (
 		ringpop    *ringpop.Ringpop
 		bootParams *swim.BootstrapOptions
 		logger     log.Logger
+		channel    tchannel.Channel
 
 		mu          sync.RWMutex
 		subscribers map[string]chan<- *membership.ChangedEvent
@@ -57,7 +60,9 @@ type (
 const (
 	// roleKey label is set by every single service as soon as it bootstraps its
 	// ringpop instance. The data for this key is the service name
-	roleKey = "serviceName"
+	roleKey      = "serviceName"
+	portTchannel = "tchannel"
+	portgRPC     = "grpc"
 )
 
 var _ membership.PeerProvider = (*Provider)(nil)
@@ -72,14 +77,9 @@ func New(
 		return nil, err
 	}
 
-	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
-	if err != nil {
-		return nil, fmt.Errorf("ringpop creation failed: %v", err)
-	}
-
 	discoveryProvider, err := newDiscoveryProvider(config, logger)
 	if err != nil {
-		return nil, fmt.Errorf("ringpop discovery provider: %v", err)
+		return nil, fmt.Errorf("ringpop discovery provider: %w", err)
 	}
 
 	bootstrapOpts := &swim.BootstrapOptions{
@@ -87,21 +87,29 @@ func New(
 		DiscoverProvider: discoveryProvider,
 	}
 
-	return NewRingpopProvider(service, rp, bootstrapOpts, logger), nil
+	rp, err := ringpop.New(config.Name, ringpop.Channel(channel.(*tcg.Channel)))
+	if err != nil {
+		return nil, fmt.Errorf("ringpop instance creation: %w", err)
+	}
+
+	return NewRingpopProvider(service, rp, bootstrapOpts, channel, logger), nil
 }
 
 // NewRingpopProvider sets up ringpop based peer provider
-func NewRingpopProvider(service string,
+func NewRingpopProvider(
+	service string,
 	rp *ringpop.Ringpop,
 	bootstrapOpts *swim.BootstrapOptions,
+	channel tchannel.Channel,
 	logger log.Logger,
 ) *Provider {
 	return &Provider{
 		service:     service,
 		status:      common.DaemonStatusInitialized,
-		ringpop:     rp,
 		bootParams:  bootstrapOpts,
 		logger:      logger,
+		channel:     channel,
+		ringpop:     rp,
 		subscribers: map[string]chan<- *membership.ChangedEvent{},
 	}
 }
@@ -129,8 +137,18 @@ func (r *Provider) Start() {
 		r.logger.Fatal("unable to get ring pop labels", tag.Error(err))
 	}
 
+	// set tchannel port to labels
+	_, port, err := net.SplitHostPort(r.channel.PeerInfo().HostPort)
+	if err != nil {
+		r.logger.Fatal("unable get tchannel port", tag.Error(err))
+	}
+
+	if err = labels.Set(portTchannel, port); err != nil {
+		r.logger.Fatal("unable to set ringpop tchannel label", tag.Error(err))
+	}
+
 	if err = labels.Set(roleKey, r.service); err != nil {
-		r.logger.Fatal("unable to set ring pop labels", tag.Error(err))
+		r.logger.Fatal("unable to set ringpop role label", tag.Error(err))
 	}
 }
 
@@ -171,13 +189,53 @@ func (r *Provider) SelfEvict() error {
 }
 
 // GetMembers returns all hosts with a specified role value
-func (r *Provider) GetMembers(service string) ([]string, error) {
-	return r.ringpop.GetReachableMembers(swim.MemberWithLabelAndValue(roleKey, service))
+func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
+	var res []membership.HostInfo
+
+	// filter member by service name, add port info to Hostinfo if they are present
+	memberData := func(member swim.Member) bool {
+		portMap := make(membership.PortMap)
+		if v, ok := member.Label(roleKey); !ok || v != service {
+			return false
+		}
+
+		if v, ok := member.Label(portTchannel); ok {
+			port, err := labelToPort(v)
+			if err != nil {
+				r.logger.Warn("tchannel port cannot be converted", tag.Error(err), tag.Value(v))
+			} else {
+				portMap[portTchannel] = port
+			}
+		}
+
+		if v, ok := member.Label(portgRPC); ok {
+			port, err := labelToPort(v)
+			if err != nil {
+				r.logger.Warn("grpc port cannot be converted", tag.Error(err), tag.Value(v))
+			} else {
+				portMap[portgRPC] = port
+			}
+		}
+
+		res = append(res, membership.NewDetailedHostInfo(member.GetAddress(), member.Identity(), portMap))
+
+		return true
+	}
+	_, err := r.ringpop.GetReachableMembers(memberData)
+	if err != nil {
+		return nil, fmt.Errorf("ringpop get members: %w", err)
+	}
+
+	return res, nil
 }
 
 // WhoAmI returns address of this instance
-func (r *Provider) WhoAmI() (string, error) {
-	return r.ringpop.WhoAmI()
+func (r *Provider) WhoAmI() (membership.HostInfo, error) {
+	address, err := r.ringpop.WhoAmI()
+	if err != nil {
+		return membership.HostInfo{}, fmt.Errorf("ringpop doesn't know Who Am I: %w", err)
+	}
+	return membership.NewHostInfo(address), nil
 }
 
 // Stop stops ringpop
@@ -205,4 +263,12 @@ func (r *Provider) Subscribe(name string, notifyChannel chan<- *membership.Chang
 
 	r.subscribers[name] = notifyChannel
 	return nil
+}
+
+func labelToPort(label string) (uint16, error) {
+	port, err := strconv.ParseInt(label, 0, 16)
+	if err != nil {
+		return 0, err
+	}
+	return uint16(port), nil
 }

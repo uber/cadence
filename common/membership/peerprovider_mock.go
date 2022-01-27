@@ -56,10 +56,10 @@ func (m *MockPeerProvider) EXPECT() *MockPeerProviderMockRecorder {
 }
 
 // GetMembers mocks base method.
-func (m *MockPeerProvider) GetMembers(service string) ([]string, error) {
+func (m *MockPeerProvider) GetMembers(service string) ([]HostInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMembers", service)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].([]HostInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -123,10 +123,10 @@ func (mr *MockPeerProviderMockRecorder) Subscribe(name, notifyChannel interface{
 }
 
 // WhoAmI mocks base method.
-func (m *MockPeerProvider) WhoAmI() (string, error) {
+func (m *MockPeerProvider) WhoAmI() (HostInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WhoAmI")
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(HostInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

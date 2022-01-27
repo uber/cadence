@@ -60,7 +60,7 @@ type (
 		GetTimeSource() clock.TimeSource
 		GetDispatcher() *yarpc.Dispatcher
 		GetMembershipResolver() membership.Resolver
-		GetHostInfo() *membership.HostInfo
+		GetHostInfo() membership.HostInfo
 		GetClusterMetadata() cluster.Metadata
 		GetMessagingClient() messaging.Client
 		GetBlobstoreClient() blobstore.Client
@@ -74,7 +74,7 @@ type (
 		status                int32
 		sName                 string
 		hostName              string
-		hostInfo              *membership.HostInfo
+		hostInfo              membership.HostInfo
 		dispatcher            *yarpc.Dispatcher
 		membershipResolver    membership.Resolver
 		rpcFactory            common.RPCFactory
@@ -232,7 +232,7 @@ func (h *serviceImpl) GetMembershipResolver() membership.Resolver {
 	return h.membershipResolver
 }
 
-func (h *serviceImpl) GetHostInfo() *membership.HostInfo {
+func (h *serviceImpl) GetHostInfo() membership.HostInfo {
 	return h.hostInfo
 }
 

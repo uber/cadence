@@ -73,7 +73,7 @@ type (
 		numShards       int
 		serviceName     string
 		hostName        string
-		hostInfo        *membership.HostInfo
+		hostInfo        membership.HostInfo
 		metricsScope    tally.Scope
 		clusterMetadata cluster.Metadata
 
@@ -382,7 +382,7 @@ func (h *Impl) GetHostName() string {
 }
 
 // GetHostInfo return host info
-func (h *Impl) GetHostInfo() *membership.HostInfo {
+func (h *Impl) GetHostInfo() membership.HostInfo {
 	return h.hostInfo
 }
 

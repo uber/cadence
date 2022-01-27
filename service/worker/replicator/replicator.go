@@ -43,7 +43,7 @@ type (
 		domainProcessors              []*domainReplicationProcessor
 		logger                        log.Logger
 		metricsClient                 metrics.Client
-		hostInfo                      *membership.HostInfo
+		hostInfo                      membership.HostInfo
 		membershipResolver            membership.Resolver
 		domainReplicationQueue        domain.ReplicationQueue
 		replicationMaxRetry           time.Duration
@@ -56,7 +56,7 @@ func NewReplicator(
 	clientBean client.Bean,
 	logger log.Logger,
 	metricsClient metrics.Client,
-	hostInfo *membership.HostInfo,
+	hostInfo membership.HostInfo,
 	membership membership.Resolver,
 	domainReplicationQueue domain.ReplicationQueue,
 	domainReplicationTaskExecutor domain.ReplicationTaskExecutor,
