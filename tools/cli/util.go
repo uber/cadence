@@ -122,7 +122,7 @@ func GetWorkflowHistoryIterator(
 		for {
 			resp, err = workflowClient.GetWorkflowExecutionHistory(tcCtx, request)
 			if err != nil {
-				break Loop
+				return pagination.Page{}, err
 			}
 
 			if isLongPoll && len(resp.History.Events) == 0 && len(resp.NextPageToken) != 0 {
@@ -131,7 +131,7 @@ func GetWorkflowHistoryIterator(
 			}
 			break Loop
 		}
-		entities := make([]pagination.Entity, len(resp.History.Events), len(resp.History.Events))
+		entities := make([]pagination.Entity, len(resp.History.Events))
 		for i, e := range resp.History.Events {
 			entities[i] = e
 		}
