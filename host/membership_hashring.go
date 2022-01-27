@@ -27,21 +27,21 @@ import (
 )
 
 type simpleHashring struct {
-	hosts    []*membership.HostInfo
+	hosts    []membership.HostInfo
 	hashfunc func([]byte) uint32
 }
 
 // newSimpleHashring returns a service resolver that maintains static mapping
 // between services and host info
 func newSimpleHashring(hosts []string) *simpleHashring {
-	hostInfos := make([]*membership.HostInfo, 0, len(hosts))
+	hostInfos := make([]membership.HostInfo, 0, len(hosts))
 	for _, host := range hosts {
 		hostInfos = append(hostInfos, membership.NewHostInfo(host))
 	}
 	return &simpleHashring{hostInfos, farm.Fingerprint32}
 }
 
-func (s *simpleHashring) Lookup(key string) (*membership.HostInfo, error) {
+func (s *simpleHashring) Lookup(key string) (membership.HostInfo, error) {
 	hash := int(s.hashfunc([]byte(key)))
 	idx := hash % len(s.hosts)
 	return s.hosts[idx], nil
@@ -59,6 +59,6 @@ func (s *simpleHashring) MemberCount() int {
 	return len(s.hosts)
 }
 
-func (s *simpleHashring) Members() []*membership.HostInfo {
+func (s *simpleHashring) Members() []membership.HostInfo {
 	return s.hosts
 }

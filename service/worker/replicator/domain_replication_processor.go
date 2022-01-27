@@ -51,7 +51,7 @@ const (
 
 type (
 	domainReplicationProcessor struct {
-		hostInfo               *membership.HostInfo
+		hostInfo               membership.HostInfo
 		membershipResolver     membership.Resolver
 		status                 int32
 		sourceCluster          string
@@ -75,7 +75,7 @@ func newDomainReplicationProcessor(
 	remotePeer admin.Client,
 	metricsClient metrics.Client,
 	taskExecutor domain.ReplicationTaskExecutor,
-	hostInfo *membership.HostInfo,
+	hostInfo membership.HostInfo,
 	resolver membership.Resolver,
 	domainReplicationQueue domain.ReplicationQueue,
 	replicationMaxRetry time.Duration,

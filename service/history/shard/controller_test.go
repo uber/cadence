@@ -59,7 +59,7 @@ type (
 		mockClusterMetadata    *cluster.MockMetadata
 		mockMembershipResolver *membership.MockResolver
 
-		hostInfo          *membership.HostInfo
+		hostInfo          membership.HostInfo
 		mockShardManager  *mmocks.ShardManager
 		mockEngineFactory *MockEngineFactory
 
@@ -280,12 +280,12 @@ func (s *controllerSuite) TestAcquireShardLookupFailure() {
 	numShards := 2
 	s.config.NumberOfShards = numShards
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockMembershipResolver.EXPECT().Lookup(service.History, string(rune(shardID))).Return(nil, errors.New("ring failure")).Times(1)
+		s.mockMembershipResolver.EXPECT().Lookup(service.History, string(rune(shardID))).Return(membership.HostInfo{}, errors.New("ring failure")).Times(1)
 	}
 
 	s.shardController.acquireShards()
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockMembershipResolver.EXPECT().Lookup(service.History, string(rune(shardID))).Return(nil, errors.New("ring failure")).Times(1)
+		s.mockMembershipResolver.EXPECT().Lookup(service.History, string(rune(shardID))).Return(membership.HostInfo{}, errors.New("ring failure")).Times(1)
 		s.Nil(s.shardController.GetEngineForShard(shardID))
 	}
 }
@@ -445,7 +445,7 @@ func (s *controllerSuite) TestAcquireShardRenewLookupFailed() {
 	s.shardController.acquireShards()
 
 	for shardID := 0; shardID < numShards; shardID++ {
-		s.mockMembershipResolver.EXPECT().Lookup(service.History, string(rune(shardID))).Return(nil, errors.New("ring failure")).Times(1)
+		s.mockMembershipResolver.EXPECT().Lookup(service.History, string(rune(shardID))).Return(membership.HostInfo{}, errors.New("ring failure")).Times(1)
 	}
 	s.shardController.acquireShards()
 
