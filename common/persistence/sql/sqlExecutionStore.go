@@ -34,6 +34,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
@@ -48,6 +49,7 @@ const (
 )
 
 type sqlExecutionStore struct {
+	cfg config.SQL 
 	sqlStore
 	shardID int
 }
@@ -56,6 +58,7 @@ var _ p.ExecutionStore = (*sqlExecutionStore)(nil)
 
 // NewSQLExecutionStore creates an instance of ExecutionStore
 func NewSQLExecutionStore(
+	cfg config.SQL,
 	db sqlplugin.DB,
 	logger log.Logger,
 	shardID int,
@@ -63,6 +66,7 @@ func NewSQLExecutionStore(
 ) (p.ExecutionStore, error) {
 
 	return &sqlExecutionStore{
+		cfg: cfg,
 		shardID: shardID,
 		sqlStore: sqlStore{
 			db:     db,
@@ -474,7 +478,7 @@ func (m *sqlExecutionStore) updateWorkflowExecutionTx(
 		}
 	}
 
-	if err := applyWorkflowMutationTx(ctx, tx, shardID, &updateWorkflow, m.parser); err != nil {
+	if err := applyWorkflowMutationTx(ctx, tx, shardID, &updateWorkflow, m.parser, m.cfg.ParallelizeTransactions); err != nil {
 		return err
 	}
 	if newWorkflow != nil {
@@ -594,7 +598,7 @@ func (m *sqlExecutionStore) conflictResolveWorkflowExecutionTx(
 		return err
 	}
 	if currentWorkflow != nil {
-		if err := applyWorkflowMutationTx(ctx, tx, shardID, currentWorkflow, m.parser); err != nil {
+		if err := applyWorkflowMutationTx(ctx, tx, shardID, currentWorkflow, m.parser, m.cfg.ParallelizeTransactions); err != nil {
 			return err
 		}
 	}

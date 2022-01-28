@@ -275,6 +275,9 @@ type (
 		// When enabled, connection will be established using MultipleDatabasesConfig in favor of single values
 		// of  User, Password, DatabaseName, ConnectAddr.
 		UseMultipleDatabases bool `yaml:"useMultipleDatabases"`
+		// ParallelizeTransactions is an optimization for write transactions to be executed in parallel
+		// to improve latency. Off by default.
+		ParallelizeTransactions bool `yaml:"parallelizeTransactions"`
 		// Required when UseMultipleDatabases is true
 		// the length of the list should be exactly the same as NumShards
 		MultipleDatabasesConfig []MultipleDatabasesConfigEntry `yaml:"multipleDatabasesConfig"`

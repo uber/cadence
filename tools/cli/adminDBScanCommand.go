@@ -34,6 +34,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -284,7 +285,7 @@ func initializeSQLExecutionStore(
 	for _, dt := range decodingTypesStr {
 		decodingTypes = append(decodingTypes, common.EncodingType(dt))
 	}
-	execStore, err := sql.NewSQLExecutionStore(sqlDB, logger, shardID, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
+	execStore, err := sql.NewSQLExecutionStore(config.SQL{}, sqlDB, logger, shardID, getSQLParser(common.EncodingType(encodingType), decodingTypes...))
 	if err != nil {
 		ErrorAndExit("Failed to get execution store from sql config", err)
 	}

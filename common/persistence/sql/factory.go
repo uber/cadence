@@ -113,7 +113,7 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewSQLExecutionStore(conn, f.logger, shardID, f.parser)
+	return NewSQLExecutionStore(f.cfg, conn, f.logger, shardID, f.parser)
 }
 
 // NewVisibilityStore returns a visibility store
