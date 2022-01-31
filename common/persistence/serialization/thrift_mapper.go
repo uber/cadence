@@ -25,10 +25,9 @@ package serialization
 import (
 	"time"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/.gen/go/sqlblobs"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 func shardInfoToThrift(info *ShardInfo) *sqlblobs.ShardInfo {
@@ -166,42 +165,22 @@ func historyTreeInfoToThrift(info *HistoryTreeInfo) *sqlblobs.HistoryTreeInfo {
 	if info == nil {
 		return nil
 	}
-	result := &sqlblobs.HistoryTreeInfo{
+	return &sqlblobs.HistoryTreeInfo{
 		CreatedTimeNanos: timeToUnixNanoPtr(info.CreatedTimestamp),
 		Info:             &info.Info,
+		Ancestors:        thrift.FromHistoryBranchRangeArray(info.Ancestors),
 	}
-	if info.Ancestors != nil {
-		result.Ancestors = make([]*shared.HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
-		for i, a := range info.Ancestors {
-			result.Ancestors[i] = &shared.HistoryBranchRange{
-				BranchID:    a.BranchID,
-				BeginNodeID: a.BeginNodeID,
-				EndNodeID:   a.EndNodeID,
-			}
-		}
-	}
-	return result
 }
 
 func historyTreeInfoFromThrift(info *sqlblobs.HistoryTreeInfo) *HistoryTreeInfo {
 	if info == nil {
 		return nil
 	}
-	result := &HistoryTreeInfo{
+	return &HistoryTreeInfo{
 		CreatedTimestamp: timeFromUnixNano(info.GetCreatedTimeNanos()),
 		Info:             info.GetInfo(),
+		Ancestors:        thrift.ToHistoryBranchRangeArray(info.Ancestors),
 	}
-	if info.Ancestors != nil {
-		result.Ancestors = make([]*types.HistoryBranchRange, len(info.Ancestors), len(info.Ancestors))
-		for i, a := range info.Ancestors {
-			result.Ancestors[i] = &types.HistoryBranchRange{
-				BranchID:    a.BranchID,
-				BeginNodeID: a.BeginNodeID,
-				EndNodeID:   a.EndNodeID,
-			}
-		}
-	}
-	return result
 }
 
 func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.WorkflowExecutionInfo {

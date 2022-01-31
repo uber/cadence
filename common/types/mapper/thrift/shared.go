@@ -2554,8 +2554,8 @@ func FromHistoryBranch(t *types.HistoryBranch) *shared.HistoryBranch {
 		return nil
 	}
 	return &shared.HistoryBranch{
-		TreeID:    t.TreeID,
-		BranchID:  t.BranchID,
+		TreeID:    &t.TreeID,
+		BranchID:  &t.BranchID,
 		Ancestors: FromHistoryBranchRangeArray(t.Ancestors),
 	}
 }
@@ -2566,8 +2566,8 @@ func ToHistoryBranch(t *shared.HistoryBranch) *types.HistoryBranch {
 		return nil
 	}
 	return &types.HistoryBranch{
-		TreeID:    t.TreeID,
-		BranchID:  t.BranchID,
+		TreeID:    *t.TreeID,
+		BranchID:  *t.BranchID,
 		Ancestors: ToHistoryBranchRangeArray(t.Ancestors),
 	}
 }
@@ -2578,9 +2578,9 @@ func FromHistoryBranchRange(t *types.HistoryBranchRange) *shared.HistoryBranchRa
 		return nil
 	}
 	return &shared.HistoryBranchRange{
-		BranchID:    t.BranchID,
-		BeginNodeID: t.BeginNodeID,
-		EndNodeID:   t.EndNodeID,
+		BranchID:    &t.BranchID,
+		BeginNodeID: &t.BeginNodeID,
+		EndNodeID:   &t.EndNodeID,
 	}
 }
 
@@ -2590,9 +2590,9 @@ func ToHistoryBranchRange(t *shared.HistoryBranchRange) *types.HistoryBranchRang
 		return nil
 	}
 	return &types.HistoryBranchRange{
-		BranchID:    t.BranchID,
-		BeginNodeID: t.BeginNodeID,
-		EndNodeID:   t.EndNodeID,
+		BranchID:    *t.BranchID,
+		BeginNodeID: *t.BeginNodeID,
+		EndNodeID:   *t.EndNodeID,
 	}
 }
 

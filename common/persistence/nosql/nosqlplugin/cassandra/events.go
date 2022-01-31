@@ -26,7 +26,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/uber/cadence/common"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -66,7 +65,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 	if treeRow != nil {
 		for _, an := range treeRow.Ancestors {
 			value := make(map[string]interface{})
-			value["end_node_id"] = *an.EndNodeID
+			value["end_node_id"] = an.EndNodeID
 			value["branch_id"] = an.BranchID
 			ancs = append(ancs, value)
 		}
@@ -220,9 +219,9 @@ func parseBranchAncestors(
 		for k, v := range e {
 			switch k {
 			case "branch_id":
-				an.BranchID = common.StringPtr(v.(gocql.UUID).String())
+				an.BranchID = v.(gocql.UUID).String()
 			case "end_node_id":
-				an.EndNodeID = common.Int64Ptr(v.(int64))
+				an.EndNodeID = v.(int64)
 			}
 		}
 		ans = append(ans, an)
@@ -230,8 +229,8 @@ func parseBranchAncestors(
 
 	if len(ans) > 0 {
 		// sort ans based onf EndNodeID so that we can set BeginNodeID
-		sort.Slice(ans, func(i, j int) bool { return *ans[i].EndNodeID < *ans[j].EndNodeID })
-		ans[0].BeginNodeID = common.Int64Ptr(int64(1))
+		sort.Slice(ans, func(i, j int) bool { return ans[i].EndNodeID < ans[j].EndNodeID })
+		ans[0].BeginNodeID = int64(1)
 		for i := 1; i < len(ans); i++ {
 			ans[i].BeginNodeID = ans[i-1].EndNodeID
 		}

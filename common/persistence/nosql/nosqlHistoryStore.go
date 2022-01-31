@@ -97,16 +97,16 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 		}
 		treeRow = &nosqlplugin.HistoryTreeRow{
 			ShardID:         request.ShardID,
-			TreeID:          branchInfo.GetTreeID(),
-			BranchID:        branchInfo.GetBranchID(),
+			TreeID:          branchInfo.TreeID,
+			BranchID:        branchInfo.BranchID,
 			Ancestors:       ancestors,
 			CreateTimestamp: time.Now(),
 			Info:            request.Info,
 		}
 	}
 	nodeRow := &nosqlplugin.HistoryNodeRow{
-		TreeID:       branchInfo.GetTreeID(),
-		BranchID:     branchInfo.GetBranchID(),
+		TreeID:       branchInfo.TreeID,
+		BranchID:     branchInfo.BranchID,
 		NodeID:       request.NodeID,
 		TxnID:        &request.TransactionID,
 		Data:         request.Events.Data,
@@ -244,18 +244,18 @@ func (h *nosqlHistoryStore) ForkHistoryBranch(
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
 	forkB := request.ForkBranchInfo
-	treeID := *forkB.TreeID
+	treeID := forkB.TreeID
 	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	beginNodeID := persistenceutils.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
-			if *br.EndNodeID >= request.ForkNodeID {
+			if br.EndNodeID >= request.ForkNodeID {
 				newAncestors = append(newAncestors, &types.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
-					EndNodeID:   common.Int64Ptr(request.ForkNodeID),
+					EndNodeID:   request.ForkNodeID,
 				})
 				break
 			} else {
@@ -267,15 +267,15 @@ func (h *nosqlHistoryStore) ForkHistoryBranch(
 		newAncestors = forkB.Ancestors
 		newAncestors = append(newAncestors, &types.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
-			BeginNodeID: common.Int64Ptr(beginNodeID),
-			EndNodeID:   common.Int64Ptr(request.ForkNodeID),
+			BeginNodeID: beginNodeID,
+			EndNodeID:   request.ForkNodeID,
 		})
 	}
 
 	resp := &p.InternalForkHistoryBranchResponse{
 		NewBranchInfo: types.HistoryBranch{
-			TreeID:    &treeID,
-			BranchID:  &request.NewBranchID,
+			TreeID:    treeID,
+			BranchID:  request.NewBranchID,
 			Ancestors: newAncestors,
 		}}
 
@@ -310,12 +310,12 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 ) error {
 
 	branch := request.BranchInfo
-	treeID := *branch.TreeID
+	treeID := branch.TreeID
 	brsToDelete := branch.Ancestors
 	beginNodeID := persistenceutils.GetBeginNodeID(branch)
 	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
-		BeginNodeID: common.Int64Ptr(beginNodeID),
+		BeginNodeID: beginNodeID,
 	})
 
 	rsp, err := h.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
@@ -329,7 +329,7 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 	treeFilter := &nosqlplugin.HistoryTreeFilter{
 		ShardID:  request.ShardID,
 		TreeID:   treeID,
-		BranchID: branch.BranchID,
+		BranchID: &branch.BranchID,
 	}
 	var nodeFilters []*nosqlplugin.HistoryNodeFilter
 
@@ -339,13 +339,13 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 	// for each branch range to delete, we iterate from bottom to up, and delete up to the point according to validBRsEndNode
 	for i := len(brsToDelete) - 1; i >= 0; i-- {
 		br := brsToDelete[i]
-		maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
+		maxReferredEndNodeID, ok := validBRsMaxEndNode[br.BranchID]
 		if ok {
 			// we can only delete from the maxEndNode and stop here
 			nodeFilter := &nosqlplugin.HistoryNodeFilter{
 				ShardID:   request.ShardID,
 				TreeID:    treeID,
-				BranchID:  *br.BranchID,
+				BranchID:  br.BranchID,
 				MinNodeID: maxReferredEndNodeID,
 			}
 			nodeFilters = append(nodeFilters, nodeFilter)
@@ -355,8 +355,8 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 			nodeFilter := &nosqlplugin.HistoryNodeFilter{
 				ShardID:   request.ShardID,
 				TreeID:    treeID,
-				BranchID:  *br.BranchID,
-				MinNodeID: *br.BeginNodeID,
+				BranchID:  br.BranchID,
+				MinNodeID: br.BeginNodeID,
 			}
 			nodeFilters = append(nodeFilters, nodeFilter)
 		}
@@ -419,8 +419,8 @@ func (h *nosqlHistoryStore) GetHistoryTree(
 	branches := make([]*types.HistoryBranch, 0)
 	for _, dbBr := range dbBranches {
 		br := &types.HistoryBranch{
-			TreeID:    &treeID,
-			BranchID:  &dbBr.BranchID,
+			TreeID:    treeID,
+			BranchID:  dbBr.BranchID,
 			Ancestors: dbBr.Ancestors,
 		}
 		branches = append(branches, br)

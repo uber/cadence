@@ -731,7 +731,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 	beginNodeID := persistenceutils.GetBeginNodeID(*branch)
 	brsToDelete := append(branch.Ancestors, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
-		BeginNodeID: common.Int64Ptr(beginNodeID),
+		BeginNodeID: beginNodeID,
 	})
 
 	branches := s.descTreeByToken(ctx, branchToken)
@@ -745,12 +745,12 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 	minNodeID := beginNodeID
 	for i := len(brsToDelete) - 1; i >= 0; i-- {
 		br := brsToDelete[i]
-		maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
+		maxReferredEndNodeID, ok := validBRsMaxEndNode[br.BranchID]
 		if ok {
 			minNodeID = maxReferredEndNodeID
 			break
 		} else {
-			minNodeID = *br.BeginNodeID
+			minNodeID = br.BeginNodeID
 		}
 	}
 

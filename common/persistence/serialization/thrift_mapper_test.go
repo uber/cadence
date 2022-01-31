@@ -136,14 +136,14 @@ func TestHistoryTreeInfo(t *testing.T) {
 		CreatedTimestamp: time.Now(),
 		Ancestors: []*types.HistoryBranchRange{
 			{
-				BranchID:    common.StringPtr("branch_id"),
-				BeginNodeID: common.Int64Ptr(int64(rand.Intn(1000))),
-				EndNodeID:   common.Int64Ptr(int64(rand.Intn(1000))),
+				BranchID:    "branch_id",
+				BeginNodeID: int64(rand.Intn(1000)),
+				EndNodeID:   int64(rand.Intn(1000)),
 			},
 			{
-				BranchID:    common.StringPtr("branch_id"),
-				BeginNodeID: common.Int64Ptr(int64(rand.Intn(1000))),
-				EndNodeID:   common.Int64Ptr(int64(rand.Intn(1000))),
+				BranchID:    "branch_id",
+				BeginNodeID: int64(rand.Intn(1000)),
+				EndNodeID:   int64(rand.Intn(1000)),
 			},
 		},
 		Info: "info",
