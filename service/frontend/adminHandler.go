@@ -557,8 +557,6 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 				logger.Info("Deleted visibility record successfully")
 			}
 		}
-		// TODO: DELETE
-		// adh.ElasticSearchDeleteWorkflow(ctx, domainName, workflowID, runID)
 
 	} else {
 		logger.Error("Describe workflow failed", tag.Error(err))
@@ -567,37 +565,6 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		}
 	}
 
-	return nil
-}
-
-// ElasticSearchDelete used to delete documents from ElasticSearch with input of list result
-func (adh *adminHandlerImpl) ElasticSearchDeleteWorkflow(
-	ctx context.Context,
-	domainName string,
-	workflowID string,
-	runID string,
-) error {
-	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
-	logger := adh.GetLogger()
-	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		logger.Info(fmt.Sprintf("ElasticSearch isn't configured for this Cadence cluster: %#v", err))
-		return nil
-	}
-
-	esClient := adh.params.ESClient
-	indexName := adh.params.ESConfig.GetVisibilityIndex()
-	err := esClient.DeleteWorkflow(ctx, indexName, workflowID, runID)
-	if err != nil {
-		logger.Error("Failed to delete corrupt workflow visibility record.",
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID))
-		return adh.error(err, scope)
-	}
-	logger.Info("Corrupt workflow visibility record successfully deleted.",
-		tag.WorkflowDomainName(domainName),
-		tag.WorkflowID(workflowID),
-		tag.WorkflowRunID(runID))
 	return nil
 }
 

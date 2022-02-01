@@ -78,8 +78,6 @@ type (
 		CreateIndex(ctx context.Context, index string) error
 
 		IsNotFoundError(err error) bool
-
-		DeleteWorkflow(ctx context.Context, indexName string, workflowID string, runID string) error
 	}
 
 	// SearchRequest is request for Search
