@@ -721,9 +721,16 @@ func TestExternalExecutionInfo(t *testing.T) {
 	assert.Nil(t, FromExternalExecutionInfoFields(nil, nil))
 	assert.Nil(t, ToExternalWorkflowExecution(nil))
 	assert.Nil(t, ToExternalInitiatedID(nil))
-	assert.Panics(t, func() { FromExternalExecutionInfoFields(nil, common.Int64Ptr(testdata.EventID1)) })
-	assert.Panics(t, func() { FromExternalExecutionInfoFields(&testdata.WorkflowExecution, nil) })
-	info := FromExternalExecutionInfoFields(&testdata.WorkflowExecution, common.Int64Ptr(testdata.EventID1))
+
+	info := FromExternalExecutionInfoFields(nil, common.Int64Ptr(testdata.EventID1))
+	assert.Nil(t, ToExternalWorkflowExecution(nil))
+	assert.Equal(t, testdata.EventID1, *ToExternalInitiatedID(info))
+
+	info = FromExternalExecutionInfoFields(&testdata.WorkflowExecution, nil)
+	assert.Equal(t, testdata.WorkflowExecution, *ToExternalWorkflowExecution(info))
+	assert.Equal(t, int64(0), *ToExternalInitiatedID(info))
+
+	info = FromExternalExecutionInfoFields(&testdata.WorkflowExecution, common.Int64Ptr(testdata.EventID1))
 	assert.Equal(t, testdata.WorkflowExecution, *ToExternalWorkflowExecution(info))
 	assert.Equal(t, testdata.EventID1, *ToExternalInitiatedID(info))
 }
