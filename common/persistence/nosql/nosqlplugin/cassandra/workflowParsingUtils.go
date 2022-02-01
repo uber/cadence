@@ -24,6 +24,8 @@ package cassandra
 import (
 	"time"
 
+	cql "github.com/gocql/gocql"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/checksum"
 	"github.com/uber/cadence/common/persistence"
@@ -31,6 +33,8 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
+
+var _emptyUUID = cql.UUID{}
 
 func parseWorkflowExecutionInfo(
 	result map[string]interface{},
@@ -362,6 +366,10 @@ func parseChildExecutionInfo(
 			encoding = common.EncodingType(v.(string))
 		case "domain_id":
 			info.DomainID = v.(gocql.UUID).String()
+			if info.DomainID == _emptyUUID.String() {
+				// for backward compatibility, the gocql library doesn't handle the null uuid correectly https://github.com/gocql/gocql/blob/master/marshal.go#L1807
+				info.DomainID = ""
+			}
 		case "domain_name":
 			info.DomainNameDEPRECATED = v.(string)
 		case "workflow_type_name":
