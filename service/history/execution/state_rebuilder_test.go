@@ -157,7 +157,6 @@ func (s *stateRebuilderSuite) TestPagination() {
 	firstEventID := common.FirstEventID
 	nextEventID := int64(101)
 	branchToken := []byte("some random branch token")
-	workflowIdentifier := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID)
 
 	event1 := &types.HistoryEvent{
 		EventID:                                 1,
@@ -209,7 +208,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.nDCStateRebuilder.getPaginationFn(context.Background(), workflowIdentifier, firstEventID, nextEventID, branchToken)
+	paginationFn := s.nDCStateRebuilder.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*types.History{}
