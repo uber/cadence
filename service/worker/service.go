@@ -240,8 +240,7 @@ func (s *Service) Start() {
 	if s.config.EnableESAnalyzer() {
 		s.startESAnalyzer()
 	}
-	// TODO: DELETE true
-	if true || s.config.EnableWatchDog() {
+	if s.config.EnableWatchDog() {
 		s.startWatchDog()
 	}
 	if s.config.EnableFailoverManager() {

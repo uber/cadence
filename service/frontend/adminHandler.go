@@ -369,8 +369,7 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 	queryTemplates := adh.getCorruptWorkflowQueryTemplates(ctx, request)
 	for functionName, queryFunc := range queryTemplates {
 		err := queryFunc(request)
-		// TODO: delete false
-		if false && err == nil {
+		if err == nil {
 			logger.Info(fmt.Sprintf("Query succeeded for function: %s", functionName))
 			continue
 		}
@@ -379,20 +378,13 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 			logger.Info(fmt.Sprintf("%s returned error %#v", functionName, err))
 		}
 
-		// check if workflow execution cannot be found
-		switch err.(type) {
-		case *types.EntityNotExistsError:
-			logger.Info("Workflow execution cannot be found.")
-			shouldDelete = true
-		}
-
 		// check if the error message indicates corrupt workflow
 		if !shouldDelete {
-			// errorMessage := err.Error()
-			errorMessage := corruptWorkflowErrorList[0]
+			errorMessage := err.Error()
 			for _, corruptMessage := range corruptWorkflowErrorList {
-				// TODO: DELETE true
-				if true || strings.Contains(errorMessage, corruptMessage) {
+				if strings.Contains(errorMessage, corruptMessage) {
+					logger.Info(fmt.Sprintf("Will delete workflow since error (%v) to query %#v contains '%v'",
+						err, functionName, corruptMessage))
 					shouldDelete = true
 					break
 				}

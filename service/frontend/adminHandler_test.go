@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -40,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
+	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -56,6 +58,8 @@ type (
 		mockResource      *resource.Test
 		mockHistoryClient *history.MockClient
 		mockDomainCache   *cache.MockDomainCache
+		frontendClient    *frontend.MockClient
+		mockResolver      *membership.MockResolver
 
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 
@@ -82,6 +86,8 @@ func (s *adminHandlerSuite) SetupTest() {
 	s.mockDomainCache = s.mockResource.DomainCache
 	s.mockHistoryClient = s.mockResource.HistoryClient
 	s.mockHistoryV2Mgr = s.mockResource.HistoryMgr
+	s.frontendClient = s.mockResource.FrontendClient
+	s.mockResolver = s.mockResource.MembershipResolver
 
 	params := &resource.Params{
 		PersistenceConfig: config.Persistence{
@@ -100,6 +106,88 @@ func (s *adminHandlerSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockResource.Finish(s.T())
 	s.handler.Stop()
+}
+
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_NormalWorkflow() {
+	s.testMaintainCorruptWorkflow(nil, nil, false)
+}
+
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_WorkflowDoesNotExist() {
+	err := &types.EntityNotExistsError{Message: "Workflow does not exist"}
+	s.testMaintainCorruptWorkflow(err, nil, false)
+}
+
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_NoStartEvent() {
+	err := &types.InternalServiceError{Message: "unable to get workflow start event"}
+	s.testMaintainCorruptWorkflow(err, nil, true)
+}
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_NoStartEventHistory() {
+	err := &types.InternalServiceError{Message: "unable to get workflow start event"}
+	s.testMaintainCorruptWorkflow(nil, err, true)
+}
+
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_UnableToGetScheduledEvent() {
+	err := &types.InternalServiceError{Message: "unable to get activity scheduled event"}
+	s.testMaintainCorruptWorkflow(err, nil, true)
+}
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_UnableToGetScheduledEventHistory() {
+	err := &types.InternalServiceError{Message: "unable to get activity scheduled event"}
+	s.testMaintainCorruptWorkflow(nil, err, true)
+}
+
+func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_CorruptedHistory() {
+	err := &types.InternalDataInconsistencyError{
+		Message: "corrupted history event batch, eventID is not continouous",
+	}
+	s.testMaintainCorruptWorkflow(err, nil, true)
+}
+
+func (s *adminHandlerSuite) testMaintainCorruptWorkflow(
+	describeWorkflowError error,
+	getHistoryError error,
+	expectDeletion bool,
+) {
+	handler := s.handler
+	handler.params = &resource.Params{}
+	ctx := context.Background()
+
+	request := &types.AdminDeleteWorkflowRequest{
+		Domain: s.domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: "someWorkflowID",
+			RunID:      uuid.New(),
+		},
+		SkipErrors: true,
+	}
+
+	// need to reeturn error here to start deleting
+	describeResp := &types.DescribeWorkflowExecutionResponse{}
+	s.frontendClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).
+		Return(describeResp, describeWorkflowError)
+
+	// need to reeturn error here to start deleting
+	historyResponse := &types.GetWorkflowExecutionHistoryResponse{}
+	s.frontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).
+		Return(historyResponse, getHistoryError).AnyTimes()
+
+	if expectDeletion {
+		hostInfo := membership.NewHostInfo("taskListA:thriftPort")
+		s.mockResolver.EXPECT().Lookup(gomock.Any(), gomock.Any()).Return(hostInfo, nil)
+		s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil)
+
+		testMutableState := &types.DescribeMutableStateResponse{
+			MutableStateInDatabase: "{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}",
+		}
+		s.mockHistoryClient.EXPECT().DescribeMutableState(gomock.Any(), gomock.Any()).Return(testMutableState, nil)
+
+		s.mockHistoryV2Mgr.On("DeleteHistoryBranch", mock.Anything, mock.Anything).Return(nil).Once()
+		s.mockResource.ExecutionMgr.On("DeleteWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
+		s.mockResource.ExecutionMgr.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
+		s.mockResource.VisibilityMgr.On("DeleteWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
+	}
+
+	err := handler.MaintainCorruptWorkflow(ctx, request)
+	s.Nil(err)
 }
 
 func (s *adminHandlerSuite) Test_ConvertIndexedValueTypeToESDataType() {

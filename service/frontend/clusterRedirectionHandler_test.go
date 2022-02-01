@@ -705,14 +705,14 @@ func (s *clusterRedirectionHandlerSuite) TestRespondQueryTaskCompleted() {
 	s.mockClusterRedirectionPolicy.On("WithDomainIDRedirect",
 		s.domainID, apiName, mock.Anything).Return(nil).Times(1)
 
-	token, err := s.handler.tokenSerializer.SerializeQueryTaskToken(&common.QueryTaskToken{
+	token, _ := s.handler.tokenSerializer.SerializeQueryTaskToken(&common.QueryTaskToken{
 		DomainID: s.domainID,
 	})
 	s.NoError(err)
 	req := &types.RespondQueryTaskCompletedRequest{
 		TaskToken: token,
 	}
-	err = s.handler.RespondQueryTaskCompleted(context.Background(), req)
+	err := s.handler.RespondQueryTaskCompleted(context.Background(), req)
 	s.Nil(err)
 
 	callFn := s.mockClusterRedirectionPolicy.Calls[0].Arguments[2].(func(string) error)

@@ -224,6 +224,22 @@ func (m *MockAdminHandler) GetReplicationMessages(arg0 context.Context, arg1 *ty
 	return ret0, ret1
 }
 
+// MaintainCorruptWorkflow mocks base method
+func (m *MockAdminHandler) MaintainCorruptWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkflow mocks base method
+func (m *MockAdminHandler) DeleteWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkflow", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
 // GetReplicationMessages indicates an expected call of GetReplicationMessages
 func (mr *MockAdminHandlerMockRecorder) GetReplicationMessages(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

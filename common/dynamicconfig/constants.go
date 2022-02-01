@@ -2192,6 +2192,7 @@ var Keys = map[Key]string{
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
+	EnableWatchDog:                      "system.EnableWatchDog",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
