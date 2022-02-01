@@ -115,6 +115,11 @@ type Interface interface {
 		Request *admin.ListDynamicConfigRequest,
 	) (*admin.ListDynamicConfigResponse, error)
 
+	MaintainCorruptWorkflow(
+		ctx context.Context,
+		Request *admin.AdminDeleteWorkflowRequest,
+	) error
+
 	MergeDLQMessages(
 		ctx context.Context,
 		Request *replicator.MergeDLQMessagesRequest,
@@ -363,6 +368,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "MaintainCorruptWorkflow",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.MaintainCorruptWorkflow),
+					NoWire: maintaincorruptworkflow_NoWireHandler{impl},
+				},
+				Signature:    "MaintainCorruptWorkflow(Request *admin.AdminDeleteWorkflowRequest)",
+				ThriftModule: admin.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "MergeDLQMessages",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -496,7 +513,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 26)
+	procedures := make([]transport.Procedure, 0, 27)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -938,6 +955,36 @@ func (h handler) ListDynamicConfig(ctx context.Context, body wire.Value) (thrift
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_ListDynamicConfig_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) MaintainCorruptWorkflow(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args admin.AdminService_MaintainCorruptWorkflow_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'AdminService' procedure 'MaintainCorruptWorkflow': %w", err)
+	}
+
+	appErr := h.impl.MaintainCorruptWorkflow(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -1824,6 +1871,43 @@ func (h listdynamicconfig_NoWireHandler) HandleNoWire(ctx context.Context, nwc *
 
 	hadError := appErr != nil
 	result, err := admin.AdminService_ListDynamicConfig_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type maintaincorruptworkflow_NoWireHandler struct{ impl Interface }
+
+func (h maintaincorruptworkflow_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args admin.AdminService_MaintainCorruptWorkflow_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'MaintainCorruptWorkflow': %w", err)
+	}
+
+	appErr := h.impl.MaintainCorruptWorkflow(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := admin.AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

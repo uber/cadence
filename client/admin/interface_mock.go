@@ -548,6 +548,25 @@ func (mr *MockClientMockRecorder) DeleteWorkflow(arg0, arg1 interface{}, arg2 ..
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkflow", reflect.TypeOf((*MockClient)(nil).DeleteWorkflow), varargs...)
 }
 
+// MaintainCorruptWorkflow mocks base method
+func (m *MockClient) MaintainCorruptWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MaintainCorruptWorkflow indicates an expected call of MaintainCorruptWorkflow
+func (mr *MockClientMockRecorder) MaintainCorruptWorkflow(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaintainCorruptWorkflow", reflect.TypeOf((*MockClient)(nil).MaintainCorruptWorkflow), varargs...)
+}
+
 // ListDynamicConfig mocks base method
 func (m *MockClient) ListDynamicConfig(arg0 context.Context, arg1 *types.ListDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
 	m.ctrl.T.Helper()

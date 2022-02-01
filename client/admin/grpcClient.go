@@ -163,6 +163,11 @@ func (g grpcClient) DeleteWorkflow(ctx context.Context, request *types.AdminDele
 	return proto.ToError(err)
 }
 
+func (g grpcClient) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest, opts ...yarpc.CallOption) error {
+	_, err := g.c.MaintainCorruptWorkflow(ctx, proto.FromAdminDeleteWorkflowRequest(request), opts...)
+	return proto.ToError(err)
+}
+
 func (g grpcClient) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
 	response, err := g.c.ListDynamicConfig(ctx, proto.FromListDynamicConfigRequest(request), opts...)
 	return proto.ToListDynamicConfigResponse(response), proto.ToError(err)

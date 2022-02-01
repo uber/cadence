@@ -130,6 +130,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*admin.ListDynamicConfigResponse, error)
 
+	MaintainCorruptWorkflow(
+		ctx context.Context,
+		Request *admin.AdminDeleteWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	MergeDLQMessages(
 		ctx context.Context,
 		Request *replicator.MergeDLQMessagesRequest,
@@ -642,6 +648,34 @@ func (c client) ListDynamicConfig(
 	}
 
 	success, err = admin.AdminService_ListDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) MaintainCorruptWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	var result admin.AdminService_MaintainCorruptWorkflow_Result
+	args := admin.AdminService_MaintainCorruptWorkflow_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	err = admin.AdminService_MaintainCorruptWorkflow_Helper.UnwrapResponse(&result)
 	return
 }
 

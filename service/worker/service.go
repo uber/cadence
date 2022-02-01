@@ -75,6 +75,7 @@ type (
 		ScannerCfg                          *scanner.Config
 		BatcherCfg                          *batcher.Config
 		ESAnalyzerCfg                       *esanalyzer.Config
+		WatchdogConfig                      *watchdog.Config
 		failoverManagerCfg                  *failovermanager.Config
 		ThrottledLogRPS                     dynamicconfig.IntPropertyFn
 		PersistenceGlobalMaxQPS             dynamicconfig.IntPropertyFn
@@ -173,6 +174,9 @@ func NewConfig(params *resource.Params) *Config {
 			ESAnalyzerMinNumWorkflowsForAvg:          dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg, common.DefaultESAnalyzerMinNumWorkflowsForAvg),
 			ESAnalyzerWorkflowDurationWarnThresholds: dc.GetStringProperty(dynamicconfig.ESAnalyzerWorkflowDurationWarnThresholds, common.DefaultESAnalyzerWorkflowDurationWarnThresholds),
 		},
+		WatchdogConfig: &watchdog.Config{
+			CorruptWorkflowWatchdogPause: dc.GetBoolProperty(dynamicconfig.CorruptWorkflowWatchdogPause, common.DefaultCorruptWorkflowWatchdogPause),
+		},
 		EnableBatcher:                       dc.GetBoolProperty(dynamicconfig.EnableBatcher, true),
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		NumParentClosePolicySystemWorkflows: dc.GetIntProperty(dynamicconfig.NumParentClosePolicySystemWorkflows, 10),
@@ -236,7 +240,8 @@ func (s *Service) Start() {
 	if s.config.EnableESAnalyzer() {
 		s.startESAnalyzer()
 	}
-	if s.config.EnableWatchDog() {
+	// TODO: DELETE true
+	if true || s.config.EnableWatchDog() {
 		s.startWatchDog()
 	}
 	if s.config.EnableFailoverManager() {
@@ -311,7 +316,7 @@ func (s *Service) startWatchDog() {
 		s.params.MetricScope,
 		s.Resource,
 		s.GetDomainCache(),
-		nil, // watchdog config, TODO: pass non-empty config
+		s.config.WatchdogConfig,
 	)
 
 	if err := watchdog.Start(); err != nil {

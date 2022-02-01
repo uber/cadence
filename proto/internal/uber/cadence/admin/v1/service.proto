@@ -115,6 +115,9 @@ service AdminAPI {
 
   // DeleteWorkflow is used to delete a workflow with given domainName, workflowID and runID
   rpc DeleteWorkflow(AdminDeleteWorkflowRequest) returns (DeleteWorkflowResponse);
+
+  // MaintainCorruptWorkflow is used to delete a workflow with given domainName, workflowID and runID
+  rpc MaintainCorruptWorkflow(AdminDeleteWorkflowRequest) returns (DeleteWorkflowResponse);
 }
 
 message DescribeWorkflowExecutionRequest {

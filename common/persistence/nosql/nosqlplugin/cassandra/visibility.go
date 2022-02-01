@@ -80,6 +80,21 @@ const (
 		`AND start_time <= ? ` +
 		`AND workflow_id = ? `
 
+	// Intended for admin operations only
+	templateGetOpenWorkflowExecutionsByRunID = `SELECT ` + openExecutionsColumnsForSelect +
+		`FROM open_executions ` +
+		`WHERE domain_id = ? ` +
+		`AND domain_partition = ? ` +
+		`AND run_id = ? ` +
+		`ALLOW FILTERING`
+
+	// Intended for admin operations only
+	templateDeleteVisibilityRecord = `DELETE FROM open_executions ` +
+		`WHERE domain_id = ? ` +
+		`and domain_partition = ? ` +
+		`and start_time = ? ` +
+		`and run_id = ? `
+
 	///////////////// Closed Executions /////////////////
 	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list, is_cron, num_clusters "
 
@@ -351,6 +366,33 @@ func (db *cdb) SelectOneClosedWorkflow(
 
 // Noop for Cassandra as it already handle by TTL
 func (db *cdb) DeleteVisibility(ctx context.Context, domainID, workflowID, runID string) error {
+	// Normally we only depend on TTL for Cassandra visibility deletion but
+	// we explicitly delete from open executions when an admin command is issued
+	key := persistence.VisbilityAdminDeletionKey("visibilityAdminDelete")
+	if v := ctx.Value(key); v != nil && v.(bool) {
+		// Primary key is <domainId, domainPartition, startTime, runId>
+		// to optimize showing open executions sorted by their start time
+		// However, it is not useful for deletion since we don't have the start
+		// time information. So, we need to get the record first with "allow
+		// filtering", read startTime then delete it. This is okay because
+		// it is only intended to be used for admin ops.
+
+		record, err := db.openWorkflowByRunID(ctx, domainID, runID)
+		if err != nil {
+			return err
+		}
+		if record == nil {
+			return nil // workflow not found, nothing to do
+		}
+
+		query := db.session.Query(templateDeleteVisibilityRecord,
+			domainID,
+			domainPartition,
+			record.StartTime,
+			runID,
+		).WithContext(ctx)
+		return query.Exec()
+	}
 	return nil
 }
 
@@ -467,6 +509,34 @@ func (db *cdb) openFilteredByWorkflowIDSortedByStartTime(
 		workflowID,
 	).Consistency(cassandraLowConslevel).WithContext(ctx)
 	return processQuery(query, request, readOpenWorkflowExecutionRecord)
+}
+
+func (db *cdb) openWorkflowByRunID(
+	ctx context.Context,
+	domainID string,
+	runID string,
+) (*persistence.InternalVisibilityWorkflowExecutionInfo, error) {
+	query := db.session.Query(templateGetOpenWorkflowExecutionsByRunID,
+		domainID,
+		domainPartition,
+		runID,
+	).WithContext(ctx)
+
+	iter := query.Iter()
+	if iter == nil {
+		return nil, fmt.Errorf("not able to create query iterator")
+	}
+
+	wfexecution, has := readOpenWorkflowExecutionRecord(iter)
+	if !has {
+		return nil, nil
+	}
+
+	if err := iter.Close(); err != nil {
+		return nil, err
+	}
+
+	return wfexecution, nil
 }
 
 func (db *cdb) closedFilteredByWorkflowIDSortedByStartTime(

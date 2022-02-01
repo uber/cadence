@@ -221,12 +221,10 @@ func (t *taskImpl) ReportCorruptWorkflowToWatchDog() error {
 	}
 
 	watchDogClient := watchdog.NewClient(
-		t.shard.GetMetricsClient(),
 		t.shard.GetLogger(),
 		t.shard.GetService().GetSDKClient(),
 	)
-	watchDogClient.ReportCorruptWorkflow(domainName, wid, rid)
-	return nil
+	return watchDogClient.ReportCorruptWorkflow(domainName, wid, rid)
 }
 
 func (t *taskImpl) HandleErr(

@@ -777,6 +777,8 @@ const (
 	AdminListDynamicConfigScope
 	// AdminDeleteWorkflowScope is the metric scope for admin.DeleteWorkflow
 	AdminDeleteWorkflowScope
+	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
+	MaintainCorruptWorkflowScope
 
 	NumAdminScopes
 )
@@ -1742,6 +1744,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
 		ESAnalyzerScope:                        {operation: "ESAnalyzer"},
+		WatchDogScope:                          {operation: "WatchDog"},
 	},
 }
 

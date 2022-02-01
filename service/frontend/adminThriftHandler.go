@@ -196,6 +196,12 @@ func (t AdminThriftHandler) DeleteWorkflow(ctx context.Context, request *admin.A
 	return thrift.FromError(err)
 }
 
+// MaintainCorruptWorkflow deletes dynamic config value from config store based on filter
+func (t AdminThriftHandler) MaintainCorruptWorkflow(ctx context.Context, request *admin.AdminDeleteWorkflowRequest) error {
+	err := t.h.MaintainCorruptWorkflow(ctx, thrift.ToAdminDeleteWorkflowRequest(request))
+	return thrift.FromError(err)
+}
+
 // ListDynamicConfig fetches all values associated to specified dc parameters or all otherwise
 func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admin.ListDynamicConfigRequest) (*admin.ListDynamicConfigResponse, error) {
 	response, err := t.h.ListDynamicConfig(ctx, thrift.ToListDynamicConfigRequest(request))

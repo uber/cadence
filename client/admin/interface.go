@@ -58,4 +58,5 @@ type Client interface {
 	RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest, ...yarpc.CallOption) error
 	ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest, ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error)
 	DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest, ...yarpc.CallOption) error
+	MaintainCorruptWorkflow(context.Context, *types.AdminDeleteWorkflowRequest, ...yarpc.CallOption) error
 }

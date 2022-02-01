@@ -23,7 +23,6 @@ package watchdog
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"go.uber.org/cadence"
@@ -33,13 +32,12 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
 const (
 	// workflow constants
-	watchdogWFID       = "cadence-sys-watchdog"
+	WatchdogWFID       = "cadence-sys-watchdog"
 	taskListName       = "cadence-sys-tl-watchdog"
 	watchdogWFTypeName = "cadence-sys-watchdog-workflow"
 
@@ -47,7 +45,7 @@ const (
 	handleCorrputedWorkflowActivity = "cadence-sys-watchdog-handle-corrupted-workflow"
 
 	// signals
-	corruptWorkflowWatchdogChannelName = "CorruptWorkflowWatchdogChannelName"
+	CorruptWorkflowWatchdogChannelName = "CorruptWorkflowWatchdogChannelName"
 )
 
 type (
@@ -58,7 +56,7 @@ type (
 
 	// Request defines the request for corruptWorkflow maintenance
 	CorruptWFRequest struct {
-		workflow   types.WorkflowExecution
+		Workflow   types.WorkflowExecution
 		DomainName string
 	}
 )
@@ -78,15 +76,10 @@ var (
 	}
 
 	wfOptions = cclient.StartWorkflowOptions{
-		ID:                           watchdogWFID,
+		ID:                           WatchdogWFID,
 		TaskList:                     taskListName,
+		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyTerminateIfRunning,
 		ExecutionStartToCloseTimeout: 24 * 365 * time.Hour, // 1 year
-	}
-
-	corruptWorkflowErrorList = [3]string{
-		"unable to get workflow start event",                        // desc + history
-		"unable to get activity scheduled event",                    // desc + history
-		"corrupted history event batch, eventID is not continouous", // history only
 	}
 )
 
@@ -109,7 +102,7 @@ func initWorkflow(wd *WatchDog) {
 
 // workflowFunc is the workflow that performs actions for WatchDog
 func (w *Workflow) workflowFunc(ctx workflow.Context) error {
-	requestCh := workflow.GetSignalChannel(ctx, corruptWorkflowWatchdogChannelName)
+	requestCh := workflow.GetSignalChannel(ctx, CorruptWorkflowWatchdogChannelName)
 	logger := w.watchdog.logger
 
 	for {
@@ -119,7 +112,7 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 			return cadence.NewCustomError("signal_channel_closed")
 		}
 
-		if w.watchdog.config.CorruptWorkflowPause() {
+		if w.watchdog.config.CorruptWorkflowWatchdogPause() {
 			logger.Warn("Corrupt workflow execution is paused. Enable to continue processing")
 			continue
 		}
@@ -128,51 +121,8 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 	}
 }
 
-func (w *Workflow) getQueryTemplates(ctx context.Context, request *CorruptWFRequest) []func(request *CorruptWFRequest) error {
-	// describe workflow
-	client := w.watchdog.frontendClient
-	return []func(request *CorruptWFRequest) error{
-		func(request *CorruptWFRequest) error {
-			_, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-				Domain: request.DomainName,
-				Execution: &types.WorkflowExecution{
-					WorkflowID: request.workflow.GetWorkflowID(),
-					RunID:      request.workflow.GetRunID(),
-				},
-			})
-			return err
-		},
-		func(request *CorruptWFRequest) error {
-			_, err := client.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
-				Domain: request.DomainName,
-				Execution: &types.WorkflowExecution{
-					WorkflowID: request.workflow.GetWorkflowID(),
-					RunID:      request.workflow.GetRunID(),
-				},
-			})
-			return err
-		},
-	}
-}
-
-func (w *Workflow) deleteWorkflow(ctx context.Context, request *CorruptWFRequest, logger *zap.Logger) error {
-	domainEntry, err := w.watchdog.domainCache.GetDomain(request.DomainName)
-	if err != nil {
-		logger.Error("Failed to get domain entry", zap.Error(err), zap.String("DomainName", request.DomainName))
-		return err
-	}
-	clusterName := domainEntry.GetReplicationConfig().ActiveClusterName
-	adminClient := w.watchdog.clientBean.GetRemoteAdminClient(clusterName)
-	wfDeleteRequest := &types.AdminDeleteWorkflowRequest{
-		Domain:    request.DomainName,
-		Execution: &request.workflow,
-	}
-	adminClient.DeleteWorkflow(ctx, wfDeleteRequest)
-	return nil
-}
-
 func (w *Workflow) getProcessedID(request *CorruptWFRequest) string {
-	return fmt.Sprintf("%s-%s", request.workflow.WorkflowID, request.workflow.RunID)
+	return fmt.Sprintf("%s-%s", request.Workflow.WorkflowID, request.Workflow.RunID)
 }
 
 // handleCorrputedWorkflowActivity is activity to handle corrupted workflows in DB
@@ -182,35 +132,24 @@ func (w *Workflow) handleCorrputedWorkflow(ctx context.Context, request *Corrupt
 		return nil
 	}
 
-	logger := activity.GetLogger(ctx)
-	logger.Error("Processing",
-		zap.String("domainName", request.DomainName),
-		zap.String("workflowID", request.workflow.WorkflowID),
-		zap.String("runID", request.workflow.RunID),
-	)
-
-	tagged := w.watchdog.scopedMetricClient.Tagged(
-		metrics.DomainTag(request.DomainName),
-	)
-
-	queryTemplates := w.getQueryTemplates(ctx, request)
-	for _, queryFunc := range queryTemplates {
-		err := queryFunc(request)
-		if err == nil {
-			continue
-		}
-		errorMessage := err.Error()
-		for _, corruptMessage := range corruptWorkflowErrorList {
-			if strings.Contains(errorMessage, corruptMessage) {
-				err = w.deleteWorkflow(ctx, request, logger)
-				if err == nil {
-					tagged.AddCounter(metrics.WatchDogNumDeletedCorruptWorkflows, 1)
-				} else {
-					tagged.AddCounter(metrics.WatchDogNumFailedToDeleteCorruptWorkflows, 1)
-				}
-			}
-		}
+	logger := activity.GetLogger(ctx).With(
+		zap.String("DomainName", request.DomainName),
+		zap.String("WorkflowID", request.Workflow.GetWorkflowID()),
+		zap.String("RunID", request.Workflow.GetRunID()))
+	logger.Info("Watchdog processing possible corrupt workflow")
+	domainEntry, err := w.watchdog.domainCache.GetDomain(request.DomainName)
+	if err != nil {
+		logger.Error("Failed to get domain entry", zap.Error(err))
+		return err
 	}
+	clusterName := domainEntry.GetReplicationConfig().ActiveClusterName
+	adminClient := w.watchdog.clientBean.GetRemoteAdminClient(clusterName)
+	maintainWFRequest := &types.AdminDeleteWorkflowRequest{
+		Domain:     request.DomainName,
+		Execution:  &request.Workflow,
+		SkipErrors: true,
+	}
+	adminClient.MaintainCorruptWorkflow(ctx, maintainWFRequest)
 
 	// We couldn't decide if we should delete this workflow. That means the same logs will continue
 	// and the workflow will keep getting signals. So adding workflow to a cache to skip processing

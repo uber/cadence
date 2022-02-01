@@ -34,6 +34,33 @@ import (
 	"github.com/uber/cadence/tools/common/flag"
 )
 
+func newAdminWatchdogCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "fix_corruption",
+			Aliases: []string{"fc"},
+			Usage:   "Checks if workflow record is corrupted in database and cleans up",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipErrorModeWithAlias,
+					Usage: "Skip errors and tries to delete as much as possible from the DB",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminMaintainCorruptWorkflow(c)
+			},
+		},
+	}
+}
+
 func newAdminWorkflowCommands() []cli.Command {
 	return []cli.Command{
 		{

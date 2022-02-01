@@ -694,6 +694,31 @@ func (c *errorInjectionClient) DeleteWorkflow(
 	return clientErr
 }
 
+func (c *errorInjectionClient) MaintainCorruptWorkflow(
+	ctx context.Context,
+	request *types.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.MaintainCorruptWorkflow(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.MaintainCorruptWorkflow,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
+}
+
 func (c *errorInjectionClient) ListDynamicConfig(
 	ctx context.Context,
 	request *types.ListDynamicConfigRequest,

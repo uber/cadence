@@ -59,7 +59,7 @@ type (
 
 	// Config contains all configs for ElasticSearch WatchDog
 	Config struct {
-		CorruptWorkflowPause dynamicconfig.BoolPropertyFn
+		CorruptWorkflowWatchdogPause dynamicconfig.BoolPropertyFn
 	}
 )
 

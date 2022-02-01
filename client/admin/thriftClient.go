@@ -164,6 +164,11 @@ func (t thriftClient) DeleteWorkflow(ctx context.Context, request *types.AdminDe
 	return thrift.ToError(err)
 }
 
+func (t thriftClient) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest, opts ...yarpc.CallOption) error {
+	err := t.c.MaintainCorruptWorkflow(ctx, thrift.FromAdminDeleteWorkflowRequest(request), opts...)
+	return thrift.ToError(err)
+}
+
 func (t thriftClient) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
 	response, err := t.c.ListDynamicConfig(ctx, thrift.FromListDynamicConfigRequest(request), opts...)
 	return thrift.ToListDynamicConfigResponse(response), thrift.ToError(err)

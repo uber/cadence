@@ -379,6 +379,9 @@ func (c *elasticV7) SearchForOneClosedExecution(
 }
 
 func fromV7toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
+	if response == nil {
+		return &GenericBulkResponse{}
+	}
 	return &GenericBulkResponse{
 		Took:   response.Took,
 		Errors: response.Errors,

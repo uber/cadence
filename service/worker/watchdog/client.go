@@ -29,7 +29,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -41,7 +40,6 @@ type (
 	}
 
 	clientImpl struct {
-		metricsClient metrics.Client
 		logger        log.Logger
 		cadenceClient cclient.Client
 	}
@@ -50,17 +48,15 @@ type (
 var _ Client = (*clientImpl)(nil)
 
 const (
-	signalTimeout = 400 * time.Millisecond
+	SignalTimeout = 400 * time.Millisecond
 )
 
 // NewClient creates a new Client
 func NewClient(
-	metricsClient metrics.Client,
 	logger log.Logger,
 	publicClient workflowserviceclient.Interface,
 ) Client {
 	return &clientImpl{
-		metricsClient: metricsClient,
 		logger:        logger,
 		cadenceClient: cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
 	}
@@ -71,15 +67,14 @@ func (c *clientImpl) ReportCorruptWorkflow(
 	workflowID string,
 	runID string,
 ) error {
-	signalCtx, cancel := context.WithTimeout(context.Background(), signalTimeout)
+	signalCtx, cancel := context.WithTimeout(context.Background(), SignalTimeout)
 	defer cancel()
 	request := CorruptWFRequest{
 		DomainName: domainName,
-		workflow: types.WorkflowExecution{
+		Workflow: types.WorkflowExecution{
 			WorkflowID: workflowID,
 			RunID:      runID,
 		},
 	}
-	err := c.cadenceClient.SignalWorkflow(signalCtx, watchdogWFID, "", corruptWorkflowWatchdogChannelName, request)
-	return err
+	return c.cadenceClient.SignalWorkflow(signalCtx, WatchdogWFID, "", CorruptWorkflowWatchdogChannelName, request)
 }

@@ -2135,6 +2135,12 @@ const (
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
 
+	// CorruptWorkflowWatchdogPause defines if we want to dynamically pause the watchdog workflow
+	// KeyName: worker.CorruptWorkflowWatchdogPause
+	// Value type: bool
+	// Default value: false
+	CorruptWorkflowWatchdogPause
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2523,6 +2529,8 @@ var Keys = map[Key]string{
 	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
 	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
 	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
+
+	CorruptWorkflowWatchdogPause: "worker.CorruptWorkflowWatchdogPause",
 }
 
 var KeyNames map[string]Key

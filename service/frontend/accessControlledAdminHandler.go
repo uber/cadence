@@ -438,6 +438,22 @@ func (a *AccessControlledWorkflowAdminHandler) DeleteWorkflow(ctx context.Contex
 	return a.AdminHandler.DeleteWorkflow(ctx, request)
 }
 
+func (a *AccessControlledWorkflowAdminHandler) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest) error {
+	attr := &authorization.Attributes{
+		APIName:    "MaintainCorruptWorkflow",
+		Permission: authorization.PermissionAdmin,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return err
+	}
+	if !isAuthorized {
+		return errUnauthorized
+	}
+
+	return a.AdminHandler.MaintainCorruptWorkflow(ctx, request)
+}
+
 func (a *AccessControlledWorkflowAdminHandler) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
 	attr := &authorization.Attributes{
 		APIName:    "ListDynamicConfig",
