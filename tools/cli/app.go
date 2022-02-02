@@ -176,12 +176,6 @@ func NewCliApp() *cli.App {
 					Usage:       "Run admin operation on config store",
 					Subcommands: newAdminConfigStoreCommands(),
 				},
-				{
-					Name:        "watchdog",
-					Aliases:     []string{"wd"},
-					Usage:       "Run watchdog operations",
-					Subcommands: newAdminWatchdogCommands(),
-				},
 			},
 		},
 		{

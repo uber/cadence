@@ -316,7 +316,7 @@ func (c *clientImpl) DeleteWorkflow(
 	ctx context.Context,
 	request *types.AdminDeleteWorkflowRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AdminDeleteWorkflowResponse, error) {
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.DeleteWorkflow(ctx, request, opts...)
@@ -324,9 +324,9 @@ func (c *clientImpl) DeleteWorkflow(
 
 func (c *clientImpl) MaintainCorruptWorkflow(
 	ctx context.Context,
-	request *types.AdminDeleteWorkflowRequest,
+	request *types.AdminMaintainWorkflowRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AdminMaintainWorkflowResponse, error) {
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.MaintainCorruptWorkflow(ctx, request, opts...)

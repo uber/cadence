@@ -502,6 +502,20 @@ func (v *AdminDeleteWorkflowRequest) GetSkipErrors() (o bool) {
 	return
 }
 
+type AdminDeleteWorkflowResponse struct {
+	Deleted bool `json:"deleted,omitempty"`
+}
+
+func (v *AdminDeleteWorkflowResponse) GetDeleted() (o bool) {
+	if v != nil {
+		return v.Deleted
+	}
+	return
+}
+
+type AdminMaintainWorkflowRequest = AdminDeleteWorkflowRequest
+type AdminMaintainWorkflowResponse = AdminDeleteWorkflowResponse
+
 type ListDynamicConfigRequest struct {
 	ConfigName string `json:"configName,omitempty"`
 }

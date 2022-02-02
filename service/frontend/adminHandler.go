@@ -93,8 +93,8 @@ type (
 		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
 		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
 		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
-		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) error
-		MaintainCorruptWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) error
+		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error)
+		MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -328,18 +328,18 @@ func (adh *adminHandlerImpl) RemoveTask(
 }
 
 func (adh *adminHandlerImpl) getCorruptWorkflowQueryTemplates(
-	ctx context.Context, request *types.AdminDeleteWorkflowRequest,
-) map[string]func(request *types.AdminDeleteWorkflowRequest) error {
+	ctx context.Context, request *types.AdminMaintainWorkflowRequest,
+) map[string]func(request *types.AdminMaintainWorkflowRequest) error {
 	client := adh.GetFrontendClient()
-	return map[string]func(request *types.AdminDeleteWorkflowRequest) error{
-		"DescribeWorkflowExecution": func(request *types.AdminDeleteWorkflowRequest) error {
+	return map[string]func(request *types.AdminMaintainWorkflowRequest) error{
+		"DescribeWorkflowExecution": func(request *types.AdminMaintainWorkflowRequest) error {
 			_, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
 				Domain:    request.Domain,
 				Execution: request.Execution,
 			})
 			return err
 		},
-		"GetWorkflowExecutionHistory": func(request *types.AdminDeleteWorkflowRequest) error {
+		"GetWorkflowExecutionHistory": func(request *types.AdminMaintainWorkflowRequest) error {
 			_, err := client.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 				Domain:    request.Domain,
 				Execution: request.Execution,
@@ -351,10 +351,10 @@ func (adh *adminHandlerImpl) getCorruptWorkflowQueryTemplates(
 
 func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 	ctx context.Context,
-	request *types.AdminDeleteWorkflowRequest,
-) error {
+	request *types.AdminMaintainWorkflowRequest,
+) (*types.AdminMaintainWorkflowResponse, error) {
 	if request.GetExecution() == nil {
-		return types.BadRequestError{Message: "Execution is missing"}
+		return nil, types.BadRequestError{Message: "Execution is missing"}
 	}
 
 	logger := adh.GetLogger().WithTags(
@@ -365,6 +365,9 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 
 	scope := adh.GetMetricsClient().Scope(metrics.WatchDogScope)
 	tagged := scope.Tagged(metrics.DomainTag(request.Domain))
+	resp := &types.AdminMaintainWorkflowResponse{
+		Deleted: false,
+	}
 
 	queryTemplates := adh.getCorruptWorkflowQueryTemplates(ctx, request)
 	for functionName, queryFunc := range queryTemplates {
@@ -392,7 +395,7 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 		}
 
 		if shouldDelete {
-			err = adh.DeleteWorkflow(ctx, request)
+			resp, err = adh.DeleteWorkflow(ctx, request)
 			if err == nil {
 				tagged.AddCounter(metrics.WatchDogNumDeletedCorruptWorkflows, 1)
 			} else {
@@ -402,24 +405,29 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 		}
 	}
 
-	return nil
+	return resp, nil
 }
 
 // DeleteWorkflow delete a workflow execution for admin
 func (adh *adminHandlerImpl) DeleteWorkflow(
 	ctx context.Context,
 	request *types.AdminDeleteWorkflowRequest,
-) error {
+) (*types.AdminDeleteWorkflowResponse, error) {
 	logger := adh.GetLogger()
 	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
 	if request.GetExecution() == nil {
 		logger.Info(fmt.Sprintf("Bad request: %#v", request))
-		return adh.error(errRequestNotSet, scope)
+		return nil, adh.error(errRequestNotSet, scope)
 	}
 	domainName := request.GetDomain()
 	workflowID := request.GetExecution().GetWorkflowID()
 	runID := request.GetExecution().GetRunID()
 	skipErrors := request.GetSkipErrors()
+
+	deletedFromExecutions := false
+	deletedFromHistory := false
+	deletedFromVisibility := false
+
 	resp, err := adh.DescribeWorkflowExecution(
 		ctx,
 		&types.AdminDescribeWorkflowExecutionRequest{
@@ -435,7 +443,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		err = json.Unmarshal([]byte(msStr), &ms)
 		if err != nil {
 			logger.Error(fmt.Sprintf("DeleteWorkflow failed: Cannot unmarshal mutableState: %#v", err))
-			return adh.error(err, scope)
+			return nil, adh.error(err, scope)
 		}
 		domainID := ms.ExecutionInfo.DomainID
 		logger = logger.WithTags(
@@ -449,7 +457,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		shardIDInt, err := strconv.Atoi(shardID)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Cannot convert shardID(%v) to int: %#v", shardID, err))
-			return adh.error(err, scope)
+			return nil, adh.error(err, scope)
 		}
 		ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 		defer cancel()
@@ -458,7 +466,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		exeStore, err := adh.GetExecutionManager(shardIDInt)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Cannot get execution manager for shardID(%v): %#v", shardIDInt, err))
-			return adh.error(err, scope)
+			return nil, adh.error(err, scope)
 		}
 		visibilityManager := adh.Resource.GetVisibilityManager()
 		if visibilityManager == nil {
@@ -477,11 +485,13 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 			}
 		}
 
+		deletedFromHistory = len(branchTokens) == 0
+		failedToDeleteFromHistory := false
 		for _, branchToken := range branchTokens {
 			err = thriftrwEncoder.Decode(branchToken, &branchInfo)
 			if err != nil {
 				logger.Error("Cannot decode thrift object", tag.Error(err))
-				return adh.error(err, scope)
+				return nil, adh.error(err, scope)
 			}
 			logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
 			err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
@@ -490,11 +500,15 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 			})
 			if err != nil {
 				logger.Error("Failed to delete history", tag.Error(err))
+				failedToDeleteFromHistory = true
 				if !skipErrors {
-					return adh.error(err, scope)
+					return nil, adh.error(err, scope)
 				}
+			} else {
+				deletedFromHistory = true
 			}
 		}
+		deletedFromHistory = deletedFromHistory && !failedToDeleteFromHistory
 
 		// DELETE FROM EXECUTIONS
 		req := &persistence.DeleteWorkflowExecutionRequest{
@@ -507,8 +521,10 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		if err != nil {
 			logger.Error("Delete mutableState row failed", tag.Error(err))
 			if !skipErrors {
-				return adh.error(err, scope)
+				return nil, adh.error(err, scope)
 			}
+		} else {
+			deletedFromExecutions = true
 		}
 
 		deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
@@ -520,8 +536,9 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
 		if err != nil {
 			logger.Error(fmt.Sprintf("Delete current row failed: %#v", err))
+			deletedFromExecutions = false
 			if !skipErrors {
-				return adh.error(err, scope)
+				return nil, adh.error(err, scope)
 			}
 		}
 		logger.Info(fmt.Sprintf("Deleted executions row successfully %#v", deleteCurrentReq))
@@ -543,21 +560,24 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 			if err != nil {
 				logger.Error("Cannot delete visibility record", tag.Error(err))
 				if !skipErrors {
-					return err
+					return nil, err
 				}
 			} else {
 				logger.Info("Deleted visibility record successfully")
+				deletedFromVisibility = true
 			}
 		}
 
 	} else {
 		logger.Error("Describe workflow failed", tag.Error(err))
 		if !skipErrors {
-			return adh.error(err, scope)
+			return nil, adh.error(err, scope)
 		}
 	}
 
-	return nil
+	return &types.AdminDeleteWorkflowResponse{
+		Deleted: deletedFromExecutions && deletedFromHistory && deletedFromVisibility,
+	}, nil
 }
 
 // CloseShard returns information about the internal states of a history host

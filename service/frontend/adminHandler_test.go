@@ -151,7 +151,7 @@ func (s *adminHandlerSuite) testMaintainCorruptWorkflow(
 	handler.params = &resource.Params{}
 	ctx := context.Background()
 
-	request := &types.AdminDeleteWorkflowRequest{
+	request := &types.AdminMaintainWorkflowRequest{
 		Domain: s.domainName,
 		Execution: &types.WorkflowExecution{
 			WorkflowID: "someWorkflowID",
@@ -186,7 +186,7 @@ func (s *adminHandlerSuite) testMaintainCorruptWorkflow(
 		s.mockResource.VisibilityMgr.On("DeleteWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 	}
 
-	err := handler.MaintainCorruptWorkflow(ctx, request)
+	_, err := handler.MaintainCorruptWorkflow(ctx, request)
 	s.Nil(err)
 }
 

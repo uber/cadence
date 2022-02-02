@@ -673,13 +673,14 @@ func (c *errorInjectionClient) DeleteWorkflow(
 	ctx context.Context,
 	request *types.AdminDeleteWorkflowRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AdminDeleteWorkflowResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
+	var resp *types.AdminDeleteWorkflowResponse
 	var clientErr error
 	var forwardCall bool
 	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		clientErr = c.client.DeleteWorkflow(ctx, request, opts...)
+		resp, clientErr = c.client.DeleteWorkflow(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
@@ -689,22 +690,23 @@ func (c *errorInjectionClient) DeleteWorkflow(
 			tag.Bool(forwardCall),
 			tag.ClientError(clientErr),
 		)
-		return fakeErr
+		return nil, fakeErr
 	}
-	return clientErr
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) MaintainCorruptWorkflow(
 	ctx context.Context,
-	request *types.AdminDeleteWorkflowRequest,
+	request *types.AdminMaintainWorkflowRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AdminMaintainWorkflowResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
+	var resp *types.AdminMaintainWorkflowResponse
 	var clientErr error
 	var forwardCall bool
 	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		clientErr = c.client.MaintainCorruptWorkflow(ctx, request, opts...)
+		resp, clientErr = c.client.MaintainCorruptWorkflow(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
@@ -714,9 +716,9 @@ func (c *errorInjectionClient) MaintainCorruptWorkflow(
 			tag.Bool(forwardCall),
 			tag.ClientError(clientErr),
 		)
-		return fakeErr
+		return nil, fakeErr
 	}
-	return clientErr
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) ListDynamicConfig(

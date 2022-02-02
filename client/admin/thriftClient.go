@@ -159,14 +159,14 @@ func (t thriftClient) RestoreDynamicConfig(ctx context.Context, request *types.R
 	return thrift.ToError(err)
 }
 
-func (t thriftClient) DeleteWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest, opts ...yarpc.CallOption) error {
-	err := t.c.DeleteWorkflow(ctx, thrift.FromAdminDeleteWorkflowRequest(request), opts...)
-	return thrift.ToError(err)
+func (t thriftClient) DeleteWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest, opts ...yarpc.CallOption) (*types.AdminDeleteWorkflowResponse, error) {
+	response, err := t.c.DeleteWorkflow(ctx, thrift.FromAdminDeleteWorkflowRequest(request), opts...)
+	return thrift.ToAdminDeleteWorkflowResponse(response), thrift.ToError(err)
 }
 
-func (t thriftClient) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest, opts ...yarpc.CallOption) error {
-	err := t.c.MaintainCorruptWorkflow(ctx, thrift.FromAdminDeleteWorkflowRequest(request), opts...)
-	return thrift.ToError(err)
+func (t thriftClient) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminMaintainWorkflowRequest, opts ...yarpc.CallOption) (*types.AdminMaintainWorkflowResponse, error) {
+	response, err := t.c.MaintainCorruptWorkflow(ctx, thrift.FromAdminMaintainWorkflowRequest(request), opts...)
+	return thrift.ToAdminMaintainWorkflowResponse(response), thrift.ToError(err)
 }
 
 func (t thriftClient) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest, opts ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {

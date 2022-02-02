@@ -144,12 +144,17 @@ func (w *Workflow) handleCorrputedWorkflow(ctx context.Context, request *Corrupt
 	}
 	clusterName := domainEntry.GetReplicationConfig().ActiveClusterName
 	adminClient := w.watchdog.clientBean.GetRemoteAdminClient(clusterName)
-	maintainWFRequest := &types.AdminDeleteWorkflowRequest{
+	maintainWFRequest := &types.AdminMaintainWorkflowRequest{
 		Domain:     request.DomainName,
 		Execution:  &request.Workflow,
 		SkipErrors: true,
 	}
-	adminClient.MaintainCorruptWorkflow(ctx, maintainWFRequest)
+	_, err = adminClient.MaintainCorruptWorkflow(ctx, maintainWFRequest)
+	if err != nil {
+		return err
+	}
+
+	// TODO: add a deleted metric
 
 	// We couldn't decide if we should delete this workflow. That means the same logs will continue
 	// and the workflow will keep getting signals. So adding workflow to a cache to skip processing

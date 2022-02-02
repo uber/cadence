@@ -161,14 +161,14 @@ func (g adminGRPCHandler) RestoreDynamicConfig(ctx context.Context, request *adm
 	return &adminv1.RestoreDynamicConfigResponse{}, proto.FromError(err)
 }
 
-func (g adminGRPCHandler) DeleteWorkflow(ctx context.Context, request *adminv1.AdminDeleteWorkflowRequest) (*adminv1.DeleteWorkflowResponse, error) {
-	err := g.h.DeleteWorkflow(ctx, proto.ToAdminDeleteWorkflowRequest(request))
-	return &adminv1.DeleteWorkflowResponse{}, proto.FromError(err)
+func (g adminGRPCHandler) DeleteWorkflow(ctx context.Context, request *adminv1.AdminDeleteWorkflowRequest) (*adminv1.AdminDeleteWorkflowResponse, error) {
+	response, err := g.h.DeleteWorkflow(ctx, proto.ToAdminDeleteWorkflowRequest(request))
+	return proto.FromAdminDeleteWorkflowResponse(response), proto.FromError(err)
 }
 
-func (g adminGRPCHandler) MaintainCorruptWorkflow(ctx context.Context, request *adminv1.AdminDeleteWorkflowRequest) (*adminv1.DeleteWorkflowResponse, error) {
-	err := g.h.MaintainCorruptWorkflow(ctx, proto.ToAdminDeleteWorkflowRequest(request))
-	return &adminv1.DeleteWorkflowResponse{}, proto.FromError(err)
+func (g adminGRPCHandler) MaintainCorruptWorkflow(ctx context.Context, request *adminv1.AdminMaintainWorkflowRequest) (*adminv1.AdminMaintainWorkflowResponse, error) {
+	response, err := g.h.MaintainCorruptWorkflow(ctx, proto.ToAdminMaintainWorkflowRequest(request))
+	return proto.FromAdminMaintainWorkflowResponse(response), proto.FromError(err)
 }
 
 func (g adminGRPCHandler) ListDynamicConfig(ctx context.Context, request *adminv1.ListDynamicConfigRequest) (*adminv1.ListDynamicConfigResponse, error) {

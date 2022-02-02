@@ -54,7 +54,7 @@ type Interface interface {
 	DeleteWorkflow(
 		ctx context.Context,
 		Request *admin.AdminDeleteWorkflowRequest,
-	) error
+	) (*admin.AdminDeleteWorkflowResponse, error)
 
 	DescribeCluster(
 		ctx context.Context,
@@ -117,8 +117,8 @@ type Interface interface {
 
 	MaintainCorruptWorkflow(
 		ctx context.Context,
-		Request *admin.AdminDeleteWorkflowRequest,
-	) error
+		Request *admin.AdminMaintainWorkflowRequest,
+	) (*admin.AdminMaintainWorkflowResponse, error)
 
 	MergeDLQMessages(
 		ctx context.Context,
@@ -219,7 +219,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.DeleteWorkflow),
 					NoWire: deleteworkflow_NoWireHandler{impl},
 				},
-				Signature:    "DeleteWorkflow(Request *admin.AdminDeleteWorkflowRequest)",
+				Signature:    "DeleteWorkflow(Request *admin.AdminDeleteWorkflowRequest) (*admin.AdminDeleteWorkflowResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -375,7 +375,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.MaintainCorruptWorkflow),
 					NoWire: maintaincorruptworkflow_NoWireHandler{impl},
 				},
-				Signature:    "MaintainCorruptWorkflow(Request *admin.AdminDeleteWorkflowRequest)",
+				Signature:    "MaintainCorruptWorkflow(Request *admin.AdminMaintainWorkflowRequest) (*admin.AdminMaintainWorkflowResponse)",
 				ThriftModule: admin.ThriftModule,
 			},
 
@@ -591,10 +591,10 @@ func (h handler) DeleteWorkflow(ctx context.Context, body wire.Value) (thrift.Re
 			"could not decode Thrift request for service 'AdminService' procedure 'DeleteWorkflow': %w", err)
 	}
 
-	appErr := h.impl.DeleteWorkflow(ctx, args.Request)
+	success, appErr := h.impl.DeleteWorkflow(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := admin.AdminService_DeleteWorkflow_Helper.WrapResponse(appErr)
+	result, err := admin.AdminService_DeleteWorkflow_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -981,10 +981,10 @@ func (h handler) MaintainCorruptWorkflow(ctx context.Context, body wire.Value) (
 			"could not decode Thrift request for service 'AdminService' procedure 'MaintainCorruptWorkflow': %w", err)
 	}
 
-	appErr := h.impl.MaintainCorruptWorkflow(ctx, args.Request)
+	success, appErr := h.impl.MaintainCorruptWorkflow(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := admin.AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(appErr)
+	result, err := admin.AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -1423,10 +1423,10 @@ func (h deleteworkflow_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thr
 			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'DeleteWorkflow': %w", err)
 	}
 
-	appErr := h.impl.DeleteWorkflow(ctx, args.Request)
+	success, appErr := h.impl.DeleteWorkflow(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := admin.AdminService_DeleteWorkflow_Helper.WrapResponse(appErr)
+	result, err := admin.AdminService_DeleteWorkflow_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
@@ -1904,10 +1904,10 @@ func (h maintaincorruptworkflow_NoWireHandler) HandleNoWire(ctx context.Context,
 			"could not decode (via no wire) Thrift request for service 'AdminService' procedure 'MaintainCorruptWorkflow': %w", err)
 	}
 
-	appErr := h.impl.MaintainCorruptWorkflow(ctx, args.Request)
+	success, appErr := h.impl.MaintainCorruptWorkflow(ctx, args.Request)
 
 	hadError := appErr != nil
-	result, err := admin.AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(appErr)
+	result, err := admin.AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

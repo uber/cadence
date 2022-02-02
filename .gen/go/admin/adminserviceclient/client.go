@@ -57,7 +57,7 @@ type Interface interface {
 		ctx context.Context,
 		Request *admin.AdminDeleteWorkflowRequest,
 		opts ...yarpc.CallOption,
-	) error
+	) (*admin.AdminDeleteWorkflowResponse, error)
 
 	DescribeCluster(
 		ctx context.Context,
@@ -132,9 +132,9 @@ type Interface interface {
 
 	MaintainCorruptWorkflow(
 		ctx context.Context,
-		Request *admin.AdminDeleteWorkflowRequest,
+		Request *admin.AdminMaintainWorkflowRequest,
 		opts ...yarpc.CallOption,
-	) error
+	) (*admin.AdminMaintainWorkflowResponse, error)
 
 	MergeDLQMessages(
 		ctx context.Context,
@@ -292,7 +292,7 @@ func (c client) DeleteWorkflow(
 	ctx context.Context,
 	_Request *admin.AdminDeleteWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *admin.AdminDeleteWorkflowResponse, err error) {
 
 	var result admin.AdminService_DeleteWorkflow_Result
 	args := admin.AdminService_DeleteWorkflow_Helper.Args(_Request)
@@ -312,7 +312,7 @@ func (c client) DeleteWorkflow(
 		}
 	}
 
-	err = admin.AdminService_DeleteWorkflow_Helper.UnwrapResponse(&result)
+	success, err = admin.AdminService_DeleteWorkflow_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -653,9 +653,9 @@ func (c client) ListDynamicConfig(
 
 func (c client) MaintainCorruptWorkflow(
 	ctx context.Context,
-	_Request *admin.AdminDeleteWorkflowRequest,
+	_Request *admin.AdminMaintainWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *admin.AdminMaintainWorkflowResponse, err error) {
 
 	var result admin.AdminService_MaintainCorruptWorkflow_Result
 	args := admin.AdminService_MaintainCorruptWorkflow_Helper.Args(_Request)
@@ -675,7 +675,7 @@ func (c client) MaintainCorruptWorkflow(
 		}
 	}
 
-	err = admin.AdminService_MaintainCorruptWorkflow_Helper.UnwrapResponse(&result)
+	success, err = admin.AdminService_MaintainCorruptWorkflow_Helper.UnwrapResponse(&result)
 	return
 }
 

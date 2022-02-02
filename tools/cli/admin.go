@@ -34,33 +34,6 @@ import (
 	"github.com/uber/cadence/tools/common/flag"
 )
 
-func newAdminWatchdogCommands() []cli.Command {
-	return []cli.Command{
-		{
-			Name:    "fix_corruption",
-			Aliases: []string{"fc"},
-			Usage:   "Checks if workflow record is corrupted in database and cleans up",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagWorkflowIDWithAlias,
-					Usage: "WorkflowID",
-				},
-				cli.StringFlag{
-					Name:  FlagRunIDWithAlias,
-					Usage: "RunID",
-				},
-				cli.BoolFlag{
-					Name:  FlagSkipErrorModeWithAlias,
-					Usage: "Skip errors and tries to delete as much as possible from the DB",
-				},
-			},
-			Action: func(c *cli.Context) {
-				AdminMaintainCorruptWorkflow(c)
-			},
-		},
-	}
-}
-
 func newAdminWorkflowCommands() []cli.Command {
 	return []cli.Command{
 		{
@@ -142,9 +115,35 @@ func newAdminWorkflowCommands() []cli.Command {
 				cli.BoolFlag{
 					Name:  FlagSkipErrorModeWithAlias,
 					Usage: "skip errors when deleting history",
+				},
+				cli.BoolFlag{
+					Name:  FlagRemoteWithAlias,
+					Usage: "Executes deletion on server side",
 				}),
 			Action: func(c *cli.Context) {
 				AdminDeleteWorkflow(c)
+			},
+		},
+		{
+			Name:    "fix_corruption",
+			Aliases: []string{"fc"},
+			Usage:   "Checks if workflow record is corrupted in database and cleans up",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagWorkflowIDWithAlias,
+					Usage: "WorkflowID",
+				},
+				cli.StringFlag{
+					Name:  FlagRunIDWithAlias,
+					Usage: "RunID",
+				},
+				cli.BoolFlag{
+					Name:  FlagSkipErrorModeWithAlias,
+					Usage: "Skip errors and tries to delete as much as possible from the DB",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminMaintainCorruptWorkflow(c)
 			},
 		},
 	}

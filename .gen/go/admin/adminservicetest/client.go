@@ -140,7 +140,7 @@ func (m *MockClient) DeleteWorkflow(
 	ctx context.Context,
 	_Request *admin.AdminDeleteWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *admin.AdminDeleteWorkflowResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -148,6 +148,8 @@ func (m *MockClient) DeleteWorkflow(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "DeleteWorkflow", args...)
+	success, _ = ret[i].(*admin.AdminDeleteWorkflowResponse)
+	i++
 	err, _ = ret[i].(error)
 	return
 }
@@ -563,9 +565,9 @@ func (mr *_MockClientRecorder) ListDynamicConfig(
 // 	... := client.MaintainCorruptWorkflow(...)
 func (m *MockClient) MaintainCorruptWorkflow(
 	ctx context.Context,
-	_Request *admin.AdminDeleteWorkflowRequest,
+	_Request *admin.AdminMaintainWorkflowRequest,
 	opts ...yarpc.CallOption,
-) (err error) {
+) (success *admin.AdminMaintainWorkflowResponse, err error) {
 
 	args := []interface{}{ctx, _Request}
 	for _, o := range opts {
@@ -573,6 +575,8 @@ func (m *MockClient) MaintainCorruptWorkflow(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", args...)
+	success, _ = ret[i].(*admin.AdminMaintainWorkflowResponse)
+	i++
 	err, _ = ret[i].(error)
 	return
 }

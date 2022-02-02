@@ -578,6 +578,70 @@ func ToAdminDeleteWorkflowRequest(t *admin.AdminDeleteWorkflowRequest) *types.Ad
 	}
 }
 
+// FromAdminDeleteWorkflowResponse converts internal AdminDeleteWorkflowResponse type to thrift
+func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *admin.AdminDeleteWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.AdminDeleteWorkflowResponse{
+		Deleted: &t.Deleted,
+	}
+}
+
+// ToAdminDeleteWorkflowResponse converts thrift AdminDeleteWorkflowResponse type to internal
+func ToAdminDeleteWorkflowResponse(t *admin.AdminDeleteWorkflowResponse) *types.AdminDeleteWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminDeleteWorkflowResponse{
+		Deleted: *t.Deleted,
+	}
+}
+
+// FromAdminMaintainWorkflowRequest converts internal AdminMaintainWorkflowRequest type to thrift
+func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *admin.AdminMaintainWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.AdminMaintainWorkflowRequest{
+		Domain:     &t.Domain,
+		Execution:  FromWorkflowExecution(t.Execution),
+		SkipErrors: &t.SkipErrors,
+	}
+}
+
+// ToAdminMaintainWorkflowRequest converts thrift AdminMaintainWorkflowRequest type to internal
+func ToAdminMaintainWorkflowRequest(t *admin.AdminMaintainWorkflowRequest) *types.AdminMaintainWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminMaintainWorkflowRequest{
+		Domain:     t.GetDomain(),
+		Execution:  ToWorkflowExecution(t.Execution),
+		SkipErrors: t.GetSkipErrors(),
+	}
+}
+
+// FromAdminMaintainWorkflowResponse converts internal AdminMaintainWorkflowResponse type to thrift
+func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *admin.AdminMaintainWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &admin.AdminMaintainWorkflowResponse{
+		Deleted: &t.Deleted,
+	}
+}
+
+// ToAdminMaintainWorkflowResponse converts thrift AdminMaintainWorkflowResponse type to internal
+func ToAdminMaintainWorkflowResponse(t *admin.AdminMaintainWorkflowResponse) *types.AdminMaintainWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminMaintainWorkflowResponse{
+		Deleted: *t.Deleted,
+	}
+}
+
 //FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
 func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.ListDynamicConfigResponse {
 	if t == nil {

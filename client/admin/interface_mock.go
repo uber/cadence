@@ -530,15 +530,16 @@ func (mr *MockClientMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}, a
 }
 
 // DeleteWorkflow mocks base method
-func (m *MockClient) DeleteWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest, arg2 ...yarpc.CallOption) error {
+func (m *MockClient) DeleteWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest, arg2 ...yarpc.CallOption) (*types.AdminDeleteWorkflowResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "DeleteWorkflow", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.AdminDeleteWorkflowResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DeleteWorkflow indicates an expected call of DeleteWorkflow
@@ -549,15 +550,16 @@ func (mr *MockClientMockRecorder) DeleteWorkflow(arg0, arg1 interface{}, arg2 ..
 }
 
 // MaintainCorruptWorkflow mocks base method
-func (m *MockClient) MaintainCorruptWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest, arg2 ...yarpc.CallOption) error {
+func (m *MockClient) MaintainCorruptWorkflow(arg0 context.Context, arg1 *types.AdminMaintainWorkflowRequest, arg2 ...yarpc.CallOption) (*types.AdminMaintainWorkflowResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*types.AdminMaintainWorkflowResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // MaintainCorruptWorkflow indicates an expected call of MaintainCorruptWorkflow

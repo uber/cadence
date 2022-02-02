@@ -879,6 +879,70 @@ func ToAdminDeleteWorkflowRequest(t *adminv1.AdminDeleteWorkflowRequest) *types.
 	}
 }
 
+//FromAdminDeleteWorkflowResponse converts internal AdminDeleteWorkflowRequest type to proto
+func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *adminv1.AdminDeleteWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminDeleteWorkflowResponse{
+		Deleted: t.Deleted,
+	}
+}
+
+//ToAdminDeleteWorkflowResponse converts proto AdminDeleteWorkflowResponse type to internal
+func ToAdminDeleteWorkflowResponse(t *adminv1.AdminDeleteWorkflowResponse) *types.AdminDeleteWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminDeleteWorkflowResponse{
+		Deleted: t.Deleted,
+	}
+}
+
+//FromAdminMaintainWorkflowRequest converts internal AdminMaintainWorkflowRequest type to proto
+func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *adminv1.AdminMaintainWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminMaintainWorkflowRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.Execution),
+		SkipErrors:        t.SkipErrors,
+	}
+}
+
+//ToAdminMaintainWorkflowRequest converts proto AdminMaintainWorkflowRequest type to internal
+func ToAdminMaintainWorkflowRequest(t *adminv1.AdminMaintainWorkflowRequest) *types.AdminMaintainWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminMaintainWorkflowRequest{
+		Domain:     t.Domain,
+		Execution:  ToWorkflowExecution(t.WorkflowExecution),
+		SkipErrors: t.SkipErrors,
+	}
+}
+
+//FromAdminMaintainWorkflowResponse converts internal AdminMaintainWorkflowResponse type to proto
+func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *adminv1.AdminMaintainWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminMaintainWorkflowResponse{
+		Deleted: t.Deleted,
+	}
+}
+
+//ToAdminMaintainWorkflowResponse converts proto AdminMaintainWorkflowResponse type to internal
+func ToAdminMaintainWorkflowResponse(t *adminv1.AdminMaintainWorkflowResponse) *types.AdminMaintainWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminMaintainWorkflowResponse{
+		Deleted: t.Deleted,
+	}
+}
+
 //FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
 func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
 	if t == nil {

@@ -466,34 +466,34 @@ func (c *metricClient) DeleteWorkflow(
 	ctx context.Context,
 	request *types.AdminDeleteWorkflowRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AdminDeleteWorkflowResponse, error) {
 	c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientLatency)
-	err := c.client.DeleteWorkflow(ctx, request, opts...)
+	resp, err := c.client.DeleteWorkflow(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientFailures)
 	}
-	return err
+	return resp, err
 }
 
 func (c *metricClient) MaintainCorruptWorkflow(
 	ctx context.Context,
-	request *types.AdminDeleteWorkflowRequest,
+	request *types.AdminMaintainWorkflowRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.AdminMaintainWorkflowResponse, error) {
 	c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientLatency)
-	err := c.client.MaintainCorruptWorkflow(ctx, request, opts...)
+	resp, err := c.client.MaintainCorruptWorkflow(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientFailures)
 	}
-	return err
+	return resp, err
 }
 
 func (c *metricClient) ListDynamicConfig(
