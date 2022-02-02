@@ -13,7 +13,7 @@ services:
     ports:
       - '9090:9090'
   cadence:
-    image: ubercadence/server:master-auto-setup
+    image: ubercadence/server:0.22.4-auto-setup
     ports:
       - "8000:8000"
       - "8001:8001"
