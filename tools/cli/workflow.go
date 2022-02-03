@@ -22,6 +22,7 @@ package cli
 
 import (
 	"strings"
+	"time"
 
 	"github.com/urfave/cli"
 
@@ -510,6 +511,26 @@ func newBatchCommands() []cli.Command {
 				cli.BoolFlag{
 					Name:  FlagYes,
 					Usage: "Optional flag to disable confirmation prompt",
+				},
+				cli.IntFlag{
+					Name:  FlagPageSize,
+					Value: batcher.DefaultPageSize,
+					Usage: "PageSize of processiing",
+				},
+				cli.IntFlag{
+					Name:  FlagRetryAttempts,
+					Value: batcher.DefaultAttemptsOnRetryableError,
+					Usage: "Retry attempts for retriable errors",
+				},
+				cli.IntFlag{
+					Name:  FlagActivityHeartBeatTimeoutWithAlias,
+					Value: int(batcher.DefaultActivityHeartBeatTimeout / time.Second),
+					Usage: "Heartbeat timeout for batcher activity in seconds",
+				},
+				cli.IntFlag{
+					Name:  FlagConcurrency,
+					Value: batcher.DefaultConcurrency,
+					Usage: "Concurrency of batch activity",
 				},
 			},
 			Action: func(c *cli.Context) {

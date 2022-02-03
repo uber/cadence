@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
@@ -172,6 +173,10 @@ func StartBatchJob(c *cli.Context) {
 		targetCluster = getRequiredOption(c, FlagTargetCluster)
 	}
 	rps := c.Int(FlagRPS)
+	pageSize := c.Int(FlagPageSize)
+	concurrency := c.Int(FlagConcurrency)
+	retryAttempt := c.Int(FlagRetryAttempts)
+	heartBeatTimeout := time.Duration(c.Int(FlagActivityHeartBeatTimeout)) * time.Second
 
 	svcClient := cFactory.ServerFrontendClient(c)
 	tcCtx, cancel := newContext(c)
@@ -221,7 +226,11 @@ func StartBatchJob(c *cli.Context) {
 			SourceCluster: sourceCluster,
 			TargetCluster: targetCluster,
 		},
-		RPS: rps,
+		RPS:                      rps,
+		Concurrency:              concurrency,
+		PageSize:                 pageSize,
+		AttemptsOnRetryableError: retryAttempt,
+		ActivityHeartBeatTimeout: heartBeatTimeout,
 	}
 	input, err := json.Marshal(params)
 	if err != nil {
