@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/urfave/cli"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -153,6 +154,10 @@ func StartBatchJob(c *cli.Context) {
 		targetCluster = getRequiredOption(c, FlagTargetCluster)
 	}
 	rps := c.Int(FlagRPS)
+	pageSize := c.Int(FlagPageSize)
+	concurrency := c.Int(FlagConcurrency)
+	retryAttempt := c.Int(FlagRetryAttempts)
+	heartBeatTimeout := time.Duration(c.Int(FlagActivityHeartBeatTimeout)) * time.Second
 
 	svcClient := cFactory.ClientFrontendClient(c)
 	client := cclient.NewClient(svcClient, common.BatcherLocalDomainName, &DefaultClientOptions)
@@ -209,7 +214,11 @@ func StartBatchJob(c *cli.Context) {
 			SourceCluster: sourceCluster,
 			TargetCluster: targetCluster,
 		},
-		RPS: rps,
+		RPS:                      rps,
+		Concurrency:              concurrency,
+		PageSize:                 pageSize,
+		AttemptsOnRetryableError: retryAttempt,
+		ActivityHeartBeatTimeout: heartBeatTimeout,
 	}
 	wf, err := client.StartWorkflow(tcCtx, options, batcher.BatchWFTypeName, params)
 	if err != nil {
