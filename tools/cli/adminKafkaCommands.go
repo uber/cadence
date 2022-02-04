@@ -479,11 +479,6 @@ func doRereplicate(
 
 // AdminRereplicate parses will re-publish replication tasks to topic
 func AdminRereplicate(c *cli.Context) {
-	numberOfShards := c.Int(FlagNumberOfShards)
-	if numberOfShards <= 0 {
-		ErrorAndExit("numberOfShards is must be > 0", nil)
-		return
-	}
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
 
 	adminClient := cFactory.ServerAdminClient(c)
