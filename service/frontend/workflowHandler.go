@@ -3826,8 +3826,8 @@ func (wh *WorkflowHandler) validateTransientDecisionEvents(
 	decision *types.TransientDecisionInfo,
 ) error {
 
-	if decision.ScheduledEvent.GetEventID() == expectedNextEventID &&
-		decision.StartedEvent.GetEventID() == expectedNextEventID+1 {
+	if decision.ScheduledEvent.ID == expectedNextEventID &&
+		decision.StartedEvent.ID == expectedNextEventID+1 {
 		return nil
 	}
 
@@ -3836,8 +3836,8 @@ func (wh *WorkflowHandler) validateTransientDecisionEvents(
 			"expectedScheduledEventID=%v expectedStartedEventID=%v but have scheduledEventID=%v startedEventID=%v",
 		expectedNextEventID,
 		expectedNextEventID+1,
-		decision.ScheduledEvent.GetEventID(),
-		decision.StartedEvent.GetEventID())
+		decision.ScheduledEvent.ID,
+		decision.StartedEvent.ID)
 }
 
 // startRequestProfile initiates recording of request metrics
@@ -4071,8 +4071,8 @@ func verifyHistoryIsComplete(
 		return fmt.Errorf("invalid history: contains zero events")
 	}
 
-	firstEventID := events[0].GetEventID()
-	lastEventID := events[nEvents-1].GetEventID()
+	firstEventID := events[0].ID
+	lastEventID := events[nEvents-1].ID
 
 	if !isFirstPage { // atleast one page of history has been read previously
 		if firstEventID <= expectedFirstEventID {

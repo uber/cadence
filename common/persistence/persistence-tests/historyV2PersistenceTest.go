@@ -235,7 +235,7 @@ func (s *HistoryV2PersistenceSuite) TestReadBranchByPagination() {
 	resp, err := s.HistoryV2Mgr.ReadHistoryBranch(ctx, req)
 	s.Nil(err)
 	s.Equal(4, len(resp.HistoryEvents))
-	s.Equal(int64(6), resp.HistoryEvents[0].GetEventID())
+	s.Equal(int64(6), resp.HistoryEvents[0].ID)
 
 	events = s.genRandomEvents([]int64{10}, 4)
 	err = s.appendNewNode(ctx, bi, events, 8)
@@ -708,7 +708,7 @@ func (s *HistoryV2PersistenceSuite) genRandomEvents(eventIDs []int64, version in
 
 	timestamp := time.Now().UnixNano()
 	for _, eid := range eventIDs {
-		e := &types.HistoryEvent{EventID: eid, Version: version, Timestamp: int64Ptr(timestamp)}
+		e := &types.HistoryEvent{ID: eid, Version: version, Timestamp: int64Ptr(timestamp)}
 		events = append(events, e)
 	}
 

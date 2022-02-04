@@ -392,7 +392,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 			taskList,
 			startToCloseTimeoutSeconds,
 			m.msb.executionInfo.DecisionAttempt)
-		scheduleID = newDecisionEvent.GetEventID()
+		scheduleID = newDecisionEvent.ID
 		scheduleTime = newDecisionEvent.GetTimestamp()
 		m.msb.executionInfo.DecisionAttempt = 0
 	}
@@ -491,7 +491,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	if decision.Attempt > 0 && (decision.ScheduleID != m.msb.GetNextEventID() || useNonTransientDecision) {
 		// Also create a new DecisionTaskScheduledEvent since new events came in when it was scheduled
 		scheduleEvent := m.msb.hBuilder.AddDecisionTaskScheduledEvent(tasklist, decision.DecisionTimeout, 0)
-		scheduleID = scheduleEvent.GetEventID()
+		scheduleID = scheduleEvent.ID
 		decision.Attempt = 0
 	}
 
@@ -499,7 +499,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	if decision.Attempt == 0 {
 		// Now create DecisionTaskStartedEvent
 		event = m.msb.hBuilder.AddDecisionTaskStartedEvent(scheduleID, requestID, request.GetIdentity())
-		startedID = event.GetEventID()
+		startedID = event.ID
 		startTime = event.GetTimestamp()
 	}
 
@@ -536,9 +536,9 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskCompletedEvent(
 		// Create corresponding DecisionTaskSchedule and DecisionTaskStarted events for decisions we have been retrying
 		scheduledEvent := m.msb.hBuilder.AddTransientDecisionTaskScheduledEvent(m.msb.executionInfo.TaskList, decision.DecisionTimeout,
 			decision.Attempt, decision.ScheduledTimestamp)
-		startedEvent := m.msb.hBuilder.AddTransientDecisionTaskStartedEvent(scheduledEvent.GetEventID(), decision.RequestID,
+		startedEvent := m.msb.hBuilder.AddTransientDecisionTaskStartedEvent(scheduledEvent.ID, decision.RequestID,
 			request.GetIdentity(), decision.StartedTimestamp)
-		startedEventID = startedEvent.GetEventID()
+		startedEventID = startedEvent.ID
 	}
 	// Now write the completed event
 	event := m.msb.hBuilder.AddDecisionTaskCompletedEvent(scheduleEventID, startedEventID, request)

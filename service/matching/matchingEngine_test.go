@@ -1655,7 +1655,7 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 func newHistoryEvent(eventID int64, eventType types.EventType) *types.HistoryEvent {
 	ts := common.Int64Ptr(time.Now().UnixNano())
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = eventID
+	historyEvent.ID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
 

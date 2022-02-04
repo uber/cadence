@@ -545,9 +545,9 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				RunID:        taskAttributes.GetRunID(),
 				TaskID:       replicationTask.GetSourceTaskID(),
 				TaskType:     persistence.ReplicationTaskTypeHistory,
-				FirstEventID: events[0].GetEventID(),
-				NextEventID:  events[len(events)-1].GetEventID() + 1,
-				Version:      events[0].GetVersion(),
+				FirstEventID: events[0].ID,
+				NextEventID:  events[len(events)-1].ID + 1,
+				Version:      events[0].Version,
 			},
 		}, nil
 	default:

@@ -2602,7 +2602,7 @@ func FromHistoryEvent(t *types.HistoryEvent) *shared.HistoryEvent {
 		return nil
 	}
 	return &shared.HistoryEvent{
-		EventId:                                 &t.EventID,
+		EventId:                                 &t.ID,
 		Timestamp:                               t.Timestamp,
 		EventType:                               FromEventType(t.EventType),
 		Version:                                 &t.Version,
@@ -2658,7 +2658,7 @@ func ToHistoryEvent(t *shared.HistoryEvent) *types.HistoryEvent {
 		return nil
 	}
 	return &types.HistoryEvent{
-		EventID:                                 t.GetEventId(),
+		ID:                                      t.GetEventId(),
 		Timestamp:                               t.Timestamp,
 		EventType:                               ToEventType(t.EventType),
 		Version:                                 t.GetVersion(),

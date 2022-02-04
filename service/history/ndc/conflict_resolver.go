@@ -99,11 +99,11 @@ func (r *conflictResolverImpl) prepareMutableState(
 	}
 
 	// mutable state does not need rebuild
-	if incomingVersion < currentLastItem.GetVersion() {
+	if incomingVersion < currentLastItem.Version {
 		return r.mutableState, false, nil
 	}
 
-	if incomingVersion == currentLastItem.GetVersion() {
+	if incomingVersion == currentLastItem.Version {
 		return nil, false, &types.BadRequestError{
 			Message: "nDCConflictResolver encounter replication task version == current branch last write version",
 		}
@@ -150,8 +150,8 @@ func (r *conflictResolverImpl) rebuild(
 		executionInfo.StartTimestamp,
 		workflowIdentifier,
 		replayVersionHistory.GetBranchToken(),
-		lastItem.GetEventID(),
-		lastItem.GetVersion(),
+		lastItem.EventID,
+		lastItem.Version,
 		workflowIdentifier,
 		replayVersionHistory.GetBranchToken(),
 		requestID,

@@ -70,7 +70,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: 33,
+							ID:      33,
 							Version: 10,
 						},
 					},
@@ -78,11 +78,11 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: 49,
+							ID:      49,
 							Version: 10,
 						},
 						{
-							EventID: 50,
+							ID:      50,
 							Version: 10,
 						},
 					},
@@ -116,7 +116,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: 20,
+							ID:      20,
 							Version: 10,
 						},
 					},
@@ -124,7 +124,7 @@ func (s *UtilSuite) TestHistoryMutated() {
 				{
 					Events: []*types.HistoryEvent{
 						{
-							EventID: 33,
+							ID:      33,
 							Version: 10,
 						},
 					},

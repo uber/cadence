@@ -185,7 +185,7 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 		RunID:       s.resetRunID,
 		BranchToken: []byte("some random reset branch token"),
 		Events: []*types.HistoryEvent{{
-			EventID: 123,
+			ID: 123,
 		}},
 	}}
 	resetEventsSize := int64(4321)
@@ -370,22 +370,22 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 	newBranchToken := []byte("some random new branch token")
 
 	baseEvent1 := &types.HistoryEvent{
-		EventID:                              124,
+		ID:                                   124,
 		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	baseEvent2 := &types.HistoryEvent{
-		EventID:                            125,
+		ID:                                 125,
 		EventType:                          types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
 	baseEvent3 := &types.HistoryEvent{
-		EventID:                              126,
+		ID:                                   126,
 		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	baseEvent4 := &types.HistoryEvent{
-		EventID:   127,
+		ID:        127,
 		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
 			NewExecutionRunID: newRunID,
@@ -393,27 +393,27 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 	}
 
 	newEvent1 := &types.HistoryEvent{
-		EventID:                                 1,
+		ID:                                      1,
 		EventType:                               types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
 	newEvent2 := &types.HistoryEvent{
-		EventID:                              2,
+		ID:                                   2,
 		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	newEvent3 := &types.HistoryEvent{
-		EventID:                            3,
+		ID:                                 3,
 		EventType:                          types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
 	newEvent4 := &types.HistoryEvent{
-		EventID:                              4,
+		ID:                                   4,
 		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	newEvent5 := &types.HistoryEvent{
-		EventID:                                5,
+		ID:                                     5,
 		EventType:                              types.EventTypeWorkflowExecutionFailed.Ptr(),
 		WorkflowExecutionFailedEventAttributes: &types.WorkflowExecutionFailedEventAttributes{},
 	}
@@ -476,27 +476,27 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 
 	newRunID := uuid.New()
 	event1 := &types.HistoryEvent{
-		EventID:                                 1,
+		ID:                                      1,
 		EventType:                               types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              2,
+		ID:                                   2,
 		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:                            3,
+		ID:                                 3,
 		EventType:                          types.EventTypeDecisionTaskStarted.Ptr(),
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &types.HistoryEvent{
-		EventID:                              4,
+		ID:                                   4,
 		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &types.HistoryEvent{
-		EventID:   5,
+		ID:        5,
 		EventType: types.EventTypeWorkflowExecutionContinuedAsNew.Ptr(),
 		WorkflowExecutionContinuedAsNewEventAttributes: &types.WorkflowExecutionContinuedAsNewEventAttributes{
 			NewExecutionRunID: newRunID,
@@ -589,7 +589,7 @@ func (s *workflowResetterSuite) TestClosePendingDecisionTask() {
 func (s *workflowResetterSuite) TestReapplyEvents() {
 
 	event1 := &types.HistoryEvent{
-		EventID:   101,
+		ID:        101,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: "some random signal name",
@@ -598,12 +598,12 @@ func (s *workflowResetterSuite) TestReapplyEvents() {
 		},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              102,
+		ID:                                   102,
 		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:   103,
+		ID:        103,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{
 			SignalName: "another random signal name",
@@ -636,23 +636,23 @@ func (s *workflowResetterSuite) TestPagination() {
 	branchToken := []byte("some random branch token")
 
 	event1 := &types.HistoryEvent{
-		EventID:                                 1,
+		ID:                                      1,
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              2,
+		ID:                                   2,
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:                            3,
+		ID:                                 3,
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &types.HistoryEvent{
-		EventID:                              4,
+		ID:                                   4,
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &types.HistoryEvent{
-		EventID:                              5,
+		ID:                                   5,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	history1 := []*types.History{{[]*types.HistoryEvent{event1, event2, event3}}}

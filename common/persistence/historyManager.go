@@ -198,7 +198,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 		}
 	}
 	version := request.Events[0].Version
-	nodeID := request.Events[0].EventID
+	nodeID := request.Events[0].ID
 	lastID := nodeID - 1
 
 	if nodeID <= 0 {
@@ -212,7 +212,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 				Msg: fmt.Sprintf("event version must be the same inside a batch"),
 			}
 		}
-		if e.EventID != lastID+1 {
+		if e.ID != lastID+1 {
 			return nil, &InvalidPersistenceRequestError{
 				Msg: fmt.Sprintf("event ID must be continuous"),
 			}
@@ -472,36 +472,36 @@ func (m *historyV2ManagerImpl) readHistoryBranch(
 		eventCount := len(events)         // length
 		lastEvent := events[eventCount-1] // last
 
-		if firstEvent.GetVersion() != lastEvent.GetVersion() || firstEvent.GetEventID()+int64(eventCount-1) != lastEvent.GetEventID() {
+		if firstEvent.Version != lastEvent.Version || firstEvent.ID+int64(eventCount-1) != lastEvent.ID {
 			// in a single batch, version should be the same, and ID should be continous
 			logger.Error("Corrupted event batch",
-				tag.FirstEventVersion(firstEvent.GetVersion()), tag.WorkflowFirstEventID(firstEvent.GetEventID()),
-				tag.LastEventVersion(lastEvent.GetVersion()), tag.WorkflowNextEventID(lastEvent.GetEventID()),
+				tag.FirstEventVersion(firstEvent.Version), tag.WorkflowFirstEventID(firstEvent.ID),
+				tag.LastEventVersion(lastEvent.Version), tag.WorkflowNextEventID(lastEvent.ID),
 				tag.Counter(eventCount))
 			return nil, nil, nil, 0, 0, &types.InternalDataInconsistencyError{
 				Message: fmt.Sprintf("corrupted history event batch, wrong version and IDs"),
 			}
 		}
 
-		if firstEvent.GetVersion() < token.LastEventVersion {
+		if firstEvent.Version < token.LastEventVersion {
 			// version decrease means the this batch are all stale events, we should skip
-			logger.Info("Stale event batch with smaller version", tag.FirstEventVersion(firstEvent.GetVersion()), tag.TokenLastEventVersion(token.LastEventVersion))
+			logger.Info("Stale event batch with smaller version", tag.FirstEventVersion(firstEvent.Version), tag.TokenLastEventVersion(token.LastEventVersion))
 			continue
 		}
-		if firstEvent.GetEventID() <= token.LastEventID {
+		if firstEvent.ID <= token.LastEventID {
 			// we could see it because first batch of next page has a smaller txn_id
-			logger.Info("Stale event batch with eventID", tag.WorkflowFirstEventID(firstEvent.GetEventID()), tag.TokenLastEventID(token.LastEventID))
+			logger.Info("Stale event batch with eventID", tag.WorkflowFirstEventID(firstEvent.ID), tag.TokenLastEventID(token.LastEventID))
 			continue
 		}
-		if firstEvent.GetEventID() != token.LastEventID+1 {
+		if firstEvent.ID != token.LastEventID+1 {
 			// We assume application layer want to read from MinEventID(inclusive)
 			// However, for getting history from remote cluster, there is scenario that we have to read from middle without knowing the firstEventID.
 			// In that case we don't validate history continuousness for the first page
 			// TODO: in this case, some events returned can be invalid(stale). application layer need to make sure it won't make any problems to XDC
 			if defaultLastEventID == 0 || token.LastEventID != defaultLastEventID {
 				logger.Error("Corrupted incontinouous event batch",
-					tag.FirstEventVersion(firstEvent.GetVersion()), tag.WorkflowFirstEventID(firstEvent.GetEventID()),
-					tag.LastEventVersion(lastEvent.GetVersion()), tag.WorkflowNextEventID(lastEvent.GetEventID()),
+					tag.FirstEventVersion(firstEvent.Version), tag.WorkflowFirstEventID(firstEvent.ID),
+					tag.LastEventVersion(lastEvent.Version), tag.WorkflowNextEventID(lastEvent.ID),
 					tag.TokenLastEventVersion(token.LastEventVersion), tag.TokenLastEventID(token.LastEventID),
 					tag.Counter(eventCount))
 				return nil, nil, nil, 0, 0, &types.InternalDataInconsistencyError{
@@ -510,14 +510,14 @@ func (m *historyV2ManagerImpl) readHistoryBranch(
 			}
 		}
 
-		token.LastEventVersion = firstEvent.GetVersion()
-		token.LastEventID = lastEvent.GetEventID()
+		token.LastEventVersion = firstEvent.Version
+		token.LastEventID = lastEvent.ID
 		if byBatch {
 			historyEventBatches = append(historyEventBatches, &types.History{Events: events})
 		} else {
 			historyEvents = append(historyEvents, events...)
 		}
-		lastFirstEventID = firstEvent.GetEventID()
+		lastFirstEventID = firstEvent.ID
 	}
 
 	nextPageToken, err := m.serializeToken(token)

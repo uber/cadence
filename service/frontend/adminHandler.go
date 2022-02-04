@@ -1117,13 +1117,13 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// If start event is not set, get the events from the first event
 		// As the API is exclusive-exclusive, use first event id - 1 here
 		request.StartEventID = common.Int64Ptr(common.FirstEventID - 1)
-		request.StartEventVersion = common.Int64Ptr(firstItem.GetVersion())
+		request.StartEventVersion = common.Int64Ptr(firstItem.Version)
 	}
 	if request.EndEventID == nil || request.EndEventVersion == nil {
 		// If end event is not set, get the events until the end event
 		// As the API is exclusive-exclusive, use end event id + 1 here
-		request.EndEventID = common.Int64Ptr(lastItem.GetEventID() + 1)
-		request.EndEventVersion = common.Int64Ptr(lastItem.GetVersion())
+		request.EndEventID = common.Int64Ptr(lastItem.EventID + 1)
+		request.EndEventVersion = common.Int64Ptr(lastItem.Version)
 	}
 
 	if request.GetStartEventID() < 0 {
@@ -1131,8 +1131,8 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 	}
 
 	// get branch based on the end event if end event is defined in the request
-	if request.GetEndEventID() == lastItem.GetEventID()+1 &&
-		request.GetEndEventVersion() == lastItem.GetVersion() {
+	if request.GetEndEventID() == lastItem.EventID+1 &&
+		request.GetEndEventVersion() == lastItem.Version {
 		// this is a special case, target branch remains the same
 	} else {
 		endItem := persistence.NewVersionHistoryItem(request.GetEndEventID(), request.GetEndEventVersion())
@@ -1151,7 +1151,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 	// If the request start event is defined. The start event may be on a different branch as current branch.
 	// We need to find the LCA of the start event and the current branch.
 	if request.GetStartEventID() == common.FirstEventID-1 &&
-		request.GetStartEventVersion() == firstItem.GetVersion() {
+		request.GetStartEventVersion() == firstItem.Version {
 		// this is a special case, start event is on the same branch as target branch
 	} else {
 		if !targetBranch.ContainsItem(startItem) {
@@ -1167,8 +1167,8 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 			if err != nil {
 				return nil, err
 			}
-			request.StartEventID = common.Int64Ptr(startItem.GetEventID())
-			request.StartEventVersion = common.Int64Ptr(startItem.GetVersion())
+			request.StartEventID = common.Int64Ptr(startItem.EventID)
+			request.StartEventVersion = common.Int64Ptr(startItem.Version)
 		}
 	}
 

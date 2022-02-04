@@ -258,7 +258,7 @@ func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
 	switch err.(type) {
 	case nil:
 		if activityDispatchInfo != nil {
-			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventID(), uuid.New(), handler.identity); err1 != nil {
+			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.ID, uuid.New(), handler.identity); err1 != nil {
 				return nil, err1
 			}
 			token := &common.TaskToken{
@@ -326,7 +326,7 @@ func (handler *taskHandlerImpl) handleDecisionRequestCancelActivity(
 			_, err = handler.mutableState.AddActivityTaskCanceledEvent(
 				ai.ScheduleID,
 				ai.StartedID,
-				actCancelReqEvent.GetEventID(),
+				actCancelReqEvent.ID,
 				[]byte(activityCancellationMsgActivityNotStarted),
 				handler.identity,
 			)

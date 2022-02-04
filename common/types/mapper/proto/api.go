@@ -5305,7 +5305,7 @@ func FromHistoryEvent(e *types.HistoryEvent) *apiv1.HistoryEvent {
 		return nil
 	}
 	event := apiv1.HistoryEvent{
-		EventId:   e.EventID,
+		EventId:   e.ID,
 		EventTime: unixNanoToTime(e.Timestamp),
 		Version:   e.Version,
 		TaskId:    e.TaskID,
@@ -5488,7 +5488,7 @@ func ToHistoryEvent(e *apiv1.HistoryEvent) *types.HistoryEvent {
 		return nil
 	}
 	event := types.HistoryEvent{
-		EventID:   e.EventId,
+		ID:        e.EventId,
 		Timestamp: timeToUnixNano(e.EventTime),
 		Version:   e.Version,
 		TaskID:    e.TaskId,

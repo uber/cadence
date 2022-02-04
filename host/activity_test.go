@@ -425,12 +425,12 @@ func (s *IntegrationSuite) TestActivityRetry() {
 					}
 
 				case types.EventTypeActivityTaskFailed:
-					if event.ActivityTaskFailedEventAttributes.GetScheduledEventID() == activityAScheduled.GetEventID() {
+					if event.ActivityTaskFailedEventAttributes.GetScheduledEventID() == activityAScheduled.ID {
 						activityAFailed = event
 					}
 
 				case types.EventTypeActivityTaskTimedOut:
-					if event.ActivityTaskTimedOutEventAttributes.GetScheduledEventID() == activityBScheduled.GetEventID() {
+					if event.ActivityTaskTimedOutEventAttributes.GetScheduledEventID() == activityBScheduled.ID {
 						activityBTimeout = event
 					}
 				}
@@ -754,7 +754,7 @@ func (s *IntegrationSuite) TestActivityTimeouts() {
 		} else if previousStartedEventID > 0 {
 			for _, event := range history.Events[previousStartedEventID:] {
 				if event.GetEventType() == types.EventTypeActivityTaskScheduled {
-					activitiesMap[event.GetEventID()] = event
+					activitiesMap[event.ID] = event
 				}
 
 				if event.GetEventType() == types.EventTypeActivityTaskTimedOut {
@@ -963,7 +963,7 @@ func (s *IntegrationSuite) TestActivityHeartbeatTimeouts() {
 		ProcessLoop:
 			for _, event := range history.Events[previousStartedEventID:] {
 				if event.GetEventType() == types.EventTypeActivityTaskScheduled {
-					lastHeartbeatMap[event.GetEventID()] = 0
+					lastHeartbeatMap[event.ID] = 0
 				}
 
 				if event.GetEventType() == types.EventTypeActivityTaskCompleted ||

@@ -71,7 +71,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	serializer := NewPayloadSerializer()
 
 	event0 := &types.HistoryEvent{
-		EventID:   999,
+		ID:        999,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 		EventType: types.EventTypeActivityTaskCompleted.Ptr(),
 		ActivityTaskCompletedEventAttributes: &types.ActivityTaskCompletedEventAttributes{

@@ -258,10 +258,10 @@ func (s *versionHistoriesSuite) TestContainsItem_True() {
 
 	prevEventID := common.FirstEventID - 1
 	for _, item := range Items {
-		for EventID := prevEventID + 1; EventID <= item.GetEventID(); EventID++ {
-			s.True(history.ContainsItem(NewVersionHistoryItem(EventID, item.GetVersion())))
+		for EventID := prevEventID + 1; EventID <= item.EventID; EventID++ {
+			s.True(history.ContainsItem(NewVersionHistoryItem(EventID, item.Version)))
 		}
-		prevEventID = item.GetEventID()
+		prevEventID = item.EventID
 	}
 }
 
@@ -459,30 +459,30 @@ func (s *versionHistoriesSuite) TestGetVersion_Success() {
 
 	Version, err := history.GetEventVersion(1)
 	s.NoError(err)
-	s.Equal(item1.GetVersion(), Version)
+	s.Equal(item1.Version, Version)
 	Version, err = history.GetEventVersion(2)
 	s.NoError(err)
-	s.Equal(item1.GetVersion(), Version)
+	s.Equal(item1.Version, Version)
 	Version, err = history.GetEventVersion(3)
 	s.NoError(err)
-	s.Equal(item1.GetVersion(), Version)
+	s.Equal(item1.Version, Version)
 
 	Version, err = history.GetEventVersion(4)
 	s.NoError(err)
-	s.Equal(item2.GetVersion(), Version)
+	s.Equal(item2.Version, Version)
 	Version, err = history.GetEventVersion(5)
 	s.NoError(err)
-	s.Equal(item2.GetVersion(), Version)
+	s.Equal(item2.Version, Version)
 	Version, err = history.GetEventVersion(6)
 	s.NoError(err)
-	s.Equal(item2.GetVersion(), Version)
+	s.Equal(item2.Version, Version)
 
 	Version, err = history.GetEventVersion(7)
 	s.NoError(err)
-	s.Equal(item3.GetVersion(), Version)
+	s.Equal(item3.Version, Version)
 	Version, err = history.GetEventVersion(8)
 	s.NoError(err)
-	s.Equal(item3.GetVersion(), Version)
+	s.Equal(item3.Version, Version)
 }
 
 func (s *versionHistoriesSuite) TestGetVersion_Failure() {

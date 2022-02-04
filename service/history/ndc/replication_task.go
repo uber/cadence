@@ -115,7 +115,7 @@ func newReplicationTask(
 
 	firstEvent := events[0]
 	lastEvent := events[len(events)-1]
-	version := firstEvent.GetVersion()
+	version := firstEvent.Version
 
 	sourceCluster := clusterMetadata.ClusterNameForFailoverVersion(version)
 
@@ -136,8 +136,8 @@ func newReplicationTask(
 		tag.WorkflowRunID(execution.GetRunID()),
 		tag.SourceCluster(sourceCluster),
 		tag.IncomingVersion(version),
-		tag.WorkflowFirstEventID(firstEvent.GetEventID()),
-		tag.WorkflowNextEventID(lastEvent.GetEventID()+1),
+		tag.WorkflowFirstEventID(firstEvent.ID),
+		tag.WorkflowNextEventID(lastEvent.ID+1),
 	)
 
 	return &replicationTaskImpl{
@@ -267,8 +267,8 @@ func (t *replicationTaskImpl) splitTask(
 	newVersionHistory := persistence.NewVersionHistoryFromInternalType(&types.VersionHistory{
 		BranchToken: nil,
 		Items: []*types.VersionHistoryItem{{
-			EventID: newLastEvent.GetEventID(),
-			Version: newLastEvent.GetVersion(),
+			EventID: newLastEvent.ID,
+			Version: newLastEvent.Version,
 		}},
 	})
 
@@ -277,8 +277,8 @@ func (t *replicationTaskImpl) splitTask(
 		tag.WorkflowRunID(newRunID),
 		tag.SourceCluster(t.sourceCluster),
 		tag.IncomingVersion(t.version),
-		tag.WorkflowFirstEventID(newFirstEvent.GetEventID()),
-		tag.WorkflowNextEventID(newLastEvent.GetEventID()+1),
+		tag.WorkflowFirstEventID(newFirstEvent.ID),
+		tag.WorkflowNextEventID(newLastEvent.ID+1),
 	)
 
 	newRunTask := &replicationTaskImpl{
@@ -363,14 +363,14 @@ func validateUUID(input string) bool {
 func validateEvents(events []*types.HistoryEvent) (int64, error) {
 
 	firstEvent := events[0]
-	firstEventID := firstEvent.GetEventID()
-	version := firstEvent.GetVersion()
+	firstEventID := firstEvent.ID
+	version := firstEvent.Version
 
 	for index, event := range events {
-		if event.GetEventID() != firstEventID+int64(index) {
+		if event.ID != firstEventID+int64(index) {
 			return 0, ErrEventIDMismatch
 		}
-		if event.GetVersion() != version {
+		if event.Version != version {
 			return 0, ErrEventVersionMismatch
 		}
 	}
