@@ -487,14 +487,10 @@ func newAdminKafkaCommands() []cli.Command {
 			Name:    "rereplicate",
 			Aliases: []string{"rrp"},
 			Usage:   "Rereplicate replication tasks from history tables",
-			Flags: append(getDBFlags(),
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagSourceCluster,
 					Usage: "Name of source cluster to resend the replication task",
-				},
-				cli.IntFlag{
-					Name:  FlagNumberOfShards,
-					Usage: "NumberOfShards is required to calculate shardID. (see server config for numHistoryShards)",
 				},
 				cli.StringFlag{
 					Name:  FlagDomainID,
@@ -515,7 +511,7 @@ func newAdminKafkaCommands() []cli.Command {
 				cli.StringFlag{
 					Name:  FlagEndEventVersion,
 					Usage: "Workflow end event version, required if MaxEventID is specified",
-				}),
+				}},
 			Action: func(c *cli.Context) {
 				AdminRereplicate(c)
 			},
