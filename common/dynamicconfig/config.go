@@ -90,7 +90,7 @@ func (c *Collection) logValue(
 	filteredKey := getFilteredKeyAsString(key, filters)
 	loadedValue, loaded := c.logKeys.LoadOrStore(filteredKey, value)
 	if !loaded {
-		c.logger.Info("First loading dynamic config",
+		c.logger.Debug("First loading dynamic config",
 			tag.Key(filteredKey), tag.Value(value), tag.DefaultValue(defaultValue))
 	} else {
 		// it's loaded before, check if the value has changed
