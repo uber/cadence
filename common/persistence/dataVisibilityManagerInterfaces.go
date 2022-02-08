@@ -177,7 +177,7 @@ type (
 		TaskID     int64
 	}
 
-	VisbilityAdminDeletionKey string
+	VisibilityAdminDeletionKey string
 
 	// VisibilityManager is used to manage the visibility store
 	VisibilityManager interface {

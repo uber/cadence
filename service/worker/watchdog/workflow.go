@@ -32,6 +32,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -142,6 +143,10 @@ func (w *Workflow) handleCorrputedWorkflow(ctx context.Context, request *Corrupt
 		logger.Error("Failed to get domain entry", zap.Error(err))
 		return err
 	}
+
+	tagged := w.watchdog.scopedMetricClient.Tagged(
+		metrics.DomainTag(domainEntry.GetInfo().Name),
+	)
 	clusterName := domainEntry.GetReplicationConfig().ActiveClusterName
 	adminClient := w.watchdog.clientBean.GetRemoteAdminClient(clusterName)
 	maintainWFRequest := &types.AdminMaintainWorkflowRequest{
@@ -154,7 +159,7 @@ func (w *Workflow) handleCorrputedWorkflow(ctx context.Context, request *Corrupt
 		return err
 	}
 
-	// TODO: add a deleted metric
+	tagged.AddCounter(metrics.WatchDogNumCorruptWorkflowProcessed, 1)
 
 	// We couldn't decide if we should delete this workflow. That means the same logs will continue
 	// and the workflow will keep getting signals. So adding workflow to a cache to skip processing

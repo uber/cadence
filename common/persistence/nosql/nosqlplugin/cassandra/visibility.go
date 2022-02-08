@@ -368,7 +368,7 @@ func (db *cdb) SelectOneClosedWorkflow(
 func (db *cdb) DeleteVisibility(ctx context.Context, domainID, workflowID, runID string) error {
 	// Normally we only depend on TTL for Cassandra visibility deletion but
 	// we explicitly delete from open executions when an admin command is issued
-	key := persistence.VisbilityAdminDeletionKey("visibilityAdminDelete")
+	key := persistence.VisibilityAdminDeletionKey("visibilityAdminDelete")
 	if v := ctx.Value(key); v != nil && v.(bool) {
 		// Primary key is <domainId, domainPartition, startTime, runId>
 		// to optimize showing open executions sorted by their start time

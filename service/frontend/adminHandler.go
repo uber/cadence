@@ -546,7 +546,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 		// DELETE FROM VISIBILITY
 		if visibilityManager != nil {
 			logger.Info("Deleting workflow from visibility store")
-			key := persistence.VisbilityAdminDeletionKey("visibilityAdminDelete")
+			key := persistence.VisibilityAdminDeletionKey("visibilityAdminDelete")
 			visCtx := context.WithValue(ctx, key, true)
 			err = visibilityManager.DeleteWorkflowExecution(
 				visCtx,

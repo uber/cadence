@@ -158,7 +158,7 @@ func (v *visibilityDualManager) chooseVisibilityManagerForWrite(ctx context.Cont
 	if v.writeMode != nil {
 		writeMode = v.writeMode()
 	} else {
-		key := VisbilityAdminDeletionKey("visibilityAdminDelete")
+		key := VisibilityAdminDeletionKey("visibilityAdminDelete")
 		if value := ctx.Value(key); value != nil && value.(bool) {
 			writeMode = v.chooseVisibilityModeForAdmin()
 		}
