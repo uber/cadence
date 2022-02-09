@@ -221,9 +221,6 @@ func (r *ring) Members() []HostInfo {
 }
 
 func (r *ring) refresh() error {
-	r.members.Lock()
-	defer r.members.Unlock()
-
 	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
 		return nil
@@ -234,6 +231,8 @@ func (r *ring) refresh() error {
 		return fmt.Errorf("getting members from peer provider: %w", err)
 	}
 
+	r.members.Lock()
+	defer r.members.Unlock()
 	newMembersMap, changed := r.compareMembers(members)
 	if !changed {
 		return nil
