@@ -2165,6 +2165,7 @@ const (
 	PollerPerTaskListCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
+	TaskBacklogPerTaskListGauge
 
 	NumMatchingMetrics
 )
