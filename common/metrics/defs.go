@@ -2165,6 +2165,7 @@ const (
 	PollerPerTaskListCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
+	TaskBacklogPerTaskListGauge
 
 	NumMatchingMetrics
 )
@@ -2697,6 +2698,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PollerPerTaskListCounter:                 {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
 		TaskListManagersGauge:                    {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                  {metricName: "task_lag_per_tl", metricType: Gauge},
+		TaskBacklogPerTaskListGauge:              {metricName: "task_backlog_per_tl", metricType: Gauge},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
