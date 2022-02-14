@@ -382,7 +382,6 @@ message RestoreDynamicConfigResponse {
 message AdminDeleteWorkflowRequest {
   string domain = 1;
   api.v1.WorkflowExecution workflow_execution = 2;
-  bool skip_errors = 3;
 }
 
 message AdminDeleteWorkflowResponse {
@@ -394,7 +393,6 @@ message AdminDeleteWorkflowResponse {
 message AdminMaintainWorkflowRequest {
   string domain = 1;
   api.v1.WorkflowExecution workflow_execution = 2;
-  bool skip_errors = 3;
 }
 
 message AdminMaintainWorkflowResponse {

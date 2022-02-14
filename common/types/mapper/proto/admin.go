@@ -863,7 +863,6 @@ func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv
 	return &adminv1.AdminDeleteWorkflowRequest{
 		Domain:            t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.Execution),
-		SkipErrors:        t.SkipErrors,
 	}
 }
 
@@ -873,9 +872,8 @@ func ToAdminDeleteWorkflowRequest(t *adminv1.AdminDeleteWorkflowRequest) *types.
 		return nil
 	}
 	return &types.AdminDeleteWorkflowRequest{
-		Domain:     t.Domain,
-		Execution:  ToWorkflowExecution(t.WorkflowExecution),
-		SkipErrors: t.SkipErrors,
+		Domain:    t.Domain,
+		Execution: ToWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
@@ -911,7 +909,6 @@ func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *ad
 	return &adminv1.AdminMaintainWorkflowRequest{
 		Domain:            t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.Execution),
-		SkipErrors:        t.SkipErrors,
 	}
 }
 
@@ -921,9 +918,8 @@ func ToAdminMaintainWorkflowRequest(t *adminv1.AdminMaintainWorkflowRequest) *ty
 		return nil
 	}
 	return &types.AdminMaintainWorkflowRequest{
-		Domain:     t.Domain,
-		Execution:  ToWorkflowExecution(t.WorkflowExecution),
-		SkipErrors: t.SkipErrors,
+		Domain:    t.Domain,
+		Execution: ToWorkflowExecution(t.WorkflowExecution),
 	}
 }
 
