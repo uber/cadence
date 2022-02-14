@@ -386,7 +386,9 @@ message AdminDeleteWorkflowRequest {
 }
 
 message AdminDeleteWorkflowResponse {
-  bool deleted = 1;
+  bool history_deleted = 1;
+  bool executions_deleted = 2;
+  bool visibility_deleted = 3;
 }
 
 message AdminMaintainWorkflowRequest {
@@ -396,7 +398,9 @@ message AdminMaintainWorkflowRequest {
 }
 
 message AdminMaintainWorkflowResponse {
-  bool deleted = 1;
+  bool history_deleted = 1;
+  bool executions_deleted = 2;
+  bool visibility_deleted = 3;
 }
 
 message ListDynamicConfigRequest {

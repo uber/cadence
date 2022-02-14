@@ -210,7 +210,7 @@ func (t *taskImpl) Execute() error {
 	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
-func (t *taskImpl) ReportCorruptWorkflowToWatchDog() error {
+func (t *taskImpl) reportCorruptWorkflowToWatchDog() error {
 	domainID := t.GetDomainID()
 	wid := t.GetWorkflowID()
 	rid := t.GetRunID()
@@ -242,7 +242,7 @@ func (t *taskImpl) HandleErr(
 				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
 				t.logger.Error("Critical error processing task, retrying.",
 					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
-				t.ReportCorruptWorkflowToWatchDog()
+				t.reportCorruptWorkflowToWatchDog()
 			}
 		}
 	}()

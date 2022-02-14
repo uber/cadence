@@ -484,14 +484,14 @@ func (c *metricClient) MaintainCorruptWorkflow(
 	request *types.AdminMaintainWorkflowRequest,
 	opts ...yarpc.CallOption,
 ) (*types.AdminMaintainWorkflowResponse, error) {
-	c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.MaintainCorruptWorkflowScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientLatency)
+	sw := c.metricsClient.StartTimer(metrics.MaintainCorruptWorkflowScope, metrics.CadenceClientLatency)
 	resp, err := c.client.MaintainCorruptWorkflow(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.MaintainCorruptWorkflowScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }

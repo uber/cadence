@@ -584,7 +584,9 @@ func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *admi
 		return nil
 	}
 	return &admin.AdminDeleteWorkflowResponse{
-		Deleted: &t.Deleted,
+		HistoryDeleted:    &t.HistoryDeleted,
+		ExecutionsDeleted: &t.ExecutionsDeleted,
+		VisibilityDeleted: &t.VisibilityDeleted,
 	}
 }
 
@@ -594,7 +596,9 @@ func ToAdminDeleteWorkflowResponse(t *admin.AdminDeleteWorkflowResponse) *types.
 		return nil
 	}
 	return &types.AdminDeleteWorkflowResponse{
-		Deleted: *t.Deleted,
+		HistoryDeleted:    *t.HistoryDeleted,
+		ExecutionsDeleted: *t.ExecutionsDeleted,
+		VisibilityDeleted: *t.VisibilityDeleted,
 	}
 }
 
@@ -628,7 +632,9 @@ func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *
 		return nil
 	}
 	return &admin.AdminMaintainWorkflowResponse{
-		Deleted: &t.Deleted,
+		HistoryDeleted:    &t.HistoryDeleted,
+		ExecutionsDeleted: &t.ExecutionsDeleted,
+		VisibilityDeleted: &t.VisibilityDeleted,
 	}
 }
 
@@ -638,7 +644,9 @@ func ToAdminMaintainWorkflowResponse(t *admin.AdminMaintainWorkflowResponse) *ty
 		return nil
 	}
 	return &types.AdminMaintainWorkflowResponse{
-		Deleted: *t.Deleted,
+		HistoryDeleted:    *t.HistoryDeleted,
+		ExecutionsDeleted: *t.ExecutionsDeleted,
+		VisibilityDeleted: *t.VisibilityDeleted,
 	}
 }
 

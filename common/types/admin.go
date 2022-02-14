@@ -503,12 +503,28 @@ func (v *AdminDeleteWorkflowRequest) GetSkipErrors() (o bool) {
 }
 
 type AdminDeleteWorkflowResponse struct {
-	Deleted bool `json:"deleted,omitempty"`
+	HistoryDeleted    bool `json:"historyDeleted,omitempty"`
+	ExecutionsDeleted bool `json:"executionsDeleted,omitempty"`
+	VisibilityDeleted bool `json:"visibilityDeleted,omitempty"`
 }
 
-func (v *AdminDeleteWorkflowResponse) GetDeleted() (o bool) {
+func (v *AdminDeleteWorkflowResponse) GetHistoryDeleted() (o bool) {
 	if v != nil {
-		return v.Deleted
+		return v.HistoryDeleted
+	}
+	return
+}
+
+func (v *AdminDeleteWorkflowResponse) GetExecutionsDeleted() (o bool) {
+	if v != nil {
+		return v.ExecutionsDeleted
+	}
+	return
+}
+
+func (v *AdminDeleteWorkflowResponse) GetVisibilityDeleted() (o bool) {
+	if v != nil {
+		return v.VisibilityDeleted
 	}
 	return
 }

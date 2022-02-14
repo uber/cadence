@@ -22,12 +22,14 @@ package watchdog
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
@@ -42,6 +44,7 @@ type (
 	clientImpl struct {
 		logger        log.Logger
 		cadenceClient cclient.Client
+		processed     cache.Cache
 	}
 )
 
@@ -56,10 +59,21 @@ func NewClient(
 	logger log.Logger,
 	publicClient workflowserviceclient.Interface,
 ) Client {
+	cacheOpts := &cache.Options{
+		InitialCapacity: 100,
+		MaxCount:        1000,
+		TTL:             24 * time.Hour,
+		Pin:             false,
+	}
 	return &clientImpl{
 		logger:        logger,
 		cadenceClient: cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
+		processed:     cache.New(cacheOpts),
 	}
+}
+
+func (c *clientImpl) getProcessedID(workflowID string, runID string) string {
+	return fmt.Sprintf("%s-%s", workflowID, runID)
 }
 
 func (c *clientImpl) ReportCorruptWorkflow(
@@ -67,6 +81,14 @@ func (c *clientImpl) ReportCorruptWorkflow(
 	workflowID string,
 	runID string,
 ) error {
+	if c.processed.Get(c.getProcessedID(workflowID, runID)) != nil {
+		// We already processed this workflow before and couldn't decide if we should delete
+		return nil
+	}
+
+	// By putting the workflow into the cache we avoid spamming the workflow
+	c.processed.Put(c.getProcessedID(workflowID, runID), struct{}{})
+
 	signalCtx, cancel := context.WithTimeout(context.Background(), SignalTimeout)
 	defer cancel()
 	request := CorruptWFRequest{

@@ -53,6 +53,10 @@ const (
 	defaultLastTransactionID = int64(0)
 )
 
+var (
+	ErrCorruptedHistory = &types.InternalDataInconsistencyError{Message: "corrupted history event batch, eventID is not continouous"}
+)
+
 var _ HistoryManager = (*historyV2ManagerImpl)(nil)
 
 // NewHistoryV2ManagerImpl returns new HistoryManager
@@ -504,9 +508,13 @@ func (m *historyV2ManagerImpl) readHistoryBranch(
 					tag.LastEventVersion(lastEvent.GetVersion()), tag.WorkflowNextEventID(lastEvent.GetEventID()),
 					tag.TokenLastEventVersion(token.LastEventVersion), tag.TokenLastEventID(token.LastEventID),
 					tag.Counter(eventCount))
+<<<<<<< HEAD
 				return nil, nil, nil, 0, 0, &types.InternalDataInconsistencyError{
 					Message: "corrupted history event batch, eventID is not continouous",
 				}
+=======
+				return nil, nil, nil, 0, 0, ErrCorruptedHistory
+>>>>>>> 0b09d93d6 (Address Comments)
 			}
 		}
 

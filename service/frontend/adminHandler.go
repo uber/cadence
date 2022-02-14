@@ -29,7 +29,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -51,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/execution"
 )
 
 var _ AdminHandler = (*adminHandlerImpl)(nil)
@@ -128,9 +128,9 @@ var (
 	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
 
 	corruptWorkflowErrorList = [3]string{
-		"unable to get workflow start event",                        // desc + history
-		"unable to get activity scheduled event",                    // desc + history
-		"corrupted history event batch, eventID is not continouous", // history only
+		execution.ErrMissingWorkflowStartEvent.Error(),
+		execution.ErrMissingActivityScheduledEvent.Error(),
+		persistence.ErrCorruptedHistory.Error(),
 	}
 )
 
@@ -366,7 +366,9 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 	scope := adh.GetMetricsClient().Scope(metrics.WatchDogScope)
 	tagged := scope.Tagged(metrics.DomainTag(request.Domain))
 	resp := &types.AdminMaintainWorkflowResponse{
-		Deleted: false,
+		HistoryDeleted:    false,
+		ExecutionsDeleted: false,
+		VisibilityDeleted: false,
 	}
 
 	queryTemplates := adh.getCorruptWorkflowQueryTemplates(ctx, request)
@@ -376,36 +378,150 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 			logger.Info(fmt.Sprintf("Query succeeded for function: %s", functionName))
 			continue
 		}
-		shouldDelete := false
 		if err != nil {
 			logger.Info(fmt.Sprintf("%s returned error %#v", functionName, err))
 		}
 
 		// check if the error message indicates corrupt workflow
-		if !shouldDelete {
-			errorMessage := err.Error()
-			for _, corruptMessage := range corruptWorkflowErrorList {
-				if strings.Contains(errorMessage, corruptMessage) {
-					logger.Info(fmt.Sprintf("Will delete workflow since error (%v) to query %#v contains '%v'",
-						err, functionName, corruptMessage))
-					shouldDelete = true
-					break
+		errorMessage := err.Error()
+		for _, corruptMessage := range corruptWorkflowErrorList {
+			if errorMessage == corruptMessage {
+				logger.Info(fmt.Sprintf("Will delete workflow because (%v) returned corrupted error (%#v)",
+					functionName, err))
+				resp, err = adh.DeleteWorkflow(ctx, request)
+				if err == nil {
+					tagged.AddCounter(metrics.WatchDogNumDeletedCorruptWorkflows, 1)
+				} else {
+					tagged.AddCounter(metrics.WatchDogNumFailedToDeleteCorruptWorkflows, 1)
 				}
+				return resp, nil
 			}
-		}
-
-		if shouldDelete {
-			resp, err = adh.DeleteWorkflow(ctx, request)
-			if err == nil {
-				tagged.AddCounter(metrics.WatchDogNumDeletedCorruptWorkflows, 1)
-			} else {
-				tagged.AddCounter(metrics.WatchDogNumFailedToDeleteCorruptWorkflows, 1)
-			}
-			break
 		}
 	}
 
 	return resp, nil
+}
+
+func (adh *adminHandlerImpl) deleteWorkflowFromHistory(
+	ctx context.Context,
+	logger log.Logger,
+	shardIDInt int,
+	mutableState persistence.WorkflowMutableState,
+) bool {
+	historyManager := adh.GetHistoryManager()
+
+	branchInfo := shared.HistoryBranch{}
+	thriftrwEncoder := codec.NewThriftRWEncoder()
+	branchTokens := [][]byte{mutableState.ExecutionInfo.BranchToken}
+	if mutableState.VersionHistories != nil {
+		// if VersionHistories is set, then all branch infos are stored in VersionHistories
+		branchTokens = [][]byte{}
+		for _, versionHistory := range mutableState.VersionHistories.ToInternalType().Histories {
+			branchTokens = append(branchTokens, versionHistory.BranchToken)
+		}
+	}
+
+	deletedFromHistory := len(branchTokens) == 0
+	failedToDeleteFromHistory := false
+	for _, branchToken := range branchTokens {
+		err := thriftrwEncoder.Decode(branchToken, &branchInfo)
+		if err != nil {
+			logger.Error("Cannot decode thrift object", tag.Error(err))
+			continue
+		}
+		logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
+		err = historyManager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+			ShardID:     &shardIDInt,
+		})
+		if err != nil {
+			logger.Error("Failed to delete history", tag.Error(err))
+			failedToDeleteFromHistory = true
+		} else {
+			deletedFromHistory = true
+		}
+	}
+	return deletedFromHistory && !failedToDeleteFromHistory
+}
+
+func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
+	ctx context.Context,
+	logger log.Logger,
+	shardIDInt int,
+	domainID string,
+	workflowID string,
+	runID string,
+	scope metrics.Scope,
+) bool {
+	exeStore, err := adh.GetExecutionManager(shardIDInt)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Cannot get execution manager for shardID(%v): %#v", shardIDInt, err))
+		return false
+	}
+
+	req := &persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	deletedFromExecutions := false
+	err = exeStore.DeleteWorkflowExecution(ctx, req)
+	if err != nil {
+		logger.Error("Delete mutableState row failed", tag.Error(err))
+	} else {
+		deletedFromExecutions = true
+	}
+
+	deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Delete current row failed: %#v", err))
+		deletedFromExecutions = false
+	}
+
+	if deletedFromExecutions {
+		logger.Info(fmt.Sprintf("Deleted executions row successfully %#v", deleteCurrentReq))
+	}
+	return deletedFromExecutions
+}
+
+func (adh *adminHandlerImpl) deleteWorkflowFromVisibility(
+	ctx context.Context,
+	logger log.Logger,
+	domainID string,
+	workflowID string,
+	runID string,
+) bool {
+	visibilityManager := adh.Resource.GetVisibilityManager()
+	if visibilityManager == nil {
+		logger.Info("No visibility manager found")
+		return false
+	}
+
+	logger.Info("Deleting workflow from visibility store")
+	key := persistence.VisibilityAdminDeletionKey("visibilityAdminDelete")
+	visCtx := context.WithValue(ctx, key, true)
+	err := visibilityManager.DeleteWorkflowExecution(
+		visCtx,
+		&persistence.VisibilityDeleteWorkflowExecutionRequest{
+			DomainID:   domainID,
+			RunID:      runID,
+			WorkflowID: workflowID,
+			TaskID:     math.MaxInt64,
+		},
+	)
+	if err != nil {
+		logger.Error("Cannot delete visibility record", tag.Error(err))
+	} else {
+		logger.Info("Deleted visibility record successfully")
+	}
+	return err == nil
 }
 
 // DeleteWorkflow delete a workflow execution for admin
@@ -424,10 +540,6 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	runID := request.GetExecution().GetRunID()
 	skipErrors := request.GetSkipErrors()
 
-	deletedFromExecutions := false
-	deletedFromHistory := false
-	deletedFromVisibility := false
-
 	resp, err := adh.DescribeWorkflowExecution(
 		ctx,
 		&types.AdminDescribeWorkflowExecutionRequest{
@@ -437,146 +549,51 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 				RunID:      runID,
 			},
 		})
-	if err == nil {
-		msStr := resp.GetMutableStateInDatabase()
-		ms := persistence.WorkflowMutableState{}
-		err = json.Unmarshal([]byte(msStr), &ms)
-		if err != nil {
-			logger.Error(fmt.Sprintf("DeleteWorkflow failed: Cannot unmarshal mutableState: %#v", err))
-			return nil, adh.error(err, scope)
-		}
-		domainID := ms.ExecutionInfo.DomainID
-		logger = logger.WithTags(
-			tag.WorkflowDomainID(domainID),
-			tag.WorkflowDomainName(domainName),
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID),
-		)
 
-		shardID := resp.GetShardID()
-		shardIDInt, err := strconv.Atoi(shardID)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Cannot convert shardID(%v) to int: %#v", shardID, err))
-			return nil, adh.error(err, scope)
-		}
-		ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-		defer cancel()
-
-		histV2 := adh.GetHistoryManager()
-		exeStore, err := adh.GetExecutionManager(shardIDInt)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Cannot get execution manager for shardID(%v): %#v", shardIDInt, err))
-			return nil, adh.error(err, scope)
-		}
-		visibilityManager := adh.Resource.GetVisibilityManager()
-		if visibilityManager == nil {
-			logger.Info("No visibility manager found")
-		}
-
-		// DELETE FROM HISTORY
-		branchInfo := shared.HistoryBranch{}
-		thriftrwEncoder := codec.NewThriftRWEncoder()
-		branchTokens := [][]byte{ms.ExecutionInfo.BranchToken}
-		if ms.VersionHistories != nil {
-			// if VersionHistories is set, then all branch infos are stored in VersionHistories
-			branchTokens = [][]byte{}
-			for _, versionHistory := range ms.VersionHistories.ToInternalType().Histories {
-				branchTokens = append(branchTokens, versionHistory.BranchToken)
-			}
-		}
-
-		deletedFromHistory = len(branchTokens) == 0
-		failedToDeleteFromHistory := false
-		for _, branchToken := range branchTokens {
-			err = thriftrwEncoder.Decode(branchToken, &branchInfo)
-			if err != nil {
-				logger.Error("Cannot decode thrift object", tag.Error(err))
-				return nil, adh.error(err, scope)
-			}
-			logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
-			err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
-				BranchToken: branchToken,
-				ShardID:     &shardIDInt,
-			})
-			if err != nil {
-				logger.Error("Failed to delete history", tag.Error(err))
-				failedToDeleteFromHistory = true
-				if !skipErrors {
-					return nil, adh.error(err, scope)
-				}
-			} else {
-				deletedFromHistory = true
-			}
-		}
-		deletedFromHistory = deletedFromHistory && !failedToDeleteFromHistory
-
-		// DELETE FROM EXECUTIONS
-		req := &persistence.DeleteWorkflowExecutionRequest{
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
-		}
-
-		err = exeStore.DeleteWorkflowExecution(ctx, req)
-		if err != nil {
-			logger.Error("Delete mutableState row failed", tag.Error(err))
-			if !skipErrors {
-				return nil, adh.error(err, scope)
-			}
-		} else {
-			deletedFromExecutions = true
-		}
-
-		deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
-		}
-
-		err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
-		if err != nil {
-			logger.Error(fmt.Sprintf("Delete current row failed: %#v", err))
-			deletedFromExecutions = false
-			if !skipErrors {
-				return nil, adh.error(err, scope)
-			}
-		}
-		logger.Info(fmt.Sprintf("Deleted executions row successfully %#v", deleteCurrentReq))
-
-		// DELETE FROM VISIBILITY
-		if visibilityManager != nil {
-			logger.Info("Deleting workflow from visibility store")
-			key := persistence.VisibilityAdminDeletionKey("visibilityAdminDelete")
-			visCtx := context.WithValue(ctx, key, true)
-			err = visibilityManager.DeleteWorkflowExecution(
-				visCtx,
-				&persistence.VisibilityDeleteWorkflowExecutionRequest{
-					DomainID:   domainID,
-					RunID:      runID,
-					WorkflowID: workflowID,
-					TaskID:     math.MaxInt64,
-				},
-			)
-			if err != nil {
-				logger.Error("Cannot delete visibility record", tag.Error(err))
-				if !skipErrors {
-					return nil, err
-				}
-			} else {
-				logger.Info("Deleted visibility record successfully")
-				deletedFromVisibility = true
-			}
-		}
-
-	} else {
+	if err != nil {
 		logger.Error("Describe workflow failed", tag.Error(err))
 		if !skipErrors {
 			return nil, adh.error(err, scope)
 		}
 	}
 
+	msStr := resp.GetMutableStateInDatabase()
+	ms := persistence.WorkflowMutableState{}
+	err = json.Unmarshal([]byte(msStr), &ms)
+	if err != nil {
+		logger.Error(fmt.Sprintf("DeleteWorkflow failed: Cannot unmarshal mutableState: %#v", err))
+		return nil, adh.error(err, scope)
+	}
+	domainID := ms.ExecutionInfo.DomainID
+	logger = logger.WithTags(
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID),
+	)
+
+	shardID := resp.GetShardID()
+	shardIDInt, err := strconv.Atoi(shardID)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Cannot convert shardID(%v) to int: %#v", shardID, err))
+		return nil, adh.error(err, scope)
+	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	deletedFromHistory := adh.deleteWorkflowFromHistory(ctx, logger, shardIDInt, ms)
+	deletedFromExecutions := adh.deleteWorkflowFromExecutions(ctx, logger, shardIDInt, domainID, workflowID, runID, scope)
+	deletedFromVisibility := false
+	if deletedFromExecutions {
+		// Without deleting the executions record, let's not delete the visibility record.
+		// If we do that, workflow won't be visible but it will exist in the DB
+		deletedFromVisibility = adh.deleteWorkflowFromVisibility(ctx, logger, domainID, workflowID, runID)
+	}
+
 	return &types.AdminDeleteWorkflowResponse{
-		Deleted: deletedFromExecutions && deletedFromHistory && deletedFromVisibility,
+		HistoryDeleted:    deletedFromHistory,
+		ExecutionsDeleted: deletedFromExecutions,
+		VisibilityDeleted: deletedFromVisibility,
 	}, nil
 }
 
@@ -1663,7 +1680,8 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 func checkValidKey(keyName string) (dc.Key, error) {
 	keyVal, ok := dc.KeyNames[keyName]
 	if !ok || keyVal == dc.UnknownKey {
-		return dc.UnknownKey, errors.New("invalid dynamic config parameter name")
+		return dc.UnknownKey, errors.New(fmt.Sprintf(
+			"invalid dynamic config parameter name: %s", keyName))
 	}
 	return keyVal, nil
 }

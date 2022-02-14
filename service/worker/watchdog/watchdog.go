@@ -82,16 +82,12 @@ func New(
 		frontendClient:     frontendClient,
 		clientBean:         clientBean,
 		logger:             logger,
-		scopedMetricClient: getScopedMetricsClient(metricsClient),
+		scopedMetricClient: metricsClient.Scope(metrics.WatchDogScope),
 		tallyScope:         tallyScope,
 		resource:           resource,
 		domainCache:        domainCache,
 		config:             config,
 	}
-}
-
-func getScopedMetricsClient(metricsClient metrics.Client) metrics.Scope {
-	return metricsClient.Scope(metrics.WatchDogScope)
 }
 
 // Start starts the scanner

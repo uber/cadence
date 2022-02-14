@@ -22,7 +22,6 @@ package watchdog
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.uber.org/cadence"
@@ -31,7 +30,6 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
@@ -43,7 +41,7 @@ const (
 	watchdogWFTypeName = "cadence-sys-watchdog-workflow"
 
 	// activities
-	handleCorrputedWorkflowActivity = "cadence-sys-watchdog-handle-corrupted-workflow"
+	handleCorruptedWorkflowActivity = "cadence-sys-watchdog-handle-corrupted-workflow"
 
 	// signals
 	CorruptWorkflowWatchdogChannelName = "CorruptWorkflowWatchdogChannelName"
@@ -51,11 +49,9 @@ const (
 
 type (
 	Workflow struct {
-		watchdog  *WatchDog
-		processed cache.Cache
+		watchdog *WatchDog
 	}
 
-	// Request defines the request for corruptWorkflow maintenance
 	CorruptWFRequest struct {
 		Workflow   types.WorkflowExecution
 		DomainName string
@@ -85,20 +81,12 @@ var (
 )
 
 func initWorkflow(wd *WatchDog) {
-	cacheOpts := &cache.Options{
-		InitialCapacity: 100,
-		MaxCount:        1000,
-		TTL:             24 * time.Hour,
-		Pin:             false,
-	}
-
 	w := Workflow{
-		watchdog:  wd,
-		processed: cache.New(cacheOpts),
+		watchdog: wd,
 	}
 
 	workflow.RegisterWithOptions(w.workflowFunc, workflow.RegisterOptions{Name: watchdogWFTypeName})
-	activity.RegisterWithOptions(w.handleCorrputedWorkflow, activity.RegisterOptions{Name: handleCorrputedWorkflowActivity})
+	activity.RegisterWithOptions(w.handleCorruptedWorkflow, activity.RegisterOptions{Name: handleCorruptedWorkflowActivity})
 }
 
 // workflowFunc is the workflow that performs actions for WatchDog
@@ -118,21 +106,12 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 			continue
 		}
 		opt := workflow.WithActivityOptions(ctx, handleCorruptWorkflowOptions)
-		_ = workflow.ExecuteActivity(opt, handleCorrputedWorkflowActivity, request).Get(ctx, nil)
+		_ = workflow.ExecuteActivity(opt, handleCorruptedWorkflowActivity, request).Get(ctx, nil)
 	}
 }
 
-func (w *Workflow) getProcessedID(request *CorruptWFRequest) string {
-	return fmt.Sprintf("%s-%s", request.Workflow.WorkflowID, request.Workflow.RunID)
-}
-
-// handleCorrputedWorkflowActivity is activity to handle corrupted workflows in DB
-func (w *Workflow) handleCorrputedWorkflow(ctx context.Context, request *CorruptWFRequest) error {
-	if w.processed.Get(w.getProcessedID(request)) != nil {
-		// We already processed this workflow before and couldn't decide if we should delete
-		return nil
-	}
-
+// handleCorruptedWorkflowActivity is activity to handle corrupted workflows in DB
+func (w *Workflow) handleCorruptedWorkflow(ctx context.Context, request *CorruptWFRequest) error {
 	logger := activity.GetLogger(ctx).With(
 		zap.String("DomainName", request.DomainName),
 		zap.String("WorkflowID", request.Workflow.GetWorkflowID()),
@@ -160,10 +139,6 @@ func (w *Workflow) handleCorrputedWorkflow(ctx context.Context, request *Corrupt
 	}
 
 	tagged.AddCounter(metrics.WatchDogNumCorruptWorkflowProcessed, 1)
-
-	// We couldn't decide if we should delete this workflow. That means the same logs will continue
-	// and the workflow will keep getting signals. So adding workflow to a cache to skip processing
-	w.processed.Put(w.getProcessedID(request), struct{}{})
 
 	return nil
 }
