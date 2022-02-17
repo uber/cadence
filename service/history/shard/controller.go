@@ -122,7 +122,7 @@ func NewShardController(
 	factory EngineFactory,
 	config *config.Config,
 ) Controller {
-	hostIdentity := resource.GetHostInfo().Identity()
+	hostAddress := resource.GetHostInfo().GetAddress()
 	return &controller{
 		Resource:           resource,
 		status:             common.DaemonStatusInitialized,
@@ -130,8 +130,8 @@ func NewShardController(
 		engineFactory:      factory,
 		historyShards:      make(map[int]*historyShardsItem),
 		shutdownCh:         make(chan struct{}),
-		logger:             resource.GetLogger().WithTags(tag.ComponentShardController, tag.Address(hostIdentity)),
-		throttledLogger:    resource.GetThrottledLogger().WithTags(tag.ComponentShardController, tag.Address(hostIdentity)),
+		logger:             resource.GetLogger().WithTags(tag.ComponentShardController, tag.Address(hostAddress)),
+		throttledLogger:    resource.GetThrottledLogger().WithTags(tag.ComponentShardController, tag.Address(hostAddress)),
 		config:             config,
 		metricsScope:       resource.GetMetricsClient().Scope(metrics.HistoryShardControllerScope),
 	}
@@ -144,15 +144,15 @@ func newHistoryShardsItem(
 	config *config.Config,
 ) (*historyShardsItem, error) {
 
-	hostIdentity := resource.GetHostInfo().Identity()
+	hostAddress := resource.GetHostInfo().GetAddress()
 	return &historyShardsItem{
 		Resource:        resource,
 		shardID:         shardID,
 		status:          historyShardsItemStatusInitialized,
 		engineFactory:   factory,
 		config:          config,
-		logger:          resource.GetLogger().WithTags(tag.ShardID(shardID), tag.Address(hostIdentity)),
-		throttledLogger: resource.GetThrottledLogger().WithTags(tag.ShardID(shardID), tag.Address(hostIdentity)),
+		logger:          resource.GetLogger().WithTags(tag.ShardID(shardID), tag.Address(hostAddress)),
+		throttledLogger: resource.GetThrottledLogger().WithTags(tag.ShardID(shardID), tag.Address(hostAddress)),
 	}, nil
 }
 
