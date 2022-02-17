@@ -100,9 +100,8 @@ func NewTaskAckManager(
 ) TaskAckManager {
 
 	config := shard.GetConfig()
-	rateLimiter := quotas.NewDynamicRateLimiter(func() float64 {
-		return config.ReplicationTaskGenerationQPS()
-	})
+	rateLimiter := quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64())
+
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)

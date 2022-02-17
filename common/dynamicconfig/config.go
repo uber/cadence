@@ -570,6 +570,18 @@ func (c *Collection) toFilterMap(opts ...FilterOption) map[Filter]interface{} {
 	return m
 }
 
+func (f IntPropertyFn) AsFloat64(opts ...FilterOption) func() float64 {
+	return func() float64 { return float64(f(opts...)) }
+}
+
+func (f IntPropertyFnWithDomainFilter) AsFloat64(domain string) func() float64 {
+	return func() float64 { return float64(f(domain)) }
+}
+
+func (f FloatPropertyFn) AsFloat64(opts ...FilterOption) func() float64 {
+	return func() float64 { return float64(f(opts...)) }
+}
+
 func getFilteredKeyAsString(
 	key Key,
 	filters map[Filter]interface{},
