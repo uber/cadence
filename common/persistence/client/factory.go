@@ -307,11 +307,7 @@ func newESVisibilityManager(
 
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
-		esRateLimiter := quotas.NewDynamicRateLimiter(
-			func() float64 {
-				return float64(visibilityConfig.PersistenceMaxQPS())
-			},
-		)
+		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
 		visibilityFromES = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
 	}
 	if metricsClient != nil {
@@ -485,7 +481,7 @@ func buildRatelimiters(cfg *config.Persistence, maxQPS dynamicconfig.IntProperty
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName := range cfg.DataStores {
 		if maxQPS != nil && maxQPS() > 0 {
-			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(maxQPS()) })
+			result[dsName] = quotas.NewDynamicRateLimiter(maxQPS.AsFloat64())
 		}
 	}
 	return result

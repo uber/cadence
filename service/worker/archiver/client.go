@@ -126,15 +126,11 @@ func NewClient(
 	archivingIncompleteHistory dynamicconfig.BoolPropertyFn,
 ) Client {
 	return &client{
-		metricsScope:  metricsClient.Scope(metrics.ArchiverClientScope),
-		logger:        logger,
-		cadenceClient: cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
-		numWorkflows:  numWorkflows,
-		rateLimiter: quotas.NewDynamicRateLimiter(
-			func() float64 {
-				return float64(requestRPS())
-			},
-		),
+		metricsScope:               metricsClient.Scope(metrics.ArchiverClientScope),
+		logger:                     logger,
+		cadenceClient:              cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
+		numWorkflows:               numWorkflows,
+		rateLimiter:                quotas.NewDynamicRateLimiter(requestRPS.AsFloat64()),
 		archiverProvider:           archiverProvider,
 		archivingIncompleteHistory: archivingIncompleteHistory,
 	}

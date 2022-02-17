@@ -162,9 +162,7 @@ func NewWorkflowHandler(
 		healthStatus:    int32(HealthStatusWarmingUp),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
-			func() float64 {
-				return float64(config.RPS())
-			},
+			config.RPS.AsFloat64(),
 			func(domain string) float64 {
 				memberCount, err := resource.GetMembershipResolver().MemberCount(service.Frontend)
 				if err == nil && memberCount > 0 && config.GlobalDomainRPS(domain) > 0 {

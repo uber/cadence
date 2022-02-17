@@ -81,9 +81,7 @@ func NewHandler(
 		config:        config,
 		metricsClient: resource.GetMetricsClient(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
-			func() float64 {
-				return float64(config.RPS())
-			},
+			config.RPS.AsFloat64(),
 			func(domain string) float64 {
 				domainRPS := float64(config.DomainRPS(domain))
 				if domainRPS > 0 {
