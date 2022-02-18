@@ -20,13 +20,22 @@
 
 package quotas
 
-import "context"
+import (
+	"context"
+
+	"golang.org/x/time/rate"
+)
 
 // RPSFunc returns a float64 as the RPS
 type RPSFunc func() float64
 
 // RPSKeyFunc returns a float64 as the RPS for the given key
 type RPSKeyFunc func(key string) float64
+
+// Apply applies given key to return regular RPS function
+func (f RPSKeyFunc) Apply(key string) RPSFunc {
+	return func() float64 { return f(key) }
+}
 
 // Info corresponds to information required to determine rate limits
 type Info struct {
@@ -43,6 +52,9 @@ type Limiter interface {
 	// Wait waits till the deadline for a rate limit token to allow the request
 	// to go through.
 	Wait(ctx context.Context) error
+
+	// Reserve reserves a rate limit token
+	Reserve() *rate.Reservation
 }
 
 // Policy corresponds to a quota policy. A policy allows implementing layered
