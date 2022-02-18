@@ -22,17 +22,17 @@ package quotas
 
 import "sync"
 
-// LimiterCollection stores a map of limiters by key
-type LimiterCollection struct {
+// Collection stores a map of limiters by key
+type Collection struct {
 	sync.RWMutex
 	factory  func(string) Limiter
 	limiters map[string]Limiter
 }
 
-// NewLimiterCollection create a new limiter collection.
+// NewCollection create a new limiter collection.
 // Given factory is called to create new individual limiter.
-func NewLimiterCollection(factory func(string) Limiter) *LimiterCollection {
-	return &LimiterCollection{
+func NewCollection(factory func(string) Limiter) *Collection {
+	return &Collection{
 		factory:  factory,
 		limiters: make(map[string]Limiter),
 	}
@@ -40,7 +40,7 @@ func NewLimiterCollection(factory func(string) Limiter) *LimiterCollection {
 
 // For retrieves limiter by a given key.
 // If limiter for such key does not exists, it creates new one with via factory.
-func (c *LimiterCollection) For(key string) Limiter {
+func (c *Collection) For(key string) Limiter {
 	c.RLock()
 	limiter, ok := c.limiters[key]
 	c.RUnlock()

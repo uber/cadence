@@ -163,7 +163,7 @@ func NewWorkflowHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
-			quotas.NewLimiterCollection(func(domain string) quotas.Limiter {
+			quotas.NewCollection(func(domain string) quotas.Limiter {
 				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
 					service.Frontend,
 					config.GlobalDomainRPS.AsFloat64(domain),

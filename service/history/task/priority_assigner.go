@@ -48,7 +48,7 @@ type (
 		config             *config.Config
 		logger             log.Logger
 		scope              metrics.Scope
-		rateLimiters       *quotas.LimiterCollection
+		rateLimiters       *quotas.Collection
 	}
 )
 
@@ -68,7 +68,7 @@ func NewPriorityAssigner(
 		config:             config,
 		logger:             logger,
 		scope:              metricClient.Scope(metrics.TaskPriorityAssignerScope),
-		rateLimiters: quotas.NewLimiterCollection(func(domain string) quotas.Limiter {
+		rateLimiters: quotas.NewCollection(func(domain string) quotas.Limiter {
 			return quotas.NewDynamicRateLimiter(config.TaskProcessRPS.AsFloat64(domain))
 		}),
 	}
