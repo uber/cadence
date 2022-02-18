@@ -329,7 +329,7 @@ func initializeDomainMgr(
 	pConfig := serviceConfig.Persistence
 	pFactory := client.NewFactory(
 		&pConfig,
-		dynamicconfig.GetIntPropertyFn(dependencyMaxQPS),
+		func() float64 { return dependencyMaxQPS },
 		clusterMetadata.GetCurrentClusterName(),
 		metricsClient,
 		logger,

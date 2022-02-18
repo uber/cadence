@@ -23,15 +23,15 @@ package quotas
 // MultiStageRateLimiter indicates a domain specific rate limit policy
 type MultiStageRateLimiter struct {
 	domainLimiters *LimiterCollection
-	globalLimiter  *DynamicRateLimiter
+	globalLimiter  Limiter
 }
 
 // NewMultiStageRateLimiter returns a new domain quota rate limiter. This is about
 // an order of magnitude slower than
-func NewMultiStageRateLimiter(rps RPSFunc, domainRps RPSKeyFunc) *MultiStageRateLimiter {
+func NewMultiStageRateLimiter(global Limiter, domainLimiters *LimiterCollection) *MultiStageRateLimiter {
 	return &MultiStageRateLimiter{
-		domainLimiters: NewLimiterCollection(DynamicRateLimiterFactory(domainRps)),
-		globalLimiter:  NewDynamicRateLimiter(rps),
+		domainLimiters: domainLimiters,
+		globalLimiter:  global,
 	}
 }
 
