@@ -32,11 +32,6 @@ type RPSFunc func() float64
 // RPSKeyFunc returns a float64 as the RPS for the given key
 type RPSKeyFunc func(key string) float64
 
-// Apply applies given key to return regular RPS function
-func (f RPSKeyFunc) Apply(key string) RPSFunc {
-	return func() float64 { return f(key) }
-}
-
 // Info corresponds to information required to determine rate limits
 type Info struct {
 	Domain string

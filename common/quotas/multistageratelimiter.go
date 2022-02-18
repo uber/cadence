@@ -30,7 +30,7 @@ type MultiStageRateLimiter struct {
 // an order of magnitude slower than
 func NewMultiStageRateLimiter(rps RPSFunc, domainRps RPSKeyFunc) *MultiStageRateLimiter {
 	return &MultiStageRateLimiter{
-		domainLimiters: NewLimiterCollection(func(domain string) Limiter { return NewDynamicRateLimiter(domainRps.Apply(domain)) }),
+		domainLimiters: NewLimiterCollection(DynamicRateLimiterFactory(domainRps)),
 		globalLimiter:  NewDynamicRateLimiter(rps),
 	}
 }
