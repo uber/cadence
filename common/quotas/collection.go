@@ -24,7 +24,7 @@ import "sync"
 
 // Collection stores a map of limiters by key
 type Collection struct {
-	sync.RWMutex
+	mu       sync.RWMutex
 	factory  func(string) Limiter
 	limiters map[string]Limiter
 }
@@ -41,22 +41,22 @@ func NewCollection(factory func(string) Limiter) *Collection {
 // For retrieves limiter by a given key.
 // If limiter for such key does not exists, it creates new one with via factory.
 func (c *Collection) For(key string) Limiter {
-	c.RLock()
+	c.mu.RLock()
 	limiter, ok := c.limiters[key]
-	c.RUnlock()
+	c.mu.RUnlock()
 
 	if !ok {
 		// create a new limiter
 		newLimiter := c.factory(key)
 
 		// verify that it is needed and add to map
-		c.Lock()
+		c.mu.Lock()
 		limiter, ok = c.limiters[key]
 		if !ok {
 			c.limiters[key] = newLimiter
 			limiter = newLimiter
 		}
-		c.Unlock()
+		c.mu.Unlock()
 	}
 
 	return limiter

@@ -29,14 +29,17 @@ import (
 // PerMember allows creating per instance RPS based on globalRPS averaged by member count for a given service.
 // If member count can not be retrieved or globalRPS is not provided it falls back to instanceRPS.
 func PerMember(service string, globalRPS, instanceRPS float64, resolver membership.Resolver) float64 {
-	if globalRPS > 0 {
-		memberCount, err := resolver.MemberCount(service)
-		if err == nil && memberCount > 0 {
-			avgQuota := math.Max(globalRPS/float64(memberCount), 1)
-			return math.Min(avgQuota, instanceRPS)
-		}
+	if globalRPS <= 0 {
+		return instanceRPS
 	}
-	return instanceRPS
+
+	memberCount, err := resolver.MemberCount(service)
+	if err != nil || memberCount < 1 {
+		return instanceRPS
+	}
+
+	avgQuota := math.Max(globalRPS/float64(memberCount), 1)
+	return math.Min(avgQuota, instanceRPS)
 }
 
 // PerMemberDynamic is a dynamic variant (using RPSFunc) of PerMember
