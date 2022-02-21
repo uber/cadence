@@ -89,13 +89,15 @@ type (
 	}
 
 	client struct {
-		metricsScope               metrics.Scope
-		logger                     log.Logger
-		cadenceClient              cclient.Client
-		numWorkflows               dynamicconfig.IntPropertyFn
-		rateLimiter                quotas.Limiter
-		archiverProvider           provider.ArchiverProvider
-		archivingIncompleteHistory dynamicconfig.BoolPropertyFn
+		metricsScope                metrics.Scope
+		logger                      log.Logger
+		cadenceClient               cclient.Client
+		numWorkflows                dynamicconfig.IntPropertyFn
+		rateLimiter                 quotas.Limiter
+		inlineHistoryRateLimiter    quotas.Limiter
+		inlineVisibilityRateLimiter quotas.Limiter
+		archiverProvider            provider.ArchiverProvider
+		archivingIncompleteHistory  dynamicconfig.BoolPropertyFn
 	}
 
 	// ArchivalTarget is either history or visibility
@@ -115,24 +117,32 @@ const (
 	ArchiveTargetVisibility
 )
 
+var (
+	errInlineArchivalThrottled = errors.New("inline archival throttled")
+)
+
 // NewClient creates a new Client
 func NewClient(
 	metricsClient metrics.Client,
 	logger log.Logger,
 	publicClient workflowserviceclient.Interface,
 	numWorkflows dynamicconfig.IntPropertyFn,
-	requestRPS dynamicconfig.IntPropertyFn,
+	requestRateLimiter quotas.Limiter,
+	inlineHistoryRateLimiter quotas.Limiter,
+	inlineVisibilityRateLimiter quotas.Limiter,
 	archiverProvider provider.ArchiverProvider,
 	archivingIncompleteHistory dynamicconfig.BoolPropertyFn,
 ) Client {
 	return &client{
-		metricsScope:               metricsClient.Scope(metrics.ArchiverClientScope),
-		logger:                     logger,
-		cadenceClient:              cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
-		numWorkflows:               numWorkflows,
-		rateLimiter:                quotas.NewDynamicRateLimiter(requestRPS.AsFloat64()),
-		archiverProvider:           archiverProvider,
-		archivingIncompleteHistory: archivingIncompleteHistory,
+		metricsScope:                metricsClient.Scope(metrics.ArchiverClientScope),
+		logger:                      logger,
+		cadenceClient:               cclient.NewClient(publicClient, common.SystemLocalDomainName, &cclient.Options{}),
+		numWorkflows:                numWorkflows,
+		rateLimiter:                 requestRateLimiter,
+		inlineHistoryRateLimiter:    inlineHistoryRateLimiter,
+		inlineVisibilityRateLimiter: inlineVisibilityRateLimiter,
+		archiverProvider:            archiverProvider,
+		archivingIncompleteHistory:  archivingIncompleteHistory,
 	}
 }
 
@@ -188,6 +198,14 @@ func (c *client) Archive(ctx context.Context, request *ClientRequest) (*ClientRe
 
 func (c *client) archiveHistoryInline(ctx context.Context, request *ClientRequest, logger log.Logger, errCh chan error) {
 	logger = tagLoggerWithHistoryRequest(logger, request.ArchiveRequest)
+
+	if !c.inlineHistoryRateLimiter.Allow() {
+		c.metricsScope.IncCounter(metrics.ArchiverClientHistoryInlineArchiveThrottledCount)
+		logger.Debug("inline history archival throttled")
+		errCh <- errInlineArchivalThrottled
+		return
+	}
+
 	var err error
 	defer func() {
 		if err != nil {
@@ -222,6 +240,13 @@ func (c *client) archiveHistoryInline(ctx context.Context, request *ClientReques
 
 func (c *client) archiveVisibilityInline(ctx context.Context, request *ClientRequest, logger log.Logger, errCh chan error) {
 	logger = tagLoggerWithVisibilityRequest(logger, request.ArchiveRequest)
+
+	if !c.inlineVisibilityRateLimiter.Allow() {
+		c.metricsScope.IncCounter(metrics.ArchiverClientVisibilityInlineArchiveThrottledCount)
+		logger.Debug("inline visibility archival throttled")
+		errCh <- errInlineArchivalThrottled
+		return
+	}
 
 	var err error
 	defer func() {
