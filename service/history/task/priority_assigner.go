@@ -48,7 +48,7 @@ type (
 		config             *config.Config
 		logger             log.Logger
 		scope              metrics.Scope
-		rateLimiters       map[string]quotas.Limiter
+		rateLimiters       *quotas.Collection
 	}
 )
 
@@ -68,7 +68,9 @@ func NewPriorityAssigner(
 		config:             config,
 		logger:             logger,
 		scope:              metricClient.Scope(metrics.TaskPriorityAssignerScope),
-		rateLimiters:       make(map[string]quotas.Limiter),
+		rateLimiters: quotas.NewCollection(func(domain string) quotas.Limiter {
+			return quotas.NewDynamicRateLimiter(config.TaskProcessRPS.AsFloat64(domain))
+		}),
 	}
 }
 
@@ -113,7 +115,7 @@ func (a *priorityAssignerImpl) Assign(
 	// for case 2 and 3 the task will be a no-op in most cases, also give it a high priority so that
 	// it can be quickly verified/acked and won't prevent the ack level in the processor from advancing
 	// (especially for active processor)
-	if !a.getRateLimiter(domainName).Allow() {
+	if !a.rateLimiters.For(domainName).Allow() {
 		queueTask.SetPriority(defaultTaskPriority)
 		taggedScope := a.scope.Tagged(metrics.DomainTag(domainName))
 		switch queueType {
@@ -154,26 +156,4 @@ func (a *priorityAssignerImpl) getDomainInfo(
 		return domainEntry.GetInfo().Name, false, nil
 	}
 	return domainEntry.GetInfo().Name, true, nil
-}
-
-func (a *priorityAssignerImpl) getRateLimiter(
-	domainName string,
-) quotas.Limiter {
-	a.RLock()
-	if limiter, ok := a.rateLimiters[domainName]; ok {
-		a.RUnlock()
-		return limiter
-	}
-	a.RUnlock()
-
-	limiter := quotas.NewDynamicRateLimiter(a.config.TaskProcessRPS.AsFloat64(domainName))
-
-	a.Lock()
-	defer a.Unlock()
-	if existingLimiter, ok := a.rateLimiters[domainName]; ok {
-		return existingLimiter
-	}
-
-	a.rateLimiters[domainName] = limiter
-	return limiter
 }

@@ -162,15 +162,15 @@ func NewWorkflowHandler(
 		healthStatus:    int32(HealthStatusWarmingUp),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
-			config.RPS.AsFloat64(),
-			func(domain string) float64 {
-				memberCount, err := resource.GetMembershipResolver().MemberCount(service.Frontend)
-				if err == nil && memberCount > 0 && config.GlobalDomainRPS(domain) > 0 {
-					avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/memberCount, 1)
-					return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))
-				}
-				return float64(config.MaxDomainRPSPerInstance(domain))
-			},
+			quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
+			quotas.NewCollection(func(domain string) quotas.Limiter {
+				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
+					service.Frontend,
+					config.GlobalDomainRPS.AsFloat64(domain),
+					config.MaxDomainRPSPerInstance.AsFloat64(domain),
+					resource.GetMembershipResolver(),
+				))
+			}),
 		),
 		versionChecker: versionChecker,
 		domainHandler: domain.NewHandler(
