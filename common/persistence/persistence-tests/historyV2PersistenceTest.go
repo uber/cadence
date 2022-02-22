@@ -159,7 +159,7 @@ func (s *HistoryV2PersistenceSuite) TestScanAllTrees() {
 		})
 		s.Nil(err)
 		for _, br := range resp.Branches {
-			if trees[br.TreeID] == true {
+			if trees[br.TreeID] {
 				delete(trees, br.TreeID)
 
 				s.True(br.ForkTime.UnixNano() > 0)
