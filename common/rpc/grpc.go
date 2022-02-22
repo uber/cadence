@@ -34,11 +34,11 @@ type (
 		GetGRPCAddress(service, hostAddress string) (string, error)
 	}
 
-	GRPCPorts map[string]int
+	GRPCPorts map[string]uint16
 )
 
 func NewGRPCPorts(c *config.Config) GRPCPorts {
-	grpcPorts := map[string]int{}
+	grpcPorts := map[string]uint16{}
 	for name, config := range c.Services {
 		grpcPorts[service.FullName(name)] = config.RPC.GRPCPort
 	}
@@ -59,5 +59,5 @@ func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
 		hostAddress = newHostAddress
 	}
 
-	return net.JoinHostPort(hostAddress, strconv.Itoa(port)), nil
+	return net.JoinHostPort(hostAddress, strconv.Itoa(int(port))), nil
 }

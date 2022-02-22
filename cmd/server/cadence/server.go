@@ -165,6 +165,10 @@ func (s *server) startService() common.Daemon {
 		params.Name,
 		&s.cfg.Ringpop,
 		rpcFactory.GetChannel(),
+		membership.PortMap{
+			membership.PortGRPC:     svcCfg.RPC.GRPCPort,
+			membership.PortTchannel: svcCfg.RPC.Port,
+		},
 		params.Logger,
 	)
 
