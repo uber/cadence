@@ -155,10 +155,7 @@ func buildSigningHTTPClientFromEnvironmentCredentialV7(credentialConfig config.A
 }
 
 func (c *elasticV7) IsNotFoundError(err error) bool {
-	if elastic.IsNotFound(err) {
-		return true
-	}
-	return false
+	return elastic.IsNotFound(err)
 }
 
 // root is for nested object like Attr property for search attributes.

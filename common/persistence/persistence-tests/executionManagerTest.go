@@ -5358,8 +5358,5 @@ func timestampConvertor(t time.Time) time.Time {
 
 func timeComparator(t1, t2 time.Time, timeTolerance time.Duration) bool {
 	diff := t2.Sub(t1)
-	if diff.Nanoseconds() <= timeTolerance.Nanoseconds() {
-		return true
-	}
-	return false
+	return diff.Nanoseconds() <= timeTolerance.Nanoseconds()
 }

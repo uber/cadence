@@ -809,10 +809,7 @@ func (e *mutableStateBuilder) IsStickyTaskListEnabled() bool {
 		return false
 	}
 	ttl := e.config.StickyTTL(e.GetDomainEntry().GetInfo().Name)
-	if e.timeSource.Now().After(e.executionInfo.LastUpdatedTimestamp.Add(ttl)) {
-		return false
-	}
-	return true
+	return !e.timeSource.Now().After(e.executionInfo.LastUpdatedTimestamp.Add(ttl))
 }
 
 func (e *mutableStateBuilder) CreateNewHistoryEvent(

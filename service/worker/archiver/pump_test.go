@@ -265,10 +265,7 @@ func channelContainsExpected(ctx workflow.Context, ch workflow.Channel, expected
 			return false
 		}
 	}
-	if ch.Receive(ctx, nil) {
-		return false
-	}
-	return true
+	return !ch.Receive(ctx, nil)
 }
 
 func randomCarryover(count int) ([]ArchiveRequest, []uint64) {

@@ -71,8 +71,5 @@ func (db *ddb) IsThrottlingError(err error) bool {
 }
 
 func (db *ddb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
+	return err == errConditionFailed
 }
