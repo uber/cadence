@@ -35,11 +35,11 @@ const (
 	activityTaskTimeout           = 3 * time.Minute
 	childWorkflowTimeout          = 6 * time.Minute
 	taskListName                  = "canary-task-queue"
-	ctxKeyActivityRuntime         = "runtime"
-	ctxKeyActivityArchivalRuntime = "runtime-archival"
-	ctxKeyActivitySystemClient    = "system-client"
-	ctxKeyActivityBatcherClient   = "batcher-client"
-	ctxKeyConfig                  = "runtime-config"
+	ctxKeyActivityRuntime         = contextKey("runtime")
+	ctxKeyActivityArchivalRuntime = contextKey("runtime-archival")
+	ctxKeyActivitySystemClient    = contextKey("system-client")
+	ctxKeyActivityBatcherClient   = contextKey("batcher-client")
+	ctxKeyConfig                  = contextKey("runtime-config")
 	archivalDomain                = "canary-archival-domain"
 	archivalTaskListName          = "canary-archival-task-queue"
 )
