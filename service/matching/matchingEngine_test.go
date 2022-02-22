@@ -92,8 +92,8 @@ func (s *matchingEngineSuite) TasksHandler(w http.ResponseWriter, r *http.Reques
 	s.Lock()
 	defer s.Unlock()
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprint(w, fmt.Sprintf("%v\n", s.taskManager))
-	fmt.Fprint(w, fmt.Sprintf("%v\n", s.matchingEngine))
+	fmt.Fprintf(w, "%v\n", s.taskManager)
+	fmt.Fprintf(w, "%v\n", s.matchingEngine)
 }
 
 func (s *matchingEngineSuite) TearDownSuite() {

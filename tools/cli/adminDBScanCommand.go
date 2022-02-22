@@ -165,7 +165,7 @@ func AdminDBScanUnsupportedWorkflow(c *cli.Context) {
 	defer outputFile.Close()
 	for i := startShardID; i <= endShardID; i++ {
 		listExecutionsByShardID(c, i, rps, outputFile)
-		fmt.Println(fmt.Sprintf("Shard %v scan operation is completed.", i))
+		fmt.Printf("Shard %v scan operation is completed.\n", i)
 	}
 }
 
