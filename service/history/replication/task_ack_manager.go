@@ -26,7 +26,6 @@ package replication
 
 import (
 	"context"
-	ctx "context"
 	"errors"
 	"strconv"
 	"sync/atomic"
@@ -60,12 +59,12 @@ type (
 	// TaskAckManager is the ack manager for replication tasks
 	TaskAckManager interface {
 		GetTask(
-			ctx ctx.Context,
+			ctx context.Context,
 			taskInfo *types.ReplicationTaskInfo,
 		) (*types.ReplicationTask, error)
 
 		GetTasks(
-			ctx ctx.Context,
+			ctx context.Context,
 			pollingCluster string,
 			lastReadTaskID int64,
 		) (*types.ReplicationMessages, error)
@@ -126,7 +125,7 @@ func NewTaskAckManager(
 }
 
 func (t *taskAckManagerImpl) GetTask(
-	ctx ctx.Context,
+	ctx context.Context,
 	taskInfo *types.ReplicationTaskInfo,
 ) (*types.ReplicationTask, error) {
 	task := &persistence.ReplicationTaskInfo{
@@ -144,7 +143,7 @@ func (t *taskAckManagerImpl) GetTask(
 }
 
 func (t *taskAckManagerImpl) GetTasks(
-	ctx ctx.Context,
+	ctx context.Context,
 	pollingCluster string,
 	lastReadTaskID int64,
 ) (*types.ReplicationMessages, error) {
@@ -243,7 +242,7 @@ TaskInfoLoop:
 }
 
 func (t *taskAckManagerImpl) toReplicationTask(
-	ctx ctx.Context,
+	ctx context.Context,
 	taskInfo task.Info,
 ) (*types.ReplicationTask, error) {
 
@@ -277,7 +276,7 @@ func (t *taskAckManagerImpl) toReplicationTask(
 }
 
 func (t *taskAckManagerImpl) processReplication(
-	ctx ctx.Context,
+	ctx context.Context,
 	processTaskIfClosed bool,
 	taskInfo *persistence.ReplicationTaskInfo,
 	action func(
@@ -370,7 +369,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 }
 
 func (t *taskAckManagerImpl) isNewRunNDCEnabled(
-	ctx ctx.Context,
+	ctx context.Context,
 	domainID string,
 	workflowID string,
 	runID string,
@@ -507,7 +506,7 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 }
 
 func (t *taskAckManagerImpl) generateSyncActivityTask(
-	ctx ctx.Context,
+	ctx context.Context,
 	taskInfo *persistence.ReplicationTaskInfo,
 ) (*types.ReplicationTask, error) {
 
@@ -568,7 +567,7 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 }
 
 func (t *taskAckManagerImpl) generateHistoryReplicationTask(
-	ctx ctx.Context,
+	ctx context.Context,
 	task *persistence.ReplicationTaskInfo,
 ) (*types.ReplicationTask, error) {
 

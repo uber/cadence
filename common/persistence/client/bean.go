@@ -26,7 +26,6 @@ import (
 	"sync"
 
 	"github.com/uber/cadence/common/config"
-	cconfig "github.com/uber/cadence/common/config"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -128,7 +127,7 @@ func NewBeanFromFactory(
 
 	var configStoreMgr persistence.ConfigStoreManager
 	if datastore, ok := params.PersistenceConfig.DataStores[params.PersistenceConfig.DefaultStore]; ok {
-		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == cconfig.StoreTypeCassandra {
+		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == config.StoreTypeCassandra {
 			configStoreMgr, err = factory.NewConfigStoreManager()
 			if err != nil {
 				return nil, err

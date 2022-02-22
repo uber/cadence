@@ -27,7 +27,6 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
@@ -40,7 +39,7 @@ type (
 func NewNoSQLConfigStore(
 	cfg config.NoSQL,
 	logger log.Logger,
-) (p.ConfigStore, error) {
+) (persistence.ConfigStore, error) {
 	db, err := NewNoSQLDB(&cfg, logger)
 	if err != nil {
 		return nil, err
@@ -54,7 +53,7 @@ func NewNoSQLConfigStore(
 	}, nil
 }
 
-func (m *nosqlConfigStore) FetchConfig(ctx context.Context, configType p.ConfigType) (*p.InternalConfigStoreEntry, error) {
+func (m *nosqlConfigStore) FetchConfig(ctx context.Context, configType persistence.ConfigType) (*persistence.InternalConfigStoreEntry, error) {
 	entry, err := m.db.SelectLatestConfig(ctx, int(configType))
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "FetchConfig", err)
@@ -62,7 +61,7 @@ func (m *nosqlConfigStore) FetchConfig(ctx context.Context, configType p.ConfigT
 	return entry, nil
 }
 
-func (m *nosqlConfigStore) UpdateConfig(ctx context.Context, value *p.InternalConfigStoreEntry) error {
+func (m *nosqlConfigStore) UpdateConfig(ctx context.Context, value *persistence.InternalConfigStoreEntry) error {
 	err := m.db.InsertConfig(ctx, value)
 	if err != nil {
 		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {

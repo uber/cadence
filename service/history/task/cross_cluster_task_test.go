@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	p "github.com/uber/cadence/common/persistence"
 	ctask "github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
@@ -79,7 +78,7 @@ func (s *crossClusterTaskSuite) SetupTest() {
 	config := config.NewForTest()
 	s.mockShard = shard.NewTestContext(
 		s.controller,
-		&p.ShardInfo{
+		&persistence.ShardInfo{
 			ShardID: 0,
 			RangeID: 1,
 		},
@@ -122,7 +121,7 @@ func (s *crossClusterTaskSuite) SetupTest() {
 func (s *crossClusterTaskSuite) TestSourceTask_Execute() {
 	sourceTask := s.newTestSourceTask(
 		cluster.TestAlternativeClusterName,
-		&p.CrossClusterTaskInfo{
+		&persistence.CrossClusterTaskInfo{
 			DomainID: constants.TestDomainID,
 		},
 	)
@@ -137,7 +136,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_Execute() {
 func (s *crossClusterTaskSuite) TestSourceTask_Ack() {
 	sourceTask := s.newTestSourceTask(
 		cluster.TestAlternativeClusterName,
-		&p.CrossClusterTaskInfo{
+		&persistence.CrossClusterTaskInfo{
 			DomainID: constants.TestDomainID,
 		},
 	)
@@ -168,7 +167,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_Ack() {
 func (s *crossClusterTaskSuite) TestSourceTask_Nack() {
 	sourceTask := s.newTestSourceTask(
 		cluster.TestAlternativeClusterName,
-		&p.CrossClusterTaskInfo{
+		&persistence.CrossClusterTaskInfo{
 			DomainID: constants.TestDomainID,
 		},
 	)
@@ -234,7 +233,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_HandleError() {
 	for _, tc := range testCases {
 		sourceTask := s.newTestSourceTask(
 			cluster.TestAlternativeClusterName,
-			&p.CrossClusterTaskInfo{
+			&persistence.CrossClusterTaskInfo{
 				DomainID: constants.TestDomainID,
 			},
 		)
@@ -283,7 +282,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_IsReadyForPoll() {
 	for _, tc := range testCases {
 		sourceTask := s.newTestSourceTask(
 			cluster.TestAlternativeClusterName,
-			&p.CrossClusterTaskInfo{
+			&persistence.CrossClusterTaskInfo{
 				DomainID: constants.TestDomainID,
 			},
 		)
@@ -329,7 +328,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_IsValid() {
 	for _, tc := range testCases {
 		sourceTask := s.newTestSourceTask(
 			tc.targetCluster,
-			&p.CrossClusterTaskInfo{
+			&persistence.CrossClusterTaskInfo{
 				DomainID:       tc.sourceDomainID,
 				TargetDomainID: tc.targetDomainID,
 			},
@@ -447,7 +446,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_RecordResponse() {
 	for _, tc := range testCases {
 		sourceTask := s.newTestSourceTask(
 			cluster.TestAlternativeClusterName,
-			&p.CrossClusterTaskInfo{
+			&persistence.CrossClusterTaskInfo{
 				DomainID: constants.TestDomainID,
 				TaskType: tc.taskType,
 			},
@@ -477,7 +476,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_Invalidated(
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
 		) {
 			s.Error(getRequestErr)
@@ -498,7 +497,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 		) {
 			// child already started, advance processing to recorded
 			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), childExecutionRunID, childInfo.WorkflowTypeName)
@@ -512,7 +511,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
 		) {
 			s.NoError(getRequestErr)
@@ -526,7 +525,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 				TaskID:              sourceTask.GetTaskID(),
 				VisibilityTimestamp: common.Int64Ptr(sourceTask.GetVisibilityTimestamp().UnixNano()),
 			}, request.TaskInfo)
-			taskInfo := sourceTask.GetInfo().(*p.CrossClusterTaskInfo)
+			taskInfo := sourceTask.GetInfo().(*persistence.CrossClusterTaskInfo)
 			s.Equal(&types.CrossClusterStartChildExecutionRequestAttributes{
 				TargetDomainID:           taskInfo.TargetDomainID,
 				RequestID:                childInfo.CreateRequestID,
@@ -549,7 +548,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 		) {
 			// child already started, advance processing to recorded
 			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), childExecutionRunID, childInfo.WorkflowTypeName)
@@ -567,7 +566,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
 		) {
 			s.NoError(getRequestErr)
@@ -581,7 +580,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 				TaskID:              sourceTask.GetTaskID(),
 				VisibilityTimestamp: common.Int64Ptr(sourceTask.GetVisibilityTimestamp().UnixNano()),
 			}, request.TaskInfo)
-			taskInfo := sourceTask.GetInfo().(*p.CrossClusterTaskInfo)
+			taskInfo := sourceTask.GetInfo().(*persistence.CrossClusterTaskInfo)
 			s.Equal(&types.CrossClusterStartChildExecutionRequestAttributes{
 				TargetDomainID:           taskInfo.TargetDomainID,
 				RequestID:                childInfo.CreateRequestID,
@@ -603,7 +602,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_Duplication(
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 		) {
 			// complete the child workflow, task should be no-op
 			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
@@ -622,7 +621,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_Duplication(
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			childInfo *p.ChildExecutionInfo,
+			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
 		) {
 			s.NoError(getRequestErr)
@@ -639,13 +638,13 @@ func (s *crossClusterTaskSuite) testGetStartChildExecutionRequest(
 		workflowExecution, targetExecution types.WorkflowExecution,
 		lastEvent *types.HistoryEvent,
 		sourceTask *crossClusterSourceTask,
-		childInfo *p.ChildExecutionInfo,
+		childInfo *persistence.ChildExecutionInfo,
 	),
 	validationFn func(
 		request *types.CrossClusterTaskRequest,
 		getRequestErr error,
 		sourceTask *crossClusterSourceTask,
-		childInfo *p.ChildExecutionInfo,
+		childInfo *persistence.ChildExecutionInfo,
 		initiatedEvent *types.HistoryEvent,
 	),
 ) {
@@ -677,7 +676,7 @@ func (s *crossClusterTaskSuite) testGetStartChildExecutionRequest(
 
 	sourceTask := s.newTestSourceTask(
 		cluster.TestAlternativeClusterName,
-		&p.CrossClusterTaskInfo{
+		&persistence.CrossClusterTaskInfo{
 			Version:          mutableState.GetCurrentVersion(),
 			DomainID:         sourceDomainID,
 			WorkflowID:       workflowExecution.GetWorkflowID(),
@@ -686,7 +685,7 @@ func (s *crossClusterTaskSuite) testGetStartChildExecutionRequest(
 			TargetWorkflowID: targetExecution.GetWorkflowID(),
 			TaskID:           int64(59),
 			TaskList:         mutableState.GetExecutionInfo().TaskList,
-			TaskType:         p.CrossClusterTaskTypeStartChildExecution,
+			TaskType:         persistence.CrossClusterTaskTypeStartChildExecution,
 			ScheduleID:       event.GetEventID(),
 		},
 	)
@@ -707,7 +706,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetCancelRequest_Duplication() {
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			cancelInfo *p.RequestCancelInfo,
+			cancelInfo *persistence.RequestCancelInfo,
 		) {
 			lastEvent = test.AddCancelRequestedEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID())
 			mutableState.FlushBufferedEvents()
@@ -720,7 +719,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetCancelRequest_Duplication() {
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			cancelInfo *p.RequestCancelInfo,
+			cancelInfo *persistence.RequestCancelInfo,
 		) {
 			s.NoError(getRequestErr)
 			s.Nil(request)
@@ -737,7 +736,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetCancelRequest_Success() {
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			cancelInfo *p.RequestCancelInfo,
+			cancelInfo *persistence.RequestCancelInfo,
 		) {
 			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
 			s.NoError(err)
@@ -747,7 +746,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetCancelRequest_Success() {
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			cancelInfo *p.RequestCancelInfo,
+			cancelInfo *persistence.RequestCancelInfo,
 		) {
 			s.NoError(getRequestErr)
 			s.NotNil(request)
@@ -760,7 +759,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetCancelRequest_Success() {
 				TaskID:              sourceTask.GetTaskID(),
 				VisibilityTimestamp: common.Int64Ptr(sourceTask.GetVisibilityTimestamp().UnixNano()),
 			}, request.TaskInfo)
-			taskInfo := sourceTask.GetInfo().(*p.CrossClusterTaskInfo)
+			taskInfo := sourceTask.GetInfo().(*persistence.CrossClusterTaskInfo)
 			s.Equal(&types.CrossClusterCancelExecutionRequestAttributes{
 				TargetDomainID:    taskInfo.TargetDomainID,
 				TargetWorkflowID:  taskInfo.TargetWorkflowID,
@@ -782,13 +781,13 @@ func (s *crossClusterTaskSuite) testGetCancelExecutionRequest(
 		workflowExecution, targetExecution types.WorkflowExecution,
 		lastEvent *types.HistoryEvent,
 		sourceTask *crossClusterSourceTask,
-		cancelInfo *p.RequestCancelInfo,
+		cancelInfo *persistence.RequestCancelInfo,
 	),
 	validationFn func(
 		request *types.CrossClusterTaskRequest,
 		getRequestErr error,
 		sourceTask *crossClusterSourceTask,
-		cancelInfo *p.RequestCancelInfo,
+		cancelInfo *persistence.RequestCancelInfo,
 	),
 ) {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
@@ -809,7 +808,7 @@ func (s *crossClusterTaskSuite) testGetCancelExecutionRequest(
 
 	sourceTask := s.newTestSourceTask(
 		cluster.TestAlternativeClusterName,
-		&p.CrossClusterTaskInfo{
+		&persistence.CrossClusterTaskInfo{
 			Version:          mutableState.GetCurrentVersion(),
 			DomainID:         sourceDomainID,
 			WorkflowID:       workflowExecution.GetWorkflowID(),
@@ -819,7 +818,7 @@ func (s *crossClusterTaskSuite) testGetCancelExecutionRequest(
 			TargetRunID:      targetExecution.GetRunID(),
 			TaskID:           int64(59),
 			TaskList:         mutableState.GetExecutionInfo().TaskList,
-			TaskType:         p.CrossClusterTaskTypeCancelExecution,
+			TaskType:         persistence.CrossClusterTaskTypeCancelExecution,
 			ScheduleID:       event.GetEventID(),
 		},
 	)
@@ -840,7 +839,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Duplication() {
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			signalInfo *p.SignalInfo,
+			signalInfo *persistence.SignalInfo,
 		) {
 			lastEvent = test.AddSignaledEvent(mutableState, lastEvent.GetEventID(), constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), signalInfo.Control)
 			mutableState.FlushBufferedEvents()
@@ -853,7 +852,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Duplication() {
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			signalInfo *p.SignalInfo,
+			signalInfo *persistence.SignalInfo,
 		) {
 			s.NoError(getRequestErr)
 			s.Nil(request)
@@ -870,7 +869,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Success() {
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			signalInfo *p.SignalInfo,
+			signalInfo *persistence.SignalInfo,
 		) {
 			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.GetEventID(), lastEvent.GetVersion())
 			s.NoError(err)
@@ -880,7 +879,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Success() {
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			signalInfo *p.SignalInfo,
+			signalInfo *persistence.SignalInfo,
 		) {
 			s.NoError(getRequestErr)
 			s.NotNil(request)
@@ -893,7 +892,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Success() {
 				TaskID:              sourceTask.GetTaskID(),
 				VisibilityTimestamp: common.Int64Ptr(sourceTask.GetVisibilityTimestamp().UnixNano()),
 			}, request.TaskInfo)
-			taskInfo := sourceTask.GetInfo().(*p.CrossClusterTaskInfo)
+			taskInfo := sourceTask.GetInfo().(*persistence.CrossClusterTaskInfo)
 			s.Equal(&types.CrossClusterSignalExecutionRequestAttributes{
 				TargetDomainID:    taskInfo.TargetDomainID,
 				TargetWorkflowID:  taskInfo.TargetWorkflowID,
@@ -919,7 +918,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Failure() {
 			workflowExecution, targetExecution types.WorkflowExecution,
 			lastEvent *types.HistoryEvent,
 			sourceTask *crossClusterSourceTask,
-			signalInfo *p.SignalInfo,
+			signalInfo *persistence.SignalInfo,
 		) {
 			sourceTask.processingState = processingStateResponseRecorded
 			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(nil, errors.New("some random error"))
@@ -928,7 +927,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetSignalRequest_Failure() {
 			request *types.CrossClusterTaskRequest,
 			getRequestErr error,
 			sourceTask *crossClusterSourceTask,
-			signalInfo *p.SignalInfo,
+			signalInfo *persistence.SignalInfo,
 		) {
 			s.Error(getRequestErr)
 			s.Nil(request)
@@ -945,13 +944,13 @@ func (s *crossClusterTaskSuite) testGetSignalExecutionRequest(
 		workflowExecution, targetExecution types.WorkflowExecution,
 		lastEvent *types.HistoryEvent,
 		sourceTask *crossClusterSourceTask,
-		signalInfo *p.SignalInfo,
+		signalInfo *persistence.SignalInfo,
 	),
 	validationFn func(
 		request *types.CrossClusterTaskRequest,
 		getRequestErr error,
 		sourceTask *crossClusterSourceTask,
-		signalInfo *p.SignalInfo,
+		signalInfo *persistence.SignalInfo,
 	),
 ) {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
@@ -975,7 +974,7 @@ func (s *crossClusterTaskSuite) testGetSignalExecutionRequest(
 
 	sourceTask := s.newTestSourceTask(
 		cluster.TestAlternativeClusterName,
-		&p.CrossClusterTaskInfo{
+		&persistence.CrossClusterTaskInfo{
 			Version:          mutableState.GetCurrentVersion(),
 			DomainID:         sourceDomainID,
 			WorkflowID:       workflowExecution.GetWorkflowID(),
@@ -985,7 +984,7 @@ func (s *crossClusterTaskSuite) testGetSignalExecutionRequest(
 			TargetRunID:      targetExecution.GetRunID(),
 			TaskID:           int64(59),
 			TaskList:         mutableState.GetExecutionInfo().TaskList,
-			TaskType:         p.CrossClusterTaskTypeSignalExecution,
+			TaskType:         persistence.CrossClusterTaskTypeSignalExecution,
 			ScheduleID:       event.GetEventID(),
 		},
 	)
@@ -1000,7 +999,7 @@ func (s *crossClusterTaskSuite) testGetSignalExecutionRequest(
 
 func (s *crossClusterTaskSuite) newTestSourceTask(
 	targetCluster string,
-	taskInfo *p.CrossClusterTaskInfo,
+	taskInfo *persistence.CrossClusterTaskInfo,
 ) *crossClusterSourceTask {
 	return NewCrossClusterSourceTask(
 		s.mockShard,
