@@ -172,5 +172,5 @@ func archivalExternalWorkflow(ctx workflow.Context, scheduledTimeNanos int64) er
 }
 
 func largeResultActivity() ([]byte, error) {
-	return make([]byte, resultSize, resultSize), nil
+	return make([]byte, resultSize), nil
 }

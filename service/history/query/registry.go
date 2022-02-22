@@ -208,7 +208,7 @@ func (r *registryImpl) getQueryNoLock(id string) (query, error) {
 }
 
 func (r *registryImpl) getIDs(m map[string]query) []string {
-	result := make([]string, len(m), len(m))
+	result := make([]string, len(m))
 	index := 0
 	for id := range m {
 		result[index] = id

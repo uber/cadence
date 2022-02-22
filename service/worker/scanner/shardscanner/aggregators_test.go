@@ -546,7 +546,7 @@ func (s *aggregatorsSuite) TestGetShardSizeQueryResult() {
 			expectedResult:   nil,
 		},
 		{
-			shardSizes: make([]ShardSizeTuple, 10, 10),
+			shardSizes: make([]ShardSizeTuple, 10),
 			req: ShardSizeQueryRequest{
 				StartIndex: 0,
 				EndIndex:   11,
@@ -555,7 +555,7 @@ func (s *aggregatorsSuite) TestGetShardSizeQueryResult() {
 			expectedResult:   nil,
 		},
 		{
-			shardSizes: make([]ShardSizeTuple, 10000, 10000),
+			shardSizes: make([]ShardSizeTuple, 10000),
 			req: ShardSizeQueryRequest{
 				StartIndex: 0,
 				EndIndex:   maxShardQueryResult + 1,

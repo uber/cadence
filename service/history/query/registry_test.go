@@ -47,8 +47,8 @@ func (s *QueryRegistrySuite) SetupTest() {
 
 func (s *QueryRegistrySuite) TestQueryRegistry() {
 	qr := NewRegistry()
-	ids := make([]string, 100, 100)
-	termChans := make([]<-chan struct{}, 100, 100)
+	ids := make([]string, 100)
+	termChans := make([]<-chan struct{}, 100)
 	for i := 0; i < 100; i++ {
 		ids[i], termChans[i] = qr.BufferQuery(&types.WorkflowQuery{})
 	}

@@ -212,7 +212,7 @@ func (m *executionManagerImpl) DeserializeChildExecutionInfos(
 	infos map[int64]*InternalChildExecutionInfo,
 ) (map[int64]*ChildExecutionInfo, error) {
 
-	newInfos := make(map[int64]*ChildExecutionInfo, 0)
+	newInfos := make(map[int64]*ChildExecutionInfo)
 	for k, v := range infos {
 		initiatedEvent, err := m.serializer.DeserializeEvent(v.InitiatedEvent)
 		if err != nil {
@@ -259,7 +259,7 @@ func (m *executionManagerImpl) DeserializeActivityInfos(
 	infos map[int64]*InternalActivityInfo,
 ) (map[int64]*ActivityInfo, error) {
 
-	newInfos := make(map[int64]*ActivityInfo, 0)
+	newInfos := make(map[int64]*ActivityInfo)
 	for k, v := range infos {
 		scheduledEvent, err := m.serializer.DeserializeEvent(v.ScheduledEvent)
 		if err != nil {
@@ -790,7 +790,7 @@ func (m *executionManagerImpl) ListConcreteExecutions(
 		return nil, err
 	}
 	newResponse := &ListConcreteExecutionsResponse{
-		Executions: make([]*ListConcreteExecutionsEntity, len(response.Executions), len(response.Executions)),
+		Executions: make([]*ListConcreteExecutionsEntity, len(response.Executions)),
 		PageToken:  response.NextPageToken,
 	}
 	for i, e := range response.Executions {
@@ -967,7 +967,7 @@ func (m *executionManagerImpl) fromInternalReplicationTaskInfos(internalInfos []
 	if internalInfos == nil {
 		return nil
 	}
-	infos := make([]*ReplicationTaskInfo, len(internalInfos), len(internalInfos))
+	infos := make([]*ReplicationTaskInfo, len(internalInfos))
 	for i := 0; i < len(internalInfos); i++ {
 		infos[i] = m.fromInternalReplicationTaskInfo(internalInfos[i])
 	}
@@ -998,7 +998,7 @@ func (m *executionManagerImpl) toInternalReplicationTaskInfos(infos []*Replicati
 	if infos == nil {
 		return nil
 	}
-	internalInfos := make([]*InternalReplicationTaskInfo, len(infos), len(infos))
+	internalInfos := make([]*InternalReplicationTaskInfo, len(infos))
 	for i := 0; i < len(infos); i++ {
 		internalInfos[i] = m.toInternalReplicationTaskInfo(infos[i])
 	}

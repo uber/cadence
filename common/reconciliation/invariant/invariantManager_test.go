@@ -227,7 +227,7 @@ func (s *InvariantManagerSuite) TestRunChecks() {
 	}
 
 	for _, tc := range testCases {
-		invariants := make([]Invariant, len(tc.checkResults), len(tc.checkResults))
+		invariants := make([]Invariant, len(tc.checkResults))
 		for i := 0; i < len(tc.checkResults); i++ {
 			mockInvariant := NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Check(gomock.Any(), gomock.Any()).Return(tc.checkResults[i])
@@ -636,7 +636,7 @@ func (s *InvariantManagerSuite) TestRunFixes() {
 	}
 
 	for _, tc := range testCases {
-		invariants := make([]Invariant, len(tc.fixResults), len(tc.fixResults))
+		invariants := make([]Invariant, len(tc.fixResults))
 		for i := 0; i < len(tc.fixResults); i++ {
 			mockInvariant := NewMockInvariant(s.controller)
 			mockInvariant.EXPECT().Fix(gomock.Any(), gomock.Any()).Return(tc.fixResults[i])
