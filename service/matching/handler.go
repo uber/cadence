@@ -81,17 +81,16 @@ func NewHandler(
 		config:        config,
 		metricsClient: resource.GetMetricsClient(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
-			func() float64 {
-				return float64(config.RPS())
-			},
-			func(domain string) float64 {
-				domainRPS := float64(config.DomainRPS(domain))
-				if domainRPS > 0 {
-					return domainRPS
-				}
-				// if domain rps not set, use host rps to keep the old behavior
-				return float64(config.RPS())
-			},
+			quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
+			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
+				func(domain string) float64 {
+					domainRPS := float64(config.DomainRPS(domain))
+					if domainRPS > 0 {
+						return domainRPS
+					}
+					// if domain rps not set, use host rps to keep the old behavior
+					return float64(config.RPS())
+				})),
 		),
 		engine: NewEngine(
 			resource.GetTaskManager(),

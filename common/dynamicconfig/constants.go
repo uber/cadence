@@ -1404,6 +1404,30 @@ const (
 	// Default value: 300 // should be much smaller than frontend RPS
 	// Allowed filters: N/A
 	ArchiveRequestRPS
+	// ArchiveInlineHistoryRPS is the (per instance) rate limit on the number of inline history archival attempts per second
+	// KeyName: history.archiveInlineHistoryRPS
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: N/A
+	ArchiveInlineHistoryRPS
+	// ArchiveInlineHistoryGlobalRPS is the global rate limit on the number of inline history archival attempts per second
+	// KeyName: history.archiveInlineHistoryGlobalRPS
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: N/A
+	ArchiveInlineHistoryGlobalRPS
+	// ArchiveInlineVisibilityRPS is the (per instance) rate limit on the number of inline visibility archival attempts per second
+	// KeyName: history.archiveInlineVisibilityRPS
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: N/A
+	ArchiveInlineVisibilityRPS
+	// ArchiveInlineVisibilityGlobalRPS is the global rate limit on the number of inline visibility archival attempts per second
+	// KeyName: history.archiveInlineVisibilityGlobalRPS
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: N/A
+	ArchiveInlineVisibilityGlobalRPS
 	// EnableAdminProtection is whether to enable admin checking
 	// KeyName: history.enableAdminProtection
 	// Value type: Bool
@@ -2375,6 +2399,10 @@ var Keys = map[Key]string{
 	EnableParentClosePolicy:                            "history.enableParentClosePolicy",
 	NumArchiveSystemWorkflows:                          "history.numArchiveSystemWorkflows",
 	ArchiveRequestRPS:                                  "history.archiveRequestRPS",
+	ArchiveInlineHistoryRPS:                            "history.archiveInlineHistoryRPS",
+	ArchiveInlineHistoryGlobalRPS:                      "history.archiveInlineHistoryGlobalRPS",
+	ArchiveInlineVisibilityRPS:                         "history.archiveInlineVisibilityRPS",
+	ArchiveInlineVisibilityGlobalRPS:                   "history.archiveInlineVisibilityGlobalRPS",
 	EmitShardDiffLog:                                   "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                             "history.throttledLogRPS",
 	StickyTTL:                                          "history.stickyTTL",

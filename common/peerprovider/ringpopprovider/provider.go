@@ -33,6 +33,7 @@ import (
 
 	"github.com/uber/ringpop-go"
 	"github.com/uber/ringpop-go/events"
+	rpmembership "github.com/uber/ringpop-go/membership"
 	"github.com/uber/ringpop-go/swim"
 	tcg "github.com/uber/tchannel-go"
 
@@ -235,6 +236,19 @@ func (r *Provider) WhoAmI() (membership.HostInfo, error) {
 	if err != nil {
 		return membership.HostInfo{}, fmt.Errorf("ringpop doesn't know Who Am I: %w", err)
 	}
+
+	labels, err := r.ringpop.Labels()
+	if err != nil {
+		return membership.HostInfo{}, fmt.Errorf("getting ringpop labels: %w", err)
+	}
+
+	// this is needed to in a situation when Cadence is trying to identify the owner for a key
+	// make sure we are comparing identities, but not host:port pairs
+	identity, set := labels.Get(rpmembership.IdentityLabelKey)
+	if set {
+		return membership.NewDetailedHostInfo(address, identity, nil), nil
+	}
+
 	return membership.NewHostInfo(address), nil
 }
 

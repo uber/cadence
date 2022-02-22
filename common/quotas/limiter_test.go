@@ -138,12 +138,12 @@ func BenchmarkMultiStageRateLimiter1000Domains(b *testing.B) {
 
 func newFixedRpsMultiStageRateLimiter(globalRps, domainRps float64) Policy {
 	return NewMultiStageRateLimiter(
-		func() float64 {
+		NewDynamicRateLimiter(func() float64 {
 			return globalRps
-		},
-		func(domain string) float64 {
+		}),
+		NewCollection(DynamicRateLimiterFactory(func(domain string) float64 {
 			return domainRps
-		},
+		})),
 	)
 }
 func getDomains(n int) []string {

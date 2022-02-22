@@ -90,7 +90,7 @@ func (c *Collection) logValue(
 	filteredKey := getFilteredKeyAsString(key, filters)
 	loadedValue, loaded := c.logKeys.LoadOrStore(filteredKey, value)
 	if !loaded {
-		c.logger.Info("First loading dynamic config",
+		c.logger.Debug("First loading dynamic config",
 			tag.Key(filteredKey), tag.Value(value), tag.DefaultValue(defaultValue))
 	} else {
 		// it's loaded before, check if the value has changed
@@ -568,6 +568,18 @@ func (c *Collection) toFilterMap(opts ...FilterOption) map[Filter]interface{} {
 		opt(m)
 	}
 	return m
+}
+
+func (f IntPropertyFn) AsFloat64(opts ...FilterOption) func() float64 {
+	return func() float64 { return float64(f(opts...)) }
+}
+
+func (f IntPropertyFnWithDomainFilter) AsFloat64(domain string) func() float64 {
+	return func() float64 { return float64(f(domain)) }
+}
+
+func (f FloatPropertyFn) AsFloat64(opts ...FilterOption) func() float64 {
+	return func() float64 { return float64(f(opts...)) }
 }
 
 func getFilteredKeyAsString(
