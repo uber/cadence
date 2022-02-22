@@ -91,9 +91,7 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 	var treeRow *nosqlplugin.HistoryTreeRow
 	if request.IsNewBranch {
 		var ancestors []*types.HistoryBranchRange
-		for _, anc := range branchInfo.Ancestors {
-			ancestors = append(ancestors, anc)
-		}
+		ancestors = append(ancestors, branchInfo.Ancestors...)
 		treeRow = &nosqlplugin.HistoryTreeRow{
 			ShardID:         request.ShardID,
 			TreeID:          branchInfo.TreeID,

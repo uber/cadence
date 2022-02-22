@@ -93,9 +93,7 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 
 	if request.IsNewBranch {
 		var ancestors []*types.HistoryBranchRange
-		for _, anc := range branchInfo.Ancestors {
-			ancestors = append(ancestors, anc)
-		}
+		ancestors = append(ancestors, branchInfo.Ancestors...)
 
 		treeInfo := &serialization.HistoryTreeInfo{
 			Ancestors:        ancestors,
