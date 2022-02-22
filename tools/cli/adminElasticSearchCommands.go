@@ -274,12 +274,8 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 // This function is used to trim unnecessary tag in returned json for table header
 func trimBucketKey(k string) string {
 	// group key is in form of "group_key", we only need "key" as the column name
-	if strings.HasPrefix(k, "group_") {
-		k = k[6:]
-	}
-	if strings.HasPrefix(k, "Attr_") {
-		k = k[5:]
-	}
+	k = strings.TrimPrefix(k, "group_")
+	k = strings.TrimPrefix(k, "Attr_")
 	return fmt.Sprintf(`%v(*)`, k)
 }
 
