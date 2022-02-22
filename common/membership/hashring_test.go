@@ -24,7 +24,10 @@ package membership
 
 import (
 	"errors"
+	"math/rand"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +35,24 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 )
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyz")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func randomHostInfo(n int) []HostInfo {
+	res := make([]HostInfo, n, n)
+	for i := 0; i < n; i++ {
+		res = append(res, NewHostInfo(randSeq(5)))
+	}
+	return res
+}
 
 func testCompareMembers(t *testing.T, curr []HostInfo, new []HostInfo, hasDiff bool) {
 	hashring := &ring{}
@@ -181,4 +202,34 @@ func TestStopWillStopProvider(t *testing.T) {
 	hr.status = common.DaemonStatusStarted
 	hr.Stop()
 
+}
+
+func TestLookupAndRefreshRaceCondition(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pp := NewMockPeerProvider(ctrl)
+	var wg sync.WaitGroup
+
+	pp.EXPECT().Subscribe(gomock.Any(), gomock.Any()).Times(1)
+	pp.EXPECT().GetMembers("test-service").AnyTimes().DoAndReturn(func(service string) ([]HostInfo, error) {
+		return randomHostInfo(5), nil
+	})
+	hr := newHashring("test-service", pp, log.NewNoop())
+	hr.Start()
+	wg.Add(2)
+	go func() {
+		for i := 0; i < 50; i++ {
+			hr.Lookup("a")
+		}
+		wg.Done()
+	}()
+	go func() {
+		for i := 0; i < 50; i++ {
+			// to bypass internal check
+			hr.members.refreshed = time.Now().AddDate(0, 0, -1)
+			hr.refresh()
+		}
+		wg.Done()
+	}()
+
+	wg.Wait()
 }

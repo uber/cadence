@@ -68,7 +68,7 @@ type ring struct {
 	value atomic.Value // this stores the current hashring
 
 	members struct {
-		sync.Mutex
+		sync.RWMutex
 		refreshed time.Time
 		keys      map[string]HostInfo // for mapping ip:port to HostInfo
 	}
@@ -160,6 +160,8 @@ func (r *ring) Lookup(
 		}
 		return HostInfo{}, ErrInsufficientHosts
 	}
+	r.members.RLock()
+	defer r.members.RUnlock()
 	host, ok := r.members.keys[addr]
 	if !ok {
 		return HostInfo{}, fmt.Errorf("host not found in member keys, host: %q", addr)
@@ -204,6 +206,8 @@ func (r *ring) Members() []HostInfo {
 	servers := r.ring().Servers()
 
 	var hosts = make([]HostInfo, 0, len(servers))
+	r.members.RLock()
+	defer r.members.RUnlock()
 	for _, s := range servers {
 		host, ok := r.members.keys[s]
 		if !ok {
@@ -217,9 +221,6 @@ func (r *ring) Members() []HostInfo {
 }
 
 func (r *ring) refresh() error {
-	r.members.Lock()
-	defer r.members.Unlock()
-
 	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
 		return nil
@@ -230,6 +231,8 @@ func (r *ring) refresh() error {
 		return fmt.Errorf("getting members from peer provider: %w", err)
 	}
 
+	r.members.Lock()
+	defer r.members.Unlock()
 	newMembersMap, changed := r.compareMembers(members)
 	if !changed {
 		return nil
@@ -239,7 +242,6 @@ func (r *ring) refresh() error {
 	for _, member := range members {
 		ring.AddMembers(member)
 	}
-
 	r.members.keys = newMembersMap
 	r.members.refreshed = time.Now()
 	r.value.Store(ring)

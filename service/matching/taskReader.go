@@ -177,6 +177,8 @@ getTasksPumpLoop:
 				checkIdleTaskListTimer = time.NewTimer(tr.tlMgr.config.IdleTasklistCheckInterval())
 			}
 		}
+		scope := tr.scope().Tagged(getTaskListTypeTag(tr.tlMgr.taskListID.taskType))
+		scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.tlMgr.taskAckManager.GetBacklogCount()))
 	}
 
 	updateAckTimer.Stop()

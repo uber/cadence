@@ -149,11 +149,7 @@ func NewHandler(
 		Resource:        resource,
 		config:          config,
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
-		rateLimiter: quotas.NewDynamicRateLimiter(
-			func() float64 {
-				return float64(config.RPS())
-			},
-		),
+		rateLimiter:     quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
 	}
 
 	// prevent us from trying to serve requests before shard controller is started and ready

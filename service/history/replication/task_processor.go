@@ -130,20 +130,18 @@ func NewTaskProcessor(
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
 	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
 	return &taskProcessorImpl{
-		currentCluster:    shard.GetClusterMetadata().GetCurrentClusterName(),
-		sourceCluster:     taskFetcher.GetSourceCluster(),
-		status:            common.DaemonStatusInitialized,
-		shard:             shard,
-		historyEngine:     historyEngine,
-		historySerializer: persistence.NewPayloadSerializer(),
-		config:            config,
-		metricsClient:     metricsClient,
-		logger:            shard.GetLogger(),
-		taskExecutor:      taskExecutor,
-		hostRateLimiter:   taskFetcher.GetRateLimiter(),
-		shardRateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
-			return config.ReplicationTaskProcessorShardQPS()
-		}),
+		currentCluster:         shard.GetClusterMetadata().GetCurrentClusterName(),
+		sourceCluster:          taskFetcher.GetSourceCluster(),
+		status:                 common.DaemonStatusInitialized,
+		shard:                  shard,
+		historyEngine:          historyEngine,
+		historySerializer:      persistence.NewPayloadSerializer(),
+		config:                 config,
+		metricsClient:          metricsClient,
+		logger:                 shard.GetLogger(),
+		taskExecutor:           taskExecutor,
+		hostRateLimiter:        taskFetcher.GetRateLimiter(),
+		shardRateLimiter:       quotas.NewDynamicRateLimiter(config.ReplicationTaskProcessorShardQPS.AsFloat64()),
 		taskRetryPolicy:        taskRetryPolicy,
 		dlqRetryPolicy:         dlqRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,

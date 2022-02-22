@@ -69,8 +69,12 @@ func (hi HostInfo) GetAddress() string {
 
 // Identity implements ringpop's Membership interface
 func (hi HostInfo) Identity() string {
-	// for now we just use the address as the identity
-	return hi.addr
+	// if identity is not set, return address
+	if hi.identity == "" {
+		return hi.addr
+	}
+
+	return hi.identity
 }
 
 // Label is a noop function to conform to ringpop hashring member interface
