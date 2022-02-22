@@ -1679,7 +1679,6 @@ func (m *testTaskManager) GetName() string {
 }
 
 func (m *testTaskManager) Close() {
-	return
 }
 
 func (m *testTaskManager) getTaskListManager(id *taskListID) *testTaskListManager {
