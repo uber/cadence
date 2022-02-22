@@ -34,7 +34,7 @@ import (
 	"time"
 
 	"github.com/urfave/cli"
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -406,7 +406,7 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.Replicati
 
 func decode(message []byte, val *replicator.ReplicationTask) error {
 	reader := bytes.NewReader(message[1:])
-	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
+	wireVal, err := binary.Default.Decode(reader, wire.TStruct)
 	if err != nil {
 		return err
 	}
@@ -434,7 +434,7 @@ func deserializeVisibilityMessages(messages [][]byte, skipErrors bool) ([]*index
 
 func decodeVisibility(message []byte, val *indexer.Message) error {
 	reader := bytes.NewReader(message[1:])
-	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
+	wireVal, err := binary.Default.Decode(reader, wire.TStruct)
 	if err != nil {
 		return err
 	}

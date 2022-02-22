@@ -116,7 +116,13 @@ func (c *Metrics) newStatsdScope(logger log.Logger) tally.Scope {
 	if len(config.HostPort) == 0 {
 		return tally.NoopScope
 	}
-	statter, err := statsd.NewBufferedClient(config.HostPort, config.Prefix, config.FlushInterval, config.FlushBytes)
+	statter, err := statsd.NewClientWithConfig(&statsd.ClientConfig{
+		Address:       config.HostPort,
+		Prefix:        config.Prefix,
+		UseBuffered:   true,
+		FlushInterval: config.FlushInterval,
+		FlushBytes:    config.FlushBytes,
+	})
 	if err != nil {
 		logger.Fatal("error creating statsd client", tag.Error(err))
 	}
