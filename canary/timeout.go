@@ -82,9 +82,7 @@ func timeoutActivity(ctx context.Context, scheduledTimeNanos int64) error {
 	defer recordActivityEnd(scope, sw, err)
 
 	timer := time.NewTimer(activityDelay)
-	select {
-	case <-timer.C:
-	}
+	<-timer.C
 	timer.Stop()
 
 	return nil

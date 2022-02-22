@@ -174,9 +174,9 @@ func (s *localTimerGateSuite) TestTimerFireAfterUpdate_NotActive_Updated() {
 	deadline := now.Add(3 * time.Second)
 
 	s.localTimerGate.Update(newTimer)
-	select { // this is to drain existing signal
-	case <-s.localTimerGate.FireChan():
-	}
+	// this is to drain existing signal
+	<-s.localTimerGate.FireChan()
+
 	// test setup up complete
 
 	s.True(s.localTimerGate.Update(updatedNewTimer))
@@ -194,9 +194,9 @@ func (s *localTimerGateSuite) TestTimerFireAfterUpdate_NotActive_NotUpdated() {
 	deadline := now.Add(1 * time.Second)
 
 	s.localTimerGate.Update(newTimer)
-	select { // this is to drain existing signal
-	case <-s.localTimerGate.FireChan():
-	}
+	// this is to drain existing signal
+	<-s.localTimerGate.FireChan()
+
 	// test setup up complete
 
 	s.True(s.localTimerGate.Update(updatedNewTimer))
@@ -346,9 +346,9 @@ func (s *remoteTimerGateSuite) TestTimerFireAfterUpdate_NotActive_Updated() {
 	deadline := now.Add(2 * time.Second)
 
 	s.remoteTimerGate.Update(newTimer)
-	select { // this is to drain existing signal
-	case <-s.remoteTimerGate.FireChan():
-	}
+	// this is to drain existing signal
+	<-s.remoteTimerGate.FireChan()
+
 	// test setup up complete
 
 	s.True(s.remoteTimerGate.Update(updatedNewTimer))
@@ -372,9 +372,9 @@ func (s *remoteTimerGateSuite) TestTimerFireAfterUpdate_NotActive_NotUpdated() {
 	updatedNewTimer := now.Add(-1 * time.Second)
 
 	s.remoteTimerGate.Update(newTimer)
-	select { // this is to drain existing signal
-	case <-s.remoteTimerGate.FireChan():
-	}
+	// this is to drain existing signal
+	<-s.remoteTimerGate.FireChan()
+
 	// test setup up complete
 
 	s.True(s.remoteTimerGate.Update(updatedNewTimer))
@@ -402,9 +402,9 @@ func (s *remoteTimerGateSuite) TestTimerSetCurrentTime_Update_TimerAlreadyFired(
 	newCurrentTime := now.Add(1 * time.Second)
 
 	s.remoteTimerGate.Update(newTimer)
-	select { // this is to drain existing signal
-	case <-s.remoteTimerGate.FireChan():
-	}
+	// this is to drain existing signal
+	<-s.remoteTimerGate.FireChan()
+
 	// test setup up complete
 
 	s.True(s.remoteTimerGate.SetCurrentTime(newCurrentTime))
