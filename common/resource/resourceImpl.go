@@ -52,6 +52,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -73,7 +74,7 @@ type (
 		numShards       int
 		serviceName     string
 		hostName        string
-		hostInfo        *membership.HostInfo
+		hostInfo        membership.HostInfo
 		metricsScope    tally.Scope
 		clusterMetadata cluster.Metadata
 
@@ -168,16 +169,12 @@ func New(
 
 	persistenceBean, err := persistenceClient.NewBeanFromFactory(persistenceClient.NewFactory(
 		&params.PersistenceConfig,
-		func(...dynamicconfig.FilterOption) int {
-			if serviceConfig.PersistenceGlobalMaxQPS() > 0 {
-				members, err := membershipResolver.MemberCount(serviceName)
-				if err == nil && members > 0 {
-					avgQuota := common.MaxInt(serviceConfig.PersistenceGlobalMaxQPS()/members, 1)
-					return common.MinInt(avgQuota, serviceConfig.PersistenceMaxQPS())
-				}
-			}
-			return serviceConfig.PersistenceMaxQPS()
-		},
+		quotas.PerMemberDynamic(
+			serviceName,
+			serviceConfig.PersistenceGlobalMaxQPS.AsFloat64(),
+			serviceConfig.PersistenceMaxQPS.AsFloat64(),
+			membershipResolver,
+		),
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
@@ -382,7 +379,7 @@ func (h *Impl) GetHostName() string {
 }
 
 // GetHostInfo return host info
-func (h *Impl) GetHostInfo() *membership.HostInfo {
+func (h *Impl) GetHostInfo() membership.HostInfo {
 	return h.hostInfo
 }
 

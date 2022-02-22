@@ -142,16 +142,6 @@ func GetFeatureFlagsFromHeader(call *yarpc.Call) shared.FeatureFlags {
 	return shared.FeatureFlags{}
 }
 
-// GetDefaultCLIYarpcCallOptions returns default yarpc options to use when sending rpc requests
-func GetDefaultCLIYarpcCallOptions() []yarpc.CallOption {
-	return []yarpc.CallOption{
-		yarpc.WithHeader(common.LibraryVersionHeaderName, "0.0.1"),
-		yarpc.WithHeader(common.FeatureVersionHeaderName, GoWorkerConsistentQueryVersion),
-		yarpc.WithHeader(common.ClientImplHeaderName, GoSDK),
-		yarpc.WithHeader(common.ClientFeatureFlagsHeaderName, FeatureFlagsHeader(DefaultCLIFeatureFlags)),
-	}
-}
-
 // NewVersionChecker constructs a new VersionChecker
 func NewVersionChecker() VersionChecker {
 	supportedFeatures := map[string]map[string]version.Constraints{

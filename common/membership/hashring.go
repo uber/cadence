@@ -50,20 +50,10 @@ const (
 type PeerProvider interface {
 	common.Daemon
 
-	GetMembers(service string) ([]string, error)
-	WhoAmI() (string, error)
+	GetMembers(service string) ([]HostInfo, error)
+	WhoAmI() (HostInfo, error)
 	SelfEvict() error
 	Subscribe(name string, notifyChannel chan<- *ChangedEvent) error
-}
-
-// PortMap is a map of port names to port numbers.
-type PortMap map[string]uint16
-
-// HostInfo is a type that contains the info about a cadence host
-type HostInfo struct {
-	addr     string // ip:port
-	identity string
-	portMap  PortMap // ports host is listening to
 }
 
 type ring struct {
@@ -78,9 +68,9 @@ type ring struct {
 	value atomic.Value // this stores the current hashring
 
 	members struct {
-		sync.Mutex
+		sync.RWMutex
 		refreshed time.Time
-		keys      map[string]struct{} // for de-duping change notifications
+		keys      map[string]HostInfo // for mapping ip:port to HostInfo
 	}
 
 	subscribers struct {
@@ -99,11 +89,11 @@ func newHashring(
 		service:      service,
 		peerProvider: provider,
 		shutdownCh:   make(chan struct{}),
-		logger:       logger.WithTags(tag.ComponentServiceResolver),
+		logger:       logger,
 		refreshChan:  make(chan *ChangedEvent),
 	}
 
-	hashring.members.keys = make(map[string]struct{})
+	hashring.members.keys = make(map[string]HostInfo)
 	hashring.subscribers.keys = make(map[string]chan<- *ChangedEvent)
 
 	hashring.value.Store(emptyHashring())
@@ -161,16 +151,22 @@ func (r *ring) Stop() {
 // Lookup finds the host in the ring responsible for serving the given key
 func (r *ring) Lookup(
 	key string,
-) (*HostInfo, error) {
+) (HostInfo, error) {
 	addr, found := r.ring().Lookup(key)
 	if !found {
 		select {
 		case r.refreshChan <- &ChangedEvent{}:
 		default:
 		}
-		return nil, ErrInsufficientHosts
+		return HostInfo{}, ErrInsufficientHosts
 	}
-	return NewHostInfo(addr), nil
+	r.members.RLock()
+	defer r.members.RUnlock()
+	host, ok := r.members.keys[addr]
+	if !ok {
+		return HostInfo{}, fmt.Errorf("host not found in member keys, host: %q", addr)
+	}
+	return host, nil
 }
 
 // Subscribe registers callback watcher.
@@ -206,44 +202,50 @@ func (r *ring) MemberCount() int {
 	return r.ring().ServerCount()
 }
 
-func (r *ring) Members() []*HostInfo {
-	var servers []*HostInfo
-	for _, s := range r.ring().Servers() {
-		servers = append(servers, NewHostInfo(s))
+func (r *ring) Members() []HostInfo {
+	servers := r.ring().Servers()
+
+	var hosts = make([]HostInfo, 0, len(servers))
+	r.members.RLock()
+	defer r.members.RUnlock()
+	for _, s := range servers {
+		host, ok := r.members.keys[s]
+		if !ok {
+			r.logger.Warn("host not found in hashring keys", tag.Address(s))
+			continue
+		}
+		hosts = append(hosts, host)
 	}
 
-	return servers
+	return hosts
 }
 
 func (r *ring) refresh() error {
-	r.members.Lock()
-	defer r.members.Unlock()
-
 	if r.members.refreshed.After(time.Now().Add(-minRefreshInternal)) {
 		// refreshed too frequently
 		return nil
 	}
 
-	addrs, err := r.peerProvider.GetMembers(r.service)
+	members, err := r.peerProvider.GetMembers(r.service)
 	if err != nil {
 		return fmt.Errorf("getting members from peer provider: %w", err)
 	}
 
-	newMembersMap, changed := r.compareMembers(addrs)
+	r.members.Lock()
+	defer r.members.Unlock()
+	newMembersMap, changed := r.compareMembers(members)
 	if !changed {
 		return nil
 	}
 
 	ring := emptyHashring()
-	for _, addr := range addrs {
-		host := NewHostInfo(addr)
-		ring.AddMembers(host)
+	for _, member := range members {
+		ring.AddMembers(member)
 	}
-
 	r.members.keys = newMembersMap
 	r.members.refreshed = time.Now()
 	r.value.Store(ring)
-	r.logger.Info("refreshed ring members", tag.Service(r.service), tag.Addresses(addrs))
+	r.logger.Info("refreshed ring members", tag.Value(members))
 
 	return nil
 }
@@ -273,12 +275,12 @@ func (r *ring) ring() *hashring.HashRing {
 	return r.value.Load().(*hashring.HashRing)
 }
 
-func (r *ring) compareMembers(addrs []string) (map[string]struct{}, bool) {
+func (r *ring) compareMembers(members []HostInfo) (map[string]HostInfo, bool) {
 	changed := false
-	newMembersMap := make(map[string]struct{}, len(addrs))
-	for _, addr := range addrs {
-		newMembersMap[addr] = struct{}{}
-		if _, ok := r.members.keys[addr]; !ok {
+	newMembersMap := make(map[string]HostInfo, len(members))
+	for _, member := range members {
+		newMembersMap[member.GetAddress()] = member
+		if _, ok := r.members.keys[member.GetAddress()]; !ok {
 			changed = true
 		}
 	}
@@ -289,31 +291,4 @@ func (r *ring) compareMembers(addrs []string) (map[string]struct{}, bool) {
 		}
 	}
 	return newMembersMap, changed
-}
-
-// NewHostInfo creates a new HostInfo instance
-func NewHostInfo(addr string) *HostInfo {
-	return &HostInfo{
-		addr: addr,
-	}
-}
-
-// GetAddress returns the ip:port address
-func (hi *HostInfo) GetAddress() string {
-	return hi.addr
-}
-
-// Identity implements ringpop's Membership interface
-func (hi *HostInfo) Identity() string {
-	// for now we just use the address as the identity
-	return hi.addr
-}
-
-// Label implements ringpop's Membership interface
-func (hi *HostInfo) Label(key string) (value string, has bool) {
-	return "", false
-}
-
-// SetLabel sets the label.
-func (hi *HostInfo) SetLabel(key string, value string) {
 }

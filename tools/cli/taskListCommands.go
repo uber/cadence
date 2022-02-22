@@ -27,18 +27,26 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
-	s "go.uber.org/cadence/.gen/go/shared"
 )
 
 // DescribeTaskList show pollers info of a given tasklist
 func DescribeTaskList(c *cli.Context) {
 	wfClient := getWorkflowClient(c)
+	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)
 	taskListType := strToTaskListType(c.String(FlagTaskListType)) // default type is decision
 
 	ctx, cancel := newContext(c)
 	defer cancel()
-	response, err := wfClient.DescribeTaskList(ctx, taskList, taskListType)
+
+	request := &types.DescribeTaskListRequest{
+		Domain: domain,
+		TaskList: &types.TaskList{
+			Name: taskList,
+		},
+		TaskListType: &taskListType,
+	}
+	response, err := wfClient.DescribeTaskList(ctx, request)
 	if err != nil {
 		ErrorAndExit("Operation DescribeTaskList failed.", err)
 	}
@@ -51,7 +59,7 @@ func DescribeTaskList(c *cli.Context) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetBorder(false)
 	table.SetColumnSeparator("|")
-	if taskListType == s.TaskListTypeActivity {
+	if taskListType.String() == types.TaskListTypeActivity.String() {
 		table.SetHeader([]string{"Activity Poller Identity", "Last Access Time"})
 	} else {
 		table.SetHeader([]string{"Decision Poller Identity", "Last Access Time"})

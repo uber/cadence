@@ -31,14 +31,10 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	"github.com/urfave/cli"
-	clientFrontend "go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	clientFrontendTest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
-	"go.uber.org/cadence/.gen/go/shared"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -46,21 +42,13 @@ type cliAppSuite struct {
 	suite.Suite
 	app                  *cli.App
 	mockCtrl             *gomock.Controller
-	clientFrontendClient *clientFrontendTest.MockClient
 	serverFrontendClient *frontend.MockClient
 	serverAdminClient    *admin.MockClient
-	cqlClient            *gocql.MockClient
 }
 
 type clientFactoryMock struct {
-	clientFrontendClient clientFrontend.Interface
 	serverFrontendClient frontend.Client
 	serverAdminClient    admin.Client
-	cqlClient            gocql.Client
-}
-
-func (m *clientFactoryMock) ClientFrontendClient(c *cli.Context) clientFrontend.Interface {
-	return m.clientFrontendClient
 }
 
 func (m *clientFactoryMock) ServerFrontendClient(c *cli.Context) frontend.Client {
@@ -74,9 +62,6 @@ func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) *elastic.Client {
 	panic("not implemented")
 }
-
-// this is the mock for yarpcCallOptions, make sure length are the same
-var callOptions = []interface{}{gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()}
 
 var commands = []string{
 	"domain", "d",
@@ -98,15 +83,11 @@ func (s *cliAppSuite) SetupSuite() {
 func (s *cliAppSuite) SetupTest() {
 	s.mockCtrl = gomock.NewController(s.T())
 
-	s.clientFrontendClient = clientFrontendTest.NewMockClient(s.mockCtrl)
 	s.serverFrontendClient = frontend.NewMockClient(s.mockCtrl)
 	s.serverAdminClient = admin.NewMockClient(s.mockCtrl)
-	s.cqlClient = gocql.NewMockClient(s.mockCtrl)
 	SetFactory(&clientFactoryMock{
-		clientFrontendClient: s.clientFrontendClient,
 		serverFrontendClient: s.serverFrontendClient,
 		serverAdminClient:    s.serverAdminClient,
-		cqlClient:            s.cqlClient,
 	})
 }
 
@@ -145,13 +126,13 @@ func (s *cliAppSuite) TestDomainRegister_GlobalDomain() {
 }
 
 func (s *cliAppSuite) TestDomainRegister_DomainExist() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&shared.DomainAlreadyExistsError{})
+	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.DomainAlreadyExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainRegister_Failed() {
-	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&shared.BadRequestError{"fake error"})
+	s.serverFrontendClient.EXPECT().RegisterDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"fake error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "register", "--global_domain", "true"})
 	s.Equal(1, errorCode)
 }
@@ -192,13 +173,13 @@ func (s *cliAppSuite) TestDomainUpdate() {
 func (s *cliAppSuite) TestDomainUpdate_DomainNotExist() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.EntityNotExistsError{})
+	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainUpdate_ActiveClusterFlagNotSet_DomainNotExist() {
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.EntityNotExistsError{})
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(nil, &types.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
 	s.Equal(1, errorCode)
 }
@@ -206,44 +187,44 @@ func (s *cliAppSuite) TestDomainUpdate_ActiveClusterFlagNotSet_DomainNotExist() 
 func (s *cliAppSuite) TestDomainUpdate_Failed() {
 	resp := describeDomainResponseServer
 	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &shared.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().UpdateDomain(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "update"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate() {
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListOpenWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_DomainNotExist() {
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListOpenWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_Failed() {
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListOpenWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListOpenWorkflowExecutionsResponse{}, nil)
 	s.serverFrontendClient.EXPECT().DeprecateDomain(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_ClosedWorkflowsExist() {
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(listClosedWorkflowExecutionsResponse, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(listClosedWorkflowExecutionsResponse, nil)
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainDeprecate_OpenWorkflowsExist() {
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.ListClosedWorkflowExecutionsResponse{}, nil)
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(listOpenWorkflowExecutionsResponse, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(&types.ListClosedWorkflowExecutionsResponse{}, nil)
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(listOpenWorkflowExecutionsResponse, nil)
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "deprecate"})
 	s.Equal(1, errorCode)
 }
@@ -275,32 +256,32 @@ func (s *cliAppSuite) TestDomainDescribe() {
 
 func (s *cliAppSuite) TestDomainDescribe_DomainNotExist() {
 	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, &shared.EntityNotExistsError{})
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, &types.EntityNotExistsError{})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "describe"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestDomainDescribe_Failed() {
 	resp := describeDomainResponseServer
-	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, &shared.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "domain", "describe"})
 	s.Equal(1, errorCode)
 }
 
 var (
-	eventType = shared.EventTypeWorkflowExecutionStarted
+	eventType = types.EventTypeWorkflowExecutionStarted
 
-	getWorkflowExecutionHistoryResponse = &shared.GetWorkflowExecutionHistoryResponse{
-		History: &shared.History{
-			Events: []*shared.HistoryEvent{
+	getWorkflowExecutionHistoryResponse = &types.GetWorkflowExecutionHistoryResponse{
+		History: &types.History{
+			Events: []*types.HistoryEvent{
 				{
 					EventType: &eventType,
-					WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-						WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr("TestWorkflow")},
-						TaskList:                            &shared.TaskList{Name: common.StringPtr("taskList")},
+					WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+						WorkflowType:                        &types.WorkflowType{Name: "TestWorkflow"},
+						TaskList:                            &types.TaskList{Name: "taskList"},
 						ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 						TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-						Identity:                            common.StringPtr("tester"),
+						Identity:                            "tester",
 					},
 				},
 			},
@@ -311,7 +292,7 @@ var (
 
 func (s *cliAppSuite) TestShowHistory() {
 	resp := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(resp, nil)
 	describeResp := &types.DescribeWorkflowExecutionResponse{
 		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
 	}
@@ -322,7 +303,7 @@ func (s *cliAppSuite) TestShowHistory() {
 
 func (s *cliAppSuite) TestShowHistoryWithID() {
 	resp := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(resp, nil)
 	describeResp := &types.DescribeWorkflowExecutionResponse{
 		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
 	}
@@ -333,7 +314,7 @@ func (s *cliAppSuite) TestShowHistoryWithID() {
 
 func (s *cliAppSuite) TestShowHistory_PrintRawTime() {
 	resp := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(resp, nil)
 	describeResp := &types.DescribeWorkflowExecutionResponse{
 		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
 	}
@@ -344,7 +325,7 @@ func (s *cliAppSuite) TestShowHistory_PrintRawTime() {
 
 func (s *cliAppSuite) TestShowHistory_PrintDateTime() {
 	resp := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(resp, nil)
 	describeResp := &types.DescribeWorkflowExecutionResponse{
 		WorkflowExecutionInfo: &types.WorkflowExecutionInfo{},
 	}
@@ -354,8 +335,8 @@ func (s *cliAppSuite) TestShowHistory_PrintDateTime() {
 }
 
 func (s *cliAppSuite) TestStartWorkflow() {
-	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
-	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil).Times(2)
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
+	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
 	// start with wid
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid", "wrp", "2"})
 	s.Nil(err)
@@ -365,18 +346,18 @@ func (s *cliAppSuite) TestStartWorkflow() {
 }
 
 func (s *cliAppSuite) TestStartWorkflow_Failed() {
-	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
-	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(resp, &shared.BadRequestError{"faked error"})
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
+	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
 	// start with wid
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "start", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestRunWorkflow() {
-	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
 	history := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil).Times(2)
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(history, nil).Times(2)
+	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(history, nil).Times(2)
 	// start with wid
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid", "wrp", "2"})
 	s.Nil(err)
@@ -386,112 +367,112 @@ func (s *cliAppSuite) TestRunWorkflow() {
 }
 
 func (s *cliAppSuite) TestRunWorkflow_Failed() {
-	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
 	history := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(resp, &shared.BadRequestError{"faked error"})
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(history, nil)
+	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(history, nil)
 	// start with wid
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "run", "-tl", "testTaskList", "-wt", "testWorkflowType", "-et", "60", "-w", "wid"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestTerminateWorkflow() {
-	s.clientFrontendClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
+	s.serverFrontendClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "terminate", "-w", "wid"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestTerminateWorkflow_Failed() {
-	s.clientFrontendClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().TerminateWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "terminate", "-w", "wid"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestCancelWorkflow() {
-	s.clientFrontendClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
+	s.serverFrontendClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "cancel", "-w", "wid"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestCancelWorkflow_Failed() {
-	s.clientFrontendClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "cancel", "-w", "wid"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestSignalWorkflow() {
-	s.clientFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(nil)
+	s.serverFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "signal", "-w", "wid", "-n", "signal-name"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestSignalWorkflow_Failed() {
-	s.clientFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(&shared.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "signal", "-w", "wid", "-n", "signal-name"})
 	s.Equal(1, errorCode)
 }
 
 func (s *cliAppSuite) TestQueryWorkflow() {
-	resp := &shared.QueryWorkflowResponse{
+	resp := &types.QueryWorkflowResponse{
 		QueryResult: []byte("query-result"),
 	}
-	s.clientFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestQueryWorkflowUsingStackTrace() {
-	resp := &shared.QueryWorkflowResponse{
+	resp := &types.QueryWorkflowResponse{
 		QueryResult: []byte("query-result"),
 	}
-	s.clientFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "stack", "-w", "wid"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestQueryWorkflow_Failed() {
-	resp := &shared.QueryWorkflowResponse{
+	resp := &types.QueryWorkflowResponse{
 		QueryResult: []byte("query-result"),
 	}
-	s.clientFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any(), callOptions...).Return(resp, &shared.BadRequestError{"faked error"})
+	s.serverFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "workflow", "query", "-w", "wid", "-qt", "query-type-test"})
 	s.Equal(1, errorCode)
 }
 
 var (
-	closeStatus = shared.WorkflowExecutionCloseStatusCompleted
+	closeStatus = types.WorkflowExecutionCloseStatusCompleted
 
-	listClosedWorkflowExecutionsResponse = &shared.ListClosedWorkflowExecutionsResponse{
-		Executions: []*shared.WorkflowExecutionInfo{
+	listClosedWorkflowExecutionsResponse = &types.ListClosedWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
 			{
-				Execution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr("test-list-workflow-id"),
-					RunId:      common.StringPtr(uuid.New()),
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-list-workflow-id",
+					RunID:      uuid.New(),
 				},
-				Type: &shared.WorkflowType{
-					Name: common.StringPtr("test-list-workflow-type"),
+				Type: &types.WorkflowType{
+					Name: "test-list-workflow-type",
 				},
 				StartTime:     common.Int64Ptr(time.Now().UnixNano()),
 				CloseTime:     common.Int64Ptr(time.Now().Add(time.Hour).UnixNano()),
 				CloseStatus:   &closeStatus,
-				HistoryLength: common.Int64Ptr(12),
+				HistoryLength: 12,
 			},
 		},
 	}
 
-	listOpenWorkflowExecutionsResponse = &shared.ListOpenWorkflowExecutionsResponse{
-		Executions: []*shared.WorkflowExecutionInfo{
+	listOpenWorkflowExecutionsResponse = &types.ListOpenWorkflowExecutionsResponse{
+		Executions: []*types.WorkflowExecutionInfo{
 			{
-				Execution: &shared.WorkflowExecution{
-					WorkflowId: common.StringPtr("test-list-open-workflow-id"),
-					RunId:      common.StringPtr(uuid.New()),
+				Execution: &types.WorkflowExecution{
+					WorkflowID: "test-list-open-workflow-id",
+					RunID:      uuid.New(),
 				},
-				Type: &shared.WorkflowType{
-					Name: common.StringPtr("test-list-open-workflow-type"),
+				Type: &types.WorkflowType{
+					Name: "test-list-open-workflow-type",
 				},
 				StartTime:     common.Int64Ptr(time.Now().UnixNano()),
 				CloseTime:     common.Int64Ptr(time.Now().Add(time.Hour).UnixNano()),
-				HistoryLength: common.Int64Ptr(12),
+				HistoryLength: 12,
 			},
 		},
 	}
@@ -499,83 +480,83 @@ var (
 
 func (s *cliAppSuite) TestListWorkflow() {
 	resp := listClosedWorkflowExecutionsResponse
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowID() {
-	resp := &shared.ListClosedWorkflowExecutionsResponse{}
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	resp := &types.ListClosedWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-wid", "nothing"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowType() {
-	resp := &shared.ListClosedWorkflowExecutionsResponse{}
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	resp := &types.ListClosedWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-wt", "no-type"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_PrintDateTime() {
 	resp := listClosedWorkflowExecutionsResponse
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-pdt"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_PrintRawTime() {
 	resp := listClosedWorkflowExecutionsResponse
-	s.clientFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-prt"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open() {
 	resp := listOpenWorkflowExecutionsResponse
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowID() {
-	resp := &shared.ListOpenWorkflowExecutionsResponse{}
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	resp := &types.ListOpenWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op", "-wid", "nothing"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowType() {
-	resp := &shared.ListOpenWorkflowExecutionsResponse{}
-	s.clientFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	resp := &types.ListOpenWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op", "-wt", "no-type"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestListArchivedWorkflow() {
-	resp := &shared.ListArchivedWorkflowExecutionsResponse{}
-	s.clientFrontendClient.EXPECT().ListArchivedWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	resp := &types.ListArchivedWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().ListArchivedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "listarchived", "-q", "some query string", "--ps", "200", "--all"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestCountWorkflow() {
-	resp := &shared.CountWorkflowExecutionsResponse{}
-	s.clientFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	resp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "count"})
 	s.Nil(err)
 
-	s.clientFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err = s.app.Run([]string{"", "--do", domainName, "workflow", "count", "-q", "'CloseTime = missing'"})
 	s.Nil(err)
 }
 
-var describeTaskListResponse = &shared.DescribeTaskListResponse{
-	Pollers: []*shared.PollerInfo{
+var describeTaskListResponse = &types.DescribeTaskListResponse{
+	Pollers: []*types.PollerInfo{
 		{
 			LastAccessTime: common.Int64Ptr(time.Now().UnixNano()),
-			Identity:       common.StringPtr("tester"),
+			Identity:       "tester",
 		},
 	},
 }
@@ -587,13 +568,13 @@ func (s *cliAppSuite) TestAdminDescribeWorkflow() {
 		MutableStateInDatabase: "{\"ExecutionInfo\":{\"BranchToken\":\"WQsACgAAACQ2MzI5YzEzMi1mMGI0LTQwZmUtYWYxMS1hODVmMDA3MzAzODQLABQAAAAkOWM5OWI1MjItMGEyZi00NTdmLWEyNDgtMWU0OTA0ZDg4YzVhDwAeDAAAAAAA\"}}",
 	}
 
-	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestAdminDescribeWorkflow_Failed() {
-	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any(), callOptions...).Return(nil, &types.BadRequestError{"faked error"})
+	s.serverAdminClient.EXPECT().DescribeWorkflowExecution(gomock.Any(), gomock.Any()).Return(nil, &types.BadRequestError{"faked error"})
 	errorCode := s.RunErrorExitCode([]string{"", "--do", domainName, "admin", "wf", "describe", "-w", "test-wf-id"})
 	s.Equal(1, errorCode)
 }
@@ -608,7 +589,7 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 			"testKey": types.IndexedValueType(1),
 		},
 	}
-	s.serverAdminClient.EXPECT().AddSearchAttribute(gomock.Any(), request, callOptions...).Return(nil)
+	s.serverAdminClient.EXPECT().AddSearchAttribute(gomock.Any(), request).Return(nil)
 
 	err := s.app.Run([]string{"", "--do", domainName, "admin", "cl", "asa", "--search_attr_key", "testKey", "--search_attr_type", "1"})
 	s.Equal("Are you trying to add key [testKey] with Type [Keyword]? Y/N", promptMsg)
@@ -616,30 +597,30 @@ func (s *cliAppSuite) TestAdminAddSearchAttribute() {
 }
 
 func (s *cliAppSuite) TestAdminFailover() {
-	resp := &shared.StartWorkflowExecutionResponse{RunId: common.StringPtr(uuid.New())}
-	s.clientFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(resp, nil)
-	s.clientFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
+	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().SignalWorkflowExecution(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	err := s.app.Run([]string{"", "admin", "cl", "fo", "start", "--tc", "standby", "--sc", "active"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestDescribeTaskList() {
 	resp := describeTaskListResponse
-	s.clientFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "tasklist", "describe", "-tl", "test-taskList"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestDescribeTaskList_Activity() {
 	resp := describeTaskListResponse
-	s.clientFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any(), callOptions...).Return(resp, nil)
+	s.serverFrontendClient.EXPECT().DescribeTaskList(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "tasklist", "describe", "-tl", "test-taskList", "-tlt", "activity"})
 	s.Nil(err)
 }
 
 func (s *cliAppSuite) TestObserveWorkflow() {
 	history := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(history, nil).Times(2)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(history, nil).Times(2)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "observe", "-w", "wid"})
 	s.Nil(err)
 	err = s.app.Run([]string{"", "--do", domainName, "workflow", "observe", "-w", "wid", "-sd"})
@@ -648,7 +629,7 @@ func (s *cliAppSuite) TestObserveWorkflow() {
 
 func (s *cliAppSuite) TestObserveWorkflowWithID() {
 	history := getWorkflowExecutionHistoryResponse
-	s.clientFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any(), callOptions...).Return(history, nil).Times(2)
+	s.serverFrontendClient.EXPECT().GetWorkflowExecutionHistory(gomock.Any(), gomock.Any()).Return(history, nil).Times(2)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "observeid", "wid"})
 	s.Nil(err)
 	err = s.app.Run([]string{"", "--do", domainName, "workflow", "observeid", "wid", "-sd"})
@@ -764,21 +745,21 @@ func (s *cliAppSuite) TestBreakLongWords() {
 
 func (s *cliAppSuite) TestAnyToString() {
 	arg := strings.Repeat("LongText", 80)
-	event := &shared.HistoryEvent{
-		EventId:   common.Int64Ptr(1),
+	event := &types.HistoryEvent{
+		EventID:   1,
 		EventType: &eventType,
-		WorkflowExecutionStartedEventAttributes: &shared.WorkflowExecutionStartedEventAttributes{
-			WorkflowType:                        &shared.WorkflowType{Name: common.StringPtr("code.uber.internal/devexp/cadence-samples.git/cmd/samples/recipes/helloworld.Workflow")},
-			TaskList:                            &shared.TaskList{Name: common.StringPtr("taskList")},
+		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+			WorkflowType:                        &types.WorkflowType{Name: "code.uber.internal/devexp/cadence-samples.git/cmd/samples/recipes/helloworld.Workflow"},
+			TaskList:                            &types.TaskList{Name: "taskList"},
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10),
-			Identity:                            common.StringPtr("tester"),
+			Identity:                            "tester",
 			Input:                               []byte(arg),
 		},
 	}
 	res := anyToString(event, false, defaultMaxFieldLength)
 	ss, l := tablewriter.WrapString(res, 10)
-	s.Equal(8, len(ss))
+	s.Equal(9, len(ss))
 	s.Equal(147, l)
 }
 
@@ -786,16 +767,16 @@ func (s *cliAppSuite) TestAnyToString_DecodeMapValues() {
 	fields := map[string][]byte{
 		"TestKey": []byte("testValue"),
 	}
-	execution := &shared.WorkflowExecutionInfo{
-		Memo: &shared.Memo{Fields: fields},
+	execution := &types.WorkflowExecutionInfo{
+		Memo: &types.Memo{Fields: fields},
 	}
-	s.Equal("{Memo:{Fields:map{TestKey:testValue}}}", anyToString(execution, true, 0))
+	s.Equal("{HistoryLength:0, Memo:{Fields:map{TestKey:testValue}}, IsCron:false}", anyToString(execution, true, 0))
 
 	fields["TestKey2"] = []byte(`anotherTestValue`)
-	execution.Memo = &shared.Memo{Fields: fields}
+	execution.Memo = &types.Memo{Fields: fields}
 	got := anyToString(execution, true, 0)
-	expected := got == "{Memo:{Fields:map{TestKey2:anotherTestValue, TestKey:testValue}}}" ||
-		got == "{Memo:{Fields:map{TestKey:testValue, TestKey2:anotherTestValue}}}"
+	expected := got == "{HistoryLength:0, Memo:{Fields:map{TestKey2:anotherTestValue, TestKey:testValue}}, IsCron:false}" ||
+		got == "{HistoryLength:0, Memo:{Fields:map{TestKey:testValue, TestKey2:anotherTestValue}}, IsCron:false}"
 	s.True(expected)
 }
 
@@ -806,7 +787,7 @@ func (s *cliAppSuite) TestIsAttributeName() {
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy() {
 	res := getWorkflowIDReusePolicy(2)
-	s.Equal(res.String(), shared.WorkflowIdReusePolicyRejectDuplicate.String())
+	s.Equal(res.String(), types.WorkflowIDReusePolicyRejectDuplicate.String())
 }
 
 func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_ExceedRange() {
@@ -832,8 +813,8 @@ func (s *cliAppSuite) TestGetWorkflowIdReusePolicy_Failed_Negative() {
 }
 
 func (s *cliAppSuite) TestGetSearchAttributes() {
-	resp := &shared.GetSearchAttributesResponse{}
-	s.clientFrontendClient.EXPECT().GetSearchAttributes(gomock.Any(), callOptions...).Return(resp, nil).Times(2)
+	resp := &types.GetSearchAttributesResponse{}
+	s.serverFrontendClient.EXPECT().GetSearchAttributes(gomock.Any()).Return(resp, nil).Times(2)
 	err := s.app.Run([]string{"", "cluster", "get-search-attr"})
 	s.Nil(err)
 	err = s.app.Run([]string{"", "--do", domainName, "cluster", "get-search-attr"})

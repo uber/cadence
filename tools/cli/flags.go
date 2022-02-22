@@ -253,6 +253,8 @@ const (
 	FlagFailoverTypeWithAlias             = FlagFailoverType + ", ft"
 	FlagFailoverTimeout                   = "failover_timeout_seconds"
 	FlagFailoverTimeoutWithAlias          = FlagFailoverTimeout + ", fts"
+	FlagActivityHeartBeatTimeout          = "heart_beat_timeout_seconds"
+	FlagActivityHeartBeatTimeoutWithAlias = FlagActivityHeartBeatTimeout + ", hbts"
 	FlagFailoverWaitTime                  = "failover_wait_time_second"
 	FlagFailoverWaitTimeWithAlias         = FlagFailoverWaitTime + ", fwts"
 	FlagFailoverBatchSize                 = "failover_batch_size"
@@ -283,6 +285,8 @@ const (
 	FlagDynamicConfigName                 = "dynamic_config_name"
 	FlagDynamicConfigFilter               = "dynamic_config_filter"
 	FlagDynamicConfigValue                = "dynamic_config_value"
+	FlagTransport                         = "transport"
+	FlagTransportWithAlias                = FlagTransport + ", t"
 )
 
 var flagsForExecution = []cli.Flag{

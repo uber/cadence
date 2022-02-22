@@ -3646,64 +3646,16 @@ func (v *History) GetEvents() (o []*HistoryEvent) {
 
 // HistoryBranch is an internal type (TBD...)
 type HistoryBranch struct {
-	TreeID    *string               `json:"treeID,omitempty"`
-	BranchID  *string               `json:"branchID,omitempty"`
-	Ancestors []*HistoryBranchRange `json:"ancestors,omitempty"`
-}
-
-// GetTreeID is an internal getter (TBD...)
-func (v *HistoryBranch) GetTreeID() (o string) {
-	if v != nil && v.TreeID != nil {
-		return *v.TreeID
-	}
-	return
-}
-
-// GetBranchID is an internal getter (TBD...)
-func (v *HistoryBranch) GetBranchID() (o string) {
-	if v != nil && v.BranchID != nil {
-		return *v.BranchID
-	}
-	return
-}
-
-// GetAncestors is an internal getter (TBD...)
-func (v *HistoryBranch) GetAncestors() (o []*HistoryBranchRange) {
-	if v != nil && v.Ancestors != nil {
-		return v.Ancestors
-	}
-	return
+	TreeID    string
+	BranchID  string
+	Ancestors []*HistoryBranchRange
 }
 
 // HistoryBranchRange is an internal type (TBD...)
 type HistoryBranchRange struct {
-	BranchID    *string `json:"branchID,omitempty"`
-	BeginNodeID *int64  `json:"beginNodeID,omitempty"`
-	EndNodeID   *int64  `json:"endNodeID,omitempty"`
-}
-
-// GetBranchID is an internal getter (TBD...)
-func (v *HistoryBranchRange) GetBranchID() (o string) {
-	if v != nil && v.BranchID != nil {
-		return *v.BranchID
-	}
-	return
-}
-
-// GetBeginNodeID is an internal getter (TBD...)
-func (v *HistoryBranchRange) GetBeginNodeID() (o int64) {
-	if v != nil && v.BeginNodeID != nil {
-		return *v.BeginNodeID
-	}
-	return
-}
-
-// GetEndNodeID is an internal getter (TBD...)
-func (v *HistoryBranchRange) GetEndNodeID() (o int64) {
-	if v != nil && v.EndNodeID != nil {
-		return *v.EndNodeID
-	}
-	return
+	BranchID    string
+	BeginNodeID int64
+	EndNodeID   int64
 }
 
 // HistoryEvent is an internal type (TBD...)

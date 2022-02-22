@@ -4297,12 +4297,9 @@ func FromExternalExecutionInfoFields(we *types.WorkflowExecution, initiatedID *i
 	if we == nil && initiatedID == nil {
 		return nil
 	}
-	if we == nil || initiatedID == nil {
-		panic("either all or none external execution info fields must be set")
-	}
 	return &apiv1.ExternalExecutionInfo{
 		WorkflowExecution: FromWorkflowExecution(we),
-		InitiatedId:       *initiatedID,
+		InitiatedId:       common.Int64Default(initiatedID), // TODO: we need to figure out whetherrr this field is needed or not
 	}
 }
 

@@ -1642,10 +1642,10 @@ func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID i
 	attributes.TaskList = scheduleAttributes.TaskList
 	attributes.Input = scheduleAttributes.Input
 	attributes.Header = scheduleAttributes.Header
-	attributes.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToCloseTimeoutSeconds)
-	attributes.ScheduleToStartTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.ScheduleToStartTimeoutSeconds)
-	attributes.StartToCloseTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.StartToCloseTimeoutSeconds)
-	attributes.HeartbeatTimeoutSeconds = common.Int32Ptr(*scheduleAttributes.HeartbeatTimeoutSeconds)
+	attributes.ScheduleToCloseTimeoutSeconds = scheduleAttributes.ScheduleToCloseTimeoutSeconds
+	attributes.ScheduleToStartTimeoutSeconds = scheduleAttributes.ScheduleToStartTimeoutSeconds
+	attributes.StartToCloseTimeoutSeconds = scheduleAttributes.StartToCloseTimeoutSeconds
+	attributes.HeartbeatTimeoutSeconds = scheduleAttributes.HeartbeatTimeoutSeconds
 	attributes.DecisionTaskCompletedEventID = decisionTaskCompletedEventID
 	historyEvent.ActivityTaskScheduledEventAttributes = attributes
 

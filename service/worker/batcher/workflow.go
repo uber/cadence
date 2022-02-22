@@ -53,7 +53,6 @@ const (
 	batchActivityName = "cadence-sys-batch-activity"
 	// InfiniteDuration is a long duration(20 yrs) we used for infinite workflow running
 	InfiniteDuration = 20 * 365 * 24 * time.Hour
-	pageSize         = 1000
 
 	_nonRetriableReason = "non-retriable-error"
 
@@ -61,6 +60,8 @@ const (
 	DefaultRPS = 50
 	// DefaultConcurrency is the default concurrency
 	DefaultConcurrency = 5
+	// DefaultPageSize is the default page size
+	DefaultPageSize = 1000
 	// DefaultAttemptsOnRetryableError is the default value for AttemptsOnRetryableError
 	DefaultAttemptsOnRetryableError = 50
 	// DefaultActivityHeartBeatTimeout is the default value for ActivityHeartBeatTimeout
@@ -135,6 +136,8 @@ type (
 		RPS int
 		// Number of goroutines running in parallel to process
 		Concurrency int
+		// Number of workflows processed in a batch
+		PageSize int
 		// Number of attempts for each workflow to process in case of retryable error before giving up
 		AttemptsOnRetryableError int
 		// timeout for activity heartbeat
@@ -237,6 +240,9 @@ func setDefaultParams(params BatchParams) BatchParams {
 	if params.Concurrency <= 0 {
 		params.Concurrency = DefaultConcurrency
 	}
+	if params.PageSize <= 0 {
+		params.PageSize = DefaultPageSize
+	}
 	if params.AttemptsOnRetryableError <= 0 {
 		params.AttemptsOnRetryableError = DefaultAttemptsOnRetryableError
 	}
@@ -298,8 +304,8 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		hbd.TotalEstimate = resp.GetCount()
 	}
 	rateLimiter := rate.NewLimiter(rate.Limit(batchParams.RPS), batchParams.RPS)
-	taskCh := make(chan taskDetail, pageSize)
-	respCh := make(chan error, pageSize)
+	taskCh := make(chan taskDetail, batchParams.PageSize)
+	respCh := make(chan error, batchParams.PageSize)
 	for i := 0; i < batchParams.Concurrency; i++ {
 		go startTaskProcessor(ctx, batchParams, domainID, taskCh, respCh, rateLimiter, client, adminClient)
 	}
@@ -310,7 +316,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 		//  And we can't use list API because terminate / reset will mutate the result.
 		resp, err := client.ScanWorkflowExecutions(ctx, &types.ListWorkflowExecutionsRequest{
 			Domain:        batchParams.DomainName,
-			PageSize:      int32(pageSize),
+			PageSize:      int32(batchParams.PageSize),
 			NextPageToken: hbd.PageToken,
 			Query:         batchParams.Query,
 		})

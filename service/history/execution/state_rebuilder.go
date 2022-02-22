@@ -114,7 +114,6 @@ func (r *stateRebuilderImpl) Rebuild(
 
 	iter := collection.NewPagingIterator(r.getPaginationFn(
 		ctx,
-		baseWorkflowIdentifier,
 		common.FirstEventID,
 		baseLastEventID+1,
 		baseBranchToken,
@@ -239,7 +238,6 @@ func (r *stateRebuilderImpl) applyEvents(
 
 func (r *stateRebuilderImpl) getPaginationFn(
 	ctx context.Context,
-	workflowIdentifier definition.WorkflowIdentifier,
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,

@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/types"
@@ -271,7 +270,6 @@ Loop:
 				ForceCreateNewDecisionTask: forceCreateNewDecision,
 				QueryResults:               getQueryResults(response.GetQueries(), queryResult),
 			},
-			client.GetDefaultCLIYarpcCallOptions()...,
 		)
 
 		return false, newTask, err
@@ -328,7 +326,6 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 			ReturnNewDecisionTask:      true,
 			ForceCreateNewDecisionTask: true,
 		},
-		client.GetDefaultCLIYarpcCallOptions()...,
 	)
 
 	return newTask, err

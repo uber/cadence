@@ -25,7 +25,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -136,7 +135,7 @@ var storeTypes = []storeType{
 // given configuration. In addition, all objects will emit metrics automatically
 func NewFactory(
 	cfg *config.Persistence,
-	persistenceMaxQPS dynamicconfig.IntPropertyFn,
+	persistenceMaxQPS quotas.RPSFunc,
 	clusterName string,
 	metricsClient metrics.Client,
 	logger log.Logger,
@@ -307,11 +306,7 @@ func newESVisibilityManager(
 
 	// wrap with rate limiter
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
-		esRateLimiter := quotas.NewDynamicRateLimiter(
-			func() float64 {
-				return float64(visibilityConfig.PersistenceMaxQPS())
-			},
-		)
+		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
 		visibilityFromES = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromES, esRateLimiter, log)
 	}
 	if metricsClient != nil {
@@ -481,11 +476,11 @@ func getSQLParser(logger log.Logger, encodingType common.EncodingType, decodingT
 	return parser
 }
 
-func buildRatelimiters(cfg *config.Persistence, maxQPS dynamicconfig.IntPropertyFn) map[string]quotas.Limiter {
+func buildRatelimiters(cfg *config.Persistence, maxQPS quotas.RPSFunc) map[string]quotas.Limiter {
 	result := make(map[string]quotas.Limiter, len(cfg.DataStores))
 	for dsName := range cfg.DataStores {
 		if maxQPS != nil && maxQPS() > 0 {
-			result[dsName] = quotas.NewDynamicRateLimiter(func() float64 { return float64(maxQPS()) })
+			result[dsName] = quotas.NewDynamicRateLimiter(maxQPS)
 		}
 	}
 	return result

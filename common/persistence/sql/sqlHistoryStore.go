@@ -83,8 +83,8 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 	}
 
 	nodeRow := &sqlplugin.HistoryNodeRow{
-		TreeID:       serialization.MustParseUUID(branchInfo.GetTreeID()),
-		BranchID:     serialization.MustParseUUID(branchInfo.GetBranchID()),
+		TreeID:       serialization.MustParseUUID(branchInfo.TreeID),
+		BranchID:     serialization.MustParseUUID(branchInfo.BranchID),
 		NodeID:       request.NodeID,
 		TxnID:        &request.TransactionID,
 		Data:         request.Events.Data,
@@ -111,13 +111,13 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 
 		treeRow := &sqlplugin.HistoryTreeRow{
 			ShardID:      request.ShardID,
-			TreeID:       serialization.MustParseUUID(branchInfo.GetTreeID()),
-			BranchID:     serialization.MustParseUUID(branchInfo.GetBranchID()),
+			TreeID:       serialization.MustParseUUID(branchInfo.TreeID),
+			BranchID:     serialization.MustParseUUID(branchInfo.BranchID),
 			Data:         blob.Data,
 			DataEncoding: string(blob.Encoding),
 		}
 
-		treeUUID := serialization.MustParseUUID(branchInfo.GetTreeID())
+		treeUUID := serialization.MustParseUUID(branchInfo.TreeID)
 		dbShardID := sqlplugin.GetDBShardIDFromTreeID(treeUUID, m.db.GetTotalNumDBShards())
 		return m.txExecute(ctx, dbShardID, "AppendHistoryNodes", func(tx sqlplugin.Tx) error {
 			result, err := tx.InsertIntoHistoryNode(ctx, nodeRow)
@@ -309,18 +309,18 @@ func (m *sqlHistoryStore) ForkHistoryBranch(
 ) (*p.InternalForkHistoryBranchResponse, error) {
 
 	forkB := request.ForkBranchInfo
-	treeID := *forkB.TreeID
+	treeID := forkB.TreeID
 	newAncestors := make([]*types.HistoryBranchRange, 0, len(forkB.Ancestors)+1)
 
 	beginNodeID := persistenceutils.GetBeginNodeID(forkB)
 	if beginNodeID >= request.ForkNodeID {
 		// this is the case that new branch's ancestors doesn't include the forking branch
 		for _, br := range forkB.Ancestors {
-			if *br.EndNodeID >= request.ForkNodeID {
+			if br.EndNodeID >= request.ForkNodeID {
 				newAncestors = append(newAncestors, &types.HistoryBranchRange{
 					BranchID:    br.BranchID,
 					BeginNodeID: br.BeginNodeID,
-					EndNodeID:   common.Int64Ptr(request.ForkNodeID),
+					EndNodeID:   request.ForkNodeID,
 				})
 				break
 			} else {
@@ -332,15 +332,15 @@ func (m *sqlHistoryStore) ForkHistoryBranch(
 		newAncestors = forkB.Ancestors
 		newAncestors = append(newAncestors, &types.HistoryBranchRange{
 			BranchID:    forkB.BranchID,
-			BeginNodeID: common.Int64Ptr(beginNodeID),
-			EndNodeID:   common.Int64Ptr(request.ForkNodeID),
+			BeginNodeID: beginNodeID,
+			EndNodeID:   request.ForkNodeID,
 		})
 	}
 
 	resp := &p.InternalForkHistoryBranchResponse{
 		NewBranchInfo: types.HistoryBranch{
-			TreeID:    &treeID,
-			BranchID:  &request.NewBranchID,
+			TreeID:    treeID,
+			BranchID:  request.NewBranchID,
 			Ancestors: newAncestors,
 		}}
 
@@ -383,12 +383,12 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 ) error {
 
 	branch := request.BranchInfo
-	treeID := *branch.TreeID
+	treeID := branch.TreeID
 	brsToDelete := branch.Ancestors
 	beginNodeID := persistenceutils.GetBeginNodeID(branch)
 	brsToDelete = append(brsToDelete, &types.HistoryBranchRange{
 		BranchID:    branch.BranchID,
-		BeginNodeID: common.Int64Ptr(beginNodeID),
+		BeginNodeID: beginNodeID,
 	})
 
 	rsp, err := m.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
@@ -405,7 +405,7 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 	treeUUID := serialization.MustParseUUID(treeID)
 	dbShardID := sqlplugin.GetDBShardIDFromTreeID(treeUUID, m.db.GetTotalNumDBShards())
 	return m.txExecute(ctx, dbShardID, "DeleteHistoryBranch", func(tx sqlplugin.Tx) error {
-		branchID := serialization.MustParseUUID(*branch.BranchID)
+		branchID := serialization.MustParseUUID(branch.BranchID)
 		treeFilter := &sqlplugin.HistoryTreeFilter{
 			TreeID:   treeUUID,
 			BranchID: &branchID,
@@ -420,10 +420,10 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 		// for each branch range to delete, we iterate from bottom to up, and delete up to the point according to validBRsEndNode
 		for i := len(brsToDelete) - 1; i >= 0; i-- {
 			br := brsToDelete[i]
-			maxReferredEndNodeID, ok := validBRsMaxEndNode[*br.BranchID]
+			maxReferredEndNodeID, ok := validBRsMaxEndNode[br.BranchID]
 			nodeFilter := &sqlplugin.HistoryNodeFilter{
 				TreeID:   serialization.MustParseUUID(treeID),
-				BranchID: serialization.MustParseUUID(*br.BranchID),
+				BranchID: serialization.MustParseUUID(br.BranchID),
 				ShardID:  request.ShardID,
 				PageSize: _defaultHistoryNodeDeleteBatch,
 			}
@@ -434,7 +434,7 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 				done = true
 			} else {
 				// No any branch is using this range, we can delete all of it
-				nodeFilter.MinNodeID = br.BeginNodeID
+				nodeFilter.MinNodeID = &br.BeginNodeID
 			}
 			for {
 				result, err := tx.DeleteFromHistoryNode(ctx, nodeFilter)
@@ -541,8 +541,8 @@ func (m *sqlHistoryStore) GetHistoryTree(
 			return nil, err
 		}
 		br := &types.HistoryBranch{
-			TreeID:    &request.TreeID,
-			BranchID:  common.StringPtr(row.BranchID.String()),
+			TreeID:    request.TreeID,
+			BranchID:  row.BranchID.String(),
 			Ancestors: treeInfo.Ancestors,
 		}
 		branches = append(branches, br)

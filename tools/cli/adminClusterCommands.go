@@ -21,17 +21,16 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/fatih/color"
+	"github.com/pborman/uuid"
 	"github.com/urfave/cli"
-	cclient "go.uber.org/cadence/client"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/service/worker/failovermanager"
 
-	cc "github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -61,7 +60,7 @@ func AdminAddSearchAttribute(c *cli.Context) {
 		SecurityToken: c.String(FlagSecurityToken),
 	}
 
-	err := adminClient.AddSearchAttribute(ctx, request, cc.GetDefaultCLIYarpcCallOptions()...)
+	err := adminClient.AddSearchAttribute(ctx, request)
 	if err != nil {
 		ErrorAndExit("Add search attribute failed.", err)
 	}
@@ -87,27 +86,46 @@ func AdminRebalanceStart(c *cli.Context) {
 	tcCtx, cancel := newContext(c)
 	defer cancel()
 
-	options := cclient.StartWorkflowOptions{
-		ID:                           failovermanager.RebalanceWorkflowID,
-		WorkflowIDReusePolicy:        cclient.WorkflowIDReusePolicyAllowDuplicate,
-		TaskList:                     failovermanager.TaskListName,
-		ExecutionStartToCloseTimeout: time.Minute,
-		Memo: map[string]interface{}{
-			common.MemoKeyForOperator: getOperator(),
-		},
-	}
-
+	workflowID := failovermanager.RebalanceWorkflowID
 	rbParams := &failovermanager.RebalanceParams{
 		BatchFailoverSize:              100,
 		BatchFailoverWaitTimeInSeconds: 10,
 	}
-	wf, err := client.StartWorkflow(tcCtx, options, failovermanager.RebalanceWorkflowTypeName, rbParams)
+	input, err := json.Marshal(rbParams)
+	if err != nil {
+		ErrorAndExit("Failed to serialize params for failover workflow", err)
+	}
+	memo, err := getWorkflowMemo(map[string]interface{}{
+		common.MemoKeyForOperator: getOperator(),
+	})
+	if err != nil {
+		ErrorAndExit("Failed to serialize memo", err)
+	}
+	request := &types.StartWorkflowExecutionRequest{
+		Domain:                              common.SystemLocalDomainName,
+		WorkflowID:                          workflowID,
+		RequestID:                           uuid.New(),
+		Identity:                            getCliIdentity(),
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyAllowDuplicate.Ptr(),
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(60),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(int32(defaultDecisionTimeoutInSeconds)),
+		Input:                               input,
+		TaskList: &types.TaskList{
+			Name: failovermanager.TaskListName,
+		},
+		Memo: memo,
+		WorkflowType: &types.WorkflowType{
+			Name: failovermanager.RebalanceWorkflowTypeName,
+		},
+	}
+
+	resp, err := client.StartWorkflowExecution(tcCtx, request)
 	if err != nil {
 		ErrorAndExit("Failed to start failover workflow", err)
 	}
 	fmt.Println("Rebalance workflow started")
-	fmt.Println("wid: " + wf.ID)
-	fmt.Println("rid: " + wf.RunID)
+	fmt.Println("wid: " + workflowID)
+	fmt.Println("rid: " + resp.GetRunID())
 }
 
 func AdminRebalanceList(c *cli.Context) {

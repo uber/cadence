@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,47 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package host
+package quotas
 
 import (
-	"github.com/dgryski/go-farm"
+	"math"
 
 	"github.com/uber/cadence/common/membership"
 )
 
-type simpleHashring struct {
-	hosts    []membership.HostInfo
-	hashfunc func([]byte) uint32
-}
-
-// newSimpleHashring returns a service resolver that maintains static mapping
-// between services and host info
-func newSimpleHashring(hosts []string) *simpleHashring {
-	hostInfos := make([]membership.HostInfo, 0, len(hosts))
-	for _, host := range hosts {
-		hostInfos = append(hostInfos, membership.NewHostInfo(host))
+// PerMember allows creating per instance RPS based on globalRPS averaged by member count for a given service.
+// If member count can not be retrieved or globalRPS is not provided it falls back to instanceRPS.
+func PerMember(service string, globalRPS, instanceRPS float64, resolver membership.Resolver) float64 {
+	if globalRPS <= 0 {
+		return instanceRPS
 	}
-	return &simpleHashring{hostInfos, farm.Fingerprint32}
+
+	memberCount, err := resolver.MemberCount(service)
+	if err != nil || memberCount < 1 {
+		return instanceRPS
+	}
+
+	avgQuota := math.Max(globalRPS/float64(memberCount), 1)
+	return math.Min(avgQuota, instanceRPS)
 }
 
-func (s *simpleHashring) Lookup(key string) (membership.HostInfo, error) {
-	hash := int(s.hashfunc([]byte(key)))
-	idx := hash % len(s.hosts)
-	return s.hosts[idx], nil
-}
-
-func (s *simpleHashring) AddListener(name string, notifyChannel chan<- *membership.ChangedEvent) error {
-	return nil
-}
-
-func (s *simpleHashring) RemoveListener(name string) error {
-	return nil
-}
-
-func (s *simpleHashring) MemberCount() int {
-	return len(s.hosts)
-}
-
-func (s *simpleHashring) Members() []membership.HostInfo {
-	return s.hosts
+// PerMemberDynamic is a dynamic variant (using RPSFunc) of PerMember
+func PerMemberDynamic(service string, globalRPS, instanceRPS RPSFunc, resolver membership.Resolver) RPSFunc {
+	return func() float64 { return PerMember(service, globalRPS(), instanceRPS(), resolver) }
 }

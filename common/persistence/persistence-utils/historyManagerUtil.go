@@ -86,7 +86,7 @@ func GetBeginNodeID(bi types.HistoryBranch) int64 {
 		return 1
 	}
 	idx := len(bi.Ancestors) - 1
-	return *bi.Ancestors[idx].EndNodeID
+	return bi.Ancestors[idx].EndNodeID
 }
 
 // PaginateHistory return paged history
@@ -146,9 +146,9 @@ func GetBranchesMaxReferredNodeIDs(branches []*types.HistoryBranch) map[string]i
 	validBRsMaxEndNode := map[string]int64{}
 	for _, b := range branches {
 		for _, br := range b.Ancestors {
-			curr, ok := validBRsMaxEndNode[*br.BranchID]
-			if !ok || curr < *br.EndNodeID {
-				validBRsMaxEndNode[*br.BranchID] = *br.EndNodeID
+			curr, ok := validBRsMaxEndNode[br.BranchID]
+			if !ok || curr < br.EndNodeID {
+				validBRsMaxEndNode[br.BranchID] = br.EndNodeID
 			}
 		}
 	}

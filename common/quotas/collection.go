@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,36 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package cli
+package quotas
 
-import (
-	"os"
-	"sort"
+import "sync"
 
-	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
-)
+// Collection stores a map of limiters by key
+type Collection struct {
+	mu       sync.RWMutex
+	factory  func(string) Limiter
+	limiters map[string]Limiter
+}
 
-// GetSearchAttributes get valid search attributes
-func GetSearchAttributes(c *cli.Context) {
-	wfClient := getWorkflowClient(c)
-	ctx, cancel := newContext(c)
-	defer cancel()
+// NewCollection create a new limiter collection.
+// Given factory is called to create new individual limiter.
+func NewCollection(factory func(string) Limiter) *Collection {
+	return &Collection{
+		factory:  factory,
+		limiters: make(map[string]Limiter),
+	}
+}
 
-	resp, err := wfClient.GetSearchAttributes(ctx)
-	if err != nil {
-		ErrorAndExit("Failed to get search attributes.", err)
+// For retrieves limiter by a given key.
+// If limiter for such key does not exists, it creates new one with via factory.
+func (c *Collection) For(key string) Limiter {
+	c.mu.RLock()
+	limiter, ok := c.limiters[key]
+	c.mu.RUnlock()
+
+	if !ok {
+		// create a new limiter
+		newLimiter := c.factory(key)
+
+		// verify that it is needed and add to map
+		c.mu.Lock()
+		limiter, ok = c.limiters[key]
+		if !ok {
+			c.limiters[key] = newLimiter
+			limiter = newLimiter
+		}
+		c.mu.Unlock()
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	header := []string{"Key", "Value type"}
-	table.SetHeader(header)
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-	rows := [][]string{}
-	for k, v := range resp.Keys {
-		rows = append(rows, []string{k, v.String()})
-	}
-	sort.Sort(byKey(rows))
-	table.AppendBulk(rows)
-	table.Render()
+	return limiter
 }
