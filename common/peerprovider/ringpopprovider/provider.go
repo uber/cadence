@@ -50,7 +50,6 @@ type (
 		ringpop     *ringpop.Ringpop
 		bootParams  *swim.BootstrapOptions
 		logger      log.Logger
-		channel     tchannel.Channel
 		portmap     membership.PortMap
 		mu          sync.RWMutex
 		subscribers map[string]chan<- *membership.ChangedEvent
@@ -91,7 +90,7 @@ func New(
 		return nil, fmt.Errorf("ringpop instance creation: %w", err)
 	}
 
-	return NewRingpopProvider(service, rp, portMap, bootstrapOpts, channel, logger), nil
+	return NewRingpopProvider(service, rp, portMap, bootstrapOpts, logger), nil
 }
 
 // NewRingpopProvider sets up ringpop based peer provider
@@ -100,7 +99,6 @@ func NewRingpopProvider(
 	rp *ringpop.Ringpop,
 	portMap membership.PortMap,
 	bootstrapOpts *swim.BootstrapOptions,
-	channel tchannel.Channel,
 	logger log.Logger,
 ) *Provider {
 	return &Provider{
@@ -108,7 +106,6 @@ func NewRingpopProvider(
 		status:      common.DaemonStatusInitialized,
 		bootParams:  bootstrapOpts,
 		logger:      logger,
-		channel:     channel,
 		portmap:     portMap,
 		ringpop:     rp,
 		subscribers: map[string]chan<- *membership.ChangedEvent{},
