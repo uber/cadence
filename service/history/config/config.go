@@ -230,9 +230,13 @@ type Config struct {
 	NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
 
 	// Archival settings
-	NumArchiveSystemWorkflows       dynamicconfig.IntPropertyFn
-	ArchiveRequestRPS               dynamicconfig.IntPropertyFn
-	AllowArchivingIncompleteHistory dynamicconfig.BoolPropertyFn
+	NumArchiveSystemWorkflows        dynamicconfig.IntPropertyFn
+	ArchiveRequestRPS                dynamicconfig.IntPropertyFn
+	ArchiveInlineHistoryRPS          dynamicconfig.IntPropertyFn
+	ArchiveInlineHistoryGlobalRPS    dynamicconfig.IntPropertyFn
+	ArchiveInlineVisibilityRPS       dynamicconfig.IntPropertyFn
+	ArchiveInlineVisibilityGlobalRPS dynamicconfig.IntPropertyFn
+	AllowArchivingIncompleteHistory  dynamicconfig.BoolPropertyFn
 
 	// Size limit related settings
 	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
@@ -503,9 +507,13 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableParentClosePolicyWorker:       dc.GetBoolProperty(dynamicconfig.EnableParentClosePolicyWorker, true),
 		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold, 10),
 
-		NumArchiveSystemWorkflows:       dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
-		ArchiveRequestRPS:               dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
-		AllowArchivingIncompleteHistory: dc.GetBoolProperty(dynamicconfig.AllowArchivingIncompleteHistory, false),
+		NumArchiveSystemWorkflows:        dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows, 1000),
+		ArchiveRequestRPS:                dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS, 300), // should be much smaller than frontend RPS
+		ArchiveInlineHistoryRPS:          dc.GetIntProperty(dynamicconfig.ArchiveInlineHistoryRPS, 1000),
+		ArchiveInlineHistoryGlobalRPS:    dc.GetIntProperty(dynamicconfig.ArchiveInlineHistoryGlobalRPS, 10000),
+		ArchiveInlineVisibilityRPS:       dc.GetIntProperty(dynamicconfig.ArchiveInlineVisibilityRPS, 1000),
+		ArchiveInlineVisibilityGlobalRPS: dc.GetIntProperty(dynamicconfig.ArchiveInlineVisibilityGlobalRPS, 10000),
+		AllowArchivingIncompleteHistory:  dc.GetBoolProperty(dynamicconfig.AllowArchivingIncompleteHistory, false),
 
 		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError, 2*1024*1024),
 		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn, 512*1024),
