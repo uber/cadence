@@ -1613,12 +1613,12 @@ func (s *IntegrationSuite) TestRateLimitBufferedEvents() {
 			// Buffered Signals
 			for i := 0; i < 100; i++ {
 				buf := new(bytes.Buffer)
-				binary.Write(buf, binary.LittleEndian, i)
+				binary.Write(buf, binary.LittleEndian, int32(i))
 				s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 			}
 
 			buf := new(bytes.Buffer)
-			binary.Write(buf, binary.LittleEndian, 101)
+			binary.Write(buf, binary.LittleEndian, int32(101))
 			signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
 			s.Nil(signalErr)
 
@@ -3256,7 +3256,7 @@ func (s *IntegrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 
 	// Send one signal to create a new decision
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, 0)
+	binary.Write(buf, binary.LittleEndian, int32(0))
 	s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 
 	// Drop decision to cause all events to be buffered from now on
@@ -3267,13 +3267,13 @@ func (s *IntegrationSuite) TestTaskProcessingProtectionForRateLimitError() {
 	// Buffered 100 Signals
 	for i := 1; i < 101; i++ {
 		buf := new(bytes.Buffer)
-		binary.Write(buf, binary.LittleEndian, i)
+		binary.Write(buf, binary.LittleEndian, int32(i))
 		s.Nil(s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity))
 	}
 
 	// 101 signal, which will fail the decision
 	buf = new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, 101)
+	binary.Write(buf, binary.LittleEndian, int32(101))
 	signalErr := s.sendSignal(s.domainName, workflowExecution, "SignalName", buf.Bytes(), identity)
 	s.Nil(signalErr)
 
