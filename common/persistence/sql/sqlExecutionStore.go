@@ -610,17 +610,108 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
-
+	recoverPanic := func(err *error) {
+		if r := recover(); r != nil {
+			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
+		}
+	}
 	domainID := serialization.MustParseUUID(request.DomainID)
 	runID := serialization.MustParseUUID(request.RunID)
-	_, err := m.db.DeleteFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
-		ShardID:    m.shardID,
-		DomainID:   domainID,
-		WorkflowID: request.WorkflowID,
-		RunID:      runID,
+	wfID := request.WorkflowID
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
+			ShardID:    m.shardID,
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
 	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
+			ShardID:    int64(m.shardID),
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
+			ShardID:    int64(m.shardID),
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
+			ShardID:    int64(m.shardID),
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
+			ShardID:    int64(m.shardID),
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
+			ShardID:    int64(m.shardID),
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
+			ShardID:    m.shardID,
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		_, e = m.db.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
+			ShardID:    int64(m.shardID),
+			DomainID:   domainID,
+			WorkflowID: wfID,
+			RunID:      runID,
+		})
+		return e
+	})
+	err := g.Wait()
 	if err != nil {
-		return convertCommonErrors(m.db, "DeleteWorkflowExecution", "", err)
+		return &types.InternalServiceError{
+			Message: fmt.Sprintf("DeleteWorkflowExecution: failed. Error: %v", err),
+		}
 	}
 	return nil
 }
