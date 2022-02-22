@@ -307,7 +307,7 @@ func (db *cdb) UpdateTaskListWithTTL(
 // Noop if TTL is already implemented in other methods
 func (db *cdb) ListTaskList(ctx context.Context, pageSize int, nextPageToken []byte) (*nosqlplugin.ListTaskListResult, error) {
 	return nil, &types.InternalServiceError{
-		Message: fmt.Sprintf("unsupported operation"),
+		Message: "unsupported operation",
 	}
 }
 

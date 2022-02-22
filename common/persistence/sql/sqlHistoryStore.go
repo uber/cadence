@@ -78,7 +78,7 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 
 	if request.NodeID < beginNodeID {
 		return &p.InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("cannot append to ancestors' nodes"),
+			Msg: "cannot append to ancestors' nodes",
 		}
 	}
 
@@ -217,7 +217,7 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 			//  -> batch with higher transaction ID is valid
 			if row.NodeID < lastNodeID {
 				return nil, &types.InternalDataInconsistencyError{
-					Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
+					Message: "corrupted data, nodeID cannot decrease",
 				}
 			} else if row.NodeID > lastNodeID {
 				// update lastNodeID so that our pagination can make progress in the corner case that
@@ -231,11 +231,11 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 		switch {
 		case row.NodeID < lastNodeID:
 			return nil, &types.InternalDataInconsistencyError{
-				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
+				Message: "corrupted data, nodeID cannot decrease",
 			}
 		case row.NodeID == lastNodeID:
 			return nil, &types.InternalDataInconsistencyError{
-				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
+				Message: "corrupted data, same nodeID must have smaller txnID",
 			}
 		default: // row.NodeID > lastNodeID:
 			// NOTE: when row.nodeID > lastNodeID, we expect the one with largest txnID comes first

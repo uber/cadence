@@ -238,7 +238,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 
 			if domainID != newDomainID {
 				return &types.InternalServiceError{
-					Message: fmt.Sprintf("UpdateWorkflowExecution: cannot continue as new to another domain"),
+					Message: "UpdateWorkflowExecution: cannot continue as new to another domain",
 				}
 			}
 

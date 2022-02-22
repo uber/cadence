@@ -570,7 +570,7 @@ func (s *MatchingPersistenceSuite) TestGetOrphanTasks() {
 	existingOrphans := len(oresp.Tasks)
 
 	domainID := uuid.New()
-	name := fmt.Sprintf("test-list-with-orphans")
+	name := "test-list-with-orphans"
 	resp, err := s.TaskMgr.LeaseTaskList(ctx, &p.LeaseTaskListRequest{
 		DomainID:     domainID,
 		TaskList:     name,

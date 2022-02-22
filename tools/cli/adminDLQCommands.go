@@ -107,7 +107,7 @@ func AdminGetDLQMessages(c *cli.Context) {
 	}
 
 	if showRawTask {
-		_, err := outputFile.WriteString(fmt.Sprintf("#### REPLICATION DLQ RAW TASKS INFO ####\n"))
+		_, err := outputFile.WriteString("#### REPLICATION DLQ RAW TASKS INFO ####\n")
 		if err != nil {
 			ErrorAndExit("fail to print dlq raw tasks.", err)
 		}

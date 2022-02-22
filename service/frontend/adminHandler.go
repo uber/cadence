@@ -198,7 +198,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 		return adh.error(&types.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
 	}
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		return adh.error(&types.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}, scope)
+		return adh.error(&types.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"}, scope)
 	}
 
 	searchAttr := request.GetSearchAttribute()

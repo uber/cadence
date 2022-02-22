@@ -69,7 +69,7 @@ func updateMetadata(ctx context.Context, tx sqlplugin.Tx, oldNotificationVersion
 		}
 	} else if rowsAffected != 1 {
 		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Failed to update domain metadata. <>1 rows affected."),
+			Message: "Failed to update domain metadata. <>1 rows affected.",
 		}
 	}
 

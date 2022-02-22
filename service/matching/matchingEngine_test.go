@@ -521,7 +521,7 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 		s.NoError(err)
 		s.NotNil(result)
 		if len(result.TaskToken) == 0 {
-			s.logger.Debug(fmt.Sprintf("empty poll returned"))
+			s.logger.Debug("empty poll returned")
 			continue
 		}
 		s.EqualValues(activityID, result.ActivityID)
@@ -663,7 +663,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		if len(result.TaskToken) == 0 {
 			// when ratelimit is set to zero, poller is expected to return empty result
 			// reset ratelimit, poll again and make sure task is returned this time
-			s.logger.Debug(fmt.Sprintf("empty poll returned"))
+			s.logger.Debug("empty poll returned")
 			s.Equal(float64(0), maxDispatch)
 			maxDispatch = _defaultTaskDispatchRPS
 			wg.Add(1)
@@ -858,7 +858,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				s.NoError(err)
 				s.NotNil(result)
 				if len(result.TaskToken) == 0 {
-					s.logger.Debug(fmt.Sprintf("empty poll returned"))
+					s.logger.Debug("empty poll returned")
 					continue
 				}
 				s.EqualValues(activityID, result.ActivityID)
@@ -981,7 +981,7 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 				}
 				s.NotNil(result)
 				if len(result.TaskToken) == 0 {
-					s.logger.Debug(fmt.Sprintf("empty poll returned"))
+					s.logger.Debug("empty poll returned")
 					continue
 				}
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -1160,7 +1160,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 				}
 				s.NotNil(result)
 				if len(result.TaskToken) == 0 {
-					s.logger.Debug(fmt.Sprintf("empty poll returned"))
+					s.logger.Debug("empty poll returned")
 					continue
 				}
 				s.EqualValues(activityID, result.ActivityID)
@@ -1297,7 +1297,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 				}
 				s.NotNil(result)
 				if len(result.TaskToken) == 0 {
-					s.logger.Debug(fmt.Sprintf("empty poll returned"))
+					s.logger.Debug("empty poll returned")
 					continue
 				}
 				s.EqualValues(workflowExecution, *result.WorkflowExecution)
@@ -1470,7 +1470,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 		s.NoError(err)
 		s.NotNil(result)
 		if len(result.TaskToken) == 0 {
-			s.logger.Debug(fmt.Sprintf("empty poll returned"))
+			s.logger.Debug("empty poll returned")
 			continue
 		}
 	}

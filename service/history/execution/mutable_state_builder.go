@@ -1980,17 +1980,17 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 func (e *mutableStateBuilder) CheckResettable() error {
 	if len(e.GetPendingChildExecutionInfos()) > 0 {
 		return &types.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending child types."),
+			Message: "it is not allowed resetting to a point that workflow has pending child types.",
 		}
 	}
 	if len(e.GetPendingRequestCancelExternalInfos()) > 0 {
 		return &types.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending request cancel."),
+			Message: "it is not allowed resetting to a point that workflow has pending request cancel.",
 		}
 	}
 	if len(e.GetPendingSignalExternalInfos()) > 0 {
 		return &types.BadRequestError{
-			Message: fmt.Sprintf("it is not allowed resetting to a point that workflow has pending signals to send."),
+			Message: "it is not allowed resetting to a point that workflow has pending signals to send.",
 		}
 	}
 	return nil
