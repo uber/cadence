@@ -563,7 +563,7 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 	case replicationTask.GetHistoryTaskV2Attributes() != nil:
 		attr := replicationTask.GetHistoryTaskV2Attributes()
 		versionHistoryItems := attr.GetVersionHistoryItems()
-		if versionHistoryItems == nil || len(versionHistoryItems) == 0 {
+		if len(versionHistoryItems) == 0 {
 			return errors.New("failed to trigger data scan due to invalid version history")
 		}
 		// version history items in same batch should be the same

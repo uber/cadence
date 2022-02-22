@@ -887,7 +887,7 @@ type (
 
 // NewDataBlob returns a new DataBlob
 func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return nil
 	}
 	if encodingType != "thriftrw" && data[0] == 'Y' {
