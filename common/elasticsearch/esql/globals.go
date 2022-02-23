@@ -21,8 +21,6 @@
 package esql
 
 import (
-	"fmt"
-
 	"github.com/xwb1989/sqlparser"
 )
 
@@ -85,11 +83,3 @@ const (
 	TieBreakerOrder      = "desc"
 	StartTimeOrder       = "desc"
 )
-
-// DEBUG usage
-//nolint
-func print(v interface{}) {
-	fmt.Println("==============")
-	fmt.Println(v)
-	fmt.Println("==============")
-}

@@ -848,6 +848,7 @@ func (s *engine2Suite) createExecutionStartedState(we types.WorkflowExecution, t
 }
 
 //nolint:unused
+//lint:ignore U1000 for printing within tests
 func (s *engine2Suite) printHistory(builder execution.MutableState) string {
 	return thrift.FromHistory(builder.GetHistoryBuilder().GetHistory()).String()
 }

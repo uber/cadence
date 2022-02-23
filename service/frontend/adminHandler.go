@@ -56,8 +56,7 @@ const (
 )
 
 var (
-	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
-	errInvalidFilters     = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
+	errInvalidFilters = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
 )
 
 type (

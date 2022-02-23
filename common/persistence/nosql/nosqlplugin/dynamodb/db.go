@@ -40,7 +40,6 @@ var (
 
 // ddb represents a logical connection to DynamoDB database
 type ddb struct {
-	logger log.Logger
 }
 
 var _ nosqlplugin.DB = (*ddb)(nil)

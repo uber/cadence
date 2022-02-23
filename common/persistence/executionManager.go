@@ -994,17 +994,6 @@ func (m *executionManagerImpl) fromInternalReplicationTaskInfo(internalInfo *Int
 	}
 }
 
-func (m *executionManagerImpl) toInternalReplicationTaskInfos(infos []*ReplicationTaskInfo) []*InternalReplicationTaskInfo {
-	if infos == nil {
-		return nil
-	}
-	internalInfos := make([]*InternalReplicationTaskInfo, len(infos))
-	for i := 0; i < len(infos); i++ {
-		internalInfos[i] = m.toInternalReplicationTaskInfo(infos[i])
-	}
-	return internalInfos
-}
-
 func (m *executionManagerImpl) toInternalReplicationTaskInfo(info *ReplicationTaskInfo) *InternalReplicationTaskInfo {
 	if info == nil {
 		return nil

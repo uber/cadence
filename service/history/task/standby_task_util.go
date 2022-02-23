@@ -105,10 +105,6 @@ func standbyTimerTaskPostActionTaskDiscarded(
 
 type (
 	historyResendInfo struct {
-		// used by 2DC, since 2DC only has one branch
-		// TODO deprecate this nextEventID
-		nextEventID *int64
-
 		// used by NDC
 		lastEventID      *int64
 		lastEventVersion *int64

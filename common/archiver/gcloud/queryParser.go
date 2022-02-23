@@ -26,13 +26,11 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/xwb1989/sqlparser"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/types"
 )
 
 type (
@@ -233,21 +231,6 @@ func (p *queryParser) convertComparisonExpr(compExpr *sqlparser.ComparisonExpr, 
 	return nil
 }
 
-func (p *queryParser) convertCloseTime(timestamp int64, op string, parsedQuery *parsedQuery) error {
-	switch op {
-	case "=":
-		if err := p.convertCloseTime(timestamp, ">=", parsedQuery); err != nil {
-			return err
-		}
-		if err := p.convertCloseTime(timestamp, "<=", parsedQuery); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("operator %s is not supported for close time", op)
-	}
-	return nil
-}
-
 func convertToTimestamp(timeStr string) (int64, error) {
 	timestamp, err := strconv.ParseInt(timeStr, 10, 64)
 	if err == nil {
@@ -262,24 +245,6 @@ func convertToTimestamp(timeStr string) (int64, error) {
 		return 0, err
 	}
 	return parsedTime.UnixNano(), nil
-}
-
-func convertStatusStr(statusStr string) (types.WorkflowExecutionCloseStatus, error) {
-	statusStr = strings.ToLower(statusStr)
-	switch statusStr {
-	case "completed":
-		return types.WorkflowExecutionCloseStatusCompleted, nil
-	case "failed":
-		return types.WorkflowExecutionCloseStatusFailed, nil
-	case "canceled":
-		return types.WorkflowExecutionCloseStatusCanceled, nil
-	case "continuedasnew":
-		return types.WorkflowExecutionCloseStatusContinuedAsNew, nil
-	case "timedout":
-		return types.WorkflowExecutionCloseStatusTimedOut, nil
-	default:
-		return 0, fmt.Errorf("unknown workflow close status: %s", statusStr)
-	}
 }
 
 func extractStringValue(s string) (string, error) {

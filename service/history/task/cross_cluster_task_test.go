@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
-	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -55,7 +54,6 @@ type (
 
 		controller          *gomock.Controller
 		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
 		mockDomainCache     *cache.MockDomainCache
 		mockClusterMetadata *cluster.MockMetadata
 		mockExecutionMgr    *mocks.ExecutionManager

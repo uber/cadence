@@ -31,10 +31,6 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-const (
-	emptyMessageID = -1
-)
-
 type (
 	sqlQueueStore struct {
 		queueType persistence.QueueType

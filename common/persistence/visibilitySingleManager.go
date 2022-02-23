@@ -385,20 +385,6 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	return convertedExecution
 }
 
-func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(internalReq *InternalListWorkflowExecutionsRequest) *ListWorkflowExecutionsRequest {
-	if internalReq == nil {
-		return nil
-	}
-	return &ListWorkflowExecutionsRequest{
-		DomainUUID:    internalReq.DomainUUID,
-		Domain:        internalReq.Domain,
-		EarliestTime:  internalReq.EarliestTime.UnixNano(),
-		LatestTime:    internalReq.LatestTime.UnixNano(),
-		PageSize:      internalReq.PageSize,
-		NextPageToken: internalReq.NextPageToken,
-	}
-}
-
 func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *ListWorkflowExecutionsRequest) *InternalListWorkflowExecutionsRequest {
 	if req == nil {
 		return nil

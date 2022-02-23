@@ -27,7 +27,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"regexp"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
@@ -36,15 +35,10 @@ import (
 	"github.com/uber/cadence/common/config"
 )
 
-const (
-	bucketNameRegExpRaw = "^gs:\\/\\/[^:\\/\n?]+"
-)
-
 var (
 	// ErrBucketNotFound is non retriable error that is thrown when the bucket doesn't exist
 	ErrBucketNotFound = errors.New("bucket not found")
 	errObjectNotFound = errors.New("object not found")
-	bucketNameRegExp  = regexp.MustCompile(bucketNameRegExpRaw)
 )
 
 type (

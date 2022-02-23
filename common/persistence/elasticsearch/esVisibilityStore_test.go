@@ -68,7 +68,6 @@ var (
 	testLatestTime   = int64(2547596872371000000)
 	testWorkflowType = "test-wf-type"
 	testWorkflowID   = "test-wid"
-	testRunID        = "1601da05-4db9-4eeb-89e4-da99481bdfc9"
 	testCloseStatus  = int32(1)
 
 	testRequest = &p.InternalListWorkflowExecutionsRequest{
@@ -82,13 +81,6 @@ var (
 	errTestESSearch  = errors.New("ES error")
 
 	testContextTimeout = 5 * time.Second
-
-	filterOpen     = "must_not:map[exists:map[field:CloseStatus]]"
-	filterClose    = "map[exists:map[field:CloseStatus]]"
-	filterByType   = fmt.Sprintf("map[match:map[WorkflowType:map[query:%s]]]", testWorkflowType)
-	filterByWID    = fmt.Sprintf("map[match:map[WorkflowID:map[query:%s]]]", testWorkflowID)
-	filterByRunID  = fmt.Sprintf("map[match:map[RunID:map[query:%s]]]", testRunID)
-	filterByStatus = fmt.Sprintf("map[match:map[CloseStatus:map[query:%v]]]", testCloseStatus)
 
 	esIndexMaxResultWindow = 3
 )

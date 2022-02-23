@@ -73,13 +73,6 @@ type (
 		condition   func(...interface{}) bool
 		action      func()
 	}
-
-	// RevokeFunc is the condition inside edge
-	// The function used to check if the edge is accessible at a certain state
-	RevokeFunc struct {
-		methodName string        //nolint
-		input      []interface{} //nolint
-	}
 )
 
 // NewEventGenerator initials the event generator
@@ -354,12 +347,6 @@ func (g *EventGenerator) pickRandomVertex(
 		newConnection.GetAction()()
 	}
 	return endVertex.DeepCopy()
-}
-
-func (g *EventGenerator) shouldBumpVersion() bool {
-	// 1//1000 to bump the version
-	//return g.dice.Intn(1000) == 500
-	return false
 }
 
 // NewHistoryEventEdge initials a new edge between two HistoryEventVertexes
