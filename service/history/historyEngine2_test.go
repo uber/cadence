@@ -1493,7 +1493,7 @@ func (s *engine2Suite) TestNewChildContext() {
 	childCtx, childCancel = s.historyEngine.newChildContext(ctx)
 	deadline, ok := childCtx.Deadline()
 	s.True(ok)
-	s.True(deadline.Sub(time.Now()) < 10*time.Minute)
+	s.True(time.Until(deadline) < 10*time.Minute)
 }
 
 func (s *engine2Suite) getBuilder(domainID string, we types.WorkflowExecution) execution.MutableState {

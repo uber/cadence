@@ -158,7 +158,7 @@ func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryP
 
 	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
-	policy.SetExpirationInterval(deadline.Sub(time.Now()))
+	policy.SetExpirationInterval(time.Until(deadline))
 	return policy
 }
 

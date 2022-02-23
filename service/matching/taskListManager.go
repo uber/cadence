@@ -561,7 +561,7 @@ func (c *taskListManagerImpl) newChildContext(
 	if !ok {
 		return context.WithTimeout(parent, timeout)
 	}
-	remaining := deadline.Sub(time.Now()) - tailroom
+	remaining := time.Until(deadline) - tailroom
 	if remaining < timeout {
 		timeout = time.Duration(common.MaxInt64(0, int64(remaining)))
 	}
