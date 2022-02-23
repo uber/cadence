@@ -786,7 +786,7 @@ func (a *AccessControlledWorkflowHandler) RefreshWorkflowTasks(ctx context.Conte
 		return errUnauthorized
 	}
 
-	return a.RefreshWorkflowTasks(ctx, request)
+	return a.frontendHandler.RefreshWorkflowTasks(ctx, request)
 }
 
 // UpdateDomain API call
