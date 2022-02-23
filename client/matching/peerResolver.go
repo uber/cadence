@@ -29,22 +29,25 @@ import (
 // Those are deployed instances of Cadence matching services that participate in the cluster ring.
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 type PeerResolver struct {
-	resolver      membership.Resolver
-	addressMapper AddressMapperFn
+	resolver  membership.Resolver
+	namedPort string
+	service   string
 }
 
-type AddressMapperFn func(string) (string, error)
-
 // NewPeerResolver creates a new matching peer resolver.
-func NewPeerResolver(membership membership.Resolver, addressMapper AddressMapperFn) PeerResolver {
-	return PeerResolver{membership, addressMapper}
+func NewPeerResolver(membership membership.Resolver, namedPort string) PeerResolver {
+	return PeerResolver{
+		resolver:  membership,
+		namedPort: namedPort,
+		service:   service.Matching,
+	}
 }
 
 // FromTaskList resolves the matching peer responsible for the given task list name.
 // It uses our membership provider to lookup which instance currently owns the given task list.
 // FromHostAddress is used for further resolving.
 func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
-	host, err := pr.resolver.Lookup(service.Matching, taskListName)
+	host, err := pr.resolver.Lookup(pr.service, taskListName)
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +57,7 @@ func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
 
 // GetAllPeers returns all matching service peers in the cluster ring.
 func (pr PeerResolver) GetAllPeers() ([]string, error) {
-	hosts, err := pr.resolver.Members(service.Matching)
+	hosts, err := pr.resolver.Members(pr.service)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +76,9 @@ func (pr PeerResolver) GetAllPeers() ([]string, error) {
 // The address may be used as is, or processed with additional address mapper.
 // In case of gRPC transport, the port within the address is replaced with gRPC port.
 func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
-	if pr.addressMapper == nil {
-		return hostAddress, nil
+	host, err := pr.resolver.LookupByAddress(pr.service, hostAddress)
+	if err != nil {
+		return "", err
 	}
-	return pr.addressMapper(hostAddress)
+	return host.GetNamedAddress(pr.namedPort), nil
 }

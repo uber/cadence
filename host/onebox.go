@@ -787,10 +787,9 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string)
 	}
 
 	return rpc.NewFactory(c.logger, rpc.Params{
-		ServiceName:       serviceName,
-		TChannelAddress:   tchannelHostPort,
-		GRPCAddress:       grpcHostPort,
-		HostAddressMapper: &grpcPortResolver,
+		ServiceName:     serviceName,
+		TChannelAddress: tchannelHostPort,
+		GRPCAddress:     grpcHostPort,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &versionMiddleware{},
 		},

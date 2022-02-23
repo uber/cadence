@@ -39,15 +39,19 @@ type PortMap map[string]uint16
 
 // HostInfo is a type that contains the info about a cadence host
 type HostInfo struct {
-	addr     string // ip:port
+	addr     string // ip:port returned by peer provider
+	ip       string // @todo should we set this to net.IP ?
 	identity string
 	portMap  PortMap // ports host is listening to
 }
 
 // NewHostInfo creates a new HostInfo instance
 func NewHostInfo(addr string) HostInfo {
+	ip, _, _ := net.SplitHostPort(addr)
+	net.ParseIP(addr)
 	return HostInfo{
 		addr: addr,
+		ip:   ip,
 	}
 }
 
@@ -62,8 +66,11 @@ func (m PortMap) String() string {
 
 // NewDetailedHostInfo creates a new HostInfo instance with identity and portmap information
 func NewDetailedHostInfo(addr string, identity string, portMap PortMap) HostInfo {
+	ip, _, _ := net.SplitHostPort(addr)
+
 	return HostInfo{
 		addr:     addr,
+		ip:       ip,
 		identity: identity,
 		portMap:  portMap,
 	}
@@ -76,8 +83,11 @@ func (hi HostInfo) GetAddress() string {
 
 // GetNamedAddress returns the ip:port address
 func (hi HostInfo) GetNamedAddress(port string) string {
+	if port, set := hi.portMap[port]; set {
 
-	return hi.addr
+		return fmt.Sprintf("%s:%d", hi.ip, port)
+	}
+	return ""
 }
 
 // Belongs tells if ip:port is assigned to this member
@@ -91,11 +101,8 @@ func (hi HostInfo) Belongs(address string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	selfip, _, err := net.SplitHostPort(hi.addr)
-	if err != nil {
-		return false, err
-	}
-	if ip != selfip {
+
+	if ip != hi.ip {
 		return false, nil
 	}
 

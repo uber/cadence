@@ -35,11 +35,10 @@ import (
 
 // Params allows to configure rpc.Factory
 type Params struct {
-	ServiceName       string
-	TChannelAddress   string
-	GRPCAddress       string
-	GRPCMaxMsgSize    int
-	HostAddressMapper HostAddressMapper
+	ServiceName     string
+	TChannelAddress string
+	GRPCAddress     string
+	GRPCMaxMsgSize  int
 
 	InboundTLS  *tls.Config
 	OutboundTLS map[string]*tls.Config
@@ -86,11 +85,10 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 	}
 
 	return Params{
-		ServiceName:       serviceName,
-		TChannelAddress:   net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.Port))),
-		GRPCAddress:       net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.GRPCPort))),
-		GRPCMaxMsgSize:    serviceConfig.RPC.GRPCMaxMsgSize,
-		HostAddressMapper: NewGRPCPorts(config),
+		ServiceName:     serviceName,
+		TChannelAddress: net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.Port))),
+		GRPCAddress:     net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.GRPCPort))),
+		GRPCMaxMsgSize:  serviceConfig.RPC.GRPCMaxMsgSize,
 		OutboundsBuilder: CombineOutbounds(
 			NewDirectOutbound(service.History, enableGRPCOutbound, outboundTLS[service.History]),
 			NewDirectOutbound(service.Matching, enableGRPCOutbound, outboundTLS[service.Matching]),

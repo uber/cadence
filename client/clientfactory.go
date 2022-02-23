@@ -147,18 +147,16 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 	longPollTimeout time.Duration,
 ) (matching.Client, error) {
 	var rawClient matching.Client
-	var addressMapper matching.AddressMapperFn
+	var namedPort = membership.PortTchannel
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.Matching)
 	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = matching.NewGRPCClient(matchingv1.NewMatchingAPIYARPCClient(outboundConfig))
-		addressMapper = func(address string) (string, error) {
-			return cf.rpcFactory.ReplaceGRPCPort(service.Matching, address)
-		}
+		namedPort = membership.PortGRPC
 	} else {
 		rawClient = matching.NewThriftClient(matchingserviceclient.New(outboundConfig))
 	}
 
-	peerResolver := matching.NewPeerResolver(cf.resolver, addressMapper)
+	peerResolver := matching.NewPeerResolver(cf.resolver, namedPort)
 
 	client := matching.NewClient(
 		timeout,
