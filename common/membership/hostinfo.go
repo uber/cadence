@@ -24,6 +24,8 @@ package membership
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
 )
 
@@ -70,6 +72,39 @@ func NewDetailedHostInfo(addr string, identity string, portMap PortMap) HostInfo
 // GetAddress returns the ip:port address
 func (hi HostInfo) GetAddress() string {
 	return hi.addr
+}
+
+// GetNamedAddress returns the ip:port address
+func (hi HostInfo) GetNamedAddress(port string) string {
+
+	return hi.addr
+}
+
+// Belongs tells if ip:port is assigned to this member
+func (hi HostInfo) Belongs(address string) (bool, error) {
+
+	if hi.addr == address {
+		return true, nil
+	}
+
+	ip, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return false, err
+	}
+	selfip, _, err := net.SplitHostPort(hi.addr)
+	if err != nil {
+		return false, err
+	}
+	if ip != selfip {
+		return false, nil
+	}
+
+	for _, number := range hi.portMap {
+		if port == strconv.Itoa(int(number)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Identity implements ringpop's Membership interface

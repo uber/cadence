@@ -104,18 +104,16 @@ func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc)
 
 func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
 	var rawClient history.Client
-	var addressMapper history.AddressMapperFn
 	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
+	var namedPort = membership.PortTchannel
 	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
-		addressMapper = func(address string) (string, error) {
-			return cf.rpcFactory.ReplaceGRPCPort(service.History, address)
-		}
+		namedPort = membership.PortGRPC
 	} else {
 		rawClient = history.NewThriftClient(historyserviceclient.New(outboundConfig))
 	}
 
-	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, addressMapper)
+	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
 	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)

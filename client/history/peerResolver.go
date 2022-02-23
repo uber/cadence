@@ -32,17 +32,15 @@ import (
 type PeerResolver struct {
 	numberOfShards int
 	resolver       membership.Resolver
-	addressMapper  AddressMapperFn
+	namedPort      string
 }
 
-type AddressMapperFn func(string) (string, error)
-
 // NewPeerResolver creates a new history peer resolver.
-func NewPeerResolver(numberOfShards int, resolver membership.Resolver, addressMapper AddressMapperFn) PeerResolver {
+func NewPeerResolver(numberOfShards int, resolver membership.Resolver, namedPort string) PeerResolver {
 	return PeerResolver{
 		numberOfShards: numberOfShards,
 		resolver:       resolver,
-		addressMapper:  addressMapper,
+		namedPort:      namedPort,
 	}
 }
 
@@ -71,15 +69,16 @@ func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return pr.FromHostAddress(host.GetAddress())
+	return host.GetNamedAddress(pr.namedPort), nil
 }
 
 // FromHostAddress resolves the final history peer responsible for the given host address.
 // The address may be used as is, or processed with additional address mapper.
 // In case of gRPC transport, the port within the address is replaced with gRPC port.
 func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
-	if pr.addressMapper == nil {
-		return hostAddress, nil
+	host, err := pr.resolver.LookupByAddress(service.History, hostAddress)
+	if err != nil {
+		return "", err
 	}
-	return pr.addressMapper(hostAddress)
+	return host.GetNamedAddress(pr.namedPort), nil
 }
