@@ -1345,7 +1345,7 @@ func buildExecutionRow(
 		RetryBackoffCoefficient:            executionInfo.BackoffCoefficient,
 		RetryMaximumInterval:               executionInfo.MaximumInterval,
 		RetryMaximumAttempts:               executionInfo.MaximumAttempts,
-		RetryExpiration:                    executionInfo.ExpirationSeconds,
+		RetryExpiration:                    executionInfo.ExpirationInterval,
 		RetryExpirationTimestamp:           executionInfo.ExpirationTime,
 		RetryNonRetryableErrors:            executionInfo.NonRetriableErrors,
 		EventStoreVersion:                  p.EventStoreVersion,

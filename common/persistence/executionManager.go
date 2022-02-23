@@ -182,7 +182,7 @@ func (m *executionManagerImpl) DeserializeExecutionInfo(
 		NonRetriableErrors:                 info.NonRetriableErrors,
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
-		ExpirationSeconds:                  int32(info.ExpirationSeconds.Seconds()),
+		ExpirationSeconds:                  int32(info.ExpirationInterval.Seconds()),
 		AutoResetPoints:                    autoResetPoints,
 		SearchAttributes:                   info.SearchAttributes,
 		Memo:                               info.Memo,
@@ -507,7 +507,7 @@ func (m *executionManagerImpl) SerializeExecutionInfo(
 		NonRetriableErrors:                 info.NonRetriableErrors,
 		BranchToken:                        info.BranchToken,
 		CronSchedule:                       info.CronSchedule,
-		ExpirationSeconds:                  common.SecondsToDuration(int64(info.ExpirationSeconds)),
+		ExpirationInterval:                 common.SecondsToDuration(int64(info.ExpirationSeconds)),
 		Memo:                               info.Memo,
 		SearchAttributes:                   info.SearchAttributes,
 

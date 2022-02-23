@@ -101,7 +101,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		CloseTimestamp:     time.Unix(0, request.CloseTimestamp),
 		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
-		RetentionSeconds:   common.SecondsToDuration(request.RetentionSeconds),
+		RetentionPeriod:    common.SecondsToDuration(request.RetentionSeconds),
 		IsCron:             request.IsCron,
 		NumClusters:        request.NumClusters,
 	}

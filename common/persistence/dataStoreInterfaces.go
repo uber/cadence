@@ -321,7 +321,7 @@ type (
 		NonRetriableErrors []string
 		BranchToken        []byte
 		CronSchedule       string
-		ExpirationSeconds  time.Duration
+		ExpirationInterval time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
 
@@ -716,7 +716,7 @@ type (
 		CloseTimestamp     time.Time
 		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
-		RetentionSeconds   time.Duration
+		RetentionPeriod    time.Duration
 		IsCron             bool
 		NumClusters        int16
 	}

@@ -1369,7 +1369,7 @@ func (m *sqlExecutionStore) populateWorkflowMutableState(
 		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
 		MaximumInterval:                    info.GetRetryMaximumInterval(),
 		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationSeconds:                  info.GetRetryExpiration(),
+		ExpirationInterval:                 info.GetRetryExpiration(),
 		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
 		BranchToken:                        info.GetEventBranchToken(),
 		ExecutionContext:                   info.GetExecutionContext(),
