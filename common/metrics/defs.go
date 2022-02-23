@@ -439,6 +439,8 @@ const (
 	FrontendClientRequestCancelWorkflowExecutionScope
 	// FrontendClientResetStickyTaskListScope tracks RPC calls to frontend service
 	FrontendClientResetStickyTaskListScope
+	// FrontendClientRefreshWorkflowTasksScope tracks RPC calls to frontend service
+	FrontendClientRefreshWorkflowTasksScope
 	// FrontendClientResetWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientResetWorkflowExecutionScope
 	// FrontendClientRespondActivityTaskCanceledScope tracks RPC calls to frontend service
@@ -613,6 +615,8 @@ const (
 	DCRedirectionListTaskListPartitionsScope
 	// DCRedirectionGetTaskListsByDomainScope tracks RPC calls for dc redirection
 	DCRedirectionGetTaskListsByDomainScope
+	// DCRedirectionRefreshWorkflowTasksScope tracks RPC calls for dc redirection
+	DCRedirectionRefreshWorkflowTasksScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
@@ -849,6 +853,8 @@ const (
 	FrontendListTaskListPartitionsScope
 	// FrontendGetTaskListsByDomainScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendGetTaskListsByDomainScope
+	// FrontendRefreshWorkflowTasksScope is the metric scope for frontend.RefreshWorkflowTasks
+	FrontendRefreshWorkflowTasksScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain

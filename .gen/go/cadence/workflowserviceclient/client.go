@@ -158,6 +158,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) (*shared.RecordActivityTaskHeartbeatResponse, error)
 
+	RefreshWorkflowTasks(
+		ctx context.Context,
+		Request *shared.RefreshWorkflowTasksRequest,
+		opts ...yarpc.CallOption,
+	) error
+
 	RegisterDomain(
 		ctx context.Context,
 		RegisterRequest *shared.RegisterDomainRequest,
@@ -857,6 +863,34 @@ func (c client) RecordActivityTaskHeartbeatByID(
 	}
 
 	success, err = cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RefreshWorkflowTasks(
+	ctx context.Context,
+	_Request *shared.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) (err error) {
+
+	var result cadence.WorkflowService_RefreshWorkflowTasks_Result
+	args := cadence.WorkflowService_RefreshWorkflowTasks_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	err = cadence.WorkflowService_RefreshWorkflowTasks_Helper.UnwrapResponse(&result)
 	return
 }
 
