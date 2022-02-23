@@ -390,6 +390,21 @@ func (c *retryableClient) ResetWorkflowExecution(
 	return resp, err
 }
 
+func (c *retryableClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	op := func() error {
+		var err error
+		err = c.client.RefreshWorkflowTasks(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return err
+}
+
 func (c *retryableClient) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *types.RespondActivityTaskCanceledRequest,

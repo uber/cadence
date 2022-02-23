@@ -624,6 +624,31 @@ func (c *errorInjectionClient) ResetWorkflowExecution(
 	return resp, clientErr
 }
 
+func (c *errorInjectionClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		clientErr = c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationRefreshWorkflowTasks,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return fakeErr
+	}
+	return clientErr
+}
+
 func (c *errorInjectionClient) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *types.RespondActivityTaskCanceledRequest,

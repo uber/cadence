@@ -120,6 +120,11 @@ func (g grpcHandler) GetTaskListsByDomain(ctx context.Context, request *apiv1.Ge
 	return proto.FromGetTaskListsByDomainResponse(response), proto.FromError(err)
 }
 
+func (g grpcHandler) RefreshWorkflowTasks(ctx context.Context, request *apiv1.RefreshWorkflowTasksRequest) (*apiv1.RefreshWorkflowTasksResponse, error) {
+	err := g.h.RefreshWorkflowTasks(ctx, proto.ToRefreshWorkflowTasksRequest(request))
+	return &apiv1.RefreshWorkflowTasksResponse{}, proto.FromError(err)
+}
+
 func (g grpcHandler) ListWorkflowExecutions(ctx context.Context, request *apiv1.ListWorkflowExecutionsRequest) (*apiv1.ListWorkflowExecutionsResponse, error) {
 	response, err := g.h.ListWorkflowExecutions(ctx, proto.ToListWorkflowExecutionsRequest(request))
 	return proto.FromListWorkflowExecutionsResponse(response), proto.FromError(err)

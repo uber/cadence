@@ -154,6 +154,11 @@ func (t thriftClient) ResetStickyTaskList(ctx context.Context, request *types.Re
 	return thrift.ToResetStickyTaskListResponse(response), thrift.ToError(err)
 }
 
+func (t thriftClient) RefreshWorkflowTasks(ctx context.Context, request *types.RefreshWorkflowTasksRequest, opts ...yarpc.CallOption) error {
+	err := t.c.RefreshWorkflowTasks(ctx, thrift.FromRefreshWorkflowTasksRequest(request), opts...)
+	return thrift.ToError(err)
+}
+
 func (t thriftClient) ResetWorkflowExecution(ctx context.Context, request *types.ResetWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.ResetWorkflowExecutionResponse, error) {
 	response, err := t.c.ResetWorkflowExecution(ctx, thrift.FromResetWorkflowExecutionRequest(request), opts...)
 	return thrift.ToResetWorkflowExecutionResponse(response), thrift.ToError(err)
