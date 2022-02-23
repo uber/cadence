@@ -326,12 +326,12 @@ func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShard
 
 	currentShardItem, ok := c.historyShards[shardID]
 	if !ok {
-		return nil, fmt.Errorf("No item found to remove for shard: %v", shardID)
+		return nil, fmt.Errorf("no item found to remove for shard: %v", shardID)
 	}
 	if shardItem != nil && currentShardItem != shardItem {
 		// the shardItem comparison is a defensive check to make sure we are deleting
 		// what we intend to delete.
-		return nil, fmt.Errorf("Current shardItem doesn't match the one we intend to delete for shard: %v", shardID)
+		return nil, fmt.Errorf("current shardItem doesn't match the one we intend to delete for shard: %v", shardID)
 	}
 
 	delete(c.historyShards, shardID)

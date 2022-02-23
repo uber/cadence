@@ -194,7 +194,7 @@ func validateAndFillWorkflowParams(
 	config *workflowConfig,
 ) error {
 	if len(params.GetDomain()) == 0 {
-		return errors.New("Domain is not set on shadower workflow params")
+		return errors.New("domain is not set on shadower workflow params")
 	}
 
 	if len(params.GetTaskList()) == 0 {

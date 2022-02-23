@@ -313,7 +313,7 @@ func (s *contextImpl) UpdateTransferProcessingQueueStates(cluster string, states
 	defer s.Unlock()
 
 	if len(states) == 0 {
-		return errors.New("Empty transfer processing queue states")
+		return errors.New("empty transfer processing queue states")
 	}
 
 	if s.shardInfo.TransferProcessingQueueStates.StatesByCluster == nil {
@@ -360,7 +360,7 @@ func (s *contextImpl) UpdateCrossClusterProcessingQueueStates(cluster string, st
 	defer s.Unlock()
 
 	if len(states) == 0 {
-		return errors.New("Empty cross-cluster processing queue states")
+		return errors.New("empty cross-cluster processing queue states")
 	}
 
 	if s.shardInfo.CrossClusterProcessingQueueStates.StatesByCluster == nil {
@@ -469,7 +469,7 @@ func (s *contextImpl) UpdateTimerProcessingQueueStates(cluster string, states []
 	defer s.Unlock()
 
 	if len(states) == 0 {
-		return errors.New("Empty transfer processing queue states")
+		return errors.New("empty transfer processing queue states")
 	}
 
 	if s.shardInfo.TimerProcessingQueueStates.StatesByCluster == nil {

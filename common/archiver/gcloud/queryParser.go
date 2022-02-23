@@ -94,7 +94,7 @@ func (p *queryParser) Parse(query string) (*parsedQuery, error) {
 	}
 
 	if (parsedQuery.closeTime == 0 && parsedQuery.startTime == 0) || (parsedQuery.closeTime != 0 && parsedQuery.startTime != 0) {
-		return nil, errors.New("Requires a StartTime or CloseTime")
+		return nil, errors.New("requires a StartTime or CloseTime")
 	}
 
 	if parsedQuery.searchPrecision == nil {
