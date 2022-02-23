@@ -1249,7 +1249,7 @@ func (s *IntegrationSuite) TestCronWorkflow() {
 
 	// Make sure the cron workflow start running at a proper time, in this case 3 seconds after the
 	// startWorkflowExecution request
-	backoffDuration := time.Now().Sub(startWorkflowTS)
+	backoffDuration := time.Since(startWorkflowTS)
 	s.True(backoffDuration > targetBackoffDuration)
 	s.True(backoffDuration < targetBackoffDuration+backoffDurationTolerance)
 
@@ -2404,7 +2404,7 @@ func (s *IntegrationSuite) TestCronChildWorkflowExecution() {
 		s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 		s.Nil(err)
 
-		backoffDuration := time.Now().Sub(startChildWorkflowTS)
+		backoffDuration := time.Since(startChildWorkflowTS)
 		s.True(backoffDuration < targetBackoffDuration+backoffDurationTolerance)
 		startChildWorkflowTS = time.Now()
 	}

@@ -637,7 +637,7 @@ func (s *IntegrationSuite) TestSignalWorkflow_Cron_NoDecisionTaskCreated() {
 	var decisionTaskDelay time.Duration
 	dtHandler := func(execution *types.WorkflowExecution, wt *types.WorkflowType,
 		previousStartedEventID, startedEventID int64, history *types.History) ([]byte, []*types.Decision, error) {
-		decisionTaskDelay = time.Now().Sub(now)
+		decisionTaskDelay = time.Since(now)
 
 		return nil, []*types.Decision{{
 			DecisionType: types.DecisionTypeCompleteWorkflowExecution.Ptr(),

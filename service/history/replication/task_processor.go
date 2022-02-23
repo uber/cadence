@@ -325,7 +325,7 @@ func (p *taskProcessorImpl) processResponse(response *types.ReplicationMessages)
 		backoffDuration := p.noTaskRetrier.NextBackOff()
 		time.Sleep(backoffDuration)
 	} else {
-		scope.RecordTimer(metrics.ReplicationTasksAppliedLatency, time.Now().Sub(batchRequestStartTime))
+		scope.RecordTimer(metrics.ReplicationTasksAppliedLatency, time.Since(batchRequestStartTime))
 	}
 
 	p.lastProcessedMessageID = response.GetLastRetrievedMessageID()
