@@ -439,6 +439,8 @@ const (
 	FrontendClientRequestCancelWorkflowExecutionScope
 	// FrontendClientResetStickyTaskListScope tracks RPC calls to frontend service
 	FrontendClientResetStickyTaskListScope
+	// FrontendClientRefreshWorkflowTasksScope tracks RPC calls to frontend service
+	FrontendClientRefreshWorkflowTasksScope
 	// FrontendClientResetWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientResetWorkflowExecutionScope
 	// FrontendClientRespondActivityTaskCanceledScope tracks RPC calls to frontend service
@@ -613,6 +615,8 @@ const (
 	DCRedirectionListTaskListPartitionsScope
 	// DCRedirectionGetTaskListsByDomainScope tracks RPC calls for dc redirection
 	DCRedirectionGetTaskListsByDomainScope
+	// DCRedirectionRefreshWorkflowTasksScope tracks RPC calls for dc redirection
+	DCRedirectionRefreshWorkflowTasksScope
 
 	// MessagingPublishScope tracks Publish calls made by service to messaging layer
 	MessagingClientPublishScope
@@ -849,6 +853,8 @@ const (
 	FrontendListTaskListPartitionsScope
 	// FrontendGetTaskListsByDomainScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendGetTaskListsByDomainScope
+	// FrontendRefreshWorkflowTasksScope is the metric scope for frontend.RefreshWorkflowTasks
+	FrontendRefreshWorkflowTasksScope
 	// FrontendResetStickyTaskListScope is the metric scope for frontend.ResetStickyTaskList
 	FrontendResetStickyTaskListScope
 	// FrontendListDomainsScope is the metric scope for frontend.ListDomain
@@ -1360,6 +1366,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientRegisterDomainScope:                     {operation: "FrontendClientRegisterDomain", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRequestCancelWorkflowExecutionScope:     {operation: "FrontendClientRequestCancelWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientResetStickyTaskListScope:                {operation: "FrontendClientResetStickyTaskList", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRefreshWorkflowTasksScope:               {operation: "FrontendClientRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientResetWorkflowExecutionScope:             {operation: "FrontendClientResetWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRespondActivityTaskCanceledScope:        {operation: "FrontendClientRespondActivityTaskCanceled", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRespondActivityTaskCanceledByIDScope:    {operation: "FrontendClientRespondActivityTaskCanceledByID", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
@@ -1447,6 +1454,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		DCRedirectionUpdateDomainScope:                        {operation: "DCRedirectionUpdateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionListTaskListPartitionsScope:              {operation: "DCRedirectionListTaskListPartitions", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionGetTaskListsByDomainScope:                {operation: "DCRedirectionGetTaskListsByDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
+		DCRedirectionRefreshWorkflowTasksScope:                {operation: "DCRedirectionRefreshWorkflowTasks", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 
 		MessagingClientPublishScope:      {operation: "MessagingClientPublish"},
 		MessagingClientPublishBatchScope: {operation: "MessagingClientPublishBatch"},
@@ -1557,6 +1565,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendDescribeWorkflowExecutionScope:          {operation: "DescribeWorkflowExecution"},
 		FrontendListTaskListPartitionsScope:             {operation: "FrontendListTaskListPartitions"},
 		FrontendGetTaskListsByDomainScope:               {operation: "FrontendGetTaskListsByDomain"},
+		FrontendRefreshWorkflowTasksScope:               {operation: "FrontendRefreshWorkflowTasks"},
 		FrontendDescribeTaskListScope:                   {operation: "DescribeTaskList"},
 		FrontendResetStickyTaskListScope:                {operation: "ResetStickyTaskList"},
 		FrontendGetSearchAttributesScope:                {operation: "GetSearchAttributes"},

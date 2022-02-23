@@ -424,6 +424,24 @@ func (c *metricClient) ResetStickyTaskList(
 	return resp, err
 }
 
+func (c *metricClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
+	err := c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
+	}
+	return err
+}
+
 func (c *metricClient) ResetWorkflowExecution(
 	ctx context.Context,
 	request *types.ResetWorkflowExecutionRequest,

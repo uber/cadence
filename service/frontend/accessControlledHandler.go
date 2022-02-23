@@ -769,6 +769,26 @@ func (a *AccessControlledWorkflowHandler) GetTaskListsByDomain(
 	return a.frontendHandler.GetTaskListsByDomain(ctx, request)
 }
 
+func (a *AccessControlledWorkflowHandler) RefreshWorkflowTasks(ctx context.Context, request *types.RefreshWorkflowTasksRequest) error {
+
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendRefreshWorkflowTasksScope, request)
+
+	attr := &authorization.Attributes{
+		APIName:    "RefreshWorkflowTasks",
+		DomainName: request.GetDomain(),
+		Permission: authorization.PermissionWrite,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return err
+	}
+	if !isAuthorized {
+		return errUnauthorized
+	}
+
+	return a.RefreshWorkflowTasks(ctx, request)
+}
+
 // UpdateDomain API call
 func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	ctx context.Context,

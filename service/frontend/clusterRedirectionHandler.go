@@ -1172,6 +1172,36 @@ func (handler *ClusterRedirectionHandlerImpl) GetTaskListsByDomain(
 	return resp, err
 }
 
+// RefreshWorkflowTasks API call
+func (handler *ClusterRedirectionHandlerImpl) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+) (retError error) {
+
+	var apiName = "RefreshWorkflowTasks"
+	var err error
+	var cluster string
+
+	scope, startTime := handler.beforeCall(metrics.DCRedirectionRefreshWorkflowTasksScope)
+	defer func() {
+		handler.afterCall(scope, startTime, cluster, &retError)
+	}()
+
+	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
+		cluster = targetDC
+		switch {
+		case targetDC == handler.currentClusterName:
+			err = handler.frontendHandler.RefreshWorkflowTasks(ctx, request)
+		default:
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			err = remoteClient.RefreshWorkflowTasks(ctx, request)
+		}
+		return err
+	})
+
+	return err
+}
+
 // GetClusterInfo API call
 func (handler *ClusterRedirectionHandlerImpl) GetClusterInfo(
 	ctx context.Context,
