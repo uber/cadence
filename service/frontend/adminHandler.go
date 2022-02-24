@@ -276,6 +276,9 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	}
 
 	domainID, err := adh.GetDomainCache().GetDomainID(request.GetDomain())
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
 
 	historyAddr := historyHost.GetAddress()
 	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
@@ -1299,6 +1302,9 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 			return nil, adh.error(err, scope)
 		}
 		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
 	}
 
 	data, err := json.Marshal(value)

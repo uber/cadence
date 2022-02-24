@@ -134,7 +134,7 @@ func (s *Service) Stop() {
 	remainingTime = common.SleepWithMinDuration(gossipPropagationDelay, remainingTime)
 
 	remainingTime = s.handler.PrepareToStop(remainingTime)
-	remainingTime = common.SleepWithMinDuration(gracePeriod, remainingTime)
+	_ = common.SleepWithMinDuration(gracePeriod, remainingTime)
 
 	close(s.stopC)
 

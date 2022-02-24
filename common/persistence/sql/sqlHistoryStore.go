@@ -506,6 +506,10 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 			TreeID:   lastRow.TreeID,
 			BranchID: lastRow.BranchID,
 		})
+		if err != nil {
+			return nil, &types.InternalServiceError{Message: fmt.Sprintf("error serializing nextPageToken:%v", err)}
+		}
+
 	}
 	// TODO: this is broken for multi-sharding: the shardID should increase if there are less rows than request pageSize,
 	// until loop over all shards

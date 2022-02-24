@@ -204,6 +204,9 @@ func (r *dlqHandlerImpl) MergeMessages(
 		pageSize,
 		pageToken,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	lastMessageID = defaultBeginningMessageID
 	for _, task := range tasks {

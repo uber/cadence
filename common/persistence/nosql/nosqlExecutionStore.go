@@ -309,6 +309,9 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 	// 2. new
 	if newWorkflow != nil {
 		insertExecution, err = d.prepareCreateWorkflowExecutionRequestWithMaps(newWorkflow)
+		if err != nil {
+			return err
+		}
 
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks, err = d.prepareNoSQLTasksForWorkflowTxn(
 			domainID, workflowID, newWorkflow.ExecutionInfo.RunID,
@@ -446,6 +449,9 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 	// 3. new
 	if newWorkflow != nil {
 		insertExecution, err = d.prepareCreateWorkflowExecutionRequestWithMaps(newWorkflow)
+		if err != nil {
+			return err
+		}
 
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks, err = d.prepareNoSQLTasksForWorkflowTxn(
 			domainID, workflowID, newWorkflow.ExecutionInfo.RunID,

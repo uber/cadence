@@ -329,6 +329,6 @@ func TestAddTaskStandby(t *testing.T) {
 
 	addTaskParam.forwardedFrom = "from child partition"
 	syncMatch, err = tlm.AddTask(context.Background(), addTaskParam)
-	require.Error(t, errRemoteSyncMatchFailed) // should not persist the task
+	require.Error(t, err) // should not persist the task
 	require.False(t, syncMatch)
 }

@@ -3392,6 +3392,7 @@ func (s *IntegrationSuite) TestStickyTimeout_NonTransientDecision() {
 		Identity:          identity,
 		RequestID:         uuid.New(),
 	})
+	s.NoError(err)
 
 	// Wait for decision timeout
 	stickyTimeout := false
@@ -3443,6 +3444,7 @@ WaitForStickyTimeoutLoop:
 
 	// Complete workflow execution
 	_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(2))
+	s.NoError(err)
 
 	// Assert for single decision task failed and workflow completion
 	failedDecisions := 0
@@ -3554,6 +3556,7 @@ func (s *IntegrationSuite) TestStickyTasklistResetThenTimeout() {
 		Identity:          identity,
 		RequestID:         uuid.New(),
 	})
+	s.NoError(err)
 
 	//Reset sticky tasklist before sticky decision task starts
 	s.engine.ResetStickyTaskList(createContext(), &types.ResetStickyTaskListRequest{
@@ -3615,6 +3618,7 @@ WaitForStickyTimeoutLoop:
 
 	// Complete workflow execution
 	_, err = poller.PollAndProcessDecisionTaskWithAttempt(true, false, false, true, int64(2))
+	s.NoError(err)
 
 	// Assert for single decision task failed and workflow completion
 	failedDecisions := 0

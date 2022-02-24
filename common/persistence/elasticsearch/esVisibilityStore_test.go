@@ -624,11 +624,11 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_all":{}}]}}]}},"from":0,"size":10,"sort":[{"ExecutionTime":"desc"},{"RunID":"desc"}]}`, dsl)
 
 	request.Query = `order by StartTime desc, CloseTime desc`
-	dsl, err = v.getESQueryDSL(request, token)
+	_, err = v.getESQueryDSL(request, token)
 	s.Equal(errors.New("only one field can be used to sort"), err)
 
 	request.Query = `order by CustomStringField desc`
-	dsl, err = v.getESQueryDSL(request, token)
+	_, err = v.getESQueryDSL(request, token)
 	s.Equal(errors.New("not able to sort by IndexedValueTypeString field, use IndexedValueTypeKeyword field"), err)
 
 	request.Query = `order by CustomIntField asc`

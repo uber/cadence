@@ -737,6 +737,9 @@ func (e *matchingEngineImpl) getAllPartitions(
 	}
 	taskList := request.GetTaskList()
 	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType)
+	if err != nil {
+		return partitionKeys, err
+	}
 	rootPartition := taskListID.GetRoot()
 
 	partitionKeys = append(partitionKeys, rootPartition)

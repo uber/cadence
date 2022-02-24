@@ -1491,6 +1491,7 @@ func (s *engine2Suite) TestNewChildContext() {
 	ctx, cancel := context.WithTimeout(ctx, time.Hour)
 	defer cancel()
 	childCtx, childCancel = s.historyEngine.newChildContext(ctx)
+	defer childCancel()
 	deadline, ok := childCtx.Deadline()
 	s.True(ok)
 	s.True(time.Until(deadline) < 10*time.Minute)

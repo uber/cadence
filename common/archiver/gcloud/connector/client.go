@@ -103,7 +103,6 @@ func (s *storageWrapper) Upload(ctx context.Context, URI archiver.URI, fileName 
 // Exist check if a bucket or an object exist
 // If fileName is empty, then 'Exist' function will only check if the given bucket exist.
 func (s *storageWrapper) Exist(ctx context.Context, URI archiver.URI, fileName string) (exists bool, err error) {
-	err = ErrBucketNotFound
 	bucket := s.client.Bucket(URI.Hostname())
 	if _, err := bucket.Attrs(ctx); err != nil {
 		return false, err

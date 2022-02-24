@@ -756,6 +756,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTasks() {
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.NoError(err)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
 	s.NoError(err)
@@ -990,6 +991,7 @@ func (s *ExecutionManagerSuite) TestUpsertWorkflowActivity() {
 		RangeID: s.ShardInfo.RangeID,
 		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
+	s.NoError(err)
 	info3, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
 	s.Nil(err)
 	s.Equal(1, len(info3.ActivityInfos))
@@ -2077,6 +2079,7 @@ func (s *ExecutionManagerSuite) TestCancelTransferTaskTasks() {
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.NoError(err)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
 	s.NoError(err)
@@ -2184,6 +2187,7 @@ func (s *ExecutionManagerSuite) TestSignalTransferTaskTasks() {
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.NoError(err)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
 	s.NoError(err)
@@ -2290,6 +2294,7 @@ func (s *ExecutionManagerSuite) TestReplicationTasks() {
 	s.NoError(err)
 	s.NotNil(task0, "Expected non empty task identifier.")
 	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.NoError(err)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
 	s.NoError(err)
@@ -3416,6 +3421,7 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskTasks() {
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.NoError(err)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
 	s.NoError(err)
@@ -3479,6 +3485,7 @@ func (s *ExecutionManagerSuite) TestReplicationTransferTaskRangeComplete() {
 	s.NotNil(task0, "Expected non empty task identifier.")
 
 	taskD, err := s.GetTransferTasks(ctx, 1, false)
+	s.NoError(err)
 	s.Equal(1, len(taskD), "Expected 1 decision task.")
 	err = s.CompleteTransferTask(ctx, taskD[0].TaskID)
 	s.NoError(err)
@@ -4230,6 +4237,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithCASMisma
 	s.NoError(err)
 
 	runID1, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), runID1)
 	state, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionCurrent)
 	s.NoError(err)
@@ -4249,6 +4257,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithCASMisma
 	err3 := s.UpdateWorkflowExecutionAndFinish(ctx, currentInfo, currentStats, int64(3), versionHistories)
 	s.NoError(err3)
 	runID1, err = s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), runID1)
 
 	resetExecutionInfo := &p.WorkflowExecutionInfo{
@@ -4327,6 +4336,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithCASMisma
 
 	// this test only assert whether the current workflow execution record is reset
 	runID, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), runID)
 }
 
@@ -4388,6 +4398,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.NoError(err)
 
 	currentRunID, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), currentRunID)
 	state, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionCurrent)
 	s.NoError(err)
@@ -4549,6 +4560,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.NoError(err)
 
 	currentRunID, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), currentRunID)
 	state, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecutionCurrent)
 	s.NoError(err)
@@ -4990,6 +5002,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.NoError(err)
 
 	currentRunID, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), currentRunID)
 
 	resetExecutionInfo := &p.WorkflowExecutionInfo{
@@ -5123,6 +5136,7 @@ func (s *ExecutionManagerSuite) TestConflictResolveWorkflowExecutionWithTransact
 	s.NoError(err)
 
 	currentRunID, err := s.GetCurrentWorkflowRunID(ctx, domainID, workflowID)
+	s.NoError(err)
 	s.Equal(workflowExecutionCurrent.GetRunID(), currentRunID)
 
 	decisionScheduleID := int64(111)

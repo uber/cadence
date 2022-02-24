@@ -62,6 +62,9 @@ func ConcreteExecution(
 	}
 
 	branchToken, branch, err := getBranchToken(e.State.ExecutionInfo.BranchToken, e.State.VersionHistories, codec.NewThriftRWEncoder())
+	if err != nil {
+		return nil, err
+	}
 
 	return &entity.ConcreteExecution{
 		BranchToken: branchToken,
