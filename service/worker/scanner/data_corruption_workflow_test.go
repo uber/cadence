@@ -43,6 +43,8 @@ import (
 
 const testWorkflowName = "default-test-workflow-type-name"
 
+var validBranchToken = []byte{89, 11, 0, 10, 0, 0, 0, 12, 116, 101, 115, 116, 45, 116, 114, 101, 101, 45, 105, 100, 11, 0, 20, 0, 0, 0, 14, 116, 101, 115, 116, 45, 98, 114, 97, 110, 99, 104, 45, 105, 100, 0}
+
 type dataCorruptionWorkflowTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
@@ -111,13 +113,13 @@ func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 	mockResource.ExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{
 		State: &p.WorkflowMutableState{
 			ExecutionInfo: &p.WorkflowExecutionInfo{
-				BranchToken: []byte{},
+				BranchToken: validBranchToken,
 			},
 			VersionHistories: &p.VersionHistories{
 				CurrentVersionHistoryIndex: 0,
 				Histories: []*p.VersionHistory{
 					{
-						BranchToken: []byte{},
+						BranchToken: validBranchToken,
 					},
 				},
 			},
