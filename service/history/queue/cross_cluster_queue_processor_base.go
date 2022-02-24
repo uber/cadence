@@ -590,7 +590,7 @@ func (c *crossClusterQueueProcessorBase) processQueueCollections() {
 		if err := c.rateLimiter.Wait(ctx); err != nil {
 			cancel()
 			if level != defaultProcessingQueueLevel {
-				c.setupBackoffTimerLocked(level)
+				c.setupBackoffTimer(level)
 			} else {
 				c.readyForProcess(level)
 			}
