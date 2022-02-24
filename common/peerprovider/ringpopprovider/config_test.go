@@ -105,7 +105,8 @@ func (resolver *mockResolver) LookupSRV(ctx context.Context, service string, pro
 	}
 
 	for _, record := range srvs {
-		records = append(records, &record)
+		srvRecord := record
+		records = append(records, &srvRecord)
 	}
 
 	return "test", records, nil
