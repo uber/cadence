@@ -3686,6 +3686,36 @@ func (wh *WorkflowHandler) GetTaskListsByDomain(
 	return resp, err
 }
 
+// RefreshWorkflowTasks re-generates the workflow tasks
+func (wh *WorkflowHandler) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+) (err error) {
+	defer log.CapturePanic(wh.GetLogger(), &err)
+	scope, sw := wh.startRequestProfile(ctx, metrics.AdminRefreshWorkflowTasksScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+	if err := validateExecution(request.Execution); err != nil {
+		return wh.error(err, scope)
+	}
+	domainEntry, err := wh.GetDomainCache().GetDomain(request.GetDomain())
+	if err != nil {
+		return wh.error(err, scope)
+	}
+
+	err = wh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
+		DomainUIID: domainEntry.GetInfo().ID,
+		Request:    request,
+	})
+	if err != nil {
+		return wh.error(err, scope)
+	}
+	return nil
+}
+
 func (wh *WorkflowHandler) getRawHistory(
 	ctx context.Context,
 	scope metrics.Scope,

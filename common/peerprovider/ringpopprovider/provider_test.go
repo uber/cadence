@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/membership"
 )
 
 type HostInfo struct {
@@ -99,7 +100,7 @@ func NewTestRingpopCluster(ringPopApp string, size int, ipAddr string, seed stri
 			return nil
 		}
 
-		NewRingpopProvider(ringPopApp, ringPop, bOptions, cluster.channels[i], logger)
+		NewRingpopProvider(ringPopApp, ringPop, membership.PortMap{}, bOptions, logger)
 
 	}
 	return cluster

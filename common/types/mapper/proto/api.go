@@ -2777,6 +2777,26 @@ func ToResetWorkflowExecutionResponse(t *apiv1.ResetWorkflowExecutionResponse) *
 	}
 }
 
+func ToRefreshWorkflowTasksRequest(t *apiv1.RefreshWorkflowTasksRequest) *types.RefreshWorkflowTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RefreshWorkflowTasksRequest{
+		Domain:    t.Domain,
+		Execution: ToWorkflowExecution(t.WorkflowExecution),
+	}
+}
+
+func FromRefreshWorkflowTasksRequest(t *types.RefreshWorkflowTasksRequest) *apiv1.RefreshWorkflowTasksRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.RefreshWorkflowTasksRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.Execution),
+	}
+}
+
 func FromRespondActivityTaskCanceledByIDRequest(t *types.RespondActivityTaskCanceledByIDRequest) *apiv1.RespondActivityTaskCanceledByIDRequest {
 	if t == nil {
 		return nil

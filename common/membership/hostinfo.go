@@ -27,6 +27,11 @@ import (
 	"strings"
 )
 
+const (
+	PortTchannel = "tchannel"
+	PortGRPC     = "grpc"
+)
+
 // PortMap is a map of port names to port numbers.
 type PortMap map[string]uint16
 
