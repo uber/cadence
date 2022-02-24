@@ -80,3 +80,7 @@ func (s *simpleResolver) MemberCount(service string) (int, error) {
 func (s *simpleResolver) Members(service string) ([]membership.HostInfo, error) {
 	return nil, nil
 }
+
+func (s *simpleResolver) LookupByAddress(service string, address string) (membership.HostInfo, error) {
+	return membership.HostInfo{}, nil
+}
