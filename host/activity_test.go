@@ -646,7 +646,7 @@ func (s *IntegrationSuite) TestActivityHeartBeatWorkflow_Timeout() {
 	s.True(err == nil || err == matching.ErrNoTasks)
 
 	err = poller.PollAndProcessActivityTask(false)
-	s.Nil(err)
+	s.Error(err)
 
 	s.Logger.Info("Waiting for workflow to complete", tag.WorkflowRunID(we.RunID))
 
