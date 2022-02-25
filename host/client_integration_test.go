@@ -100,7 +100,7 @@ func (s *ClientIntegrationSuite) TearDownSuite() {
 func (s *ClientIntegrationSuite) buildServiceClient() (workflowserviceclient.Interface, error) {
 	cadenceClientName := "cadence-client"
 	cadenceFrontendService := service.Frontend
-	hostPort := "127.0.0.1:7104"
+	hostPort := "127.0.0.1:7114"
 	if TestFlags.FrontendAddr != "" {
 		hostPort = TestFlags.FrontendAddr
 	}
