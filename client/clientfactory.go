@@ -104,8 +104,9 @@ func (cf *rpcClientFactory) NewMatchingClient(domainIDToName DomainIDToNameFunc)
 
 func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (history.Client, error) {
 	var rawClient history.Client
-	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
 	var namedPort = membership.PortTchannel
+
+	outboundConfig := cf.rpcFactory.GetDispatcher().ClientConfig(service.History)
 	if rpc.IsGRPCOutbound(outboundConfig) {
 		rawClient = history.NewGRPCClient(historyv1.NewHistoryAPIYARPCClient(outboundConfig))
 		namedPort = membership.PortGRPC

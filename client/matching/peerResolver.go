@@ -30,8 +30,8 @@ import (
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 type PeerResolver struct {
 	resolver  membership.Resolver
-	namedPort string
 	service   string
+	namedPort string // grpc or tchannel, depends on yarpc configuration
 }
 
 // NewPeerResolver creates a new matching peer resolver.

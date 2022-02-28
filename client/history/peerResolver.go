@@ -32,7 +32,7 @@ import (
 type PeerResolver struct {
 	numberOfShards int
 	resolver       membership.Resolver
-	namedPort      string
+	namedPort      string // grpc or tchannel, depends on yarpc configuration
 }
 
 // NewPeerResolver creates a new history peer resolver.
@@ -73,8 +73,7 @@ func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 }
 
 // FromHostAddress resolves the final history peer responsible for the given host address.
-// The address may be used as is, or processed with additional address mapper.
-// In case of gRPC transport, the port within the address is replaced with gRPC port.
+// The address is formed by adding port for specified transport
 func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 	host, err := pr.resolver.LookupByAddress(service.History, hostAddress)
 	if err != nil {
