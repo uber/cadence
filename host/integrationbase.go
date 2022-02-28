@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common"
@@ -133,9 +133,7 @@ func (s *IntegrationBase) setupSuite() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	s.Logger = loggerimpl.NewLogger(zapLogger)
+	s.Logger = loggerimpl.NewLogger(zaptest.NewLogger(s.T()))
 }
 
 // GetTestClusterConfig return test cluster config

@@ -28,13 +28,12 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/yarpc"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
+	"go.uber.org/yarpc"
+	"go.uber.org/zap/zaptest"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -77,11 +76,8 @@ func TestNDCIntegrationTestSuite(t *testing.T) {
 }
 
 func (s *NDCIntegrationTestSuite) SetupSuite() {
-	zapLogger, err := zap.NewDevelopment()
-	// cannot use s.Nil since it is not initialized
-	s.Require().NoError(err)
 	s.serializer = persistence.NewPayloadSerializer()
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.logger = loggerimpl.NewLogger(zaptest.NewLogger(s.T()))
 
 	s.standByReplicationTasksChan = make(chan *types.ReplicationTask, 100)
 
