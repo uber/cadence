@@ -2006,10 +2006,11 @@ func (h *handlerImpl) convertError(err error) error {
 	switch err := err.(type) {
 	case *persistence.ShardOwnershipLostError:
 		info, err2 := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(err.ShardID))
-		if err2 == nil {
-			return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
+		if err2 != nil {
+			return shard.CreateShardOwnershipLostError(h.GetHostInfo(), membership.HostInfo{})
 		}
-		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), membership.HostInfo{})
+
+		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
 	case *persistence.WorkflowExecutionAlreadyStartedError:
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:

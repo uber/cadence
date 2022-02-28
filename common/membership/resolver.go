@@ -73,6 +73,7 @@ type (
 		// Members returns all host addresses in a service specific hashring
 		Members(service string) ([]HostInfo, error)
 
+		// LookupByAddress returns Host which owns IP:port tuple
 		LookupByAddress(service, address string) (HostInfo, error)
 	}
 )

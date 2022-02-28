@@ -181,9 +181,7 @@ func (c *cadenceImpl) enableWorker() bool {
 func (c *cadenceImpl) Start() error {
 	hosts := make(map[string][]membership.HostInfo)
 	hosts[service.Frontend] = []membership.HostInfo{c.FrontendHost()}
-
 	hosts[service.Matching] = []membership.HostInfo{c.MatchingServiceHost()}
-
 	hosts[service.History] = c.HistoryHosts()
 	if c.enableWorker() {
 		hosts[service.Worker] = []membership.HostInfo{c.WorkerServiceHost()}
@@ -800,17 +798,17 @@ func newPublicClient(dispatcher *yarpc.Dispatcher) cwsc.Interface {
 func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo) common.RPCFactory {
 	tchannelAddres, err := host.GetNamedAddress(membership.PortTchannel)
 	if err != nil {
-		c.logger.Fatal("couldn't get tchannel port")
+		c.logger.Fatal("failed to get PortTchannel port from host", tag.Value(host), tag.Error(err))
 	}
 
 	grpcAddress, err := host.GetNamedAddress(membership.PortGRPC)
 	if err != nil {
-		c.logger.Fatal("couldn't get grpc port")
+		c.logger.Fatal("failed to get PortGRPC port from host", tag.Value(host), tag.Error(err))
 	}
 
 	frontendGrpcAddress, err := c.FrontendHost().GetNamedAddress(membership.PortGRPC)
 	if err != nil {
-		c.logger.Fatal("couldn't get frontend grpc port")
+		c.logger.Fatal("failed to get frontend PortGRPC", tag.Value(c.FrontendHost()), tag.Error(err))
 	}
 
 	return rpc.NewFactory(c.logger, rpc.Params{
