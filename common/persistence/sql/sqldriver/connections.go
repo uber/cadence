@@ -54,7 +54,7 @@ func CreateDBConnections(cfg *config.SQL, createConnFunc CreateSingleDBConn) ([]
 		cfg.ConnectAddr = ""
 	}()
 
-	xdbs := make([]*sqlx.DB, cfg.NumShards, cfg.NumShards)
+	xdbs := make([]*sqlx.DB, cfg.NumShards)
 	for idx, entry := range cfg.MultipleDatabasesConfig {
 		cfg.User = entry.User
 		cfg.Password = entry.Password

@@ -94,8 +94,8 @@ var (
 	historyServiceOperationRetryPolicy = common.CreateHistoryServiceRetryPolicy()
 
 	// ErrNoTasks is exported temporarily for integration test
-	ErrNoTasks    = errors.New("No tasks")
-	errPumpClosed = errors.New("Task list pump closed its channel")
+	ErrNoTasks    = errors.New("no tasks")
+	errPumpClosed = errors.New("task list pump closed its channel")
 
 	pollerIDKey pollerIDCtxKey = "pollerID"
 	identityKey identityCtxKey = "identity"
@@ -737,6 +737,9 @@ func (e *matchingEngineImpl) getAllPartitions(
 	}
 	taskList := request.GetTaskList()
 	taskListID, err := newTaskListID(domainID, taskList.GetName(), taskListType)
+	if err != nil {
+		return partitionKeys, err
+	}
 	rootPartition := taskListID.GetRoot()
 
 	partitionKeys = append(partitionKeys, rootPartition)

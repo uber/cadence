@@ -39,8 +39,6 @@ type (
 		useTx         bool       // if tx is not nil, the methods from commonOfDbAndTx should use tx
 		currTxShardID int        // which shard is current tx started from
 	}
-
-	shardedSqlExecResult struct{}
 )
 
 // newShardedSQLDriver returns a driver querying a group of SQL databases as sharded solution.

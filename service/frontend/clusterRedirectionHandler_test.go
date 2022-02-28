@@ -708,6 +708,7 @@ func (s *clusterRedirectionHandlerSuite) TestRespondQueryTaskCompleted() {
 	token, err := s.handler.tokenSerializer.SerializeQueryTaskToken(&common.QueryTaskToken{
 		DomainID: s.domainID,
 	})
+	s.NoError(err)
 	req := &types.RespondQueryTaskCompletedRequest{
 		TaskToken: token,
 	}

@@ -250,7 +250,3 @@ func handleErr(err error) error {
 	log.Println(err)
 	return err
 }
-
-func logErr(err error) {
-	log.Println(err)
-}

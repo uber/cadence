@@ -163,7 +163,7 @@ func parseWorkflowExecutionInfo(
 		case "cron_schedule":
 			info.CronSchedule = v.(string)
 		case "expiration_seconds":
-			info.ExpirationSeconds = common.SecondsToDuration(int64(v.(int)))
+			info.ExpirationInterval = common.SecondsToDuration(int64(v.(int)))
 		case "search_attributes":
 			info.SearchAttributes = v.(map[string][]byte)
 		case "memo":

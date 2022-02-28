@@ -53,7 +53,7 @@ func int32Ptr(v int32) *int32 {
 
 // getContextValue retrieves and returns the value corresponding
 // to the given key - panics if the key does not exist
-func getContextValue(ctx context.Context, key string) interface{} {
+func getContextValue(ctx context.Context, key contextKey) interface{} {
 	value := ctx.Value(key)
 	if value == nil {
 		panic("ctx.Value(" + key + ") returned nil")

@@ -412,7 +412,7 @@ func (tm *TaskMatcher) ratelimit(ctx context.Context) (*rate.Reservation, error)
 
 	rsv := tm.limiter.Reserve()
 	// If we have to wait too long for reservation, give up and return
-	if !rsv.OK() || rsv.Delay() > deadline.Sub(time.Now()) {
+	if !rsv.OK() || rsv.Delay() > time.Until(deadline) {
 		if rsv.OK() { // if we were indeed given a reservation, return it before we bail out
 			rsv.Cancel()
 		}

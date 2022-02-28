@@ -428,7 +428,7 @@ func (m *sqlExecutionStore) updateWorkflowExecutionTx(
 
 			if !bytes.Equal(domainID, newDomainID) {
 				return &types.InternalServiceError{
-					Message: fmt.Sprintf("UpdateWorkflowExecution: cannot continue as new to another domain"),
+					Message: "UpdateWorkflowExecution: cannot continue as new to another domain",
 				}
 			}
 
@@ -1460,7 +1460,7 @@ func (m *sqlExecutionStore) populateWorkflowMutableState(
 		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
 		MaximumInterval:                    info.GetRetryMaximumInterval(),
 		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationSeconds:                  info.GetRetryExpiration(),
+		ExpirationInterval:                 info.GetRetryExpiration(),
 		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
 		BranchToken:                        info.GetEventBranchToken(),
 		ExecutionContext:                   info.GetExecutionContext(),

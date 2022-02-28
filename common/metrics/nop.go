@@ -39,11 +39,9 @@ func NopStopwatch() tally.Stopwatch {
 type noopClientImpl struct{}
 
 func (n noopClientImpl) IncCounter(scope int, counter int) {
-	return
 }
 
 func (n noopClientImpl) AddCounter(scope int, counter int, delta int64) {
-	return
 }
 
 func (n noopClientImpl) StartTimer(scope int, timer int) tally.Stopwatch {
@@ -51,15 +49,12 @@ func (n noopClientImpl) StartTimer(scope int, timer int) tally.Stopwatch {
 }
 
 func (n noopClientImpl) RecordTimer(scope int, timer int, d time.Duration) {
-	return
 }
 
 func (m *noopClientImpl) RecordHistogramDuration(scope int, timer int, d time.Duration) {
-	return
 }
 
 func (n noopClientImpl) UpdateGauge(scope int, gauge int, value float64) {
-	return
 }
 
 func (n noopClientImpl) Scope(scope int, tags ...Tag) Scope {

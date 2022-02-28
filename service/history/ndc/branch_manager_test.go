@@ -212,6 +212,7 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 	ctx := ctx.Background()
 
 	_, _, err = s.branchManager.flushBufferedEvents(ctx, incomingVersionHistory)
+	s.NoError(err)
 }
 
 func (s *branchManagerSuite) TestPrepareVersionHistory_BranchAppendable_NoMissingEventInBetween() {

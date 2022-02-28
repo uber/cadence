@@ -1127,7 +1127,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	queryFirstDecisionTaskWaitTime := defaultQueryFirstDecisionTaskWaitTime
 	ctxDeadline, ok := ctx.Deadline()
 	if ok {
-		ctxWaitTime := ctxDeadline.Sub(time.Now()) - time.Second
+		ctxWaitTime := time.Until(ctxDeadline) - time.Second
 		if ctxWaitTime > queryFirstDecisionTaskWaitTime {
 			queryFirstDecisionTaskWaitTime = ctxWaitTime
 		}

@@ -120,6 +120,9 @@ func (r *workflowResetterImpl) ResetWorkflow(
 	}
 
 	resetBranchToken, err := r.getResetBranchToken(ctx, baseBranchToken, baseLastEventID)
+	if err != nil {
+		return nil, err
+	}
 
 	requestID := uuid.New()
 	rebuildMutableState, rebuiltHistorySize, err := r.stateRebuilder.Rebuild(

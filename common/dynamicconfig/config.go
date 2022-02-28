@@ -421,7 +421,6 @@ func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue 
 func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn {
 	return func(opts ...FilterOption) bool {
 		filters := c.toFilterMap(opts...)
-		opts = append(opts, c.filterOptions...)
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,

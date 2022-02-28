@@ -31,10 +31,6 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-const (
-	emptyMessageID = -1
-)
-
 type (
 	sqlQueueStore struct {
 		queueType persistence.QueueType
@@ -178,7 +174,7 @@ func (q *sqlQueueStore) ReadMessagesFromDLQ(
 	pageToken []byte,
 ) ([]*persistence.InternalQueueMessage, []byte, error) {
 
-	if pageToken != nil && len(pageToken) != 0 {
+	if len(pageToken) != 0 {
 		lastReadMessageID, err := deserializePageToken(pageToken)
 		if err != nil {
 			return nil, nil, &types.InternalServiceError{

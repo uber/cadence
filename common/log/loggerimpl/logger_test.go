@@ -49,8 +49,7 @@ func TestDefaultLogger(t *testing.T) {
 		outC <- buf.String()
 	}()
 
-	var zapLogger *zap.Logger
-	zapLogger = zap.NewExample()
+	zapLogger := zap.NewExample()
 
 	logger := NewLogger(zapLogger)
 	preCaller := caller(1)
@@ -82,8 +81,7 @@ func TestThrottleLogger(t *testing.T) {
 		outC <- buf.String()
 	}()
 
-	var zapLogger *zap.Logger
-	zapLogger = zap.NewExample()
+	zapLogger := zap.NewExample()
 
 	dc := dynamicconfig.NewNopClient()
 	cln := dynamicconfig.NewCollection(dc, NewNopLogger())
@@ -116,8 +114,7 @@ func TestEmptyMsg(t *testing.T) {
 		outC <- buf.String()
 	}()
 
-	var zapLogger *zap.Logger
-	zapLogger = zap.NewExample()
+	zapLogger := zap.NewExample()
 
 	logger := NewLogger(zapLogger)
 	preCaller := caller(1)

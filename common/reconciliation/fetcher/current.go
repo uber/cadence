@@ -81,7 +81,7 @@ func getCurrentExecution(
 		if err != nil {
 			return pagination.Page{}, err
 		}
-		executions := make([]pagination.Entity, len(resp.Executions), len(resp.Executions))
+		executions := make([]pagination.Entity, len(resp.Executions))
 		for i, e := range resp.Executions {
 			currentExec := &entity.CurrentExecution{
 				CurrentRunID: e.CurrentRunID,

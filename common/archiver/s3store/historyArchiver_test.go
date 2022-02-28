@@ -46,7 +46,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/archiver/s3store/mocks"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
@@ -73,7 +72,6 @@ type historyArchiverSuite struct {
 	suite.Suite
 	s3cli              *mocks.S3API
 	container          *archiver.HistoryBootstrapContainer
-	logger             log.Logger
 	testArchivalURI    archiver.URI
 	historyBatchesV1   []*archiver.HistoryBlob
 	historyBatchesV100 []*archiver.HistoryBlob

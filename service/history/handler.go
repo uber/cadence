@@ -2001,22 +2001,18 @@ func (h *handlerImpl) GetFailoverInfo(
 // HistoryEngine API calls to ShardOwnershipLost error return by HistoryService for client to be redirected to the
 // correct shard.
 func (h *handlerImpl) convertError(err error) error {
-	switch err.(type) {
+	switch err := err.(type) {
 	case *persistence.ShardOwnershipLostError:
-		shardID := err.(*persistence.ShardOwnershipLostError).ShardID
-		info, err := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(shardID))
-		if err == nil {
+		info, err2 := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(err.ShardID))
+		if err2 == nil {
 			return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
 		}
 		return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), "")
 	case *persistence.WorkflowExecutionAlreadyStartedError:
-		err := err.(*persistence.WorkflowExecutionAlreadyStartedError)
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:
-		err := err.(*persistence.CurrentWorkflowConditionFailedError)
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.TransactionSizeLimitError:
-		err := err.(*persistence.TransactionSizeLimitError)
 		return &types.BadRequestError{Message: err.Msg}
 	}
 

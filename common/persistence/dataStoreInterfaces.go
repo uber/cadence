@@ -321,7 +321,7 @@ type (
 		NonRetriableErrors []string
 		BranchToken        []byte
 		CronSchedule       string
-		ExpirationSeconds  time.Duration
+		ExpirationInterval time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
 
@@ -716,7 +716,7 @@ type (
 		CloseTimestamp     time.Time
 		Status             types.WorkflowExecutionCloseStatus
 		HistoryLength      int64
-		RetentionSeconds   time.Duration
+		RetentionPeriod    time.Duration
 		IsCron             bool
 		NumClusters        int16
 	}
@@ -887,7 +887,7 @@ type (
 
 // NewDataBlob returns a new DataBlob
 func NewDataBlob(data []byte, encodingType common.EncodingType) *DataBlob {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return nil
 	}
 	if encodingType != "thriftrw" && data[0] == 'Y' {

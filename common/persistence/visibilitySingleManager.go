@@ -101,7 +101,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		CloseTimestamp:     time.Unix(0, request.CloseTimestamp),
 		Status:             request.Status,
 		HistoryLength:      request.HistoryLength,
-		RetentionSeconds:   common.SecondsToDuration(request.RetentionSeconds),
+		RetentionPeriod:    common.SecondsToDuration(request.RetentionSeconds),
 		IsCron:             request.IsCron,
 		NumClusters:        request.NumClusters,
 	}
@@ -383,20 +383,6 @@ func (v *visibilityManagerImpl) convertVisibilityWorkflowExecutionInfo(execution
 	}
 
 	return convertedExecution
-}
-
-func (v *visibilityManagerImpl) fromInternalListWorkflowExecutionsRequest(internalReq *InternalListWorkflowExecutionsRequest) *ListWorkflowExecutionsRequest {
-	if internalReq == nil {
-		return nil
-	}
-	return &ListWorkflowExecutionsRequest{
-		DomainUUID:    internalReq.DomainUUID,
-		Domain:        internalReq.Domain,
-		EarliestTime:  internalReq.EarliestTime.UnixNano(),
-		LatestTime:    internalReq.LatestTime.UnixNano(),
-		PageSize:      internalReq.PageSize,
-		NextPageToken: internalReq.NextPageToken,
-	}
 }
 
 func (v *visibilityManagerImpl) toInternalListWorkflowExecutionsRequest(req *ListWorkflowExecutionsRequest) *InternalListWorkflowExecutionsRequest {

@@ -24,7 +24,6 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
 
 // Insert a new record to domain, return error if failed or already exists
@@ -33,14 +32,6 @@ func (db *ddb) InsertDomain(
 	ctx context.Context,
 	row *nosqlplugin.DomainRow,
 ) error {
-	panic("TODO")
-}
-
-func (db *ddb) updateMetadataBatch(
-	ctx context.Context,
-	batch gocql.Batch,
-	notificationVersion int64,
-) {
 	panic("TODO")
 }
 

@@ -1224,54 +1224,6 @@ func assertRunIDAndUpdateCurrentExecution(
 	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
-func assertAndUpdateCurrentExecution(
-	ctx context.Context,
-	tx sqlplugin.Tx,
-	shardID int,
-	domainID serialization.UUID,
-	workflowID string,
-	newRunID serialization.UUID,
-	previousRunID serialization.UUID,
-	previousLastWriteVersion int64,
-	previousState int,
-	createRequestID string,
-	state int,
-	closeStatus int,
-	startVersion int64,
-	lastWriteVersion int64,
-) error {
-
-	assertFn := func(currentRow *sqlplugin.CurrentExecutionsRow) error {
-		if !bytes.Equal(currentRow.RunID, previousRunID) {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"assertAndUpdateCurrentExecution failed. Current run ID was %v, expected %v",
-				currentRow.RunID,
-				previousRunID,
-			)}
-		}
-		if currentRow.LastWriteVersion != previousLastWriteVersion {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"assertAndUpdateCurrentExecution failed. Current last write version was %v, expected %v",
-				currentRow.LastWriteVersion,
-				previousLastWriteVersion,
-			)}
-		}
-		if currentRow.State != previousState {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"assertAndUpdateCurrentExecution failed. Current state %v, expected %v",
-				currentRow.State,
-				previousState,
-			)}
-		}
-		return nil
-	}
-	if err := assertCurrentExecution(ctx, tx, shardID, domainID, workflowID, assertFn); err != nil {
-		return err
-	}
-
-	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
-}
-
 func assertCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
@@ -1393,7 +1345,7 @@ func buildExecutionRow(
 		RetryBackoffCoefficient:            executionInfo.BackoffCoefficient,
 		RetryMaximumInterval:               executionInfo.MaximumInterval,
 		RetryMaximumAttempts:               executionInfo.MaximumAttempts,
-		RetryExpiration:                    executionInfo.ExpirationSeconds,
+		RetryExpiration:                    executionInfo.ExpirationInterval,
 		RetryExpirationTimestamp:           executionInfo.ExpirationTime,
 		RetryNonRetryableErrors:            executionInfo.NonRetriableErrors,
 		EventStoreVersion:                  p.EventStoreVersion,

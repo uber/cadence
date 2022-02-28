@@ -47,7 +47,7 @@ func randSeq(n int) string {
 }
 
 func randomHostInfo(n int) []HostInfo {
-	res := make([]HostInfo, n, n)
+	res := make([]HostInfo, n)
 	for i := 0; i < n; i++ {
 		res = append(res, NewHostInfo(randSeq(5)))
 	}

@@ -79,13 +79,6 @@ const (
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
-	templateCompleteTaskQuery = `DELETE FROM tasks ` +
-		`WHERE domain_id = ? ` +
-		`and task_list_name = ? ` +
-		`and task_list_type = ? ` +
-		`and type = ? ` +
-		`and task_id = ?`
-
 	templateCompleteTasksLessThanQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +
 		`AND task_list_name = ? ` +
@@ -307,7 +300,7 @@ func (db *cdb) UpdateTaskListWithTTL(
 // Noop if TTL is already implemented in other methods
 func (db *cdb) ListTaskList(ctx context.Context, pageSize int, nextPageToken []byte) (*nosqlplugin.ListTaskListResult, error) {
 	return nil, &types.InternalServiceError{
-		Message: fmt.Sprintf("unsupported operation"),
+		Message: "unsupported operation",
 	}
 }
 

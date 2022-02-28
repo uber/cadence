@@ -268,7 +268,7 @@ func (q *processingQueueImpl) AddTasks(
 		if !taskBelongsToProcessQueue(q.state, key, task) {
 			errMsg := "Processing queue encountered a task doesn't belong to its scope"
 			q.logger.Error(errMsg, tag.Error(
-				fmt.Errorf("Processing queue state: %+v, task: %+v", q.state, key),
+				fmt.Errorf("processing queue state: %+v, task: %+v", q.state, key),
 			))
 			panic(errMsg)
 		}

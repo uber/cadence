@@ -24,7 +24,6 @@ package reset
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -634,7 +633,7 @@ func (r *workflowResetterImpl) closePendingDecisionTask(
 
 	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
 		return nil, &types.BadRequestError{
-			Message: fmt.Sprintf("Can not reset workflow with pending child workflows"),
+			Message: "Can not reset workflow with pending child workflows",
 		}
 	}
 

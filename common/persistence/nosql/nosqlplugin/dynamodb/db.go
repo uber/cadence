@@ -40,7 +40,6 @@ var (
 
 // ddb represents a logical connection to DynamoDB database
 type ddb struct {
-	logger log.Logger
 }
 
 var _ nosqlplugin.DB = (*ddb)(nil)
@@ -71,8 +70,5 @@ func (db *ddb) IsThrottlingError(err error) bool {
 }
 
 func (db *ddb) IsConditionFailedError(err error) bool {
-	if err == errConditionFailed {
-		return true
-	}
-	return false
+	return err == errConditionFailed
 }
