@@ -90,6 +90,8 @@ func (s *ClientIntegrationSuite) SetupSuite() {
 	s.worker = worker.New(s.wfService, s.domainName, s.taskList, worker.Options{})
 	if err := s.worker.Start(); err != nil {
 		s.Logger.Fatal("Error when start worker", tag.Error(err))
+	} else {
+		s.Logger.Info("Worker started")
 	}
 }
 
@@ -99,12 +101,10 @@ func (s *ClientIntegrationSuite) TearDownSuite() {
 
 func (s *ClientIntegrationSuite) buildServiceClient() (workflowserviceclient.Interface, error) {
 	cadenceClientName := "cadence-client"
-	cadenceFrontendService := service.Frontend
-	hostPort := "127.0.0.1:7114"
+	hostPort := "127.0.0.1:7104"
 	if TestFlags.FrontendAddr != "" {
 		hostPort = TestFlags.FrontendAddr
 	}
-
 	ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName))
 	if err != nil {
 		s.Logger.Fatal("Failed to create transport channel", tag.Error(err))
@@ -113,7 +113,7 @@ func (s *ClientIntegrationSuite) buildServiceClient() (workflowserviceclient.Int
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: cadenceClientName,
 		Outbounds: yarpc.Outbounds{
-			cadenceFrontendService: {Unary: ch.NewSingleOutbound(hostPort)},
+			service.Frontend: {Unary: ch.NewSingleOutbound(hostPort)},
 		},
 	})
 	if dispatcher == nil {
@@ -123,7 +123,7 @@ func (s *ClientIntegrationSuite) buildServiceClient() (workflowserviceclient.Int
 		s.Logger.Fatal("Failed to create outbound transport channel", tag.Error(err))
 	}
 
-	return workflowserviceclient.New(dispatcher.ClientConfig(cadenceFrontendService)), nil
+	return workflowserviceclient.New(dispatcher.ClientConfig(service.Frontend)), nil
 }
 
 func (s *ClientIntegrationSuite) SetupTest() {

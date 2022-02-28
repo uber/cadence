@@ -69,7 +69,7 @@ func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return host.GetNamedAddress(pr.namedPort), nil
+	return host.GetNamedAddress(pr.namedPort)
 }
 
 // FromHostAddress resolves the final history peer responsible for the given host address.
@@ -80,5 +80,5 @@ func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return host.GetNamedAddress(pr.namedPort), nil
+	return host.GetNamedAddress(pr.namedPort)
 }

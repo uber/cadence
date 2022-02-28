@@ -82,5 +82,14 @@ func (s *simpleResolver) Members(service string) ([]membership.HostInfo, error) 
 }
 
 func (s *simpleResolver) LookupByAddress(service string, address string) (membership.HostInfo, error) {
+	resolver, ok := s.resolvers[service]
+	if !ok {
+		return membership.HostInfo{}, fmt.Errorf("cannot lookup host for service %q", service)
+	}
+	for _, m := range resolver.Members() {
+		if belongs, err := m.Belongs(address); err == nil && belongs {
+			return m, nil
+		}
+	}
 	return membership.HostInfo{}, nil
 }

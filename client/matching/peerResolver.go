@@ -80,5 +80,7 @@ func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return host.GetNamedAddress(pr.namedPort), nil
+
+	return host.GetNamedAddress(pr.namedPort)
+
 }

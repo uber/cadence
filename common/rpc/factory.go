@@ -45,7 +45,7 @@ type Factory struct {
 // NewFactory builds a new rpc.Factory
 func NewFactory(logger log.Logger, p Params) *Factory {
 	inbounds := yarpc.Inbounds{}
-
+	logger = logger.WithTags(tag.Service(p.ServiceName))
 	// Create TChannel transport
 	// This is here only because ringpop expects tchannel.ChannelTransport,
 	// everywhere else we use regular tchannel.Transport.

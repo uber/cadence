@@ -798,17 +798,33 @@ func newPublicClient(dispatcher *yarpc.Dispatcher) cwsc.Interface {
 }
 
 func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo) common.RPCFactory {
+	tchannelAddres, err := host.GetNamedAddress(membership.PortTchannel)
+	if err != nil {
+		c.logger.Fatal("couldn't get tchannel port")
+	}
+
+	grpcAddress, err := host.GetNamedAddress(membership.PortGRPC)
+	if err != nil {
+		c.logger.Fatal("couldn't get grpc port")
+	}
+
+	frontendGrpcAddress, err := c.FrontendHost().GetNamedAddress(membership.PortGRPC)
+	if err != nil {
+		c.logger.Fatal("couldn't get frontend grpc port")
+	}
+
 	return rpc.NewFactory(c.logger, rpc.Params{
 		ServiceName:     serviceName,
-		TChannelAddress: host.GetNamedAddress(membership.PortTchannel),
-		GRPCAddress:     host.GetNamedAddress(membership.PortGRPC),
+		TChannelAddress: tchannelAddres,
+		GRPCAddress:     grpcAddress,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &versionMiddleware{},
 		},
+
 		// For integration tests to generate client out of the same outbound.
 		OutboundsBuilder: rpc.CombineOutbounds(
-			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, host.GetNamedAddress(membership.PortGRPC)},
-			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, c.FrontendHost().GetNamedAddress(membership.PortGRPC)},
+			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, grpcAddress},
+			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, frontendGrpcAddress},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
 			rpc.NewDirectOutbound(service.History, true, nil),
 			rpc.NewDirectOutbound(service.Matching, true, nil),

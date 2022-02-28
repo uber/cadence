@@ -535,9 +535,12 @@ func CreateShardOwnershipLostError(
 	currentHost membership.HostInfo,
 	ownerHost membership.HostInfo,
 ) *types.ShardOwnershipLostError {
-
+	address, err := ownerHost.GetNamedAddress(membership.PortTchannel)
+	if err != nil {
+		address = ownerHost.Identity()
+	}
 	return &types.ShardOwnershipLostError{
 		Message: fmt.Sprintf("Shard is not owned by host: %v", currentHost.Identity()),
-		Owner:   ownerHost.GetNamedAddress(membership.PortTchannel),
+		Owner:   address,
 	}
 }

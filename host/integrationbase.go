@@ -58,8 +58,8 @@ type (
 		Logger                   log.Logger
 		domainName               string
 		testRawHistoryDomainName string
-		foreignDomainName        string
 		archivalDomainName       string
+		foreignDomainName        string
 		defaultTestCluster       testcluster.PersistenceTestCluster
 		visibilityTestCluster    testcluster.PersistenceTestCluster
 	}

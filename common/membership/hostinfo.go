@@ -82,12 +82,12 @@ func (hi HostInfo) GetAddress() string {
 }
 
 // GetNamedAddress returns the ip:port address
-func (hi HostInfo) GetNamedAddress(port string) string {
+func (hi HostInfo) GetNamedAddress(port string) (string, error) {
 	if port, set := hi.portMap[port]; set {
-
-		return fmt.Sprintf("%s:%d", hi.ip, port)
+		return fmt.Sprintf("%s:%d", hi.ip, port), nil
 	}
-	return ""
+
+	return "", fmt.Errorf("port %q is not set for %+v", port, hi)
 }
 
 // Belongs tells if ip:port is assigned to this member
