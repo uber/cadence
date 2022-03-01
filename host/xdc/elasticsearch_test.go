@@ -37,7 +37,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common"
@@ -90,7 +90,10 @@ var (
 )
 
 func (s *esCrossDCTestSuite) SetupSuite() {
-	s.logger = loggerimpl.NewLogger(zaptest.NewLogger(s.T()))
+	zapLogger, err := zap.NewDevelopment()
+	// cannot use s.Nil since it is not initialized
+	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLogger(zapLogger)
 
 	fileName := "../testdata/xdc_integration_es_clusters.yaml"
 	if host.TestFlags.TestClusterConfigFile != "" {
