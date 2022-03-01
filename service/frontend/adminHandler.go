@@ -1633,7 +1633,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 		return adh.error(err, scope)
 	}
 
-	var filters map[dynamicconfig.Filter]interface{}
+	var filters map[dc.Filter]interface{}
 
 	if request.Filters == nil {
 		filters = nil
@@ -1657,7 +1657,7 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 
 	keyVal, err := checkValidKey(request.ConfigName)
 	if err != nil {
-		entries, err2 := adh.params.DynamicConfig.ListValue(dynamicconfig.UnknownKey)
+		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
 		if err2 != nil {
 			return nil, adh.error(err2, scope)
 		}
@@ -1697,15 +1697,15 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	}
 }
 
-func convertFilterListToMap(filters []*types.DynamicConfigFilter) (map[dynamicconfig.Filter]interface{}, error) {
-	newFilters := make(map[dynamicconfig.Filter]interface{})
+func convertFilterListToMap(filters []*types.DynamicConfigFilter) (map[dc.Filter]interface{}, error) {
+	newFilters := make(map[dc.Filter]interface{})
 
 	for _, filter := range filters {
 		val, err := convertFromDataBlob(filter.Value)
 		if err != nil {
 			return nil, err
 		}
-		newFilters[dynamicconfig.ParseFilter(filter.Name)] = val
+		newFilters[dc.ParseFilter(filter.Name)] = val
 	}
 	return newFilters, nil
 }
