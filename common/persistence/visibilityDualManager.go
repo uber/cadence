@@ -85,6 +85,7 @@ func (v *visibilityDualManager) RecordWorkflowExecutionStarted(
 	request *RecordWorkflowExecutionStartedRequest,
 ) error {
 	return v.chooseVisibilityManagerForWrite(
+		ctx,
 		func() error {
 			return v.dbVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 		},
@@ -99,6 +100,7 @@ func (v *visibilityDualManager) RecordWorkflowExecutionClosed(
 	request *RecordWorkflowExecutionClosedRequest,
 ) error {
 	return v.chooseVisibilityManagerForWrite(
+		ctx,
 		func() error {
 			return v.dbVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 		},
@@ -113,6 +115,7 @@ func (v *visibilityDualManager) DeleteWorkflowExecution(
 	request *VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	return v.chooseVisibilityManagerForWrite(
+		ctx,
 		func() error {
 			return v.dbVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
@@ -127,6 +130,7 @@ func (v *visibilityDualManager) UpsertWorkflowExecution(
 	request *UpsertWorkflowExecutionRequest,
 ) error {
 	return v.chooseVisibilityManagerForWrite(
+		ctx,
 		func() error {
 			return v.dbVisibilityManager.UpsertWorkflowExecution(ctx, request)
 		},
@@ -136,19 +140,42 @@ func (v *visibilityDualManager) UpsertWorkflowExecution(
 	)
 }
 
-func (v *visibilityDualManager) chooseVisibilityManagerForWrite(dbVisFunc, esVisFunc func() error) error {
-	switch v.writeMode() {
+func (v *visibilityDualManager) chooseVisibilityModeForAdmin() string {
+	switch {
+	case v.dbVisibilityManager != nil && v.esVisibilityManager != nil:
+		return common.AdvancedVisibilityWritingModeDual
+	case v.esVisibilityManager != nil:
+		return common.AdvancedVisibilityWritingModeOn
+	case v.dbVisibilityManager != nil:
+		return common.AdvancedVisibilityWritingModeOff
+	default:
+		return "INVALID_ADMIN_MODE"
+	}
+}
+
+func (v *visibilityDualManager) chooseVisibilityManagerForWrite(ctx context.Context, dbVisFunc, esVisFunc func() error) error {
+	var writeMode string
+	if v.writeMode != nil {
+		writeMode = v.writeMode()
+	} else {
+		key := VisibilityAdminDeletionKey("visibilityAdminDelete")
+		if value := ctx.Value(key); value != nil && value.(bool) {
+			writeMode = v.chooseVisibilityModeForAdmin()
+		}
+	}
+
+	switch writeMode {
 	case common.AdvancedVisibilityWritingModeOff:
 		if v.dbVisibilityManager == nil {
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", v.writeMode()),
+				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
 			}
 		}
 		return dbVisFunc()
 	case common.AdvancedVisibilityWritingModeOn:
 		if v.esVisibilityManager == nil {
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", v.writeMode()),
+				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
 			}
 		}
 
@@ -156,7 +183,7 @@ func (v *visibilityDualManager) chooseVisibilityManagerForWrite(dbVisFunc, esVis
 	case common.AdvancedVisibilityWritingModeDual:
 		if v.dbVisibilityManager == nil || v.esVisibilityManager == nil {
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", v.writeMode()),
+				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
 			}
 		}
 
@@ -166,7 +193,7 @@ func (v *visibilityDualManager) chooseVisibilityManagerForWrite(dbVisFunc, esVis
 		return dbVisFunc()
 	default:
 		return &types.InternalServiceError{
-			Message: fmt.Sprintf("Unknown visibility writing mode: %s", v.writeMode()),
+			Message: fmt.Sprintf("Unknown visibility writing mode: %s", writeMode),
 		}
 	}
 }

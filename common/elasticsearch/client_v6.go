@@ -380,6 +380,9 @@ func (c *elasticV6) SearchForOneClosedExecution(
 }
 
 func fromV6toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
+	if response == nil {
+		return &GenericBulkResponse{}
+	}
 	return &GenericBulkResponse{
 		Took:   response.Took,
 		Errors: response.Errors,

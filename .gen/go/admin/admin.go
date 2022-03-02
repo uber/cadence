@@ -489,6 +489,1244 @@ func (v *AddSearchAttributeRequest) IsSetSecurityToken() bool {
 	return v != nil && v.SecurityToken != nil
 }
 
+type AdminDeleteWorkflowRequest struct {
+	Domain    *string                   `json:"domain,omitempty"`
+	Execution *shared.WorkflowExecution `json:"execution,omitempty"`
+}
+
+// ToWire translates a AdminDeleteWorkflowRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminDeleteWorkflowRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
+	var v shared.WorkflowExecution
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminDeleteWorkflowRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminDeleteWorkflowRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminDeleteWorkflowRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminDeleteWorkflowRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminDeleteWorkflowRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminDeleteWorkflowRequest struct could not be encoded.
+func (v *AdminDeleteWorkflowRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Domain != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Domain)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Execution != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Execution.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _WorkflowExecution_Decode(sr stream.Reader) (*shared.WorkflowExecution, error) {
+	var v shared.WorkflowExecution
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminDeleteWorkflowRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminDeleteWorkflowRequest struct could not be generated from the wire
+// representation.
+func (v *AdminDeleteWorkflowRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Domain = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TStruct:
+			v.Execution, err = _WorkflowExecution_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminDeleteWorkflowRequest
+// struct.
+func (v *AdminDeleteWorkflowRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		i++
+	}
+
+	return fmt.Sprintf("AdminDeleteWorkflowRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminDeleteWorkflowRequest match the
+// provided AdminDeleteWorkflowRequest.
+//
+// This function performs a deep comparison.
+func (v *AdminDeleteWorkflowRequest) Equals(rhs *AdminDeleteWorkflowRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminDeleteWorkflowRequest.
+func (v *AdminDeleteWorkflowRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.Execution != nil {
+		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *AdminDeleteWorkflowRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *AdminDeleteWorkflowRequest) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+// GetExecution returns the value of Execution if it is set or its
+// zero value if it is unset.
+func (v *AdminDeleteWorkflowRequest) GetExecution() (o *shared.WorkflowExecution) {
+	if v != nil && v.Execution != nil {
+		return v.Execution
+	}
+
+	return
+}
+
+// IsSetExecution returns true if Execution is not nil.
+func (v *AdminDeleteWorkflowRequest) IsSetExecution() bool {
+	return v != nil && v.Execution != nil
+}
+
+type AdminDeleteWorkflowResponse struct {
+	HistoryDeleted    *bool `json:"historyDeleted,omitempty"`
+	ExecutionsDeleted *bool `json:"executionsDeleted,omitempty"`
+	VisibilityDeleted *bool `json:"visibilityDeleted,omitempty"`
+}
+
+// ToWire translates a AdminDeleteWorkflowResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminDeleteWorkflowResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.HistoryDeleted != nil {
+		w, err = wire.NewValueBool(*(v.HistoryDeleted)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ExecutionsDeleted != nil {
+		w, err = wire.NewValueBool(*(v.ExecutionsDeleted)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.VisibilityDeleted != nil {
+		w, err = wire.NewValueBool(*(v.VisibilityDeleted)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a AdminDeleteWorkflowResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminDeleteWorkflowResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminDeleteWorkflowResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminDeleteWorkflowResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.HistoryDeleted = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.ExecutionsDeleted = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.VisibilityDeleted = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminDeleteWorkflowResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminDeleteWorkflowResponse struct could not be encoded.
+func (v *AdminDeleteWorkflowResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.HistoryDeleted != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBool}); err != nil {
+			return err
+		}
+		if err := sw.WriteBool(*(v.HistoryDeleted)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.ExecutionsDeleted != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TBool}); err != nil {
+			return err
+		}
+		if err := sw.WriteBool(*(v.ExecutionsDeleted)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.VisibilityDeleted != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 30, Type: wire.TBool}); err != nil {
+			return err
+		}
+		if err := sw.WriteBool(*(v.VisibilityDeleted)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a AdminDeleteWorkflowResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminDeleteWorkflowResponse struct could not be generated from the wire
+// representation.
+func (v *AdminDeleteWorkflowResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBool:
+			var x bool
+			x, err = sr.ReadBool()
+			v.HistoryDeleted = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TBool:
+			var x bool
+			x, err = sr.ReadBool()
+			v.ExecutionsDeleted = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 30 && fh.Type == wire.TBool:
+			var x bool
+			x, err = sr.ReadBool()
+			v.VisibilityDeleted = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminDeleteWorkflowResponse
+// struct.
+func (v *AdminDeleteWorkflowResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.HistoryDeleted != nil {
+		fields[i] = fmt.Sprintf("HistoryDeleted: %v", *(v.HistoryDeleted))
+		i++
+	}
+	if v.ExecutionsDeleted != nil {
+		fields[i] = fmt.Sprintf("ExecutionsDeleted: %v", *(v.ExecutionsDeleted))
+		i++
+	}
+	if v.VisibilityDeleted != nil {
+		fields[i] = fmt.Sprintf("VisibilityDeleted: %v", *(v.VisibilityDeleted))
+		i++
+	}
+
+	return fmt.Sprintf("AdminDeleteWorkflowResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _Bool_EqualsPtr(lhs, rhs *bool) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return (x == y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this AdminDeleteWorkflowResponse match the
+// provided AdminDeleteWorkflowResponse.
+//
+// This function performs a deep comparison.
+func (v *AdminDeleteWorkflowResponse) Equals(rhs *AdminDeleteWorkflowResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.HistoryDeleted, rhs.HistoryDeleted) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.ExecutionsDeleted, rhs.ExecutionsDeleted) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.VisibilityDeleted, rhs.VisibilityDeleted) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminDeleteWorkflowResponse.
+func (v *AdminDeleteWorkflowResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.HistoryDeleted != nil {
+		enc.AddBool("historyDeleted", *v.HistoryDeleted)
+	}
+	if v.ExecutionsDeleted != nil {
+		enc.AddBool("executionsDeleted", *v.ExecutionsDeleted)
+	}
+	if v.VisibilityDeleted != nil {
+		enc.AddBool("visibilityDeleted", *v.VisibilityDeleted)
+	}
+	return err
+}
+
+// GetHistoryDeleted returns the value of HistoryDeleted if it is set or its
+// zero value if it is unset.
+func (v *AdminDeleteWorkflowResponse) GetHistoryDeleted() (o bool) {
+	if v != nil && v.HistoryDeleted != nil {
+		return *v.HistoryDeleted
+	}
+
+	return
+}
+
+// IsSetHistoryDeleted returns true if HistoryDeleted is not nil.
+func (v *AdminDeleteWorkflowResponse) IsSetHistoryDeleted() bool {
+	return v != nil && v.HistoryDeleted != nil
+}
+
+// GetExecutionsDeleted returns the value of ExecutionsDeleted if it is set or its
+// zero value if it is unset.
+func (v *AdminDeleteWorkflowResponse) GetExecutionsDeleted() (o bool) {
+	if v != nil && v.ExecutionsDeleted != nil {
+		return *v.ExecutionsDeleted
+	}
+
+	return
+}
+
+// IsSetExecutionsDeleted returns true if ExecutionsDeleted is not nil.
+func (v *AdminDeleteWorkflowResponse) IsSetExecutionsDeleted() bool {
+	return v != nil && v.ExecutionsDeleted != nil
+}
+
+// GetVisibilityDeleted returns the value of VisibilityDeleted if it is set or its
+// zero value if it is unset.
+func (v *AdminDeleteWorkflowResponse) GetVisibilityDeleted() (o bool) {
+	if v != nil && v.VisibilityDeleted != nil {
+		return *v.VisibilityDeleted
+	}
+
+	return
+}
+
+// IsSetVisibilityDeleted returns true if VisibilityDeleted is not nil.
+func (v *AdminDeleteWorkflowResponse) IsSetVisibilityDeleted() bool {
+	return v != nil && v.VisibilityDeleted != nil
+}
+
+type AdminMaintainWorkflowRequest struct {
+	Domain    *string                   `json:"domain,omitempty"`
+	Execution *shared.WorkflowExecution `json:"execution,omitempty"`
+}
+
+// ToWire translates a AdminMaintainWorkflowRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminMaintainWorkflowRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.Execution != nil {
+		w, err = v.Execution.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a AdminMaintainWorkflowRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminMaintainWorkflowRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminMaintainWorkflowRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminMaintainWorkflowRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.Execution, err = _WorkflowExecution_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminMaintainWorkflowRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminMaintainWorkflowRequest struct could not be encoded.
+func (v *AdminMaintainWorkflowRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Domain != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Domain)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.Execution != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Execution.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a AdminMaintainWorkflowRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminMaintainWorkflowRequest struct could not be generated from the wire
+// representation.
+func (v *AdminMaintainWorkflowRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Domain = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TStruct:
+			v.Execution, err = _WorkflowExecution_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminMaintainWorkflowRequest
+// struct.
+func (v *AdminMaintainWorkflowRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.Execution != nil {
+		fields[i] = fmt.Sprintf("Execution: %v", v.Execution)
+		i++
+	}
+
+	return fmt.Sprintf("AdminMaintainWorkflowRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminMaintainWorkflowRequest match the
+// provided AdminMaintainWorkflowRequest.
+//
+// This function performs a deep comparison.
+func (v *AdminMaintainWorkflowRequest) Equals(rhs *AdminMaintainWorkflowRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.Execution == nil && rhs.Execution == nil) || (v.Execution != nil && rhs.Execution != nil && v.Execution.Equals(rhs.Execution))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminMaintainWorkflowRequest.
+func (v *AdminMaintainWorkflowRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.Execution != nil {
+		err = multierr.Append(err, enc.AddObject("execution", v.Execution))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *AdminMaintainWorkflowRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *AdminMaintainWorkflowRequest) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+// GetExecution returns the value of Execution if it is set or its
+// zero value if it is unset.
+func (v *AdminMaintainWorkflowRequest) GetExecution() (o *shared.WorkflowExecution) {
+	if v != nil && v.Execution != nil {
+		return v.Execution
+	}
+
+	return
+}
+
+// IsSetExecution returns true if Execution is not nil.
+func (v *AdminMaintainWorkflowRequest) IsSetExecution() bool {
+	return v != nil && v.Execution != nil
+}
+
+type AdminMaintainWorkflowResponse struct {
+	HistoryDeleted    *bool `json:"historyDeleted,omitempty"`
+	ExecutionsDeleted *bool `json:"executionsDeleted,omitempty"`
+	VisibilityDeleted *bool `json:"visibilityDeleted,omitempty"`
+}
+
+// ToWire translates a AdminMaintainWorkflowResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminMaintainWorkflowResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [3]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.HistoryDeleted != nil {
+		w, err = wire.NewValueBool(*(v.HistoryDeleted)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.ExecutionsDeleted != nil {
+		w, err = wire.NewValueBool(*(v.ExecutionsDeleted)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+	if v.VisibilityDeleted != nil {
+		w, err = wire.NewValueBool(*(v.VisibilityDeleted)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 30, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a AdminMaintainWorkflowResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminMaintainWorkflowResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminMaintainWorkflowResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminMaintainWorkflowResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.HistoryDeleted = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.ExecutionsDeleted = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 30:
+			if field.Value.Type() == wire.TBool {
+				var x bool
+				x, err = field.Value.GetBool(), error(nil)
+				v.VisibilityDeleted = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminMaintainWorkflowResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminMaintainWorkflowResponse struct could not be encoded.
+func (v *AdminMaintainWorkflowResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.HistoryDeleted != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBool}); err != nil {
+			return err
+		}
+		if err := sw.WriteBool(*(v.HistoryDeleted)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.ExecutionsDeleted != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TBool}); err != nil {
+			return err
+		}
+		if err := sw.WriteBool(*(v.ExecutionsDeleted)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.VisibilityDeleted != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 30, Type: wire.TBool}); err != nil {
+			return err
+		}
+		if err := sw.WriteBool(*(v.VisibilityDeleted)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a AdminMaintainWorkflowResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminMaintainWorkflowResponse struct could not be generated from the wire
+// representation.
+func (v *AdminMaintainWorkflowResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBool:
+			var x bool
+			x, err = sr.ReadBool()
+			v.HistoryDeleted = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TBool:
+			var x bool
+			x, err = sr.ReadBool()
+			v.ExecutionsDeleted = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 30 && fh.Type == wire.TBool:
+			var x bool
+			x, err = sr.ReadBool()
+			v.VisibilityDeleted = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminMaintainWorkflowResponse
+// struct.
+func (v *AdminMaintainWorkflowResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [3]string
+	i := 0
+	if v.HistoryDeleted != nil {
+		fields[i] = fmt.Sprintf("HistoryDeleted: %v", *(v.HistoryDeleted))
+		i++
+	}
+	if v.ExecutionsDeleted != nil {
+		fields[i] = fmt.Sprintf("ExecutionsDeleted: %v", *(v.ExecutionsDeleted))
+		i++
+	}
+	if v.VisibilityDeleted != nil {
+		fields[i] = fmt.Sprintf("VisibilityDeleted: %v", *(v.VisibilityDeleted))
+		i++
+	}
+
+	return fmt.Sprintf("AdminMaintainWorkflowResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminMaintainWorkflowResponse match the
+// provided AdminMaintainWorkflowResponse.
+//
+// This function performs a deep comparison.
+func (v *AdminMaintainWorkflowResponse) Equals(rhs *AdminMaintainWorkflowResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.HistoryDeleted, rhs.HistoryDeleted) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.ExecutionsDeleted, rhs.ExecutionsDeleted) {
+		return false
+	}
+	if !_Bool_EqualsPtr(v.VisibilityDeleted, rhs.VisibilityDeleted) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminMaintainWorkflowResponse.
+func (v *AdminMaintainWorkflowResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.HistoryDeleted != nil {
+		enc.AddBool("historyDeleted", *v.HistoryDeleted)
+	}
+	if v.ExecutionsDeleted != nil {
+		enc.AddBool("executionsDeleted", *v.ExecutionsDeleted)
+	}
+	if v.VisibilityDeleted != nil {
+		enc.AddBool("visibilityDeleted", *v.VisibilityDeleted)
+	}
+	return err
+}
+
+// GetHistoryDeleted returns the value of HistoryDeleted if it is set or its
+// zero value if it is unset.
+func (v *AdminMaintainWorkflowResponse) GetHistoryDeleted() (o bool) {
+	if v != nil && v.HistoryDeleted != nil {
+		return *v.HistoryDeleted
+	}
+
+	return
+}
+
+// IsSetHistoryDeleted returns true if HistoryDeleted is not nil.
+func (v *AdminMaintainWorkflowResponse) IsSetHistoryDeleted() bool {
+	return v != nil && v.HistoryDeleted != nil
+}
+
+// GetExecutionsDeleted returns the value of ExecutionsDeleted if it is set or its
+// zero value if it is unset.
+func (v *AdminMaintainWorkflowResponse) GetExecutionsDeleted() (o bool) {
+	if v != nil && v.ExecutionsDeleted != nil {
+		return *v.ExecutionsDeleted
+	}
+
+	return
+}
+
+// IsSetExecutionsDeleted returns true if ExecutionsDeleted is not nil.
+func (v *AdminMaintainWorkflowResponse) IsSetExecutionsDeleted() bool {
+	return v != nil && v.ExecutionsDeleted != nil
+}
+
+// GetVisibilityDeleted returns the value of VisibilityDeleted if it is set or its
+// zero value if it is unset.
+func (v *AdminMaintainWorkflowResponse) GetVisibilityDeleted() (o bool) {
+	if v != nil && v.VisibilityDeleted != nil {
+		return *v.VisibilityDeleted
+	}
+
+	return
+}
+
+// IsSetVisibilityDeleted returns true if VisibilityDeleted is not nil.
+func (v *AdminMaintainWorkflowResponse) IsSetVisibilityDeleted() bool {
+	return v != nil && v.VisibilityDeleted != nil
+}
+
 type DescribeClusterResponse struct {
 	SupportedClientVersions *shared.SupportedClientVersions `json:"supportedClientVersions,omitempty"`
 	MembershipInfo          *MembershipInfo                 `json:"membershipInfo,omitempty"`
@@ -1059,12 +2297,6 @@ func (v *DescribeWorkflowExecutionRequest) ToWire() (wire.Value, error) {
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
 
-func _WorkflowExecution_Read(w wire.Value) (*shared.WorkflowExecution, error) {
-	var v shared.WorkflowExecution
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a DescribeWorkflowExecutionRequest struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
@@ -1145,12 +2377,6 @@ func (v *DescribeWorkflowExecutionRequest) Encode(sw stream.Writer) error {
 	}
 
 	return sw.WriteStructEnd()
-}
-
-func _WorkflowExecution_Decode(sr stream.Reader) (*shared.WorkflowExecution, error) {
-	var v shared.WorkflowExecution
-	err := v.Decode(sr)
-	return &v, err
 }
 
 // Decode deserializes a DescribeWorkflowExecutionRequest struct directly from its Thrift-level
@@ -5016,16 +6242,6 @@ func (v *PersistenceFeature) String() string {
 	return fmt.Sprintf("PersistenceFeature{%v}", strings.Join(fields[:i], ", "))
 }
 
-func _Bool_EqualsPtr(lhs, rhs *bool) bool {
-	if lhs != nil && rhs != nil {
-
-		x := *lhs
-		y := *rhs
-		return (x == y)
-	}
-	return lhs == nil && rhs == nil
-}
-
 // Equals returns true if all the fields of this PersistenceFeature match the
 // provided PersistenceFeature.
 //
@@ -7764,7 +8980,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "d60357c2526ae877750859fb07d8fafd7483998f",
+	SHA1:     "97dc0a35258af322a543448375033d60a7c5c540",
 	Includes: []*thriftreflect.ThriftModule{
 		config.ThriftModule,
 		replicator.ThriftModule,
@@ -7773,7 +8989,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"config.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks\n  **/\n  shared.RespondCrossClusterTasksCompletedResponse RespondCrossClusterTasksCompleted(1: shared.RespondCrossClusterTasksCompletedRequest request) \n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\n//Eventually remove configName and integrate this functionality into Get.\n//GetDynamicConfigResponse would need to change as well.\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<config.DynamicConfigEntry> entries\n}\n\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"config.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks\n  **/\n  shared.RespondCrossClusterTasksCompletedResponse RespondCrossClusterTasksCompleted(1: shared.RespondCrossClusterTasksCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  AdminDeleteWorkflowResponse DeleteWorkflow(1: AdminDeleteWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  AdminMaintainWorkflowResponse MaintainCorruptWorkflow(1: AdminMaintainWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct AdminDeleteWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminDeleteWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\nstruct AdminMaintainWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminMaintainWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\n//Eventually remove configName and integrate this functionality into Get.\n//GetDynamicConfigResponse would need to change as well.\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<config.DynamicConfigEntry> entries\n}\n\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -9296,6 +10512,846 @@ func (v *AdminService_CloseShard_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_CloseShard_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_DeleteWorkflow_Args represents the arguments for the AdminService.DeleteWorkflow function.
+//
+// The arguments for DeleteWorkflow are sent and received over the wire as this struct.
+type AdminService_DeleteWorkflow_Args struct {
+	Request *AdminDeleteWorkflowRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_DeleteWorkflow_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_DeleteWorkflow_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _AdminDeleteWorkflowRequest_Read(w wire.Value) (*AdminDeleteWorkflowRequest, error) {
+	var v AdminDeleteWorkflowRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_DeleteWorkflow_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_DeleteWorkflow_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_DeleteWorkflow_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_DeleteWorkflow_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _AdminDeleteWorkflowRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_DeleteWorkflow_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_DeleteWorkflow_Args struct could not be encoded.
+func (v *AdminService_DeleteWorkflow_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _AdminDeleteWorkflowRequest_Decode(sr stream.Reader) (*AdminDeleteWorkflowRequest, error) {
+	var v AdminDeleteWorkflowRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_DeleteWorkflow_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_DeleteWorkflow_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_DeleteWorkflow_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _AdminDeleteWorkflowRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_DeleteWorkflow_Args
+// struct.
+func (v *AdminService_DeleteWorkflow_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_DeleteWorkflow_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_DeleteWorkflow_Args match the
+// provided AdminService_DeleteWorkflow_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_DeleteWorkflow_Args) Equals(rhs *AdminService_DeleteWorkflow_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_DeleteWorkflow_Args.
+func (v *AdminService_DeleteWorkflow_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_DeleteWorkflow_Args) GetRequest() (o *AdminDeleteWorkflowRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_DeleteWorkflow_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "DeleteWorkflow" for this struct.
+func (v *AdminService_DeleteWorkflow_Args) MethodName() string {
+	return "DeleteWorkflow"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_DeleteWorkflow_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_DeleteWorkflow_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.DeleteWorkflow
+// function.
+var AdminService_DeleteWorkflow_Helper = struct {
+	// Args accepts the parameters of DeleteWorkflow in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *AdminDeleteWorkflowRequest,
+	) *AdminService_DeleteWorkflow_Args
+
+	// IsException returns true if the given error can be thrown
+	// by DeleteWorkflow.
+	//
+	// An error can be thrown by DeleteWorkflow only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for DeleteWorkflow
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// DeleteWorkflow into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by DeleteWorkflow
+	//
+	//   value, err := DeleteWorkflow(args)
+	//   result, err := AdminService_DeleteWorkflow_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from DeleteWorkflow: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*AdminDeleteWorkflowResponse, error) (*AdminService_DeleteWorkflow_Result, error)
+
+	// UnwrapResponse takes the result struct for DeleteWorkflow
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if DeleteWorkflow threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_DeleteWorkflow_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_DeleteWorkflow_Result) (*AdminDeleteWorkflowResponse, error)
+}{}
+
+func init() {
+	AdminService_DeleteWorkflow_Helper.Args = func(
+		request *AdminDeleteWorkflowRequest,
+	) *AdminService_DeleteWorkflow_Args {
+		return &AdminService_DeleteWorkflow_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_DeleteWorkflow_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_DeleteWorkflow_Helper.WrapResponse = func(success *AdminDeleteWorkflowResponse, err error) (*AdminService_DeleteWorkflow_Result, error) {
+		if err == nil {
+			return &AdminService_DeleteWorkflow_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_DeleteWorkflow_Result.BadRequestError")
+			}
+			return &AdminService_DeleteWorkflow_Result{BadRequestError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_DeleteWorkflow_Result.EntityNotExistError")
+			}
+			return &AdminService_DeleteWorkflow_Result{EntityNotExistError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_DeleteWorkflow_Result.InternalServiceError")
+			}
+			return &AdminService_DeleteWorkflow_Result{InternalServiceError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_DeleteWorkflow_Helper.UnwrapResponse = func(result *AdminService_DeleteWorkflow_Result) (success *AdminDeleteWorkflowResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_DeleteWorkflow_Result represents the result of a AdminService.DeleteWorkflow function call.
+//
+// The result of a DeleteWorkflow execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_DeleteWorkflow_Result struct {
+	// Value returned by DeleteWorkflow after a successful execution.
+	Success              *AdminDeleteWorkflowResponse `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError      `json:"badRequestError,omitempty"`
+	EntityNotExistError  *shared.EntityNotExistsError `json:"entityNotExistError,omitempty"`
+	InternalServiceError *shared.InternalServiceError `json:"internalServiceError,omitempty"`
+}
+
+// ToWire translates a AdminService_DeleteWorkflow_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_DeleteWorkflow_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_DeleteWorkflow_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _AdminDeleteWorkflowResponse_Read(w wire.Value) (*AdminDeleteWorkflowResponse, error) {
+	var v AdminDeleteWorkflowResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _EntityNotExistsError_Read(w wire.Value) (*shared.EntityNotExistsError, error) {
+	var v shared.EntityNotExistsError
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_DeleteWorkflow_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_DeleteWorkflow_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_DeleteWorkflow_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_DeleteWorkflow_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _AdminDeleteWorkflowResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_DeleteWorkflow_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_DeleteWorkflow_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_DeleteWorkflow_Result struct could not be encoded.
+func (v *AdminService_DeleteWorkflow_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.EntityNotExistError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.EntityNotExistError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.InternalServiceError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 3, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.InternalServiceError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_DeleteWorkflow_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _AdminDeleteWorkflowResponse_Decode(sr stream.Reader) (*AdminDeleteWorkflowResponse, error) {
+	var v AdminDeleteWorkflowResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+func _EntityNotExistsError_Decode(sr stream.Reader) (*shared.EntityNotExistsError, error) {
+	var v shared.EntityNotExistsError
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_DeleteWorkflow_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_DeleteWorkflow_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_DeleteWorkflow_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _AdminDeleteWorkflowResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TStruct:
+			v.EntityNotExistError, err = _EntityNotExistsError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 3 && fh.Type == wire.TStruct:
+			v.InternalServiceError, err = _InternalServiceError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_DeleteWorkflow_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_DeleteWorkflow_Result
+// struct.
+func (v *AdminService_DeleteWorkflow_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_DeleteWorkflow_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_DeleteWorkflow_Result match the
+// provided AdminService_DeleteWorkflow_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_DeleteWorkflow_Result) Equals(rhs *AdminService_DeleteWorkflow_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_DeleteWorkflow_Result.
+func (v *AdminService_DeleteWorkflow_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_DeleteWorkflow_Result) GetSuccess() (o *AdminDeleteWorkflowResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_DeleteWorkflow_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_DeleteWorkflow_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_DeleteWorkflow_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_DeleteWorkflow_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *AdminService_DeleteWorkflow_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_DeleteWorkflow_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_DeleteWorkflow_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "DeleteWorkflow" for this struct.
+func (v *AdminService_DeleteWorkflow_Result) MethodName() string {
+	return "DeleteWorkflow"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_DeleteWorkflow_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
@@ -12744,12 +14800,6 @@ func _DescribeWorkflowExecutionResponse_Read(w wire.Value) (*DescribeWorkflowExe
 	return &v, err
 }
 
-func _EntityNotExistsError_Read(w wire.Value) (*shared.EntityNotExistsError, error) {
-	var v shared.EntityNotExistsError
-	err := v.FromWire(w)
-	return &v, err
-}
-
 // FromWire deserializes a AdminService_DescribeWorkflowExecution_Result struct from its Thrift-level
 // representation. The Thrift-level representation may be obtained
 // from a ThriftRW protocol implementation.
@@ -12933,12 +14983,6 @@ func (v *AdminService_DescribeWorkflowExecution_Result) Encode(sw stream.Writer)
 
 func _DescribeWorkflowExecutionResponse_Decode(sr stream.Reader) (*DescribeWorkflowExecutionResponse, error) {
 	var v DescribeWorkflowExecutionResponse
-	err := v.Decode(sr)
-	return &v, err
-}
-
-func _EntityNotExistsError_Decode(sr stream.Reader) (*shared.EntityNotExistsError, error) {
-	var v shared.EntityNotExistsError
 	err := v.Decode(sr)
 	return &v, err
 }
@@ -18946,6 +20990,834 @@ func (v *AdminService_ListDynamicConfig_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_ListDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_MaintainCorruptWorkflow_Args represents the arguments for the AdminService.MaintainCorruptWorkflow function.
+//
+// The arguments for MaintainCorruptWorkflow are sent and received over the wire as this struct.
+type AdminService_MaintainCorruptWorkflow_Args struct {
+	Request *AdminMaintainWorkflowRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_MaintainCorruptWorkflow_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_MaintainCorruptWorkflow_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _AdminMaintainWorkflowRequest_Read(w wire.Value) (*AdminMaintainWorkflowRequest, error) {
+	var v AdminMaintainWorkflowRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_MaintainCorruptWorkflow_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_MaintainCorruptWorkflow_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_MaintainCorruptWorkflow_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_MaintainCorruptWorkflow_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _AdminMaintainWorkflowRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_MaintainCorruptWorkflow_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_MaintainCorruptWorkflow_Args struct could not be encoded.
+func (v *AdminService_MaintainCorruptWorkflow_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _AdminMaintainWorkflowRequest_Decode(sr stream.Reader) (*AdminMaintainWorkflowRequest, error) {
+	var v AdminMaintainWorkflowRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_MaintainCorruptWorkflow_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_MaintainCorruptWorkflow_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_MaintainCorruptWorkflow_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _AdminMaintainWorkflowRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_MaintainCorruptWorkflow_Args
+// struct.
+func (v *AdminService_MaintainCorruptWorkflow_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_MaintainCorruptWorkflow_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_MaintainCorruptWorkflow_Args match the
+// provided AdminService_MaintainCorruptWorkflow_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_MaintainCorruptWorkflow_Args) Equals(rhs *AdminService_MaintainCorruptWorkflow_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_MaintainCorruptWorkflow_Args.
+func (v *AdminService_MaintainCorruptWorkflow_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MaintainCorruptWorkflow_Args) GetRequest() (o *AdminMaintainWorkflowRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_MaintainCorruptWorkflow_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "MaintainCorruptWorkflow" for this struct.
+func (v *AdminService_MaintainCorruptWorkflow_Args) MethodName() string {
+	return "MaintainCorruptWorkflow"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_MaintainCorruptWorkflow_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_MaintainCorruptWorkflow_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.MaintainCorruptWorkflow
+// function.
+var AdminService_MaintainCorruptWorkflow_Helper = struct {
+	// Args accepts the parameters of MaintainCorruptWorkflow in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *AdminMaintainWorkflowRequest,
+	) *AdminService_MaintainCorruptWorkflow_Args
+
+	// IsException returns true if the given error can be thrown
+	// by MaintainCorruptWorkflow.
+	//
+	// An error can be thrown by MaintainCorruptWorkflow only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for MaintainCorruptWorkflow
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// MaintainCorruptWorkflow into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by MaintainCorruptWorkflow
+	//
+	//   value, err := MaintainCorruptWorkflow(args)
+	//   result, err := AdminService_MaintainCorruptWorkflow_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from MaintainCorruptWorkflow: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*AdminMaintainWorkflowResponse, error) (*AdminService_MaintainCorruptWorkflow_Result, error)
+
+	// UnwrapResponse takes the result struct for MaintainCorruptWorkflow
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if MaintainCorruptWorkflow threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_MaintainCorruptWorkflow_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_MaintainCorruptWorkflow_Result) (*AdminMaintainWorkflowResponse, error)
+}{}
+
+func init() {
+	AdminService_MaintainCorruptWorkflow_Helper.Args = func(
+		request *AdminMaintainWorkflowRequest,
+	) *AdminService_MaintainCorruptWorkflow_Args {
+		return &AdminService_MaintainCorruptWorkflow_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_MaintainCorruptWorkflow_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		case *shared.EntityNotExistsError:
+			return true
+		case *shared.InternalServiceError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_MaintainCorruptWorkflow_Helper.WrapResponse = func(success *AdminMaintainWorkflowResponse, err error) (*AdminService_MaintainCorruptWorkflow_Result, error) {
+		if err == nil {
+			return &AdminService_MaintainCorruptWorkflow_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_MaintainCorruptWorkflow_Result.BadRequestError")
+			}
+			return &AdminService_MaintainCorruptWorkflow_Result{BadRequestError: e}, nil
+		case *shared.EntityNotExistsError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_MaintainCorruptWorkflow_Result.EntityNotExistError")
+			}
+			return &AdminService_MaintainCorruptWorkflow_Result{EntityNotExistError: e}, nil
+		case *shared.InternalServiceError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_MaintainCorruptWorkflow_Result.InternalServiceError")
+			}
+			return &AdminService_MaintainCorruptWorkflow_Result{InternalServiceError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_MaintainCorruptWorkflow_Helper.UnwrapResponse = func(result *AdminService_MaintainCorruptWorkflow_Result) (success *AdminMaintainWorkflowResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+		if result.EntityNotExistError != nil {
+			err = result.EntityNotExistError
+			return
+		}
+		if result.InternalServiceError != nil {
+			err = result.InternalServiceError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_MaintainCorruptWorkflow_Result represents the result of a AdminService.MaintainCorruptWorkflow function call.
+//
+// The result of a MaintainCorruptWorkflow execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_MaintainCorruptWorkflow_Result struct {
+	// Value returned by MaintainCorruptWorkflow after a successful execution.
+	Success              *AdminMaintainWorkflowResponse `json:"success,omitempty"`
+	BadRequestError      *shared.BadRequestError        `json:"badRequestError,omitempty"`
+	EntityNotExistError  *shared.EntityNotExistsError   `json:"entityNotExistError,omitempty"`
+	InternalServiceError *shared.InternalServiceError   `json:"internalServiceError,omitempty"`
+}
+
+// ToWire translates a AdminService_MaintainCorruptWorkflow_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_MaintainCorruptWorkflow_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [4]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		w, err = v.EntityNotExistError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 2, Value: w}
+		i++
+	}
+	if v.InternalServiceError != nil {
+		w, err = v.InternalServiceError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 3, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_MaintainCorruptWorkflow_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _AdminMaintainWorkflowResponse_Read(w wire.Value) (*AdminMaintainWorkflowResponse, error) {
+	var v AdminMaintainWorkflowResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_MaintainCorruptWorkflow_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_MaintainCorruptWorkflow_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_MaintainCorruptWorkflow_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_MaintainCorruptWorkflow_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _AdminMaintainWorkflowResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 2:
+			if field.Value.Type() == wire.TStruct {
+				v.EntityNotExistError, err = _EntityNotExistsError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 3:
+			if field.Value.Type() == wire.TStruct {
+				v.InternalServiceError, err = _InternalServiceError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_MaintainCorruptWorkflow_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_MaintainCorruptWorkflow_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_MaintainCorruptWorkflow_Result struct could not be encoded.
+func (v *AdminService_MaintainCorruptWorkflow_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.EntityNotExistError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 2, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.EntityNotExistError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.InternalServiceError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 3, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.InternalServiceError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_MaintainCorruptWorkflow_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _AdminMaintainWorkflowResponse_Decode(sr stream.Reader) (*AdminMaintainWorkflowResponse, error) {
+	var v AdminMaintainWorkflowResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_MaintainCorruptWorkflow_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_MaintainCorruptWorkflow_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_MaintainCorruptWorkflow_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _AdminMaintainWorkflowResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 2 && fh.Type == wire.TStruct:
+			v.EntityNotExistError, err = _EntityNotExistsError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 3 && fh.Type == wire.TStruct:
+			v.InternalServiceError, err = _InternalServiceError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if v.EntityNotExistError != nil {
+		count++
+	}
+	if v.InternalServiceError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_MaintainCorruptWorkflow_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_MaintainCorruptWorkflow_Result
+// struct.
+func (v *AdminService_MaintainCorruptWorkflow_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [4]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+	if v.EntityNotExistError != nil {
+		fields[i] = fmt.Sprintf("EntityNotExistError: %v", v.EntityNotExistError)
+		i++
+	}
+	if v.InternalServiceError != nil {
+		fields[i] = fmt.Sprintf("InternalServiceError: %v", v.InternalServiceError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_MaintainCorruptWorkflow_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_MaintainCorruptWorkflow_Result match the
+// provided AdminService_MaintainCorruptWorkflow_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_MaintainCorruptWorkflow_Result) Equals(rhs *AdminService_MaintainCorruptWorkflow_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+	if !((v.EntityNotExistError == nil && rhs.EntityNotExistError == nil) || (v.EntityNotExistError != nil && rhs.EntityNotExistError != nil && v.EntityNotExistError.Equals(rhs.EntityNotExistError))) {
+		return false
+	}
+	if !((v.InternalServiceError == nil && rhs.InternalServiceError == nil) || (v.InternalServiceError != nil && rhs.InternalServiceError != nil && v.InternalServiceError.Equals(rhs.InternalServiceError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_MaintainCorruptWorkflow_Result.
+func (v *AdminService_MaintainCorruptWorkflow_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	if v.EntityNotExistError != nil {
+		err = multierr.Append(err, enc.AddObject("entityNotExistError", v.EntityNotExistError))
+	}
+	if v.InternalServiceError != nil {
+		err = multierr.Append(err, enc.AddObject("internalServiceError", v.InternalServiceError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MaintainCorruptWorkflow_Result) GetSuccess() (o *AdminMaintainWorkflowResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_MaintainCorruptWorkflow_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MaintainCorruptWorkflow_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_MaintainCorruptWorkflow_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// GetEntityNotExistError returns the value of EntityNotExistError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MaintainCorruptWorkflow_Result) GetEntityNotExistError() (o *shared.EntityNotExistsError) {
+	if v != nil && v.EntityNotExistError != nil {
+		return v.EntityNotExistError
+	}
+
+	return
+}
+
+// IsSetEntityNotExistError returns true if EntityNotExistError is not nil.
+func (v *AdminService_MaintainCorruptWorkflow_Result) IsSetEntityNotExistError() bool {
+	return v != nil && v.EntityNotExistError != nil
+}
+
+// GetInternalServiceError returns the value of InternalServiceError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_MaintainCorruptWorkflow_Result) GetInternalServiceError() (o *shared.InternalServiceError) {
+	if v != nil && v.InternalServiceError != nil {
+		return v.InternalServiceError
+	}
+
+	return
+}
+
+// IsSetInternalServiceError returns true if InternalServiceError is not nil.
+func (v *AdminService_MaintainCorruptWorkflow_Result) IsSetInternalServiceError() bool {
+	return v != nil && v.InternalServiceError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "MaintainCorruptWorkflow" for this struct.
+func (v *AdminService_MaintainCorruptWorkflow_Result) MethodName() string {
+	return "MaintainCorruptWorkflow"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_MaintainCorruptWorkflow_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
