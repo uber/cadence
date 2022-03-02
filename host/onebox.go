@@ -412,7 +412,6 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 	params.Name = service.Frontend
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
-	params.UpdateLoggerWithServiceName(service.Frontend)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendHost())
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
@@ -478,7 +477,6 @@ func (c *cadenceImpl) startHistory(
 		params.Name = service.History
 		params.Logger = c.logger
 		params.ThrottledLogger = c.logger
-		params.UpdateLoggerWithServiceName(service.History)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = c.newRPCFactory(service.History, hostport)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
@@ -544,7 +542,6 @@ func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, star
 	params.Name = service.Matching
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
-	params.UpdateLoggerWithServiceName(service.Matching)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceHost())
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
@@ -586,7 +583,6 @@ func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startW
 	params.Name = service.Worker
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
-	params.UpdateLoggerWithServiceName(service.Worker)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
 	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceHost())
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
@@ -796,7 +792,7 @@ func newPublicClient(dispatcher *yarpc.Dispatcher) cwsc.Interface {
 }
 
 func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo) common.RPCFactory {
-	tchannelAddres, err := host.GetNamedAddress(membership.PortTchannel)
+	tchannelAddress, err := host.GetNamedAddress(membership.PortTchannel)
 	if err != nil {
 		c.logger.Fatal("failed to get PortTchannel port from host", tag.Value(host), tag.Error(err))
 	}
@@ -813,7 +809,7 @@ func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo
 
 	return rpc.NewFactory(c.logger, rpc.Params{
 		ServiceName:     serviceName,
-		TChannelAddress: tchannelAddres,
+		TChannelAddress: tchannelAddress,
 		GRPCAddress:     grpcAddress,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &versionMiddleware{},

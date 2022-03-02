@@ -110,8 +110,8 @@ func (s *server) startService() common.Daemon {
 	if err != nil {
 		log.Fatal("failed to create the zap logger, err: ", err.Error())
 	}
-	params.Logger = loggerimpl.NewLogger(zapLogger)
-	params.UpdateLoggerWithServiceName(params.Name)
+	params.Logger = loggerimpl.NewLogger(zapLogger).WithTags(tag.Service(params.Name))
+
 	params.PersistenceConfig = s.cfg.Persistence
 
 	err = nil

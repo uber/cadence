@@ -21,6 +21,7 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/membership"
@@ -91,5 +92,6 @@ func (s *simpleResolver) LookupByAddress(service string, address string) (member
 			return m, nil
 		}
 	}
-	return membership.HostInfo{}, nil
+
+	return membership.HostInfo{}, errors.New("host not found")
 }

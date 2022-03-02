@@ -48,7 +48,6 @@ type HostInfo struct {
 // NewHostInfo creates a new HostInfo instance
 func NewHostInfo(addr string) HostInfo {
 	ip, _, _ := net.SplitHostPort(addr)
-	net.ParseIP(addr)
 	return HostInfo{
 		addr: addr,
 		ip:   ip,
@@ -67,7 +66,6 @@ func (m PortMap) String() string {
 // NewDetailedHostInfo creates a new HostInfo instance with identity and portmap information
 func NewDetailedHostInfo(addr string, identity string, portMap PortMap) HostInfo {
 	ip, _, _ := net.SplitHostPort(addr)
-
 	return HostInfo{
 		addr:     addr,
 		ip:       ip,
@@ -84,7 +82,7 @@ func (hi HostInfo) GetAddress() string {
 // GetNamedAddress returns the ip:port address
 func (hi HostInfo) GetNamedAddress(port string) (string, error) {
 	if port, set := hi.portMap[port]; set {
-		return fmt.Sprintf("%s:%d", hi.ip, port), nil
+		return net.JoinHostPort(hi.ip, strconv.Itoa(int(port))), nil
 	}
 
 	return "", fmt.Errorf("port %q is not set for %+v", port, hi)

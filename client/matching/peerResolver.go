@@ -30,7 +30,6 @@ import (
 // The resulting peer is simply an address of form ip:port where RPC calls can be routed to.
 type PeerResolver struct {
 	resolver  membership.Resolver
-	service   string
 	namedPort string // grpc or tchannel, depends on yarpc configuration
 }
 
@@ -39,7 +38,6 @@ func NewPeerResolver(membership membership.Resolver, namedPort string) PeerResol
 	return PeerResolver{
 		resolver:  membership,
 		namedPort: namedPort,
-		service:   service.Matching,
 	}
 }
 
@@ -47,7 +45,7 @@ func NewPeerResolver(membership membership.Resolver, namedPort string) PeerResol
 // It uses our membership provider to lookup which instance currently owns the given task list.
 // FromHostAddress is used for further resolving.
 func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
-	host, err := pr.resolver.Lookup(pr.service, taskListName)
+	host, err := pr.resolver.Lookup(service.Matching, taskListName)
 	if err != nil {
 		return "", err
 	}
@@ -57,7 +55,7 @@ func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
 
 // GetAllPeers returns all matching service peers in the cluster ring.
 func (pr PeerResolver) GetAllPeers() ([]string, error) {
-	hosts, err := pr.resolver.Members(pr.service)
+	hosts, err := pr.resolver.Members(service.Matching)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +74,7 @@ func (pr PeerResolver) GetAllPeers() ([]string, error) {
 // The address may be used as is, or processed with additional address mapper.
 // In case of gRPC transport, the port within the address is replaced with gRPC port.
 func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
-	host, err := pr.resolver.LookupByAddress(pr.service, hostAddress)
+	host, err := pr.resolver.LookupByAddress(service.Matching, hostAddress)
 	if err != nil {
 		return "", err
 	}
