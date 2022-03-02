@@ -1420,55 +1420,11 @@ func (m *sqlExecutionStore) populateWorkflowMutableState(
 	}
 
 	state := &p.InternalWorkflowMutableState{}
-	state.ExecutionInfo = &p.InternalWorkflowExecutionInfo{
-		DomainID:                           execution.DomainID.String(),
-		WorkflowID:                         execution.WorkflowID,
-		RunID:                              execution.RunID.String(),
-		NextEventID:                        execution.NextEventID,
-		TaskList:                           info.GetTaskList(),
-		WorkflowTypeName:                   info.GetWorkflowTypeName(),
-		WorkflowTimeout:                    info.GetWorkflowTimeout(),
-		DecisionStartToCloseTimeout:        info.GetDecisionTaskTimeout(),
-		State:                              int(info.GetState()),
-		CloseStatus:                        int(info.GetCloseStatus()),
-		LastFirstEventID:                   info.GetLastFirstEventID(),
-		LastProcessedEvent:                 info.GetLastProcessedEvent(),
-		StartTimestamp:                     info.GetStartTimestamp(),
-		LastUpdatedTimestamp:               info.GetLastUpdatedTimestamp(),
-		CreateRequestID:                    info.GetCreateRequestID(),
-		DecisionVersion:                    info.GetDecisionVersion(),
-		DecisionScheduleID:                 info.GetDecisionScheduleID(),
-		DecisionStartedID:                  info.GetDecisionStartedID(),
-		DecisionRequestID:                  info.GetDecisionRequestID(),
-		DecisionTimeout:                    info.GetDecisionTimeout(),
-		DecisionAttempt:                    info.GetDecisionAttempt(),
-		DecisionStartedTimestamp:           info.GetDecisionStartedTimestamp(),
-		DecisionScheduledTimestamp:         info.GetDecisionScheduledTimestamp(),
-		DecisionOriginalScheduledTimestamp: info.GetDecisionOriginalScheduledTimestamp(),
-		StickyTaskList:                     info.GetStickyTaskList(),
-		StickyScheduleToStartTimeout:       info.GetStickyScheduleToStartTimeout(),
-		ClientLibraryVersion:               info.GetClientLibraryVersion(),
-		ClientFeatureVersion:               info.GetClientFeatureVersion(),
-		ClientImpl:                         info.GetClientImpl(),
-		SignalCount:                        int32(info.GetSignalCount()),
-		HistorySize:                        info.GetHistorySize(),
-		CronSchedule:                       info.GetCronSchedule(),
-		CompletionEventBatchID:             common.EmptyEventID,
-		HasRetryPolicy:                     info.GetHasRetryPolicy(),
-		Attempt:                            int32(info.GetRetryAttempt()),
-		InitialInterval:                    info.GetRetryInitialInterval(),
-		BackoffCoefficient:                 info.GetRetryBackoffCoefficient(),
-		MaximumInterval:                    info.GetRetryMaximumInterval(),
-		MaximumAttempts:                    info.GetRetryMaximumAttempts(),
-		ExpirationInterval:                 info.GetRetryExpiration(),
-		ExpirationTime:                     info.GetRetryExpirationTimestamp(),
-		BranchToken:                        info.GetEventBranchToken(),
-		ExecutionContext:                   info.GetExecutionContext(),
-		NonRetriableErrors:                 info.GetRetryNonRetryableErrors(),
-		SearchAttributes:                   info.GetSearchAttributes(),
-		Memo:                               info.GetMemo(),
-	}
-
+	state.ExecutionInfo = serialization.ToInternalWorkflowExecutionInfo(info)
+	state.ExecutionInfo.DomainID = execution.DomainID.String()
+	state.ExecutionInfo.WorkflowID = execution.WorkflowID
+	state.ExecutionInfo.RunID = execution.RunID.String()
+	state.ExecutionInfo.NextEventID = execution.NextEventID
 	// TODO: remove this after all 2DC workflows complete
 	if info.LastWriteEventID != nil {
 		state.ReplicationState = &p.ReplicationState{}
@@ -1484,32 +1440,6 @@ func (m *sqlExecutionStore) populateWorkflowMutableState(
 		)
 	}
 
-	if info.ParentDomainID != nil {
-		state.ExecutionInfo.ParentDomainID = info.ParentDomainID.String()
-		state.ExecutionInfo.ParentWorkflowID = info.GetParentWorkflowID()
-		state.ExecutionInfo.ParentRunID = info.ParentRunID.String()
-		state.ExecutionInfo.InitiatedID = info.GetInitiatedID()
-		state.ExecutionInfo.CompletionEvent = nil
-	}
-
-	if info.GetCancelRequested() {
-		state.ExecutionInfo.CancelRequested = true
-		state.ExecutionInfo.CancelRequestID = info.GetCancelRequestID()
-	}
-
-	if info.CompletionEventBatchID != nil {
-		state.ExecutionInfo.CompletionEventBatchID = info.GetCompletionEventBatchID()
-	}
-
-	if info.CompletionEvent != nil {
-		state.ExecutionInfo.CompletionEvent = p.NewDataBlob(info.CompletionEvent,
-			common.EncodingType(info.GetCompletionEventEncoding()))
-	}
-
-	if info.AutoResetPoints != nil {
-		state.ExecutionInfo.AutoResetPoints = p.NewDataBlob(info.AutoResetPoints,
-			common.EncodingType(info.GetAutoResetPointsEncoding()))
-	}
 	return state, nil
 }
 
