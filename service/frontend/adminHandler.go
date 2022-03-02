@@ -111,6 +111,11 @@ type (
 		throttleRetry         *backoff.ThrottleRetry
 	}
 
+	workflowQueryTemplate struct {
+		name     string
+		function func(request *types.AdminMaintainWorkflowRequest) error
+	}
+
 	getWorkflowRawHistoryV2Token struct {
 		DomainName        string
 		WorkflowID        string
@@ -329,22 +334,28 @@ func (adh *adminHandlerImpl) RemoveTask(
 
 func (adh *adminHandlerImpl) getCorruptWorkflowQueryTemplates(
 	ctx context.Context, request *types.AdminMaintainWorkflowRequest,
-) map[string]func(request *types.AdminMaintainWorkflowRequest) error {
+) []workflowQueryTemplate {
 	client := adh.GetFrontendClient()
-	return map[string]func(request *types.AdminMaintainWorkflowRequest) error{
-		"DescribeWorkflowExecution": func(request *types.AdminMaintainWorkflowRequest) error {
-			_, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
-				Domain:    request.Domain,
-				Execution: request.Execution,
-			})
-			return err
+	return []workflowQueryTemplate{
+		{
+			name: "DescribeWorkflowExecution",
+			function: func(request *types.AdminMaintainWorkflowRequest) error {
+				_, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
+					Domain:    request.Domain,
+					Execution: request.Execution,
+				})
+				return err
+			},
 		},
-		"GetWorkflowExecutionHistory": func(request *types.AdminMaintainWorkflowRequest) error {
-			_, err := client.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
-				Domain:    request.Domain,
-				Execution: request.Execution,
-			})
-			return err
+		{
+			name: "GetWorkflowExecutionHistory",
+			function: func(request *types.AdminMaintainWorkflowRequest) error {
+				_, err := client.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+					Domain:    request.Domain,
+					Execution: request.Execution,
+				})
+				return err
+			},
 		},
 	}
 }
@@ -372,7 +383,9 @@ func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
 	}
 
 	queryTemplates := adh.getCorruptWorkflowQueryTemplates(ctx, request)
-	for functionName, queryFunc := range queryTemplates {
+	for _, template := range queryTemplates {
+		functionName := template.name
+		queryFunc := template.function
 		err := queryFunc(request)
 		if err == nil {
 			logger.Info(fmt.Sprintf("Query succeeded for function: %s", functionName))
