@@ -46,9 +46,10 @@ func NewHistoryBuilder(msBuilder MutableState, logger log.Logger) *HistoryBuilde
 }
 
 // NewHistoryBuilderFromEvents creates a new history builder based on the given workflow history events
-func NewHistoryBuilderFromEvents(history []*types.HistoryEvent, logger log.Logger) *HistoryBuilder {
+func NewHistoryBuilderFromEvents(msBuilder MutableState, history []*types.HistoryEvent, logger log.Logger) *HistoryBuilder {
 	return &HistoryBuilder{
-		history: history,
+		history:   history,
+		msBuilder: msBuilder,
 	}
 }
 
