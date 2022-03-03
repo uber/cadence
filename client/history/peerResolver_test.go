@@ -21,6 +21,7 @@
 package history
 
 import (
+	"errors"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,24 +36,46 @@ func TestPeerResolver(t *testing.T) {
 	numShards := 123
 	controller := gomock.NewController(t)
 	serviceResolver := membership.NewMockResolver(controller)
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(membership.NewHostInfo("domainHost:thriftPort"), nil)
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(membership.NewHostInfo("workflowHost:thriftPort"), nil)
-	serviceResolver.EXPECT().Lookup(service.History, string(rune(99))).Return(membership.NewHostInfo("shardHost:thriftPort"), nil)
+	serviceResolver.EXPECT().Lookup(
+		service.History, string(rune(common.DomainIDToHistoryShard("domainID", numShards)))).Return(
+		membership.NewDetailedHostInfo(
+			"domainHost:123",
+			"domainHost_123",
+			membership.PortMap{membership.PortTchannel: 1234}),
+		nil)
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(common.WorkflowIDToHistoryShard("workflowID", numShards)))).Return(
+		membership.NewDetailedHostInfo(
+			"workflowHost:123",
+			"workflow",
+			membership.PortMap{membership.PortTchannel: 1235, membership.PortGRPC: 1666}), nil)
+
+	serviceResolver.EXPECT().Lookup(service.History, string(rune(99))).Return(
+		membership.NewDetailedHostInfo(
+			"shardHost:123",
+			"shard_123",
+			membership.PortMap{membership.PortTchannel: 1235}),
+		nil)
+
+	serviceResolver.EXPECT().LookupByAddress(service.History, "invalid address").Return(
+		membership.HostInfo{},
+		errors.New("host not found"),
+	)
+
 	serviceResolver.EXPECT().Lookup(service.History, string(rune(11))).Return(membership.HostInfo{}, assert.AnError)
 
-	r := NewPeerResolver(numShards, serviceResolver, fakeAddressMapper)
+	r := NewPeerResolver(numShards, serviceResolver, membership.PortTchannel)
 
 	peer, err := r.FromDomainID("domainID")
 	assert.NoError(t, err)
-	assert.Equal(t, "domainHost:grpcPort", peer)
+	assert.Equal(t, "domainHost:1234", peer)
 
 	peer, err = r.FromWorkflowID("workflowID")
 	assert.NoError(t, err)
-	assert.Equal(t, "workflowHost:grpcPort", peer)
+	assert.Equal(t, "workflowHost:1235", peer)
 
 	peer, err = r.FromShardID(99)
 	assert.NoError(t, err)
-	assert.Equal(t, "shardHost:grpcPort", peer)
+	assert.Equal(t, "shardHost:1235", peer)
 
 	_, err = r.FromShardID(11)
 	assert.Error(t, err)
@@ -60,20 +83,4 @@ func TestPeerResolver(t *testing.T) {
 	_, err = r.FromHostAddress("invalid address")
 	assert.Error(t, err)
 
-	r = NewPeerResolver(numShards, nil, nil)
-	peer, err = r.FromHostAddress("no mapper")
-	assert.NoError(t, err)
-	assert.Equal(t, "no mapper", peer)
-}
-
-func fakeAddressMapper(address string) (string, error) {
-	switch address {
-	case "domainHost:thriftPort":
-		return "domainHost:grpcPort", nil
-	case "workflowHost:thriftPort":
-		return "workflowHost:grpcPort", nil
-	case "shardHost:thriftPort":
-		return "shardHost:grpcPort", nil
-	}
-	return "", assert.AnError
 }

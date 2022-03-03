@@ -53,7 +53,6 @@ type (
 	// RPCFactory Creates a dispatcher that knows how to transport requests.
 	RPCFactory interface {
 		GetDispatcher() *yarpc.Dispatcher
-		ReplaceGRPCPort(serviceName, hostAddress string) (string, error)
 		GetMaxMessageSize() int
 	}
 )

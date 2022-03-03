@@ -37,16 +37,14 @@ const defaultGRPCSizeLimit = 4 * 1024 * 1024
 
 // Factory is an implementation of common.RPCFactory interface
 type Factory struct {
-	maxMessageSize    int
-	hostAddressMapper HostAddressMapper
-	channel           tchannel.Channel
-	dispatcher        *yarpc.Dispatcher
+	maxMessageSize int
+	channel        tchannel.Channel
+	dispatcher     *yarpc.Dispatcher
 }
 
 // NewFactory builds a new rpc.Factory
 func NewFactory(logger log.Logger, p Params) *Factory {
 	inbounds := yarpc.Inbounds{}
-
 	// Create TChannel transport
 	// This is here only because ringpop expects tchannel.ChannelTransport,
 	// everywhere else we use regular tchannel.Transport.
@@ -104,10 +102,9 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 	})
 
 	return &Factory{
-		maxMessageSize:    p.GRPCMaxMsgSize,
-		hostAddressMapper: p.HostAddressMapper,
-		dispatcher:        dispatcher,
-		channel:           ch.Channel(),
+		maxMessageSize: p.GRPCMaxMsgSize,
+		dispatcher:     dispatcher,
+		channel:        ch.Channel(),
 	}
 }
 
@@ -119,11 +116,6 @@ func (d *Factory) GetDispatcher() *yarpc.Dispatcher {
 // GetChannel returns Tchannel Channel used by Ringpop
 func (d *Factory) GetChannel() tchannel.Channel {
 	return d.channel
-}
-
-// ReplaceGRPCPort replaces port in the address to grpc for a given service
-func (d *Factory) ReplaceGRPCPort(serviceName, hostAddress string) (string, error) {
-	return d.hostAddressMapper.GetGRPCAddress(serviceName, hostAddress)
 }
 
 func (d *Factory) GetMaxMessageSize() int {

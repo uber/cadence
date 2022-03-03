@@ -236,14 +236,15 @@ func (r *Provider) WhoAmI() (membership.HostInfo, error) {
 		return membership.HostInfo{}, fmt.Errorf("getting ringpop labels: %w", err)
 	}
 
+	hostIdentity := address
 	// this is needed to in a situation when Cadence is trying to identify the owner for a key
 	// make sure we are comparing identities, but not host:port pairs
-	identity, set := labels.Get(rpmembership.IdentityLabelKey)
+	rpIdentity, set := labels.Get(rpmembership.IdentityLabelKey)
 	if set {
-		return membership.NewDetailedHostInfo(address, identity, nil), nil
+		hostIdentity = rpIdentity
 	}
 
-	return membership.NewHostInfo(address), nil
+	return membership.NewDetailedHostInfo(address, hostIdentity, r.portmap), nil
 }
 
 // Stop stops ringpop
