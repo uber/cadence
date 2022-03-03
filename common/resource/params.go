@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
@@ -69,13 +68,3 @@ type (
 		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
 	}
 )
-
-// UpdateLoggerWithServiceName tag logging with service name from the top level
-func (params *Params) UpdateLoggerWithServiceName(name string) {
-	if params.Logger != nil {
-		params.Logger = params.Logger.WithTags(tag.Service(name))
-	}
-	if params.ThrottledLogger != nil {
-		params.ThrottledLogger = params.ThrottledLogger.WithTags(tag.Service(name))
-	}
-}

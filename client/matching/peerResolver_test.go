@@ -33,18 +33,46 @@ import (
 func TestPeerResolver(t *testing.T) {
 	controller := gomock.NewController(t)
 	serviceResolver := membership.NewMockResolver(controller)
-	serviceResolver.EXPECT().Lookup(service.Matching, "taskListA").Return(membership.NewHostInfo("taskListA:thriftPort"), nil)
+	host1 := membership.NewDetailedHostInfo(
+		"tasklistHost:1234",
+		"tasklistHost_1234",
+		membership.PortMap{
+			membership.PortTchannel: 1234,
+			membership.PortGRPC:     1244,
+		},
+	)
+	host2 := membership.NewDetailedHostInfo(
+		"tasklistHost2:1235",
+		"tasklistHost2_1235",
+		membership.PortMap{
+			membership.PortTchannel: 1235,
+			membership.PortGRPC:     1245,
+		},
+	)
+	serviceResolver.EXPECT().Lookup(service.Matching, "taskListA").Return(
+		host1,
+		nil)
 	serviceResolver.EXPECT().Lookup(service.Matching, "invalid").Return(membership.HostInfo{}, assert.AnError)
+	serviceResolver.EXPECT().LookupByAddress(service.Matching, "invalid address").Return(membership.HostInfo{}, assert.AnError)
+
 	serviceResolver.EXPECT().Members(service.Matching).Return([]membership.HostInfo{
-		membership.NewHostInfo("taskListA:thriftPort"),
-		membership.NewHostInfo("taskListB:thriftPort"),
+		host1,
+		host2,
 	}, nil)
 
-	r := NewPeerResolver(serviceResolver, fakeAddressMapper)
+	serviceResolver.EXPECT().LookupByAddress(service.Matching, "tasklistHost2:1235").Return(
+		host2,
+		nil,
+	).AnyTimes()
+	serviceResolver.EXPECT().LookupByAddress(service.Matching, "tasklistHost:1234").Return(
+		host1,
+		nil,
+	).AnyTimes()
+	r := NewPeerResolver(serviceResolver, membership.PortGRPC)
 
 	peer, err := r.FromTaskList("taskListA")
 	assert.NoError(t, err)
-	assert.Equal(t, "taskListA:grpcPort", peer)
+	assert.Equal(t, "tasklistHost:1244", peer)
 
 	_, err = r.FromTaskList("invalid")
 	assert.Error(t, err)
@@ -54,20 +82,6 @@ func TestPeerResolver(t *testing.T) {
 
 	peers, err := r.GetAllPeers()
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"taskListA:grpcPort", "taskListB:grpcPort"}, peers)
+	assert.Equal(t, []string{"tasklistHost:1244", "tasklistHost2:1245"}, peers)
 
-	r = NewPeerResolver(nil, nil)
-	peer, err = r.FromHostAddress("no mapper")
-	assert.NoError(t, err)
-	assert.Equal(t, "no mapper", peer)
-}
-
-func fakeAddressMapper(address string) (string, error) {
-	switch address {
-	case "taskListA:thriftPort":
-		return "taskListA:grpcPort", nil
-	case "taskListB:thriftPort":
-		return "taskListB:grpcPort", nil
-	}
-	return "", assert.AnError
 }
