@@ -22,7 +22,6 @@ package resource
 
 import (
 	"math/rand"
-	"os"
 	"sync/atomic"
 	"time"
 
@@ -69,10 +68,8 @@ type (
 		status int32
 
 		// static infos
-
 		numShards       int
 		serviceName     string
-		hostName        string
 		hostInfo        membership.HostInfo
 		metricsScope    tally.Scope
 		clusterMetadata cluster.Metadata
@@ -136,13 +133,7 @@ func New(
 	throttledLogger := loggerimpl.NewThrottledLogger(logger, serviceConfig.ThrottledLoggerMaxRPS)
 
 	numShards := params.PersistenceConfig.NumHistoryShards
-	hostName, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-
 	dispatcher := params.RPCFactory.GetDispatcher()
-
 	membershipResolver := params.MembershipResolver
 
 	dynamicCollection := dynamicconfig.NewCollection(
@@ -259,7 +250,6 @@ func New(
 
 		numShards:       numShards,
 		serviceName:     params.Name,
-		hostName:        hostName,
 		metricsScope:    params.MetricScope,
 		clusterMetadata: params.ClusterMetadata,
 
@@ -374,11 +364,6 @@ func (h *Impl) Stop() {
 // GetServiceName return service name
 func (h *Impl) GetServiceName() string {
 	return h.serviceName
-}
-
-// GetHostName return host name
-func (h *Impl) GetHostName() string {
-	return h.hostName
 }
 
 // GetHostInfo return host info

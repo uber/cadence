@@ -54,7 +54,6 @@ type (
 		// static infos
 
 		GetServiceName() string
-		GetHostName() string
 		GetHostInfo() membership.HostInfo
 		GetArchivalMetadata() archiver.ArchivalMetadata
 		GetClusterMetadata() cluster.Metadata

@@ -24,6 +24,7 @@
 package membership
 
 import (
+	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -71,6 +72,9 @@ type (
 
 		// Members returns all host addresses in a service specific hashring
 		Members(service string) ([]HostInfo, error)
+
+		// LookupByAddress returns Host which owns IP:port tuple
+		LookupByAddress(service, address string) (HostInfo, error)
 	}
 )
 
@@ -192,6 +196,19 @@ func (rpo *MultiringResolver) Members(service string) ([]HostInfo, error) {
 		return nil, err
 	}
 	return ring.Members(), nil
+}
+
+func (rpo *MultiringResolver) LookupByAddress(service, address string) (HostInfo, error) {
+	members, err := rpo.Members(service)
+	if err != nil {
+		return HostInfo{}, err
+	}
+	for _, m := range members {
+		if belongs, err := m.Belongs(address); err == nil && belongs {
+			return m, nil
+		}
+	}
+	return HostInfo{}, errors.New("host not found")
 }
 
 func (rpo *MultiringResolver) MemberCount(service string) (int, error) {

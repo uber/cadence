@@ -24,8 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -80,7 +78,7 @@ type Cadence interface {
 	Stop()
 	GetAdminClient() adminClient.Client
 	GetFrontendClient() frontendClient.Client
-	FrontendAddress() string
+	FrontendHost() membership.HostInfo
 	GetHistoryClient() historyClient.Client
 	GetExecutionManagerFactory() persistence.ExecutionManagerFactory
 }
@@ -181,12 +179,12 @@ func (c *cadenceImpl) enableWorker() bool {
 }
 
 func (c *cadenceImpl) Start() error {
-	hosts := make(map[string][]string)
-	hosts[service.Frontend] = []string{c.FrontendAddress()}
-	hosts[service.Matching] = []string{c.MatchingServiceAddress()}
-	hosts[service.History] = c.HistoryServiceAddress()
+	hosts := make(map[string][]membership.HostInfo)
+	hosts[service.Frontend] = []membership.HostInfo{c.FrontendHost()}
+	hosts[service.Matching] = []membership.HostInfo{c.MatchingServiceHost()}
+	hosts[service.History] = c.HistoryHosts()
 	if c.enableWorker() {
-		hosts[service.Worker] = []string{c.WorkerServiceAddress()}
+		hosts[service.Worker] = []membership.HostInfo{c.WorkerServiceHost()}
 	}
 
 	// create cadence-system domain, this must be created before starting
@@ -235,19 +233,36 @@ func (c *cadenceImpl) Stop() {
 	c.shutdownWG.Wait()
 }
 
-func (c *cadenceImpl) FrontendAddress() string {
+func newHost(tchan uint16) membership.HostInfo {
+	address := "127.0.0.1"
+	return membership.NewDetailedHostInfo(
+		fmt.Sprintf("%s:%d", address, tchan),
+		fmt.Sprintf("%s_%d", address, tchan),
+		membership.PortMap{
+			membership.PortTchannel: tchan,
+			membership.PortGRPC:     tchan + 10,
+		},
+	)
+
+}
+
+func (c *cadenceImpl) FrontendHost() membership.HostInfo {
+	var tchan uint16
 	switch c.clusterNo {
 	case 0:
-		return "127.0.0.1:7104"
+		tchan = 7104
 	case 1:
-		return "127.0.0.1:8104"
+		tchan = 8104
 	case 2:
-		return "127.0.0.1:9104"
+		tchan = 9104
 	case 3:
-		return "127.0.0.1:10104"
+		tchan = 10104
 	default:
-		return "127.0.0.1:7104"
+		tchan = 7104
 	}
+
+	return newHost(tchan)
+
 }
 
 func (c *cadenceImpl) FrontendPProfPort() int {
@@ -265,8 +280,8 @@ func (c *cadenceImpl) FrontendPProfPort() int {
 	}
 }
 
-func (c *cadenceImpl) HistoryServiceAddress() []string {
-	var hosts []string
+func (c *cadenceImpl) HistoryHosts() []membership.HostInfo {
+	var hosts []membership.HostInfo
 	var startPort int
 	switch c.clusterNo {
 	case 0:
@@ -282,10 +297,10 @@ func (c *cadenceImpl) HistoryServiceAddress() []string {
 	}
 	for i := 0; i < c.historyConfig.NumHistoryHosts; i++ {
 		port := startPort + i
-		hosts = append(hosts, fmt.Sprintf("127.0.0.1:%v", port))
+		hosts = append(hosts, newHost(uint16(port)))
 	}
 
-	c.logger.Info("History hosts", tag.Addresses(hosts))
+	c.logger.Info("History hosts", tag.Value(hosts))
 	return hosts
 }
 
@@ -313,19 +328,23 @@ func (c *cadenceImpl) HistoryPProfPort() []int {
 	return ports
 }
 
-func (c *cadenceImpl) MatchingServiceAddress() string {
+func (c *cadenceImpl) MatchingServiceHost() membership.HostInfo {
+	var tchan uint16
 	switch c.clusterNo {
 	case 0:
-		return "127.0.0.1:7106"
+		tchan = 7106
 	case 1:
-		return "127.0.0.1:8106"
+		tchan = 8106
 	case 2:
-		return "127.0.0.1:9106"
+		tchan = 9106
 	case 3:
-		return "127.0.0.1:10106"
+		tchan = 10106
 	default:
-		return "127.0.0.1:7106"
+		tchan = 7106
 	}
+
+	return newHost(tchan)
+
 }
 
 func (c *cadenceImpl) MatchingPProfPort() int {
@@ -343,19 +362,21 @@ func (c *cadenceImpl) MatchingPProfPort() int {
 	}
 }
 
-func (c *cadenceImpl) WorkerServiceAddress() string {
+func (c *cadenceImpl) WorkerServiceHost() membership.HostInfo {
+	var tchan uint16
 	switch c.clusterNo {
 	case 0:
-		return "127.0.0.1:7108"
+		tchan = 7108
 	case 1:
-		return "127.0.0.1:8108"
+		tchan = 8108
 	case 2:
-		return "127.0.0.1:9108"
+		tchan = 9108
 	case 3:
-		return "127.0.0.1:10108"
+		tchan = 10108
 	default:
-		return "127.0.0.1:7108"
+		tchan = 7108
 	}
+	return newHost(tchan)
 }
 
 func (c *cadenceImpl) WorkerPProfPort() int {
@@ -385,15 +406,14 @@ func (c *cadenceImpl) GetHistoryClient() historyClient.Client {
 	return c.historyClient
 }
 
-func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.WaitGroup) {
+func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
 	params := new(resource.Params)
 	params.ClusterRedirectionPolicy = &config.ClusterRedirectionPolicy{}
 	params.Name = service.Frontend
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
-	params.UpdateLoggerWithServiceName(service.Frontend)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.FrontendPProfPort())
-	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendAddress())
+	params.RPCFactory = c.newRPCFactory(service.Frontend, c.FrontendHost())
 	params.MetricScope = tally.NewTestScope(service.Frontend, make(map[string]string))
 	params.MembershipResolver = newMembershipResolver(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -448,16 +468,15 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]string, startWG *sync.Wai
 }
 
 func (c *cadenceImpl) startHistory(
-	hosts map[string][]string,
+	hosts map[string][]membership.HostInfo,
 	startWG *sync.WaitGroup,
 ) {
 	pprofPorts := c.HistoryPProfPort()
-	for i, hostport := range c.HistoryServiceAddress() {
+	for i, hostport := range c.HistoryHosts() {
 		params := new(resource.Params)
 		params.Name = service.History
 		params.Logger = c.logger
 		params.ThrottledLogger = c.logger
-		params.UpdateLoggerWithServiceName(service.History)
 		params.PProfInitializer = newPProfInitializerImpl(c.logger, pprofPorts[i])
 		params.RPCFactory = c.newRPCFactory(service.History, hostport)
 		params.MetricScope = tally.NewTestScope(service.History, make(map[string]string))
@@ -517,15 +536,14 @@ func (c *cadenceImpl) startHistory(
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.WaitGroup) {
+func (c *cadenceImpl) startMatching(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
 
 	params := new(resource.Params)
 	params.Name = service.Matching
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
-	params.UpdateLoggerWithServiceName(service.Matching)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.MatchingPProfPort())
-	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceAddress())
+	params.RPCFactory = c.newRPCFactory(service.Matching, c.MatchingServiceHost())
 	params.MetricScope = tally.NewTestScope(service.Matching, make(map[string]string))
 	params.MembershipResolver = newMembershipResolver(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -560,14 +578,13 @@ func (c *cadenceImpl) startMatching(hosts map[string][]string, startWG *sync.Wai
 	c.shutdownWG.Done()
 }
 
-func (c *cadenceImpl) startWorker(hosts map[string][]string, startWG *sync.WaitGroup) {
+func (c *cadenceImpl) startWorker(hosts map[string][]membership.HostInfo, startWG *sync.WaitGroup) {
 	params := new(resource.Params)
 	params.Name = service.Worker
 	params.Logger = c.logger
 	params.ThrottledLogger = c.logger
-	params.UpdateLoggerWithServiceName(service.Worker)
 	params.PProfInitializer = newPProfInitializerImpl(c.logger, c.WorkerPProfPort())
-	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceAddress())
+	params.RPCFactory = c.newRPCFactory(service.Worker, c.WorkerServiceHost())
 	params.MetricScope = tally.NewTestScope(service.Worker, make(map[string]string))
 	params.MembershipResolver = newMembershipResolver(params.Name, hosts)
 	params.ClusterMetadata = c.clusterMetadata
@@ -751,7 +768,7 @@ func copyPersistenceConfig(pConfig config.Persistence) (config.Persistence, erro
 	return pConfig, nil
 }
 
-func newMembershipResolver(serviceName string, hosts map[string][]string) membership.Resolver {
+func newMembershipResolver(serviceName string, hosts map[string][]membership.HostInfo) membership.Resolver {
 	return NewSimpleResolver(serviceName, hosts)
 }
 
@@ -774,30 +791,34 @@ func newPublicClient(dispatcher *yarpc.Dispatcher) cwsc.Interface {
 	)
 }
 
-func (c *cadenceImpl) newRPCFactory(serviceName string, tchannelHostPort string) common.RPCFactory {
-	grpcPortResolver := grpcPortResolver{}
-	grpcHostPort, err := grpcPortResolver.GetGRPCAddress("", tchannelHostPort)
+func (c *cadenceImpl) newRPCFactory(serviceName string, host membership.HostInfo) common.RPCFactory {
+	tchannelAddress, err := host.GetNamedAddress(membership.PortTchannel)
 	if err != nil {
-		c.logger.Fatal("Failed to obtain GRPC address", tag.Error(err))
+		c.logger.Fatal("failed to get PortTchannel port from host", tag.Value(host), tag.Error(err))
 	}
 
-	frontendGRPCAddress, err := grpcPortResolver.GetGRPCAddress("", c.FrontendAddress())
+	grpcAddress, err := host.GetNamedAddress(membership.PortGRPC)
 	if err != nil {
-		c.logger.Fatal("Failed to obtain frontend GRPC address", tag.Error(err))
+		c.logger.Fatal("failed to get PortGRPC port from host", tag.Value(host), tag.Error(err))
+	}
+
+	frontendGrpcAddress, err := c.FrontendHost().GetNamedAddress(membership.PortGRPC)
+	if err != nil {
+		c.logger.Fatal("failed to get frontend PortGRPC", tag.Value(c.FrontendHost()), tag.Error(err))
 	}
 
 	return rpc.NewFactory(c.logger, rpc.Params{
-		ServiceName:       serviceName,
-		TChannelAddress:   tchannelHostPort,
-		GRPCAddress:       grpcHostPort,
-		HostAddressMapper: &grpcPortResolver,
+		ServiceName:     serviceName,
+		TChannelAddress: tchannelAddress,
+		GRPCAddress:     grpcAddress,
 		InboundMiddleware: yarpc.InboundMiddleware{
 			Unary: &versionMiddleware{},
 		},
+
 		// For integration tests to generate client out of the same outbound.
 		OutboundsBuilder: rpc.CombineOutbounds(
-			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, grpcHostPort},
-			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, frontendGRPCAddress},
+			&singleGRPCOutbound{testOutboundName(serviceName), serviceName, grpcAddress},
+			&singleGRPCOutbound{rpc.OutboundPublicClient, service.Frontend, frontendGrpcAddress},
 			rpc.NewCrossDCOutbounds(c.clusterMetadata.GetAllClusterInfo(), rpc.NewDNSPeerChooserFactory(0, c.logger)),
 			rpc.NewDirectOutbound(service.History, true, nil),
 			rpc.NewDirectOutbound(service.Matching, true, nil),
@@ -834,23 +855,4 @@ func (vm *versionMiddleware) Handle(ctx context.Context, req *transport.Request,
 		With(common.ClientImplHeaderName, cc.GoSDK)
 
 	return h.Handle(ctx, req, resw)
-}
-
-const grpcPortOffset = 10
-
-type grpcPortResolver struct{}
-
-func (p *grpcPortResolver) GetGRPCAddress(_, hostPort string) (string, error) {
-	host, port, err := net.SplitHostPort(hostPort)
-	if err != nil {
-		return "", err
-	}
-
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		return "", err
-	}
-
-	grpcAddress := net.JoinHostPort(host, strconv.Itoa(portInt+grpcPortOffset))
-	return grpcAddress, nil
 }

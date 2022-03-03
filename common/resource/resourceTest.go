@@ -212,11 +212,6 @@ func (s *Test) GetServiceName() string {
 	panic("user should implement this method for test")
 }
 
-// GetHostName for testing
-func (s *Test) GetHostName() string {
-	return testHostInfo.Identity()
-}
-
 // GetHostInfo for testing
 func (s *Test) GetHostInfo() membership.HostInfo {
 	return testHostInfo
