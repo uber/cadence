@@ -512,6 +512,12 @@ func (handler *ClusterRedirectionHandlerImpl) QueryWorkflow(
 	var err error
 	var cluster string
 
+	// Only autoforward strong consistent queries, this is done for two reasons:
+	// 1. Query is meant to be fast, autoforwarding all queries will increase latency.
+	// 2. If eventual consistency was requested then the results from running out of local dc will be fine.
+	if request.GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
+		apiName = "QueryWorkflowStrongConsistency"
+	}
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionQueryWorkflowScope)
 	defer func() {
 		handler.afterCall(scope, startTime, cluster, &retError)
@@ -523,15 +529,8 @@ func (handler *ClusterRedirectionHandlerImpl) QueryWorkflow(
 		case targetDC == handler.currentClusterName:
 			resp, err = handler.frontendHandler.QueryWorkflow(ctx, request)
 		default:
-			// Only autofoward consistent queries, this is done for two reasons:
-			// 1. Query is meant to be fast, autoforwarding all queries will increase latency.
-			// 2. If eventual consistency was requested then the results from running out of local dc will be fine.
-			if request.GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
-				remoteClient := handler.GetRemoteFrontendClient(targetDC)
-				resp, err = remoteClient.QueryWorkflow(ctx, request)
-			} else {
-				resp, err = handler.frontendHandler.QueryWorkflow(ctx, request)
-			}
+			remoteClient := handler.GetRemoteFrontendClient(targetDC)
+			resp, err = remoteClient.QueryWorkflow(ctx, request)
 		}
 		return err
 	})

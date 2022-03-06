@@ -83,7 +83,7 @@ func TestInternalWorkflowExecutionInfo(t *testing.T) {
 		NonRetriableErrors:                 []string{"RetryNonRetryableErrors"},
 		BranchToken:                        []byte("EventBranchToken"),
 		CronSchedule:                       "CronSchedule",
-		ExpirationSeconds:                 time.Minute * time.Duration(rand.Intn(10)),
+		ExpirationInterval:                 time.Minute * time.Duration(rand.Intn(10)),
 		Memo:                               map[string][]byte{"key_1": []byte("Memo")},
 		SearchAttributes:                   map[string][]byte{"key_1": []byte("SearchAttributes")},
 		HistorySize:                        int64(rand.Intn(1000)),
