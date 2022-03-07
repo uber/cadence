@@ -33,7 +33,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
-	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -56,7 +55,7 @@ func NewHistoryV2Persistence(
 	db sqlplugin.DB,
 	logger log.Logger,
 	parser serialization.Parser,
-) (p.HistoryStore, error) {
+) (persistence.HistoryStore, error) {
 
 	return &sqlHistoryStore{
 		sqlStore: sqlStore{
@@ -70,15 +69,15 @@ func NewHistoryV2Persistence(
 // AppendHistoryNodes add(or override) a node to a history branch
 func (m *sqlHistoryStore) AppendHistoryNodes(
 	ctx context.Context,
-	request *p.InternalAppendHistoryNodesRequest,
+	request *persistence.InternalAppendHistoryNodesRequest,
 ) error {
 
 	branchInfo := request.BranchInfo
 	beginNodeID := persistenceutils.GetBeginNodeID(branchInfo)
 
 	if request.NodeID < beginNodeID {
-		return &p.InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("cannot append to ancestors' nodes"),
+		return &persistence.InvalidPersistenceRequestError{
+			Msg: "cannot append to ancestors' nodes",
 		}
 	}
 
@@ -94,9 +93,7 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 
 	if request.IsNewBranch {
 		var ancestors []*types.HistoryBranchRange
-		for _, anc := range branchInfo.Ancestors {
-			ancestors = append(ancestors, anc)
-		}
+		ancestors = append(ancestors, branchInfo.Ancestors...)
 
 		treeInfo := &serialization.HistoryTreeInfo{
 			Ancestors:        ancestors,
@@ -149,7 +146,7 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 	_, err := m.db.InsertIntoHistoryNode(ctx, nodeRow)
 	if err != nil {
 		if m.db.IsDupEntryError(err) {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
+			return &persistence.ConditionFailedError{Msg: fmt.Sprintf("AppendHistoryNodes: row already exist: %v", err)}
 		}
 		return convertCommonErrors(m.db, "AppendHistoryEvents", "", err)
 	}
@@ -159,8 +156,8 @@ func (m *sqlHistoryStore) AppendHistoryNodes(
 // ReadHistoryBranch returns history node data for a branch
 func (m *sqlHistoryStore) ReadHistoryBranch(
 	ctx context.Context,
-	request *p.InternalReadHistoryBranchRequest,
-) (*p.InternalReadHistoryBranchResponse, error) {
+	request *persistence.InternalReadHistoryBranchRequest,
+) (*persistence.InternalReadHistoryBranchResponse, error) {
 
 	minNodeID := request.MinNodeID
 	maxNodeID := request.MaxNodeID
@@ -191,14 +188,14 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 
 	rows, err := m.db.SelectFromHistoryNode(ctx, filter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		return &p.InternalReadHistoryBranchResponse{}, nil
+		return &persistence.InternalReadHistoryBranchResponse{}, nil
 	}
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "ReadHistoryBranch", "", err)
 	}
 
-	history := make([]*p.DataBlob, 0, int(request.PageSize))
-	eventBlob := &p.DataBlob{}
+	history := make([]*persistence.DataBlob, 0, int(request.PageSize))
+	eventBlob := &persistence.DataBlob{}
 
 	for _, row := range rows {
 		eventBlob.Data = row.Data
@@ -217,7 +214,7 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 			//  -> batch with higher transaction ID is valid
 			if row.NodeID < lastNodeID {
 				return nil, &types.InternalDataInconsistencyError{
-					Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
+					Message: "corrupted data, nodeID cannot decrease",
 				}
 			} else if row.NodeID > lastNodeID {
 				// update lastNodeID so that our pagination can make progress in the corner case that
@@ -231,18 +228,18 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 		switch {
 		case row.NodeID < lastNodeID:
 			return nil, &types.InternalDataInconsistencyError{
-				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
+				Message: "corrupted data, nodeID cannot decrease",
 			}
 		case row.NodeID == lastNodeID:
 			return nil, &types.InternalDataInconsistencyError{
-				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
+				Message: "corrupted data, same nodeID must have smaller txnID",
 			}
 		default: // row.NodeID > lastNodeID:
 			// NOTE: when row.nodeID > lastNodeID, we expect the one with largest txnID comes first
 			lastTxnID = *row.TxnID
 			lastNodeID = row.NodeID
 			history = append(history, eventBlob)
-			eventBlob = &p.DataBlob{}
+			eventBlob = &persistence.DataBlob{}
 		}
 	}
 
@@ -251,7 +248,7 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 		pagingToken = serializePageToken(lastNodeID)
 	}
 
-	return &p.InternalReadHistoryBranchResponse{
+	return &persistence.InternalReadHistoryBranchResponse{
 		History:           history,
 		NextPageToken:     pagingToken,
 		LastNodeID:        lastNodeID,
@@ -305,8 +302,8 @@ func (m *sqlHistoryStore) ReadHistoryBranch(
 //
 func (m *sqlHistoryStore) ForkHistoryBranch(
 	ctx context.Context,
-	request *p.InternalForkHistoryBranchRequest,
-) (*p.InternalForkHistoryBranchResponse, error) {
+	request *persistence.InternalForkHistoryBranchRequest,
+) (*persistence.InternalForkHistoryBranchResponse, error) {
 
 	forkB := request.ForkBranchInfo
 	treeID := forkB.TreeID
@@ -337,7 +334,7 @@ func (m *sqlHistoryStore) ForkHistoryBranch(
 		})
 	}
 
-	resp := &p.InternalForkHistoryBranchResponse{
+	resp := &persistence.InternalForkHistoryBranchResponse{
 		NewBranchInfo: types.HistoryBranch{
 			TreeID:    treeID,
 			BranchID:  request.NewBranchID,
@@ -379,7 +376,7 @@ func (m *sqlHistoryStore) ForkHistoryBranch(
 // DeleteHistoryBranch removes a branch
 func (m *sqlHistoryStore) DeleteHistoryBranch(
 	ctx context.Context,
-	request *p.InternalDeleteHistoryBranchRequest,
+	request *persistence.InternalDeleteHistoryBranchRequest,
 ) error {
 
 	branch := request.BranchInfo
@@ -391,7 +388,7 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 		BeginNodeID: beginNodeID,
 	})
 
-	rsp, err := m.GetHistoryTree(ctx, &p.InternalGetHistoryTreeRequest{
+	rsp, err := m.GetHistoryTree(ctx, &persistence.InternalGetHistoryTreeRequest{
 		TreeID:  treeID,
 		ShardID: common.IntPtr(request.ShardID),
 	})
@@ -462,8 +459,8 @@ func (m *sqlHistoryStore) DeleteHistoryBranch(
 // TODO: Limit the underlying query to a specific shard at a time. See https://github.com/uber/cadence/issues/4064
 func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
-	request *p.GetAllHistoryTreeBranchesRequest,
-) (*p.GetAllHistoryTreeBranchesResponse, error) {
+	request *persistence.GetAllHistoryTreeBranchesRequest,
+) (*persistence.GetAllHistoryTreeBranchesResponse, error) {
 	page := historyTreePageToken{}
 	if request.NextPageToken != nil {
 		if err := gobDeserialize(request.NextPageToken, &page); err != nil {
@@ -484,13 +481,13 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 	}
 	rows, err := m.db.GetAllHistoryTreeBranches(ctx, &filter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		return &p.GetAllHistoryTreeBranchesResponse{}, nil
+		return &persistence.GetAllHistoryTreeBranchesResponse{}, nil
 	}
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "GetAllHistoryTreeBranches", "", err)
 	}
-	resp := &p.GetAllHistoryTreeBranchesResponse{}
-	resp.Branches = make([]p.HistoryBranchDetail, len(rows))
+	resp := &persistence.GetAllHistoryTreeBranchesResponse{}
+	resp.Branches = make([]persistence.HistoryBranchDetail, len(rows))
 	for i, row := range rows {
 		treeInfo, err := m.parser.HistoryTreeInfoFromBlob(row.Data, row.DataEncoding)
 		if err != nil {
@@ -509,6 +506,10 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 			TreeID:   lastRow.TreeID,
 			BranchID: lastRow.BranchID,
 		})
+		if err != nil {
+			return nil, &types.InternalServiceError{Message: fmt.Sprintf("error serializing nextPageToken:%v", err)}
+		}
+
 	}
 	// TODO: this is broken for multi-sharding: the shardID should increase if there are less rows than request pageSize,
 	// until loop over all shards
@@ -518,8 +519,8 @@ func (m *sqlHistoryStore) GetAllHistoryTreeBranches(
 // GetHistoryTree returns all branch information of a tree
 func (m *sqlHistoryStore) GetHistoryTree(
 	ctx context.Context,
-	request *p.InternalGetHistoryTreeRequest,
-) (*p.InternalGetHistoryTreeResponse, error) {
+	request *persistence.InternalGetHistoryTreeRequest,
+) (*persistence.InternalGetHistoryTreeResponse, error) {
 
 	treeID := serialization.MustParseUUID(request.TreeID)
 	branches := make([]*types.HistoryBranch, 0)
@@ -530,7 +531,7 @@ func (m *sqlHistoryStore) GetHistoryTree(
 	}
 	rows, err := m.db.SelectFromHistoryTree(ctx, treeFilter)
 	if err == sql.ErrNoRows || (err == nil && len(rows) == 0) {
-		return &p.InternalGetHistoryTreeResponse{}, nil
+		return &persistence.InternalGetHistoryTreeResponse{}, nil
 	}
 	if err != nil {
 		return nil, convertCommonErrors(m.db, "GetHistoryTree", "", err)
@@ -548,7 +549,7 @@ func (m *sqlHistoryStore) GetHistoryTree(
 		branches = append(branches, br)
 	}
 
-	return &p.InternalGetHistoryTreeResponse{
+	return &persistence.InternalGetHistoryTreeResponse{
 		Branches: branches,
 	}, nil
 }

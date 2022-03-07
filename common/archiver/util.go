@@ -30,7 +30,7 @@ import (
 
 var (
 	errEmptyDomainID         = errors.New("DomainID is empty")
-	errEmptyDomainName       = errors.New("Domain name is empty")
+	errEmptyDomainName       = errors.New("DomainName is empty")
 	errEmptyWorkflowID       = errors.New("WorkflowID is empty")
 	errEmptyRunID            = errors.New("RunID is empty")
 	errInvalidPageSize       = errors.New("PageSize should be greater than 0")

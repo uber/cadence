@@ -20,29 +20,19 @@
 
 package quotas
 
-import (
-	"sync"
-)
-
 // MultiStageRateLimiter indicates a domain specific rate limit policy
 type MultiStageRateLimiter struct {
-	sync.RWMutex
-	rps            RPSFunc
-	domainRPS      RPSKeyFunc
-	domainLimiters map[string]*DynamicRateLimiter
-	globalLimiter  *DynamicRateLimiter
+	domainLimiters *Collection
+	globalLimiter  Limiter
 }
 
 // NewMultiStageRateLimiter returns a new domain quota rate limiter. This is about
 // an order of magnitude slower than
-func NewMultiStageRateLimiter(rps RPSFunc, domainRps RPSKeyFunc) *MultiStageRateLimiter {
-	rl := &MultiStageRateLimiter{
-		rps:            rps,
-		domainRPS:      domainRps,
-		domainLimiters: map[string]*DynamicRateLimiter{},
-		globalLimiter:  NewDynamicRateLimiter(rps),
+func NewMultiStageRateLimiter(global Limiter, domainLimiters *Collection) *MultiStageRateLimiter {
+	return &MultiStageRateLimiter{
+		domainLimiters: domainLimiters,
+		globalLimiter:  global,
 	}
-	return rl
 }
 
 // Allow attempts to allow a request to go through. The method returns
@@ -54,32 +44,8 @@ func (d *MultiStageRateLimiter) Allow(info Info) bool {
 		return d.globalLimiter.Allow()
 	}
 
-	// check if we have a per-domain limiter - if not create a default one for
-	// the domain.
-	d.RLock()
-	limiter, ok := d.domainLimiters[domain]
-	d.RUnlock()
-
-	if !ok {
-		// create a new limiter
-		domainLimiter := NewDynamicRateLimiter(
-			func() float64 {
-				return d.domainRPS(domain)
-			},
-		)
-
-		// verify that it is needed and add to map
-		d.Lock()
-		limiter, ok = d.domainLimiters[domain]
-		if !ok {
-			d.domainLimiters[domain] = domainLimiter
-			limiter = domainLimiter
-		}
-		d.Unlock()
-	}
-
 	// take a reservation with the domain limiter first
-	rsv := limiter.Reserve()
+	rsv := d.domainLimiters.For(domain).Reserve()
 	if !rsv.OK() {
 		return false
 	}

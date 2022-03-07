@@ -56,7 +56,7 @@ func AdminGetDynamicConfig(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	if filters == nil || len(filters) == 0 {
+	if len(filters) == 0 {
 		req := &types.ListDynamicConfigRequest{
 			ConfigName: dcName,
 		}

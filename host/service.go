@@ -22,7 +22,6 @@ package host
 
 import (
 	"math/rand"
-	"os"
 	"sync/atomic"
 	"time"
 
@@ -50,7 +49,6 @@ type (
 	// Service is the interface which must be implemented by all the services
 	// TODO: Service contains many methods that are not used now that we have resource bean, these should be cleaned up
 	Service interface {
-		GetHostName() string
 		Start()
 		Stop()
 		GetLogger() log.Logger
@@ -73,7 +71,6 @@ type (
 	serviceImpl struct {
 		status                int32
 		sName                 string
-		hostName              string
 		hostInfo              membership.HostInfo
 		dispatcher            *yarpc.Dispatcher
 		membershipResolver    membership.Resolver
@@ -135,18 +132,7 @@ func NewService(params *resource.Params) Service {
 		sVice.logger.Fatal("Unable to create yarpc dispatcher")
 	}
 
-	// Get the host name and set it on the service.  This is used for emitting metric with a tag for hostname
-	if hostName, err := os.Hostname(); err != nil {
-		sVice.logger.WithTags(tag.Error(err)).Fatal("Error getting hostname")
-	} else {
-		sVice.hostName = hostName
-	}
 	return sVice
-}
-
-// GetHostName returns the name of host running the service
-func (h *serviceImpl) GetHostName() string {
-	return h.hostName
 }
 
 // Start starts a yarpc service

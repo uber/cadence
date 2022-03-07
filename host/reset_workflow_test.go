@@ -404,7 +404,7 @@ func (s *IntegrationSuite) TestResetWorkflow_NoDecisionTaskCompleted() {
 	s.Logger.Info("PollAndProcessWorkflowTask", tag.Error(err))
 	s.NoError(err)
 
-	events = s.getHistory(s.domainName, &types.WorkflowExecution{
+	s.getHistory(s.domainName, &types.WorkflowExecution{
 		WorkflowID: id,
 		RunID:      newRunID,
 	})

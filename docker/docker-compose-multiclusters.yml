@@ -82,7 +82,7 @@ services:
   cadence-web-secondary:
     image: ubercadence/web:latest
     environment:
-      - "CADENCE_TCHANNEL_PEERS=cadence-secondary:7943"
+      - "CADENCE_TCHANNEL_PEERS=cadence-secondary:7933"
     ports:
       - "8089:8088"
     depends_on:

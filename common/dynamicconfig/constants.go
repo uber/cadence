@@ -1404,6 +1404,30 @@ const (
 	// Default value: 300 // should be much smaller than frontend RPS
 	// Allowed filters: N/A
 	ArchiveRequestRPS
+	// ArchiveInlineHistoryRPS is the (per instance) rate limit on the number of inline history archival attempts per second
+	// KeyName: history.archiveInlineHistoryRPS
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: N/A
+	ArchiveInlineHistoryRPS
+	// ArchiveInlineHistoryGlobalRPS is the global rate limit on the number of inline history archival attempts per second
+	// KeyName: history.archiveInlineHistoryGlobalRPS
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: N/A
+	ArchiveInlineHistoryGlobalRPS
+	// ArchiveInlineVisibilityRPS is the (per instance) rate limit on the number of inline visibility archival attempts per second
+	// KeyName: history.archiveInlineVisibilityRPS
+	// Value type: Int
+	// Default value: 1000
+	// Allowed filters: N/A
+	ArchiveInlineVisibilityRPS
+	// ArchiveInlineVisibilityGlobalRPS is the global rate limit on the number of inline visibility archival attempts per second
+	// KeyName: history.archiveInlineVisibilityGlobalRPS
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: N/A
+	ArchiveInlineVisibilityGlobalRPS
 	// EnableAdminProtection is whether to enable admin checking
 	// KeyName: history.enableAdminProtection
 	// Value type: Bool
@@ -1916,6 +1940,12 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableESAnalyzer
+	// EnableWatchDog decides whether to enable watchdog system worker
+	// KeyName: system.enableWatchdog
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableWatchDog
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
@@ -2105,6 +2135,12 @@ const (
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
 
+	// CorruptWorkflowWatchdogPause defines if we want to dynamically pause the watchdog workflow
+	// KeyName: worker.CorruptWorkflowWatchdogPause
+	// Value type: bool
+	// Default value: false
+	CorruptWorkflowWatchdogPause
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2156,6 +2192,7 @@ var Keys = map[Key]string{
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
+	EnableWatchDog:                      "system.EnableWatchDog",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -2375,6 +2412,10 @@ var Keys = map[Key]string{
 	EnableParentClosePolicy:                            "history.enableParentClosePolicy",
 	NumArchiveSystemWorkflows:                          "history.numArchiveSystemWorkflows",
 	ArchiveRequestRPS:                                  "history.archiveRequestRPS",
+	ArchiveInlineHistoryRPS:                            "history.archiveInlineHistoryRPS",
+	ArchiveInlineHistoryGlobalRPS:                      "history.archiveInlineHistoryGlobalRPS",
+	ArchiveInlineVisibilityRPS:                         "history.archiveInlineVisibilityRPS",
+	ArchiveInlineVisibilityGlobalRPS:                   "history.archiveInlineVisibilityGlobalRPS",
 	EmitShardDiffLog:                                   "history.emitShardDiffLog",
 	HistoryThrottledLogRPS:                             "history.throttledLogRPS",
 	StickyTTL:                                          "history.stickyTTL",
@@ -2489,6 +2530,8 @@ var Keys = map[Key]string{
 	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
 	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
 	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
+
+	CorruptWorkflowWatchdogPause: "worker.CorruptWorkflowWatchdogPause",
 }
 
 var KeyNames map[string]Key

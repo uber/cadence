@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,37 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package quotas
 
 import (
-	"testing"
+	"math"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/membership"
 )
 
-func TestGRPCPorts(t *testing.T) {
-	config := config.Config{
-		Services: map[string]config.Service{
-			"frontend": {RPC: config.RPC{GRPCPort: 9999}},
-			"history":  {RPC: config.RPC{}},
-		},
+// PerMember allows creating per instance RPS based on globalRPS averaged by member count for a given service.
+// If member count can not be retrieved or globalRPS is not provided it falls back to instanceRPS.
+func PerMember(service string, globalRPS, instanceRPS float64, resolver membership.Resolver) float64 {
+	if globalRPS <= 0 {
+		return instanceRPS
 	}
-	grpcPorts := NewGRPCPorts(&config)
 
-	_, err := grpcPorts.GetGRPCAddress("some-service", "1.2.3.4")
-	assert.EqualError(t, err, "unknown service: some-service")
+	memberCount, err := resolver.MemberCount(service)
+	if err != nil || memberCount < 1 {
+		return instanceRPS
+	}
 
-	_, err = grpcPorts.GetGRPCAddress(service.History, "1.2.3.4")
-	assert.EqualError(t, err, "GRPC port not configured for service: cadence-history")
+	avgQuota := math.Max(globalRPS/float64(memberCount), 1)
+	return math.Min(avgQuota, instanceRPS)
+}
 
-	grpcAddress, err := grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
-
-	grpcAddress, err = grpcPorts.GetGRPCAddress(service.Frontend, "1.2.3.4:8888")
-	assert.Nil(t, err)
-	assert.Equal(t, grpcAddress, "1.2.3.4:9999")
+// PerMemberDynamic is a dynamic variant (using RPSFunc) of PerMember
+func PerMemberDynamic(service string, globalRPS, instanceRPS RPSFunc, resolver membership.Resolver) RPSFunc {
+	return func() float64 { return PerMember(service, globalRPS(), instanceRPS(), resolver) }
 }

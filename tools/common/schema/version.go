@@ -22,7 +22,6 @@ package schema
 
 import (
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -96,31 +95,4 @@ func parseValidateVersion(ver string) (string, error) {
 		return "", fmt.Errorf("invalid version, expected format is x.x")
 	}
 	return ver, nil
-}
-
-// getExpectedVersion gets the latest version from the schema directory
-func getExpectedVersion(dir string) (string, error) {
-	subdirs, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return "", err
-	}
-
-	var result string
-	for _, subdir := range subdirs {
-		if !subdir.IsDir() {
-			continue
-		}
-		dirname := subdir.Name()
-		if !versionStrRegex.MatchString(dirname) {
-			continue
-		}
-		ver := dirToVersion(dirname)
-		if len(result) == 0 || cmpVersion(ver, result) > 0 {
-			result = ver
-		}
-	}
-	if len(result) == 0 {
-		return "", fmt.Errorf("no valid schemas found in dir: %s", dir)
-	}
-	return result, nil
 }

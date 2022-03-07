@@ -193,10 +193,64 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 	return resp
 }
 
+// AdminMaintainCorruptWorkflow deletes workflow from DB if it's corrupt
+func AdminMaintainCorruptWorkflow(c *cli.Context) error {
+	domainName := getRequiredGlobalOption(c, FlagDomain)
+	workflowID := c.String(FlagWorkflowID)
+	runID := c.String(FlagRunID)
+	skipErrors := c.Bool(FlagSkipErrorMode)
+	adminClient := cFactory.ServerAdminClient(c)
+
+	request := &types.AdminMaintainWorkflowRequest{
+		Domain: domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+		SkipErrors: skipErrors,
+	}
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	_, err := adminClient.MaintainCorruptWorkflow(ctx, request)
+	if err != nil {
+		ErrorAndExit("Operation AdminMaintainCorruptWorkflow failed.", err)
+	}
+
+	return err
+}
+
 // AdminDeleteWorkflow delete a workflow execution for admin
 func AdminDeleteWorkflow(c *cli.Context) {
+	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
+	remote := c.Bool(FlagRemote)
+	skipError := c.Bool(FlagSkipErrorMode)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	// With remote flag, we run the command on the server side using existing APIs
+	// Without remote, commands are run directly through some DB clients. This is
+	// useful if server is down somehow. However, we only support couple DB clients
+	// currently. If the server side hosts working, remote is a cleaner approach
+	if remote {
+		adminClient := cFactory.ServerAdminClient(c)
+		request := &types.AdminDeleteWorkflowRequest{
+			Domain: domain,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			},
+			SkipErrors: skipError,
+		}
+		_, err := adminClient.DeleteWorkflow(ctx, request)
+		if err != nil {
+			ErrorAndExit("Operation AdminMaintainCorruptWorkflow failed.", err)
+		}
+		return
+	}
 
 	resp := describeMutableState(c)
 	msStr := resp.GetMutableStateInDatabase()
@@ -206,15 +260,12 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		ErrorAndExit("json.Unmarshal err", err)
 	}
 	domainID := ms.ExecutionInfo.DomainID
-	skipError := c.Bool(FlagSkipErrorMode)
 
 	shardID := resp.GetShardID()
 	shardIDInt, err := strconv.Atoi(shardID)
 	if err != nil {
 		ErrorAndExit("strconv.Atoi(shardID) err", err)
 	}
-	ctx, cancel := newContext(c)
-	defer cancel()
 	histV2 := initializeHistoryManager(c)
 	defer histV2.Close()
 	exeStore := initializeExecutionStore(c, shardIDInt, 0)

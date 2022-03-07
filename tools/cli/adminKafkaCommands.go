@@ -34,7 +34,7 @@ import (
 	"time"
 
 	"github.com/urfave/cli"
-	"go.uber.org/thriftrw/protocol"
+	"go.uber.org/thriftrw/protocol/binary"
 	"go.uber.org/thriftrw/wire"
 
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -200,16 +200,15 @@ func startParser(readerCh <-chan []byte, writerCh *writerChannel, skipErrors boo
 	var buffer []byte
 Loop:
 	for {
-		select {
-		case data, ok := <-readerCh:
-			if !ok {
-				break Loop
-			}
-			buffer = append(buffer, data...)
-			data, nextBuffer := splitBuffer(buffer)
-			buffer = nextBuffer
-			parse(data, skipErrors, skippedCount, writerCh)
+		data, ok := <-readerCh
+
+		if !ok {
+			break Loop
 		}
+		buffer = append(buffer, data...)
+		data, nextBuffer := splitBuffer(buffer)
+		buffer = nextBuffer
+		parse(data, skipErrors, skippedCount, writerCh)
 	}
 	parse(buffer, skipErrors, skippedCount, writerCh)
 }
@@ -248,37 +247,36 @@ func writeReplicationTask(
 	filter := buildFilterFn(c.String(FlagWorkflowID), c.String(FlagRunID))
 Loop:
 	for {
-		select {
-		case task, ok := <-writerCh.ReplicationTaskChannel:
-			if !ok {
-				break Loop
-			}
-			if filter(task) {
-				jsonStr, err := decodeReplicationTask(task, serializer)
-				if err != nil {
-					if !skipErrMode {
-						ErrorAndExit(malformedMessage, fmt.Errorf("failed to encode into json, err: %v", err))
-					} else {
-						atomic.AddInt32(skippedCount, 1)
-						continue Loop
-					}
-				}
+		task, ok := <-writerCh.ReplicationTaskChannel
 
-				var outStr string
-				if !headerMode {
-					outStr = string(jsonStr)
+		if !ok {
+			break Loop
+		}
+		if filter(task) {
+			jsonStr, err := decodeReplicationTask(task, serializer)
+			if err != nil {
+				if !skipErrMode {
+					ErrorAndExit(malformedMessage, fmt.Errorf("failed to encode into json, err: %v", err))
 				} else {
-					outStr = fmt.Sprintf(
-						"%v, %v, %v",
-						task.GetHistoryTaskV2Attributes().DomainID,
-						task.GetHistoryTaskV2Attributes().WorkflowID,
-						task.GetHistoryTaskV2Attributes().RunID,
-					)
+					atomic.AddInt32(skippedCount, 1)
+					continue Loop
 				}
-				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
-				if err != nil {
-					ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
-				}
+			}
+
+			var outStr string
+			if !headerMode {
+				outStr = string(jsonStr)
+			} else {
+				outStr = fmt.Sprintf(
+					"%v, %v, %v",
+					task.GetHistoryTaskV2Attributes().DomainID,
+					task.GetHistoryTaskV2Attributes().WorkflowID,
+					task.GetHistoryTaskV2Attributes().RunID,
+				)
+			}
+			_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+			if err != nil {
+				ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
 			}
 		}
 	}
@@ -295,39 +293,38 @@ func writeVisibilityMessage(
 	filter := buildFilterFnForVisibility(c.String(FlagWorkflowID), c.String(FlagRunID))
 Loop:
 	for {
-		select {
-		case msg, ok := <-writerCh.VisibilityMsgChannel:
-			if !ok {
-				break Loop
-			}
-			if filter(msg) {
-				jsonStr, err := json.Marshal(msg)
-				if err != nil {
-					if !skipErrMode {
-						ErrorAndExit(malformedMessage, fmt.Errorf("failed to encode into json, err: %v", err))
-					} else {
-						atomic.AddInt32(skippedCount, 1)
-						continue Loop
-					}
-				}
+		msg, ok := <-writerCh.VisibilityMsgChannel
 
-				var outStr string
-				if !headerMode {
-					outStr = string(jsonStr)
+		if !ok {
+			break Loop
+		}
+		if filter(msg) {
+			jsonStr, err := json.Marshal(msg)
+			if err != nil {
+				if !skipErrMode {
+					ErrorAndExit(malformedMessage, fmt.Errorf("failed to encode into json, err: %v", err))
 				} else {
-					outStr = fmt.Sprintf(
-						"%v, %v, %v, %v, %v",
-						msg.GetDomainID(),
-						msg.GetWorkflowID(),
-						msg.GetRunID(),
-						msg.GetMessageType().String(),
-						msg.GetVersion(),
-					)
+					atomic.AddInt32(skippedCount, 1)
+					continue Loop
 				}
-				_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
-				if err != nil {
-					ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
-				}
+			}
+
+			var outStr string
+			if !headerMode {
+				outStr = string(jsonStr)
+			} else {
+				outStr = fmt.Sprintf(
+					"%v, %v, %v, %v, %v",
+					msg.GetDomainID(),
+					msg.GetWorkflowID(),
+					msg.GetRunID(),
+					msg.GetMessageType().String(),
+					msg.GetVersion(),
+				)
+			}
+			_, err = outputFile.WriteString(fmt.Sprintf("%v\n", outStr))
+			if err != nil {
+				ErrorAndExit("Failed to write to file", fmt.Errorf("err: %v", err))
 			}
 		}
 	}
@@ -409,7 +406,7 @@ func deserializeMessages(messages [][]byte, skipErrors bool) ([]*types.Replicati
 
 func decode(message []byte, val *replicator.ReplicationTask) error {
 	reader := bytes.NewReader(message[1:])
-	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
+	wireVal, err := binary.Default.Decode(reader, wire.TStruct)
 	if err != nil {
 		return err
 	}
@@ -437,7 +434,7 @@ func deserializeVisibilityMessages(messages [][]byte, skipErrors bool) ([]*index
 
 func decodeVisibility(message []byte, val *indexer.Message) error {
 	reader := bytes.NewReader(message[1:])
-	wireVal, err := protocol.Binary.Decode(reader, wire.TStruct)
+	wireVal, err := binary.Default.Decode(reader, wire.TStruct)
 	if err != nil {
 		return err
 	}

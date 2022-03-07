@@ -1117,7 +1117,7 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 			crossClusterTask Task,
 			childInfo *p.ChildExecutionInfo,
 		) {
-			lastEvent = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.ID, constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
+			_ = test.AddChildWorkflowExecutionStartedEvent(mutableState, lastEvent.ID, constants.TestTargetDomainID, targetExecution.GetWorkflowID(), targetExecution.GetRunID(), childInfo.WorkflowTypeName)
 			di := test.AddDecisionTaskScheduledEvent(mutableState)
 			lastEvent = test.AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, mutableState.GetExecutionInfo().TaskList, "some random identity")
 			lastEvent = test.AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, lastEvent.ID, nil, "some random identity")

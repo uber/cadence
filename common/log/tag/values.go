@@ -299,6 +299,8 @@ var (
 	AdminClientOperationUpdateDynamicConfig               = clientOperation("admin-update-dynamic-config")
 	AdminClientOperationRestoreDynamicConfig              = clientOperation("admin-restore-dynamic-config")
 	AdminClientOperationListDynamicConfig                 = clientOperation("admin-list-dynamic-config")
+	AdminDeleteWorkflow                                   = clientOperation("admin-delete-workflow")
+	MaintainCorruptWorkflow                               = clientOperation("maintain-corrupt-workflow")
 
 	FrontendClientOperationDeprecateDomain                  = clientOperation("frontend-deprecate-domain")
 	FrontendClientOperationDescribeDomain                   = clientOperation("frontend-describe-domain")
@@ -322,6 +324,7 @@ var (
 	FrontendClientOperationRequestCancelWorkflowExecution   = clientOperation("frontend-request-cancel-wf-execution")
 	FrontendClientOperationResetStickyTaskList              = clientOperation("frontend-reset-sticky-task-list")
 	FrontendClientOperationResetWorkflowExecution           = clientOperation("frontend-reset-wf-execution")
+	FrontendClientOperationRefreshWorkflowTasks             = clientOperation("frontend-refresh-wf-tasks")
 	FrontendClientOperationRespondActivityTaskCanceled      = clientOperation("frontend-respond-activity-task-canceled")
 	FrontendClientOperationRespondActivityTaskCanceledByID  = clientOperation("frontend-respond-activity-task-canceled-by-id")
 	FrontendClientOperationRespondActivityTaskCompleted     = clientOperation("frontend-respond-activity-task-completed")

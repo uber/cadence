@@ -383,6 +383,36 @@ func (c *retryableClient) RestoreDynamicConfig(
 	return c.throttleRetry.Do(ctx, op)
 }
 
+func (c *retryableClient) DeleteWorkflow(
+	ctx context.Context,
+	request *types.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (*types.AdminDeleteWorkflowResponse, error) {
+	var resp *types.AdminDeleteWorkflowResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.DeleteWorkflow(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) MaintainCorruptWorkflow(
+	ctx context.Context,
+	request *types.AdminMaintainWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (*types.AdminMaintainWorkflowResponse, error) {
+	var resp *types.AdminMaintainWorkflowResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.MaintainCorruptWorkflow(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) ListDynamicConfig(
 	ctx context.Context,
 	request *types.ListDynamicConfigRequest,

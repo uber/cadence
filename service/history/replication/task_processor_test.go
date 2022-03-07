@@ -176,62 +176,27 @@ func (s *taskProcessorSuite) TestHandleSyncShardStatus() {
 }
 
 func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplicationTask() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	task := &types.ReplicationTask{
-		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
-		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	}
 	request := &persistence.PutReplicationTaskToDLQRequest{
 		SourceClusterName: "standby",
 		TaskInfo: &persistence.ReplicationTaskInfo{
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
+			DomainID:   uuid.New(),
+			WorkflowID: uuid.New(),
+			RunID:      uuid.New(),
 			TaskType:   persistence.ReplicationTaskTypeSyncActivity,
 		},
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
-	err := s.taskProcessor.putReplicationTaskToDLQ(task)
+	err := s.taskProcessor.putReplicationTaskToDLQ(request)
 	s.NoError(err)
 }
 
 func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTask() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	events := []*types.HistoryEvent{
-		{
-			ID:      1,
-			Version: 1,
-		},
-	}
-	serializer := s.mockShard.GetPayloadSerializer()
-	data, err := serializer.SerializeBatchEvents(events, common.EncodingTypeThriftRW)
-	s.NoError(err)
-	task := &types.ReplicationTask{
-		TaskType: types.ReplicationTaskTypeHistoryV2.Ptr(),
-		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
-			Events: &types.DataBlob{
-				EncodingType: types.EncodingTypeThriftRW.Ptr(),
-				Data:         data.Data,
-			},
-		},
-	}
 	request := &persistence.PutReplicationTaskToDLQRequest{
 		SourceClusterName: "standby",
 		TaskInfo: &persistence.ReplicationTaskInfo{
-			DomainID:     domainID,
-			WorkflowID:   workflowID,
-			RunID:        runID,
+			DomainID:     uuid.New(),
+			WorkflowID:   uuid.New(),
+			RunID:        uuid.New(),
 			TaskType:     persistence.ReplicationTaskTypeHistory,
 			FirstEventID: 1,
 			NextEventID:  2,
@@ -239,7 +204,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 		},
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
-	err = s.taskProcessor.putReplicationTaskToDLQ(task)
+	err := s.taskProcessor.putReplicationTaskToDLQ(request)
 	s.NoError(err)
 }
 

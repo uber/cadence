@@ -154,11 +154,7 @@ func newProcessorBase(
 		metricsClient: metricsClient,
 		metricsScope:  metricsScope,
 
-		rateLimiter: quotas.NewDynamicRateLimiter(
-			func() float64 {
-				return float64(options.MaxPollRPS())
-			},
-		),
+		rateLimiter: quotas.NewDynamicRateLimiter(options.MaxPollRPS.AsFloat64()),
 
 		status:         common.DaemonStatusInitialized,
 		shutdownCh:     make(chan struct{}),

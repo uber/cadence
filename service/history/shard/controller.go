@@ -122,7 +122,7 @@ func NewShardController(
 	factory EngineFactory,
 	config *config.Config,
 ) Controller {
-	hostIdentity := resource.GetHostInfo().Identity()
+	hostAddress := resource.GetHostInfo().GetAddress()
 	return &controller{
 		Resource:           resource,
 		status:             common.DaemonStatusInitialized,
@@ -130,8 +130,8 @@ func NewShardController(
 		engineFactory:      factory,
 		historyShards:      make(map[int]*historyShardsItem),
 		shutdownCh:         make(chan struct{}),
-		logger:             resource.GetLogger().WithTags(tag.ComponentShardController, tag.Address(hostIdentity)),
-		throttledLogger:    resource.GetThrottledLogger().WithTags(tag.ComponentShardController, tag.Address(hostIdentity)),
+		logger:             resource.GetLogger().WithTags(tag.ComponentShardController, tag.Address(hostAddress)),
+		throttledLogger:    resource.GetThrottledLogger().WithTags(tag.ComponentShardController, tag.Address(hostAddress)),
 		config:             config,
 		metricsScope:       resource.GetMetricsClient().Scope(metrics.HistoryShardControllerScope),
 	}
@@ -144,15 +144,15 @@ func newHistoryShardsItem(
 	config *config.Config,
 ) (*historyShardsItem, error) {
 
-	hostIdentity := resource.GetHostInfo().Identity()
+	hostAddress := resource.GetHostInfo().GetAddress()
 	return &historyShardsItem{
 		Resource:        resource,
 		shardID:         shardID,
 		status:          historyShardsItemStatusInitialized,
 		engineFactory:   factory,
 		config:          config,
-		logger:          resource.GetLogger().WithTags(tag.ShardID(shardID), tag.Address(hostIdentity)),
-		throttledLogger: resource.GetThrottledLogger().WithTags(tag.ShardID(shardID), tag.Address(hostIdentity)),
+		logger:          resource.GetLogger().WithTags(tag.ShardID(shardID), tag.Address(hostAddress)),
+		throttledLogger: resource.GetThrottledLogger().WithTags(tag.ShardID(shardID), tag.Address(hostAddress)),
 	}, nil
 }
 
@@ -316,7 +316,8 @@ func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsIte
 		return shardItem, nil
 	}
 
-	return nil, CreateShardOwnershipLostError(c.GetHostInfo().Identity(), info.GetAddress())
+	// for backwards compatibility, always return tchannel port
+	return nil, CreateShardOwnershipLostError(c.GetHostInfo(), info)
 }
 
 func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShardsItem) (*historyShardsItem, error) {
@@ -326,12 +327,12 @@ func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShard
 
 	currentShardItem, ok := c.historyShards[shardID]
 	if !ok {
-		return nil, fmt.Errorf("No item found to remove for shard: %v", shardID)
+		return nil, fmt.Errorf("no item found to remove for shard: %v", shardID)
 	}
 	if shardItem != nil && currentShardItem != shardItem {
 		// the shardItem comparison is a defensive check to make sure we are deleting
 		// what we intend to delete.
-		return nil, fmt.Errorf("Current shardItem doesn't match the one we intend to delete for shard: %v", shardID)
+		return nil, fmt.Errorf("current shardItem doesn't match the one we intend to delete for shard: %v", shardID)
 	}
 
 	delete(c.historyShards, shardID)
@@ -531,13 +532,15 @@ func IsShardOwnershiptLostError(err error) bool {
 
 // CreateShardOwnershipLostError creates a new shard ownership lost error
 func CreateShardOwnershipLostError(
-	currentHost string,
-	ownerHost string,
+	currentHost membership.HostInfo,
+	ownerHost membership.HostInfo,
 ) *types.ShardOwnershipLostError {
-
-	shardLostErr := &types.ShardOwnershipLostError{}
-	shardLostErr.Message = fmt.Sprintf("Shard is not owned by host: %v", currentHost)
-	shardLostErr.Owner = ownerHost
-
-	return shardLostErr
+	address, err := ownerHost.GetNamedAddress(membership.PortTchannel)
+	if err != nil {
+		address = ownerHost.Identity()
+	}
+	return &types.ShardOwnershipLostError{
+		Message: fmt.Sprintf("Shard is not owned by host: %v", currentHost.Identity()),
+		Owner:   address,
+	}
 }

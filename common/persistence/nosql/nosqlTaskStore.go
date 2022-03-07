@@ -80,7 +80,7 @@ func (t *nosqlTaskStore) LeaseTaskList(
 ) (*p.LeaseTaskListResponse, error) {
 	if len(request.TaskList) == 0 {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("LeaseTaskList requires non empty task list"),
+			Message: "LeaseTaskList requires non empty task list",
 		}
 	}
 	now := time.Now()
@@ -194,7 +194,7 @@ func (t *nosqlTaskStore) ListTaskList(
 	_ *p.ListTaskListRequest,
 ) (*p.ListTaskListResponse, error) {
 	return nil, &types.InternalServiceError{
-		Message: fmt.Sprintf("unsupported operation"),
+		Message: "unsupported operation",
 	}
 }
 

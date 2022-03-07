@@ -115,6 +115,7 @@ func NewTaskProcessor(
 	taskExecutor TaskExecutor,
 ) TaskProcessor {
 	shardID := shard.GetShardID()
+	sourceCluster := taskFetcher.GetSourceCluster()
 	firstRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorRetryWait(shardID))
 	firstRetryPolicy.SetMaximumAttempts(config.ReplicationTaskProcessorErrorRetryMaxAttempts(shardID))
 	secondRetryPolicy := backoff.NewExponentialRetryPolicy(config.ReplicationTaskProcessorErrorSecondRetryWait(shardID))
@@ -130,20 +131,18 @@ func NewTaskProcessor(
 	noTaskBackoffPolicy.SetExpirationInterval(backoff.NoInterval)
 	noTaskRetrier := backoff.NewRetrier(noTaskBackoffPolicy, backoff.SystemClock)
 	return &taskProcessorImpl{
-		currentCluster:    shard.GetClusterMetadata().GetCurrentClusterName(),
-		sourceCluster:     taskFetcher.GetSourceCluster(),
-		status:            common.DaemonStatusInitialized,
-		shard:             shard,
-		historyEngine:     historyEngine,
-		historySerializer: persistence.NewPayloadSerializer(),
-		config:            config,
-		metricsClient:     metricsClient,
-		logger:            shard.GetLogger(),
-		taskExecutor:      taskExecutor,
-		hostRateLimiter:   taskFetcher.GetRateLimiter(),
-		shardRateLimiter: quotas.NewDynamicRateLimiter(func() float64 {
-			return config.ReplicationTaskProcessorShardQPS()
-		}),
+		currentCluster:         shard.GetClusterMetadata().GetCurrentClusterName(),
+		sourceCluster:          sourceCluster,
+		status:                 common.DaemonStatusInitialized,
+		shard:                  shard,
+		historyEngine:          historyEngine,
+		historySerializer:      persistence.NewPayloadSerializer(),
+		config:                 config,
+		metricsClient:          metricsClient,
+		logger:                 shard.GetLogger().WithTags(tag.SourceCluster(sourceCluster), tag.ShardID(shardID)),
+		taskExecutor:           taskExecutor,
+		hostRateLimiter:        taskFetcher.GetRateLimiter(),
+		shardRateLimiter:       quotas.NewDynamicRateLimiter(config.ReplicationTaskProcessorShardQPS.AsFloat64()),
 		taskRetryPolicy:        taskRetryPolicy,
 		dlqRetryPolicy:         dlqRetryPolicy,
 		noTaskRetrier:          noTaskRetrier,
@@ -327,7 +326,7 @@ func (p *taskProcessorImpl) processResponse(response *types.ReplicationMessages)
 		backoffDuration := p.noTaskRetrier.NextBackOff()
 		time.Sleep(backoffDuration)
 	} else {
-		scope.RecordTimer(metrics.ReplicationTasksAppliedLatency, time.Now().Sub(batchRequestStartTime))
+		scope.RecordTimer(metrics.ReplicationTasksAppliedLatency, time.Since(batchRequestStartTime))
 	}
 
 	p.lastProcessedMessageID = response.GetLastRetrievedMessageID()
@@ -428,9 +427,18 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 		p.logger.Warn("Skip adding new messages to DLQ.", tag.Error(err))
 		return err
 	default:
-		p.logger.Error(
-			"Failed to apply replication task after retry. Putting task into DLQ.",
-			tag.TaskID(replicationTask.GetSourceTaskID()),
+		request, err := p.generateDLQRequest(replicationTask)
+		if err != nil {
+			p.logger.Error("Failed to generate DLQ replication task.", tag.Error(err))
+			// We cannot deserialize the task. Dropping it.
+			return nil
+		}
+		p.logger.Error("Failed to apply replication task after retry. Putting task into DLQ.",
+			tag.WorkflowDomainID(request.TaskInfo.GetDomainID()),
+			tag.WorkflowID(request.TaskInfo.GetWorkflowID()),
+			tag.WorkflowRunID(request.TaskInfo.GetRunID()),
+			tag.TaskID(request.TaskInfo.GetTaskID()),
+			tag.TaskType(request.TaskInfo.GetTaskType()),
 			tag.Error(err),
 		)
 		//TODO: uncomment this when the execution fixer workflow is ready
@@ -438,7 +446,7 @@ func (p *taskProcessorImpl) processSingleTask(replicationTask *types.Replication
 		//	p.logger.Warn("Failed to trigger data scan", tag.Error(err))
 		//	p.metricsClient.IncCounter(metrics.ReplicationDLQStatsScope, metrics.ReplicationDLQValidationFailed)
 		//}
-		return p.putReplicationTaskToDLQ(replicationTask)
+		return p.putReplicationTaskToDLQ(request)
 	}
 }
 
@@ -468,21 +476,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *types.ReplicationTa
 	return err
 }
 
-func (p *taskProcessorImpl) putReplicationTaskToDLQ(replicationTask *types.ReplicationTask) error {
-	request, err := p.generateDLQRequest(replicationTask)
-	if err != nil {
-		p.logger.Error("Failed to generate DLQ replication task.", tag.Error(err))
-		// We cannot deserialize the task. Dropping it.
-		return nil
-	}
-	p.logger.Info("Put history replication to DLQ",
-		tag.WorkflowDomainID(request.TaskInfo.GetDomainID()),
-		tag.WorkflowID(request.TaskInfo.GetWorkflowID()),
-		tag.WorkflowRunID(request.TaskInfo.GetRunID()),
-		tag.TaskID(request.TaskInfo.GetTaskID()),
-		tag.ShardID(p.shard.GetShardID()),
-	)
-
+func (p *taskProcessorImpl) putReplicationTaskToDLQ(request *persistence.PutReplicationTaskToDLQRequest) error {
 	p.metricsClient.Scope(
 		metrics.ReplicationDLQStatsScope,
 		metrics.TargetClusterTag(p.sourceCluster),
@@ -565,7 +559,7 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 	case replicationTask.GetHistoryTaskV2Attributes() != nil:
 		attr := replicationTask.GetHistoryTaskV2Attributes()
 		versionHistoryItems := attr.GetVersionHistoryItems()
-		if versionHistoryItems == nil || len(versionHistoryItems) == 0 {
+		if len(versionHistoryItems) == 0 {
 			return errors.New("failed to trigger data scan due to invalid version history")
 		}
 		// version history items in same batch should be the same

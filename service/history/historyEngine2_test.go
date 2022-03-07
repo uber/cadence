@@ -848,6 +848,7 @@ func (s *engine2Suite) createExecutionStartedState(we types.WorkflowExecution, t
 }
 
 //nolint:unused
+//lint:ignore U1000 for printing within tests
 func (s *engine2Suite) printHistory(builder execution.MutableState) string {
 	return thrift.FromHistory(builder.GetHistoryBuilder().GetHistory()).String()
 }
@@ -1490,9 +1491,10 @@ func (s *engine2Suite) TestNewChildContext() {
 	ctx, cancel := context.WithTimeout(ctx, time.Hour)
 	defer cancel()
 	childCtx, childCancel = s.historyEngine.newChildContext(ctx)
+	defer childCancel()
 	deadline, ok := childCtx.Deadline()
 	s.True(ok)
-	s.True(deadline.Sub(time.Now()) < 10*time.Minute)
+	s.True(time.Until(deadline) < 10*time.Minute)
 }
 
 func (s *engine2Suite) getBuilder(domainID string, we types.WorkflowExecution) execution.MutableState {

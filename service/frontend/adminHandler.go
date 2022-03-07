@@ -27,17 +27,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
 
+	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/dynamicconfig"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
@@ -48,6 +50,7 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/execution"
 )
 
 var _ AdminHandler = (*adminHandlerImpl)(nil)
@@ -57,8 +60,7 @@ const (
 )
 
 var (
-	errMaxMessageIDNotSet = &types.BadRequestError{Message: "Max messageID is not set."}
-	errInvalidFilters     = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
+	errInvalidFilters = &types.BadRequestError{Message: "Request Filters are invalid, unable to parse."}
 )
 
 type (
@@ -91,6 +93,8 @@ type (
 		UpdateDynamicConfig(context.Context, *types.UpdateDynamicConfigRequest) error
 		RestoreDynamicConfig(context.Context, *types.RestoreDynamicConfigRequest) error
 		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
+		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error)
+		MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -105,6 +109,11 @@ type (
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
+	}
+
+	workflowQueryTemplate struct {
+		name     string
+		function func(request *types.AdminMaintainWorkflowRequest) error
 	}
 
 	getWorkflowRawHistoryV2Token struct {
@@ -122,6 +131,12 @@ type (
 
 var (
 	adminServiceRetryPolicy = common.CreateAdminServiceRetryPolicy()
+
+	corruptWorkflowErrorList = [3]string{
+		execution.ErrMissingWorkflowStartEvent.Error(),
+		execution.ErrMissingActivityScheduledEvent.Error(),
+		persistence.ErrCorruptedHistory.Error(),
+	}
 )
 
 // NewAdminHandler creates a thrift handler for the cadence admin service
@@ -198,12 +213,12 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 		return adh.error(&types.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
 	}
 	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		return adh.error(&types.BadRequestError{Message: fmt.Sprintf("AdvancedVisibilityStore is not configured for this Cadence Cluster")}, scope)
+		return adh.error(&types.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"}, scope)
 	}
 
 	searchAttr := request.GetSearchAttribute()
 	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
-		dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
+		dc.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
 	if err != nil {
 		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
@@ -222,7 +237,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
-	err = adh.params.DynamicConfig.UpdateValue(dynamicconfig.ValidSearchAttributes, currentValidAttr)
+	err = adh.params.DynamicConfig.UpdateValue(dc.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
 		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
@@ -278,6 +293,9 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	}
 
 	domainID, err := adh.GetDomainCache().GetDomainID(request.GetDomain())
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
 
 	historyAddr := historyHost.GetAddress()
 	resp2, err := adh.GetHistoryClient().DescribeMutableState(ctx, &types.DescribeMutableStateRequest{
@@ -312,6 +330,284 @@ func (adh *adminHandlerImpl) RemoveTask(
 		return adh.error(err, scope)
 	}
 	return nil
+}
+
+func (adh *adminHandlerImpl) getCorruptWorkflowQueryTemplates(
+	ctx context.Context, request *types.AdminMaintainWorkflowRequest,
+) []workflowQueryTemplate {
+	client := adh.GetFrontendClient()
+	return []workflowQueryTemplate{
+		{
+			name: "DescribeWorkflowExecution",
+			function: func(request *types.AdminMaintainWorkflowRequest) error {
+				_, err := client.DescribeWorkflowExecution(ctx, &types.DescribeWorkflowExecutionRequest{
+					Domain:    request.Domain,
+					Execution: request.Execution,
+				})
+				return err
+			},
+		},
+		{
+			name: "GetWorkflowExecutionHistory",
+			function: func(request *types.AdminMaintainWorkflowRequest) error {
+				_, err := client.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+					Domain:    request.Domain,
+					Execution: request.Execution,
+				})
+				return err
+			},
+		},
+	}
+}
+
+func (adh *adminHandlerImpl) MaintainCorruptWorkflow(
+	ctx context.Context,
+	request *types.AdminMaintainWorkflowRequest,
+) (*types.AdminMaintainWorkflowResponse, error) {
+	if request.GetExecution() == nil {
+		return nil, types.BadRequestError{Message: "Execution is missing"}
+	}
+
+	logger := adh.GetLogger().WithTags(
+		tag.WorkflowDomainName(request.Domain),
+		tag.WorkflowID(request.GetExecution().GetWorkflowID()),
+		tag.WorkflowRunID(request.GetExecution().GetRunID()),
+	)
+
+	scope := adh.GetMetricsClient().Scope(metrics.WatchDogScope)
+	tagged := scope.Tagged(metrics.DomainTag(request.Domain))
+	resp := &types.AdminMaintainWorkflowResponse{
+		HistoryDeleted:    false,
+		ExecutionsDeleted: false,
+		VisibilityDeleted: false,
+	}
+
+	queryTemplates := adh.getCorruptWorkflowQueryTemplates(ctx, request)
+	for _, template := range queryTemplates {
+		functionName := template.name
+		queryFunc := template.function
+		err := queryFunc(request)
+		if err == nil {
+			logger.Info(fmt.Sprintf("Query succeeded for function: %s", functionName))
+			continue
+		}
+		if err != nil {
+			logger.Info(fmt.Sprintf("%s returned error %#v", functionName, err))
+		}
+
+		// check if the error message indicates corrupt workflow
+		errorMessage := err.Error()
+		for _, corruptMessage := range corruptWorkflowErrorList {
+			if errorMessage == corruptMessage {
+				logger.Info(fmt.Sprintf("Will delete workflow because (%v) returned corrupted error (%#v)",
+					functionName, err))
+				resp, err = adh.DeleteWorkflow(ctx, request)
+				if err == nil {
+					tagged.AddCounter(metrics.WatchDogNumDeletedCorruptWorkflows, 1)
+				} else {
+					tagged.AddCounter(metrics.WatchDogNumFailedToDeleteCorruptWorkflows, 1)
+				}
+				return resp, nil
+			}
+		}
+	}
+
+	return resp, nil
+}
+
+func (adh *adminHandlerImpl) deleteWorkflowFromHistory(
+	ctx context.Context,
+	logger log.Logger,
+	shardIDInt int,
+	mutableState persistence.WorkflowMutableState,
+) bool {
+	historyManager := adh.GetHistoryManager()
+
+	branchInfo := shared.HistoryBranch{}
+	thriftrwEncoder := codec.NewThriftRWEncoder()
+	branchTokens := [][]byte{mutableState.ExecutionInfo.BranchToken}
+	if mutableState.VersionHistories != nil {
+		// if VersionHistories is set, then all branch infos are stored in VersionHistories
+		branchTokens = [][]byte{}
+		for _, versionHistory := range mutableState.VersionHistories.ToInternalType().Histories {
+			branchTokens = append(branchTokens, versionHistory.BranchToken)
+		}
+	}
+
+	deletedFromHistory := len(branchTokens) == 0
+	failedToDeleteFromHistory := false
+	for _, branchToken := range branchTokens {
+		err := thriftrwEncoder.Decode(branchToken, &branchInfo)
+		if err != nil {
+			logger.Error("Cannot decode thrift object", tag.Error(err))
+			continue
+		}
+		logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
+		err = historyManager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
+			BranchToken: branchToken,
+			ShardID:     &shardIDInt,
+		})
+		if err != nil {
+			logger.Error("Failed to delete history", tag.Error(err))
+			failedToDeleteFromHistory = true
+		} else {
+			deletedFromHistory = true
+		}
+	}
+	return deletedFromHistory && !failedToDeleteFromHistory
+}
+
+func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
+	ctx context.Context,
+	logger log.Logger,
+	shardIDInt int,
+	domainID string,
+	workflowID string,
+	runID string,
+	scope metrics.Scope,
+) bool {
+	exeStore, err := adh.GetExecutionManager(shardIDInt)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Cannot get execution manager for shardID(%v): %#v", shardIDInt, err))
+		return false
+	}
+
+	req := &persistence.DeleteWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	deletedFromExecutions := false
+	err = exeStore.DeleteWorkflowExecution(ctx, req)
+	if err != nil {
+		logger.Error("Delete mutableState row failed", tag.Error(err))
+	} else {
+		deletedFromExecutions = true
+	}
+
+	deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
+		DomainID:   domainID,
+		WorkflowID: workflowID,
+		RunID:      runID,
+	}
+
+	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Delete current row failed: %#v", err))
+		deletedFromExecutions = false
+	}
+
+	if deletedFromExecutions {
+		logger.Info(fmt.Sprintf("Deleted executions row successfully %#v", deleteCurrentReq))
+	}
+	return deletedFromExecutions
+}
+
+func (adh *adminHandlerImpl) deleteWorkflowFromVisibility(
+	ctx context.Context,
+	logger log.Logger,
+	domainID string,
+	workflowID string,
+	runID string,
+) bool {
+	visibilityManager := adh.Resource.GetVisibilityManager()
+	if visibilityManager == nil {
+		logger.Info("No visibility manager found")
+		return false
+	}
+
+	logger.Info("Deleting workflow from visibility store")
+	key := persistence.VisibilityAdminDeletionKey("visibilityAdminDelete")
+	visCtx := context.WithValue(ctx, key, true)
+	err := visibilityManager.DeleteWorkflowExecution(
+		visCtx,
+		&persistence.VisibilityDeleteWorkflowExecutionRequest{
+			DomainID:   domainID,
+			RunID:      runID,
+			WorkflowID: workflowID,
+			TaskID:     math.MaxInt64,
+		},
+	)
+	if err != nil {
+		logger.Error("Cannot delete visibility record", tag.Error(err))
+	} else {
+		logger.Info("Deleted visibility record successfully")
+	}
+	return err == nil
+}
+
+// DeleteWorkflow delete a workflow execution for admin
+func (adh *adminHandlerImpl) DeleteWorkflow(
+	ctx context.Context,
+	request *types.AdminDeleteWorkflowRequest,
+) (*types.AdminDeleteWorkflowResponse, error) {
+	logger := adh.GetLogger()
+	scope := adh.GetMetricsClient().Scope(metrics.AdminDeleteWorkflowScope).Tagged(metrics.GetContextTags(ctx)...)
+	if request.GetExecution() == nil {
+		logger.Info(fmt.Sprintf("Bad request: %#v", request))
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	domainName := request.GetDomain()
+	workflowID := request.GetExecution().GetWorkflowID()
+	runID := request.GetExecution().GetRunID()
+	skipErrors := request.GetSkipErrors()
+
+	resp, err := adh.DescribeWorkflowExecution(
+		ctx,
+		&types.AdminDescribeWorkflowExecutionRequest{
+			Domain: domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+		})
+
+	if err != nil {
+		logger.Error("Describe workflow failed", tag.Error(err))
+		if !skipErrors {
+			return nil, adh.error(err, scope)
+		}
+	}
+
+	msStr := resp.GetMutableStateInDatabase()
+	ms := persistence.WorkflowMutableState{}
+	err = json.Unmarshal([]byte(msStr), &ms)
+	if err != nil {
+		logger.Error(fmt.Sprintf("DeleteWorkflow failed: Cannot unmarshal mutableState: %#v", err))
+		return nil, adh.error(err, scope)
+	}
+	domainID := ms.ExecutionInfo.DomainID
+	logger = logger.WithTags(
+		tag.WorkflowDomainID(domainID),
+		tag.WorkflowDomainName(domainName),
+		tag.WorkflowID(workflowID),
+		tag.WorkflowRunID(runID),
+	)
+
+	shardID := resp.GetShardID()
+	shardIDInt, err := strconv.Atoi(shardID)
+	if err != nil {
+		logger.Error(fmt.Sprintf("Cannot convert shardID(%v) to int: %#v", shardID, err))
+		return nil, adh.error(err, scope)
+	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	deletedFromHistory := adh.deleteWorkflowFromHistory(ctx, logger, shardIDInt, ms)
+	deletedFromExecutions := adh.deleteWorkflowFromExecutions(ctx, logger, shardIDInt, domainID, workflowID, runID, scope)
+	deletedFromVisibility := false
+	if deletedFromExecutions {
+		// Without deleting the executions record, let's not delete the visibility record.
+		// If we do that, workflow won't be visible but it will exist in the DB
+		deletedFromVisibility = adh.deleteWorkflowFromVisibility(ctx, logger, domainID, workflowID, runID)
+	}
+
+	return &types.AdminDeleteWorkflowResponse{
+		HistoryDeleted:    deletedFromHistory,
+		ExecutionsDeleted: deletedFromExecutions,
+		VisibilityDeleted: deletedFromVisibility,
+	}, nil
 }
 
 // CloseShard returns information about the internal states of a history host
@@ -1301,6 +1597,9 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 			return nil, adh.error(err, scope)
 		}
 		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+		if err != nil {
+			return nil, adh.error(err, scope)
+		}
 	}
 
 	data, err := json.Marshal(value)
@@ -1391,10 +1690,11 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	}, nil
 }
 
-func checkValidKey(keyName string) (dynamicconfig.Key, error) {
-	keyVal, ok := dynamicconfig.KeyNames[keyName]
-	if !ok || keyVal == dynamicconfig.UnknownKey {
-		return dynamicconfig.UnknownKey, errors.New("invalid dynamic config parameter name")
+func checkValidKey(keyName string) (dc.Key, error) {
+	keyVal, ok := dc.KeyNames[keyName]
+	if !ok || keyVal == dc.UnknownKey {
+		return dc.UnknownKey, errors.New(fmt.Sprintf(
+			"invalid dynamic config parameter name: %s", keyName))
 	}
 	return keyVal, nil
 }

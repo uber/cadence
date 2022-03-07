@@ -124,7 +124,7 @@ func (s *DecisionHandlerSuite) constructQueryResults(ids []string, resultSize in
 	for _, id := range ids {
 		results[id] = &types.WorkflowQueryResult{
 			ResultType: types.QueryResultTypeAnswered.Ptr(),
-			Answer:     make([]byte, resultSize, resultSize),
+			Answer:     make([]byte, resultSize),
 		}
 	}
 	return results

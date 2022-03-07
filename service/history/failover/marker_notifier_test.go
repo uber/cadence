@@ -161,7 +161,6 @@ func (s *markerNotifierSuite) TestNotifyPendingFailoverMarker() {
 			if count == 1 {
 				close(s.markerNotifier.shutdownCh)
 			}
-			return
 		},
 	)
 

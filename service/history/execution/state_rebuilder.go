@@ -24,7 +24,6 @@ package execution
 
 import (
 	"context"
-	ctx "context"
 	"fmt"
 	"time"
 
@@ -50,7 +49,7 @@ type (
 	// StateRebuilder is a mutable state builder to ndc state rebuild
 	StateRebuilder interface {
 		Rebuild(
-			ctx ctx.Context,
+			ctx context.Context,
 			now time.Time,
 			baseWorkflowIdentifier definition.WorkflowIdentifier,
 			baseBranchToken []byte,
@@ -101,7 +100,7 @@ func NewStateRebuilder(
 }
 
 func (r *stateRebuilderImpl) Rebuild(
-	ctx ctx.Context,
+	ctx context.Context,
 	now time.Time,
 	baseWorkflowIdentifier definition.WorkflowIdentifier,
 	baseBranchToken []byte,

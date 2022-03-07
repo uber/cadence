@@ -354,10 +354,7 @@ func validateReplicateEventsRequest(
 }
 
 func validateUUID(input string) bool {
-	if uuid.Parse(input) == nil {
-		return false
-	}
-	return true
+	return uuid.Parse(input) != nil
 }
 
 func validateEvents(events []*types.HistoryEvent) (int64, error) {

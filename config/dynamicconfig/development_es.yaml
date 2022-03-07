@@ -38,3 +38,7 @@ frontend.validSearchAttributes:
       Passed: 4
 system.minRetentionDays:
     - value: 0
+history.EnableConsistentQueryByDomain:
+- value: true
+  constraints: {}
+

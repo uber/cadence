@@ -33,12 +33,11 @@ type simpleHashring struct {
 
 // newSimpleHashring returns a service resolver that maintains static mapping
 // between services and host info
-func newSimpleHashring(hosts []string) *simpleHashring {
-	hostInfos := make([]membership.HostInfo, 0, len(hosts))
-	for _, host := range hosts {
-		hostInfos = append(hostInfos, membership.NewHostInfo(host))
+func newSimpleHashring(hosts []membership.HostInfo) *simpleHashring {
+	return &simpleHashring{
+		hosts:    hosts,
+		hashfunc: farm.Fingerprint32,
 	}
-	return &simpleHashring{hostInfos, farm.Fingerprint32}
 }
 
 func (s *simpleHashring) Lookup(key string) (membership.HostInfo, error) {

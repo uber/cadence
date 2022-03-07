@@ -422,6 +422,38 @@ func (a *AccessControlledWorkflowAdminHandler) RestoreDynamicConfig(ctx context.
 	return a.AdminHandler.RestoreDynamicConfig(ctx, request)
 }
 
+func (a *AccessControlledWorkflowAdminHandler) DeleteWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error) {
+	attr := &authorization.Attributes{
+		APIName:    "DeleteWorkflow",
+		Permission: authorization.PermissionAdmin,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.AdminHandler.DeleteWorkflow(ctx, request)
+}
+
+func (a *AccessControlledWorkflowAdminHandler) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error) {
+	attr := &authorization.Attributes{
+		APIName:    "MaintainCorruptWorkflow",
+		Permission: authorization.PermissionAdmin,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.AdminHandler.MaintainCorruptWorkflow(ctx, request)
+}
+
 func (a *AccessControlledWorkflowAdminHandler) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
 	attr := &authorization.Attributes{
 		APIName:    "ListDynamicConfig",

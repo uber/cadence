@@ -166,6 +166,11 @@ func (g grpcClient) ResetWorkflowExecution(ctx context.Context, request *types.R
 	return proto.ToResetWorkflowExecutionResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) RefreshWorkflowTasks(ctx context.Context, request *types.RefreshWorkflowTasksRequest, opts ...yarpc.CallOption) error {
+	_, err := g.workflow.RefreshWorkflowTasks(ctx, proto.FromRefreshWorkflowTasksRequest(request), opts...)
+	return proto.ToError(err)
+}
+
 func (g grpcClient) RespondActivityTaskCanceled(ctx context.Context, request *types.RespondActivityTaskCanceledRequest, opts ...yarpc.CallOption) error {
 	_, err := g.worker.RespondActivityTaskCanceled(ctx, proto.FromRespondActivityTaskCanceledRequest(request), opts...)
 	return proto.ToError(err)

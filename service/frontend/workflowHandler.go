@@ -162,17 +162,15 @@ func NewWorkflowHandler(
 		healthStatus:    int32(HealthStatusWarmingUp),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
-			func() float64 {
-				return float64(config.RPS())
-			},
-			func(domain string) float64 {
-				memberCount, err := resource.GetMembershipResolver().MemberCount(service.Frontend)
-				if err == nil && memberCount > 0 && config.GlobalDomainRPS(domain) > 0 {
-					avgQuota := common.MaxInt(config.GlobalDomainRPS(domain)/memberCount, 1)
-					return float64(common.MinInt(avgQuota, config.MaxDomainRPSPerInstance(domain)))
-				}
-				return float64(config.MaxDomainRPSPerInstance(domain))
-			},
+			quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
+			quotas.NewCollection(func(domain string) quotas.Limiter {
+				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
+					service.Frontend,
+					config.GlobalDomainRPS.AsFloat64(domain),
+					config.MaxDomainRPSPerInstance.AsFloat64(domain),
+					resource.GetMembershipResolver(),
+				))
+			}),
 		),
 		versionChecker: versionChecker,
 		domainHandler: domain.NewHandler(
@@ -3686,6 +3684,36 @@ func (wh *WorkflowHandler) GetTaskListsByDomain(
 		Domain: request.Domain,
 	})
 	return resp, err
+}
+
+// RefreshWorkflowTasks re-generates the workflow tasks
+func (wh *WorkflowHandler) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+) (err error) {
+	defer log.CapturePanic(wh.GetLogger(), &err)
+	scope, sw := wh.startRequestProfile(ctx, metrics.AdminRefreshWorkflowTasksScope)
+	defer sw.Stop()
+
+	if request == nil {
+		return wh.error(errRequestNotSet, scope)
+	}
+	if err := validateExecution(request.Execution); err != nil {
+		return wh.error(err, scope)
+	}
+	domainEntry, err := wh.GetDomainCache().GetDomain(request.GetDomain())
+	if err != nil {
+		return wh.error(err, scope)
+	}
+
+	err = wh.GetHistoryClient().RefreshWorkflowTasks(ctx, &types.HistoryRefreshWorkflowTasksRequest{
+		DomainUIID: domainEntry.GetInfo().ID,
+		Request:    request,
+	})
+	if err != nil {
+		return wh.error(err, scope)
+	}
+	return nil
 }
 
 func (wh *WorkflowHandler) getRawHistory(

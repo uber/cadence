@@ -258,7 +258,7 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
 	p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
 	before := time.Now()
 	err := op()
-	duration := time.Now().Sub(before)
+	duration := time.Since(before)
 	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
 	if p.enableLatencyHistogramMetrics {
 		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)

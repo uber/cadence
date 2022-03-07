@@ -86,7 +86,7 @@ func (tgc *taskGC) checkPrecond(ackLevel int64, batchSize int, ignoreTimeCond bo
 	if backlog >= int64(batchSize) {
 		return true
 	}
-	return backlog > 0 && (ignoreTimeCond || time.Now().Sub(tgc.lastDeleteTime) > maxTimeBetweenTaskDeletes)
+	return backlog > 0 && (ignoreTimeCond || time.Since(tgc.lastDeleteTime) > maxTimeBetweenTaskDeletes)
 }
 
 func (tgc *taskGC) tryLock() bool {

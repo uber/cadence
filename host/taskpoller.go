@@ -160,7 +160,7 @@ Loop:
 			}
 
 			events = history.Events
-			if events == nil || len(events) == 0 {
+			if len(events) == 0 {
 				p.Logger.Fatal("History Events are empty")
 			}
 
@@ -293,7 +293,7 @@ func (p *TaskPoller) HandlePartialDecision(response *types.PollForDecisionTaskRe
 	}
 
 	events = history.Events
-	if events == nil || len(events) == 0 {
+	if len(events) == 0 {
 		p.Logger.Fatal("History Events are empty")
 	}
 

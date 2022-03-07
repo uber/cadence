@@ -163,7 +163,7 @@ func (s *workflowsSuite) TestScannerWorkflow_Success_Disabled() {
 
 func (s *workflowsSuite) TestFixerWorkflow_Success() {
 	env := s.NewTestWorkflowEnvironment()
-	corruptedKeys := make([]shardscanner.CorruptedKeysEntry, 30, 30)
+	corruptedKeys := make([]shardscanner.CorruptedKeysEntry, 30)
 	for i := 0; i < 30; i++ {
 		corruptedKeys[i] = shardscanner.CorruptedKeysEntry{
 			ShardID: i,

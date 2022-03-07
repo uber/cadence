@@ -158,7 +158,7 @@ func CreatePersistenceRetryPolicyWithContext(ctx context.Context) backoff.RetryP
 
 	policy := backoff.NewExponentialRetryPolicy(retryPersistenceOperationInitialInterval)
 	policy.SetMaximumInterval(retryPersistenceOperationMaxInterval)
-	policy.SetExpirationInterval(deadline.Sub(time.Now()))
+	policy.SetExpirationInterval(time.Until(deadline))
 	return policy
 }
 
@@ -876,15 +876,15 @@ func ConvertDynamicConfigMapPropertyToIntMap(
 		}
 
 		var intValue int
-		switch value.(type) {
+		switch value := value.(type) {
 		case float64:
-			intValue = int(value.(float64))
+			intValue = int(value)
 		case int:
-			intValue = value.(int)
+			intValue = value
 		case int32:
-			intValue = int(value.(int32))
+			intValue = int(value)
 		case int64:
-			intValue = int(value.(int64))
+			intValue = int(value)
 		default:
 			return nil, fmt.Errorf("unknown value %v with type %T", value, value)
 		}

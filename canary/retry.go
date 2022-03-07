@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	errRetryableActivityError = errors.New("Retry me")
-	errUnexpectedProgress     = errors.New("Unexpected progress")
-	errUnexpectedResult       = errors.New("Unexpected result")
+	errRetryableActivityError = errors.New("retry me")
+	errUnexpectedProgress     = errors.New("unexpected progress")
+	errUnexpectedResult       = errors.New("unexpected result")
 )
 
 func init() {

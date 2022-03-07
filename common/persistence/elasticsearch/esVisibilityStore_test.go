@@ -68,7 +68,6 @@ var (
 	testLatestTime   = int64(2547596872371000000)
 	testWorkflowType = "test-wf-type"
 	testWorkflowID   = "test-wid"
-	testRunID        = "1601da05-4db9-4eeb-89e4-da99481bdfc9"
 	testCloseStatus  = int32(1)
 
 	testRequest = &p.InternalListWorkflowExecutionsRequest{
@@ -82,13 +81,6 @@ var (
 	errTestESSearch  = errors.New("ES error")
 
 	testContextTimeout = 5 * time.Second
-
-	filterOpen     = "must_not:map[exists:map[field:CloseStatus]]"
-	filterClose    = "map[exists:map[field:CloseStatus]]"
-	filterByType   = fmt.Sprintf("map[match:map[WorkflowType:map[query:%s]]]", testWorkflowType)
-	filterByWID    = fmt.Sprintf("map[match:map[WorkflowID:map[query:%s]]]", testWorkflowID)
-	filterByRunID  = fmt.Sprintf("map[match:map[RunID:map[query:%s]]]", testRunID)
-	filterByStatus = fmt.Sprintf("map[match:map[CloseStatus:map[query:%v]]]", testCloseStatus)
 
 	esIndexMaxResultWindow = 3
 )
@@ -632,11 +624,11 @@ func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"match_all":{}}]}}]}},"from":0,"size":10,"sort":[{"ExecutionTime":"desc"},{"RunID":"desc"}]}`, dsl)
 
 	request.Query = `order by StartTime desc, CloseTime desc`
-	dsl, err = v.getESQueryDSL(request, token)
+	_, err = v.getESQueryDSL(request, token)
 	s.Equal(errors.New("only one field can be used to sort"), err)
 
 	request.Query = `order by CustomStringField desc`
-	dsl, err = v.getESQueryDSL(request, token)
+	_, err = v.getESQueryDSL(request, token)
 	s.Equal(errors.New("not able to sort by IndexedValueTypeString field, use IndexedValueTypeKeyword field"), err)
 
 	request.Query = `order by CustomIntField asc`

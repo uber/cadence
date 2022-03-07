@@ -53,8 +53,7 @@ type (
 	}
 )
 
-var errNoHosts = errors.New("Cassandra Hosts list is empty or malformed")
-var errGetSchemaVersion = errors.New("Failed to get current schema version from cassandra")
+var errGetSchemaVersion = errors.New("failed to get current schema version from cassandra")
 
 const (
 	DefaultTimeout       = 30 // Timeout in seconds

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2022 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,46 +18,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package rpc
+package quotas
 
-import (
-	"errors"
-	"net"
-	"strconv"
+import "sync"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/service"
-)
-
-type (
-	HostAddressMapper interface {
-		GetGRPCAddress(service, hostAddress string) (string, error)
-	}
-
-	GRPCPorts map[string]int
-)
-
-func NewGRPCPorts(c *config.Config) GRPCPorts {
-	grpcPorts := map[string]int{}
-	for name, config := range c.Services {
-		grpcPorts[service.FullName(name)] = config.RPC.GRPCPort
-	}
-	return grpcPorts
+// Collection stores a map of limiters by key
+type Collection struct {
+	mu       sync.RWMutex
+	factory  func(string) Limiter
+	limiters map[string]Limiter
 }
 
-func (p GRPCPorts) GetGRPCAddress(service, hostAddress string) (string, error) {
-	port, ok := p[service]
+// NewCollection create a new limiter collection.
+// Given factory is called to create new individual limiter.
+func NewCollection(factory func(string) Limiter) *Collection {
+	return &Collection{
+		factory:  factory,
+		limiters: make(map[string]Limiter),
+	}
+}
+
+// For retrieves limiter by a given key.
+// If limiter for such key does not exists, it creates new one with via factory.
+func (c *Collection) For(key string) Limiter {
+	c.mu.RLock()
+	limiter, ok := c.limiters[key]
+	c.mu.RUnlock()
+
 	if !ok {
-		return hostAddress, errors.New("unknown service: " + service)
-	}
-	if port == 0 {
-		return hostAddress, errors.New("GRPC port not configured for service: " + service)
+		// create a new limiter
+		newLimiter := c.factory(key)
+
+		// verify that it is needed and add to map
+		c.mu.Lock()
+		limiter, ok = c.limiters[key]
+		if !ok {
+			c.limiters[key] = newLimiter
+			limiter = newLimiter
+		}
+		c.mu.Unlock()
 	}
 
-	// Drop port if provided
-	if newHostAddress, _, err := net.SplitHostPort(hostAddress); err == nil {
-		hostAddress = newHostAddress
-	}
-
-	return net.JoinHostPort(hostAddress, strconv.Itoa(port)), nil
+	return limiter
 }

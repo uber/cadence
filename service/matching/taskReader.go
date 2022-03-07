@@ -292,7 +292,7 @@ func (tr *taskReader) persistAckLevel() error {
 }
 
 func (tr *taskReader) isTaskAddedRecently(lastAddTime time.Time) bool {
-	return time.Now().Sub(lastAddTime) <= tr.tlMgr.config.MaxTasklistIdleTime()
+	return time.Since(lastAddTime) <= tr.tlMgr.config.MaxTasklistIdleTime()
 }
 
 func (tr *taskReader) logger() log.Logger {

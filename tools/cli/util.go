@@ -714,7 +714,7 @@ func parseTime(timeStr string, defaultValue int64) int64 {
 func parseTimeRange(timeRange string) (time.Time, error) {
 	match, err := regexp.MatchString(defaultDateTimeRangeShortRE, timeRange)
 	if !match { // fallback on to check if it's of longer notation
-		match, err = regexp.MatchString(defaultDateTimeRangeLongRE, timeRange)
+		_, err = regexp.MatchString(defaultDateTimeRangeLongRE, timeRange)
 	}
 	if err != nil {
 		return time.Time{}, err
