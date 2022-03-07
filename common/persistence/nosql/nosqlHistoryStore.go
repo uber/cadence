@@ -22,7 +22,6 @@ package nosql
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -84,7 +83,7 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 
 	if request.NodeID < beginNodeID {
 		return &p.InvalidPersistenceRequestError{
-			Msg: fmt.Sprintf("cannot append to ancestors' nodes"),
+			Msg: "cannot append to ancestors' nodes",
 		}
 	}
 
@@ -92,9 +91,7 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 	var treeRow *nosqlplugin.HistoryTreeRow
 	if request.IsNewBranch {
 		var ancestors []*types.HistoryBranchRange
-		for _, anc := range branchInfo.Ancestors {
-			ancestors = append(ancestors, anc)
-		}
+		ancestors = append(ancestors, branchInfo.Ancestors...)
 		treeRow = &nosqlplugin.HistoryTreeRow{
 			ShardID:         request.ShardID,
 			TreeID:          branchInfo.TreeID,
@@ -171,11 +168,11 @@ func (h *nosqlHistoryStore) ReadHistoryBranch(
 		switch {
 		case nodeID < lastNodeID:
 			return nil, &types.InternalDataInconsistencyError{
-				Message: fmt.Sprintf("corrupted data, nodeID cannot decrease"),
+				Message: "corrupted data, nodeID cannot decrease",
 			}
 		case nodeID == lastNodeID:
 			return nil, &types.InternalDataInconsistencyError{
-				Message: fmt.Sprintf("corrupted data, same nodeID must have smaller txnID"),
+				Message: "corrupted data, same nodeID must have smaller txnID",
 			}
 		default: // row.NodeID > lastNodeID:
 			// NOTE: when row.nodeID > lastNodeID, we expect the one with largest txnID comes first

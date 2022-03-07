@@ -1224,54 +1224,6 @@ func assertRunIDAndUpdateCurrentExecution(
 	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
 }
 
-func assertAndUpdateCurrentExecution(
-	ctx context.Context,
-	tx sqlplugin.Tx,
-	shardID int,
-	domainID serialization.UUID,
-	workflowID string,
-	newRunID serialization.UUID,
-	previousRunID serialization.UUID,
-	previousLastWriteVersion int64,
-	previousState int,
-	createRequestID string,
-	state int,
-	closeStatus int,
-	startVersion int64,
-	lastWriteVersion int64,
-) error {
-
-	assertFn := func(currentRow *sqlplugin.CurrentExecutionsRow) error {
-		if !bytes.Equal(currentRow.RunID, previousRunID) {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"assertAndUpdateCurrentExecution failed. Current run ID was %v, expected %v",
-				currentRow.RunID,
-				previousRunID,
-			)}
-		}
-		if currentRow.LastWriteVersion != previousLastWriteVersion {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"assertAndUpdateCurrentExecution failed. Current last write version was %v, expected %v",
-				currentRow.LastWriteVersion,
-				previousLastWriteVersion,
-			)}
-		}
-		if currentRow.State != previousState {
-			return &p.ConditionFailedError{Msg: fmt.Sprintf(
-				"assertAndUpdateCurrentExecution failed. Current state %v, expected %v",
-				currentRow.State,
-				previousState,
-			)}
-		}
-		return nil
-	}
-	if err := assertCurrentExecution(ctx, tx, shardID, domainID, workflowID, assertFn); err != nil {
-		return err
-	}
-
-	return updateCurrentExecution(ctx, tx, shardID, domainID, workflowID, newRunID, createRequestID, state, closeStatus, startVersion, lastWriteVersion)
-}
-
 func assertCurrentExecution(
 	ctx context.Context,
 	tx sqlplugin.Tx,
@@ -1355,63 +1307,7 @@ func buildExecutionRow(
 	parser serialization.Parser,
 ) (row *sqlplugin.ExecutionsRow, err error) {
 
-	info := &serialization.WorkflowExecutionInfo{
-		TaskList:                           executionInfo.TaskList,
-		WorkflowTypeName:                   executionInfo.WorkflowTypeName,
-		WorkflowTimeout:                    executionInfo.WorkflowTimeout,
-		DecisionTaskTimeout:                executionInfo.DecisionStartToCloseTimeout,
-		ExecutionContext:                   executionInfo.ExecutionContext,
-		State:                              int32(executionInfo.State),
-		CloseStatus:                        int32(executionInfo.CloseStatus),
-		LastFirstEventID:                   executionInfo.LastFirstEventID,
-		LastEventTaskID:                    executionInfo.LastEventTaskID,
-		LastProcessedEvent:                 executionInfo.LastProcessedEvent,
-		StartTimestamp:                     executionInfo.StartTimestamp,
-		LastUpdatedTimestamp:               executionInfo.LastUpdatedTimestamp,
-		CreateRequestID:                    executionInfo.CreateRequestID,
-		DecisionVersion:                    executionInfo.DecisionVersion,
-		DecisionScheduleID:                 executionInfo.DecisionScheduleID,
-		DecisionStartedID:                  executionInfo.DecisionStartedID,
-		DecisionRequestID:                  executionInfo.DecisionRequestID,
-		DecisionTimeout:                    executionInfo.DecisionTimeout,
-		DecisionAttempt:                    executionInfo.DecisionAttempt,
-		DecisionStartedTimestamp:           executionInfo.DecisionStartedTimestamp,
-		DecisionScheduledTimestamp:         executionInfo.DecisionScheduledTimestamp,
-		DecisionOriginalScheduledTimestamp: executionInfo.DecisionOriginalScheduledTimestamp,
-		StickyTaskList:                     executionInfo.StickyTaskList,
-		StickyScheduleToStartTimeout:       executionInfo.StickyScheduleToStartTimeout,
-		ClientLibraryVersion:               executionInfo.ClientLibraryVersion,
-		ClientFeatureVersion:               executionInfo.ClientFeatureVersion,
-		ClientImpl:                         executionInfo.ClientImpl,
-		SignalCount:                        int64(executionInfo.SignalCount),
-		HistorySize:                        executionInfo.HistorySize,
-		CronSchedule:                       executionInfo.CronSchedule,
-		CompletionEventBatchID:             &executionInfo.CompletionEventBatchID,
-		HasRetryPolicy:                     executionInfo.HasRetryPolicy,
-		RetryAttempt:                       int64(executionInfo.Attempt),
-		RetryInitialInterval:               executionInfo.InitialInterval,
-		RetryBackoffCoefficient:            executionInfo.BackoffCoefficient,
-		RetryMaximumInterval:               executionInfo.MaximumInterval,
-		RetryMaximumAttempts:               executionInfo.MaximumAttempts,
-		RetryExpiration:                    executionInfo.ExpirationSeconds,
-		RetryExpirationTimestamp:           executionInfo.ExpirationTime,
-		RetryNonRetryableErrors:            executionInfo.NonRetriableErrors,
-		EventStoreVersion:                  p.EventStoreVersion,
-		EventBranchToken:                   executionInfo.BranchToken,
-		AutoResetPoints:                    executionInfo.AutoResetPoints.Data,
-		AutoResetPointsEncoding:            string(executionInfo.AutoResetPoints.GetEncoding()),
-		SearchAttributes:                   executionInfo.SearchAttributes,
-		Memo:                               executionInfo.Memo,
-		CompletionEventEncoding:            string(common.EncodingTypeEmpty),
-		VersionHistoriesEncoding:           string(common.EncodingTypeEmpty),
-		InitiatedID:                        common.EmptyEventID,
-	}
-
-	completionEvent := executionInfo.CompletionEvent
-	if completionEvent != nil {
-		info.CompletionEvent = completionEvent.Data
-		info.CompletionEventEncoding = string(completionEvent.Encoding)
-	}
+	info := serialization.FromInternalWorkflowExecutionInfo(executionInfo)
 
 	info.StartVersion = startVersion
 	if versionHistories == nil {
@@ -1419,19 +1315,6 @@ func buildExecutionRow(
 	} else {
 		info.VersionHistories = versionHistories.Data
 		info.VersionHistoriesEncoding = string(versionHistories.GetEncoding())
-	}
-
-	if executionInfo.ParentDomainID != "" {
-		info.ParentDomainID = serialization.MustParseUUID(executionInfo.ParentDomainID)
-		info.ParentWorkflowID = executionInfo.ParentWorkflowID
-		info.ParentRunID = serialization.MustParseUUID(executionInfo.ParentRunID)
-		info.InitiatedID = executionInfo.InitiatedID
-		info.CompletionEvent = nil
-	}
-
-	if executionInfo.CancelRequested {
-		info.CancelRequested = true
-		info.CancelRequestID = executionInfo.CancelRequestID
 	}
 
 	blob, err := parser.WorkflowExecutionInfoToBlob(info)

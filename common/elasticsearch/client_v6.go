@@ -81,10 +81,7 @@ type (
 )
 
 func (c *elasticV6) IsNotFoundError(err error) bool {
-	if elastic.IsNotFound(err) {
-		return true
-	}
-	return false
+	return elastic.IsNotFound(err)
 }
 
 // NewV6Client returns a new implementation of GenericClient
@@ -383,6 +380,9 @@ func (c *elasticV6) SearchForOneClosedExecution(
 }
 
 func fromV6toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
+	if response == nil {
+		return &GenericBulkResponse{}
+	}
 	return &GenericBulkResponse{
 		Took:   response.Took,
 		Errors: response.Errors,

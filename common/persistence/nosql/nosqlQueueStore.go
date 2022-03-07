@@ -331,7 +331,7 @@ func (q *nosqlQueueStore) updateQueueMetadata(
 	if err != nil {
 		if _, ok := err.(*nosqlplugin.ConditionFailure); ok {
 			return &types.InternalServiceError{
-				Message: fmt.Sprintf("UpdateQueueMetadata operation encounter concurrent write."),
+				Message: "UpdateQueueMetadata operation encounter concurrent write.",
 			}
 		}
 

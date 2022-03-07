@@ -143,7 +143,7 @@ func concurrentActivity(
 ) (time.Duration, error) {
 	var latency time.Duration
 	if activity.GetInfo(ctx).Attempt == 0 {
-		latency = time.Now().Sub(time.Unix(0, scheduledTimeNanos))
+		latency = time.Since(time.Unix(0, scheduledTimeNanos))
 	}
 
 	time.Sleep(time.Duration(rand.Intn(maxSleepTimeInSeconds)) * time.Second)

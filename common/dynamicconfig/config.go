@@ -90,7 +90,7 @@ func (c *Collection) logValue(
 	filteredKey := getFilteredKeyAsString(key, filters)
 	loadedValue, loaded := c.logKeys.LoadOrStore(filteredKey, value)
 	if !loaded {
-		c.logger.Info("First loading dynamic config",
+		c.logger.Debug("First loading dynamic config",
 			tag.Key(filteredKey), tag.Value(value), tag.DefaultValue(defaultValue))
 	} else {
 		// it's loaded before, check if the value has changed
@@ -421,7 +421,6 @@ func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue 
 func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn {
 	return func(opts ...FilterOption) bool {
 		filters := c.toFilterMap(opts...)
-		opts = append(opts, c.filterOptions...)
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,

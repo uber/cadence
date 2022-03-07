@@ -298,6 +298,17 @@ func (c *clientImpl) ResetWorkflowExecution(
 	return c.client.ResetWorkflowExecution(ctx, request, opts...)
 }
 
+func (c *clientImpl) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.RefreshWorkflowTasks(ctx, request, opts...)
+}
+
 func (c *clientImpl) RespondActivityTaskCanceled(
 	ctx context.Context,
 	request *types.RespondActivityTaskCanceledRequest,

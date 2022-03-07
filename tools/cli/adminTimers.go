@@ -53,7 +53,6 @@ type Reporter struct {
 	timerTypes []int
 	loader     LoadCloser
 	printer    Printer
-	timeFormat string
 }
 
 type dbLoadCloser struct {

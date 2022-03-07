@@ -37,7 +37,7 @@ import (
 )
 
 var (
-	errUnknownCrossClusterTask      = errors.New("Unknown cross cluster task")
+	errUnknownCrossClusterTask      = errors.New("unknown cross cluster task")
 	errUnknownTaskProcessingState   = errors.New("unknown cross cluster task processing state")
 	errMissingTaskRequestAttributes = errors.New("request attributes not specified")
 	errDomainNotExists              = errors.New("domain not exists")

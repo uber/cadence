@@ -61,17 +61,11 @@ func (pdb *db) IsDupEntryError(err error) bool {
 }
 
 func (pdb *db) IsNotFoundError(err error) bool {
-	if err == sql.ErrNoRows {
-		return true
-	}
-	return false
+	return err == sql.ErrNoRows
 }
 
 func (pdb *db) IsTimeoutError(err error) bool {
-	if err == context.DeadlineExceeded {
-		return true
-	}
-	return false
+	return err == context.DeadlineExceeded
 }
 
 func (pdb *db) IsThrottlingError(err error) bool {

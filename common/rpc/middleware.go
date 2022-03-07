@@ -51,7 +51,9 @@ func (m *authOutboundMiddleware) Call(ctx context.Context, request *transport.Re
 	return out.Call(ctx, request)
 }
 
-const _responseInfoContextKey = "response-info"
+type contextKey string
+
+const _responseInfoContextKey = contextKey("response-info")
 
 // ContextWithResponseInfo will create a child context that has ResponseInfo set as value.
 // This value will get filled after the call is made and can be used later to retrieve some info of interest.

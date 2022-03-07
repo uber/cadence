@@ -112,6 +112,12 @@ service AdminAPI {
 
   // ListDynamicConfig returns all dynamic config parameters and associated values.
   rpc ListDynamicConfig(ListDynamicConfigRequest) returns (ListDynamicConfigResponse);
+
+  // DeleteWorkflow is used to delete a workflow with given domainName, workflowID and runID
+  rpc DeleteWorkflow(AdminDeleteWorkflowRequest) returns (AdminDeleteWorkflowResponse);
+
+  // MaintainCorruptWorkflow deletes a workflow if its history is corrupt due to underlying DB issues (e.g. Cassandra resurrections)
+  rpc MaintainCorruptWorkflow(AdminMaintainWorkflowRequest) returns (AdminMaintainWorkflowResponse);
 }
 
 message DescribeWorkflowExecutionRequest {
@@ -371,6 +377,28 @@ message RestoreDynamicConfigRequest {
 }
 
 message RestoreDynamicConfigResponse {
+}
+
+message AdminDeleteWorkflowRequest {
+  string domain = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+}
+
+message AdminDeleteWorkflowResponse {
+  bool history_deleted = 1;
+  bool executions_deleted = 2;
+  bool visibility_deleted = 3;
+}
+
+message AdminMaintainWorkflowRequest {
+  string domain = 1;
+  api.v1.WorkflowExecution workflow_execution = 2;
+}
+
+message AdminMaintainWorkflowResponse {
+  bool history_deleted = 1;
+  bool executions_deleted = 2;
+  bool visibility_deleted = 3;
 }
 
 message ListDynamicConfigRequest {

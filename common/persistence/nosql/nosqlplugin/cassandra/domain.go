@@ -427,8 +427,7 @@ func (db *cdb) SelectAllDomains(
 	pageSize int,
 	pageToken []byte,
 ) ([]*nosqlplugin.DomainRow, []byte, error) {
-	var query gocql.Query
-	query = db.session.Query(templateListDomainQueryV2, constDomainPartition).WithContext(ctx)
+	query := db.session.Query(templateListDomainQueryV2, constDomainPartition).WithContext(ctx)
 	iter := query.PageSize(pageSize).PageState(pageToken).Iter()
 	if iter == nil {
 		return nil, nil, &types.InternalServiceError{

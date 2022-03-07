@@ -65,7 +65,7 @@ func AdminDBDataDecodeThrift(c *cli.Context) {
 				if err != nil {
 					ErrorAndExit("cannot encode back to confirm", err)
 				}
-				if bytes.Compare(data, data2) == 0 {
+				if bytes.Equal(data, data2) {
 					fmt.Printf("=======Decode into type %v ========\n", typeName)
 					fmt.Println(anyToString(t, true, 0))
 					found = true

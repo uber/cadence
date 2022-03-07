@@ -123,9 +123,9 @@ type (
 	// RPC contains the rpc config items
 	RPC struct {
 		// Port is the port  on which the Thrift TChannel will bind to
-		Port int `yaml:"port"`
+		Port uint16 `yaml:"port"`
 		// GRPCPort is the port on which the grpc listener will bind to
-		GRPCPort int `yaml:"grpcPort"`
+		GRPCPort uint16 `yaml:"grpcPort"`
 		// BindOnLocalHost is true if localhost is the bind address
 		BindOnLocalHost bool `yaml:"bindOnLocalHost"`
 		// BindOnIP can be used to bind service on specific ip (eg. `0.0.0.0`) -

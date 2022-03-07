@@ -509,6 +509,25 @@ func (m *MockClient) ResetStickyTaskList(arg0 context.Context, arg1 *types.Reset
 	return ret0, ret1
 }
 
+// RefreshWorkflowTasks indicates an expected call of RefreshWorkflowTasks
+func (mr *MockClientMockRecorder) RefreshWorkflowTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWorkflowTasks", reflect.TypeOf((*MockClient)(nil).RefreshWorkflowTasks), varargs...)
+}
+
+// RefreshWorkflowTasks mocks base method
+func (m *MockClient) RefreshWorkflowTasks(arg0 context.Context, arg1 *types.RefreshWorkflowTasksRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
 // ResetStickyTaskList indicates an expected call of ResetStickyTaskList
 func (mr *MockClientMockRecorder) ResetStickyTaskList(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

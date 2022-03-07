@@ -87,16 +87,12 @@ func startHandler(c *cli.Context) {
 		server.Start()
 	}
 
-	select {
-	case <-sigc:
-		{
-			log.Println("Received SIGTERM signal, initiating shutdown.")
-			for _, daemon := range daemons {
-				daemon.Stop()
-			}
-			os.Exit(0)
-		}
+	<-sigc
+	log.Println("Received SIGTERM signal, initiating shutdown.")
+	for _, daemon := range daemons {
+		daemon.Stop()
 	}
+	os.Exit(0)
 }
 
 func getEnvironment(c *cli.Context) string {

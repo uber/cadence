@@ -47,7 +47,9 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	cndc "github.com/uber/cadence/common/ndc"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/reconciliation/invariant"
+	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/decision"
@@ -174,7 +176,19 @@ func NewEngineWithShardContext(
 			logger,
 			publicClient,
 			shard.GetConfig().NumArchiveSystemWorkflows,
-			shard.GetConfig().ArchiveRequestRPS,
+			quotas.NewDynamicRateLimiter(config.ArchiveRequestRPS.AsFloat64()),
+			quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
+				service.History,
+				config.ArchiveInlineHistoryGlobalRPS.AsFloat64(),
+				config.ArchiveInlineHistoryRPS.AsFloat64(),
+				shard.GetService().GetMembershipResolver(),
+			)),
+			quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
+				service.History,
+				config.ArchiveInlineVisibilityGlobalRPS.AsFloat64(),
+				config.ArchiveInlineVisibilityRPS.AsFloat64(),
+				shard.GetService().GetMembershipResolver(),
+			)),
 			shard.GetService().GetArchiverProvider(),
 			config.AllowArchivingIncompleteHistory,
 		),
@@ -1113,7 +1127,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	queryFirstDecisionTaskWaitTime := defaultQueryFirstDecisionTaskWaitTime
 	ctxDeadline, ok := ctx.Deadline()
 	if ok {
-		ctxWaitTime := ctxDeadline.Sub(time.Now()) - time.Second
+		ctxWaitTime := time.Until(ctxDeadline) - time.Second
 		if ctxWaitTime > queryFirstDecisionTaskWaitTime {
 			queryFirstDecisionTaskWaitTime = ctxWaitTime
 		}

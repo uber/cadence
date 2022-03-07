@@ -50,11 +50,6 @@ func decodeHistoryBatches(data []byte) ([]*types.History, error) {
 	return historyBatches, nil
 }
 
-func constructHistoryFilename(domainID, workflowID, runID string, version int64) string {
-	combinedHash := constructHistoryFilenamePrefix(domainID, workflowID, runID)
-	return fmt.Sprintf("%s_%v.history", combinedHash, version)
-}
-
 func constructHistoryFilenameMultipart(domainID, workflowID, runID string, version int64, partNumber int) string {
 	combinedHash := constructHistoryFilenamePrefix(domainID, workflowID, runID)
 	return fmt.Sprintf("%s_%v_%v.history", combinedHash, version, partNumber)

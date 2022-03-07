@@ -219,25 +219,25 @@ func (e *ESql) convertParenExpr(expr sqlparser.Expr, parent sqlparser.Expr) (str
 func (e *ESql) convertNotExpr(expr sqlparser.Expr, parent sqlparser.Expr) (string, error) {
 	notExpr := expr.(*sqlparser.NotExpr)
 	exprInside := notExpr.Expr
-	switch (exprInside).(type) {
+	switch exprInside := (exprInside).(type) {
 	case *sqlparser.NotExpr:
-		expr1 := exprInside.(*sqlparser.NotExpr)
+		expr1 := exprInside
 		expr2 := expr1.Expr
 		return e.convertWhereExpr(expr2, parent)
 	case *sqlparser.AndExpr:
-		expr1 := exprInside.(*sqlparser.AndExpr)
+		expr1 := exprInside
 		var exprLeft sqlparser.Expr = &sqlparser.NotExpr{Expr: expr1.Left}
 		var exprRight sqlparser.Expr = &sqlparser.NotExpr{Expr: expr1.Right}
 		var expr2 sqlparser.Expr = &sqlparser.OrExpr{Left: exprLeft, Right: exprRight}
 		return e.convertOrExpr(expr2, parent)
 	case *sqlparser.OrExpr:
-		expr1 := exprInside.(*sqlparser.OrExpr)
+		expr1 := exprInside
 		var exprLeft sqlparser.Expr = &sqlparser.NotExpr{Expr: expr1.Left}
 		var exprRight sqlparser.Expr = &sqlparser.NotExpr{Expr: expr1.Right}
 		var expr2 sqlparser.Expr = &sqlparser.AndExpr{Left: exprLeft, Right: exprRight}
 		return e.convertAndExpr(expr2, parent)
 	case *sqlparser.ParenExpr:
-		expr1 := exprInside.(*sqlparser.ParenExpr)
+		expr1 := exprInside
 		exprBody := expr1.Expr
 		var expr2 sqlparser.Expr = &sqlparser.NotExpr{Expr: exprBody}
 		return e.convertNotExpr(expr2, parent)

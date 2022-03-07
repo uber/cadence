@@ -59,8 +59,8 @@ var (
 )
 
 var (
-	errUnknownTransferTask   = errors.New("Unknown transfer task")
-	errWorkflowBusy          = errors.New("Unable to get workflow execution lock within specified timeout")
+	errUnknownTransferTask   = errors.New("unknown transfer task")
+	errWorkflowBusy          = errors.New("unable to get workflow execution lock within specified timeout")
 	errTargetDomainNotActive = errors.New("target domain not active")
 )
 

@@ -58,10 +58,7 @@ func (mdb *db) IsDupEntryError(err error) bool {
 }
 
 func (mdb *db) IsNotFoundError(err error) bool {
-	if err == sql.ErrNoRows {
-		return true
-	}
-	return false
+	return err == sql.ErrNoRows
 }
 
 func (mdb *db) IsTimeoutError(err error) bool {

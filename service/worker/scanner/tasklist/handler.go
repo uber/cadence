@@ -102,7 +102,7 @@ func (s *Scavenger) tryDeleteTaskList(info *p.TaskListInfo) {
 	if strings.HasPrefix(info.Name, scannerTaskListPrefix) {
 		return // avoid deleting our own task list
 	}
-	delta := time.Now().Sub(info.LastUpdated)
+	delta := time.Since(info.LastUpdated)
 	if delta < taskListGracePeriod {
 		return
 	}

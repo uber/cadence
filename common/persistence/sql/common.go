@@ -27,11 +27,10 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/uber/cadence/common/persistence/serialization"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence/serialization"
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 )
@@ -105,7 +104,7 @@ func serializePageToken(offset int64) []byte {
 
 func deserializePageToken(payload []byte) (int64, error) {
 	if len(payload) != 8 {
-		return 0, fmt.Errorf("Invalid token of %v length", len(payload))
+		return 0, fmt.Errorf("invalid token of %v length", len(payload))
 	}
 	return int64(binary.LittleEndian.Uint64(payload)), nil
 }

@@ -97,7 +97,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	// Find how long to keep the row
-	retention := request.RetentionSeconds
+	retention := request.RetentionPeriod
 	if retention == 0 {
 		retention = defaultCloseTTLSeconds * time.Second
 	}

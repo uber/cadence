@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/tokenbucket"
 
 	"github.com/olekukonko/tablewriter"
@@ -44,9 +45,6 @@ import (
 )
 
 const (
-	esDocIDDelimiter = "~"
-	esDocType        = "_doc"
-
 	versionTypeExternal = "external"
 )
 
@@ -125,14 +123,14 @@ func AdminIndex(c *cli.Context) {
 		}
 	}
 	for i, message := range messages {
-		docID := message.GetWorkflowID() + esDocIDDelimiter + message.GetRunID()
+		docID := message.GetWorkflowID() + elasticsearch.GetESDocDelimiter() + message.GetRunID()
 		var req elastic.BulkableRequest
 		switch message.GetMessageType() {
 		case indexer.MessageTypeIndex:
 			doc := generateESDoc(message)
 			req = elastic.NewBulkIndexRequest().
 				Index(indexName).
-				Type(esDocType).
+				Type(elasticsearch.GetESDocType()).
 				Id(docID).
 				VersionType(versionTypeExternal).
 				Version(message.GetVersion()).
@@ -140,7 +138,7 @@ func AdminIndex(c *cli.Context) {
 		case indexer.MessageTypeDelete:
 			req = elastic.NewBulkDeleteRequest().
 				Index(indexName).
-				Type(esDocType).
+				Type(elasticsearch.GetESDocType()).
 				Id(docID).
 				VersionType(versionTypeExternal).
 				Version(message.GetVersion())
@@ -196,10 +194,10 @@ func AdminDelete(c *cli.Context) {
 
 	for scanner.Scan() {
 		line := strings.Split(scanner.Text(), "|")
-		docID := strings.TrimSpace(line[1]) + esDocIDDelimiter + strings.TrimSpace(line[2])
+		docID := strings.TrimSpace(line[1]) + elasticsearch.GetESDocDelimiter() + strings.TrimSpace(line[2])
 		req := elastic.NewBulkDeleteRequest().
 			Index(indexName).
-			Type(esDocType).
+			Type(elasticsearch.GetESDocType()).
 			Id(docID).
 			VersionType(versionTypeExternal).
 			Version(math.MaxInt64)
@@ -274,12 +272,8 @@ func generateESDoc(msg *indexer.Message) map[string]interface{} {
 // This function is used to trim unnecessary tag in returned json for table header
 func trimBucketKey(k string) string {
 	// group key is in form of "group_key", we only need "key" as the column name
-	if strings.HasPrefix(k, "group_") {
-		k = k[6:]
-	}
-	if strings.HasPrefix(k, "Attr_") {
-		k = k[5:]
-	}
+	k = strings.TrimPrefix(k, "group_")
+	k = strings.TrimPrefix(k, "Attr_")
 	return fmt.Sprintf(`%v(*)`, k)
 }
 

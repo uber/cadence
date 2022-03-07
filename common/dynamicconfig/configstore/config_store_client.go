@@ -67,11 +67,6 @@ type cacheEntry struct {
 	dcEntries     map[string]*types.DynamicConfigEntry
 }
 
-type fetchResult struct {
-	snapshot *persistence.DynamicConfigSnapshot
-	err      error
-}
-
 // NewConfigStoreClient creates a config store client
 func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Persistence, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
 	if err := validateClientConfig(clientCfg); err != nil {

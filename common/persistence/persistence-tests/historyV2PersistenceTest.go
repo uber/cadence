@@ -159,7 +159,7 @@ func (s *HistoryV2PersistenceSuite) TestScanAllTrees() {
 		})
 		s.Nil(err)
 		for _, br := range resp.Branches {
-			if trees[br.TreeID] == true {
+			if trees[br.TreeID] {
 				delete(trees, br.TreeID)
 
 				s.True(br.ForkTime.UnixNano() > 0)
@@ -755,8 +755,7 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 	}
 
 	op := func() error {
-		var err error
-		err = s.HistoryV2Mgr.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
+		err := s.HistoryV2Mgr.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
 		})

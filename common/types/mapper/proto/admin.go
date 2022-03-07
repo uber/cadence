@@ -855,6 +855,98 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 	}
 }
 
+//FromAdminDeleteWorkflowRequest converts internal AdminDeleteWorkflowRequest type to proto
+func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv1.AdminDeleteWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminDeleteWorkflowRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.Execution),
+	}
+}
+
+//ToAdminDeleteWorkflowRequest converts proto AdminDeleteWorkflowRequest type to internal
+func ToAdminDeleteWorkflowRequest(t *adminv1.AdminDeleteWorkflowRequest) *types.AdminDeleteWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminDeleteWorkflowRequest{
+		Domain:    t.Domain,
+		Execution: ToWorkflowExecution(t.WorkflowExecution),
+	}
+}
+
+//FromAdminDeleteWorkflowResponse converts internal AdminDeleteWorkflowRequest type to proto
+func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *adminv1.AdminDeleteWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminDeleteWorkflowResponse{
+		HistoryDeleted:    t.HistoryDeleted,
+		ExecutionsDeleted: t.ExecutionsDeleted,
+		VisibilityDeleted: t.VisibilityDeleted,
+	}
+}
+
+//ToAdminDeleteWorkflowResponse converts proto AdminDeleteWorkflowResponse type to internal
+func ToAdminDeleteWorkflowResponse(t *adminv1.AdminDeleteWorkflowResponse) *types.AdminDeleteWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminDeleteWorkflowResponse{
+		HistoryDeleted:    t.HistoryDeleted,
+		ExecutionsDeleted: t.ExecutionsDeleted,
+		VisibilityDeleted: t.VisibilityDeleted,
+	}
+}
+
+//FromAdminMaintainWorkflowRequest converts internal AdminMaintainWorkflowRequest type to proto
+func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *adminv1.AdminMaintainWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminMaintainWorkflowRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.Execution),
+	}
+}
+
+//ToAdminMaintainWorkflowRequest converts proto AdminMaintainWorkflowRequest type to internal
+func ToAdminMaintainWorkflowRequest(t *adminv1.AdminMaintainWorkflowRequest) *types.AdminMaintainWorkflowRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminMaintainWorkflowRequest{
+		Domain:    t.Domain,
+		Execution: ToWorkflowExecution(t.WorkflowExecution),
+	}
+}
+
+//FromAdminMaintainWorkflowResponse converts internal AdminMaintainWorkflowResponse type to proto
+func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *adminv1.AdminMaintainWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.AdminMaintainWorkflowResponse{
+		HistoryDeleted:    t.HistoryDeleted,
+		ExecutionsDeleted: t.ExecutionsDeleted,
+		VisibilityDeleted: t.VisibilityDeleted,
+	}
+}
+
+//ToAdminMaintainWorkflowResponse converts proto AdminMaintainWorkflowResponse type to internal
+func ToAdminMaintainWorkflowResponse(t *adminv1.AdminMaintainWorkflowResponse) *types.AdminMaintainWorkflowResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.AdminMaintainWorkflowResponse{
+		HistoryDeleted:    t.HistoryDeleted,
+		ExecutionsDeleted: t.ExecutionsDeleted,
+		VisibilityDeleted: t.VisibilityDeleted,
+	}
+}
+
 //FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
 func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
 	if t == nil {
