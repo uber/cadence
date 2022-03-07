@@ -1367,6 +1367,11 @@ func FromDecisionTaskTimedOutEventAttributes(t *types.DecisionTaskTimedOutEventA
 		ScheduledEventId: &t.ScheduledEventID,
 		StartedEventId:   &t.StartedEventID,
 		TimeoutType:      FromTimeoutType(t.TimeoutType),
+		BaseRunId:        &t.BaseRunID,
+		NewRunId:         &t.NewRunID,
+		ForkEventVersion: &t.ForkEventVersion,
+		Reason:           &t.Reason,
+		Cause:            FromDecisionTaskTimedOutCause(t.Cause),
 	}
 }
 
@@ -1379,6 +1384,11 @@ func ToDecisionTaskTimedOutEventAttributes(t *shared.DecisionTaskTimedOutEventAt
 		ScheduledEventID: t.GetScheduledEventId(),
 		StartedEventID:   t.GetStartedEventId(),
 		TimeoutType:      ToTimeoutType(t.TimeoutType),
+		BaseRunID:        t.GetBaseRunId(),
+		NewRunID:         t.GetNewRunId(),
+		ForkEventVersion: t.GetForkEventVersion(),
+		Reason:           t.GetReason(),
+		Cause:            ToDecisionTaskTimedOutCause(t.Cause),
 	}
 }
 
