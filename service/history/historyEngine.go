@@ -689,7 +689,13 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	// overwrite in case of signalWithStart
 	if prevMutableState != nil {
 		createMode = persistence.CreateWorkflowModeWorkflowIDReuse
-		prevRunID = prevMutableState.GetExecutionInfo().RunID
+		info := prevMutableState.GetExecutionInfo()
+		// For corrupted workflows use ContinueAsNew mode.
+		// WorkflowIDReuse mode require workflows to be in completed state, which is not necessarily true for corrupted workflows.
+		if info.State == persistence.WorkflowStateCorrupted {
+			createMode = persistence.CreateWorkflowModeContinueAsNew
+		}
+		prevRunID = info.RunID
 		prevLastWriteVersion, err = prevMutableState.GetLastWriteVersion()
 		if err != nil {
 			return nil, err
@@ -2239,6 +2245,11 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 				return nil, workflow.ErrAlreadyCompleted
 			}
 
+			// If history is corrupted, signal will be rejected
+			if err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+				return nil, &types.EntityNotExistsError{Message: err.Error()}
+			}
+
 			executionInfo := mutableState.GetExecutionInfo()
 			createDecisionTask := true
 			// Do not create decision task when the workflow is cron and the cron has not been started yet
@@ -2323,6 +2334,13 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				prevMutableState = mutableState
 				break
 			}
+
+			// workflow exists but history is corrupted, will restart workflow then signal
+			if err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+				prevMutableState = mutableState
+				break
+			}
+
 			// workflow is running, if policy is TerminateIfRunning, terminate current run then signalWithStart
 			if sRequest.GetWorkflowIDReusePolicy() == types.WorkflowIDReusePolicyTerminateIfRunning {
 				workflowExecution.RunID = uuid.New()
@@ -2405,6 +2423,32 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 		metrics.HistorySignalWithStartWorkflowExecutionScope,
 		sigWithStartArg,
 	)
+}
+
+func (e *historyEngineImpl) checkForHistoryCorruptions(ctx context.Context, mutableState execution.MutableState) error {
+	domainName := mutableState.GetDomainEntry().GetInfo().Name
+	if !e.config.EnableHistoryCorruptionCheck(domainName) {
+		return nil
+	}
+
+	// Ensure that we can obtain start event. Failing to do so means corrupted history or resurrected mutable state record.
+	_, err := mutableState.GetStartEvent(ctx)
+	if err != nil {
+		info := mutableState.GetExecutionInfo()
+		// Mark workflow as corrupted. So that new one can be restarted.
+		info.State = persistence.WorkflowStateCorrupted
+
+		e.logger.Error("history corruption check failed",
+			tag.WorkflowDomainName(domainName),
+			tag.WorkflowID(info.WorkflowID),
+			tag.WorkflowRunID(info.RunID),
+			tag.WorkflowType(info.WorkflowTypeName),
+			tag.Error(err))
+
+		return err
+	}
+
+	return nil
 }
 
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
@@ -3027,6 +3071,9 @@ func (e *historyEngineImpl) applyWorkflowIDReusePolicyHelper(
 		return getWorkflowAlreadyStartedError(msg, prevStartRequestID, execution.GetWorkflowID(), prevRunID)
 	case persistence.WorkflowStateCompleted:
 		// previous workflow completed, proceed
+	case persistence.WorkflowStateCorrupted:
+		// ignore workflow ID reuse policy for corrupted workflows, treat as they do not exist
+		return nil
 	default:
 		// persistence.WorkflowStateZombie or unknown type
 		return &types.InternalServiceError{Message: fmt.Sprintf("Failed to process workflow, workflow has invalid state: %v.", prevState)}

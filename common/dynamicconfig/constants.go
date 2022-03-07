@@ -1555,6 +1555,12 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	MutableStateChecksumInvalidateBefore
+	// EnableHistoryCorruptionCheck enables additional sanity check for corrupted history. This allows early catches of DB corruptions but potiantally increased latency.
+	// KeyName: history.enableHistoryCorruptionCheck
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableHistoryCorruptionCheck
 	// NotifyFailoverMarkerInterval is determines the frequency to notify failover marker
 	// KeyName: history.NotifyFailoverMarkerInterval
 	// Value type: Duration
@@ -2440,6 +2446,7 @@ var Keys = map[Key]string{
 	MutableStateChecksumGenProbability:                 "history.mutableStateChecksumGenProbability",
 	MutableStateChecksumVerifyProbability:              "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:               "history.mutableStateChecksumInvalidateBefore",
+	EnableHistoryCorruptionCheck:                       "history.enableHistoryCorruptionCheck",
 	NotifyFailoverMarkerInterval:                       "history.NotifyFailoverMarkerInterval",
 	NotifyFailoverMarkerTimerJitterCoefficient:         "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                      "history.DropStuckTaskByDomain",
