@@ -194,7 +194,7 @@ func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
 		}
 
 		// replicating swim member isReachable() method here as we are skipping other predicates
-		if member.Status != swim.Alive || member.Status != swim.Suspect {
+		if member.Status != swim.Alive && member.Status != swim.Suspect {
 			return false
 		}
 
