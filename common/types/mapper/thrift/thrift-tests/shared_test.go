@@ -36,6 +36,12 @@ import (
 // "github.com/uber/cadence/common/persistence" imports
 // "github.com/uber/cadence/common/types/mapper/thrift"
 
+func TestDecisionTaskTimedOutEventAttributes(t *testing.T) {
+	for _, item := range []*types.DecisionTaskTimedOutEventAttributes{nil, {}, &testdata.DecisionTaskTimedOutEventAttributes} {
+		assert.Equal(t, item, thrift.ToDecisionTaskTimedOutEventAttributes(thrift.FromDecisionTaskTimedOutEventAttributes(item)))
+	}
+}
+
 func TestRemoveTaskRequest(t *testing.T) {
 	for _, item := range []*types.RemoveTaskRequest{nil, {}, &testdata.AdminRemoveTaskRequest} {
 		assert.Equal(t, item, thrift.ToRemoveTaskRequest(thrift.FromRemoveTaskRequest(item)))
