@@ -375,6 +375,29 @@ func (s *clusterRedirectionHandlerSuite) TestQueryWorkflow() {
 		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
 
 	req := &types.QueryWorkflowRequest{
+		Domain: s.domainName,
+	}
+	resp, err := s.handler.QueryWorkflow(context.Background(), req)
+	s.Nil(err)
+	// the resp is initialized to nil, since inner function is not called
+	s.Nil(resp)
+
+	callFn := s.mockClusterRedirectionPolicy.Calls[0].Arguments[2].(func(string) error)
+	s.mockFrontendHandler.EXPECT().QueryWorkflow(gomock.Any(), req).Return(&types.QueryWorkflowResponse{}, nil).Times(1)
+	err = callFn(s.currentClusterName)
+	s.Nil(err)
+	s.mockRemoteFrontendClient.EXPECT().QueryWorkflow(gomock.Any(), req).Return(&types.QueryWorkflowResponse{}, nil).Times(1)
+	err = callFn(s.alternativeClusterName)
+	s.Nil(err)
+}
+
+func (s *clusterRedirectionHandlerSuite) TestQueryWorkflowStrongConsistency() {
+	apiName := "QueryWorkflowStrongConsistency"
+
+	s.mockClusterRedirectionPolicy.On("WithDomainNameRedirect",
+		s.domainName, apiName, mock.Anything).Return(nil).Times(1)
+
+	req := &types.QueryWorkflowRequest{
 		Domain:                s.domainName,
 		QueryConsistencyLevel: types.QueryConsistencyLevelStrong.Ptr(),
 	}

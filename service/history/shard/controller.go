@@ -316,7 +316,8 @@ func (c *controller) getOrCreateHistoryShardItem(shardID int) (*historyShardsIte
 		return shardItem, nil
 	}
 
-	return nil, CreateShardOwnershipLostError(c.GetHostInfo().Identity(), info.GetAddress())
+	// for backwards compatibility, always return tchannel port
+	return nil, CreateShardOwnershipLostError(c.GetHostInfo(), info)
 }
 
 func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShardsItem) (*historyShardsItem, error) {
@@ -531,13 +532,15 @@ func IsShardOwnershiptLostError(err error) bool {
 
 // CreateShardOwnershipLostError creates a new shard ownership lost error
 func CreateShardOwnershipLostError(
-	currentHost string,
-	ownerHost string,
+	currentHost membership.HostInfo,
+	ownerHost membership.HostInfo,
 ) *types.ShardOwnershipLostError {
-
-	shardLostErr := &types.ShardOwnershipLostError{}
-	shardLostErr.Message = fmt.Sprintf("Shard is not owned by host: %v", currentHost)
-	shardLostErr.Owner = ownerHost
-
-	return shardLostErr
+	address, err := ownerHost.GetNamedAddress(membership.PortTchannel)
+	if err != nil {
+		address = ownerHost.Identity()
+	}
+	return &types.ShardOwnershipLostError{
+		Message: fmt.Sprintf("Shard is not owned by host: %v", currentHost.Identity()),
+		Owner:   address,
+	}
 }

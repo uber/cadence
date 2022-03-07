@@ -21,6 +21,7 @@
 package host
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/uber/cadence/common/membership"
@@ -32,13 +33,13 @@ type simpleResolver struct {
 }
 
 // NewSimpleResolver returns a membership resolver interface
-func NewSimpleResolver(serviceName string, hosts map[string][]string) membership.Resolver {
+func NewSimpleResolver(serviceName string, hosts map[string][]membership.HostInfo) membership.Resolver {
 	resolvers := make(map[string]*simpleHashring, len(hosts))
 	for service, hostList := range hosts {
 		resolvers[service] = newSimpleHashring(hostList)
 	}
 	return &simpleResolver{
-		hostInfo:  membership.NewHostInfo(hosts[serviceName][0]),
+		hostInfo:  hosts[serviceName][0],
 		resolvers: resolvers,
 	}
 }
@@ -79,4 +80,18 @@ func (s *simpleResolver) MemberCount(service string) (int, error) {
 
 func (s *simpleResolver) Members(service string) ([]membership.HostInfo, error) {
 	return nil, nil
+}
+
+func (s *simpleResolver) LookupByAddress(service string, address string) (membership.HostInfo, error) {
+	resolver, ok := s.resolvers[service]
+	if !ok {
+		return membership.HostInfo{}, fmt.Errorf("cannot lookup host for service %q", service)
+	}
+	for _, m := range resolver.Members() {
+		if belongs, err := m.Belongs(address); err == nil && belongs {
+			return m, nil
+		}
+	}
+
+	return membership.HostInfo{}, errors.New("host not found")
 }

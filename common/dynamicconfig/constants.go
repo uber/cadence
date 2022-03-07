@@ -1946,6 +1946,12 @@ const (
 	// Default value: false
 	// Allowed filters: N/A
 	EnableESAnalyzer
+	// EnableWatchDog decides whether to enable watchdog system worker
+	// KeyName: system.enableWatchdog
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableWatchDog
 	// EnableStickyQuery is indicates if sticky query should be enabled per domain
 	// KeyName: system.enableStickyQuery
 	// Value type: Bool
@@ -2135,6 +2141,12 @@ const (
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
 
+	// CorruptWorkflowWatchdogPause defines if we want to dynamically pause the watchdog workflow
+	// KeyName: worker.CorruptWorkflowWatchdogPause
+	// Value type: bool
+	// Default value: false
+	CorruptWorkflowWatchdogPause
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2186,6 +2198,7 @@ var Keys = map[Key]string{
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
+	EnableWatchDog:                      "system.EnableWatchDog",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -2524,6 +2537,8 @@ var Keys = map[Key]string{
 	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
 	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
 	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
+
+	CorruptWorkflowWatchdogPause: "worker.CorruptWorkflowWatchdogPause",
 }
 
 var KeyNames map[string]Key

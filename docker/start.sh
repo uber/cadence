@@ -20,6 +20,9 @@ export DBNAME="${DBNAME:-cadence}"
 export VISIBILITY_DBNAME="${VISIBILITY_DBNAME:-cadence_visibility}"
 export DB_PORT=${DB_PORT:-3306}
 
+# elasticsearch env
+export VISIBILITY_NAME="${VISIBILITY_NAME:-cadence-visibility-dev}"
+
 setup_cassandra_schema() {
     SCHEMA_DIR=$CADENCE_HOME/schema/cassandra/cadence/versioned
     cadence-cassandra-tool --ep $CASSANDRA_SEEDS create -k $KEYSPACE --rf $RF
@@ -62,7 +65,7 @@ setup_es_template() {
     server=`echo $ES_SEEDS | awk -F ',' '{print $1}'`
     URL="http://$server:$ES_PORT/_template/cadence-visibility-template"
     curl -X PUT $URL -H 'Content-Type: application/json' --data-binary "@$SCHEMA_FILE"
-    URL="http://$server:$ES_PORT/cadence-visibility-dev"
+    URL="http://$server:$ES_PORT/$VISIBILITY_NAME"
     curl -X PUT $URL
 }
 

@@ -775,6 +775,10 @@ const (
 	AdminRestoreDynamicConfigScope
 	// AdminListDynamicConfigScope is the metric scope for admin.ListDynamicConfig
 	AdminListDynamicConfigScope
+	// AdminDeleteWorkflowScope is the metric scope for admin.DeleteWorkflow
+	AdminDeleteWorkflowScope
+	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
+	MaintainCorruptWorkflowScope
 
 	NumAdminScopes
 )
@@ -1197,6 +1201,8 @@ const (
 	CheckDataCorruptionWorkflowScope
 	// ESAnalyzerScope is scope used by ElasticSearch Analyzer (esanalyzer) workflow
 	ESAnalyzerScope
+	// WatchDogScope is scope used by WatchDog workflow
+	WatchDogScope
 
 	NumWorkerScopes
 )
@@ -1527,6 +1533,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminUpdateDynamicConfigScope:               {operation: "AdminUpdateDynamicConfig"},
 		AdminRestoreDynamicConfigScope:              {operation: "AdminRestoreDynamicConfig"},
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
+		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
+		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
 
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
@@ -1736,6 +1744,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BatcherScope:                           {operation: "batcher"},
 		ParentClosePolicyProcessorScope:        {operation: "ParentClosePolicyProcessor"},
 		ESAnalyzerScope:                        {operation: "ESAnalyzer"},
+		WatchDogScope:                          {operation: "WatchDog"},
 	},
 }
 
@@ -2259,6 +2268,9 @@ const (
 	ESAnalyzerNumStuckWorkflowsRefreshed
 	ESAnalyzerNumStuckWorkflowsFailedToRefresh
 	ESAnalyzerNumLongRunningWorkflows
+	WatchDogNumDeletedCorruptWorkflows
+	WatchDogNumFailedToDeleteCorruptWorkflows
+	WatchDogNumCorruptWorkflowProcessed
 
 	NumWorkerMetrics
 )
@@ -2790,6 +2802,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ESAnalyzerNumStuckWorkflowsRefreshed:          {metricName: "es_analyzer_num_stuck_workflows_refreshed", metricType: Counter},
 		ESAnalyzerNumStuckWorkflowsFailedToRefresh:    {metricName: "es_analyzer_num_stuck_workflows_failed_to_refresh", metricType: Counter},
 		ESAnalyzerNumLongRunningWorkflows:             {metricName: "es_analyzer_num_long_running_workflows", metricType: Counter},
+		WatchDogNumDeletedCorruptWorkflows:            {metricName: "watchdog_num_deleted_corrupt_workflows", metricType: Counter},
+		WatchDogNumFailedToDeleteCorruptWorkflows:     {metricName: "watchdog_num_failed_to_delete_corrupt_workflows", metricType: Counter},
+		WatchDogNumCorruptWorkflowProcessed:           {metricName: "watchdog_num_corrupt_workflows_processed", metricType: Counter},
 	},
 }
 

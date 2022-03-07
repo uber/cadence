@@ -30,6 +30,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/membership"
+
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -1903,11 +1905,11 @@ func (h *handlerImpl) GetCrossClusterTasks(
 			engine, err := h.controller.GetEngineForShard(int(shardID))
 			if err != nil {
 				logger.Error("History engine not found for shard", tag.Error(err))
-				var owner string
+				var owner membership.HostInfo
 				if info, err := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(int(shardID))); err == nil {
-					owner = info.GetAddress()
+					owner = info
 				}
-				settable.Set(nil, shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), owner))
+				settable.Set(nil, shard.CreateShardOwnershipLostError(h.GetHostInfo(), owner))
 				return
 			}
 
@@ -2004,10 +2006,11 @@ func (h *handlerImpl) convertError(err error) error {
 	switch err := err.(type) {
 	case *persistence.ShardOwnershipLostError:
 		info, err2 := h.GetMembershipResolver().Lookup(service.History, strconv.Itoa(err.ShardID))
-		if err2 == nil {
-			return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), info.GetAddress())
+		if err2 != nil {
+			return shard.CreateShardOwnershipLostError(h.GetHostInfo(), membership.HostInfo{})
 		}
-		return shard.CreateShardOwnershipLostError(h.GetHostInfo().GetAddress(), "")
+
+		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
 	case *persistence.WorkflowExecutionAlreadyStartedError:
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:

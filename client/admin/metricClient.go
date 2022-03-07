@@ -462,6 +462,40 @@ func (c *metricClient) RestoreDynamicConfig(
 	return err
 }
 
+func (c *metricClient) DeleteWorkflow(
+	ctx context.Context,
+	request *types.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (*types.AdminDeleteWorkflowResponse, error) {
+	c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientLatency)
+	resp, err := c.client.DeleteWorkflow(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminDeleteWorkflowScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) MaintainCorruptWorkflow(
+	ctx context.Context,
+	request *types.AdminMaintainWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (*types.AdminMaintainWorkflowResponse, error) {
+	c.metricsClient.IncCounter(metrics.MaintainCorruptWorkflowScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.MaintainCorruptWorkflowScope, metrics.CadenceClientLatency)
+	resp, err := c.client.MaintainCorruptWorkflow(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.MaintainCorruptWorkflowScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
 func (c *metricClient) ListDynamicConfig(
 	ctx context.Context,
 	request *types.ListDynamicConfigRequest,

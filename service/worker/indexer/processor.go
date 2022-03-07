@@ -31,6 +31,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/elasticsearch"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -59,10 +60,6 @@ type indexProcessor struct {
 }
 
 const (
-	esDocIDDelimiter = "~"
-	esDocType        = "_doc"
-	esDocIDSizeLimit = 512
-
 	versionTypeExternal = "external"
 )
 
@@ -191,9 +188,9 @@ func (p *indexProcessor) deserialize(payload []byte) (*indexer.Message, error) {
 }
 
 func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.Message, logger log.Logger) error {
-	docID := generateDocID(indexMsg.GetWorkflowID(), indexMsg.GetRunID())
+	docID := elasticsearch.GenerateDocID(indexMsg.GetWorkflowID(), indexMsg.GetRunID())
 	// check and skip invalid docID
-	if len(docID) >= esDocIDSizeLimit {
+	if len(docID) >= elasticsearch.GetESDocIDSizeLimit() {
 		logger.Error("Index message is too long",
 			tag.WorkflowDomainID(indexMsg.GetDomainID()),
 			tag.WorkflowID(indexMsg.GetWorkflowID()),
@@ -205,7 +202,7 @@ func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg mess
 	var keyToKafkaMsg string
 	req := &es.GenericBulkableAddRequest{
 		Index:       p.esIndexName,
-		Type:        esDocType,
+		Type:        elasticsearch.GetESDocType(),
 		ID:          docID,
 		VersionType: versionTypeExternal,
 		Version:     indexMsg.GetVersion(),
@@ -292,8 +289,4 @@ func fulfillDoc(doc map[string]interface{}, msg *indexer.Message, keyToKafkaMsg 
 	doc[definition.WorkflowID] = msg.GetWorkflowID()
 	doc[definition.RunID] = msg.GetRunID()
 	doc[definition.KafkaKey] = keyToKafkaMsg
-}
-
-func generateDocID(wid, rid string) string {
-	return wid + esDocIDDelimiter + rid
 }

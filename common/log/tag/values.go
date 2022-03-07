@@ -299,6 +299,8 @@ var (
 	AdminClientOperationUpdateDynamicConfig               = clientOperation("admin-update-dynamic-config")
 	AdminClientOperationRestoreDynamicConfig              = clientOperation("admin-restore-dynamic-config")
 	AdminClientOperationListDynamicConfig                 = clientOperation("admin-list-dynamic-config")
+	AdminDeleteWorkflow                                   = clientOperation("admin-delete-workflow")
+	MaintainCorruptWorkflow                               = clientOperation("maintain-corrupt-workflow")
 
 	FrontendClientOperationDeprecateDomain                  = clientOperation("frontend-deprecate-domain")
 	FrontendClientOperationDescribeDomain                   = clientOperation("frontend-describe-domain")
