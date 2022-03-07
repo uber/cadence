@@ -189,11 +189,16 @@ func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
 
 	// filter member by service name, add port info to Hostinfo if they are present
 	memberData := func(member swim.Member) bool {
-		portMap := make(membership.PortMap)
 		if v, ok := member.Label(roleKey); !ok || v != service {
 			return false
 		}
 
+		// replicating swim member isReachable() method here as we are skipping other predicates
+		if member.Status != swim.Alive && member.Status != swim.Suspect {
+			return false
+		}
+
+		portMap := make(membership.PortMap)
 		if v, ok := member.Label(membership.PortTchannel); ok {
 			port, err := labelToPort(v)
 			if err != nil {
