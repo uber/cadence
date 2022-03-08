@@ -90,7 +90,7 @@ func (s *eventsCacheSuite) TestEventsCacheHitSuccess() {
 	runID := "events-cache-hit-success-run-id"
 	eventID := int64(23)
 	event := &types.HistoryEvent{
-		EventID:                            eventID,
+		ID:                                 eventID,
 		EventType:                          types.EventTypeActivityTaskStarted.Ptr(),
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
 	}
@@ -106,32 +106,32 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 	workflowID := "events-cache-miss-multi-events-batch-v2-success-workflow-id"
 	runID := "events-cache-miss-multi-events-batch-v2-success-run-id"
 	event1 := &types.HistoryEvent{
-		EventID:                              11,
+		ID:                                   11,
 		EventType:                            types.EventTypeDecisionTaskCompleted.Ptr(),
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              12,
+		ID:                                   12,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:                              13,
+		ID:                                   13,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event4 := &types.HistoryEvent{
-		EventID:                              14,
+		ID:                                   14,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event5 := &types.HistoryEvent{
-		EventID:                              15,
+		ID:                                   15,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	event6 := &types.HistoryEvent{
-		EventID:                              16,
+		ID:                                   16,
 		EventType:                            types.EventTypeActivityTaskScheduled.Ptr(),
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
@@ -139,19 +139,19 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 	shardID := common.IntPtr(10)
 	s.mockHistoryManager.On("ReadHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   []byte("store_token"),
-		MinEventID:    event1.GetEventID(),
-		MaxEventID:    event6.GetEventID() + 1,
+		MinEventID:    event1.ID,
+		MaxEventID:    event6.ID + 1,
 		PageSize:      1,
 		NextPageToken: nil,
 		ShardID:       shardID,
 	}).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*types.HistoryEvent{event1, event2, event3, event4, event5, event6},
 		NextPageToken:    nil,
-		LastFirstEventID: event1.GetEventID(),
+		LastFirstEventID: event1.ID,
 	}, nil)
 
-	s.cache.PutEvent(domainID, workflowID, runID, event2.GetEventID(), event2)
-	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event1.GetEventID(), event6.GetEventID(), []byte("store_token"))
+	s.cache.PutEvent(domainID, workflowID, runID, event2.ID, event2)
+	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event1.ID, event6.ID, []byte("store_token"))
 	s.Nil(err)
 	s.Equal(event6, actualEvent)
 }
@@ -183,33 +183,33 @@ func (s *eventsCacheSuite) TestEventsCacheDisableSuccess() {
 	runID := "events-cache-disable-success-run-id"
 	shardID := common.IntPtr(10)
 	event1 := &types.HistoryEvent{
-		EventID:                            23,
+		ID:                                 23,
 		EventType:                          types.EventTypeActivityTaskStarted.Ptr(),
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                            32,
+		ID:                                 32,
 		EventType:                          types.EventTypeActivityTaskStarted.Ptr(),
 		ActivityTaskStartedEventAttributes: &types.ActivityTaskStartedEventAttributes{},
 	}
 
 	s.mockHistoryManager.On("ReadHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   []byte("store_token"),
-		MinEventID:    event2.GetEventID(),
-		MaxEventID:    event2.GetEventID() + 1,
+		MinEventID:    event2.ID,
+		MaxEventID:    event2.ID + 1,
 		PageSize:      1,
 		NextPageToken: nil,
 		ShardID:       shardID,
 	}).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents:    []*types.HistoryEvent{event2},
 		NextPageToken:    nil,
-		LastFirstEventID: event2.GetEventID(),
+		LastFirstEventID: event2.ID,
 	}, nil)
 
-	s.cache.PutEvent(domainID, workflowID, runID, event1.GetEventID(), event1)
-	s.cache.PutEvent(domainID, workflowID, runID, event2.GetEventID(), event2)
+	s.cache.PutEvent(domainID, workflowID, runID, event1.ID, event1)
+	s.cache.PutEvent(domainID, workflowID, runID, event2.ID, event2)
 	s.cache.disabled = true
-	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event2.GetEventID(), event2.GetEventID(), []byte("store_token"))
+	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event2.ID, event2.ID, []byte("store_token"))
 	s.Nil(err)
 	s.Equal(event2, actualEvent)
 }

@@ -155,13 +155,13 @@ func ConvertSearchAttrToBytes(searchAttrStr map[string]string) map[string][]byte
 func IsHistoryMutated(request *ArchiveHistoryRequest, historyBatches []*types.History, isLast bool, logger log.Logger) (mutated bool) {
 	lastBatch := historyBatches[len(historyBatches)-1].Events
 	lastEvent := lastBatch[len(lastBatch)-1]
-	lastFailoverVersion := lastEvent.GetVersion()
+	lastFailoverVersion := lastEvent.Version
 	defer func() {
 		if mutated {
 			logger.Warn(ArchiveNonRetriableErrorMsg+":history is mutated when during archival",
 				tag.ArchivalArchiveFailReason(ErrReasonHistoryMutated),
 				tag.FailoverVersion(lastFailoverVersion),
-				tag.TokenLastEventID(lastEvent.GetEventID()))
+				tag.TokenLastEventID(lastEvent.ID))
 		}
 	}()
 	if lastFailoverVersion > request.CloseFailoverVersion {
@@ -171,6 +171,6 @@ func IsHistoryMutated(request *ArchiveHistoryRequest, historyBatches []*types.Hi
 	if !isLast {
 		return false
 	}
-	lastEventID := lastEvent.GetEventID()
+	lastEventID := lastEvent.ID
 	return lastFailoverVersion != request.CloseFailoverVersion || lastEventID+1 != request.NextEventID
 }

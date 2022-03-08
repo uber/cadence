@@ -428,7 +428,7 @@ Update_History_Loop:
 				handler.config.HistorySizeLimitError(domainName),
 				handler.config.HistoryCountLimitWarn(domainName),
 				handler.config.HistoryCountLimitError(domainName),
-				completedEvent.GetEventID(),
+				completedEvent.ID,
 				msBuilder,
 				executionStats,
 				handler.metricsClient.Scope(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.DomainTag(domainName)),
@@ -437,7 +437,7 @@ Update_History_Loop:
 
 			decisionTaskHandler := newDecisionTaskHandler(
 				request.GetIdentity(),
-				completedEvent.GetEventID(),
+				completedEvent.ID,
 				domainEntry,
 				msBuilder,
 				handler.attrValidator,

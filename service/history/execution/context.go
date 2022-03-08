@@ -717,7 +717,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		firstEventID := startEvents.Events[0].GetEventID()
+		firstEventID := startEvents.Events[0].ID
 		var eventsSize int64
 		if firstEventID == common.FirstEventID {
 			eventsSize, err = c.PersistStartWorkflowBatchEvents(ctx, startEvents)

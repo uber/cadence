@@ -1030,7 +1030,7 @@ func getStartVersion(
 	if err != nil {
 		return 0, err
 	}
-	return versionHistoryItem.GetVersion(), nil
+	return versionHistoryItem.Version, nil
 }
 
 func getLastWriteVersion(
@@ -1049,5 +1049,5 @@ func getLastWriteVersion(
 	if err != nil {
 		return 0, err
 	}
-	return versionHistoryItem.GetVersion(), nil
+	return versionHistoryItem.Version, nil
 }

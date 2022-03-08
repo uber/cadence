@@ -992,15 +992,15 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 	nextPageToken := []byte{'1', '2', '3'}
 	historyBatch1 := &types.History{
 		Events: []*types.HistoryEvent{
-			{EventID: 1},
-			{EventID: 2},
+			{ID: 1},
+			{ID: 2},
 		},
 	}
 	historyBatch2 := &types.History{
 		Events: []*types.HistoryEvent{
-			{EventID: 3},
-			{EventID: 4},
-			{EventID: 5},
+			{ID: 3},
+			{ID: 4},
+			{ID: 5},
 		},
 	}
 	history := &types.History{}
@@ -1044,7 +1044,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, req).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{
 			{
-				EventID: int64(100),
+				ID: int64(100),
 			},
 		},
 		NextPageToken:    []byte{},
@@ -1160,16 +1160,16 @@ func (s *workflowHandlerSuite) TestGetSearchAttributes() {
 func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledTransientDecisionEmitted() {
 	var nextEventID int64 = 5
 	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
-		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
-		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
+		StartedEvent:   &types.HistoryEvent{ID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{ID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
 func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHistoryEnabledNoTransientDecisionEmitted() {
 	var nextEventID int64 = 5
 	s.getWorkflowExecutionHistory(5, &types.TransientDecisionInfo{
-		StartedEvent:   &types.HistoryEvent{EventID: nextEventID + 1},
-		ScheduledEvent: &types.HistoryEvent{EventID: nextEventID},
+		StartedEvent:   &types.HistoryEvent{ID: nextEventID + 1},
+		ScheduledEvent: &types.HistoryEvent{ID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
@@ -1365,7 +1365,7 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 func (s *workflowHandlerSuite) TestVerifyHistoryIsComplete() {
 	events := make([]*types.HistoryEvent, 50)
 	for i := 0; i < len(events); i++ {
-		events[i] = &types.HistoryEvent{EventID: int64(i + 1)}
+		events[i] = &types.HistoryEvent{ID: int64(i + 1)}
 	}
 	var eventsWithHoles []*types.HistoryEvent
 	eventsWithHoles = append(eventsWithHoles, events[9:12]...)

@@ -258,7 +258,7 @@ func (e *cacheImpl) getHistoryEventFromStore(
 
 	// find history event from batch and return back single event to caller
 	for _, e := range historyEvents {
-		if e.GetEventID() == eventID {
+		if e.ID == eventID {
 			return e, nil
 		}
 	}

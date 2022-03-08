@@ -252,32 +252,32 @@ func (r *activityReplicatorImpl) shouldApplySyncActivity(
 		// case 2-2: incoming version history has the higher version and resend the missing incoming events
 		if currentVersionHistory.IsLCAAppendable(lcaItem) || incomingVersionHistory.IsLCAAppendable(lcaItem) {
 			// case 1
-			if scheduleID > lcaItem.GetEventID() {
+			if scheduleID > lcaItem.EventID {
 				return false, newNDCRetryTaskErrorWithHint(
 					resendMissingEventMessage,
 					domainID,
 					workflowID,
 					runID,
-					common.Int64Ptr(lcaItem.GetEventID()),
-					common.Int64Ptr(lcaItem.GetVersion()),
+					common.Int64Ptr(lcaItem.EventID),
+					common.Int64Ptr(lcaItem.Version),
 					nil,
 					nil,
 				)
 			}
 		} else {
 			// case 2
-			if lastIncomingItem.GetVersion() < lastLocalItem.GetVersion() {
+			if lastIncomingItem.Version < lastLocalItem.Version {
 				// case 2-1
 				return false, nil
-			} else if lastIncomingItem.GetVersion() > lastLocalItem.GetVersion() {
+			} else if lastIncomingItem.Version > lastLocalItem.Version {
 				// case 2-2
 				return false, newNDCRetryTaskErrorWithHint(
 					resendHigherVersionMessage,
 					domainID,
 					workflowID,
 					runID,
-					common.Int64Ptr(lcaItem.GetEventID()),
-					common.Int64Ptr(lcaItem.GetVersion()),
+					common.Int64Ptr(lcaItem.EventID),
+					common.Int64Ptr(lcaItem.Version),
 					nil,
 					nil,
 				)

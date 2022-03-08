@@ -109,7 +109,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 	for _, event := range history {
 		// NOTE: stateBuilder is also being used in the active side
-		if err := b.mutableState.UpdateCurrentVersion(event.GetVersion(), true); err != nil {
+		if err := b.mutableState.UpdateCurrentVersion(event.Version, true); err != nil {
 			return nil, err
 		}
 		versionHistories := b.mutableState.GetVersionHistories()
@@ -121,12 +121,12 @@ func (b *stateBuilderImpl) ApplyEvents(
 			return nil, err
 		}
 		if err := versionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(
-			event.GetEventID(),
-			event.GetVersion(),
+			event.ID,
+			event.Version,
 		)); err != nil {
 			return nil, err
 		}
-		b.mutableState.GetExecutionInfo().LastEventTaskID = event.GetTaskID()
+		b.mutableState.GetExecutionInfo().LastEventTaskID = event.TaskID
 
 		switch event.GetEventType() {
 		case types.EventTypeWorkflowExecutionStarted:
@@ -186,8 +186,8 @@ func (b *stateBuilderImpl) ApplyEvents(
 			attributes := event.DecisionTaskScheduledEventAttributes
 			// use event.GetTimestamp() as DecisionOriginalScheduledTimestamp, because the heartbeat is not happening here.
 			decision, err := b.mutableState.ReplicateDecisionTaskScheduledEvent(
-				event.GetVersion(),
-				event.GetEventID(),
+				event.Version,
+				event.ID,
 				attributes.TaskList.GetName(),
 				attributes.GetStartToCloseTimeoutSeconds(),
 				attributes.GetAttempt(),
@@ -211,9 +211,9 @@ func (b *stateBuilderImpl) ApplyEvents(
 			attributes := event.DecisionTaskStartedEventAttributes
 			decision, err := b.mutableState.ReplicateDecisionTaskStartedEvent(
 				nil,
-				event.GetVersion(),
+				event.Version,
 				attributes.GetScheduledEventID(),
-				event.GetEventID(),
+				event.ID,
 				attributes.GetRequestID(),
 				event.GetTimestamp(),
 			)
@@ -282,7 +282,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeActivityTaskScheduled:
 			if _, err := b.mutableState.ReplicateActivityTaskScheduledEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 			); err != nil {
 				return nil, err
@@ -365,7 +365,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeStartChildWorkflowExecutionInitiated:
 			if _, err := b.mutableState.ReplicateStartChildWorkflowExecutionInitiatedEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 				// create a new request ID which is used by transfer queue processor
 				// if domain is failed over at this point
@@ -431,7 +431,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
 			if _, err := b.mutableState.ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 				// create a new request ID which is used by transfer queue processor
 				// if domain is failed over at this point
@@ -464,7 +464,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			// Create a new request ID which is used by transfer queue processor if domain is failed over at this point
 			signalRequestID := uuid.New()
 			if _, err := b.mutableState.ReplicateSignalExternalWorkflowExecutionInitiatedEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 				signalRequestID,
 			); err != nil {
@@ -516,7 +516,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeWorkflowExecutionCompleted:
 			if err := b.mutableState.ReplicateWorkflowExecutionCompletedEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 			); err != nil {
 				return nil, err
@@ -530,7 +530,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeWorkflowExecutionFailed:
 			if err := b.mutableState.ReplicateWorkflowExecutionFailedEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 			); err != nil {
 				return nil, err
@@ -544,7 +544,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeWorkflowExecutionTimedOut:
 			if err := b.mutableState.ReplicateWorkflowExecutionTimedoutEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 			); err != nil {
 				return nil, err
@@ -558,7 +558,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeWorkflowExecutionCanceled:
 			if err := b.mutableState.ReplicateWorkflowExecutionCanceledEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 			); err != nil {
 				return nil, err
@@ -572,7 +572,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 
 		case types.EventTypeWorkflowExecutionTerminated:
 			if err := b.mutableState.ReplicateWorkflowExecutionTerminatedEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				event,
 			); err != nil {
 				return nil, err
@@ -612,7 +612,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			err := b.mutableState.ReplicateWorkflowExecutionContinuedAsNewEvent(
-				firstEvent.GetEventID(),
+				firstEvent.ID,
 				domainID,
 				event,
 			)
@@ -639,8 +639,8 @@ func (b *stateBuilderImpl) ApplyEvents(
 		return nil, err
 	}
 
-	b.mutableState.GetExecutionInfo().SetLastFirstEventID(firstEvent.GetEventID())
-	b.mutableState.GetExecutionInfo().SetNextEventID(lastEvent.GetEventID() + 1)
+	b.mutableState.GetExecutionInfo().SetLastFirstEventID(firstEvent.ID)
+	b.mutableState.GetExecutionInfo().SetNextEventID(lastEvent.ID + 1)
 
 	b.mutableState.SetHistoryBuilder(NewHistoryBuilderFromEvents(history, b.logger))
 

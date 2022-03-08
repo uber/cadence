@@ -330,8 +330,8 @@ func (s *IntegrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	events := s.getHistory(s.domainName, executions[0])
 	s.True(len(events) != 0)
 	for _, event := range events {
-		s.True(event.GetTaskID() > minTaskID)
-		minTaskID = event.GetTaskID()
+		s.True(event.TaskID > minTaskID)
+		minTaskID = event.TaskID
 	}
 
 	_, err = poller.PollAndProcessDecisionTask(false, false)
@@ -339,8 +339,8 @@ func (s *IntegrationSuite) TestWorkflowContinueAsNew_TaskID() {
 	events = s.getHistory(s.domainName, executions[1])
 	s.True(len(events) != 0)
 	for _, event := range events {
-		s.True(event.GetTaskID() > minTaskID)
-		minTaskID = event.GetTaskID()
+		s.True(event.TaskID > minTaskID)
+		minTaskID = event.TaskID
 	}
 }
 
