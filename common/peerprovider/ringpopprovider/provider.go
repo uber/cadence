@@ -24,6 +24,7 @@ package ringpopprovider
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -206,6 +207,20 @@ func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
 			} else {
 				portMap[membership.PortTchannel] = port
 			}
+		} else {
+			// for backwards compatibility: get tchannel port from member address
+			_, port, err := net.SplitHostPort(member.Address)
+			if err != nil {
+				r.logger.Warn("getting ringpop member port from address", tag.Value(member.Address), tag.Error(err))
+			} else {
+				tchannelPort, err := labelToPort(port)
+				if err != nil {
+					r.logger.Warn("tchannel port cannot be converted", tag.Error(err), tag.Value(port))
+				} else {
+					portMap[membership.PortTchannel] = tchannelPort
+				}
+			}
+
 		}
 
 		if v, ok := member.Label(membership.PortGRPC); ok {
