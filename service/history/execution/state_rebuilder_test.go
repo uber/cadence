@@ -124,12 +124,12 @@ func (s *stateRebuilderSuite) TestApplyEvents() {
 	requestID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID:                                 1,
+			ID:                                      1,
 			EventType:                               types.EventTypeWorkflowExecutionStarted.Ptr(),
 			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 		},
 		{
-			EventID:                                  2,
+			ID:                                       2,
 			EventType:                                types.EventTypeWorkflowExecutionSignaled.Ptr(),
 			WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{},
 		},
@@ -159,23 +159,23 @@ func (s *stateRebuilderSuite) TestPagination() {
 	branchToken := []byte("some random branch token")
 
 	event1 := &types.HistoryEvent{
-		EventID:                                 1,
+		ID:                                      1,
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{},
 	}
 	event2 := &types.HistoryEvent{
-		EventID:                              2,
+		ID:                                   2,
 		DecisionTaskScheduledEventAttributes: &types.DecisionTaskScheduledEventAttributes{},
 	}
 	event3 := &types.HistoryEvent{
-		EventID:                            3,
+		ID:                                 3,
 		DecisionTaskStartedEventAttributes: &types.DecisionTaskStartedEventAttributes{},
 	}
 	event4 := &types.HistoryEvent{
-		EventID:                              4,
+		ID:                                   4,
 		DecisionTaskCompletedEventAttributes: &types.DecisionTaskCompletedEventAttributes{},
 	}
 	event5 := &types.HistoryEvent{
-		EventID:                              5,
+		ID:                                   5,
 		ActivityTaskScheduledEventAttributes: &types.ActivityTaskScheduledEventAttributes{},
 	}
 	history1 := []*types.History{{Events: []*types.HistoryEvent{event1, event2, event3}}}
@@ -237,7 +237,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	firstEventID := common.FirstEventID
 	nextEventID := lastEventID + 1
 	events1 := []*types.HistoryEvent{{
-		EventID:   1,
+		ID:        1,
 		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionStarted.Ptr(),
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
@@ -250,7 +250,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		},
 	}}
 	events2 := []*types.HistoryEvent{{
-		EventID:   2,
+		ID:        2,
 		Version:   version,
 		EventType: types.EventTypeWorkflowExecutionSignaled.Ptr(),
 		WorkflowExecutionSignaledEventAttributes: &types.WorkflowExecutionSignaledEventAttributes{

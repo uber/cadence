@@ -135,13 +135,13 @@ func (s *historyResenderSuite) TestSendSingleWorkflowHistory() {
 	pageSize := defaultPageSize
 	eventBatch := []*types.HistoryEvent{
 		{
-			EventID:   2,
+			ID:        2,
 			Version:   123,
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskScheduled.Ptr(),
 		},
 		{
-			EventID:   3,
+			ID:        3,
 			Version:   123,
 			Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 			EventType: types.EventTypeDecisionTaskStarted.Ptr(),

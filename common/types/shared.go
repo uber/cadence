@@ -3660,7 +3660,7 @@ type HistoryBranchRange struct {
 
 // HistoryEvent is an internal type (TBD...)
 type HistoryEvent struct {
-	EventID                                                        int64                                                           `json:"eventId,omitempty"`
+	ID                                                             int64                                                           `json:"eventId,omitempty"`
 	Timestamp                                                      *int64                                                          `json:"timestamp,omitempty"`
 	EventType                                                      *EventType                                                      `json:"eventType,omitempty"`
 	Version                                                        int64                                                           `json:"version,omitempty"`
@@ -3709,14 +3709,6 @@ type HistoryEvent struct {
 	UpsertWorkflowSearchAttributesEventAttributes                  *UpsertWorkflowSearchAttributesEventAttributes                  `json:"upsertWorkflowSearchAttributesEventAttributes,omitempty"`
 }
 
-// GetEventID is an internal getter (TBD...)
-func (v *HistoryEvent) GetEventID() (o int64) {
-	if v != nil {
-		return v.EventID
-	}
-	return
-}
-
 // GetTimestamp is an internal getter (TBD...)
 func (v *HistoryEvent) GetTimestamp() (o int64) {
 	if v != nil && v.Timestamp != nil {
@@ -3729,22 +3721,6 @@ func (v *HistoryEvent) GetTimestamp() (o int64) {
 func (v *HistoryEvent) GetEventType() (o EventType) {
 	if v != nil && v.EventType != nil {
 		return *v.EventType
-	}
-	return
-}
-
-// GetVersion is an internal getter (TBD...)
-func (v *HistoryEvent) GetVersion() (o int64) {
-	if v != nil {
-		return v.Version
-	}
-	return
-}
-
-// GetTaskID is an internal getter (TBD...)
-func (v *HistoryEvent) GetTaskID() (o int64) {
-	if v != nil {
-		return v.TaskID
 	}
 	return
 }

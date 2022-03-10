@@ -86,10 +86,10 @@ func SetupWorkflowWithCompletedDecision(
 
 	di := AddDecisionTaskScheduledEvent(mutableState)
 	event := AddDecisionTaskStartedEvent(mutableState, di.ScheduleID, mutableState.GetExecutionInfo().TaskList, uuid.New())
-	di.StartedID = event.GetEventID()
+	di.StartedID = event.ID
 	event = AddDecisionTaskCompletedEvent(mutableState, di.ScheduleID, di.StartedID, nil, "some random identity")
 
-	return workflowExecution, mutableState, event.GetEventID(), nil
+	return workflowExecution, mutableState, event.ID, nil
 }
 
 // CreatePersistenceMutableState generated a persistence representation of the mutable state

@@ -419,7 +419,7 @@ func (e *mutableStateBuilder) FlushBufferedEvents() error {
 	var newBufferedEvents []*types.HistoryEvent
 	var newCommittedEvents []*types.HistoryEvent
 	for _, event := range e.hBuilder.history {
-		if event.GetEventID() == common.BufferedEventID {
+		if event.ID == common.BufferedEventID {
 			newBufferedEvents = append(newBufferedEvents, event)
 		} else {
 			newCommittedEvents = append(newCommittedEvents, event)
@@ -519,7 +519,7 @@ func (e *mutableStateBuilder) UpdateCurrentVersion(
 			if err != nil {
 				return err
 			}
-			e.currentVersion = versionHistoryItem.GetVersion()
+			e.currentVersion = versionHistoryItem.Version
 		}
 
 		if version > e.currentVersion || forceUpdate {
@@ -557,7 +557,7 @@ func (e *mutableStateBuilder) GetStartVersion() (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		return firstItem.GetVersion(), nil
+		return firstItem.Version, nil
 	}
 
 	return common.EmptyVersion, nil
@@ -579,7 +579,7 @@ func (e *mutableStateBuilder) GetLastWriteVersion() (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		return lastItem.GetVersion(), nil
+		return lastItem.Version, nil
 	}
 
 	return common.EmptyVersion, nil
@@ -659,12 +659,12 @@ func (e *mutableStateBuilder) assignEventIDToBufferedEvents() {
 
 	scheduledIDToStartedID := make(map[int64]int64)
 	for _, event := range newCommittedEvents {
-		if event.GetEventID() != common.BufferedEventID {
+		if event.ID != common.BufferedEventID {
 			continue
 		}
 
 		eventID := e.executionInfo.NextEventID
-		event.EventID = eventID
+		event.ID = eventID
 		e.executionInfo.IncreaseNextEventID()
 
 		switch event.GetEventType() {
@@ -745,7 +745,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		}
 
 		for index, event := range e.hBuilder.transientHistory {
-			if event.GetTaskID() == common.EmptyEventTaskID {
+			if event.TaskID == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
 				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
@@ -762,7 +762,7 @@ func (e *mutableStateBuilder) assignTaskIDToEvents() error {
 		}
 
 		for index, event := range e.hBuilder.history {
-			if event.GetTaskID() == common.EmptyEventTaskID {
+			if event.TaskID == common.EmptyEventTaskID {
 				taskID := taskIDs[index]
 				event.TaskID = taskID
 				e.executionInfo.LastEventTaskID = taskID
@@ -833,7 +833,7 @@ func (e *mutableStateBuilder) CreateNewHistoryEventWithTimestamp(
 
 	ts := common.Int64Ptr(timestamp)
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = eventID
+	historyEvent.ID = eventID
 	historyEvent.Timestamp = ts
 	historyEvent.EventType = &eventType
 	historyEvent.Version = e.GetCurrentVersion()
@@ -1231,7 +1231,7 @@ func (e *mutableStateBuilder) writeEventToCache(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
-		event.GetEventID(),
+		event.ID,
 		event,
 	)
 }
@@ -1475,7 +1475,7 @@ func (e *mutableStateBuilder) HasBufferedEvents() bool {
 	}
 
 	for _, event := range e.hBuilder.history {
-		if event.GetEventID() == common.BufferedEventID {
+		if event.ID == common.BufferedEventID {
 			return true
 		}
 	}
@@ -1773,7 +1773,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 		return err
 	}
 	e.executionInfo.LastProcessedEvent = common.EmptyEventID
-	e.executionInfo.LastFirstEventID = startEvent.GetEventID()
+	e.executionInfo.LastFirstEventID = startEvent.ID
 
 	e.executionInfo.DecisionVersion = common.EmptyVersion
 	e.executionInfo.DecisionScheduleID = common.EmptyEventID
@@ -1951,7 +1951,7 @@ func (e *mutableStateBuilder) addBinaryCheckSumIfNotExists(
 	info := &types.ResetPointInfo{
 		BinaryChecksum:           binChecksum,
 		RunID:                    exeInfo.RunID,
-		FirstDecisionCompletedID: event.GetEventID(),
+		FirstDecisionCompletedID: event.ID,
 		CreatedTimeNano:          common.Int64Ptr(e.timeSource.Now().UnixNano()),
 		Resettable:               resettable,
 	}
@@ -2118,7 +2118,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		e.executionInfo.DomainID,
 		e.executionInfo.WorkflowID,
 		e.executionInfo.RunID,
-		event.GetEventID(),
+		event.ID,
 		event,
 	)
 
@@ -2154,11 +2154,11 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 		}
 	}
 
-	scheduleEventID := event.GetEventID()
+	scheduleEventID := event.ID
 	scheduleToCloseTimeout := attributes.GetScheduleToCloseTimeoutSeconds()
 
 	ai := &persistence.ActivityInfo{
-		Version:                  event.GetVersion(),
+		Version:                  event.Version,
 		ScheduleID:               scheduleEventID,
 		ScheduledEventBatchID:    firstEventID,
 		ScheduledTime:            time.Unix(0, event.GetTimestamp()),
@@ -2266,8 +2266,8 @@ func (e *mutableStateBuilder) ReplicateActivityTaskStartedEvent(
 		return ErrMissingActivityInfo
 	}
 
-	ai.Version = event.GetVersion()
-	ai.StartedID = event.GetEventID()
+	ai.Version = event.Version
+	ai.StartedID = event.ID
 	ai.RequestID = attributes.GetRequestID()
 	ai.StartedTime = time.Unix(0, event.GetTimestamp())
 	ai.LastHeartBeatUpdatedTime = ai.StartedTime
@@ -2454,14 +2454,14 @@ func (e *mutableStateBuilder) ReplicateActivityTaskCancelRequestedEvent(
 		return nil
 	}
 
-	ai.Version = event.GetVersion()
+	ai.Version = event.Version
 
 	// - We have the activity dispatched to worker.
 	// - The activity might not be heartbeating, but the activity can still call RecordActivityHeartBeat()
 	//   to see cancellation while reporting progress of the activity.
 	ai.CancelRequested = true
 
-	ai.CancelRequestID = event.GetEventID()
+	ai.CancelRequestID = event.ID
 	e.updateActivityInfos[ai.ScheduleID] = ai
 	return nil
 }
@@ -2764,9 +2764,9 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionIni
 ) (*persistence.RequestCancelInfo, error) {
 
 	// TODO: Evaluate if we need cancelRequestID also part of history event
-	initiatedEventID := event.GetEventID()
+	initiatedEventID := event.ID
 	rci := &persistence.RequestCancelInfo{
-		Version:               event.GetVersion(),
+		Version:               event.Version,
 		InitiatedEventBatchID: firstEventID,
 		InitiatedID:           initiatedEventID,
 		CancelRequestID:       cancelRequestID,
@@ -2887,10 +2887,10 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 ) (*persistence.SignalInfo, error) {
 
 	// TODO: Consider also writing signalRequestID to history event
-	initiatedEventID := event.GetEventID()
+	initiatedEventID := event.ID
 	attributes := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
 	si := &persistence.SignalInfo{
-		Version:               event.GetVersion(),
+		Version:               event.Version,
 		InitiatedEventBatchID: firstEventID,
 		InitiatedID:           initiatedEventID,
 		SignalRequestID:       signalRequestID,
@@ -3066,10 +3066,10 @@ func (e *mutableStateBuilder) ReplicateTimerStartedEvent(
 	// TODO: Time skew need to be taken in to account.
 	expiryTime := time.Unix(0, event.GetTimestamp()).Add(fireTimeout) // should use the event time, not now
 	ti := &persistence.TimerInfo{
-		Version:    event.GetVersion(),
+		Version:    event.Version,
 		TimerID:    timerID,
 		ExpiryTime: expiryTime,
-		StartedID:  event.GetEventID(),
+		StartedID:  event.ID,
 		TaskStatus: TimerTaskStatusNone,
 	}
 
@@ -3399,7 +3399,7 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 	)
 	// Write the event to cache only on active cluster
 	e.eventsCache.PutEvent(e.executionInfo.DomainID, e.executionInfo.WorkflowID, e.executionInfo.RunID,
-		event.GetEventID(), event)
+		event.ID, event)
 
 	ci, err := e.ReplicateStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, event, createRequestID)
 	if err != nil {
@@ -3420,7 +3420,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 	createRequestID string,
 ) (*persistence.ChildExecutionInfo, error) {
 
-	initiatedEventID := event.GetEventID()
+	initiatedEventID := event.ID
 	attributes := event.StartChildWorkflowExecutionInitiatedEventAttributes
 
 	domainID := e.GetExecutionInfo().DomainID
@@ -3433,7 +3433,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 		}
 	}
 	ci := &persistence.ChildExecutionInfo{
-		Version:               event.GetVersion(),
+		Version:               event.Version,
 		InitiatedID:           initiatedEventID,
 		InitiatedEventBatchID: firstEventID,
 		StartedID:             common.EmptyEventID,
@@ -3499,7 +3499,7 @@ func (e *mutableStateBuilder) ReplicateChildWorkflowExecutionStartedEvent(
 		)
 		return ErrMissingChildWorkflowInfo
 	}
-	ci.StartedID = event.GetEventID()
+	ci.StartedID = event.ID
 	ci.StartedRunID = attributes.GetWorkflowExecution().GetRunID()
 	e.updateChildExecutionInfos[ci.InitiatedID] = ci
 
@@ -4277,7 +4277,7 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 
 	firstEvent := events[0]
 	lastEvent := events[len(events)-1]
-	version := firstEvent.GetVersion()
+	version := firstEvent.Version
 
 	sourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(version)
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
@@ -4295,9 +4295,9 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 
 	// the visibility timestamp will be set in shard context
 	replicationTask := &persistence.HistoryReplicationTask{
-		FirstEventID:      firstEvent.GetEventID(),
-		NextEventID:       lastEvent.GetEventID() + 1,
-		Version:           firstEvent.GetVersion(),
+		FirstEventID:      firstEvent.ID,
+		NextEventID:       lastEvent.ID + 1,
+		Version:           firstEvent.Version,
 		BranchToken:       currentBranchToken,
 		NewRunBranchToken: nil,
 	}
@@ -4330,7 +4330,7 @@ func (e *mutableStateBuilder) updateWithLastWriteEvent(
 		return nil
 	}
 
-	e.GetExecutionInfo().LastEventTaskID = lastEvent.GetTaskID()
+	e.GetExecutionInfo().LastEventTaskID = lastEvent.TaskID
 
 	if e.versionHistories != nil {
 		currentVersionHistory, err := e.versionHistories.GetCurrentVersionHistory()
@@ -4338,7 +4338,7 @@ func (e *mutableStateBuilder) updateWithLastWriteEvent(
 			return err
 		}
 		if err := currentVersionHistory.AddOrUpdateItem(persistence.NewVersionHistoryItem(
-			lastEvent.GetEventID(), lastEvent.GetVersion(),
+			lastEvent.ID, lastEvent.Version,
 		)); err != nil {
 			return err
 		}
@@ -4349,7 +4349,7 @@ func (e *mutableStateBuilder) updateWithLastWriteEvent(
 func (e *mutableStateBuilder) updateWithLastFirstEvent(
 	lastFirstEvent *types.HistoryEvent,
 ) {
-	e.GetExecutionInfo().SetLastFirstEventID(lastFirstEvent.GetEventID())
+	e.GetExecutionInfo().SetLastFirstEventID(lastFirstEvent.ID)
 }
 
 func (e *mutableStateBuilder) canReplicateEvents() bool {

@@ -24,6 +24,7 @@ package ringpopprovider
 
 import (
 	"fmt"
+	"net"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -189,11 +190,16 @@ func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
 
 	// filter member by service name, add port info to Hostinfo if they are present
 	memberData := func(member swim.Member) bool {
-		portMap := make(membership.PortMap)
 		if v, ok := member.Label(roleKey); !ok || v != service {
 			return false
 		}
 
+		// replicating swim member isReachable() method here as we are skipping other predicates
+		if member.Status != swim.Alive && member.Status != swim.Suspect {
+			return false
+		}
+
+		portMap := make(membership.PortMap)
 		if v, ok := member.Label(membership.PortTchannel); ok {
 			port, err := labelToPort(v)
 			if err != nil {
@@ -201,6 +207,20 @@ func (r *Provider) GetMembers(service string) ([]membership.HostInfo, error) {
 			} else {
 				portMap[membership.PortTchannel] = port
 			}
+		} else {
+			// for backwards compatibility: get tchannel port from member address
+			_, port, err := net.SplitHostPort(member.Address)
+			if err != nil {
+				r.logger.Warn("getting ringpop member port from address", tag.Value(member.Address), tag.Error(err))
+			} else {
+				tchannelPort, err := labelToPort(port)
+				if err != nil {
+					r.logger.Warn("tchannel port cannot be converted", tag.Error(err), tag.Value(port))
+				} else {
+					portMap[membership.PortTchannel] = tchannelPort
+				}
+			}
+
 		}
 
 		if v, ok := member.Label(membership.PortGRPC); ok {

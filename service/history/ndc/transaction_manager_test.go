@@ -148,7 +148,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*types.HistoryEvent{{EventID: 1}},
+		Events: []*types.HistoryEvent{{ID: 1}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
@@ -259,7 +259,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	var releaseFn execution.ReleaseFunc = func(error) { releaseCalled = true }
 
 	workflowEvents := &persistence.WorkflowEvents{
-		Events: []*types.HistoryEvent{{EventID: 1}},
+		Events: []*types.HistoryEvent{{ID: 1}},
 	}
 
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()

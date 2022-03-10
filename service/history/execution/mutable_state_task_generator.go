@@ -148,7 +148,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 	firstDecisionDelayDuration := time.Duration(attr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
 
 	executionInfo := r.mutableState.GetExecutionInfo()
-	startVersion := startEvent.GetVersion()
+	startVersion := startEvent.Version
 
 	workflowTimeoutDuration := time.Duration(executionInfo.WorkflowTimeout) * time.Second
 	workflowTimeoutTimestamp := startTime.Add(workflowTimeoutDuration + firstDecisionDelayDuration)
@@ -181,7 +181,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		// source domain passive, generate only one close execution task
 		transferTasks = append(transferTasks, &persistence.CloseExecutionTask{
 			// TaskID and VisibilityTimestamp are set by shard context
-			Version: closeEvent.GetVersion(),
+			Version: closeEvent.Version,
 		})
 	} else {
 		// 1. check if parent is cross cluster
@@ -195,7 +195,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 				TargetDomainID:   executionInfo.ParentDomainID,
 				TargetWorkflowID: executionInfo.ParentWorkflowID,
 				TargetRunID:      executionInfo.ParentRunID,
-				Version:          closeEvent.GetVersion(),
+				Version:          closeEvent.Version,
 			}
 
 			if !isActive {
@@ -211,7 +211,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		// 2. check if child domains are cross cluster
 		parentCloseTransferTask,
 			parentCloseCrossClusterTask,
-			err := r.generateApplyParentCloseTasks(nil, closeEvent.GetVersion(), time.Time{}, false)
+			err := r.generateApplyParentCloseTasks(nil, closeEvent.Version, time.Time{}, false)
 		if err != nil {
 			return err
 		}
@@ -221,12 +221,12 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		// 3. add record workflow closed task
 		if len(crossClusterTasks) != 0 {
 			transferTasks = append(transferTasks, &persistence.RecordWorkflowClosedTask{
-				Version: closeEvent.GetVersion(),
+				Version: closeEvent.Version,
 			})
 		} else {
 			transferTasks = []persistence.Task{
 				&persistence.CloseExecutionTask{
-					Version: closeEvent.GetVersion(),
+					Version: closeEvent.Version,
 				},
 			}
 		}
@@ -251,7 +251,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: closeTimestamp.Add(retentionDuration),
-		Version:             closeEvent.GetVersion(),
+		Version:             closeEvent.Version,
 	})
 
 	return nil
@@ -261,7 +261,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateDelayedDecisionTasks(
 	startEvent *types.HistoryEvent,
 ) error {
 
-	startVersion := startEvent.GetVersion()
+	startVersion := startEvent.Version
 	startTimestamp := time.Unix(0, startEvent.GetTimestamp())
 	startAttr := startEvent.WorkflowExecutionStartedEventAttributes
 	decisionBackoffDuration := time.Duration(startAttr.GetFirstDecisionTaskBackoffSeconds()) * time.Second
@@ -302,7 +302,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateRecordWorkflowStartedTasks(
 	startEvent *types.HistoryEvent,
 ) error {
 
-	startVersion := startEvent.GetVersion()
+	startVersion := startEvent.Version
 
 	r.mutableState.AddTransferTasks(&persistence.RecordWorkflowStartedTask{
 		// TaskID and VisibilityTimestamp are set by shard context
@@ -392,7 +392,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateActivityTransferTasks(
 ) error {
 
 	attr := event.ActivityTaskScheduledEventAttributes
-	activityScheduleID := event.GetEventID()
+	activityScheduleID := event.ID
 
 	activityInfo, ok := r.mutableState.GetActivityInfo(activityScheduleID)
 	if !ok {
@@ -453,7 +453,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateChildWorkflowTasks(
 ) error {
 
 	attr := event.StartChildWorkflowExecutionInitiatedEventAttributes
-	childWorkflowScheduleID := event.GetEventID()
+	childWorkflowScheduleID := event.ID
 	childWorkflowTargetDomain := attr.GetDomain()
 
 	childWorkflowInfo, ok := r.mutableState.GetChildExecutionInfo(childWorkflowScheduleID)
@@ -502,8 +502,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateRequestCancelExternalTasks(
 ) error {
 
 	attr := event.RequestCancelExternalWorkflowExecutionInitiatedEventAttributes
-	scheduleID := event.GetEventID()
-	version := event.GetVersion()
+	scheduleID := event.ID
+	version := event.Version
 	targetDomainName := attr.GetDomain()
 	targetWorkflowID := attr.GetWorkflowExecution().GetWorkflowID()
 	targetRunID := attr.GetWorkflowExecution().GetRunID()
@@ -553,8 +553,8 @@ func (r *mutableStateTaskGeneratorImpl) GenerateSignalExternalTasks(
 ) error {
 
 	attr := event.SignalExternalWorkflowExecutionInitiatedEventAttributes
-	scheduleID := event.GetEventID()
-	version := event.GetVersion()
+	scheduleID := event.ID
+	version := event.Version
 	targetDomainName := attr.GetDomain()
 	targetWorkflowID := attr.GetWorkflowExecution().GetWorkflowID()
 	targetRunID := attr.GetWorkflowExecution().GetRunID()

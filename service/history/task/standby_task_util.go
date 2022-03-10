@@ -166,7 +166,7 @@ func getHistoryResendInfo(
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryResendInfo(lastItem.GetEventID(), lastItem.GetVersion()), nil
+	return newHistoryResendInfo(lastItem.EventID, lastItem.Version), nil
 }
 
 func getStandbyPostActionFn(

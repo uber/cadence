@@ -580,7 +580,7 @@ var (
 
 func generateEvent(modifier func(e *types.HistoryEvent)) types.HistoryEvent {
 	e := types.HistoryEvent{
-		EventID:   EventID1,
+		ID:        EventID1,
 		Timestamp: &Timestamp1,
 		Version:   Version1,
 		TaskID:    TaskID,

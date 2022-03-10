@@ -746,7 +746,7 @@ func (s *cliAppSuite) TestBreakLongWords() {
 func (s *cliAppSuite) TestAnyToString() {
 	arg := strings.Repeat("LongText", 80)
 	event := &types.HistoryEvent{
-		EventID:   1,
+		ID:        1,
 		EventType: &eventType,
 		WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
 			WorkflowType:                        &types.WorkflowType{Name: "code.uber.internal/devexp/cadence-samples.git/cmd/samples/recipes/helloworld.Workflow"},

@@ -138,7 +138,7 @@ func (r *branchManagerImpl) prepareVersionHistory(
 	newVersionHistoryIndex, err := r.createNewBranch(
 		ctx,
 		versionHistory.GetBranchToken(),
-		lcaVersionHistoryItem.GetEventID(),
+		lcaVersionHistoryItem.EventID,
 		newVersionHistory,
 	)
 	if err != nil {
@@ -207,7 +207,7 @@ func (r *branchManagerImpl) verifyEventsOrder(
 	if err != nil {
 		return false, err
 	}
-	nextEventID := lastVersionHistoryItem.GetEventID() + 1
+	nextEventID := lastVersionHistoryItem.EventID + 1
 
 	if incomingFirstEventID < nextEventID {
 		// duplicate replication task
@@ -220,8 +220,8 @@ func (r *branchManagerImpl) verifyEventsOrder(
 			executionInfo.DomainID,
 			executionInfo.WorkflowID,
 			executionInfo.RunID,
-			common.Int64Ptr(lastVersionHistoryItem.GetEventID()),
-			common.Int64Ptr(lastVersionHistoryItem.GetVersion()),
+			common.Int64Ptr(lastVersionHistoryItem.EventID),
+			common.Int64Ptr(lastVersionHistoryItem.Version),
 			common.Int64Ptr(incomingFirstEventID),
 			common.Int64Ptr(incomingFirstEventVersion))
 	}
