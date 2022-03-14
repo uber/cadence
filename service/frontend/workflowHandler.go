@@ -52,6 +52,7 @@ import (
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"github.com/uber/cadence/service/worker/watchdog"
 )
 
 const (
@@ -676,6 +677,13 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		tag.WorkflowRunID(matchingResp.GetWorkflowExecution().GetRunID())}...)
 	resp, err = wh.createPollForDecisionTaskResponse(ctx, scope, domainID, matchingResp, matchingResp.GetBranchToken())
 	if err != nil {
+		if err == persistence.ErrCorruptedHistory {
+			watchDogClient := watchdog.NewClient(wh.GetLogger(), wh.GetSDKClient())
+			watchDogClient.ReportCorruptWorkflow(
+				domainName,
+				matchingResp.GetWorkflowExecution().GetWorkflowID(),
+				matchingResp.GetWorkflowExecution().GetRunID())
+		}
 		return nil, wh.error(err, scope, tags...)
 	}
 	return resp, nil

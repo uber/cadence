@@ -54,7 +54,7 @@ const (
 )
 
 var (
-	ErrCorruptedHistory = &types.InternalDataInconsistencyError{Message: "corrupted history event batch, eventID is not continouous"}
+	ErrCorruptedHistory = &types.InternalDataInconsistencyError{Message: "corrupted history event batch, eventID is not continuous"}
 )
 
 var _ HistoryManager = (*historyV2ManagerImpl)(nil)
