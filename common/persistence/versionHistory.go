@@ -54,7 +54,7 @@ func NewVersionHistoryItemFromInternalType(
 		panic("version history item is null")
 	}
 
-	return NewVersionHistoryItem(input.GetEventID(), input.GetVersion())
+	return NewVersionHistoryItem(input.EventID, input.Version)
 }
 
 // Duplicate duplicate VersionHistoryItem
@@ -70,16 +70,6 @@ func (item *VersionHistoryItem) ToInternalType() *types.VersionHistoryItem {
 		EventID: item.EventID,
 		Version: item.Version,
 	}
-}
-
-// GetEventID return the event ID
-func (item *VersionHistoryItem) GetEventID() int64 {
-	return item.EventID
-}
-
-// GetVersion return the event ID
-func (item *VersionHistoryItem) GetVersion() int64 {
-	return item.Version
 }
 
 // Equals test if this version history itme and input version history item  are the same
@@ -242,14 +232,14 @@ func (v *VersionHistory) ContainsItem(
 
 	prevEventID := common.FirstEventID - 1
 	for _, currentItem := range v.Items {
-		if item.GetVersion() == currentItem.GetVersion() {
-			if prevEventID < item.GetEventID() && item.GetEventID() <= currentItem.GetEventID() {
+		if item.Version == currentItem.Version {
+			if prevEventID < item.EventID && item.EventID <= currentItem.EventID {
 				return true
 			}
-		} else if item.GetVersion() < currentItem.GetVersion() {
+		} else if item.Version < currentItem.Version {
 			return false
 		}
-		prevEventID = currentItem.GetEventID()
+		prevEventID = currentItem.EventID
 	}
 	return false
 }
@@ -328,7 +318,7 @@ func (v *VersionHistory) GetEventVersion(
 	if err != nil {
 		return 0, err
 	}
-	if eventID < common.FirstEventID || eventID > lastItem.GetEventID() {
+	if eventID < common.FirstEventID || eventID > lastItem.EventID {
 		return 0, &types.BadRequestError{Message: "input event ID is not in range."}
 	}
 
@@ -336,8 +326,8 @@ func (v *VersionHistory) GetEventVersion(
 	// so the fist item with item event ID >= input event ID
 	// the item version is the result
 	for _, currentItem := range v.Items {
-		if eventID <= currentItem.GetEventID() {
-			return currentItem.GetVersion(), nil
+		if eventID <= currentItem.EventID {
+			return currentItem.Version, nil
 		}
 	}
 	return 0, &types.BadRequestError{Message: "input event ID is not in range."}
@@ -572,7 +562,7 @@ func (h *VersionHistories) IsRebuilt() (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		if lastItem.GetVersion() > currentLastItem.GetVersion() {
+		if lastItem.Version > currentLastItem.Version {
 			return true, nil
 		}
 	}

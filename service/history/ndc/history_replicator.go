@@ -339,8 +339,8 @@ func (r *historyReplicatorImpl) applyNonStartEventsPrepareBranch(
 	doContinue, versionHistoryIndex, err := branchManager.prepareVersionHistory(
 		ctx,
 		incomingVersionHistory,
-		task.getFirstEvent().GetEventID(),
-		task.getFirstEvent().GetVersion(),
+		task.getFirstEvent().ID,
+		task.getFirstEvent().Version,
 	)
 	switch err.(type) {
 	case nil:
@@ -497,8 +497,8 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 ) error {
 
 	versionHistoryItem := persistence.NewVersionHistoryItem(
-		task.getLastEvent().GetEventID(),
-		task.getLastEvent().GetVersion(),
+		task.getLastEvent().ID,
+		task.getLastEvent().Version,
 	)
 	versionHistories := mutableState.GetVersionHistories()
 	if versionHistories == nil {
@@ -602,13 +602,13 @@ func (r *historyReplicatorImpl) applyNonStartEventsMissingMutableState(
 			task.getRunID(),
 			nil,
 			nil,
-			common.Int64Ptr(firstEvent.GetEventID()),
-			common.Int64Ptr(firstEvent.GetVersion()),
+			common.Int64Ptr(firstEvent.ID),
+			common.Int64Ptr(firstEvent.Version),
 		)
 	}
 
 	decisionTaskEvent := task.getFirstEvent()
-	baseEventID := decisionTaskEvent.GetEventID() - 1
+	baseEventID := decisionTaskEvent.ID - 1
 	baseRunID, newRunID, baseEventVersion := task.getWorkflowResetMetadata()
 
 	workflowResetter := r.newWorkflowResetter(
@@ -625,7 +625,7 @@ func (r *historyReplicatorImpl) applyNonStartEventsMissingMutableState(
 		task.getEventTime(),
 		baseEventID,
 		baseEventVersion,
-		task.getFirstEvent().GetEventID(),
+		task.getFirstEvent().ID,
 		task.getVersion(),
 	)
 	if err != nil {

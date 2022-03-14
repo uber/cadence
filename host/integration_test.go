@@ -3786,10 +3786,10 @@ func (s *IntegrationSuite) TestBufferedEventsOutOfOrder() {
 	s.NotNil(scheduleEvent)
 	s.NotNil(startedEvent)
 	s.NotNil(completedEvent)
-	s.True(startedEvent.GetEventID() < completedEvent.GetEventID())
-	s.Equal(scheduleEvent.GetEventID(), startedEvent.ActivityTaskStartedEventAttributes.GetScheduledEventID())
-	s.Equal(scheduleEvent.GetEventID(), completedEvent.ActivityTaskCompletedEventAttributes.GetScheduledEventID())
-	s.Equal(startedEvent.GetEventID(), completedEvent.ActivityTaskCompletedEventAttributes.GetStartedEventID())
+	s.True(startedEvent.ID < completedEvent.ID)
+	s.Equal(scheduleEvent.ID, startedEvent.ActivityTaskStartedEventAttributes.GetScheduledEventID())
+	s.Equal(scheduleEvent.ID, completedEvent.ActivityTaskCompletedEventAttributes.GetScheduledEventID())
+	s.Equal(startedEvent.ID, completedEvent.ActivityTaskCompletedEventAttributes.GetStartedEventID())
 	s.True(workflowComplete)
 }
 

@@ -117,7 +117,7 @@ func (s *NDCIntegrationTestSuite) TestReplicationMessageDLQ() {
 
 	expectedDLQMsgs := map[int64]bool{}
 	for _, batch := range historyBatch {
-		firstEventID := batch.Events[0].GetEventID()
+		firstEventID := batch.Events[0].ID
 		expectedDLQMsgs[firstEventID] = true
 	}
 

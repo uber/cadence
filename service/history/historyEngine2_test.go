@@ -531,7 +531,7 @@ func (s *engine2Suite) TestRecordDecisionTaskRetrySameRequest() {
 	s.NotNil(response)
 	s.Equal("wType", response.WorkflowType.Name)
 	s.True(response.PreviousStartedEventID == nil)
-	s.Equal(startedEventID.EventID, response.StartedEventID)
+	s.Equal(startedEventID.ID, response.StartedEventID)
 }
 
 func (s *engine2Suite) TestRecordDecisionTaskRetryDifferentRequest() {
@@ -728,7 +728,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 
 	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
 	decisionCompletedEvent := test.AddDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
-	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.EventID, activityID,
+	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.ID, activityID,
 		activityType, tl, activityInput, 100, 10, 1, 5)
 
 	ms1 := execution.CreatePersistenceMutableState(msBuilder)
@@ -742,7 +742,7 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 
 	s.mockEventsCache.EXPECT().GetEvent(
 		gomock.Any(), gomock.Any(), domainID, workflowExecution.GetWorkflowID(), workflowExecution.GetRunID(),
-		decisionCompletedEvent.GetEventID(), scheduledEvent.GetEventID(), gomock.Any(),
+		decisionCompletedEvent.ID, scheduledEvent.ID, gomock.Any(),
 	).Return(scheduledEvent, nil)
 	response, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
 		DomainUUID:        domainID,

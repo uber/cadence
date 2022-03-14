@@ -214,7 +214,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 	runID := uuid.New()
 	events := []*types.HistoryEvent{
 		{
-			EventID: 1,
+			ID:      1,
 			Version: 1,
 		},
 	}

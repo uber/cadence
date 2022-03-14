@@ -580,8 +580,8 @@ func (s *HistoryIteratorSuite) TestNext_Success_SameHistoryDifferentPage() {
 
 		s.Equal(history1.Header, history2.Header)
 		s.Equal(len(history1.Body), len(history2.Body))
-		s.Equal(expectedFirstEventID[i], history1.Body[0].Events[0].GetEventID())
-		s.Equal(expectedFirstEventID[i], history2.Body[0].Events[0].GetEventID())
+		s.Equal(expectedFirstEventID[i], history1.Body[0].Events[0].ID)
+		s.Equal(expectedFirstEventID[i], history2.Body[0].Events[0].ID)
 	}
 	expectedIteratorState := historyIteratorState{
 		NextEventID:       0,
@@ -665,7 +665,7 @@ func (s *HistoryIteratorSuite) constructHistoryBatches(batchInfo []int, page pag
 		events := []*types.HistoryEvent{}
 		for i := 0; i < numEvents; i++ {
 			event := &types.HistoryEvent{
-				EventID: eventsID,
+				ID:      eventsID,
 				Version: page.firstEventFailoverVersion,
 			}
 			eventsID++

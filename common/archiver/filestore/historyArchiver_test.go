@@ -208,7 +208,7 @@ func (s *historyArchiverSuite) TestArchive_Fail_HistoryMutated() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   common.FirstEventID + 1,
+					ID:        common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion + 1,
 				},
@@ -276,7 +276,7 @@ func (s *historyArchiverSuite) TestArchive_Skip() {
 			{
 				Events: []*types.HistoryEvent{
 					{
-						EventID:   common.FirstEventID,
+						ID:        common.FirstEventID,
 						Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 						Version:   testCloseFailoverVersion,
 					},
@@ -313,12 +313,12 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   common.FirstEventID + 1,
+					ID:        common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion,
 				},
 				{
-					EventID:   common.FirstEventID + 2,
+					ID:        common.FirstEventID + 2,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion,
 				},
@@ -327,7 +327,7 @@ func (s *historyArchiverSuite) TestArchive_Success() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   testNextEventID - 1,
+					ID:        testNextEventID - 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion,
 				},
@@ -578,7 +578,7 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   testNextEventID - 1,
+					ID:        testNextEventID - 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   1,
 				},
@@ -590,12 +590,12 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   common.FirstEventID + 1,
+					ID:        common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion,
 				},
 				{
-					EventID:   common.FirstEventID + 1,
+					ID:        common.FirstEventID + 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion,
 				},
@@ -604,7 +604,7 @@ func (s *historyArchiverSuite) setupHistoryDirectory() {
 		{
 			Events: []*types.HistoryEvent{
 				{
-					EventID:   testNextEventID - 1,
+					ID:        testNextEventID - 1,
 					Timestamp: common.Int64Ptr(time.Now().UnixNano()),
 					Version:   testCloseFailoverVersion,
 				},

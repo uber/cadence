@@ -125,7 +125,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 			}
 
 			columns := []string{}
-			columns = append(columns, strconv.FormatInt(e.GetEventID(), 10))
+			columns = append(columns, strconv.FormatInt(e.ID, 10))
 
 			if printRawTime {
 				columns = append(columns, strconv.FormatInt(e.GetTimestamp(), 10))
@@ -133,7 +133,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 				columns = append(columns, convertTime(e.GetTimestamp(), false))
 			}
 			if printVersion {
-				columns = append(columns, fmt.Sprintf("(Version: %v)", e.GetVersion()))
+				columns = append(columns, fmt.Sprintf("(Version: %v)", e.Version))
 			}
 
 			columns = append(columns, ColorEvent(e), HistoryEventToString(e, false, maxFieldLength))
@@ -434,9 +434,9 @@ func printWorkflowProgress(c *cli.Context, domain, wid, rid string) {
 				isTimeElapseExist = false
 			}
 			if showDetails {
-				fmt.Printf("  %d, %s, %s, %s\n", event.GetEventID(), convertTime(event.GetTimestamp(), false), ColorEvent(event), HistoryEventToString(event, true, maxFieldLength))
+				fmt.Printf("  %d, %s, %s, %s\n", event.ID, convertTime(event.GetTimestamp(), false), ColorEvent(event), HistoryEventToString(event, true, maxFieldLength))
 			} else {
-				fmt.Printf("  %d, %s, %s\n", event.GetEventID(), convertTime(event.GetTimestamp(), false), ColorEvent(event))
+				fmt.Printf("  %d, %s, %s\n", event.ID, convertTime(event.GetTimestamp(), false), ColorEvent(event))
 			}
 			lastEvent = event
 		}
@@ -2076,7 +2076,7 @@ func getFirstDecisionTaskByType(
 
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
-				decisionFinishID = e.GetEventID()
+				decisionFinishID = e.ID
 				return decisionFinishID, nil
 			}
 		}
@@ -2165,7 +2165,7 @@ func getLastDecisionTaskByType(
 
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == decisionType {
-				decisionEventID := e.GetEventID()
+				decisionEventID := e.ID
 				fixedSizeQueue = append(fixedSizeQueue, decisionEventID)
 				if len(fixedSizeQueue) > size {
 					fixedSizeQueue = fixedSizeQueue[1:]
@@ -2222,7 +2222,7 @@ func getLastContinueAsNewID(ctx context.Context, domain, wid, rid string, fronte
 		}
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == types.EventTypeDecisionTaskCompleted {
-				decisionFinishID = e.GetEventID()
+				decisionFinishID = e.ID
 			}
 		}
 		if len(resp.NextPageToken) != 0 {
@@ -2339,7 +2339,7 @@ OuterLoop:
 		for _, e := range resp.GetHistory().GetEvents() {
 			if e.GetEventType() == types.EventTypeDecisionTaskCompleted {
 				if e.GetTimestamp() >= earliestTime {
-					decisionFinishID = e.GetEventID()
+					decisionFinishID = e.ID
 					break OuterLoop
 				}
 			}

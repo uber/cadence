@@ -1155,7 +1155,7 @@ func newDecisionTaskStartedEventWithInfo(eventID, timestamp int64, ScheduledEven
 
 func createNewHistoryEvent(eventID int64, eventType types.EventType, timestamp int64) *types.HistoryEvent {
 	historyEvent := &types.HistoryEvent{}
-	historyEvent.EventID = eventID
+	historyEvent.ID = eventID
 	historyEvent.Timestamp = common.Int64Ptr(timestamp)
 	historyEvent.EventType = eventType.Ptr()
 

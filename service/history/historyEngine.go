@@ -3195,11 +3195,11 @@ func (e *historyEngineImpl) ReapplyEvents(
 				return nil, err
 			}
 			for _, event := range reapplyEvents {
-				if event.GetVersion() == lastWriteVersion {
+				if event.Version == lastWriteVersion {
 					// The reapply is from the same cluster. Ignoring.
 					continue
 				}
-				dedupResource := definition.NewEventReappliedID(runID, event.GetEventID(), event.GetVersion())
+				dedupResource := definition.NewEventReappliedID(runID, event.ID, event.Version)
 				if mutableState.IsResourceDuplicated(dedupResource) {
 					// already apply the signal
 					continue
