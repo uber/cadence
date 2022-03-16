@@ -2171,6 +2171,11 @@ const (
 	// Value type: Int
 	// Default value: "" => means no limitation
 	ESAnalyzerLimitToTypes
+	// ESAnalyzerEnableAvgDurationBasedChecks controls if we want to enable avg duration based task refreshes
+	// KeyName: worker.ESAnalyzerEnableAvgDurationBasedChecks
+	// Value type: Bool
+	// Default value: false
+	ESAnalyzerEnableAvgDurationBasedChecks
 	// ESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
 	// KeyName: worker.ESAnalyzerLimitToDomains
 	// Value type: Int
@@ -2178,7 +2183,7 @@ const (
 	ESAnalyzerLimitToDomains
 	// ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types
 	// KeyName: worker.ESAnalyzerWorkflowDurationWarnThresholds
-	// Value type: string (json of a dictionary {"<domainName>/<workflowType>":<value>,...})
+	// Value type: string [{"domainName":"<domain>", "wfType":"<workflowType>", "threshold":"<duration>", "refresh":<shouldRefresh>}]
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
 
@@ -2581,6 +2586,7 @@ var Keys = map[Key]string{
 	ESAnalyzerBufferWaitTime:                 "worker.ESAnalyzerBufferWaitTime",
 	ESAnalyzerMinNumWorkflowsForAvg:          "worker.ESAnalyzerMinNumWorkflowsForAvg",
 	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerEnableAvgDurationBasedChecks:   "worker.ESAnalyzerEnableAvgDurationBasedChecks",
 	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
 	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 
