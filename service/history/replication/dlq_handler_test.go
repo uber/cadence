@@ -170,7 +170,7 @@ func (s *dlqHandlerSuite) TestPurgeMessages_OK() {
 
 func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	ctx := context.Background()
-	lastMessageID := int64(1)
+	lastMessageID := int64(2)
 	pageSize := 1
 	pageToken := []byte{}
 
@@ -182,6 +182,13 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 				RunID:      uuid.New(),
 				TaskType:   0,
 				TaskID:     1,
+			},
+			{
+				DomainID:   uuid.New(),
+				WorkflowID: uuid.New(),
+				RunID:      uuid.New(),
+				TaskType:   0,
+				TaskID:     2,
 			},
 		},
 	}
@@ -198,7 +205,7 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	s.mockClientBean.EXPECT().GetRemoteAdminClient(s.sourceCluster).Return(s.adminClient).AnyTimes()
 	replicationTask := &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskTypeHistory.Ptr(),
-		SourceTaskID: lastMessageID,
+		SourceTaskID: 1,
 	}
 	s.adminClient.EXPECT().
 		GetDLQReplicationMessages(ctx, gomock.Any()).
