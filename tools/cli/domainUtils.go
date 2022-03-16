@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/client"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -201,20 +200,7 @@ var (
 		},
 	}
 
-	adminDomainCommonFlags = []cli.Flag{
-		cli.StringFlag{
-			Name:  FlagServiceConfigDirWithAlias,
-			Usage: "Required service configuration dir",
-		},
-		cli.StringFlag{
-			Name:  FlagServiceEnvWithAlias,
-			Usage: "Optional service env for loading service configuration",
-		},
-		cli.StringFlag{
-			Name:  FlagServiceZoneWithAlias,
-			Usage: "Optional service zone for loading service configuration",
-		},
-	}
+	adminDomainCommonFlags = getDBFlags()
 
 	adminRegisterDomainFlags = append(
 		registerDomainFlags,
@@ -247,19 +233,18 @@ func initializeAdminDomainHandler(
 	context *cli.Context,
 ) domain.Handler {
 
-	configuration := loadConfig(context)
+	configuration, err := cFactory.ServerConfig(context)
+	if err != nil {
+		ErrorAndExit("Unable to load config.", err)
+	}
+
 	metricsClient := initializeMetricsClient()
 	logger := initializeLogger(configuration)
 	clusterMetadata := initializeClusterMetadata(
 		configuration,
 		logger,
 	)
-	metadataMgr := initializeDomainMgr(
-		configuration,
-		clusterMetadata,
-		metricsClient,
-		logger,
-	)
+	metadataMgr := initializeDomainManager(context)
 	dynamicConfig := initializeDynamicConfig(configuration, logger)
 	return initializeDomainHandler(
 		logger,
@@ -317,28 +302,6 @@ func initializeLogger(
 		ErrorAndExit("failed to create zap logger, err: ", err)
 	}
 	return loggerimpl.NewLogger(zapLogger)
-}
-
-func initializeDomainMgr(
-	serviceConfig *config.Config,
-	clusterMetadata cluster.Metadata,
-	metricsClient metrics.Client,
-	logger log.Logger,
-) persistence.DomainManager {
-
-	pConfig := serviceConfig.Persistence
-	pFactory := client.NewFactory(
-		&pConfig,
-		func() float64 { return dependencyMaxQPS },
-		clusterMetadata.GetCurrentClusterName(),
-		metricsClient,
-		logger,
-	)
-	metadata, err := pFactory.NewDomainManager()
-	if err != nil {
-		ErrorAndExit("Unable to initialize metadata manager.", err)
-	}
-	return metadata
 }
 
 func initializeClusterMetadata(

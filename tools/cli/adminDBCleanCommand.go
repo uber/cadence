@@ -153,7 +153,7 @@ func fixExecution(
 	invariants []executions.InvariantFactory,
 	execution *store.ScanOutputEntity,
 ) invariant.ManagerFixResult {
-	execManager := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID(), 0)
+	execManager := initializeExecutionStore(c, execution.Execution.(entity.Entity).GetShardID())
 	defer execManager.Close()
 
 	historyV2Mgr := initializeHistoryManager(c)
