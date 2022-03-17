@@ -21,8 +21,13 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/urfave/cli"
@@ -136,15 +141,13 @@ func AdminGetDLQMessages(c *cli.Context) {
 func AdminPurgeDLQMessages(c *cli.Context) {
 	dlqType := getRequiredOption(c, FlagDLQType)
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-	lowerShardBound := c.Int(FlagLowerShardBound)
-	upperShardBound := c.Int(FlagUpperShardBound)
 	var lastMessageID *int64
 	if c.IsSet(FlagLastMessageID) {
 		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
 	}
 
 	adminClient := cFactory.ServerAdminClient(c)
-	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
+	for shardID := range getShards(c) {
 		ctx, cancel := newContext(c)
 		err := adminClient.PurgeDLQMessages(ctx, &types.PurgeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
@@ -166,8 +169,6 @@ func AdminPurgeDLQMessages(c *cli.Context) {
 func AdminMergeDLQMessages(c *cli.Context) {
 	dlqType := getRequiredOption(c, FlagDLQType)
 	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-	lowerShardBound := c.Int(FlagLowerShardBound)
-	upperShardBound := c.Int(FlagUpperShardBound)
 	var lastMessageID *int64
 	if c.IsSet(FlagLastMessageID) {
 		lastMessageID = common.Int64Ptr(c.Int64(FlagLastMessageID))
@@ -175,7 +176,7 @@ func AdminMergeDLQMessages(c *cli.Context) {
 
 	adminClient := cFactory.ServerAdminClient(c)
 ShardIDLoop:
-	for shardID := lowerShardBound; shardID <= upperShardBound; shardID++ {
+	for shardID := range getShards(c) {
 		request := &types.MergeDLQMessagesRequest{
 			Type:                  toQueueType(dlqType),
 			SourceCluster:         sourceCluster,
@@ -201,6 +202,54 @@ ShardIDLoop:
 		}
 		fmt.Printf("Successfully merged all messages in shard %v.\n", shardID)
 	}
+}
+
+func getShards(c *cli.Context) chan int {
+	// Check if we have stdin available
+	stat, err := os.Stdin.Stat()
+	if err == nil && (stat.Mode()&os.ModeCharDevice) == 0 {
+		return readShardsFromStdin()
+	}
+
+	return generateShardRangeFromFlags(c)
+}
+
+func generateShardRangeFromFlags(c *cli.Context) chan int {
+	shards := make(chan int)
+	go func() {
+		lower := c.Int(FlagLowerShardBound)
+		upper := c.Int(FlagUpperShardBound)
+		for shard := lower; shard <= upper; shard++ {
+			shards <- shard
+		}
+		close(shards)
+	}()
+	return shards
+}
+
+func readShardsFromStdin() chan int {
+	shards := make(chan int)
+	go func() {
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			line, err := reader.ReadString('\n')
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				fmt.Printf("Unable to read from stdin: %v", err)
+				continue
+			}
+			shard, err := strconv.ParseInt(strings.TrimSpace(line), 10, 64)
+			if err != nil {
+				fmt.Printf("Failed to parse shard id: %q\n", line)
+				continue
+			}
+			shards <- int(shard)
+		}
+		close(shards)
+	}()
+	return shards
 }
 
 func toQueueType(dlqType string) *types.DLQType {
