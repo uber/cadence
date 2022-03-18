@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -115,7 +114,6 @@ var (
 	colorMagenta = color.New(color.FgMagenta).SprintFunc()
 	colorGreen   = color.New(color.FgGreen).SprintFunc()
 
-	tableHeaderBlue         = tablewriter.Colors{tablewriter.FgHiBlueColor}
 	optionErr               = "there is something wrong with your command options"
 	osExit                  = os.Exit
 	workflowClosedStatusMap = map[string]types.WorkflowExecutionCloseStatus{

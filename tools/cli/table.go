@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+var tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
+
 // TableOptions allows passing optional flags for altering rendered table
 type TableOptions struct {
 	// OptionalColumns may contain column header names which can be hidden
