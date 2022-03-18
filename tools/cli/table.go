@@ -43,8 +43,8 @@ type TableOptions struct {
 	// Border specified whether to render table border
 	Border bool
 
-	// NoColor will not use color characters while printing table
-	NoColor bool
+	// Color will use coloring characters while printing table
+	Color bool
 
 	// PrintRawTime will print time as int64 unix nanos
 	PrintRawTime bool
@@ -56,7 +56,7 @@ type TableOptions struct {
 func RenderTable(w io.Writer, slice interface{}, opts TableOptions) {
 	sliceValue := reflect.ValueOf(slice)
 	if sliceValue.Kind() != reflect.Slice {
-		panic("table must be a slice")
+		panic(fmt.Errorf("table must be a slice, provided: %s", sliceValue.Kind()))
 	}
 
 	// No elements - nothing to render
@@ -66,7 +66,7 @@ func RenderTable(w io.Writer, slice interface{}, opts TableOptions) {
 
 	firstElem := sliceValue.Index(0)
 	if firstElem.Kind() != reflect.Struct {
-		panic("slice element must be a struct")
+		panic(fmt.Errorf("table slice element must be a struct, provided: %s", firstElem.Kind()))
 	}
 
 	table := tablewriter.NewWriter(w)
@@ -96,7 +96,7 @@ func RenderTable(w io.Writer, slice interface{}, opts TableOptions) {
 		}
 		if r == 0 {
 			table.SetHeader(headers)
-			if !opts.NoColor {
+			if opts.Color {
 				table.SetHeaderColor(colors...)
 			}
 		}

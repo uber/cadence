@@ -1009,6 +1009,7 @@ func workflowTableOptions(c *cli.Context) TableOptions {
 	isScanQueryOpen := isQueryOpen(c.String(FlagListQuery))
 
 	return TableOptions{
+		Color:         true,
 		PrintDateTime: c.Bool(FlagPrintDateTime),
 		PrintRawTime:  c.Bool(FlagPrintRawTime),
 		OptionalColumns: map[string]bool{

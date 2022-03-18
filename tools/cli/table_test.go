@@ -50,7 +50,7 @@ func Test_RenderTable(t *testing.T) {
 	}
 
 	builder := &strings.Builder{}
-	RenderTable(builder, table, TableOptions{NoColor: true})
+	RenderTable(builder, table, TableOptions{})
 	assert.Equal(t, ""+
 		"        STRING        | INTEGER | BOOL  |   TIME   | MEMO | SEARCH ATTRIBUTES  \n"+
 		"  text                |     123 | true  | 03:04:05 | A=AA | X=XX               \n"+
@@ -58,12 +58,15 @@ func Test_RenderTable(t *testing.T) {
 		builder.String())
 
 	builder = &strings.Builder{}
-	RenderTable(builder, table, TableOptions{NoColor: true, OptionalColumns: map[string]bool{"memo": true, "search attributes": false}, PrintDateTime: true})
+	RenderTable(builder, table, TableOptions{OptionalColumns: map[string]bool{"memo": true, "search attributes": false}, PrintDateTime: true})
 	assert.Equal(t, ""+
 		"        STRING        | INTEGER | BOOL  |         TIME         | MEMO  \n"+
 		"  text                |     123 | true  | 2000-01-02T03:04:05Z | A=AA  \n"+
 		"  ...g long long long |     456 | false | 2000-11-12T13:14:15Z |       \n",
 		builder.String())
+
+	assert.PanicsWithError(t, "table must be a slice, provided: int", func() { RenderTable(nil, 123, TableOptions{}) })
+	assert.PanicsWithError(t, "table slice element must be a struct, provided: ptr", func() { RenderTable(nil, []*testRow{{}}, TableOptions{}) })
 }
 
 type testRow struct {
