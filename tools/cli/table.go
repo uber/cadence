@@ -72,7 +72,7 @@ func RenderTable(w io.Writer, slice interface{}, opts TableOptions) {
 	table := tablewriter.NewWriter(w)
 	table.SetBorder(opts.Border)
 	table.SetColumnSeparator("|")
-	table.SetHeaderLine(false)
+	table.SetHeaderLine(opts.Border)
 
 	for r := 0; r < sliceValue.Len(); r++ {
 		var row []string
