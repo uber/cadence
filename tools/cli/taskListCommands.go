@@ -22,11 +22,24 @@ package cli
 
 import (
 	"os"
+	"time"
 
 	"github.com/uber/cadence/common/types"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
+)
+
+type (
+	TaskListPollerRow struct {
+		ActivityIdentity string    `header:"Activity Poller Identity"`
+		DecisionIdentity string    `header:"Decision Poller Identity"`
+		LastAccessTime   time.Time `header:"Last Access Time"`
+	}
+	TaskListPartitionRow struct {
+		ActivityPartition string `header:"Activity Task List Partition"`
+		DecisionPartition string `header:"Decision Task List Partition"`
+		Host              string `header:"Host"`
+	}
 )
 
 // DescribeTaskList show pollers info of a given tasklist
@@ -56,20 +69,7 @@ func DescribeTaskList(c *cli.Context) {
 		ErrorAndExit(colorMagenta("No poller for tasklist: "+taskList), nil)
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	if taskListType.String() == types.TaskListTypeActivity.String() {
-		table.SetHeader([]string{"Activity Poller Identity", "Last Access Time"})
-	} else {
-		table.SetHeader([]string{"Decision Poller Identity", "Last Access Time"})
-	}
-	table.SetHeaderLine(false)
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-	for _, poller := range pollers {
-		table.Append([]string{poller.GetIdentity(), convertTime(poller.GetLastAccessTime(), false)})
-	}
-	table.Render()
+	printTaskListPollers(pollers, taskListType)
 }
 
 // ListTaskListPartitions gets all the tasklist partition and host information.
@@ -97,15 +97,31 @@ func ListTaskListPartitions(c *cli.Context) {
 	}
 }
 
-func printTaskListPartitions(taskListType string, partitions []*types.TaskListPartitionMetadata) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	table.SetHeader([]string{taskListType + "TaskListPartition", "Host"})
-	table.SetHeaderLine(false)
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-	for _, partition := range partitions {
-		table.Append([]string{partition.GetKey(), partition.GetOwnerHostName()})
+func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskListType) {
+	table := []TaskListPollerRow{}
+	for _, poller := range pollers {
+		table = append(table, TaskListPollerRow{
+			ActivityIdentity: poller.GetIdentity(),
+			DecisionIdentity: poller.GetIdentity(),
+			LastAccessTime:   time.Unix(0, poller.GetLastAccessTime())})
 	}
-	table.Render()
+	RenderTable(os.Stdout, table, TableOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
+		"Activity Poller Identity": taskListType == types.TaskListTypeActivity,
+		"Decision Poller Identity": taskListType == types.TaskListTypeDecision,
+	}})
+}
+
+func printTaskListPartitions(taskListType string, partitions []*types.TaskListPartitionMetadata) {
+	table := []TaskListPartitionRow{}
+	for _, partition := range partitions {
+		table = append(table, TaskListPartitionRow{
+			ActivityPartition: partition.GetKey(),
+			DecisionPartition: partition.GetKey(),
+			Host:              partition.GetOwnerHostName(),
+		})
+	}
+	RenderTable(os.Stdout, table, TableOptions{Color: true, OptionalColumns: map[string]bool{
+		"Activity Task List Partition": taskListType == "Activity",
+		"Decision Task List Partition": taskListType == "Decision",
+	}})
 }
