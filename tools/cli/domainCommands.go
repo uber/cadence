@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/tools/common/flag"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/client/frontend"
@@ -453,39 +452,44 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	fmt.Printf(formatStr, descValues...)
 	if resp.Configuration.BadBinaries != nil {
 		fmt.Println("Bad binaries to reset:")
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(true)
-		table.SetColumnSeparator("|")
-		header := []string{"Binary Checksum", "Operator", "Start Time", "Reason"}
-		headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
-		table.SetHeader(header)
-		table.SetHeaderColor(headerColor...)
+		table := []BadBinaryRow{}
 		for cs, bin := range resp.Configuration.BadBinaries.Binaries {
-			row := []string{cs}
-			row = append(row, bin.GetOperator())
-			row = append(row, time.Unix(0, bin.GetCreatedTimeNano()).String())
-			row = append(row, bin.GetReason())
-			table.Append(row)
+			table = append(table, BadBinaryRow{
+				Checksum:  cs,
+				Operator:  bin.GetOperator(),
+				StartTime: time.Unix(0, bin.GetCreatedTimeNano()),
+				Reason:    bin.GetReason(),
+			})
 		}
-		table.Render()
+		RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true, PrintDateTime: true})
 	}
 	if resp.GetFailoverInfo() != nil {
 		info := resp.GetFailoverInfo()
 		fmt.Println("Graceful failover info:")
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetBorder(true)
-		table.SetColumnSeparator("|")
-		header := []string{"Failover Version", "Start Time", "Expire Time", "Completed Shard Count", "Pending Shard"}
-		table.SetHeader(header)
-		row := []string{}
-		row = append(row, fmt.Sprintf("%v", info.GetFailoverVersion()))
-		row = append(row, time.Unix(0, info.GetFailoverStartTimestamp()).String())
-		row = append(row, time.Unix(0, info.GetFailoverExpireTimestamp()).String())
-		row = append(row, fmt.Sprintf("%v", info.GetCompletedShardCount()))
-		row = append(row, fmt.Sprintf("%v", info.GetPendingShards()))
-		table.Append(row)
-		table.Render()
+		table := []FailoverInfoRow{{
+			FailoverVersion:     info.GetFailoverVersion(),
+			StartTime:           time.Unix(0, info.GetFailoverStartTimestamp()),
+			ExpireTime:          time.Unix(0, info.GetFailoverExpireTimestamp()),
+			CompletedShardCount: info.GetCompletedShardCount(),
+			PendingShard:        info.GetPendingShards(),
+		}}
+		RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true, PrintDateTime: true})
 	}
+}
+
+type BadBinaryRow struct {
+	Checksum  string    `header:"Binary Checksum"`
+	Operator  string    `header:"Operator"`
+	StartTime time.Time `header:"Start Time"`
+	Reason    string    `header:"Reason"`
+}
+
+type FailoverInfoRow struct {
+	FailoverVersion     int64     `header:"Failover Version"`
+	StartTime           time.Time `header:"Start Time"`
+	ExpireTime          time.Time `header:"Expire Time"`
+	CompletedShardCount int32     `header:"Completed Shard Count"`
+	PendingShard        []int32   `header:"Pending Shard"`
 }
 
 type DomainRow struct {
