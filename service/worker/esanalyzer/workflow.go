@@ -85,10 +85,11 @@ type (
 	}
 
 	LongRunCheckEntry struct {
-		DomainName   string
-		WorkflowType string
-		Threshold    time.Duration
-		Refresh      bool
+		DomainName      string
+		WorkflowType    string
+		Threshold       time.Duration
+		Refresh         bool
+		MaxNumWorkflows int
 	}
 )
 
@@ -285,10 +286,11 @@ func (w *Workflow) getLongRunCheckEntries(ctx context.Context) ([]LongRunCheckEn
 	}
 
 	var entries []struct {
-		DomainName   string
-		WorkflowType string
-		Threshold    string
-		Refresh      bool
+		DomainName      string
+		WorkflowType    string
+		Threshold       string
+		Refresh         bool
+		MaxNumWorkflows int
 	}
 	err := json.Unmarshal([]byte(workflowThresholds), &entries)
 	if err != nil {
@@ -308,10 +310,11 @@ func (w *Workflow) getLongRunCheckEntries(ctx context.Context) ([]LongRunCheckEn
 			continue
 		}
 		result = append(result, LongRunCheckEntry{
-			DomainName:   entry.DomainName,
-			WorkflowType: entry.WorkflowType,
-			Threshold:    threshold,
-			Refresh:      entry.Refresh,
+			DomainName:      entry.DomainName,
+			WorkflowType:    entry.WorkflowType,
+			Threshold:       threshold,
+			Refresh:         entry.Refresh,
+			MaxNumWorkflows: entry.MaxNumWorkflows,
 		})
 	}
 
@@ -335,7 +338,11 @@ func (w *Workflow) findLongRunningWorkflows(ctx context.Context, entry LongRunCh
 
 	maxNumWorkflows := 0
 	if entry.Refresh {
-		maxNumWorkflows = w.analyzer.config.ESAnalyzerNumWorkflowsToRefresh(entry.DomainName, entry.WorkflowType)
+		if entry.MaxNumWorkflows > 0 {
+			maxNumWorkflows = entry.MaxNumWorkflows
+		} else {
+			maxNumWorkflows = w.analyzer.config.ESAnalyzerNumWorkflowsToRefresh(entry.DomainName, entry.WorkflowType)
+		}
 	}
 	query, err := getLongRunningWorkflowsQuery(maxWorkflowStartTime, domainID, entry.WorkflowType, maxNumWorkflows)
 	if err != nil {

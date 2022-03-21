@@ -399,12 +399,13 @@ func (s *esanalyzerWorkflowTestSuite) TestGetLongRunCheckEntriesSingleEntry() {
 	s.Equal("SomeDomain", longRunningWorkflows[0].DomainName)
 	s.Equal("SomeWFType", longRunningWorkflows[0].WorkflowType)
 	s.Equal(2*time.Minute, longRunningWorkflows[0].Threshold)
+	s.Equal(0, longRunningWorkflows[0].MaxNumWorkflows)
 	s.Equal(true, longRunningWorkflows[0].Refresh)
 }
 
 func (s *esanalyzerWorkflowTestSuite) TestGetLongRunCheckEntriesMultipleEntries() {
 	s.config.ESAnalyzerWorkflowDurationWarnThresholds = dynamicconfig.GetStringPropertyFn(
-		`[{"DomainName":"d1", "WorkflowType":"t1", "Threshold":"2m", "Refresh":true},{"DomainName":"d2", "WorkflowType":"t2", "Threshold":"3m", "Refresh":false}]`,
+		`[{"DomainName":"d1", "WorkflowType":"t1", "Threshold":"2m", "Refresh":true},{"DomainName":"d2", "WorkflowType":"t2", "Threshold":"3m", "Refresh":false, "MaxNumWorkflows":1000000}]`,
 	)
 
 	actFuture, err := s.activityEnv.ExecuteActivity(s.workflow.getLongRunCheckEntries)
@@ -416,11 +417,13 @@ func (s *esanalyzerWorkflowTestSuite) TestGetLongRunCheckEntriesMultipleEntries(
 	s.Equal("d1", longRunningWorkflows[0].DomainName)
 	s.Equal("t1", longRunningWorkflows[0].WorkflowType)
 	s.Equal(2*time.Minute, longRunningWorkflows[0].Threshold)
+	s.Equal(0, longRunningWorkflows[0].MaxNumWorkflows)
 	s.Equal(true, longRunningWorkflows[0].Refresh)
 
 	s.Equal("d2", longRunningWorkflows[1].DomainName)
 	s.Equal("t2", longRunningWorkflows[1].WorkflowType)
 	s.Equal(3*time.Minute, longRunningWorkflows[1].Threshold)
+	s.Equal(1000000, longRunningWorkflows[1].MaxNumWorkflows)
 	s.Equal(false, longRunningWorkflows[1].Refresh)
 }
 

@@ -2183,7 +2183,7 @@ const (
 	ESAnalyzerLimitToDomains
 	// ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types
 	// KeyName: worker.ESAnalyzerWorkflowDurationWarnThresholds
-	// Value type: string [{"domainName":"<domain>", "wfType":"<workflowType>", "threshold":"<duration>", "refresh":<shouldRefresh>}]
+	// Value type: string [{"DomainName":"<domain>", "WorkflowType":"<workflowType>", "Threshold":"<duration>", "Refresh":<shouldRefresh>, "MaxNumWorkflows":<maxNumber>}]
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
 
