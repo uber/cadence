@@ -20,6 +20,8 @@
 
 package dynamicconfig
 
+import "math"
+
 // Key represents a key/property stored in dynamic config
 type Key int
 
@@ -30,6 +32,15 @@ func (k Key) String() string {
 	}
 	return keyName
 }
+
+// UnlimitedRPS represents an integer to use for "unlimited" RPS values.
+//
+// Since our ratelimiters do int/float conversions, and zero or negative values
+// result in not allowing any requests, math.MaxInt is unsafe:
+//   int(float64(int(math.MaxInt))) results in a negative number.
+//
+// Much higher values are possible, but we can't handle 2 billion RPS, this is good enough.
+const UnlimitedRPS = math.MaxInt32
 
 /***
 * !!!Important!!!
@@ -364,7 +375,7 @@ const (
 	// FrontendWorkerRPS is background-processing workflow rate limit per second
 	// KeyName: frontend.workerrps
 	// Value type: Int
-	// Default value: 0
+	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendWorkerRPS
 	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
@@ -376,7 +387,7 @@ const (
 	// FrontendMaxDomainWorkerRPSPerInstance is background-processing workflow domain rate limit per second
 	// KeyName: frontend.domainworkerrps
 	// Value type: Int
-	// Default value: 0
+	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainWorkerRPSPerInstance
 	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
@@ -388,7 +399,7 @@ const (
 	// FrontendGlobalDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster
 	// KeyName: frontend.globalDomainWorkerrps
 	// Value type: Int
-	// Default value: 0
+	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainWorkerRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
@@ -505,7 +516,7 @@ const (
 	// MatchingWorkerRPS is background-processing request rate per second for each matching host
 	// KeyName: matching.workerrps
 	// Value type: Int
-	// Default value: 1200
+	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	MatchingWorkerRPS
 	// MatchingDomainUserRPS is request rate per domain per second for each matching host
@@ -517,7 +528,7 @@ const (
 	// MatchingDomainWorkerRPS is background-processing request rate per domain per second for each matching host
 	// KeyName: matching.domainworkerrps
 	// Value type: Int
-	// Default value: 1200
+	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	MatchingDomainWorkerRPS
 	// MatchingPersistenceMaxQPS is the max qps matching host can query DB
@@ -2271,7 +2282,7 @@ var Keys = map[Key]string{
 	FrontendMaxDomainWorkerRPSPerInstance:       "frontend.domainworkerrps",
 	FrontendDecisionResultCountLimit:            "frontend.decisionResultCountLimit",
 	FrontendGlobalDomainUserRPS:                 "frontend.globalDomainrps",
-	FrontendGlobalDomainWorkerRPS:               "frontend.globalDomainworkerrps",
+	FrontendGlobalDomainWorkerRPS:               "frontend.globalDomainWorkerrps",
 	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
 	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
 	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
