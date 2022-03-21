@@ -37,7 +37,7 @@ func (k Key) String() string {
 //
 // Since our ratelimiters do int/float conversions, and zero or negative values
 // result in not allowing any requests, math.MaxInt is unsafe:
-//   int(float64(int(math.MaxInt))) results in a negative number.
+//   int(float64(math.MaxInt)) // -9223372036854775808
 //
 // Much higher values are possible, but we can't handle 2 billion RPS, this is good enough.
 const UnlimitedRPS = math.MaxInt32
