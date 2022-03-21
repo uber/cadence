@@ -94,6 +94,31 @@ func TestMultiStageRateLimitingMultipleDomains(t *testing.T) {
 	check(" after refill")
 }
 
+func TestMultiStageRateLimitingUserAndWorkerRps(t *testing.T) {
+	t.Parallel()
+	// 2-global allows the 1-domain requests to be consumed while leaving the same remaining limit for global,
+	// so the same checks can be re-performed with the global limit.
+	policy := newFixedRpsMultiStageRateLimiter(2, 1)
+	checkDomain := func(domain, suffix string) {
+		// user bucket allows 1
+		assert.True(t, policy.Allow(Info{Domain: domain, IsUser: true}), "1:1 user should work"+suffix)
+		assert.False(t, policy.Allow(Info{Domain: domain, IsUser: true}), "second 1:1 user should be limited"+suffix)
+		// worker bucket independently allows 1
+		assert.True(t, policy.Allow(Info{Domain: domain, IsUser: false}), "1:1 worker should work despite user being limited"+suffix)
+		assert.False(t, policy.Allow(Info{Domain: domain, IsUser: false}), "second 1:1 worker should be limited"+suffix)
+	}
+	check := func(suffix string) {
+		// per-domain has one set of limits
+		checkDomain("withdomain", " for domains"+suffix)
+		// global has an independent set of limits
+		checkDomain("", " for global"+suffix)
+	}
+
+	check("")
+	time.Sleep(time.Second)
+	check(" after refill")
+}
+
 func BenchmarkRateLimiter(b *testing.B) {
 	rps := float64(defaultRps)
 	limiter := NewRateLimiter(&rps, 2*time.Minute, defaultRps)
