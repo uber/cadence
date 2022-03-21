@@ -81,15 +81,25 @@ func NewHandler(
 		config:        config,
 		metricsClient: resource.GetMetricsClient(),
 		rateLimiter: quotas.NewMultiStageRateLimiter(
-			quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
+			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
+			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
 			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
 				func(domain string) float64 {
-					domainRPS := float64(config.DomainRPS(domain))
+					domainRPS := float64(config.DomainUserRPS(domain))
 					if domainRPS > 0 {
 						return domainRPS
 					}
 					// if domain rps not set, use host rps to keep the old behavior
-					return float64(config.RPS())
+					return float64(config.UserRPS())
+				})),
+			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
+				func(domain string) float64 {
+					domainRPS := float64(config.DomainWorkerRPS(domain))
+					if domainRPS > 0 {
+						return domainRPS
+					}
+					// if domain rps not set, use host rps to keep the old behavior
+					return float64(config.WorkerRPS())
 				})),
 		),
 		engine: NewEngine(
@@ -167,6 +177,7 @@ func (h *handlerImpl) AddActivityTask(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: false,
 	}); !ok {
 		return hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -204,6 +215,7 @@ func (h *handlerImpl) AddDecisionTask(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: false,
 	}); !ok {
 		return hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -239,6 +251,7 @@ func (h *handlerImpl) PollForActivityTask(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: false,
 	}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -279,6 +292,7 @@ func (h *handlerImpl) PollForDecisionTask(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: false,
 	}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -319,6 +333,7 @@ func (h *handlerImpl) QueryWorkflow(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: true,
 	}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -348,6 +363,7 @@ func (h *handlerImpl) RespondQueryTaskCompleted(
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: false,
 	})
 
 	err := h.engine.RespondQueryTaskCompleted(hCtx, request)
@@ -373,6 +389,7 @@ func (h *handlerImpl) CancelOutstandingPoll(ctx context.Context,
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
 	h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: false,
 	})
 
 	err := h.engine.CancelOutstandingPoll(hCtx, request)
@@ -401,6 +418,7 @@ func (h *handlerImpl) DescribeTaskList(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: domainName,
+		IsUser: true,
 	}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -430,6 +448,7 @@ func (h *handlerImpl) ListTaskListPartitions(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: request.GetDomain(),
+		IsUser: true,
 	}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
@@ -459,6 +478,7 @@ func (h *handlerImpl) GetTaskListsByDomain(
 
 	if ok := h.rateLimiter.Allow(quotas.Info{
 		Domain: request.GetDomain(),
+		IsUser: true,
 	}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}

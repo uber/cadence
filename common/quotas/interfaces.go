@@ -35,6 +35,9 @@ type RPSKeyFunc func(key string) float64
 // Info corresponds to information required to determine rate limits
 type Info struct {
 	Domain string
+	// IsUser is true if this endpoint is for a "user" request, false if "worker".
+	// This is expected to be insufficiently flexible, but for now it's good enough to alleviate some pressure.
+	IsUser bool
 }
 
 // Limiter corresponds to basic rate limiting functionality.

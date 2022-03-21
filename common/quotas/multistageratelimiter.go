@@ -20,18 +20,27 @@
 
 package quotas
 
+import "golang.org/x/time/rate"
+
 // MultiStageRateLimiter indicates a domain specific rate limit policy
 type MultiStageRateLimiter struct {
-	domainLimiters *Collection
-	globalLimiter  Limiter
+	// "user"-request limits, e.g. for start, signal, query.
+	domainUserLimiters *Collection
+	// "worker"-request limits, currently just polling.  task-responses are not limited.
+	domainWorkerLimiters *Collection
+
+	globalUserLimiter   Limiter
+	globalWorkerLimiter Limiter
 }
 
 // NewMultiStageRateLimiter returns a new domain quota rate limiter. This is about
 // an order of magnitude slower than
-func NewMultiStageRateLimiter(global Limiter, domainLimiters *Collection) *MultiStageRateLimiter {
+func NewMultiStageRateLimiter(globalUser, globalWorker Limiter, domainUser, domainWorker *Collection) *MultiStageRateLimiter {
 	return &MultiStageRateLimiter{
-		domainLimiters: domainLimiters,
-		globalLimiter:  global,
+		domainUserLimiters:   domainUser,
+		domainWorkerLimiters: domainWorker,
+		globalUserLimiter:    globalUser,
+		globalWorkerLimiter:  globalWorker,
 	}
 }
 
@@ -39,13 +48,25 @@ func NewMultiStageRateLimiter(global Limiter, domainLimiters *Collection) *Multi
 // immediately with a true or false indicating if the request can make
 // progress
 func (d *MultiStageRateLimiter) Allow(info Info) bool {
+	var global Limiter
+	if info.IsUser {
+		global = d.globalUserLimiter
+	} else {
+		global = d.globalWorkerLimiter
+	}
+
 	domain := info.Domain
 	if len(domain) == 0 {
-		return d.globalLimiter.Allow()
+		return global.Allow()
 	}
 
 	// take a reservation with the domain limiter first
-	rsv := d.domainLimiters.For(domain).Reserve()
+	var rsv *rate.Reservation
+	if info.IsUser {
+		rsv = d.domainUserLimiters.For(domain).Reserve()
+	} else {
+		rsv = d.domainWorkerLimiters.For(domain).Reserve()
+	}
 	if !rsv.OK() {
 		return false
 	}
@@ -59,7 +80,7 @@ func (d *MultiStageRateLimiter) Allow(info Info) bool {
 
 	// ensure that the reservation does not break the global rate limit, if it
 	// does, cancel the reservation and do not allow to proceed.
-	if !d.globalLimiter.Allow() {
+	if !global.Allow() {
 		rsv.Cancel()
 		return false
 	}

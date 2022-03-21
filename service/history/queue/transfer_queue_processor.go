@@ -601,6 +601,7 @@ func newTransferQueueFailoverProcessor(
 
 	currentClusterName := shardContext.GetService().GetClusterMetadata().GetCurrentClusterName()
 	failoverUUID := uuid.New()
+	// TODO: unused, find log and restore or remove this With
 	logger = logger.WithTags(
 		tag.ClusterName(currentClusterName),
 		tag.WorkflowDomainIDs(domainIDs),

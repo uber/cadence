@@ -240,7 +240,7 @@ func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -269,7 +269,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_BadDelayStartSeconds() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -300,7 +300,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_BadDelayStartSe
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	_, err := wh.StartWorkflowExecution(context.Background(), nil)
@@ -310,7 +310,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_StartRequestNot
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -339,7 +339,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_DomainNotSet() 
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -368,7 +368,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowIdNotSe
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -398,7 +398,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_WorkflowTypeNot
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -428,7 +428,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_TaskListNotSet(
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutionStartToCloseTimeout() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
@@ -458,7 +458,7 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidExecutio
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStartToCloseTimeout() {
 	config := s.newConfig(dc.NewInMemoryClient())
-	config.RPS = dc.GetIntPropertyFn(10)
+	config.UserRPS = dc.GetIntPropertyFn(10)
 	wh := s.getWorkflowHandler(config)
 
 	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
