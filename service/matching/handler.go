@@ -59,11 +59,12 @@ type (
 	handlerImpl struct {
 		resource.Resource
 
-		engine        Engine
-		config        *Config
-		metricsClient metrics.Client
-		startWG       sync.WaitGroup
-		rateLimiter   quotas.Policy
+		engine            Engine
+		config            *Config
+		metricsClient     metrics.Client
+		startWG           sync.WaitGroup
+		userRateLimiter   quotas.Policy
+		workerRateLimiter quotas.Policy
 	}
 )
 
@@ -80,16 +81,28 @@ func NewHandler(
 		Resource:      resource,
 		config:        config,
 		metricsClient: resource.GetMetricsClient(),
-		rateLimiter: quotas.NewMultiStageRateLimiter(
-			quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
+		userRateLimiter: quotas.NewMultiStageRateLimiter(
+			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
 			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
 				func(domain string) float64 {
-					domainRPS := float64(config.DomainRPS(domain))
+					domainRPS := float64(config.DomainUserRPS(domain))
 					if domainRPS > 0 {
 						return domainRPS
 					}
 					// if domain rps not set, use host rps to keep the old behavior
-					return float64(config.RPS())
+					return float64(config.UserRPS())
+				})),
+		),
+		workerRateLimiter: quotas.NewMultiStageRateLimiter(
+			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
+			quotas.NewCollection(quotas.DynamicRateLimiterFactory(
+				func(domain string) float64 {
+					domainRPS := float64(config.DomainWorkerRPS(domain))
+					if domainRPS > 0 {
+						return domainRPS
+					}
+					// if domain rps not set, use host rps to keep the old behavior
+					return float64(config.WorkerRPS())
 				})),
 		),
 		engine: NewEngine(
@@ -165,9 +178,7 @@ func (h *handlerImpl) AddActivityTask(
 		hCtx.scope.IncCounter(metrics.ForwardedPerTaskListCounter)
 	}
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	}); !ok {
+	if ok := h.workerRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
 		return hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -202,9 +213,7 @@ func (h *handlerImpl) AddDecisionTask(
 		hCtx.scope.IncCounter(metrics.ForwardedPerTaskListCounter)
 	}
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	}); !ok {
+	if ok := h.workerRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
 		return hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -237,9 +246,7 @@ func (h *handlerImpl) PollForActivityTask(
 		hCtx.scope.IncCounter(metrics.ForwardedPerTaskListCounter)
 	}
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	}); !ok {
+	if ok := h.workerRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -277,9 +284,7 @@ func (h *handlerImpl) PollForDecisionTask(
 		hCtx.scope.IncCounter(metrics.ForwardedPerTaskListCounter)
 	}
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	}); !ok {
+	if ok := h.workerRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -317,9 +322,7 @@ func (h *handlerImpl) QueryWorkflow(
 		hCtx.scope.IncCounter(metrics.ForwardedPerTaskListCounter)
 	}
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	}); !ok {
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -346,9 +349,7 @@ func (h *handlerImpl) RespondQueryTaskCompleted(
 	defer sw.Stop()
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
-	h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	})
+	h.workerRateLimiter.Allow(quotas.Info{Domain: domainName})
 
 	err := h.engine.RespondQueryTaskCompleted(hCtx, request)
 	return hCtx.handleErr(err)
@@ -371,9 +372,7 @@ func (h *handlerImpl) CancelOutstandingPoll(ctx context.Context,
 	defer sw.Stop()
 
 	// Count the request in the RPS, but we still accept it even if RPS is exceeded
-	h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	})
+	h.workerRateLimiter.Allow(quotas.Info{Domain: domainName})
 
 	err := h.engine.CancelOutstandingPoll(hCtx, request)
 	return hCtx.handleErr(err)
@@ -399,9 +398,7 @@ func (h *handlerImpl) DescribeTaskList(
 	sw := hCtx.startProfiling(&h.startWG)
 	defer sw.Stop()
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: domainName,
-	}); !ok {
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: domainName}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -428,9 +425,7 @@ func (h *handlerImpl) ListTaskListPartitions(
 	sw := hCtx.startProfiling(&h.startWG)
 	defer sw.Stop()
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: request.GetDomain(),
-	}); !ok {
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: request.GetDomain()}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 
@@ -457,9 +452,7 @@ func (h *handlerImpl) GetTaskListsByDomain(
 	sw := hCtx.startProfiling(&h.startWG)
 	defer sw.Stop()
 
-	if ok := h.rateLimiter.Allow(quotas.Info{
-		Domain: request.GetDomain(),
-	}); !ok {
+	if ok := h.userRateLimiter.Allow(quotas.Info{Domain: request.GetDomain()}); !ok {
 		return nil, hCtx.handleErr(errMatchingHostThrottle)
 	}
 

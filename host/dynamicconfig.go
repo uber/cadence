@@ -32,7 +32,7 @@ import (
 var (
 	// Override values for dynamic configs
 	staticOverrides = map[dynamicconfig.Key]interface{}{
-		dynamicconfig.FrontendRPS:                                   3000,
+		dynamicconfig.FrontendUserRPS:                               3000,
 		dynamicconfig.FrontendVisibilityListMaxQPS:                  200,
 		dynamicconfig.FrontendESIndexMaxResultWindow:                defaultTestValueOfESIndexMaxResultWindow,
 		dynamicconfig.MatchingNumTasklistWritePartitions:            3,
