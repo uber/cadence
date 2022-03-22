@@ -188,7 +188,6 @@ const (
 	FlagRemote                            = "remote"
 	FlagTimerType                         = "timer_type"
 	FlagSkipErrorModeWithAlias            = FlagSkipErrorMode + ", serr"
-	FlagRemoteWithAlias                   = FlagRemote + ", r"
 	FlagHeadersMode                       = "headers"
 	FlagHeadersModeWithAlias              = FlagHeadersMode + ", he"
 	FlagMessageType                       = "message_type"
