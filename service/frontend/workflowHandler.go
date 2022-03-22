@@ -78,7 +78,8 @@ type (
 		shuttingDown              int32
 		healthStatus              int32
 		tokenSerializer           common.TaskTokenSerializer
-		rateLimiter               quotas.Policy
+		userRateLimiter           quotas.Policy
+		workerRateLimiter         quotas.Policy
 		config                    *Config
 		versionChecker            client.VersionChecker
 		domainHandler             domain.Handler
@@ -99,9 +100,6 @@ type (
 
 	domainGetter interface {
 		GetDomain() string
-	}
-	tasklistGetter interface {
-		GetTaskList() *types.TaskList
 	}
 
 	// HealthStatus is an enum that refers to the rpc handler health status
@@ -164,9 +162,8 @@ func NewWorkflowHandler(
 		config:          config,
 		healthStatus:    int32(HealthStatusWarmingUp),
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
-		rateLimiter: quotas.NewMultiStageRateLimiter(
+		userRateLimiter: quotas.NewMultiStageRateLimiter(
 			quotas.NewDynamicRateLimiter(config.UserRPS.AsFloat64()),
-			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
 			quotas.NewCollection(func(domain string) quotas.Limiter {
 				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
 					service.Frontend,
@@ -175,6 +172,9 @@ func NewWorkflowHandler(
 					resource.GetMembershipResolver(),
 				))
 			}),
+		),
+		workerRateLimiter: quotas.NewMultiStageRateLimiter(
+			quotas.NewDynamicRateLimiter(config.WorkerRPS.AsFloat64()),
 			quotas.NewCollection(func(domain string) quotas.Limiter {
 				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
 					service.Frontend,
@@ -4346,10 +4346,10 @@ func (wh *WorkflowHandler) allow(isUserEndpoint bool, d domainGetter) bool {
 	if d != nil {
 		domain = d.GetDomain()
 	}
-	return wh.rateLimiter.Allow(quotas.Info{
-		Domain: domain,
-		IsUser: isUserEndpoint,
-	})
+	if isUserEndpoint {
+		return wh.userRateLimiter.Allow(quotas.Info{Domain: domain})
+	}
+	return wh.workerRateLimiter.Allow(quotas.Info{Domain: domain})
 }
 
 // GetClusterInfo return information about cadence deployment
@@ -4387,7 +4387,6 @@ func checkPermission(
 	return nil
 }
 
-// this is a clear sign that we should accept a func rather than an interface with a single method
 type domainWrapper struct {
 	domain string
 }
