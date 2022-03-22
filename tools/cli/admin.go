@@ -22,16 +22,13 @@
 package cli
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
-	"github.com/uber/cadence/tools/common/flag"
 )
 
 func newAdminWorkflowCommands() []cli.Command {
@@ -117,7 +114,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "skip errors when deleting history",
 				},
 				cli.BoolFlag{
-					Name:  FlagRemoteWithAlias,
+					Name:  FlagRemote,
 					Usage: "Executes deletion on server side",
 				}),
 			Action: func(c *cli.Context) {
@@ -261,11 +258,6 @@ func newAdminShardManagementCommands() []cli.Command {
 					Name:  FlagPageSize,
 					Usage: "page size used to query db executions table",
 					Value: 500,
-				},
-				cli.IntFlag{
-					Name:  FlagRPS,
-					Usage: "target rps of database queries",
-					Value: 100,
 				},
 				cli.StringFlag{
 					Name:  FlagStartDate,
@@ -975,91 +967,6 @@ func newDBCommands() []cli.Command {
 			Action: func(c *cli.Context) {
 				AdminDBDataDecodeThrift(c)
 			},
-		},
-	}
-}
-
-func getDBFlags() []cli.Flag {
-	supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:  FlagDBType,
-			Value: "cassandra",
-			Usage: fmt.Sprintf("persistence type. Current supported options are %v", supportedDBs),
-		},
-		cli.StringFlag{
-			Name:  FlagDBAddress,
-			Value: "127.0.0.1",
-			Usage: "persistence address (right now only cassandra is fully supported)",
-		},
-		cli.IntFlag{
-			Name:  FlagDBPort,
-			Value: 9042,
-			Usage: "persistence port",
-		},
-		cli.StringFlag{
-			Name:  FlagDBRegion,
-			Usage: "persistence region",
-		},
-		cli.StringFlag{
-			Name:  FlagUsername,
-			Usage: "persistence username",
-		},
-		cli.StringFlag{
-			Name:  FlagPassword,
-			Usage: "persistence password",
-		},
-		cli.StringFlag{
-			Name:  FlagKeyspace,
-			Value: "cadence",
-			Usage: "cassandra keyspace",
-		},
-		cli.StringFlag{
-			Name:  FlagDatabaseName,
-			Value: "cadence",
-			Usage: "sql database name",
-		},
-		cli.StringFlag{
-			Name:  FlagEncodingType,
-			Value: "thriftrw",
-			Usage: "sql database encoding type",
-		},
-		cli.StringSliceFlag{
-			Name: FlagDecodingTypes,
-			Value: &cli.StringSlice{
-				"thriftrw",
-			},
-			Usage: "sql database decoding types",
-		},
-		cli.IntFlag{
-			Name:  FlagProtoVersion,
-			Value: 4,
-			Usage: "cassandra protocol version",
-		},
-		cli.BoolFlag{
-			Name:  FlagEnableTLS,
-			Usage: "enable TLS over cassandra connection",
-		},
-		cli.StringFlag{
-			Name:  FlagTLSCertPath,
-			Usage: "cassandra tls client cert path (tls must be enabled)",
-		},
-		cli.StringFlag{
-			Name:  FlagTLSKeyPath,
-			Usage: "cassandra tls client key path (tls must be enabled)",
-		},
-		cli.StringFlag{
-			Name:  FlagTLSCaPath,
-			Usage: "cassandra tls client ca path (tls must be enabled)",
-		},
-		cli.BoolFlag{
-			Name:  FlagTLSEnableHostVerification,
-			Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
-		},
-		cli.GenericFlag{
-			Name:  FlagConnectionAttributes,
-			Usage: "a key-value set of sql database connection attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
-			Value: &flag.StringMap{},
 		},
 	}
 }

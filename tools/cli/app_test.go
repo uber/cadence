@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -60,6 +61,10 @@ func (m *clientFactoryMock) ServerAdminClient(c *cli.Context) admin.Client {
 }
 
 func (m *clientFactoryMock) ElasticSearchClient(c *cli.Context) *elastic.Client {
+	panic("not implemented")
+}
+
+func (m *clientFactoryMock) ServerConfig(c *cli.Context) (*config.Config, error) {
 	panic("not implemented")
 }
 

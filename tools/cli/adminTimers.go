@@ -75,9 +75,8 @@ type jsonPrinter struct {
 
 // NewDBLoadCloser creates a new LoadCloser to load timer task information from database
 func NewDBLoadCloser(c *cli.Context) LoadCloser {
-	rps := c.Int(FlagRPS)
 	shardID := getRequiredIntOption(c, FlagShardID)
-	executionManager := initializeExecutionStore(c, shardID, rps)
+	executionManager := initializeExecutionStore(c, shardID)
 	return &dbLoadCloser{
 		ctx:              c,
 		executionManager: executionManager,
