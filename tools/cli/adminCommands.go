@@ -29,7 +29,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -463,6 +462,11 @@ func AdminCloseShard(c *cli.Context) {
 	}
 }
 
+type ShardRow struct {
+	ShardID  int32  `header:"ShardID"`
+	Identity string `header:"Identity"`
+}
+
 // AdminDescribeShardDistribution describes shard distribution
 func AdminDescribeShardDistribution(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
@@ -487,31 +491,23 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 		return
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	header := []string{"ShardID", "Identity"}
-	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue}
-	table.SetHeader(header)
-	table.SetHeaderColor(headerColor...)
-	table.SetHeaderLine(false)
-
+	table := []ShardRow{}
+	opts := TableOptions{Color: true}
 	outputPageSize := tableRenderSize
 	for shardID, identity := range resp.Shards {
 		if outputPageSize == 0 {
-			table.Render()
-			table.ClearRows()
+			RenderTable(os.Stdout, table, opts)
+			table = []ShardRow{}
 			if !showNextPage() {
 				break
 			}
 			outputPageSize = tableRenderSize
 		}
-		table.Append([]string{strconv.Itoa(int(shardID)), identity})
+		table = append(table, ShardRow{ShardID: shardID, Identity: identity})
 		outputPageSize--
 	}
 	// output the remaining rows
-	table.Render()
-	table.ClearRows()
+	RenderTable(os.Stdout, table, opts)
 }
 
 // AdminDescribeHistoryHost describes history host

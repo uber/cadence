@@ -35,6 +35,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+var tableHeaderBlue = tablewriter.Colors{tablewriter.FgHiBlueColor}
+
 // TableOptions allows passing optional flags for altering rendered table
 type TableOptions struct {
 	// OptionalColumns may contain column header names which can be hidden
@@ -72,7 +74,7 @@ func RenderTable(w io.Writer, slice interface{}, opts TableOptions) {
 	table := tablewriter.NewWriter(w)
 	table.SetBorder(opts.Border)
 	table.SetColumnSeparator("|")
-	table.SetHeaderLine(false)
+	table.SetHeaderLine(opts.Border)
 
 	for r := 0; r < sliceValue.Len(); r++ {
 		var row []string
