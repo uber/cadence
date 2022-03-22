@@ -197,7 +197,7 @@ func (r *dlqHandlerImpl) MergeMessages(
 		return nil, errInvalidCluster
 	}
 
-	tasks, _, token, err := r.readMessagesWithAckLevel(
+	tasks, rawTasks, token, err := r.readMessagesWithAckLevel(
 		ctx,
 		sourceCluster,
 		lastMessageID,
@@ -205,17 +205,23 @@ func (r *dlqHandlerImpl) MergeMessages(
 		pageToken,
 	)
 
-	lastMessageID = defaultBeginningMessageID
+	replicationTasks := map[int64]*types.ReplicationTask{}
 	for _, task := range tasks {
-		if _, err := r.taskExecutors[sourceCluster].execute(
-			task,
-			true,
-		); err != nil {
-			return nil, err
+		replicationTasks[task.SourceTaskID] = task
+	}
+
+	lastMessageID = defaultBeginningMessageID
+	for _, raw := range rawTasks {
+		if task, ok := replicationTasks[raw.TaskID]; ok {
+			if _, err := r.taskExecutors[sourceCluster].execute(task, true); err != nil {
+				return nil, err
+			}
 		}
 
-		if lastMessageID < task.GetSourceTaskID() {
-			lastMessageID = task.GetSourceTaskID()
+		// If hydrated replication task does not exists in remote cluster - continue merging
+		// Record lastMessageID with raw task id, so that they can be purged after.
+		if lastMessageID < raw.TaskID {
+			lastMessageID = raw.TaskID
 		}
 	}
 
