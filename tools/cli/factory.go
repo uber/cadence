@@ -42,6 +42,7 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	cc "github.com/uber/cadence/common/client"
+	"github.com/uber/cadence/common/config"
 )
 
 const (
@@ -63,6 +64,8 @@ type ClientFactory interface {
 	ServerAdminClient(c *cli.Context) admin.Client
 
 	ElasticSearchClient(c *cli.Context) *elastic.Client
+
+	ServerConfig(c *cli.Context) (*config.Config, error)
 }
 
 type clientFactory struct {
@@ -81,6 +84,18 @@ func NewClientFactory() ClientFactory {
 	return &clientFactory{
 		logger: logger,
 	}
+}
+
+// ServerConfig returns Cadence server configs.
+// Use in some CLI admin operations (e.g. accessing DB directly)
+func (b *clientFactory) ServerConfig(c *cli.Context) (*config.Config, error) {
+	env := c.String(FlagServiceEnv)
+	zone := c.String(FlagServiceZone)
+	configDir := c.String(FlagServiceConfigDir)
+
+	var cfg config.Config
+	err := config.Load(env, configDir, zone, &cfg)
+	return &cfg, err
 }
 
 // ServerFrontendClient builds a frontend client (based on server side thrift interface)

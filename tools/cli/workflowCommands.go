@@ -766,26 +766,28 @@ func describeWorkflowHelper(c *cli.Context, wid, rid string) {
 	prettyPrintJSONObject(o)
 }
 
+type AutoResetPointRow struct {
+	BinaryChecksum string    `header:"Binary Checksum"`
+	CreateTime     time.Time `header:"Create Time"`
+	RunID          string    `header:"RunID"`
+	EventID        int64     `header:"EventID"`
+}
+
 func printAutoResetPoints(resp *types.DescribeWorkflowExecutionResponse) {
 	fmt.Println("Auto Reset Points:")
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(true)
-	table.SetColumnSeparator("|")
-	header := []string{"Binary Checksum", "Create Time", "RunID", "EventID"}
-	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue, tableHeaderBlue, tableHeaderBlue}
-	table.SetHeader(header)
-	table.SetHeaderColor(headerColor...)
-	if resp.WorkflowExecutionInfo.AutoResetPoints != nil && len(resp.WorkflowExecutionInfo.AutoResetPoints.Points) > 0 {
-		for _, pt := range resp.WorkflowExecutionInfo.AutoResetPoints.Points {
-			var row []string
-			row = append(row, pt.GetBinaryChecksum())
-			row = append(row, time.Unix(0, pt.GetCreatedTimeNano()).String())
-			row = append(row, pt.GetRunID())
-			row = append(row, strconv.FormatInt(pt.GetFirstDecisionCompletedID(), 10))
-			table.Append(row)
-		}
+	table := []AutoResetPointRow{}
+	if resp.WorkflowExecutionInfo.AutoResetPoints == nil || len(resp.WorkflowExecutionInfo.AutoResetPoints.Points) == 0 {
+		return
 	}
-	table.Render()
+	for _, pt := range resp.WorkflowExecutionInfo.AutoResetPoints.Points {
+		table = append(table, AutoResetPointRow{
+			BinaryChecksum: pt.GetBinaryChecksum(),
+			CreateTime:     time.Unix(0, pt.GetCreatedTimeNano()),
+			RunID:          pt.GetRunID(),
+			EventID:        pt.GetFirstDecisionCompletedID(),
+		})
+	}
+	RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true, PrintDateTime: true})
 }
 
 // describeWorkflowExecutionResponse is used to print datetime instead of print raw time
@@ -1588,19 +1590,6 @@ func loadWorkflowIDsFromFile(excludeFileName, separator string) map[string]bool 
 		}
 	}
 	return excludeWIDs
-}
-
-// sort helper for search attributes
-type byKey [][]string
-
-func (s byKey) Len() int {
-	return len(s)
-}
-func (s byKey) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-func (s byKey) Less(i, j int) bool {
-	return s[i][0] < s[j][0]
 }
 
 func printErrorAndReturn(msg string, err error) error {
