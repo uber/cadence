@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -383,6 +382,26 @@ func (d *domainCLIImpl) failover(c *cli.Context, domainName string, targetCluste
 	return err
 }
 
+var templateDomain = `Name: {{.Name}}
+UUID: {{.UUID}}
+Description: {{.Description}}
+OwnerEmail: {{.OwnerEmail}}
+DomainData: {{.DomainData}}
+Status: {{.Status}}
+RetentionInDays: {{.RetentionDays}}
+EmitMetrics: {{.EmitMetrics}}
+IsGlobal(XDC)Domain: {{.IsGlobal}}
+ActiveClusterName: {{.ActiveCluster}}
+Clusters: {{if .IsGlobal}}{{.Clusters}}{{else}}N/A, Not a global domain{{end}}
+HistoryArchivalStatus: {{.HistoryArchivalStatus}}{{with .HistoryArchivalURI}}
+HistoryArchivalURI: {{.}}{{end}}
+VisibilityArchivalStatus: {{.VisibilityArchivalStatus}}{{with .VisibilityArchivalURI}}
+VisibilityArchivalURI: {{.}}{{end}}
+{{with .BadBinaries}}Bad binaries to reset:
+{{table .}}{{end}}
+{{with .FailoverInfo}}Graceful failover info:
+{{table .}}{{end}}`
+
 // DescribeDomain updates a domain
 func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 	domainName := c.GlobalString(FlagDomain)
@@ -419,62 +438,12 @@ func (d *domainCLIImpl) DescribeDomain(c *cli.Context) {
 		return
 	}
 
-	clusters := "N/A, Not a global domain"
-	if resp.IsGlobalDomain {
-		clusters = clustersToString(resp.ReplicationConfiguration.Clusters)
-	}
-	var formatStr = "Name: %v\nUUID: %v\nDescription: %v\nOwnerEmail: %v\nDomainData: %v\nStatus: %v\nRetentionInDays: %v\n" +
-		"EmitMetrics: %v\nIsGlobal(XDC)Domain: %v\nActiveClusterName: %v\nClusters: %v\nHistoryArchivalStatus: %v\n"
-	descValues := []interface{}{
-		resp.DomainInfo.GetName(),
-		resp.DomainInfo.GetUUID(),
-		resp.DomainInfo.GetDescription(),
-		resp.DomainInfo.GetOwnerEmail(),
-		resp.DomainInfo.Data,
-		resp.DomainInfo.GetStatus(),
-		resp.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
-		resp.Configuration.GetEmitMetric(),
-		resp.IsGlobalDomain,
-		resp.ReplicationConfiguration.GetActiveClusterName(),
-		clusters,
-		resp.Configuration.GetHistoryArchivalStatus().String(),
-	}
-	if resp.Configuration.GetHistoryArchivalURI() != "" {
-		formatStr = formatStr + "HistoryArchivalURI: %v\n"
-		descValues = append(descValues, resp.Configuration.GetHistoryArchivalURI())
-	}
-	formatStr = formatStr + "VisibilityArchivalStatus: %v\n"
-	descValues = append(descValues, resp.Configuration.GetVisibilityArchivalStatus().String())
-	if resp.Configuration.GetVisibilityArchivalURI() != "" {
-		formatStr = formatStr + "VisibilityArchivalURI: %v\n"
-		descValues = append(descValues, resp.Configuration.GetVisibilityArchivalURI())
-	}
-	fmt.Printf(formatStr, descValues...)
-	if resp.Configuration.BadBinaries != nil {
-		fmt.Println("Bad binaries to reset:")
-		table := []BadBinaryRow{}
-		for cs, bin := range resp.Configuration.BadBinaries.Binaries {
-			table = append(table, BadBinaryRow{
-				Checksum:  cs,
-				Operator:  bin.GetOperator(),
-				StartTime: time.Unix(0, bin.GetCreatedTimeNano()),
-				Reason:    bin.GetReason(),
-			})
-		}
-		RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true, PrintDateTime: true})
-	}
-	if resp.GetFailoverInfo() != nil {
-		info := resp.GetFailoverInfo()
-		fmt.Println("Graceful failover info:")
-		table := []FailoverInfoRow{{
-			FailoverVersion:     info.GetFailoverVersion(),
-			StartTime:           time.Unix(0, info.GetFailoverStartTimestamp()),
-			ExpireTime:          time.Unix(0, info.GetFailoverExpireTimestamp()),
-			CompletedShardCount: info.GetCompletedShardCount(),
-			PendingShard:        info.GetPendingShards(),
-		}}
-		RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true, PrintDateTime: true})
-	}
+	Render(c, newDomainRow(resp), RenderOptions{
+		DefaultTemplate: templateDomain,
+		Color:           true,
+		Border:          true,
+		PrintDateTime:   true,
+	})
 }
 
 type BadBinaryRow struct {
@@ -493,43 +462,83 @@ type FailoverInfoRow struct {
 }
 
 type DomainRow struct {
-	Name                     string               `header:"Name"`
-	UUID                     string               `header:"UUID"`
-	DomainData               string               `header:"Domain Data"`
-	Status                   types.DomainStatus   `header:"Status"`
-	IsGlobal                 bool                 `header:"Is Global Domain"`
-	ActiveCluster            string               `header:"Active Cluster"`
-	Clusters                 string               `header:"Clusters"`
-	RetentionDays            int32                `header:"Retention Days"`
+	Name                     string `header:"Name"`
+	UUID                     string `header:"UUID"`
+	Description              string
+	OwnerEmail               string
+	DomainData               map[string]string  `header:"Domain Data"`
+	Status                   types.DomainStatus `header:"Status"`
+	IsGlobal                 bool               `header:"Is Global Domain"`
+	ActiveCluster            string             `header:"Active Cluster"`
+	Clusters                 []string           `header:"Clusters"`
+	RetentionDays            int32              `header:"Retention Days"`
+	EmitMetrics              bool
 	HistoryArchivalStatus    types.ArchivalStatus `header:"History Archival Status"`
 	HistoryArchivalURI       string               `header:"History Archival URI"`
 	VisibilityArchivalStatus types.ArchivalStatus `header:"Visibility Archival Status"`
 	VisibilityArchivalURI    string               `header:"Visibility Archival URI"`
+	BadBinaries              []BadBinaryRow
+	FailoverInfo             *FailoverInfoRow
 }
 
 func newDomainRow(domain *types.DescribeDomainResponse) DomainRow {
 	return DomainRow{
 		Name:                     domain.DomainInfo.Name,
 		UUID:                     domain.DomainInfo.UUID,
-		DomainData:               mapToString(domain.DomainInfo.GetData(), ", "),
+		Description:              domain.DomainInfo.Description,
+		OwnerEmail:               domain.DomainInfo.OwnerEmail,
+		DomainData:               domain.DomainInfo.GetData(),
 		Status:                   domain.DomainInfo.GetStatus(),
 		IsGlobal:                 domain.IsGlobalDomain,
 		ActiveCluster:            domain.ReplicationConfiguration.GetActiveClusterName(),
-		Clusters:                 clustersToString(domain.ReplicationConfiguration.GetClusters()),
+		Clusters:                 clustersToStrings(domain.ReplicationConfiguration.GetClusters()),
 		RetentionDays:            domain.Configuration.GetWorkflowExecutionRetentionPeriodInDays(),
+		EmitMetrics:              domain.Configuration.GetEmitMetric(),
 		HistoryArchivalStatus:    domain.Configuration.GetHistoryArchivalStatus(),
 		HistoryArchivalURI:       domain.Configuration.GetHistoryArchivalURI(),
 		VisibilityArchivalStatus: domain.Configuration.GetVisibilityArchivalStatus(),
 		VisibilityArchivalURI:    domain.Configuration.GetVisibilityArchivalURI(),
+		BadBinaries:              newBadBinaryRows(domain.Configuration.BadBinaries),
+		FailoverInfo:             newFailoverInfoRow(domain.FailoverInfo),
 	}
 }
 
-func domainTableOptions(c *cli.Context) TableOptions {
+func newFailoverInfoRow(info *types.FailoverInfo) *FailoverInfoRow {
+	if info == nil {
+		return nil
+	}
+	return &FailoverInfoRow{
+		FailoverVersion:     info.GetFailoverVersion(),
+		StartTime:           time.Unix(0, info.GetFailoverStartTimestamp()),
+		ExpireTime:          time.Unix(0, info.GetFailoverExpireTimestamp()),
+		CompletedShardCount: info.GetCompletedShardCount(),
+		PendingShard:        info.GetPendingShards(),
+	}
+}
+
+func newBadBinaryRows(bb *types.BadBinaries) []BadBinaryRow {
+	if bb == nil {
+		return nil
+	}
+	rows := []BadBinaryRow{}
+	for cs, bin := range bb.Binaries {
+		rows = append(rows, BadBinaryRow{
+			Checksum:  cs,
+			Operator:  bin.GetOperator(),
+			StartTime: time.Unix(0, bin.GetCreatedTimeNano()),
+			Reason:    bin.GetReason(),
+		})
+	}
+	return rows
+}
+
+func domainTableOptions(c *cli.Context) RenderOptions {
 	printAll := c.Bool(FlagAll)
 	printFull := c.Bool(FlagPrintFullyDetail)
 
-	return TableOptions{
-		Color: true,
+	return RenderOptions{
+		DefaultTemplate: templateTable,
+		Color:           true,
 		OptionalColumns: map[string]bool{
 			"Status":                     printAll || printFull,
 			"Clusters":                   printFull,
@@ -601,7 +610,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 		}
 
 		// page is full
-		RenderTable(os.Stdout, table, domainTableOptions(c))
+		Render(c, table, domainTableOptions(c))
 		if i == len(domains)-1 || !showNextPage() {
 			return
 		}
@@ -609,7 +618,7 @@ func (d *domainCLIImpl) ListDomains(c *cli.Context) {
 		currentPageSize = 0
 	}
 
-	RenderTable(os.Stdout, table, domainTableOptions(c))
+	Render(c, table, domainTableOptions(c))
 }
 
 func (d *domainCLIImpl) listDomains(
@@ -686,14 +695,10 @@ func archivalStatus(c *cli.Context, statusFlagName string) *types.ArchivalStatus
 	return nil
 }
 
-func clustersToString(clusters []*types.ClusterReplicationConfiguration) string {
-	var res string
-	for i, cluster := range clusters {
-		if i == 0 {
-			res = res + cluster.GetClusterName()
-		} else {
-			res = res + ", " + cluster.GetClusterName()
-		}
+func clustersToStrings(clusters []*types.ClusterReplicationConfiguration) []string {
+	var res []string
+	for _, cluster := range clusters {
+		res = append(res, cluster.GetClusterName())
 	}
 	return res
 }

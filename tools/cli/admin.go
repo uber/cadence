@@ -178,6 +178,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Value: 0,
 					Usage: "Option to show results offset from pagesize * page_id",
 				},
+				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) {
 				AdminDescribeShardDistribution(c)
@@ -448,8 +449,9 @@ func newAdminDomainCommands() []cli.Command {
 				},
 				cli.BoolFlag{
 					Name:  FlagPrintJSONWithAlias,
-					Usage: "Print in raw json format",
+					Usage: "Print in raw json format (DEPRECATED: instead use --format json)",
 				},
+				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).ListDomains(c)
@@ -548,6 +550,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Name:  FlagURL,
 					Usage: "URL of ElasticSearch cluster",
 				},
+				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) {
 				AdminCatIndices(c)

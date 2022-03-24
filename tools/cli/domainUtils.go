@@ -198,6 +198,7 @@ var (
 			Name:  FlagPrintJSONWithAlias,
 			Usage: "Print in raw JSON format",
 		},
+		getFormatFlag(),
 	}
 
 	adminDomainCommonFlags = getDBFlags()

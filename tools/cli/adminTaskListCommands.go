@@ -107,7 +107,7 @@ func AdminListTaskList(c *cli.Context) {
 	for name, taskList := range response.GetActivityTaskListMap() {
 		table = append(table, TaskListRow{name, "Activity", len(taskList.GetPollers())})
 	}
-	RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true})
+	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
 }
 
 func printTaskListStatus(taskListStatus *types.TaskListStatus) {
@@ -118,5 +118,5 @@ func printTaskListStatus(taskListStatus *types.TaskListStatus) {
 		StartID:   taskListStatus.GetTaskIDBlock().GetStartID(),
 		EndID:     taskListStatus.GetTaskIDBlock().GetEndID(),
 	}}
-	RenderTable(os.Stdout, table, TableOptions{Color: true})
+	RenderTable(os.Stdout, table, RenderOptions{Color: true})
 }

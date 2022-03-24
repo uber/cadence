@@ -61,5 +61,5 @@ func GetSearchAttributes(c *cli.Context) {
 		table = append(table, SearchAttributesRow{Key: k, ValueType: v.String()})
 	}
 	sort.Sort(table)
-	RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true})
+	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
 }

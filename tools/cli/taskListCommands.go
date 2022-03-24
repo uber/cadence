@@ -105,7 +105,7 @@ func printTaskListPollers(pollers []*types.PollerInfo, taskListType types.TaskLi
 			DecisionIdentity: poller.GetIdentity(),
 			LastAccessTime:   time.Unix(0, poller.GetLastAccessTime())})
 	}
-	RenderTable(os.Stdout, table, TableOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
+	RenderTable(os.Stdout, table, RenderOptions{Color: true, PrintDateTime: true, OptionalColumns: map[string]bool{
 		"Activity Poller Identity": taskListType == types.TaskListTypeActivity,
 		"Decision Poller Identity": taskListType == types.TaskListTypeDecision,
 	}})
@@ -120,7 +120,7 @@ func printTaskListPartitions(taskListType string, partitions []*types.TaskListPa
 			Host:              partition.GetOwnerHostName(),
 		})
 	}
-	RenderTable(os.Stdout, table, TableOptions{Color: true, OptionalColumns: map[string]bool{
+	RenderTable(os.Stdout, table, RenderOptions{Color: true, OptionalColumns: map[string]bool{
 		"Activity Task List Partition": taskListType == "Activity",
 		"Decision Task List Partition": taskListType == "Decision",
 	}})
