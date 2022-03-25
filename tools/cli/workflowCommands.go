@@ -787,7 +787,7 @@ func printAutoResetPoints(resp *types.DescribeWorkflowExecutionResponse) {
 			EventID:        pt.GetFirstDecisionCompletedID(),
 		})
 	}
-	RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true, PrintDateTime: true})
+	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true, PrintDateTime: true})
 }
 
 // describeWorkflowExecutionResponse is used to print datetime instead of print raw time
@@ -980,19 +980,31 @@ func printRunStatus(event *types.HistoryEvent) {
 
 // WorkflowRow is a presentation layer entity use to render a table of workflows
 type WorkflowRow struct {
-	WorkflowType     string                  `header:"Workflow Type" maxLength:"32"`
-	WorkflowID       string                  `header:"Workflow ID"`
-	RunID            string                  `header:"Run ID"`
-	TaskList         string                  `header:"Task List"`
-	IsCron           bool                    `header:"Is Cron"`
-	StartTime        time.Time               `header:"Start Time"`
-	ExecutionTime    time.Time               `header:"Execution Time"`
-	EndTime          time.Time               `header:"End Time"`
-	Memo             *types.Memo             `header:"Memo"`
-	SearchAttributes *types.SearchAttributes `header:"Search Attributes"`
+	WorkflowType     string                 `header:"Workflow Type" maxLength:"32"`
+	WorkflowID       string                 `header:"Workflow ID"`
+	RunID            string                 `header:"Run ID"`
+	TaskList         string                 `header:"Task List"`
+	IsCron           bool                   `header:"Is Cron"`
+	StartTime        time.Time              `header:"Start Time"`
+	ExecutionTime    time.Time              `header:"Execution Time"`
+	EndTime          time.Time              `header:"End Time"`
+	Memo             map[string]string      `header:"Memo"`
+	SearchAttributes map[string]interface{} `header:"Search Attributes"`
 }
 
 func newWorkflowRow(workflow *types.WorkflowExecutionInfo) WorkflowRow {
+	memo := map[string]string{}
+	for k, v := range workflow.Memo.GetFields() {
+		memo[k] = string(v)
+	}
+
+	sa := map[string]interface{}{}
+	for k, v := range workflow.SearchAttributes.GetIndexedFields() {
+		var decodedVal interface{}
+		json.Unmarshal(v, &decodedVal)
+		sa[k] = decodedVal
+	}
+
 	return WorkflowRow{
 		WorkflowType:     workflow.Type.GetName(),
 		WorkflowID:       workflow.Execution.GetWorkflowID(),
@@ -1002,18 +1014,19 @@ func newWorkflowRow(workflow *types.WorkflowExecutionInfo) WorkflowRow {
 		StartTime:        time.Unix(0, workflow.GetStartTime()),
 		ExecutionTime:    time.Unix(0, workflow.GetExecutionTime()),
 		EndTime:          time.Unix(0, workflow.GetCloseTime()),
-		Memo:             workflow.Memo,
-		SearchAttributes: workflow.SearchAttributes,
+		Memo:             memo,
+		SearchAttributes: sa,
 	}
 }
 
-func workflowTableOptions(c *cli.Context) TableOptions {
+func workflowTableOptions(c *cli.Context) RenderOptions {
 	isScanQueryOpen := isQueryOpen(c.String(FlagListQuery))
 
-	return TableOptions{
-		Color:         true,
-		PrintDateTime: c.Bool(FlagPrintDateTime),
-		PrintRawTime:  c.Bool(FlagPrintRawTime),
+	return RenderOptions{
+		DefaultTemplate: templateTable,
+		Color:           true,
+		PrintDateTime:   c.Bool(FlagPrintDateTime),
+		PrintRawTime:    c.Bool(FlagPrintRawTime),
 		OptionalColumns: map[string]bool{
 			"End Time":          !(c.Bool(FlagOpen) || isScanQueryOpen),
 			"Memo":              c.Bool(FlagPrintMemo),
@@ -1095,7 +1108,7 @@ func displayWorkflows(c *cli.Context, workflows []*types.WorkflowExecutionInfo) 
 		for _, workflow := range workflows {
 			table = append(table, newWorkflowRow(workflow))
 		}
-		RenderTable(os.Stdout, table, tableOptions)
+		Render(c, table, tableOptions)
 	}
 }
 

@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"time"
 
@@ -492,11 +491,11 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 	}
 
 	table := []ShardRow{}
-	opts := TableOptions{Color: true}
+	opts := RenderOptions{DefaultTemplate: templateTable, Color: true}
 	outputPageSize := tableRenderSize
 	for shardID, identity := range resp.Shards {
 		if outputPageSize == 0 {
-			RenderTable(os.Stdout, table, opts)
+			Render(c, table, opts)
 			table = []ShardRow{}
 			if !showNextPage() {
 				break
@@ -507,7 +506,7 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 		outputPageSize--
 	}
 	// output the remaining rows
-	RenderTable(os.Stdout, table, opts)
+	Render(c, table, opts)
 }
 
 // AdminDescribeHistoryHost describes history host

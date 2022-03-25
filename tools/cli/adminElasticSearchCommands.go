@@ -107,7 +107,7 @@ func AdminCatIndices(c *cli.Context) {
 			PrimaryStorageSize: row.PriStoreSize,
 		})
 	}
-	RenderTable(os.Stdout, table, TableOptions{Color: true, Border: true})
+	Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true, Border: true})
 }
 
 // AdminIndex used to bulk insert message from kafka parse

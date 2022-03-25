@@ -139,8 +139,8 @@ const (
 	FlagPrintMemoWithAlias                = FlagPrintMemo + ", pme"
 	FlagPrintSearchAttr                   = "print_search_attr"
 	FlagPrintSearchAttrWithAlias          = FlagPrintSearchAttr + ", psa"
-	FlagPrintJSON                         = "print_json"
-	FlagPrintJSONWithAlias                = FlagPrintJSON + ", pjson"
+	FlagPrintJSON                         = "print_json"              // Deprecated: use --format json
+	FlagPrintJSONWithAlias                = FlagPrintJSON + ", pjson" // Deprecated: use --format json
 	FlagDescription                       = "description"
 	FlagDescriptionWithAlias              = FlagDescription + ", desc"
 	FlagOwnerEmail                        = "owner_email"
@@ -288,6 +288,7 @@ const (
 	FlagDynamicConfigValue                = "dynamic_config_value"
 	FlagTransport                         = "transport"
 	FlagTransportWithAlias                = FlagTransport + ", t"
+	FlagFormat                            = "format"
 )
 
 var flagsForExecution = []cli.Flag{
@@ -533,6 +534,13 @@ func getFlagsForTerminate() []cli.Flag {
 	})
 }
 
+func getFormatFlag() cli.Flag {
+	return cli.StringFlag{
+		Name:  FlagFormat,
+		Usage: "Format [table|json|<template>]; Use GoLang \"text/template\" syntax to format the output.",
+	}
+}
+
 func getCommonFlagsForVisibility() []cli.Flag {
 	return []cli.Flag{
 		cli.BoolFlag{
@@ -557,8 +565,9 @@ func getCommonFlagsForVisibility() []cli.Flag {
 		},
 		cli.BoolFlag{
 			Name:  FlagPrintJSONWithAlias,
-			Usage: "Print in raw json format",
+			Usage: "Print in raw json format (DEPRECATED: instead use --format json)",
 		},
+		getFormatFlag(),
 	}
 }
 
