@@ -421,6 +421,7 @@ func (v *esVisibilityStore) ScanWorkflowExecutions(
 			return nil, &types.BadRequestError{Message: fmt.Sprintf("Error when parse query: %v", err)}
 		}
 	}
+	v.logger.Error("scan workflow request received", tag.VisibilityQuery(queryDSL))
 
 	resp, err := v.esClient.ScanByQuery(ctx, &es.ScanByQueryRequest{
 		Index:         v.index,
