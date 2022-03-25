@@ -749,42 +749,41 @@ func newAdminClusterCommands() []cli.Command {
 	}
 }
 
+func getDLQFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagShards,
+			Usage: "Comma separated shard IDs or inclusive ranges. Example: \"2,5-6,10\".  Alternatively, feed one shard ID per line via STDIN.",
+		},
+		cli.StringFlag{
+			Name:  FlagDLQTypeWithAlias,
+			Usage: "Type of DLQ to manage. (Options: domain, history)",
+			Value: "history",
+		},
+		cli.StringFlag{
+			Name:  FlagSourceCluster,
+			Usage: "The cluster where the task is generated",
+		},
+		cli.IntFlag{
+			Name:  FlagLastMessageIDWithAlias,
+			Usage: "The upper boundary of the read message",
+		},
+	}
+}
+
 func newAdminDLQCommands() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "read",
 			Aliases: []string{"r"},
 			Usage:   "Read DLQ Messages",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage. (Options: domain, history)",
-				},
-				cli.StringFlag{
-					Name:  FlagSourceCluster,
-					Usage: "The cluster where the task is generated",
-				},
-				cli.IntFlag{
-					Name:  FlagShardIDWithAlias,
-					Usage: "ShardID",
-				},
+			Flags: append(getDLQFlags(),
 				cli.IntFlag{
 					Name:  FlagMaxMessageCountWithAlias,
 					Usage: "Max message size to fetch",
 				},
-				cli.IntFlag{
-					Name:  FlagLastMessageIDWithAlias,
-					Usage: "The upper boundary of the read message",
-				},
-				cli.StringFlag{
-					Name:  FlagOutputFilenameWithAlias,
-					Usage: "Output file to write to, if not provided output is written to stdout",
-				},
-				cli.BoolFlag{
-					Name:  FlagDLQRawTask,
-					Usage: "Show DLQ raw task information",
-				},
-			},
+				getFormatFlag(),
+			),
 			Action: func(c *cli.Context) {
 				AdminGetDLQMessages(c)
 			},
@@ -793,28 +792,7 @@ func newAdminDLQCommands() []cli.Command {
 			Name:    "purge",
 			Aliases: []string{"p"},
 			Usage:   "Delete DLQ messages with equal or smaller ids than the provided task id",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage. (Options: domain, history)",
-				},
-				cli.StringFlag{
-					Name:  FlagSourceCluster,
-					Usage: "The cluster where the task is generated",
-				},
-				cli.IntFlag{
-					Name:  FlagLowerShardBound,
-					Usage: "lower bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagUpperShardBound,
-					Usage: "upper bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagLastMessageIDWithAlias,
-					Usage: "The upper boundary of the read message",
-				},
-			},
+			Flags:   getDLQFlags(),
 			Action: func(c *cli.Context) {
 				AdminPurgeDLQMessages(c)
 			},
@@ -823,28 +801,7 @@ func newAdminDLQCommands() []cli.Command {
 			Name:    "merge",
 			Aliases: []string{"m"},
 			Usage:   "Merge DLQ messages with equal or smaller ids than the provided task id",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage. (Options: domain, history)",
-				},
-				cli.StringFlag{
-					Name:  FlagSourceCluster,
-					Usage: "The cluster where the task is generated",
-				},
-				cli.IntFlag{
-					Name:  FlagLowerShardBound,
-					Usage: "lower bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagUpperShardBound,
-					Usage: "upper bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagLastMessageIDWithAlias,
-					Usage: "The upper boundary of the read message",
-				},
-			},
+			Flags:   getDLQFlags(),
 			Action: func(c *cli.Context) {
 				AdminMergeDLQMessages(c)
 			},
