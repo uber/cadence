@@ -321,7 +321,7 @@ func BatchActivity(ctx context.Context, batchParams BatchParams) (HeartBeatDetai
 			Query:         batchParams.Query,
 		})
 		if err != nil {
-			return HeartBeatDetails{}, err
+			return HeartBeatDetails{}, fmt.Errorf("scan workflow Failed: %v", err.Error())
 		}
 		batchCount := len(resp.Executions)
 		if batchCount <= 0 {
