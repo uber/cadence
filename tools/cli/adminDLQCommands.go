@@ -22,7 +22,6 @@ package cli
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -33,7 +32,6 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -42,21 +40,40 @@ const (
 	defaultPageSize = 1000
 )
 
+type DLQRow struct {
+	ShardID         int                        `header:"Shard ID" json:"shardID"`
+	DomainName      string                     `header:"Domain Name" json:"domainName"`
+	DomainID        string                     `header:"Domain ID" json:"domainID"`
+	WorkflowID      string                     `header:"Workflow ID" json:"workflowID"`
+	RunID           string                     `header:"Run ID" json:"runID"`
+	TaskID          int64                      `header:"Task ID" json:"taskID"`
+	TaskType        *types.ReplicationTaskType `header:"Task Type" json:"taskType"`
+	Version         int64                      `json:"version"`
+	FirstEventID    int64                      `json:"firstEventID"`
+	NextEventID     int64                      `json:"nextEventID"`
+	ScheduledID     int64                      `json:"scheduledID"`
+	ReplicationTask *types.ReplicationTask     `json:"replicationTask"`
+
+	// Those are deserialized variants from history replications task
+	Events       []*types.HistoryEvent `json:"events"`
+	NewRunEvents []*types.HistoryEvent `json:"newRunEvents,omitempty"`
+
+	// Only event IDs for compact table representation
+	EventIDs       []int64 `header:"Event IDs"`
+	NewRunEventIDs []int64 `header:"New Run Event IDs"`
+}
+
 // AdminGetDLQMessages gets DLQ metadata
 func AdminGetDLQMessages(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
+	client := cFactory.ServerFrontendClient(c)
 	adminClient := cFactory.ServerAdminClient(c)
-	dlqType := getRequiredOption(c, FlagDLQType)
-	sourceCluster := getRequiredOption(c, FlagSourceCluster)
-	shardID := getRequiredIntOption(c, FlagShardID)
-	serializer := persistence.NewPayloadSerializer()
-	outputFile := getOutputFile(c.String(FlagOutputFilename))
-	defer outputFile.Close()
 
-	showRawTask := c.Bool(FlagDLQRawTask)
-	var rawTasksInfo []*types.ReplicationTaskInfo
+	dlqType := toQueueType(getRequiredOption(c, FlagDLQType))
+	sourceCluster := getRequiredOption(c, FlagSourceCluster)
+
 	remainingMessageCount := common.EndMessageID
 	if c.IsSet(FlagMaxMessageCount) {
 		remainingMessageCount = c.Int64(FlagMaxMessageCount)
@@ -66,75 +83,96 @@ func AdminGetDLQMessages(c *cli.Context) {
 		lastMessageID = c.Int64(FlagLastMessageID)
 	}
 
-	paginationFunc := func(paginationToken []byte) ([]interface{}, []byte, error) {
-		resp, err := adminClient.ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{
-			Type:                  toQueueType(dlqType),
-			SourceCluster:         sourceCluster,
-			ShardID:               int32(shardID),
-			InclusiveEndMessageID: common.Int64Ptr(lastMessageID),
-			MaximumPageSize:       defaultPageSize,
-			NextPageToken:         paginationToken,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		var paginateItems []interface{}
-		for _, item := range resp.GetReplicationTasks() {
-			paginateItems = append(paginateItems, item)
-		}
-		if showRawTask {
-			rawTasksInfo = append(rawTasksInfo, resp.GetReplicationTasksInfo()...)
+	// Cache for domain names
+	domainNames := map[string]string{}
+	getDomainName := func(domainId string) string {
+		if domainName, ok := domainNames[domainId]; ok {
+			return domainName
 		}
 
-		return paginateItems, resp.GetNextPageToken(), err
+		resp, err := client.DescribeDomain(ctx, &types.DescribeDomainRequest{UUID: common.StringPtr(domainId)})
+		if err != nil {
+			ErrorAndExit("failed to describe domain", err)
+		}
+		domainNames[domainId] = resp.DomainInfo.Name
+		return resp.DomainInfo.Name
 	}
 
-	iterator := collection.NewPagingIterator(paginationFunc)
-	var lastReadMessageID int
-	for iterator.HasNext() && remainingMessageCount > 0 {
-		item, err := iterator.Next()
-		if err != nil {
-			ErrorAndExit(fmt.Sprintf("fail to read dlq message. Last read message id: %v", lastReadMessageID), err)
-		}
+	readShard := func(shardID int) []DLQRow {
+		var rows []DLQRow
+		var pageToken []byte
 
-		task := item.(*types.ReplicationTask)
-		taskStr, err := decodeReplicationTask(task, serializer)
-		if err != nil {
-			ErrorAndExit(fmt.Sprintf("fail to encode dlq message. Last read message id: %v", lastReadMessageID), err)
-		}
-
-		lastReadMessageID = int(task.SourceTaskID)
-		remainingMessageCount--
-		_, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(taskStr)))
-		if err != nil {
-			ErrorAndExit("fail to print dlq messages.", err)
-		}
-	}
-
-	if showRawTask {
-		_, err := outputFile.WriteString("#### REPLICATION DLQ RAW TASKS INFO ####\n")
-		if err != nil {
-			ErrorAndExit("fail to print dlq raw tasks.", err)
-		}
-		for _, info := range rawTasksInfo {
-			str, err := json.Marshal(info)
+		for {
+			resp, err := adminClient.ReadDLQMessages(ctx, &types.ReadDLQMessagesRequest{
+				Type:                  dlqType,
+				SourceCluster:         sourceCluster,
+				ShardID:               int32(shardID),
+				InclusiveEndMessageID: common.Int64Ptr(lastMessageID),
+				MaximumPageSize:       defaultPageSize,
+				NextPageToken:         pageToken,
+			})
 			if err != nil {
-				ErrorAndExit("fail to encode dlq raw tasks.", err)
+				ErrorAndExit(fmt.Sprintf("fail to read dlq message for shard: %d", shardID), err)
 			}
 
-			if _, err = outputFile.WriteString(fmt.Sprintf("%v\n", string(str))); err != nil {
-				ErrorAndExit("fail to print dlq raw tasks.", err)
+			replicationTasks := map[int64]*types.ReplicationTask{}
+			for _, task := range resp.ReplicationTasks {
+				replicationTasks[task.SourceTaskID] = task
 			}
-		}
-	} else {
-		if lastReadMessageID == 0 && len(rawTasksInfo) > 0 {
-			if _, err := outputFile.WriteString(
-				fmt.Sprintf("WARN: Received empty replication task but metadata is not empty. Please use %v to show metadata task.\n", FlagDLQRawTask),
-			); err != nil {
-				ErrorAndExit("fail to print warning message.", err)
+
+			for _, info := range resp.ReplicationTasksInfo {
+				task := replicationTasks[info.TaskID]
+
+				var taskType *types.ReplicationTaskType
+				if task != nil {
+					taskType = task.TaskType
+				}
+
+				events := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetEvents())
+				newRunEvents := deserializeBatchEvents(task.GetHistoryTaskV2Attributes().GetNewRunEvents())
+
+				rows = append(rows, DLQRow{
+					ShardID:         shardID,
+					DomainName:      getDomainName(info.DomainID),
+					DomainID:        info.DomainID,
+					WorkflowID:      info.WorkflowID,
+					RunID:           info.RunID,
+					TaskType:        taskType,
+					TaskID:          info.TaskID,
+					Version:         info.Version,
+					FirstEventID:    info.FirstEventID,
+					NextEventID:     info.NextEventID,
+					ScheduledID:     info.ScheduledID,
+					ReplicationTask: task,
+					Events:          events,
+					EventIDs:        collectEventIDs(events),
+					NewRunEvents:    newRunEvents,
+					NewRunEventIDs:  collectEventIDs(newRunEvents),
+				})
+
+				remainingMessageCount--
+				if remainingMessageCount <= 0 {
+					return rows
+				}
 			}
+
+			if len(resp.NextPageToken) == 0 {
+				break
+			}
+			pageToken = resp.NextPageToken
 		}
+		return rows
 	}
+
+	table := []DLQRow{}
+	for shardID := range getShards(c) {
+		if remainingMessageCount <= 0 {
+			break
+		}
+		table = append(table, readShard(shardID)...)
+	}
+
+	Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true})
 }
 
 // AdminPurgeDLQMessages deletes messages from DLQ
@@ -217,10 +255,13 @@ func getShards(c *cli.Context) chan int {
 func generateShardRangeFromFlags(c *cli.Context) chan int {
 	shards := make(chan int)
 	go func() {
-		lower := c.Int(FlagLowerShardBound)
-		upper := c.Int(FlagUpperShardBound)
-		for shard := lower; shard <= upper; shard++ {
-			shards <- shard
+		shardRange, err := parseIntMultiRange(c.String(FlagShards))
+		if err != nil {
+			fmt.Printf("failed to parse shard range: %q\n", c.String(FlagShards))
+		} else {
+			for _, shard := range shardRange {
+				shards <- shard
+			}
 		}
 		close(shards)
 	}()
@@ -262,4 +303,24 @@ func toQueueType(dlqType string) *types.DLQType {
 		ErrorAndExit("The queue type is not supported.", fmt.Errorf("the queue type is not supported. Type: %v", dlqType))
 	}
 	return nil
+}
+
+func deserializeBatchEvents(blob *types.DataBlob) []*types.HistoryEvent {
+	if blob == nil {
+		return nil
+	}
+	serializer := persistence.NewPayloadSerializer()
+	events, err := serializer.DeserializeBatchEvents(persistence.NewDataBlobFromInternal(blob))
+	if err != nil {
+		ErrorAndExit("Failed to decode DLQ history replication events", err)
+	}
+	return events
+}
+
+func collectEventIDs(events []*types.HistoryEvent) []int64 {
+	ids := make([]int64, 0, len(events))
+	for _, event := range events {
+		ids = append(ids, event.ID)
+	}
+	return ids
 }

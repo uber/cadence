@@ -34,6 +34,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1122,4 +1123,49 @@ func serializeSearchAttributes(input map[string]interface{}) (*types.SearchAttri
 		attr[k] = attrBytes
 	}
 	return &types.SearchAttributes{IndexedFields: attr}, nil
+}
+
+// parseIntMultiRange will parse string of multiple integer ranges separates by commas.
+// Single range can be an integer or inclusive range separated by dash.
+// The result is a sorted set union of integers.
+// Example: "3,8-8,5-6" -> [3,4,5,8]
+func parseIntMultiRange(s string) ([]int, error) {
+	set := map[int]struct{}{}
+	ranges := strings.Split(strings.TrimSpace(s), ",")
+	for _, r := range ranges {
+		r = strings.TrimSpace(r)
+		if len(r) == 0 {
+			continue
+		}
+		parts := strings.Split(r, "-")
+		switch len(parts) {
+		case 1:
+			i, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+			if err != nil {
+				return nil, fmt.Errorf("single number %q: %v", r, err)
+			}
+			set[i] = struct{}{}
+		case 2:
+			lower, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+			if err != nil {
+				return nil, fmt.Errorf("lower range of %q: %v", r, err)
+			}
+			upper, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err != nil {
+				return nil, fmt.Errorf("upper range of %q: %v", r, err)
+			}
+			for i := lower; i <= upper; i++ {
+				set[i] = struct{}{}
+			}
+		default:
+			return nil, fmt.Errorf("invalid range %q", r)
+		}
+	}
+
+	result := []int{}
+	for i := range set {
+		result = append(result, i)
+	}
+	sort.Ints(result)
+	return result, nil
 }
