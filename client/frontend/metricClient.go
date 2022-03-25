@@ -236,7 +236,7 @@ func (c *metricClient) ScanWorkflowExecutions(
 	c.metricsClient.IncCounter(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientLatency)
-	resp, err := c.client.ListWorkflowExecutions(ctx, request, opts...)
+	resp, err := c.client.ScanWorkflowExecutions(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
