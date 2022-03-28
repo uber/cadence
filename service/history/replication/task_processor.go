@@ -629,6 +629,7 @@ func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
 			} else {
 				p.metricsClient.Scope(
 					metrics.ReplicationDLQStatsScope,
+					metrics.SourceClusterTag(p.sourceCluster),
 					metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
 				).UpdateGauge(metrics.ReplicationDLQSize, float64(resp.Size))
 			}
