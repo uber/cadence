@@ -33,6 +33,7 @@ const (
 
 	instance               = "instance"
 	domain                 = "domain"
+	sourceCluster          = "source_cluster"
 	targetCluster          = "target_cluster"
 	activeCluster          = "active_cluster"
 	taskList               = "tasklist"
@@ -90,6 +91,11 @@ func DomainUnknownTag() Tag {
 // InstanceTag returns a new instance tag
 func InstanceTag(value string) Tag {
 	return simpleMetric{key: instance, value: value}
+}
+
+// SourceClusterTag returns a new source cluster tag.
+func SourceClusterTag(value string) Tag {
+	return metricWithUnknown(sourceCluster, value)
 }
 
 // TargetClusterTag returns a new target cluster tag.
