@@ -203,6 +203,8 @@ const (
 	DefaultESAnalyzerMinNumWorkflowsForAvg = 100
 	// DefaultESAnalyzerLimitToTypes controls if we want to limit ESAnalyzer only to some workflow types
 	DefaultESAnalyzerLimitToTypes = ""
+	// DefaultESAnalyzerEnableAvgDurationBasedChecks controls if we want to enable avg duration based refreshes
+	DefaultESAnalyzerEnableAvgDurationBasedChecks = false
 	// DefaultESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
 	DefaultESAnalyzerLimitToDomains = ""
 	// DefaultESAnalyzerWorkflowDurationWarnThreshold defines warning threshold for a workflow duration
