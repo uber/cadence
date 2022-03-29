@@ -365,6 +365,8 @@ const (
 	HistoryClientQueryWorkflowScope
 	// HistoryClientReapplyEventsScope tracks RPC calls to history service
 	HistoryClientReapplyEventsScope
+	// HistoryClientCountDLQMessagesScope tracks RPC calls to history service
+	HistoryClientCountDLQMessagesScope
 	// HistoryClientReadDLQMessagesScope tracks RPC calls to history service
 	HistoryClientReadDLQMessagesScope
 	// HistoryClientPurgeDLQMessagesScope tracks RPC calls to history service
@@ -513,6 +515,8 @@ const (
 	AdminClientGetWorkflowExecutionRawHistoryV2Scope
 	// AdminClientDescribeClusterScope tracks RPC calls to admin service
 	AdminClientDescribeClusterScope
+	// AdminClientCountDLQMessagesScope tracks RPC calls to admin service
+	AdminClientCountDLQMessagesScope
 	// AdminClientReadDLQMessagesScope tracks RPC calls to admin service
 	AdminClientReadDLQMessagesScope
 	// AdminClientPurgeDLQMessagesScope tracks RPC calls to admin service
@@ -755,6 +759,8 @@ const (
 	AdminResetQueueScope
 	// AdminDescribeQueueScope is the metrics scope for admin.AdminDescribeQueueScope
 	AdminDescribeQueueScope
+	// AdminCountDLQMessagesScope is the metric scope for admin.AdminCountDLQMessagesScope
+	AdminCountDLQMessagesScope
 	// AdminReadDLQMessagesScope is the metric scope for admin.AdminReadDLQMessagesScope
 	AdminReadDLQMessagesScope
 	// AdminPurgeDLQMessagesScope is the metric scope for admin.AdminPurgeDLQMessagesScope
@@ -935,6 +941,8 @@ const (
 	HistoryGetReplicationMessagesScope
 	// HistoryGetDLQReplicationMessagesScope tracks GetReplicationMessages API calls received by service
 	HistoryGetDLQReplicationMessagesScope
+	// HistoryCountDLQMessagesScope tracks CountDLQMessages API calls received by service
+	HistoryCountDLQMessagesScope
 	// HistoryReadDLQMessagesScope tracks ReadDLQMessages API calls received by service
 	HistoryReadDLQMessagesScope
 	// HistoryPurgeDLQMessagesScope tracks PurgeDLQMessages API calls received by service
@@ -1335,6 +1343,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryClientGetDLQReplicationTasksScope:              {operation: "HistoryClientGetDLQReplicationTasksScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientQueryWorkflowScope:                       {operation: "HistoryClientQueryWorkflowScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientReapplyEventsScope:                       {operation: "HistoryClientReapplyEventsScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
+		HistoryClientCountDLQMessagesScope:                    {operation: "HistoryClientCountDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientReadDLQMessagesScope:                     {operation: "HistoryClientReadDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientPurgeDLQMessagesScope:                    {operation: "HistoryClientPurgeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
 		HistoryClientMergeDLQMessagesScope:                    {operation: "HistoryClientMergeDLQMessagesScope", tags: map[string]string{CadenceRoleTagName: HistoryClientRoleTagValue}},
@@ -1411,6 +1420,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientRemoveTaskScope:                            {operation: "AdminClientRemoveTask", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientResetQueueScope:                            {operation: "AdminClientResetQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientDescribeQueueScope:                         {operation: "AdminClientDescribeQueue", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientCountDLQMessagesScope:                      {operation: "AdminClientCountDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientReadDLQMessagesScope:                       {operation: "AdminClientReadDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientPurgeDLQMessagesScope:                      {operation: "AdminClientPurgeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientMergeDLQMessagesScope:                      {operation: "AdminClientMergeDLQMessages", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
@@ -1512,6 +1522,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminCloseShardScope:                        {operation: "AdminCloseShard"},
 		AdminResetQueueScope:                        {operation: "AdminResetQueue"},
 		AdminDescribeQueueScope:                     {operation: "AdminDescribeQueue"},
+		AdminCountDLQMessagesScope:                  {operation: "AdminCountDLQMessages"},
 		AdminReadDLQMessagesScope:                   {operation: "AdminReadDLQMessages"},
 		AdminPurgeDLQMessagesScope:                  {operation: "AdminPurgeDLQMessages"},
 		AdminMergeDLQMessagesScope:                  {operation: "AdminMergeDLQMessages"},
@@ -1614,6 +1625,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		HistoryDescribeMutableStateScope:                                {operation: "DescribeMutableState"},
 		HistoryGetReplicationMessagesScope:                              {operation: "GetReplicationMessages"},
 		HistoryGetDLQReplicationMessagesScope:                           {operation: "GetDLQReplicationMessages"},
+		HistoryCountDLQMessagesScope:                                    {operation: "CountDLQMessages"},
 		HistoryReadDLQMessagesScope:                                     {operation: "ReadDLQMessages"},
 		HistoryPurgeDLQMessagesScope:                                    {operation: "PurgeDLQMessages"},
 		HistoryMergeDLQMessagesScope:                                    {operation: "MergeDLQMessages"},

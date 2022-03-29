@@ -111,6 +111,11 @@ var (
 		HistoryBatches: DataBlobArray,
 		VersionHistory: &VersionHistory,
 	}
+	AdminCountDLQMessagesRequest  = types.CountDLQMessagesRequest{ForceFetch: true}
+	AdminCountDLQMessagesResponse = types.CountDLQMessagesResponse{
+		History: HistoryCountDLQMessagesResponse.Entries,
+		Domain:  123456,
+	}
 	AdminMergeDLQMessagesRequest = types.MergeDLQMessagesRequest{
 		Type:                  types.DLQTypeDomain.Ptr(),
 		ShardID:               ShardID,

@@ -24,15 +24,23 @@ package domain
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
+	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
 type (
 	// DLQMessageHandler is the interface handles domain DLQ messages
 	DLQMessageHandler interface {
+		common.Daemon
+
+		Count(ctx context.Context, forceFetch bool) (int64, error)
 		Read(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]*types.ReplicationTask, []byte, error)
 		Purge(ctx context.Context, lastMessageID int64) error
 		Merge(ctx context.Context, lastMessageID int64, pageSize int, pageToken []byte) ([]byte, error)
@@ -42,6 +50,12 @@ type (
 		replicationHandler ReplicationTaskExecutor
 		replicationQueue   ReplicationQueue
 		logger             log.Logger
+		metricsClient      metrics.Client
+		done               chan struct{}
+		status             int32
+
+		mu        sync.Mutex
+		lastCount int64
 	}
 )
 
@@ -50,12 +64,46 @@ func NewDLQMessageHandler(
 	replicationHandler ReplicationTaskExecutor,
 	replicationQueue ReplicationQueue,
 	logger log.Logger,
+	metricsClient metrics.Client,
 ) DLQMessageHandler {
 	return &dlqMessageHandlerImpl{
 		replicationHandler: replicationHandler,
 		replicationQueue:   replicationQueue,
 		logger:             logger,
+		metricsClient:      metricsClient,
+		done:               make(chan struct{}),
+		lastCount:          -1,
 	}
+}
+
+// Start starts the DLQ handler
+func (d *dlqMessageHandlerImpl) Start() {
+	if !atomic.CompareAndSwapInt32(&d.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
+	go d.emitDLQSizeMetricsLoop()
+	d.logger.Info("Domain DLQ handler started.")
+}
+
+// Stop stops the DLQ handler
+func (d *dlqMessageHandlerImpl) Stop() {
+	if !atomic.CompareAndSwapInt32(&d.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
+	d.logger.Debug("Domain DLQ handler shutting down.")
+	close(d.done)
+}
+
+// Count counts domain replication DLQ messages
+func (d *dlqMessageHandlerImpl) Count(ctx context.Context, forceFetch bool) (int64, error) {
+	if forceFetch || d.lastCount == -1 {
+		if err := d.fetchAndEmitDLQSize(ctx); err != nil {
+			return 0, err
+		}
+	}
+	return d.lastCount, nil
 }
 
 // ReadMessages reads domain replication DLQ messages
@@ -162,4 +210,35 @@ func (d *dlqMessageHandlerImpl) Merge(
 	}
 
 	return token, nil
+}
+
+func (d *dlqMessageHandlerImpl) emitDLQSizeMetricsLoop() {
+	ticker := time.NewTicker(queueSizeQueryInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-d.done:
+			return
+		case <-ticker.C:
+			d.fetchAndEmitDLQSize(context.Background())
+		}
+	}
+}
+
+func (d *dlqMessageHandlerImpl) fetchAndEmitDLQSize(ctx context.Context) error {
+	size, err := d.replicationQueue.GetDLQSize(ctx)
+	if err != nil {
+		d.logger.Warn("Failed to get DLQ size.", tag.Error(err))
+		d.metricsClient.Scope(metrics.DomainReplicationQueueScope).IncCounter(metrics.DomainReplicationQueueSizeErrorCount)
+		return err
+	}
+
+	d.metricsClient.Scope(metrics.DomainReplicationQueueScope).UpdateGauge(metrics.DomainReplicationQueueSizeGauge, float64(size))
+
+	d.mu.Lock()
+	d.lastCount = size
+	d.mu.Unlock()
+
+	return nil
 }

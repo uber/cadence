@@ -903,6 +903,46 @@ func (c *clientImpl) ReapplyEvents(
 	return err
 }
 
+func (c *clientImpl) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.HistoryCountDLQMessagesResponse, error) {
+
+	peers, err := c.peerResolver.GetAllPeers()
+	if err != nil {
+		return nil, err
+	}
+
+	var mu sync.Mutex
+	responses := make([]*types.HistoryCountDLQMessagesResponse, 0, len(peers))
+
+	g := &errgroup.Group{}
+	for _, peer := range peers {
+		peer := peer
+		g.Go(func() error {
+			response, err := c.client.CountDLQMessages(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+			if err == nil {
+				mu.Lock()
+				responses = append(responses, response)
+				mu.Unlock()
+			}
+
+			return err
+		})
+	}
+
+	err = g.Wait()
+
+	entries := map[types.HistoryDLQCountKey]int64{}
+	for _, response := range responses {
+		for key, count := range response.Entries {
+			entries[key] = count
+		}
+	}
+	return &types.HistoryCountDLQMessagesResponse{Entries: entries}, err
+}
+
 func (c *clientImpl) ReadDLQMessages(
 	ctx context.Context,
 	request *types.ReadDLQMessagesRequest,

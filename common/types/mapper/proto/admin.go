@@ -438,6 +438,44 @@ func ToAdminGetWorkflowExecutionRawHistoryV2Response(t *adminv1.GetWorkflowExecu
 	}
 }
 
+func FromAdminCountDLQMessagesRequest(t *types.CountDLQMessagesRequest) *adminv1.CountDLQMessagesRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.CountDLQMessagesRequest{
+		ForceFetch: t.ForceFetch,
+	}
+}
+
+func ToAdminCountDLQMessagesRequest(t *adminv1.CountDLQMessagesRequest) *types.CountDLQMessagesRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.CountDLQMessagesRequest{
+		ForceFetch: t.ForceFetch,
+	}
+}
+
+func FromAdminCountDLQMessagesResponse(t *types.CountDLQMessagesResponse) *adminv1.CountDLQMessagesResponse {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.CountDLQMessagesResponse{
+		History: FromHistoryDLQCountEntryMap(t.History),
+		Domain:  t.Domain,
+	}
+}
+
+func ToAdminCountDLQMessagesResponse(t *adminv1.CountDLQMessagesResponse) *types.CountDLQMessagesResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.CountDLQMessagesResponse{
+		History: ToHistoryDLQCountEntryMap(t.History),
+		Domain:  t.Domain,
+	}
+}
+
 func FromAdminMergeDLQMessagesRequest(t *types.MergeDLQMessagesRequest) *adminv1.MergeDLQMessagesRequest {
 	if t == nil {
 		return nil

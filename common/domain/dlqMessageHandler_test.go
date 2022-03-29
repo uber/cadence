@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -71,6 +72,7 @@ func (s *dlqMessageHandlerSuite) SetupTest() {
 		s.mockReplicationTaskExecutor,
 		s.mockReplicationQueue,
 		logger,
+		metrics.NewNoopMetricsClient(),
 	).(*dlqMessageHandlerImpl)
 }
 
