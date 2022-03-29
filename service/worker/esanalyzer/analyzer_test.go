@@ -166,6 +166,10 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		s.workflow.findLongRunningWorkflows,
 		activity.RegisterOptions{Name: findLongRunningWorkflowsActivity},
 	)
+	s.workflowEnv.RegisterActivityWithOptions(
+		s.workflow.getLongRunCheckEntries,
+		activity.RegisterOptions{Name: getLongRunCheckEntriesActivity},
+	)
 
 	s.activityEnv.RegisterActivityWithOptions(
 		s.workflow.getWorkflowTypes,
@@ -180,6 +184,10 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.activityEnv.RegisterActivityWithOptions(
 		s.workflow.findLongRunningWorkflows,
 		activity.RegisterOptions{Name: findLongRunningWorkflowsActivity},
+	)
+	s.activityEnv.RegisterActivityWithOptions(
+		s.workflow.getLongRunCheckEntries,
+		activity.RegisterOptions{Name: getLongRunCheckEntriesActivity},
 	)
 }
 
@@ -210,10 +218,21 @@ func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflow() {
 	}
 	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[0]).
 		Return(workflows, nil).Times(1)
-	s.workflowEnv.OnActivity(findLongRunningWorkflowsActivity, mock.Anything).
-		Return(nil).Times(1)
 
-	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows).Return(nil).Times(1)
+	longRunningWorkflows := []LongRunCheckEntry{
+		{
+			DomainName:   s.DomainName,
+			WorkflowType: s.WorkflowType,
+			Threshold:    time.Hour,
+			Refresh:      true,
+		},
+	}
+	s.workflowEnv.OnActivity(getLongRunCheckEntriesActivity, mock.Anything).
+		Return(longRunningWorkflows, nil).Times(1)
+	s.workflowEnv.OnActivity(findLongRunningWorkflowsActivity, mock.Anything, longRunningWorkflows[0]).
+		Return(workflows, nil).Times(1)
+
+	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows).Return(nil).Times(2)
 
 	s.workflowEnv.ExecuteWorkflow(esanalyzerWFTypeName)
 	err := s.workflowEnv.GetWorkflowResult(nil)
@@ -254,8 +273,8 @@ func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflowMultipleWorkflowTypes()
 		Return(workflows1, nil).Times(1)
 	s.workflowEnv.OnActivity(findStuckWorkflowsActivity, mock.Anything, workflowTypeInfos[1]).
 		Return(workflows2, nil).Times(1)
-	s.workflowEnv.OnActivity(findLongRunningWorkflowsActivity, mock.Anything).
-		Return(nil).Times(1)
+	s.workflowEnv.OnActivity(getLongRunCheckEntriesActivity, mock.Anything).
+		Return(nil, nil).Times(1)
 
 	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows1).Return(nil).Times(1)
 	s.workflowEnv.OnActivity(refreshStuckWorkflowsActivity, mock.Anything, workflows2).Return(nil).Times(1)
@@ -366,6 +385,48 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowI
 	s.EqualError(err, "InternalServiceError{Message: Inconsistent worklow. Expected domainID: deadbeef-0123-4567-890a-bcdef0123460, actual: another-domain-id}")
 }
 
+func (s *esanalyzerWorkflowTestSuite) TestGetLongRunCheckEntriesSingleEntry() {
+	s.config.ESAnalyzerWorkflowDurationWarnThresholds = dynamicconfig.GetStringPropertyFn(
+		`[{"DomainName":"SomeDomain", "WorkflowType":"SomeWFType", "Threshold":"2m", "Refresh":true}]`,
+	)
+
+	actFuture, err := s.activityEnv.ExecuteActivity(s.workflow.getLongRunCheckEntries)
+	s.NoError(err)
+	var longRunningWorkflows []LongRunCheckEntry
+	err = actFuture.Get(&longRunningWorkflows)
+	s.NoError(err)
+	s.Equal(1, len(longRunningWorkflows))
+	s.Equal("SomeDomain", longRunningWorkflows[0].DomainName)
+	s.Equal("SomeWFType", longRunningWorkflows[0].WorkflowType)
+	s.Equal(2*time.Minute, longRunningWorkflows[0].Threshold)
+	s.Equal(0, longRunningWorkflows[0].MaxNumWorkflows)
+	s.Equal(true, longRunningWorkflows[0].Refresh)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestGetLongRunCheckEntriesMultipleEntries() {
+	s.config.ESAnalyzerWorkflowDurationWarnThresholds = dynamicconfig.GetStringPropertyFn(
+		`[{"DomainName":"d1", "WorkflowType":"t1", "Threshold":"2m", "Refresh":true},{"DomainName":"d2", "WorkflowType":"t2", "Threshold":"3m", "Refresh":false, "MaxNumWorkflows":1000000}]`,
+	)
+
+	actFuture, err := s.activityEnv.ExecuteActivity(s.workflow.getLongRunCheckEntries)
+	s.NoError(err)
+	var longRunningWorkflows []LongRunCheckEntry
+	err = actFuture.Get(&longRunningWorkflows)
+	s.NoError(err)
+	s.Equal(2, len(longRunningWorkflows))
+	s.Equal("d1", longRunningWorkflows[0].DomainName)
+	s.Equal("t1", longRunningWorkflows[0].WorkflowType)
+	s.Equal(2*time.Minute, longRunningWorkflows[0].Threshold)
+	s.Equal(0, longRunningWorkflows[0].MaxNumWorkflows)
+	s.Equal(true, longRunningWorkflows[0].Refresh)
+
+	s.Equal("d2", longRunningWorkflows[1].DomainName)
+	s.Equal("t2", longRunningWorkflows[1].WorkflowType)
+	s.Equal(3*time.Minute, longRunningWorkflows[1].Threshold)
+	s.Equal(1000000, longRunningWorkflows[1].MaxNumWorkflows)
+	s.Equal(false, longRunningWorkflows[1].Refresh)
+}
+
 func (s *esanalyzerWorkflowTestSuite) TestFindLongRunningWorkflows() {
 	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(
 		&elasticsearch.RawResponse{
@@ -382,8 +443,15 @@ func (s *esanalyzerWorkflowTestSuite) TestFindLongRunningWorkflows() {
 		int64(1234),
 	).Return().Times(1)
 
-	s.config.ESAnalyzerWorkflowDurationWarnThresholds = dynamicconfig.GetStringPropertyFn(`{"test-domain/workflow1":"1m"}`)
-	_, err := s.activityEnv.ExecuteActivity(s.workflow.findLongRunningWorkflows)
+	longRunningWorkflows := []LongRunCheckEntry{
+		{
+			DomainName:   s.DomainName,
+			WorkflowType: s.WorkflowType,
+			Threshold:    time.Hour,
+			Refresh:      true,
+		},
+	}
+	_, err := s.activityEnv.ExecuteActivity(s.workflow.findLongRunningWorkflows, longRunningWorkflows[0])
 	s.NoError(err)
 }
 
@@ -470,7 +538,15 @@ func (s *esanalyzerWorkflowTestSuite) TestFindStuckWorkflowsMinNumWorkflowValida
 	s.Equal(0, len(results))
 }
 
-func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
+func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypesEnabled() {
+	s.testGetWorkflowTypes(true)
+}
+func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypesDisabled() {
+	s.testGetWorkflowTypes(false)
+}
+
+func (s *esanalyzerWorkflowTestSuite) testGetWorkflowTypes(enabled bool) {
+	s.config.ESAnalyzerEnableAvgDurationBasedChecks = dynamicconfig.GetBoolPropertyFn(enabled)
 	esResult := struct {
 		Buckets []DomainInfo `json:"buckets"`
 	}{
@@ -512,11 +588,16 @@ func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypes() {
 	var results []WorkflowTypeInfo
 	err = actFuture.Get(&results)
 	s.NoError(err)
-	s.Equal(2, len(results))
-	s.Equal(normalizeDomainInfos(esResult.Buckets), results)
+	if enabled {
+		s.Equal(2, len(results))
+		s.Equal(normalizeDomainInfos(esResult.Buckets), results)
+	} else {
+		s.Equal(0, len(results))
+	}
 }
 
 func (s *esanalyzerWorkflowTestSuite) TestGetWorkflowTypesFromConfig() {
+	s.config.ESAnalyzerEnableAvgDurationBasedChecks = dynamicconfig.GetBoolPropertyFn(true)
 	workflowTypes := []WorkflowTypeInfo{
 		{DomainID: s.DomainID, Name: "workflow1"},
 		{DomainID: s.DomainID, Name: "workflow2"},

@@ -68,6 +68,7 @@ type (
 		ESAnalyzerMaxNumDomains                  dynamicconfig.IntPropertyFn
 		ESAnalyzerMaxNumWorkflowTypes            dynamicconfig.IntPropertyFn
 		ESAnalyzerLimitToTypes                   dynamicconfig.StringPropertyFn
+		ESAnalyzerEnableAvgDurationBasedChecks   dynamicconfig.BoolPropertyFn
 		ESAnalyzerLimitToDomains                 dynamicconfig.StringPropertyFn
 		ESAnalyzerNumWorkflowsToRefresh          dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerBufferWaitTime                 dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
