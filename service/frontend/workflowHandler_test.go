@@ -886,7 +886,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEn
 	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
 	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
-func (s *workflowHandlerSuite) TestUpdateDomain_Success_GracefulFailOver() {
+func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
 	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
 	}, nil)
