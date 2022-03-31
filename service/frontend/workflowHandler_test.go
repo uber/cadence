@@ -927,7 +927,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_GracefulFailOver() {
 func (s *workflowHandlerSuite) TestUpdateDomain_Failure_FailoverLockdown() {
 
 	dynamicClient := dc.NewInMemoryClient()
-	dynamicClient.UpdateValue(dc.SystemLockdown, map[string]interface{}{"SystemLockdown": true})
+	dynamicClient.UpdateValue(dc.Lockdown, map[string]interface{}{"Lockdown": true})
 	wh := s.getWorkflowHandler(s.newConfig(dynamicClient))
 
 	updateReq := updateFailoverRequest(

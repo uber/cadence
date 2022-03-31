@@ -4394,7 +4394,7 @@ func checkPermission(
 }
 
 func checkFailOverPermission(config *Config, domainName string) error {
-	if config.SystemLockdown(domainName) {
+	if config.Lockdown(domainName) {
 		return errDomainInLockdown
 	}
 	return nil
