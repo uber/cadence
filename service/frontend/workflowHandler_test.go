@@ -927,7 +927,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_GracefulFailOver() {
 func (s *workflowHandlerSuite) TestUpdateDomain_Failure_FailoverLockdown() {
 
 	dynamicClient := dc.NewInMemoryClient()
-	dynamicClient.UpdateValue(dc.SystemLockdown, map[string]interface{}{"SystemLockdown": "system.lockdown"})
+	dynamicClient.UpdateValue(dc.SystemLockdown, map[string]interface{}{"SystemLockdown": true})
 	wh := s.getWorkflowHandler(s.newConfig(dynamicClient))
 
 	updateReq := updateFailoverRequest(
@@ -938,8 +938,8 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_FailoverLockdown() {
 		common.Int32Ptr(1),
 		common.StringPtr(cluster.TestAlternativeClusterName),
 	)
-	_, err := wh.UpdateDomain(context.Background(), updateReq)
-
+	resp, err := wh.UpdateDomain(context.Background(), updateReq)
+	s.Nil(resp)
 	s.Error(err)
 }
 
