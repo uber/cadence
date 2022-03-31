@@ -2194,7 +2194,7 @@ const (
 	CorruptWorkflowWatchdogPause
 
 	// SystemLockdown defines if we want to allow failovers of domains to this cluster
-	// KeyName: worker.SystemLockdown
+	// KeyName: system.SystemLockdown
 	// Value type: bool
 	// Default value: false
 	SystemLockdown
