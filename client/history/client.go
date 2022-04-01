@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"go.uber.org/yarpc"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -804,29 +805,25 @@ func (c *clientImpl) GetReplicationMessages(
 		req.Tokens = append(req.Tokens, token)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(requestsByPeer))
+	g := &errgroup.Group{}
 	var responseMutex sync.Mutex
 	peerResponses := make([]*getReplicationMessagesWithSize, 0, len(requestsByPeer))
-	errChan := make(chan error, 1)
 
 	for peer, req := range requestsByPeer {
-		go func(ctx context.Context, peer string, request *types.GetReplicationMessagesRequest) {
-			defer wg.Done()
+		peer, req := peer, req
+		g.Go(func() error {
 			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
+
 			requestContext, responseInfo := rpc.ContextWithResponseInfo(requestContext)
-			resp, err := c.client.GetReplicationMessages(requestContext, request, append(opts, yarpc.WithShardKey(peer))...)
+			resp, err := c.client.GetReplicationMessages(requestContext, req, append(opts, yarpc.WithShardKey(peer))...)
 			if err != nil {
 				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
 				// Returns service busy error to notify replication
 				if _, ok := err.(*types.ServiceBusyError); ok {
-					select {
-					case errChan <- err:
-					default:
-					}
+					return err
 				}
-				return
+				return nil
 			}
 			responseMutex.Lock()
 			peerResponses = append(peerResponses, &getReplicationMessagesWithSize{
@@ -834,14 +831,11 @@ func (c *clientImpl) GetReplicationMessages(
 				size:     responseInfo.Size,
 			})
 			responseMutex.Unlock()
-		}(ctx, peer, req)
+			return nil
+		})
 	}
 
-	wg.Wait()
-	close(errChan)
-
-	if len(errChan) > 0 {
-		err := <-errChan
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
 
@@ -989,33 +983,18 @@ func (c *clientImpl) NotifyFailoverMarkers(
 		req.FailoverMarkerTokens = append(req.FailoverMarkerTokens, token)
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(requestsByPeer))
-	respChan := make(chan error, len(requestsByPeer))
+	g := &errgroup.Group{}
 	for peer, req := range requestsByPeer {
-		go func(peer string, request *types.NotifyFailoverMarkersRequest) {
-			defer wg.Done()
-
+		peer, req := peer, req
+		g.Go(func() error {
 			ctx, cancel := c.createContext(ctx)
 			defer cancel()
-			err := c.client.NotifyFailoverMarkers(
-				ctx,
-				request,
-				append(opts, yarpc.WithShardKey(peer))...,
-			)
-			respChan <- err
-		}(peer, req)
+
+			return c.client.NotifyFailoverMarkers(ctx, req, append(opts, yarpc.WithShardKey(peer))...)
+		})
 	}
 
-	wg.Wait()
-	close(respChan)
-
-	for err := range respChan {
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return g.Wait()
 }
 
 func (c *clientImpl) GetCrossClusterTasks(
