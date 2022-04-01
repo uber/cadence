@@ -25,15 +25,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/yarpcerrors"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
 	"github.com/uber/cadence/common/backoff"
@@ -4211,36 +4210,20 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 
 	clusterMetadata := wh.GetClusterMetadata()
 	respChan := make(chan *types.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
-	wg := &sync.WaitGroup{}
 
-	describeDomain := func(
-		ctx context.Context,
-		client frontend.Client,
-		domainName *string,
-	) {
-		defer wg.Done()
-		resp, _ := client.DescribeDomain(
-			ctx,
-			&types.DescribeDomainRequest{
-				Name: domainName,
-			},
-		)
-		respChan <- resp
-	}
-
+	g := &errgroup.Group{}
 	for clusterName, cluster := range clusterMetadata.GetAllClusterInfo() {
 		if !cluster.Enabled {
 			continue
 		}
 		frontendClient := wh.GetRemoteFrontendClient(clusterName)
-		wg.Add(1)
-		go describeDomain(
-			ctx,
-			frontendClient,
-			domainName,
-		)
+		g.Go(func() error {
+			resp, _ := frontendClient.DescribeDomain(ctx, &types.DescribeDomainRequest{Name: domainName})
+			respChan <- resp
+			return nil
+		})
 	}
-	wg.Wait()
+	g.Wait()
 	close(respChan)
 
 	var failoverVersion *int64
