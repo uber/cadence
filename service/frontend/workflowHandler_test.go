@@ -886,6 +886,62 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEn
 	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
 	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
+func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
+	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
+		NotificationVersion: int64(0),
+	}, nil)
+	getDomainResp := persistenceGetDomainResponseForFailoverTest(
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
+	)
+
+	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
+	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, mock.Anything).Return(nil)
+	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestAlternativeClusterName).AnyTimes()
+	s.mockClusterMetadata.EXPECT().GetNextFailoverVersion(gomock.Any(), gomock.Any()).Return(int64(123)).AnyTimes()
+	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("disabled"), dc.GetBoolPropertyFn(false), "disabled", "some random URI"))
+	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("disabled"), dc.GetBoolPropertyFn(false), "disabled", "some random URI"))
+	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+	s.mockResource.RemoteFrontendClient.EXPECT().DescribeDomain(gomock.Any(), gomock.Any()).
+		Return(describeDomainResponseServer, nil).AnyTimes()
+
+	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
+
+	updateReq := updateFailoverRequest(
+		common.StringPtr(testHistoryArchivalURI),
+		types.ArchivalStatusEnabled.Ptr(),
+		common.StringPtr(testVisibilityArchivalURI),
+		types.ArchivalStatusEnabled.Ptr(),
+		common.Int32Ptr(1),
+		common.StringPtr(cluster.TestAlternativeClusterName),
+	)
+	result, err := wh.UpdateDomain(context.Background(), updateReq)
+
+	s.NoError(err)
+	s.NotNil(result)
+	s.NotNil(result.Configuration)
+	s.Equal(result.ReplicationConfiguration.ActiveClusterName, cluster.TestAlternativeClusterName)
+}
+
+func (s *workflowHandlerSuite) TestUpdateDomain_Failure_FailoverLockdown() {
+
+	dynamicClient := dc.NewInMemoryClient()
+	dynamicClient.UpdateValue(dc.Lockdown, map[string]interface{}{"Lockdown": true})
+	wh := s.getWorkflowHandler(s.newConfig(dynamicClient))
+
+	updateReq := updateFailoverRequest(
+		common.StringPtr(testHistoryArchivalURI),
+		types.ArchivalStatusEnabled.Ptr(),
+		common.StringPtr(testVisibilityArchivalURI),
+		types.ArchivalStatusEnabled.Ptr(),
+		common.Int32Ptr(1),
+		common.StringPtr(cluster.TestAlternativeClusterName),
+	)
+	resp, err := wh.UpdateDomain(context.Background(), updateReq)
+	s.Nil(resp)
+	s.Error(err)
+}
 
 func (s *workflowHandlerSuite) TestHistoryArchived() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
@@ -1488,6 +1544,25 @@ func updateRequest(
 	}
 }
 
+func updateFailoverRequest(
+	historyArchivalURI *string,
+	historyArchivalStatus *types.ArchivalStatus,
+	visibilityArchivalURI *string,
+	visibilityArchivalStatus *types.ArchivalStatus,
+	failoverTimeoutInSeconds *int32,
+	activeClusterName *string,
+) *types.UpdateDomainRequest {
+	return &types.UpdateDomainRequest{
+		Name:                     "test-name",
+		HistoryArchivalStatus:    historyArchivalStatus,
+		HistoryArchivalURI:       historyArchivalURI,
+		VisibilityArchivalStatus: visibilityArchivalStatus,
+		VisibilityArchivalURI:    visibilityArchivalURI,
+		FailoverTimeoutInSeconds: failoverTimeoutInSeconds,
+		ActiveClusterName:        activeClusterName,
+	}
+}
+
 func persistenceGetDomainResponse(historyArchivalState, visibilityArchivalState *domain.ArchivalState) *persistence.GetDomainResponse {
 	return &persistence.GetDomainResponse{
 		Info: &persistence.DomainInfo{
@@ -1515,6 +1590,40 @@ func persistenceGetDomainResponse(historyArchivalState, visibilityArchivalState 
 			},
 		},
 		IsGlobalDomain:              false,
+		ConfigVersion:               0,
+		FailoverVersion:             0,
+		FailoverNotificationVersion: 0,
+		NotificationVersion:         0,
+	}
+}
+
+func persistenceGetDomainResponseForFailoverTest(historyArchivalState, visibilityArchivalState *domain.ArchivalState) *persistence.GetDomainResponse {
+	return &persistence.GetDomainResponse{
+		Info: &persistence.DomainInfo{
+			ID:          "test-id",
+			Name:        "test-name",
+			Status:      0,
+			Description: "test-description",
+			OwnerEmail:  "test-owner-email",
+			Data:        make(map[string]string),
+		},
+		Config: &persistence.DomainConfig{
+			Retention:                1,
+			EmitMetric:               true,
+			HistoryArchivalStatus:    historyArchivalState.Status,
+			HistoryArchivalURI:       historyArchivalState.URI,
+			VisibilityArchivalStatus: visibilityArchivalState.Status,
+			VisibilityArchivalURI:    visibilityArchivalState.URI,
+		},
+		ReplicationConfig: &persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{
+					ClusterName: cluster.TestAlternativeClusterName,
+				},
+			},
+		},
+		IsGlobalDomain:              true,
 		ConfigVersion:               0,
 		FailoverVersion:             0,
 		FailoverNotificationVersion: 0,
@@ -1566,4 +1675,27 @@ func listArchivedWorkflowExecutionsTestRequest() *types.ListArchivedWorkflowExec
 		PageSize: 10,
 		Query:    "some random query string",
 	}
+}
+
+var describeDomainResponseServer = &types.DescribeDomainResponse{
+	DomainInfo: &types.DomainInfo{
+		Name:        "test-domain",
+		Description: "a test domain",
+		OwnerEmail:  "test@uber.com",
+	},
+	Configuration: &types.DomainConfiguration{
+		WorkflowExecutionRetentionPeriodInDays: 3,
+		EmitMetric:                             true,
+	},
+	ReplicationConfiguration: &types.DomainReplicationConfiguration{
+		ActiveClusterName: cluster.TestCurrentClusterName,
+		Clusters: []*types.ClusterReplicationConfiguration{
+			{
+				ClusterName: cluster.TestCurrentClusterName,
+			},
+			{
+				ClusterName: cluster.TestAlternativeClusterName,
+			},
+		},
+	},
 }

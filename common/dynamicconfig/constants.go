@@ -2193,6 +2193,12 @@ const (
 	// Default value: false
 	CorruptWorkflowWatchdogPause
 
+	// Lockdown defines if we want to allow failovers of domains to this cluster
+	// KeyName: system.Lockdown
+	// Value type: bool
+	// Default value: false
+	Lockdown
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2245,6 +2251,7 @@ var Keys = map[Key]string{
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
 	EnableWatchDog:                      "system.EnableWatchDog",
+	Lockdown:                            "system.Lockdown",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",

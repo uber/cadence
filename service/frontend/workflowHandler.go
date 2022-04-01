@@ -132,6 +132,7 @@ var (
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
 	errEmptyQueueType                             = &types.BadRequestError{Message: "Queue type is not set."}
+	errDomainInLockdown                           = &types.BadRequestError{Message: "Domain is not accepting fail overs at this time due to lockdown."}
 	errShuttingDown                               = &types.InternalServiceError{Message: "Shutting down"}
 
 	// err for archival
@@ -406,6 +407,11 @@ func (wh *WorkflowHandler) UpdateDomain(
 	// don't require permission for failover request
 	if !isFailoverRequest(updateRequest) {
 		if err := checkPermission(wh.config, updateRequest.SecurityToken); err != nil {
+			return nil, err
+		}
+	} else {
+		// reject the failover if the cluster is in lockdown
+		if err := checkFailOverPermission(wh.config, updateRequest.Name); err != nil {
 			return nil, err
 		}
 	}
@@ -4366,6 +4372,13 @@ func checkPermission(
 		if securityToken != requiredToken {
 			return errNoPermission
 		}
+	}
+	return nil
+}
+
+func checkFailOverPermission(config *Config, domainName string) error {
+	if config.Lockdown(domainName) {
+		return errDomainInLockdown
 	}
 	return nil
 }
