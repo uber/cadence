@@ -133,7 +133,7 @@ var (
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
 	errEmptyQueueType                             = &types.BadRequestError{Message: "Queue type is not set."}
-	errDomainInLockdown                           = &types.BadRequestError{Message: "Domain is not accepting fail overs at this time."}
+	errDomainInLockdown                           = &types.BadRequestError{Message: "Domain is not accepting fail overs at this time due to lockdown."}
 	errShuttingDown                               = &types.InternalServiceError{Message: "Shutting down"}
 
 	// err for archival
