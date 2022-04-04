@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"strconv"
 	"time"
 
 	"github.com/urfave/cli"
@@ -263,6 +262,8 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("calling describeMutableState")
 
 	resp := describeMutableState(c)
+
+	fmt.Println(resp)
 
 	fmt.Println("finished")
 
