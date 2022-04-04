@@ -241,8 +241,18 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		return
 	}
 
+	fmt.Println("calling describeMutableState")
+
 	resp := describeMutableState(c)
+
+	fmt.Println("calling describeMutableState completed")
+
+	fmt.Println("calling GetMutableStateInDatabase")
+
 	msStr := resp.GetMutableStateInDatabase()
+
+	fmt.Println("calling GetMutableStateInDatabase completed")
+
 	ms := persistence.WorkflowMutableState{}
 	err := json.Unmarshal([]byte(msStr), &ms)
 	if err != nil {
