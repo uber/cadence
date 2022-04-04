@@ -177,7 +177,26 @@ func describeMutableState(c *cli.Context) *types.AdminDescribeWorkflowExecutionR
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Get workflow mutableState failed", err)
+		// try getting the current workflow and check if it matches the run id
+		fmt.Println("trying to get current workflow...")
+
+		resp, err := adminClient.DescribeWorkflowExecution(
+			ctx,
+			&types.AdminDescribeWorkflowExecutionRequest{
+				Domain: domain,
+				Execution: &types.WorkflowExecution{
+					WorkflowID: wid,
+					RunID:      "30000000-0000-f000-f000-000000000001",
+				},
+			},
+		)
+
+		if err != nil {
+			ErrorAndExit("Get workflow mutableState failed", err)
+		}
+
+		fmt.Println("response is: ")
+		fmt.Println(resp)
 	}
 	return resp
 }
@@ -245,92 +264,94 @@ func AdminDeleteWorkflow(c *cli.Context) {
 
 	resp := describeMutableState(c)
 
-	fmt.Println("calling describeMutableState completed")
+	fmt.Println("finished")
 
-	fmt.Println("calling GetMutableStateInDatabase")
+	// fmt.Println("calling describeMutableState completed")
 
-	msStr := resp.GetMutableStateInDatabase()
+	// fmt.Println("calling GetMutableStateInDatabase")
 
-	fmt.Println("calling GetMutableStateInDatabase completed")
+	// msStr := resp.GetMutableStateInDatabase()
 
-	ms := persistence.WorkflowMutableState{}
-	err := json.Unmarshal([]byte(msStr), &ms)
-	if err != nil {
-		ErrorAndExit("json.Unmarshal err", err)
-	}
-	domainID := ms.ExecutionInfo.DomainID
+	// fmt.Println("calling GetMutableStateInDatabase completed")
 
-	shardID := resp.GetShardID()
-	shardIDInt, err := strconv.Atoi(shardID)
-	if err != nil {
-		ErrorAndExit("strconv.Atoi(shardID) err", err)
-	}
-	histV2 := initializeHistoryManager(c)
-	defer histV2.Close()
-	exeStore := initializeExecutionStore(c, shardIDInt)
+	// ms := persistence.WorkflowMutableState{}
+	// err := json.Unmarshal([]byte(msStr), &ms)
+	// if err != nil {
+	// 	ErrorAndExit("json.Unmarshal err", err)
+	// }
+	// domainID := ms.ExecutionInfo.DomainID
 
-	branchInfo := shared.HistoryBranch{}
-	thriftrwEncoder := codec.NewThriftRWEncoder()
-	branchTokens := [][]byte{ms.ExecutionInfo.BranchToken}
-	if ms.VersionHistories != nil {
-		// if VersionHistories is set, then all branch infos are stored in VersionHistories
-		branchTokens = [][]byte{}
-		for _, versionHistory := range ms.VersionHistories.ToInternalType().Histories {
-			branchTokens = append(branchTokens, versionHistory.BranchToken)
-		}
-	}
+	// shardID := resp.GetShardID()
+	// shardIDInt, err := strconv.Atoi(shardID)
+	// if err != nil {
+	// 	ErrorAndExit("strconv.Atoi(shardID) err", err)
+	// }
+	// histV2 := initializeHistoryManager(c)
+	// defer histV2.Close()
+	// exeStore := initializeExecutionStore(c, shardIDInt)
 
-	for _, branchToken := range branchTokens {
-		err = thriftrwEncoder.Decode(branchToken, &branchInfo)
-		if err != nil {
-			ErrorAndExit("thriftrwEncoder.Decode err", err)
-		}
-		fmt.Println("deleting history events for ...")
-		prettyPrintJSONObject(branchInfo)
-		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
-			BranchToken: branchToken,
-			ShardID:     &shardIDInt,
-		})
-		if err != nil {
-			if skipError {
-				fmt.Println("failed to delete history, ", err)
-			} else {
-				ErrorAndExit("DeleteHistoryBranch err", err)
-			}
-		}
-	}
+	// branchInfo := shared.HistoryBranch{}
+	// thriftrwEncoder := codec.NewThriftRWEncoder()
+	// branchTokens := [][]byte{ms.ExecutionInfo.BranchToken}
+	// if ms.VersionHistories != nil {
+	// 	// if VersionHistories is set, then all branch infos are stored in VersionHistories
+	// 	branchTokens = [][]byte{}
+	// 	for _, versionHistory := range ms.VersionHistories.ToInternalType().Histories {
+	// 		branchTokens = append(branchTokens, versionHistory.BranchToken)
+	// 	}
+	// }
 
-	req := &persistence.DeleteWorkflowExecutionRequest{
-		DomainID:   domainID,
-		WorkflowID: wid,
-		RunID:      rid,
-	}
+	// for _, branchToken := range branchTokens {
+	// 	err = thriftrwEncoder.Decode(branchToken, &branchInfo)
+	// 	if err != nil {
+	// 		ErrorAndExit("thriftrwEncoder.Decode err", err)
+	// 	}
+	// 	fmt.Println("deleting history events for ...")
+	// 	prettyPrintJSONObject(branchInfo)
+	// 	err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
+	// 		BranchToken: branchToken,
+	// 		ShardID:     &shardIDInt,
+	// 	})
+	// 	if err != nil {
+	// 		if skipError {
+	// 			fmt.Println("failed to delete history, ", err)
+	// 		} else {
+	// 			ErrorAndExit("DeleteHistoryBranch err", err)
+	// 		}
+	// 	}
+	// }
 
-	err = exeStore.DeleteWorkflowExecution(ctx, req)
-	if err != nil {
-		if skipError {
-			fmt.Println("delete mutableState row failed, ", err)
-		} else {
-			ErrorAndExit("delete mutableState row failed", err)
-		}
-	}
-	fmt.Println("delete mutableState row successfully")
+	// req := &persistence.DeleteWorkflowExecutionRequest{
+	// 	DomainID:   domainID,
+	// 	WorkflowID: wid,
+	// 	RunID:      rid,
+	// }
 
-	deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
-		DomainID:   domainID,
-		WorkflowID: wid,
-		RunID:      rid,
-	}
+	// err = exeStore.DeleteWorkflowExecution(ctx, req)
+	// if err != nil {
+	// 	if skipError {
+	// 		fmt.Println("delete mutableState row failed, ", err)
+	// 	} else {
+	// 		ErrorAndExit("delete mutableState row failed", err)
+	// 	}
+	// }
+	// fmt.Println("delete mutableState row successfully")
 
-	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
-	if err != nil {
-		if skipError {
-			fmt.Println("delete current row failed, ", err)
-		} else {
-			ErrorAndExit("delete current row failed", err)
-		}
-	}
-	fmt.Println("delete current row successfully")
+	// deleteCurrentReq := &persistence.DeleteCurrentWorkflowExecutionRequest{
+	// 	DomainID:   domainID,
+	// 	WorkflowID: wid,
+	// 	RunID:      rid,
+	// }
+
+	// err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
+	// if err != nil {
+	// 	if skipError {
+	// 		fmt.Println("delete current row failed, ", err)
+	// 	} else {
+	// 		ErrorAndExit("delete current row failed", err)
+	// 	}
+	// }
+	// fmt.Println("delete current row successfully")
 }
 
 // AdminGetDomainIDOrName map domain
