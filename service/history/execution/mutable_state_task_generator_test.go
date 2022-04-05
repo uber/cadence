@@ -138,6 +138,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		Version:   version,
 	}
 	domainEntry, err := s.mockDomainCache.GetDomainByID(constants.TestDomainID)
+	domainEntry.GetInfo().Data = map[string]string{"jittered_workflow_deletion": "true"}
 	s.NoError(err)
 	retention := time.Duration(domainEntry.GetRetentionDays(constants.TestWorkflowID)) * time.Hour * 24
 	testCases := []struct {
@@ -384,6 +385,12 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 			// it will be set by shard context
 			// set it to now so that we can easily test if other fields are equal
 			task.SetVisibilityTimestamp(now)
+		}
+		for _, task := range timerTasks {
+			// force set timer tasks because with jittering the timertask visibility time stamp
+			// is not consistent for each run.
+			// as long as code doesn't break during generation we should be ok
+			task.SetVisibilityTimestamp(time.Unix(0, closeEvent.GetTimestamp()).Add(retention))
 		}
 		actualGeneratedTasks = append(actualGeneratedTasks, timerTasks...)
 		s.Equal(tc.generatedTasks, actualGeneratedTasks)

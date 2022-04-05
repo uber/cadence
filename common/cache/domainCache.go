@@ -901,6 +901,9 @@ var SampleRetentionKey = "sample_retention_days"
 // SampleRateKey is key to specify sample rate
 var SampleRateKey = "sample_retention_rate"
 
+// JitteredWorkflowDeletionKey is key to determine if deletion times should be jittered
+var JitteredWorkflowDeletionKey = "jittered_workflow_deletion"
+
 // GetRetentionDays returns retention in days for given workflow
 func (entry *DomainCacheEntry) GetRetentionDays(
 	workflowID string,
@@ -951,4 +954,11 @@ func (entry *DomainCacheEntry) IsSampledForLongerRetention(
 		}
 	}
 	return false
+}
+
+func (entry *DomainCacheEntry) HoursToAddToRetentionDuration() time.Duration {
+	if _, ok := entry.info.Data[JitteredWorkflowDeletionKey]; ok {
+		return time.Duration(common.GenerateRandomInt(0, 24))
+	}
+	return 0
 }

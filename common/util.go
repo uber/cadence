@@ -390,6 +390,11 @@ func GenerateRandomString(n int) string {
 	return string(b)
 }
 
+// GenerateRandomInt generates a random int between 2 numbers
+func GenerateRandomInt(num1 int, num2 int) int {
+	return rand.Intn(num2-num1) + num1
+}
+
 // CreateMatchingPollForDecisionTaskResponse create response for matching's PollForDecisionTask
 func CreateMatchingPollForDecisionTaskResponse(historyResponse *types.RecordDecisionTaskStartedResponse, workflowExecution *types.WorkflowExecution, token []byte) *types.MatchingPollForDecisionTaskResponse {
 	matchingResp := &types.MatchingPollForDecisionTaskResponse{
