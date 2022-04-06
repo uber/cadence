@@ -60,6 +60,7 @@ func NewSQLExecutionStore(
 	logger log.Logger,
 	shardID int,
 	parser serialization.Parser,
+	dc *p.DynamicConfiguration,
 ) (p.ExecutionStore, error) {
 
 	return &sqlExecutionStore{
@@ -68,6 +69,7 @@ func NewSQLExecutionStore(
 			db:     db,
 			logger: logger,
 			parser: parser,
+			dc:     dc,
 		},
 	}, nil
 }
@@ -472,6 +474,19 @@ func (m *sqlExecutionStore) updateWorkflowExecutionTx(
 		return &types.InternalServiceError{
 			Message: fmt.Sprintf("UpdateWorkflowExecution: unknown mode: %v", request.Mode),
 		}
+	}
+
+	if m.useAsyncTransaction() { // async transaction is enabled
+		// TODO: it's possible to merge some operations in the following 2 functions in a batch, should refactor the code later
+		if err := applyWorkflowMutationAsyncTx(ctx, tx, shardID, &updateWorkflow, m.parser); err != nil {
+			return err
+		}
+		if newWorkflow != nil {
+			if err := m.applyWorkflowSnapshotAsyncTxAsNew(ctx, tx, shardID, newWorkflow, m.parser); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	if err := applyWorkflowMutationTx(ctx, tx, shardID, &updateWorkflow, m.parser); err != nil {

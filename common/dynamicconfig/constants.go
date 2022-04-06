@@ -207,6 +207,12 @@ const (
 	// Default value: 4194304 (4*1024*1024)
 	// Allowed filters: N/A
 	GRPCMaxSizeInByte
+	// EnableSQLAsyncTransaction is the key for enabling async transaction
+	// KeyName: system.enableSQLAsyncTransaction
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	EnableSQLAsyncTransaction
 	// BlobSizeLimitError is the per event blob size limit
 	// KeyName: limit.blobSize.error
 	// Value type: Int
@@ -2250,6 +2256,7 @@ var Keys = map[Key]string{
 	RequiredDomainDataKeys:              "system.requiredDomainDataKeys",
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
+	EnableSQLAsyncTransaction:           "system.enableSQLAsyncTransaction",
 	EnableWatchDog:                      "system.EnableWatchDog",
 	Lockdown:                            "system.Lockdown",
 

@@ -135,3 +135,8 @@ func (pdb *db) SupportsTTL() bool {
 func (pdb *db) MaxAllowedTTL() (*time.Duration, error) {
 	return nil, sqlplugin.ErrTTLNotSupported
 }
+
+// SupportsTTL returns weather Postgre supports Asynchronous transaction
+func (mdb *db) SupportsAsyncTransaction() bool {
+	return false
+}
