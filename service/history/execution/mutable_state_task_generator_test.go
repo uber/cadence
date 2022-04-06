@@ -138,7 +138,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		Version:   version,
 	}
 	domainEntry, err := s.mockDomainCache.GetDomainByID(constants.TestDomainID)
-	domainEntry.GetInfo().Data = map[string]string{"jittered_workflow_deletion": "true"}
+	domainEntry.GetInfo().Data = map[string]string{"jittered_workflow_deletion_hours": "24"}
 	s.NoError(err)
 	retention := time.Duration(domainEntry.GetRetentionDays(constants.TestWorkflowID)) * time.Hour * 24
 	testCases := []struct {

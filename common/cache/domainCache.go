@@ -25,6 +25,7 @@ package cache
 import (
 	"context"
 	"hash/fnv"
+	"math/rand"
 	"sort"
 	"strconv"
 	"sync"
@@ -901,8 +902,10 @@ var SampleRetentionKey = "sample_retention_days"
 // SampleRateKey is key to specify sample rate
 var SampleRateKey = "sample_retention_rate"
 
-// JitteredWorkflowDeletionKey is key to determine if deletion times should be jittered
-var JitteredWorkflowDeletionKey = "jittered_workflow_deletion"
+// JitteredWorkflowDeletionKey is key to determine the number of hours
+// generated deletion tasks should be jittered over. Should be a
+// parsable number or else it defaults to 0
+var JitteredWorkflowDeletionKey = "jittered_workflow_deletion_hours"
 
 // GetRetentionDays returns retention in days for given workflow
 func (entry *DomainCacheEntry) GetRetentionDays(
@@ -957,8 +960,12 @@ func (entry *DomainCacheEntry) IsSampledForLongerRetention(
 }
 
 func (entry *DomainCacheEntry) HoursToAddToRetentionDuration() time.Duration {
-	if _, ok := entry.info.Data[JitteredWorkflowDeletionKey]; ok {
-		return time.Duration(common.GenerateRandomInt(0, 24))
+	if strHours, ok := entry.info.Data[JitteredWorkflowDeletionKey]; ok {
+		intVar, err := strconv.Atoi(strHours)
+		if err != nil {
+			return 0
+		}
+		return time.Hour * time.Duration(rand.Intn(intVar))
 	}
 	return 0
 }
