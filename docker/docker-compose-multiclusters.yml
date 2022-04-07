@@ -7,7 +7,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - ./prometheus_config_multiclusters.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus_multiclusters:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     ports:
