@@ -129,7 +129,7 @@ func (s *mutableStateTaskGeneratorSuite) TestIsCrossClusterTask() {
 	}
 }
 
-func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered_Deletion_InvalidInput() {
+func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion_InvalidInput() {
 	now := time.Now()
 	version := int64(123)
 	closeEvent := &types.HistoryEvent{
@@ -184,7 +184,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		s.Equal(tc.generatedTasks, actualGeneratedTasks)
 	}
 }
-func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered_Deletion_ValidInput() {
+func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion_ValidInput() {
 	now := time.Now()
 	version := int64(123)
 	closeEvent := &types.HistoryEvent{
