@@ -247,7 +247,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	}
 
 	closeTimestamp := time.Unix(0, closeEvent.GetTimestamp())
-	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24) + domainEntry.HoursToAddToRetentionDuration()
+	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24) + domainEntry.MinutesToAddToRetentionDuration()
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: closeTimestamp.Add(retentionDuration),

@@ -902,10 +902,10 @@ var SampleRetentionKey = "sample_retention_days"
 // SampleRateKey is key to specify sample rate
 var SampleRateKey = "sample_retention_rate"
 
-// JitteredWorkflowDeletionHoursKey is key to determine the number of hours
+// JitteredWorkflowDeletionMinutesKey is key to determine the number of minutes
 // generated deletion tasks should be jittered over. Should be a
 // parsable number or else it defaults to 0
-const JitteredWorkflowDeletionHoursKey = "jittered_workflow_deletion_hours"
+const JitteredWorkflowDeletionMinutesKey = "jittered_workflow_deletion_minutes"
 
 // GetRetentionDays returns retention in days for given workflow
 func (entry *DomainCacheEntry) GetRetentionDays(
@@ -959,14 +959,14 @@ func (entry *DomainCacheEntry) IsSampledForLongerRetention(
 	return false
 }
 
-// HoursToAddToRetentionDuration return number of hours to add to jittered wf deletion time
-func (entry *DomainCacheEntry) HoursToAddToRetentionDuration() time.Duration {
-	if strHours, ok := entry.info.Data[JitteredWorkflowDeletionHoursKey]; ok {
-		intVar, err := strconv.Atoi(strHours)
+// MinutesToAddToRetentionDuration return number of hours to add to jittered wf deletion time
+func (entry *DomainCacheEntry) MinutesToAddToRetentionDuration() time.Duration {
+	if strMinutes, ok := entry.info.Data[JitteredWorkflowDeletionMinutesKey]; ok {
+		intVar, err := strconv.Atoi(strMinutes)
 		if err != nil {
 			return 0
 		}
-		return time.Hour * time.Duration(rand.Intn(intVar))
+		return time.Minute * time.Duration(rand.Intn(intVar))
 	}
 	return 0
 }
