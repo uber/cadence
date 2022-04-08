@@ -92,7 +92,7 @@ func (d *dlqMessageHandlerImpl) Stop() {
 		return
 	}
 
-	d.logger.Debug("Domain DLQ handler shutting down.")
+	d.logger.Info("Domain DLQ handler shutting down.")
 	close(d.done)
 }
 
@@ -221,7 +221,10 @@ func (d *dlqMessageHandlerImpl) emitDLQSizeMetricsLoop() {
 		case <-d.done:
 			return
 		case <-ticker.C:
-			d.fetchAndEmitDLQSize(context.Background())
+			err := d.fetchAndEmitDLQSize(context.Background())
+			if err != nil {
+				d.logger.Warn("Failed to get DLQ size.", tag.Error(err))
+			}
 		}
 	}
 }
@@ -229,7 +232,6 @@ func (d *dlqMessageHandlerImpl) emitDLQSizeMetricsLoop() {
 func (d *dlqMessageHandlerImpl) fetchAndEmitDLQSize(ctx context.Context) error {
 	size, err := d.replicationQueue.GetDLQSize(ctx)
 	if err != nil {
-		d.logger.Warn("Failed to get DLQ size.", tag.Error(err))
 		d.metricsClient.Scope(metrics.DomainReplicationQueueScope).IncCounter(metrics.DomainReplicationQueueSizeErrorCount)
 		return err
 	}
