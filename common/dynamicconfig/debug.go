@@ -144,7 +144,12 @@ func getDynamicConfigs(
 
 	all := c.AllProperties()
 	result := make(map[Key][]FilterResult, len(all))
+outer:
 	for k, v := range all {
+		if ctx.Err() != nil {
+			break
+		}
+
 		var list []FilterResult
 
 		// I'm unsure if generics can reduce duplication here... but it probably isn't worth a lot of effort to try.
@@ -170,42 +175,69 @@ func getDynamicConfigs(
 		// all shard IDs are treated the same
 		case IntPropertyFnWithShardIDFilter:
 			for _, s := range shardIDs {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(s), FilterValue{ShardID, s})
 			}
 		case FloatPropertyFnWithShardIDFilter:
 			for _, s := range shardIDs {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(s), FilterValue{ShardID, s})
 			}
 		case DurationPropertyFnWithShardIDFilter:
 			for _, s := range shardIDs {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(s), FilterValue{ShardID, s})
 			}
 
 		// all domain names are treated the same
 		case IntPropertyFnWithDomainFilter:
 			for _, d := range domainNames {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(d), FilterValue{DomainName, d})
 			}
 		case StringPropertyFnWithDomainFilter:
 			for _, d := range domainNames {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(d), FilterValue{DomainName, d})
 			}
 		case BoolPropertyFnWithDomainFilter:
 			for _, d := range domainNames {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(d), FilterValue{DomainName, d})
 			}
 		case DurationPropertyFnWithDomainFilter:
 			for _, d := range domainNames {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(d), FilterValue{DomainName, d})
 			}
 
 		// all domain IDs are treated the same
 		case DurationPropertyFnWithDomainIDFilter:
 			for _, d := range domainIds {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(d), FilterValue{DomainID, d})
 			}
 		case BoolPropertyFnWithDomainIDFilter:
 			for _, d := range domainIds {
+				if ctx.Err() != nil {
+					break outer
+				}
 				list = appendFiltered(list, v.defaultValue, prop(d), FilterValue{DomainID, d})
 			}
 
@@ -213,6 +245,9 @@ func getDynamicConfigs(
 		case IntPropertyFnWithWorkflowTypeFilter:
 			for _, d := range domainNames {
 				for _, w := range workflowTypes {
+					if ctx.Err() != nil {
+						break outer
+					}
 					list = appendFiltered(list, v.defaultValue, prop(d, w),
 						FilterValue{DomainName, d},
 						FilterValue{WorkflowType, w})
@@ -221,6 +256,9 @@ func getDynamicConfigs(
 		case DurationPropertyFnWithWorkflowTypeFilter:
 			for _, d := range domainNames {
 				for _, w := range workflowTypes {
+					if ctx.Err() != nil {
+						break outer
+					}
 					list = appendFiltered(list, v.defaultValue, prop(d, w),
 						FilterValue{DomainName, d},
 						FilterValue{WorkflowType, w})
@@ -232,6 +270,9 @@ func getDynamicConfigs(
 		case BoolPropertyFnWithDomainIDAndWorkflowIDFilter:
 			for _, d := range domainIds {
 				for _, w := range workflowIDs {
+					if ctx.Err() != nil {
+						break outer
+					}
 					list = appendFiltered(list, v.defaultValue, prop(d, w),
 						FilterValue{DomainID, d},
 						FilterValue{WorkflowID, w})
@@ -243,6 +284,9 @@ func getDynamicConfigs(
 			for _, d := range domainNames {
 				for _, l := range taskListNames {
 					for _, t := range taskListTypes {
+						if ctx.Err() != nil {
+							break outer
+						}
 						list = appendFiltered(list, v.defaultValue, prop(d, l, t),
 							FilterValue{DomainName, d},
 							FilterValue{TaskListName, l},
@@ -254,6 +298,9 @@ func getDynamicConfigs(
 			for _, d := range domainNames {
 				for _, l := range taskListNames {
 					for _, t := range taskListTypes {
+						if ctx.Err() != nil {
+							break outer
+						}
 						list = appendFiltered(list, v.defaultValue, prop(d, l, t),
 							FilterValue{DomainName, d},
 							FilterValue{TaskListName, l},
@@ -265,6 +312,9 @@ func getDynamicConfigs(
 			for _, d := range domainNames {
 				for _, l := range taskListNames {
 					for _, t := range taskListTypes {
+						if ctx.Err() != nil {
+							break outer
+						}
 						list = appendFiltered(list, v.defaultValue, prop(d, l, t),
 							FilterValue{DomainName, d},
 							FilterValue{TaskListName, l},
