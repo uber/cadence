@@ -5,27 +5,6 @@ import (
 	"fmt"
 )
 
-// UnknownFilter Filter = iota
-// // DomainName is the domain name
-// DomainName
-// // DomainID is the domain id
-// DomainID
-// // TaskListName is the tasklist name
-// TaskListName
-// // TaskType is the task type (0:Decision, 1:Activity)
-// TaskType
-// // ShardID is the shard id
-// ShardID
-// // ClusterName is the cluster name in a multi-region setup
-// ClusterName
-// // WorkflowID is the workflow id
-// WorkflowID
-// // WorkflowType is the workflow type name
-// WorkflowType
-//
-// // LastFilterTypeForTest must be the last one in this const group for testing purpose
-// LastFilterTypeForTest
-
 type FilterResult struct {
 	// Filters holds any applicable filter-type and the value used.
 	// "empty" values will not result in an entry.
