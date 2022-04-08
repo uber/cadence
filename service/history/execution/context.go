@@ -45,10 +45,29 @@ const (
 	defaultRemoteCallTimeout = 30 * time.Second
 )
 
-var (
-	// ErrConflict is exported temporarily for integration test
-	ErrConflict = errors.New("conditional update failed")
-)
+type conflictError struct {
+	Cause error
+}
+
+func (e *conflictError) Error() string {
+	return fmt.Sprintf("conditional update failed: %s", e.Cause.Error())
+}
+
+func (e *conflictError) Unwrap() error {
+	return e.Cause
+}
+
+// NewConflictError is only public because it used in workflow/util_test.go
+// TODO: refactor those tests
+func NewConflictError(cause error) error {
+	return &conflictError{cause}
+}
+
+// IsConflictError checks whether a conflict has occurred while updating a workflow execution
+func IsConflictError(err error) bool {
+	var e *conflictError
+	return errors.As(err, &e)
+}
 
 type (
 	// Context is the processing context for all operations on workflow execution
@@ -1114,8 +1133,7 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	case nil:
 		return resp, nil
 	case *persistence.ConditionFailedError:
-		// TODO get rid of ErrConflict
-		return nil, ErrConflict
+		return nil, NewConflictError(err)
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
@@ -1274,6 +1292,6 @@ func (c *contextImpl) isPersistenceTimeoutError(
 	case *persistence.TimeoutError:
 		return true
 	default:
-		return err != ErrConflict
+		return !IsConflictError(err)
 	}
 }
