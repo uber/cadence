@@ -1775,7 +1775,9 @@ func (h *handlerImpl) CountDLQMessages(
 	entries := map[types.HistoryDLQCountKey]int64{}
 	for _, shardID := range h.controller.ShardIDs() {
 		shardID := shardID
-		g.Go(func() error {
+		g.Go(func() (e error) {
+			defer log.CapturePanic(h.GetLogger(), &e)
+
 			engine, err := h.controller.GetEngineForShard(int(shardID))
 			if err != nil {
 				return fmt.Errorf("dlq count for shard %d: %w", shardID, err)
