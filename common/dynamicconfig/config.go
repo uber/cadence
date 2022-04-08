@@ -50,7 +50,13 @@ func NewCollection(
 		logKeys:       &sync.Map{},
 		errCount:      -1,
 		filterOptions: filterOptions,
+		allProperties: &sync.Map{},
 	}
+}
+
+type ConfigWithDefault struct {
+	defaultValue interface{}
+	prop         interface{}
 }
 
 // Collection wraps dynamic config client with a closure so that across the code, the config values
@@ -62,6 +68,9 @@ type Collection struct {
 	logKeys       *sync.Map // map of config Keys for logging to capture changes
 	errCount      int64
 	filterOptions []FilterOption
+	// allProperties holds onto all retrieved dynamic config properties, and their associated funcs.
+	// conceptually it's a thread-safe map[Key]ConfigWithDefault .
+	allProperties *sync.Map
 }
 
 func (c *Collection) logError(
@@ -170,9 +179,25 @@ type IntPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType st
 // DurationPropertyFnWithDomainFilter is a wrapper to get duration property from dynamic config with domain as filter
 type DurationPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType string) time.Duration
 
+// AllProperties gets a snapshot of all known dynamic config properties in this Collection.
+// Note that this does not necessarily contain all properties defined in code,
+// as some are only gathered in specific services like frontend / matching / etc.
+//
+// This is primarily intended for runtime inspection and bulk value viewing,
+// nearly all code should get and retain a reference to individual properties instead.
+func (c *Collection) AllProperties() map[Key]ConfigWithDefault {
+	dup := make(map[Key]ConfigWithDefault, len(Keys))
+	c.allProperties.Range(func(key, value any) bool {
+		// any failed casts will panic and likely end the process at startup, should never pass CI
+		dup[key.(Key)] = value.(ConfigWithDefault)
+		return true
+	})
+	return dup
+}
+
 // GetProperty gets a interface property and returns defaultValue if property is not found
-func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
-	return func() interface{} {
+func (c *Collection) GetProperty(key Key, defaultValue interface{}) (prop PropertyFn) {
+	prop = func() interface{} {
 		val, err := c.client.GetValue(key, defaultValue)
 		if err != nil {
 			c.logError(key, nil, err)
@@ -180,11 +205,16 @@ func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
 		c.logValue(key, nil, val, defaultValue, reflect.DeepEqual)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetIntProperty gets property and asserts that it's an integer
-func (c *Collection) GetIntProperty(key Key, defaultValue int) IntPropertyFn {
-	return func(opts ...FilterOption) int {
+func (c *Collection) GetIntProperty(key Key, defaultValue int) (prop IntPropertyFn) {
+	prop = func(opts ...FilterOption) int {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetIntValue(
 			key,
@@ -197,11 +227,16 @@ func (c *Collection) GetIntProperty(key Key, defaultValue int) IntPropertyFn {
 		c.logValue(key, filters, val, defaultValue, intCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetIntPropertyFilteredByDomain gets property with domain filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) IntPropertyFnWithDomainFilter {
-	return func(domain string) int {
+func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) (prop IntPropertyFnWithDomainFilter) {
+	prop = func(domain string) int {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetIntValue(
 			key,
@@ -214,11 +249,16 @@ func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) I
 		c.logValue(key, filters, val, defaultValue, intCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetIntPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue int) IntPropertyFnWithWorkflowTypeFilter {
-	return func(domainName string, workflowType string) int {
+func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue int) (prop IntPropertyFnWithWorkflowTypeFilter) {
+	prop = func(domainName string, workflowType string) int {
 		filters := c.toFilterMap(
 			DomainFilter(domainName),
 			WorkflowTypeFilter(workflowType),
@@ -234,11 +274,16 @@ func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue 
 		c.logValue(key, filters, val, defaultValue, intCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetDurationPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key Key, defaultValue time.Duration) DurationPropertyFnWithWorkflowTypeFilter {
-	return func(domainName string, workflowType string) time.Duration {
+func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key Key, defaultValue time.Duration) (prop DurationPropertyFnWithWorkflowTypeFilter) {
+	prop = func(domainName string, workflowType string) time.Duration {
 		filters := c.toFilterMap(
 			DomainFilter(domainName),
 			WorkflowTypeFilter(workflowType),
@@ -254,11 +299,16 @@ func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key Key, defaultV
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetIntPropertyFilteredByTaskListInfo gets property with taskListInfo as filters and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue int) IntPropertyFnWithTaskListInfoFilters {
-	return func(domain string, taskList string, taskType int) int {
+func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue int) (prop IntPropertyFnWithTaskListInfoFilters) {
+	prop = func(domain string, taskList string, taskType int) int {
 		filters := c.toFilterMap(
 			DomainFilter(domain),
 			TaskListFilter(taskList),
@@ -275,11 +325,16 @@ func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue 
 		c.logValue(key, filters, val, defaultValue, intCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetIntPropertyFilteredByShardID gets property with shardID as filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByShardID(key Key, defaultValue int) IntPropertyFnWithShardIDFilter {
-	return func(shardID int) int {
+func (c *Collection) GetIntPropertyFilteredByShardID(key Key, defaultValue int) (prop IntPropertyFnWithShardIDFilter) {
+	prop = func(shardID int) int {
 		filters := c.toFilterMap(ShardIDFilter(shardID))
 		val, err := c.client.GetIntValue(
 			key,
@@ -292,11 +347,16 @@ func (c *Collection) GetIntPropertyFilteredByShardID(key Key, defaultValue int) 
 		c.logValue(key, filters, val, defaultValue, intCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetFloat64Property gets property and asserts that it's a float64
-func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatPropertyFn {
-	return func(opts ...FilterOption) float64 {
+func (c *Collection) GetFloat64Property(key Key, defaultValue float64) (prop FloatPropertyFn) {
+	prop = func(opts ...FilterOption) float64 {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetFloatValue(
 			key,
@@ -309,11 +369,16 @@ func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatProp
 		c.logValue(key, filters, val, defaultValue, float64CompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetFloat64PropertyFilteredByShardID gets property with shardID filter and asserts that it's a float64
-func (c *Collection) GetFloat64PropertyFilteredByShardID(key Key, defaultValue float64) FloatPropertyFnWithShardIDFilter {
-	return func(shardID int) float64 {
+func (c *Collection) GetFloat64PropertyFilteredByShardID(key Key, defaultValue float64) (prop FloatPropertyFnWithShardIDFilter) {
+	prop = func(shardID int) float64 {
 		filters := c.toFilterMap(ShardIDFilter(shardID))
 		val, err := c.client.GetFloatValue(
 			key,
@@ -326,11 +391,16 @@ func (c *Collection) GetFloat64PropertyFilteredByShardID(key Key, defaultValue f
 		c.logValue(key, filters, val, defaultValue, float64CompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetDurationProperty gets property and asserts that it's a duration
-func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) DurationPropertyFn {
-	return func(opts ...FilterOption) time.Duration {
+func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) (prop DurationPropertyFn) {
+	prop = func(opts ...FilterOption) time.Duration {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetDurationValue(
 			key,
@@ -343,11 +413,16 @@ func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) Du
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetDurationPropertyFilteredByDomain gets property with domain filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByDomain(key Key, defaultValue time.Duration) DurationPropertyFnWithDomainFilter {
-	return func(domain string) time.Duration {
+func (c *Collection) GetDurationPropertyFilteredByDomain(key Key, defaultValue time.Duration) (prop DurationPropertyFnWithDomainFilter) {
+	prop = func(domain string) time.Duration {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetDurationValue(
 			key,
@@ -360,11 +435,16 @@ func (c *Collection) GetDurationPropertyFilteredByDomain(key Key, defaultValue t
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetDurationPropertyFilteredByDomainID gets property with domainID filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByDomainID(key Key, defaultValue time.Duration) DurationPropertyFnWithDomainIDFilter {
-	return func(domainID string) time.Duration {
+func (c *Collection) GetDurationPropertyFilteredByDomainID(key Key, defaultValue time.Duration) (prop DurationPropertyFnWithDomainIDFilter) {
+	prop = func(domainID string) time.Duration {
 		filters := c.toFilterMap(DomainIDFilter(domainID))
 		val, err := c.client.GetDurationValue(
 			key,
@@ -377,11 +457,16 @@ func (c *Collection) GetDurationPropertyFilteredByDomainID(key Key, defaultValue
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetDurationPropertyFilteredByTaskListInfo gets property with taskListInfo as filters and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key Key, defaultValue time.Duration) DurationPropertyFnWithTaskListInfoFilters {
-	return func(domain string, taskList string, taskType int) time.Duration {
+func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key Key, defaultValue time.Duration) (prop DurationPropertyFnWithTaskListInfoFilters) {
+	prop = func(domain string, taskList string, taskType int) time.Duration {
 		filters := c.toFilterMap(
 			DomainFilter(domain),
 			TaskListFilter(taskList),
@@ -398,11 +483,16 @@ func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key Key, defaultV
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetDurationPropertyFilteredByShardID gets property with shardID id as filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue time.Duration) DurationPropertyFnWithShardIDFilter {
-	return func(shardID int) time.Duration {
+func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue time.Duration) (prop DurationPropertyFnWithShardIDFilter) {
+	prop = func(shardID int) time.Duration {
 		filters := c.toFilterMap(ShardIDFilter(shardID))
 		val, err := c.client.GetDurationValue(
 			key,
@@ -415,11 +505,16 @@ func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue 
 		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetBoolProperty gets property and asserts that it's an bool
-func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn {
-	return func(opts ...FilterOption) bool {
+func (c *Collection) GetBoolProperty(key Key, defaultValue bool) (prop BoolPropertyFn) {
+	prop = func(opts ...FilterOption) bool {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetBoolValue(
 			key,
@@ -432,11 +527,16 @@ func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn 
 		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetStringProperty gets property and asserts that it's an string
-func (c *Collection) GetStringProperty(key Key, defaultValue string) StringPropertyFn {
-	return func(opts ...FilterOption) string {
+func (c *Collection) GetStringProperty(key Key, defaultValue string) (prop StringPropertyFn) {
+	prop = func(opts ...FilterOption) string {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetStringValue(
 			key,
@@ -449,11 +549,16 @@ func (c *Collection) GetStringProperty(key Key, defaultValue string) StringPrope
 		c.logValue(key, filters, val, defaultValue, stringCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetMapProperty gets property and asserts that it's a map
-func (c *Collection) GetMapProperty(key Key, defaultValue map[string]interface{}) MapPropertyFn {
-	return func(opts ...FilterOption) map[string]interface{} {
+func (c *Collection) GetMapProperty(key Key, defaultValue map[string]interface{}) (prop MapPropertyFn) {
+	prop = func(opts ...FilterOption) map[string]interface{} {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetMapValue(
 			key,
@@ -466,11 +571,16 @@ func (c *Collection) GetMapProperty(key Key, defaultValue map[string]interface{}
 		c.logValue(key, filters, val, defaultValue, reflect.DeepEqual)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetStringPropertyFilteredByDomain gets property with domain filter and asserts that it's a string
-func (c *Collection) GetStringPropertyFilteredByDomain(key Key, defaultValue string) StringPropertyFnWithDomainFilter {
-	return func(domain string) string {
+func (c *Collection) GetStringPropertyFilteredByDomain(key Key, defaultValue string) (prop StringPropertyFnWithDomainFilter) {
+	prop = func(domain string) string {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetStringValue(
 			key,
@@ -483,11 +593,16 @@ func (c *Collection) GetStringPropertyFilteredByDomain(key Key, defaultValue str
 		c.logValue(key, filters, val, defaultValue, stringCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetBoolPropertyFilteredByDomain gets property with domain filter and asserts that it's a bool
-func (c *Collection) GetBoolPropertyFilteredByDomain(key Key, defaultValue bool) BoolPropertyFnWithDomainFilter {
-	return func(domain string) bool {
+func (c *Collection) GetBoolPropertyFilteredByDomain(key Key, defaultValue bool) (prop BoolPropertyFnWithDomainFilter) {
+	prop = func(domain string) bool {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetBoolValue(
 			key,
@@ -500,11 +615,16 @@ func (c *Collection) GetBoolPropertyFilteredByDomain(key Key, defaultValue bool)
 		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetBoolPropertyFilteredByDomainID gets property with domainID filter and asserts that it's a bool
-func (c *Collection) GetBoolPropertyFilteredByDomainID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDFilter {
-	return func(domainID string) bool {
+func (c *Collection) GetBoolPropertyFilteredByDomainID(key Key, defaultValue bool) (prop BoolPropertyFnWithDomainIDFilter) {
+	prop = func(domainID string) bool {
 		filters := c.toFilterMap(DomainIDFilter(domainID))
 		val, err := c.client.GetBoolValue(
 			key,
@@ -517,11 +637,16 @@ func (c *Collection) GetBoolPropertyFilteredByDomainID(key Key, defaultValue boo
 		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetBoolPropertyFilteredByDomainIDAndWorkflowID gets property with domainID and workflowID filters and asserts that it's a bool
-func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDAndWorkflowIDFilter {
-	return func(domainID string, workflowID string) bool {
+func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key Key, defaultValue bool) (prop BoolPropertyFnWithDomainIDAndWorkflowIDFilter) {
+	prop = func(domainID string, workflowID string) bool {
 		filters := c.toFilterMap(DomainIDFilter(domainID), WorkflowIDFilter(workflowID))
 		val, err := c.client.GetBoolValue(
 			key,
@@ -534,11 +659,16 @@ func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key Key, def
 		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 // GetBoolPropertyFilteredByTaskListInfo gets property with taskListInfo as filters and asserts that it's an bool
-func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key Key, defaultValue bool) BoolPropertyFnWithTaskListInfoFilters {
-	return func(domain string, taskList string, taskType int) bool {
+func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key Key, defaultValue bool) (prop BoolPropertyFnWithTaskListInfoFilters) {
+	prop = func(domain string, taskList string, taskType int) bool {
 		filters := c.toFilterMap(
 			DomainFilter(domain),
 			TaskListFilter(taskList),
@@ -555,6 +685,11 @@ func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key Key, defaultValue
 		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
 		return val
 	}
+	c.allProperties.Store(key, ConfigWithDefault{
+		defaultValue: defaultValue,
+		prop:         prop,
+	})
+	return prop
 }
 
 func (c *Collection) toFilterMap(opts ...FilterOption) map[Filter]interface{} {
