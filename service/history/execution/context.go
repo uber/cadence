@@ -27,6 +27,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -50,7 +51,7 @@ type conflictError struct {
 }
 
 func (e *conflictError) Error() string {
-	return fmt.Sprintf("conditional update failed: %s", e.Cause.Error())
+	return fmt.Sprintf("conditional update failed: %v", e.Cause)
 }
 
 func (e *conflictError) Unwrap() error {
@@ -59,7 +60,7 @@ func (e *conflictError) Unwrap() error {
 
 // NewConflictError is only public because it used in workflow/util_test.go
 // TODO: refactor those tests
-func NewConflictError(cause error) error {
+func NewConflictError(_ *testing.T, cause error) error {
 	return &conflictError{cause}
 }
 
@@ -1133,7 +1134,7 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	case nil:
 		return resp, nil
 	case *persistence.ConditionFailedError:
-		return nil, NewConflictError(err)
+		return nil, &conflictError{err}
 	default:
 		c.logger.Error(
 			"Persistent store operation failure",
