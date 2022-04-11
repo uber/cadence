@@ -148,6 +148,12 @@ message SyncShardStatus {
   google.protobuf.Timestamp timestamp = 1;
 }
 
+message HistoryDLQCountEntry {
+  int64 count = 1;
+  int32 shard_id = 2;
+  string source_cluster = 3;
+}
+
 enum DLQType {
   DLQ_TYPE_INVALID = 0;
   DLQ_TYPE_REPLICATION = 1;

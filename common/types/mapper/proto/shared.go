@@ -1781,3 +1781,30 @@ func ToCrossClusterTaskResponseArray(t []*sharedv1.CrossClusterTaskResponse) []*
 	}
 	return v
 }
+
+func FromHistoryDLQCountEntryMap(t map[types.HistoryDLQCountKey]int64) []*sharedv1.HistoryDLQCountEntry {
+	if t == nil {
+		return nil
+	}
+	entries := make([]*sharedv1.HistoryDLQCountEntry, 0, len(t))
+	for key, count := range t {
+		entries = append(entries, &sharedv1.HistoryDLQCountEntry{
+			ShardId:       key.ShardID,
+			SourceCluster: key.SourceCluster,
+			Count:         count,
+		})
+	}
+	return entries
+}
+
+func ToHistoryDLQCountEntryMap(t []*sharedv1.HistoryDLQCountEntry) map[types.HistoryDLQCountKey]int64 {
+	if t == nil {
+		return nil
+	}
+	entries := make(map[types.HistoryDLQCountKey]int64, len(t))
+	for _, entry := range t {
+		key := types.HistoryDLQCountKey{ShardID: entry.ShardId, SourceCluster: entry.SourceCluster}
+		entries[key] = entry.Count
+	}
+	return entries
+}

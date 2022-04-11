@@ -548,7 +548,7 @@ Update_History_Loop:
 		}
 
 		if updateErr != nil {
-			if updateErr == execution.ErrConflict {
+			if execution.IsConflictError(updateErr) {
 				handler.metricsClient.IncCounter(metrics.HistoryRespondDecisionTaskCompletedScope, metrics.ConcurrencyUpdateFailureCounter)
 				continue Update_History_Loop
 			}

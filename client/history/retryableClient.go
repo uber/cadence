@@ -564,6 +564,23 @@ func (c *retryableClient) ReapplyEvents(
 	return c.throttleRetry.Do(ctx, op)
 }
 
+func (c *retryableClient) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.HistoryCountDLQMessagesResponse, error) {
+
+	var resp *types.HistoryCountDLQMessagesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.CountDLQMessages(ctx, request, opts...)
+		return err
+	}
+
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) ReadDLQMessages(
 	ctx context.Context,
 	request *types.ReadDLQMessagesRequest,
