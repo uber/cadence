@@ -35,30 +35,30 @@ import (
 	types "github.com/uber/cadence/common/types"
 )
 
-// MockHandler is a mock of Handler interface
+// MockHandler is a mock of Handler interface.
 type MockHandler struct {
 	ctrl     *gomock.Controller
 	recorder *MockHandlerMockRecorder
 }
 
-// MockHandlerMockRecorder is the mock recorder for MockHandler
+// MockHandlerMockRecorder is the mock recorder for MockHandler.
 type MockHandlerMockRecorder struct {
 	mock *MockHandler
 }
 
-// NewMockHandler creates a new mock instance
+// NewMockHandler creates a new mock instance.
 func NewMockHandler(ctrl *gomock.Controller) *MockHandler {
 	mock := &MockHandler{ctrl: ctrl}
 	mock.recorder = &MockHandlerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockHandler) EXPECT() *MockHandlerMockRecorder {
 	return m.recorder
 }
 
-// DeprecateDomain mocks base method
+// DeprecateDomain mocks base method.
 func (m *MockHandler) DeprecateDomain(ctx context.Context, deprecateRequest *types.DeprecateDomainRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeprecateDomain", ctx, deprecateRequest)
@@ -66,13 +66,13 @@ func (m *MockHandler) DeprecateDomain(ctx context.Context, deprecateRequest *typ
 	return ret0
 }
 
-// DeprecateDomain indicates an expected call of DeprecateDomain
+// DeprecateDomain indicates an expected call of DeprecateDomain.
 func (mr *MockHandlerMockRecorder) DeprecateDomain(ctx, deprecateRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeprecateDomain", reflect.TypeOf((*MockHandler)(nil).DeprecateDomain), ctx, deprecateRequest)
 }
 
-// DescribeDomain mocks base method
+// DescribeDomain mocks base method.
 func (m *MockHandler) DescribeDomain(ctx context.Context, describeRequest *types.DescribeDomainRequest) (*types.DescribeDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeDomain", ctx, describeRequest)
@@ -81,13 +81,13 @@ func (m *MockHandler) DescribeDomain(ctx context.Context, describeRequest *types
 	return ret0, ret1
 }
 
-// DescribeDomain indicates an expected call of DescribeDomain
+// DescribeDomain indicates an expected call of DescribeDomain.
 func (mr *MockHandlerMockRecorder) DescribeDomain(ctx, describeRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeDomain", reflect.TypeOf((*MockHandler)(nil).DescribeDomain), ctx, describeRequest)
 }
 
-// ListDomains mocks base method
+// ListDomains mocks base method.
 func (m *MockHandler) ListDomains(ctx context.Context, listRequest *types.ListDomainsRequest) (*types.ListDomainsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDomains", ctx, listRequest)
@@ -96,13 +96,13 @@ func (m *MockHandler) ListDomains(ctx context.Context, listRequest *types.ListDo
 	return ret0, ret1
 }
 
-// ListDomains indicates an expected call of ListDomains
+// ListDomains indicates an expected call of ListDomains.
 func (mr *MockHandlerMockRecorder) ListDomains(ctx, listRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDomains", reflect.TypeOf((*MockHandler)(nil).ListDomains), ctx, listRequest)
 }
 
-// RegisterDomain mocks base method
+// RegisterDomain mocks base method.
 func (m *MockHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterDomain", ctx, registerRequest)
@@ -110,13 +110,13 @@ func (m *MockHandler) RegisterDomain(ctx context.Context, registerRequest *types
 	return ret0
 }
 
-// RegisterDomain indicates an expected call of RegisterDomain
+// RegisterDomain indicates an expected call of RegisterDomain.
 func (mr *MockHandlerMockRecorder) RegisterDomain(ctx, registerRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterDomain", reflect.TypeOf((*MockHandler)(nil).RegisterDomain), ctx, registerRequest)
 }
 
-// UpdateDomain mocks base method
+// UpdateDomain mocks base method.
 func (m *MockHandler) UpdateDomain(ctx context.Context, updateRequest *types.UpdateDomainRequest) (*types.UpdateDomainResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateDomain", ctx, updateRequest)
@@ -125,7 +125,7 @@ func (m *MockHandler) UpdateDomain(ctx context.Context, updateRequest *types.Upd
 	return ret0, ret1
 }
 
-// UpdateDomain indicates an expected call of UpdateDomain
+// UpdateDomain indicates an expected call of UpdateDomain.
 func (mr *MockHandlerMockRecorder) UpdateDomain(ctx, updateRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomain", reflect.TypeOf((*MockHandler)(nil).UpdateDomain), ctx, updateRequest)
