@@ -811,7 +811,9 @@ func (c *clientImpl) GetReplicationMessages(
 
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
-		g.Go(func() error {
+		g.Go(func() (e error) {
+			defer log.CapturePanic(c.logger, &e)
+
 			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
 
@@ -903,6 +905,48 @@ func (c *clientImpl) ReapplyEvents(
 	return err
 }
 
+func (c *clientImpl) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.HistoryCountDLQMessagesResponse, error) {
+
+	peers, err := c.peerResolver.GetAllPeers()
+	if err != nil {
+		return nil, err
+	}
+
+	var mu sync.Mutex
+	responses := make([]*types.HistoryCountDLQMessagesResponse, 0, len(peers))
+
+	g := &errgroup.Group{}
+	for _, peer := range peers {
+		peer := peer
+		g.Go(func() (e error) {
+			defer log.CapturePanic(c.logger, &e)
+
+			response, err := c.client.CountDLQMessages(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+			if err == nil {
+				mu.Lock()
+				responses = append(responses, response)
+				mu.Unlock()
+			}
+
+			return err
+		})
+	}
+
+	err = g.Wait()
+
+	entries := map[types.HistoryDLQCountKey]int64{}
+	for _, response := range responses {
+		for key, count := range response.Entries {
+			entries[key] = count
+		}
+	}
+	return &types.HistoryCountDLQMessagesResponse{Entries: entries}, err
+}
+
 func (c *clientImpl) ReadDLQMessages(
 	ctx context.Context,
 	request *types.ReadDLQMessagesRequest,
@@ -986,7 +1030,9 @@ func (c *clientImpl) NotifyFailoverMarkers(
 	g := &errgroup.Group{}
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
-		g.Go(func() error {
+		g.Go(func() (e error) {
+			defer log.CapturePanic(c.logger, &e)
+
 			ctx, cancel := c.createContext(ctx)
 			defer cancel()
 

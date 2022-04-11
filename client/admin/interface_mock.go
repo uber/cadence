@@ -36,30 +36,30 @@ import (
 	types "github.com/uber/cadence/common/types"
 )
 
-// MockClient is a mock of Client interface
+// MockClient is a mock of Client interface.
 type MockClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMockRecorder
 }
 
-// MockClientMockRecorder is the mock recorder for MockClient
+// MockClientMockRecorder is the mock recorder for MockClient.
 type MockClientMockRecorder struct {
 	mock *MockClient
 }
 
-// NewMockClient creates a new mock instance
+// NewMockClient creates a new mock instance.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
 	mock := &MockClient{ctrl: ctrl}
 	mock.recorder = &MockClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
-// AddSearchAttribute mocks base method
+// AddSearchAttribute mocks base method.
 func (m *MockClient) AddSearchAttribute(arg0 context.Context, arg1 *types.AddSearchAttributeRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -71,14 +71,14 @@ func (m *MockClient) AddSearchAttribute(arg0 context.Context, arg1 *types.AddSea
 	return ret0
 }
 
-// AddSearchAttribute indicates an expected call of AddSearchAttribute
+// AddSearchAttribute indicates an expected call of AddSearchAttribute.
 func (mr *MockClientMockRecorder) AddSearchAttribute(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSearchAttribute", reflect.TypeOf((*MockClient)(nil).AddSearchAttribute), varargs...)
 }
 
-// CloseShard mocks base method
+// CloseShard mocks base method.
 func (m *MockClient) CloseShard(arg0 context.Context, arg1 *types.CloseShardRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -90,446 +90,14 @@ func (m *MockClient) CloseShard(arg0 context.Context, arg1 *types.CloseShardRequ
 	return ret0
 }
 
-// CloseShard indicates an expected call of CloseShard
+// CloseShard indicates an expected call of CloseShard.
 func (mr *MockClientMockRecorder) CloseShard(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseShard", reflect.TypeOf((*MockClient)(nil).CloseShard), varargs...)
 }
 
-// DescribeCluster mocks base method
-func (m *MockClient) DescribeCluster(arg0 context.Context, arg1 ...yarpc.CallOption) (*types.DescribeClusterResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DescribeCluster", varargs...)
-	ret0, _ := ret[0].(*types.DescribeClusterResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeCluster indicates an expected call of DescribeCluster
-func (mr *MockClientMockRecorder) DescribeCluster(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCluster", reflect.TypeOf((*MockClient)(nil).DescribeCluster), varargs...)
-}
-
-// DescribeShardDistribution mocks base method
-func (m *MockClient) DescribeShardDistribution(arg0 context.Context, arg1 *types.DescribeShardDistributionRequest, arg2 ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DescribeShardDistribution", varargs...)
-	ret0, _ := ret[0].(*types.DescribeShardDistributionResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeShardDistribution indicates an expected call of DescribeShardDistribution
-func (mr *MockClientMockRecorder) DescribeShardDistribution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeShardDistribution", reflect.TypeOf((*MockClient)(nil).DescribeShardDistribution), varargs...)
-}
-
-// DescribeHistoryHost mocks base method
-func (m *MockClient) DescribeHistoryHost(arg0 context.Context, arg1 *types.DescribeHistoryHostRequest, arg2 ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DescribeHistoryHost", varargs...)
-	ret0, _ := ret[0].(*types.DescribeHistoryHostResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeHistoryHost indicates an expected call of DescribeHistoryHost
-func (mr *MockClientMockRecorder) DescribeHistoryHost(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeHistoryHost", reflect.TypeOf((*MockClient)(nil).DescribeHistoryHost), varargs...)
-}
-
-// DescribeQueue mocks base method
-func (m *MockClient) DescribeQueue(arg0 context.Context, arg1 *types.DescribeQueueRequest, arg2 ...yarpc.CallOption) (*types.DescribeQueueResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DescribeQueue", varargs...)
-	ret0, _ := ret[0].(*types.DescribeQueueResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeQueue indicates an expected call of DescribeQueue
-func (mr *MockClientMockRecorder) DescribeQueue(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeQueue", reflect.TypeOf((*MockClient)(nil).DescribeQueue), varargs...)
-}
-
-// DescribeWorkflowExecution mocks base method
-func (m *MockClient) DescribeWorkflowExecution(arg0 context.Context, arg1 *types.AdminDescribeWorkflowExecutionRequest, arg2 ...yarpc.CallOption) (*types.AdminDescribeWorkflowExecutionResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", varargs...)
-	ret0, _ := ret[0].(*types.AdminDescribeWorkflowExecutionResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DescribeWorkflowExecution indicates an expected call of DescribeWorkflowExecution
-func (mr *MockClientMockRecorder) DescribeWorkflowExecution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeWorkflowExecution", reflect.TypeOf((*MockClient)(nil).DescribeWorkflowExecution), varargs...)
-}
-
-// GetDLQReplicationMessages mocks base method
-func (m *MockClient) GetDLQReplicationMessages(arg0 context.Context, arg1 *types.GetDLQReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetDLQReplicationMessages", varargs...)
-	ret0, _ := ret[0].(*types.GetDLQReplicationMessagesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDLQReplicationMessages indicates an expected call of GetDLQReplicationMessages
-func (mr *MockClientMockRecorder) GetDLQReplicationMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetDLQReplicationMessages), varargs...)
-}
-
-// GetDomainReplicationMessages mocks base method
-func (m *MockClient) GetDomainReplicationMessages(arg0 context.Context, arg1 *types.GetDomainReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetDomainReplicationMessagesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetDomainReplicationMessages", varargs...)
-	ret0, _ := ret[0].(*types.GetDomainReplicationMessagesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDomainReplicationMessages indicates an expected call of GetDomainReplicationMessages
-func (mr *MockClientMockRecorder) GetDomainReplicationMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetDomainReplicationMessages), varargs...)
-}
-
-// GetReplicationMessages mocks base method
-func (m *MockClient) GetReplicationMessages(arg0 context.Context, arg1 *types.GetReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetReplicationMessages", varargs...)
-	ret0, _ := ret[0].(*types.GetReplicationMessagesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetReplicationMessages indicates an expected call of GetReplicationMessages
-func (mr *MockClientMockRecorder) GetReplicationMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetReplicationMessages), varargs...)
-}
-
-// GetWorkflowExecutionRawHistoryV2 mocks base method
-func (m *MockClient) GetWorkflowExecutionRawHistoryV2(arg0 context.Context, arg1 *types.GetWorkflowExecutionRawHistoryV2Request, arg2 ...yarpc.CallOption) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetWorkflowExecutionRawHistoryV2", varargs...)
-	ret0, _ := ret[0].(*types.GetWorkflowExecutionRawHistoryV2Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetWorkflowExecutionRawHistoryV2 indicates an expected call of GetWorkflowExecutionRawHistoryV2
-func (mr *MockClientMockRecorder) GetWorkflowExecutionRawHistoryV2(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkflowExecutionRawHistoryV2", reflect.TypeOf((*MockClient)(nil).GetWorkflowExecutionRawHistoryV2), varargs...)
-}
-
-// MergeDLQMessages mocks base method
-func (m *MockClient) MergeDLQMessages(arg0 context.Context, arg1 *types.MergeDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "MergeDLQMessages", varargs...)
-	ret0, _ := ret[0].(*types.MergeDLQMessagesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MergeDLQMessages indicates an expected call of MergeDLQMessages
-func (mr *MockClientMockRecorder) MergeDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeDLQMessages", reflect.TypeOf((*MockClient)(nil).MergeDLQMessages), varargs...)
-}
-
-// PurgeDLQMessages mocks base method
-func (m *MockClient) PurgeDLQMessages(arg0 context.Context, arg1 *types.PurgeDLQMessagesRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "PurgeDLQMessages", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PurgeDLQMessages indicates an expected call of PurgeDLQMessages
-func (mr *MockClientMockRecorder) PurgeDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeDLQMessages", reflect.TypeOf((*MockClient)(nil).PurgeDLQMessages), varargs...)
-}
-
-// ReadDLQMessages mocks base method
-func (m *MockClient) ReadDLQMessages(arg0 context.Context, arg1 *types.ReadDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ReadDLQMessages", varargs...)
-	ret0, _ := ret[0].(*types.ReadDLQMessagesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ReadDLQMessages indicates an expected call of ReadDLQMessages
-func (mr *MockClientMockRecorder) ReadDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDLQMessages", reflect.TypeOf((*MockClient)(nil).ReadDLQMessages), varargs...)
-}
-
-// ReapplyEvents mocks base method
-func (m *MockClient) ReapplyEvents(arg0 context.Context, arg1 *types.ReapplyEventsRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ReapplyEvents", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReapplyEvents indicates an expected call of ReapplyEvents
-func (mr *MockClientMockRecorder) ReapplyEvents(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReapplyEvents", reflect.TypeOf((*MockClient)(nil).ReapplyEvents), varargs...)
-}
-
-// RefreshWorkflowTasks mocks base method
-func (m *MockClient) RefreshWorkflowTasks(arg0 context.Context, arg1 *types.RefreshWorkflowTasksRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RefreshWorkflowTasks indicates an expected call of RefreshWorkflowTasks
-func (mr *MockClientMockRecorder) RefreshWorkflowTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWorkflowTasks", reflect.TypeOf((*MockClient)(nil).RefreshWorkflowTasks), varargs...)
-}
-
-// RemoveTask mocks base method
-func (m *MockClient) RemoveTask(arg0 context.Context, arg1 *types.RemoveTaskRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RemoveTask", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RemoveTask indicates an expected call of RemoveTask
-func (mr *MockClientMockRecorder) RemoveTask(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveTask", reflect.TypeOf((*MockClient)(nil).RemoveTask), varargs...)
-}
-
-// ResendReplicationTasks mocks base method
-func (m *MockClient) ResendReplicationTasks(arg0 context.Context, arg1 *types.ResendReplicationTasksRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ResendReplicationTasks", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResendReplicationTasks indicates an expected call of ResendReplicationTasks
-func (mr *MockClientMockRecorder) ResendReplicationTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResendReplicationTasks", reflect.TypeOf((*MockClient)(nil).ResendReplicationTasks), varargs...)
-}
-
-// ResetQueue mocks base method
-func (m *MockClient) ResetQueue(arg0 context.Context, arg1 *types.ResetQueueRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ResetQueue", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ResetQueue indicates an expected call of ResetQueue
-func (mr *MockClientMockRecorder) ResetQueue(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQueue", reflect.TypeOf((*MockClient)(nil).ResetQueue), varargs...)
-}
-
-// GetCrossClusterTasks mocks base method
-func (m *MockClient) GetCrossClusterTasks(arg0 context.Context, arg1 *types.GetCrossClusterTasksRequest, arg2 ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetCrossClusterTasks", varargs...)
-	ret0, _ := ret[0].(*types.GetCrossClusterTasksResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks
-func (mr *MockClientMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockClient)(nil).GetCrossClusterTasks), varargs...)
-}
-
-// RespondCrossClusterTasksCompleted mocks base method
-func (m *MockClient) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest, arg2 ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", varargs...)
-	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted
-func (mr *MockClientMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockClient)(nil).RespondCrossClusterTasksCompleted), varargs...)
-}
-
-// GetDynamicConfig mocks base method
-func (m *MockClient) GetDynamicConfig(arg0 context.Context, arg1 *types.GetDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetDynamicConfig", varargs...)
-	ret0, _ := ret[0].(*types.GetDynamicConfigResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDynamicConfig indicates an expected call of GetDynamicConfig
-func (mr *MockClientMockRecorder) GetDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicConfig", reflect.TypeOf((*MockClient)(nil).GetDynamicConfig), varargs...)
-}
-
-// UpdateDynamicConfig mocks base method
-func (m *MockClient) UpdateDynamicConfig(arg0 context.Context, arg1 *types.UpdateDynamicConfigRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpdateDynamicConfig", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateDynamicConfig indicates an expected call of UpdateDynamicConfig
-func (mr *MockClientMockRecorder) UpdateDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockClient)(nil).UpdateDynamicConfig), varargs...)
-}
-
-// RestoreDynamicConfig mocks base method
-func (m *MockClient) RestoreDynamicConfig(arg0 context.Context, arg1 *types.RestoreDynamicConfigRequest, arg2 ...yarpc.CallOption) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "RestoreDynamicConfig", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RestoreDynamicConfig indicates an expected call of RestoreDynamicConfig
-func (mr *MockClientMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDynamicConfig", reflect.TypeOf((*MockClient)(nil).RestoreDynamicConfig), varargs...)
-}
-
-// DeleteWorkflow mocks base method
+// DeleteWorkflow mocks base method.
 func (m *MockClient) DeleteWorkflow(arg0 context.Context, arg1 *types.AdminDeleteWorkflowRequest, arg2 ...yarpc.CallOption) (*types.AdminDeleteWorkflowResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -542,34 +110,254 @@ func (m *MockClient) DeleteWorkflow(arg0 context.Context, arg1 *types.AdminDelet
 	return ret0, ret1
 }
 
-// DeleteWorkflow indicates an expected call of DeleteWorkflow
+// DeleteWorkflow indicates an expected call of DeleteWorkflow.
 func (mr *MockClientMockRecorder) DeleteWorkflow(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkflow", reflect.TypeOf((*MockClient)(nil).DeleteWorkflow), varargs...)
 }
 
-// MaintainCorruptWorkflow mocks base method
-func (m *MockClient) MaintainCorruptWorkflow(arg0 context.Context, arg1 *types.AdminMaintainWorkflowRequest, arg2 ...yarpc.CallOption) (*types.AdminMaintainWorkflowResponse, error) {
+// DescribeCluster mocks base method.
+func (m *MockClient) DescribeCluster(arg0 context.Context, arg1 ...yarpc.CallOption) (*types.DescribeClusterResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeCluster", varargs...)
+	ret0, _ := ret[0].(*types.DescribeClusterResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeCluster indicates an expected call of DescribeCluster.
+func (mr *MockClientMockRecorder) DescribeCluster(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCluster", reflect.TypeOf((*MockClient)(nil).DescribeCluster), varargs...)
+}
+
+// DescribeHistoryHost mocks base method.
+func (m *MockClient) DescribeHistoryHost(arg0 context.Context, arg1 *types.DescribeHistoryHostRequest, arg2 ...yarpc.CallOption) (*types.DescribeHistoryHostResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", varargs...)
-	ret0, _ := ret[0].(*types.AdminMaintainWorkflowResponse)
+	ret := m.ctrl.Call(m, "DescribeHistoryHost", varargs...)
+	ret0, _ := ret[0].(*types.DescribeHistoryHostResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// MaintainCorruptWorkflow indicates an expected call of MaintainCorruptWorkflow
-func (mr *MockClientMockRecorder) MaintainCorruptWorkflow(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+// DescribeHistoryHost indicates an expected call of DescribeHistoryHost.
+func (mr *MockClientMockRecorder) DescribeHistoryHost(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaintainCorruptWorkflow", reflect.TypeOf((*MockClient)(nil).MaintainCorruptWorkflow), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeHistoryHost", reflect.TypeOf((*MockClient)(nil).DescribeHistoryHost), varargs...)
 }
 
-// ListDynamicConfig mocks base method
+// DescribeQueue mocks base method.
+func (m *MockClient) DescribeQueue(arg0 context.Context, arg1 *types.DescribeQueueRequest, arg2 ...yarpc.CallOption) (*types.DescribeQueueResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeQueue", varargs...)
+	ret0, _ := ret[0].(*types.DescribeQueueResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeQueue indicates an expected call of DescribeQueue.
+func (mr *MockClientMockRecorder) DescribeQueue(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeQueue", reflect.TypeOf((*MockClient)(nil).DescribeQueue), varargs...)
+}
+
+// DescribeShardDistribution mocks base method.
+func (m *MockClient) DescribeShardDistribution(arg0 context.Context, arg1 *types.DescribeShardDistributionRequest, arg2 ...yarpc.CallOption) (*types.DescribeShardDistributionResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeShardDistribution", varargs...)
+	ret0, _ := ret[0].(*types.DescribeShardDistributionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeShardDistribution indicates an expected call of DescribeShardDistribution.
+func (mr *MockClientMockRecorder) DescribeShardDistribution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeShardDistribution", reflect.TypeOf((*MockClient)(nil).DescribeShardDistribution), varargs...)
+}
+
+// DescribeWorkflowExecution mocks base method.
+func (m *MockClient) DescribeWorkflowExecution(arg0 context.Context, arg1 *types.AdminDescribeWorkflowExecutionRequest, arg2 ...yarpc.CallOption) (*types.AdminDescribeWorkflowExecutionResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeWorkflowExecution", varargs...)
+	ret0, _ := ret[0].(*types.AdminDescribeWorkflowExecutionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeWorkflowExecution indicates an expected call of DescribeWorkflowExecution.
+func (mr *MockClientMockRecorder) DescribeWorkflowExecution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeWorkflowExecution", reflect.TypeOf((*MockClient)(nil).DescribeWorkflowExecution), varargs...)
+}
+
+// GetCrossClusterTasks mocks base method.
+func (m *MockClient) GetCrossClusterTasks(arg0 context.Context, arg1 *types.GetCrossClusterTasksRequest, arg2 ...yarpc.CallOption) (*types.GetCrossClusterTasksResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetCrossClusterTasks", varargs...)
+	ret0, _ := ret[0].(*types.GetCrossClusterTasksResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCrossClusterTasks indicates an expected call of GetCrossClusterTasks.
+func (mr *MockClientMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockClient)(nil).GetCrossClusterTasks), varargs...)
+}
+
+// CountDLQMessages mocks base method.
+func (m *MockClient) CountDLQMessages(arg0 context.Context, arg1 *types.CountDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.CountDLQMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CountDLQMessages", varargs...)
+	ret0, _ := ret[0].(*types.CountDLQMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountDLQMessages indicates an expected call of CountDLQMessages.
+func (mr *MockClientMockRecorder) CountDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDLQMessages", reflect.TypeOf((*MockClient)(nil).CountDLQMessages), varargs...)
+}
+
+// GetDLQReplicationMessages mocks base method.
+func (m *MockClient) GetDLQReplicationMessages(arg0 context.Context, arg1 *types.GetDLQReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDLQReplicationMessages", varargs...)
+	ret0, _ := ret[0].(*types.GetDLQReplicationMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDLQReplicationMessages indicates an expected call of GetDLQReplicationMessages.
+func (mr *MockClientMockRecorder) GetDLQReplicationMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetDLQReplicationMessages), varargs...)
+}
+
+// GetDomainReplicationMessages mocks base method.
+func (m *MockClient) GetDomainReplicationMessages(arg0 context.Context, arg1 *types.GetDomainReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetDomainReplicationMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDomainReplicationMessages", varargs...)
+	ret0, _ := ret[0].(*types.GetDomainReplicationMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainReplicationMessages indicates an expected call of GetDomainReplicationMessages.
+func (mr *MockClientMockRecorder) GetDomainReplicationMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetDomainReplicationMessages), varargs...)
+}
+
+// GetDynamicConfig mocks base method.
+func (m *MockClient) GetDynamicConfig(arg0 context.Context, arg1 *types.GetDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.GetDynamicConfigResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDynamicConfig", varargs...)
+	ret0, _ := ret[0].(*types.GetDynamicConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDynamicConfig indicates an expected call of GetDynamicConfig.
+func (mr *MockClientMockRecorder) GetDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicConfig", reflect.TypeOf((*MockClient)(nil).GetDynamicConfig), varargs...)
+}
+
+// GetReplicationMessages mocks base method.
+func (m *MockClient) GetReplicationMessages(arg0 context.Context, arg1 *types.GetReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetReplicationMessages", varargs...)
+	ret0, _ := ret[0].(*types.GetReplicationMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetReplicationMessages indicates an expected call of GetReplicationMessages.
+func (mr *MockClientMockRecorder) GetReplicationMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetReplicationMessages), varargs...)
+}
+
+// GetWorkflowExecutionRawHistoryV2 mocks base method.
+func (m *MockClient) GetWorkflowExecutionRawHistoryV2(arg0 context.Context, arg1 *types.GetWorkflowExecutionRawHistoryV2Request, arg2 ...yarpc.CallOption) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetWorkflowExecutionRawHistoryV2", varargs...)
+	ret0, _ := ret[0].(*types.GetWorkflowExecutionRawHistoryV2Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkflowExecutionRawHistoryV2 indicates an expected call of GetWorkflowExecutionRawHistoryV2.
+func (mr *MockClientMockRecorder) GetWorkflowExecutionRawHistoryV2(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkflowExecutionRawHistoryV2", reflect.TypeOf((*MockClient)(nil).GetWorkflowExecutionRawHistoryV2), varargs...)
+}
+
+// ListDynamicConfig mocks base method.
 func (m *MockClient) ListDynamicConfig(arg0 context.Context, arg1 *types.ListDynamicConfigRequest, arg2 ...yarpc.CallOption) (*types.ListDynamicConfigResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -582,9 +370,241 @@ func (m *MockClient) ListDynamicConfig(arg0 context.Context, arg1 *types.ListDyn
 	return ret0, ret1
 }
 
-// ListDynamicConfig indicates an expected call of ListDynamicConfig
+// ListDynamicConfig indicates an expected call of ListDynamicConfig.
 func (mr *MockClientMockRecorder) ListDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDynamicConfig", reflect.TypeOf((*MockClient)(nil).ListDynamicConfig), varargs...)
+}
+
+// MaintainCorruptWorkflow mocks base method.
+func (m *MockClient) MaintainCorruptWorkflow(arg0 context.Context, arg1 *types.AdminMaintainWorkflowRequest, arg2 ...yarpc.CallOption) (*types.AdminMaintainWorkflowResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", varargs...)
+	ret0, _ := ret[0].(*types.AdminMaintainWorkflowResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MaintainCorruptWorkflow indicates an expected call of MaintainCorruptWorkflow.
+func (mr *MockClientMockRecorder) MaintainCorruptWorkflow(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MaintainCorruptWorkflow", reflect.TypeOf((*MockClient)(nil).MaintainCorruptWorkflow), varargs...)
+}
+
+// MergeDLQMessages mocks base method.
+func (m *MockClient) MergeDLQMessages(arg0 context.Context, arg1 *types.MergeDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MergeDLQMessages", varargs...)
+	ret0, _ := ret[0].(*types.MergeDLQMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MergeDLQMessages indicates an expected call of MergeDLQMessages.
+func (mr *MockClientMockRecorder) MergeDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeDLQMessages", reflect.TypeOf((*MockClient)(nil).MergeDLQMessages), varargs...)
+}
+
+// PurgeDLQMessages mocks base method.
+func (m *MockClient) PurgeDLQMessages(arg0 context.Context, arg1 *types.PurgeDLQMessagesRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PurgeDLQMessages", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PurgeDLQMessages indicates an expected call of PurgeDLQMessages.
+func (mr *MockClientMockRecorder) PurgeDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeDLQMessages", reflect.TypeOf((*MockClient)(nil).PurgeDLQMessages), varargs...)
+}
+
+// ReadDLQMessages mocks base method.
+func (m *MockClient) ReadDLQMessages(arg0 context.Context, arg1 *types.ReadDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReadDLQMessages", varargs...)
+	ret0, _ := ret[0].(*types.ReadDLQMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDLQMessages indicates an expected call of ReadDLQMessages.
+func (mr *MockClientMockRecorder) ReadDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDLQMessages", reflect.TypeOf((*MockClient)(nil).ReadDLQMessages), varargs...)
+}
+
+// ReapplyEvents mocks base method.
+func (m *MockClient) ReapplyEvents(arg0 context.Context, arg1 *types.ReapplyEventsRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ReapplyEvents", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReapplyEvents indicates an expected call of ReapplyEvents.
+func (mr *MockClientMockRecorder) ReapplyEvents(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReapplyEvents", reflect.TypeOf((*MockClient)(nil).ReapplyEvents), varargs...)
+}
+
+// RefreshWorkflowTasks mocks base method.
+func (m *MockClient) RefreshWorkflowTasks(arg0 context.Context, arg1 *types.RefreshWorkflowTasksRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RefreshWorkflowTasks", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RefreshWorkflowTasks indicates an expected call of RefreshWorkflowTasks.
+func (mr *MockClientMockRecorder) RefreshWorkflowTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWorkflowTasks", reflect.TypeOf((*MockClient)(nil).RefreshWorkflowTasks), varargs...)
+}
+
+// RemoveTask mocks base method.
+func (m *MockClient) RemoveTask(arg0 context.Context, arg1 *types.RemoveTaskRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RemoveTask", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveTask indicates an expected call of RemoveTask.
+func (mr *MockClientMockRecorder) RemoveTask(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveTask", reflect.TypeOf((*MockClient)(nil).RemoveTask), varargs...)
+}
+
+// ResendReplicationTasks mocks base method.
+func (m *MockClient) ResendReplicationTasks(arg0 context.Context, arg1 *types.ResendReplicationTasksRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ResendReplicationTasks", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResendReplicationTasks indicates an expected call of ResendReplicationTasks.
+func (mr *MockClientMockRecorder) ResendReplicationTasks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResendReplicationTasks", reflect.TypeOf((*MockClient)(nil).ResendReplicationTasks), varargs...)
+}
+
+// ResetQueue mocks base method.
+func (m *MockClient) ResetQueue(arg0 context.Context, arg1 *types.ResetQueueRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ResetQueue", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ResetQueue indicates an expected call of ResetQueue.
+func (mr *MockClientMockRecorder) ResetQueue(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetQueue", reflect.TypeOf((*MockClient)(nil).ResetQueue), varargs...)
+}
+
+// RespondCrossClusterTasksCompleted mocks base method.
+func (m *MockClient) RespondCrossClusterTasksCompleted(arg0 context.Context, arg1 *types.RespondCrossClusterTasksCompletedRequest, arg2 ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RespondCrossClusterTasksCompleted", varargs...)
+	ret0, _ := ret[0].(*types.RespondCrossClusterTasksCompletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RespondCrossClusterTasksCompleted indicates an expected call of RespondCrossClusterTasksCompleted.
+func (mr *MockClientMockRecorder) RespondCrossClusterTasksCompleted(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondCrossClusterTasksCompleted", reflect.TypeOf((*MockClient)(nil).RespondCrossClusterTasksCompleted), varargs...)
+}
+
+// RestoreDynamicConfig mocks base method.
+func (m *MockClient) RestoreDynamicConfig(arg0 context.Context, arg1 *types.RestoreDynamicConfigRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RestoreDynamicConfig", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreDynamicConfig indicates an expected call of RestoreDynamicConfig.
+func (mr *MockClientMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDynamicConfig", reflect.TypeOf((*MockClient)(nil).RestoreDynamicConfig), varargs...)
+}
+
+// UpdateDynamicConfig mocks base method.
+func (m *MockClient) UpdateDynamicConfig(arg0 context.Context, arg1 *types.UpdateDynamicConfigRequest, arg2 ...yarpc.CallOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateDynamicConfig", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateDynamicConfig indicates an expected call of UpdateDynamicConfig.
+func (mr *MockClientMockRecorder) UpdateDynamicConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockClient)(nil).UpdateDynamicConfig), varargs...)
 }

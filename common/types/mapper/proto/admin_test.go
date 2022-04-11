@@ -122,6 +122,16 @@ func TestAdminGetWorkflowExecutionRawHistoryV2Response(t *testing.T) {
 		assert.Equal(t, item, ToAdminGetWorkflowExecutionRawHistoryV2Response(FromAdminGetWorkflowExecutionRawHistoryV2Response(item)))
 	}
 }
+func TestAdminCountDLQMessagesRequest(t *testing.T) {
+	for _, item := range []*types.CountDLQMessagesRequest{nil, {}, &testdata.AdminCountDLQMessagesRequest} {
+		assert.Equal(t, item, ToAdminCountDLQMessagesRequest(FromAdminCountDLQMessagesRequest(item)))
+	}
+}
+func TestAdminCountDLQMessagesResponse(t *testing.T) {
+	for _, item := range []*types.CountDLQMessagesResponse{nil, {}, &testdata.AdminCountDLQMessagesResponse} {
+		assert.Equal(t, item, ToAdminCountDLQMessagesResponse(FromAdminCountDLQMessagesResponse(item)))
+	}
+}
 func TestAdminMergeDLQMessagesRequest(t *testing.T) {
 	for _, item := range []*types.MergeDLQMessagesRequest{nil, {}, &testdata.AdminMergeDLQMessagesRequest} {
 		assert.Equal(t, item, ToAdminMergeDLQMessagesRequest(FromAdminMergeDLQMessagesRequest(item)))

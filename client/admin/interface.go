@@ -43,6 +43,7 @@ type Client interface {
 	GetDomainReplicationMessages(context.Context, *types.GetDomainReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetDomainReplicationMessagesResponse, error)
 	GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest, ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error)
 	GetWorkflowExecutionRawHistoryV2(context.Context, *types.GetWorkflowExecutionRawHistoryV2Request, ...yarpc.CallOption) (*types.GetWorkflowExecutionRawHistoryV2Response, error)
+	CountDLQMessages(context.Context, *types.CountDLQMessagesRequest, ...yarpc.CallOption) (*types.CountDLQMessagesResponse, error)
 	MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest, ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error)
 	PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest, ...yarpc.CallOption) error
 	ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest, ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error)

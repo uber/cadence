@@ -24,8 +24,16 @@ package replication
 
 import (
 	"context"
+	"strconv"
+	"sync"
+	"sync/atomic"
+	"time"
 
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
@@ -42,6 +50,12 @@ var (
 type (
 	// DLQHandler is the interface handles replication DLQ messages
 	DLQHandler interface {
+		common.Daemon
+
+		GetMessageCount(
+			ctx context.Context,
+			forceFetch bool,
+		) (map[string]int64, error)
 		ReadMessages(
 			ctx context.Context,
 			sourceCluster string,
@@ -67,6 +81,12 @@ type (
 		taskExecutors map[string]TaskExecutor
 		shard         shard.Context
 		logger        log.Logger
+		metricsClient metrics.Client
+		done          chan struct{}
+		status        int32
+
+		mu           sync.Mutex
+		latestCounts map[string]int64
 	}
 )
 
@@ -86,6 +106,89 @@ func NewDLQHandler(
 		shard:         shard,
 		taskExecutors: taskExecutors,
 		logger:        shard.GetLogger(),
+		metricsClient: shard.GetMetricsClient(),
+		done:          make(chan struct{}),
+	}
+}
+
+// Start starts the DLQ handler
+func (r *dlqHandlerImpl) Start() {
+	if !atomic.CompareAndSwapInt32(&r.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
+	go r.emitDLQSizeMetricsLoop()
+	r.logger.Info("DLQ handler started.")
+}
+
+// Stop stops the DLQ handler
+func (r *dlqHandlerImpl) Stop() {
+	if !atomic.CompareAndSwapInt32(&r.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
+	r.logger.Debug("DLQ handler shutting down.")
+	close(r.done)
+}
+
+func (r *dlqHandlerImpl) GetMessageCount(ctx context.Context, forceFetch bool) (map[string]int64, error) {
+	if forceFetch || r.latestCounts == nil {
+		if err := r.fetchAndEmitMessageCount(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	return r.latestCounts, nil
+}
+
+func (r *dlqHandlerImpl) fetchAndEmitMessageCount(ctx context.Context) error {
+	shardID := strconv.Itoa(r.shard.GetShardID())
+	result := map[string]int64{}
+	for sourceCluster := range r.taskExecutors {
+		request := persistence.GetReplicationDLQSizeRequest{SourceClusterName: sourceCluster}
+		response, err := r.shard.GetExecutionManager().GetReplicationDLQSize(ctx, &request)
+		if err != nil {
+			r.logger.Error("failed to get replication DLQ size", tag.Error(err))
+			r.metricsClient.Scope(metrics.ReplicationDLQStatsScope).IncCounter(metrics.ReplicationDLQProbeFailed)
+			return err
+		}
+		r.metricsClient.Scope(
+			metrics.ReplicationDLQStatsScope,
+			metrics.SourceClusterTag(sourceCluster),
+			metrics.InstanceTag(shardID),
+		).UpdateGauge(metrics.ReplicationDLQSize, float64(response.Size))
+
+		if response.Size > 0 {
+			result[sourceCluster] = response.Size
+		}
+	}
+
+	r.mu.Lock()
+	r.latestCounts = result
+	r.mu.Unlock()
+
+	return nil
+}
+
+func (r *dlqHandlerImpl) emitDLQSizeMetricsLoop() {
+	getInterval := func() time.Duration {
+		return backoff.JitDuration(
+			dlqMetricsEmitTimerInterval,
+			dlqMetricsEmitTimerCoefficient,
+		)
+	}
+
+	timer := time.NewTimer(getInterval())
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			r.fetchAndEmitMessageCount(context.Background())
+			timer.Reset(getInterval())
+		case <-r.done:
+			return
+		}
 	}
 }
 

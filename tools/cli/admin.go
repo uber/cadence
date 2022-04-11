@@ -774,6 +774,26 @@ func getDLQFlags() []cli.Flag {
 func newAdminDLQCommands() []cli.Command {
 	return []cli.Command{
 		{
+			Name:    "count",
+			Aliases: []string{"c"},
+			Usage:   "Count DLQ Messages",
+			Flags: []cli.Flag{
+				getFormatFlag(),
+				cli.StringFlag{
+					Name:  FlagDLQTypeWithAlias,
+					Usage: "Type of DLQ to manage. (Options: domain, history)",
+					Value: "history",
+				},
+				cli.BoolFlag{
+					Name:  FlagForce,
+					Usage: "Force fetch latest counts (will put additional stress on DB)",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminCountDLQMessages(c)
+			},
+		},
+		{
 			Name:    "read",
 			Aliases: []string{"r"},
 			Usage:   "Read DLQ Messages",

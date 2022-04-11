@@ -67,6 +67,7 @@ type (
 		RespondCrossClusterTasksCompleted(ctx context.Context, targetCluster string, responses []*types.CrossClusterTaskResponse) error
 		QueryWorkflow(ctx context.Context, request *types.HistoryQueryWorkflowRequest) (*types.HistoryQueryWorkflowResponse, error)
 		ReapplyEvents(ctx context.Context, domainUUID string, workflowID string, runID string, events []*types.HistoryEvent) error
+		CountDLQMessages(ctx context.Context, forceFetch bool) (map[string]int64, error)
 		ReadDLQMessages(ctx context.Context, messagesRequest *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
 		PurgeDLQMessages(ctx context.Context, messagesRequest *types.PurgeDLQMessagesRequest) error
 		MergeDLQMessages(ctx context.Context, messagesRequest *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error)

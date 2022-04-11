@@ -80,6 +80,9 @@ service AdminAPI {
   // DescribeCluster returns information about Cadence cluster.
   rpc DescribeCluster(DescribeClusterRequest) returns (DescribeClusterResponse);
 
+  // CountDLQMessages returns message count in DLQ.
+  rpc CountDLQMessages(CountDLQMessagesRequest) returns (CountDLQMessagesResponse);
+
   // ReadDLQMessages returns messages from DLQ.
   rpc ReadDLQMessages(ReadDLQMessagesRequest) returns (ReadDLQMessagesResponse);
 
@@ -266,6 +269,15 @@ message DescribeClusterResponse {
   api.v1.SupportedClientVersions supported_client_versions = 1;
   shared.v1.MembershipInfo membership_info = 2;
   map<string,shared.v1.PersistenceInfo> persistence_info = 3;
+}
+
+message CountDLQMessagesRequest {
+  bool forceFetch = 1;
+}
+
+message CountDLQMessagesResponse {
+  repeated shared.v1.HistoryDLQCountEntry history = 1;
+  int64 domain = 2;
 }
 
 message ReadDLQMessagesRequest {
