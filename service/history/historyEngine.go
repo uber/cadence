@@ -870,7 +870,7 @@ UpdateWorkflowLoop:
 			newMutableState,
 		)
 		if updateErr != nil {
-			if updateErr == execution.ErrConflict {
+			if execution.IsConflictError(updateErr) {
 				e.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.ConcurrencyUpdateFailureCounter)
 				continue UpdateWorkflowLoop
 			}
@@ -2391,7 +2391,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 			// the history and try the operation again.
 			if err := wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now()); err != nil {
-				if err == execution.ErrConflict {
+				if execution.IsConflictError(err) {
 					continue Just_Signal_Loop
 				}
 				return nil, err
