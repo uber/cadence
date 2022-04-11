@@ -72,7 +72,7 @@ func TestUpdateHelper(t *testing.T) {
 		{
 			msg: "update workflow conflict",
 			mockSetupFn: func(mockContext *execution.MockContext, mockMutableState *execution.MockMutableState) {
-				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(execution.NewConflictError(assert.AnError)).Times(ConditionalRetryCount - 1)
+				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(execution.NewConflictError(t, assert.AnError)).Times(ConditionalRetryCount - 1)
 				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 			actionFn: func(context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {
