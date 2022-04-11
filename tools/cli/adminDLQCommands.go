@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -61,6 +62,62 @@ type DLQRow struct {
 	// Only event IDs for compact table representation
 	EventIDs       []int64 `header:"Event IDs"`
 	NewRunEventIDs []int64 `header:"New Run Event IDs"`
+}
+
+type HistoryDLQCountRow struct {
+	SourceCluster string `header:"Source Cluster" json:"sourceCluster"`
+	ShardID       int32  `header:"Shard ID" json:"shardID"`
+	Count         int64  `header:"Count" json:"count"`
+}
+
+// AdminCountDLQMessages returns info how many and where DLQ messages are queued
+func AdminCountDLQMessages(c *cli.Context) {
+	force := c.Bool(FlagForce)
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	adminClient := cFactory.ServerAdminClient(c)
+	response, err := adminClient.CountDLQMessages(ctx, &types.CountDLQMessagesRequest{ForceFetch: force})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error occurred while getting DLQ count, results may be partial: %v\n", err)
+	}
+
+	if c.String(FlagDLQType) == "domain" {
+		fmt.Println(response.Domain)
+		return
+	}
+
+	table := []HistoryDLQCountRow{}
+	for key, count := range response.History {
+		table = append(table, HistoryDLQCountRow{
+			SourceCluster: key.SourceCluster,
+			ShardID:       key.ShardID,
+			Count:         count,
+		})
+	}
+	sort.Slice(table, func(i, j int) bool {
+		// First sort by source cluster
+		switch strings.Compare(table[i].SourceCluster, table[j].SourceCluster) {
+		case -1:
+			return true
+		case 1:
+			return false
+		}
+
+		// Then by count in decreasing order
+		diff := table[i].Count - table[j].Count
+		if diff > 0 {
+			return true
+		}
+		if diff < 0 {
+			return false
+		}
+
+		// Finally by shard in increasing order
+		return table[i].ShardID < table[j].ShardID
+	})
+
+	Render(c, table, RenderOptions{Color: true, DefaultTemplate: templateTable})
 }
 
 // AdminGetDLQMessages gets DLQ metadata

@@ -345,6 +345,7 @@ func (e *historyEngineImpl) Start() {
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
 	e.crossClusterProcessor.Start()
+	e.replicationDLQHandler.Start()
 
 	// failover callback will try to create a failover queue processor to scan all inflight tasks
 	// if domain needs to be failovered. However, in the multicursor queue logic, the scan range
@@ -371,6 +372,7 @@ func (e *historyEngineImpl) Stop() {
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
 	e.crossClusterProcessor.Stop()
+	e.replicationDLQHandler.Stop()
 
 	e.crossClusterTaskProcessors.Stop()
 
@@ -3300,6 +3302,10 @@ func (e *historyEngineImpl) ReapplyEvents(
 			return postActions, nil
 		},
 	)
+}
+
+func (e *historyEngineImpl) CountDLQMessages(ctx context.Context, forceFetch bool) (map[string]int64, error) {
+	return e.replicationDLQHandler.GetMessageCount(ctx, forceFetch)
 }
 
 func (e *historyEngineImpl) ReadDLQMessages(
