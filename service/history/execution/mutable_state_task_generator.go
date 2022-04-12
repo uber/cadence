@@ -49,7 +49,7 @@ type (
 		) error
 		GenerateWorkflowCloseTasks(
 			closeEvent *types.HistoryEvent,
-			workflowDeletionTaskJitterRange time.Duration,
+			workflowDeletionTaskJitterRange int,
 		) error
 		GenerateRecordWorkflowStartedTasks(
 			startEvent *types.HistoryEvent,
@@ -168,7 +168,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 
 func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	closeEvent *types.HistoryEvent,
-	workflowDeletionTaskJitterRange time.Duration,
+	workflowDeletionTaskJitterRange int,
 ) error {
 
 	executionInfo := r.mutableState.GetExecutionInfo()
@@ -249,7 +249,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	}
 
 	closeTimestamp := time.Unix(0, closeEvent.GetTimestamp())
-	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24) + workflowDeletionTaskJitterRange
+	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24) + (time.Duration(rand.Intn(workflowDeletionTaskJitterRange)) * time.Minute)
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: closeTimestamp.Add(retentionDuration),

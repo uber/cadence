@@ -247,7 +247,7 @@ func (mr *MockMutableStateTaskGeneratorMockRecorder) GenerateUserTimerTasks() *g
 }
 
 // GenerateWorkflowCloseTasks mocks base method.
-func (m *MockMutableStateTaskGenerator) GenerateWorkflowCloseTasks(closeEvent *types.HistoryEvent, workflowDeletionTaskJitterRange time.Duration) error {
+func (m *MockMutableStateTaskGenerator) GenerateWorkflowCloseTasks(closeEvent *types.HistoryEvent, workflowDeletionTaskJitterRange int) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateWorkflowCloseTasks", closeEvent, workflowDeletionTaskJitterRange)
 	ret0, _ := ret[0].(error)

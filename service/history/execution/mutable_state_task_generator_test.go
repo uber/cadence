@@ -167,7 +167,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		}).MaxTimes(1)
 
 		tc.setupFn(mockMutableState)
-		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 60*time.Minute)
+		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 60)
 		s.NoError(err)
 
 		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
@@ -227,7 +227,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		}).MaxTimes(1)
 
 		tc.setupFn(mockMutableState)
-		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 0)
+		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 1)
 		s.NoError(err)
 
 		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
