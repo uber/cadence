@@ -129,7 +129,7 @@ func (s *mutableStateTaskGeneratorSuite) TestIsCrossClusterTask() {
 	}
 }
 
-func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion_InvalidInput() {
+func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion() {
 	now := time.Now()
 	version := int64(123)
 	closeEvent := &types.HistoryEvent{
@@ -138,8 +138,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		Version:   version,
 	}
 	domainEntry, err := s.mockDomainCache.GetDomainByID(constants.TestDomainID)
-	// this should default to 0 and not error out
-	domainEntry.GetInfo().Data = map[string]string{"jittered_workflow_deletion_minutes": "some string"}
 	s.NoError(err)
 	retention := time.Duration(domainEntry.GetRetentionDays(constants.TestWorkflowID)) * time.Hour * 24
 	testCases := GenerateWorkflowCloseTasksTestCases(retention, closeEvent, now)
@@ -169,61 +167,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		}).MaxTimes(1)
 
 		tc.setupFn(mockMutableState)
-		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent)
-		s.NoError(err)
-
-		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
-		for _, task := range actualGeneratedTasks {
-			// force set visibility timestamp since that field is not assigned
-			// for transfer and cross cluster in GenerateWorkflowCloseTasks
-			// it will be set by shard context
-			// set it to now so that we can easily test if other fields are equal
-			task.SetVisibilityTimestamp(now)
-		}
-		actualGeneratedTasks = append(actualGeneratedTasks, timerTasks...)
-		s.Equal(tc.generatedTasks, actualGeneratedTasks)
-	}
-}
-func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion_ValidInput() {
-	now := time.Now()
-	version := int64(123)
-	closeEvent := &types.HistoryEvent{
-		EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
-		Timestamp: common.Int64Ptr(now.UnixNano()),
-		Version:   version,
-	}
-	domainEntry, err := s.mockDomainCache.GetDomainByID(constants.TestDomainID)
-	domainEntry.GetInfo().Data = map[string]string{"jittered_workflow_deletion_minutes": "60"}
-	s.NoError(err)
-	retention := time.Duration(domainEntry.GetRetentionDays(constants.TestWorkflowID)) * time.Hour * 24
-	testCases := GenerateWorkflowCloseTasksTestCases(retention, closeEvent, now)
-
-	for _, tc := range testCases {
-		// create new mockMutableState so can we can setup separete mock for each test case
-		mockMutableState := NewMockMutableState(s.controller)
-		taskGenerator := NewMutableStateTaskGenerator(
-			constants.TestClusterMetadata,
-			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
-			mockMutableState,
-		)
-
-		var transferTasks []persistence.Task
-		var crossClusterTasks []persistence.Task
-		var timerTasks []persistence.Task
-		mockMutableState.EXPECT().GetDomainEntry().Return(domainEntry).AnyTimes()
-		mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			transferTasks = tasks
-		}).MaxTimes(1)
-		mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			crossClusterTasks = tasks
-		}).MaxTimes(1)
-		mockMutableState.EXPECT().AddTimerTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
-			timerTasks = tasks
-		}).MaxTimes(1)
-
-		tc.setupFn(mockMutableState)
-		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent)
+		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 60*time.Minute)
 		s.NoError(err)
 
 		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
@@ -283,7 +227,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		}).MaxTimes(1)
 
 		tc.setupFn(mockMutableState)
-		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent)
+		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 0)
 		s.NoError(err)
 
 		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
