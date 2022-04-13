@@ -39,6 +39,7 @@ func FromMatchingAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matchi
 		ScheduleToStartTimeout: secondsToDuration(t.ScheduleToStartTimeoutSeconds),
 		Source:                 FromTaskSource(t.Source),
 		ForwardedFrom:          t.ForwardedFrom,
+		SyncMatchOnly:          common.BoolDefault(t.SyncMatchOnly),
 	}
 }
 
@@ -55,6 +56,7 @@ func ToMatchingAddActivityTaskRequest(t *matchingv1.AddActivityTaskRequest) *typ
 		ScheduleToStartTimeoutSeconds: durationToSeconds(t.ScheduleToStartTimeout),
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.ForwardedFrom,
+		SyncMatchOnly:                 common.BoolPtr(t.SyncMatchOnly),
 	}
 }
 

@@ -56,6 +56,7 @@ type (
 		taskInfo      *persistence.TaskInfo
 		source        types.TaskSource
 		forwardedFrom string
+		syncMatchOnly bool
 	}
 
 	taskListManager interface {
@@ -253,6 +254,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		syncMatch, err = c.trySyncMatch(ctx, params)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
+		}
+		if params.syncMatchOnly {
+			return nil, errRemoteSyncMatchFailed
 		}
 
 		if isForwarded {
@@ -528,7 +532,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 }
 
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true)
+	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true, params.syncMatchOnly)
 	childCtx := ctx
 	cancel := func() {}
 	if !task.isForwarded() {

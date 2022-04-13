@@ -36,6 +36,7 @@ type AddActivityTaskRequest struct {
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
+	SyncMatchOnly                 *bool              `json:"syncMatchOnly,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)

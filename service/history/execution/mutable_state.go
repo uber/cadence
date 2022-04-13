@@ -61,7 +61,7 @@ type (
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) (*types.HistoryEvent, error)
 		AddActivityTaskCompletedEvent(int64, int64, *types.RespondActivityTaskCompletedRequest) (*types.HistoryEvent, error)
 		AddActivityTaskFailedEvent(int64, int64, *types.RespondActivityTaskFailedRequest) (*types.HistoryEvent, error)
-		AddActivityTaskScheduledEvent(int64, *types.ScheduleActivityTaskDecisionAttributes) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, error)
+		AddActivityTaskScheduledEvent(int64, *types.ScheduleActivityTaskDecisionAttributes, bool) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, error)
 		AddActivityTaskStartedEvent(*persistence.ActivityInfo, int64, string, string) (*types.HistoryEvent, error)
 		AddActivityTaskTimedOutEvent(int64, int64, types.TimeoutType, []uint8) (*types.HistoryEvent, error)
 		AddCancelTimerFailedEvent(int64, *types.CancelTimerDecisionAttributes, string) (*types.HistoryEvent, error)

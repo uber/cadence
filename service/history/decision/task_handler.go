@@ -131,34 +131,25 @@ func (handler *taskHandlerImpl) handleDecisions(
 	if err != nil || failWorkflow {
 		return nil, err
 	}
-
+	maxActivitySyncMatchCount := handler.config.MaxActivityCountDispatchedForSyncMatchByDomain(handler.domainEntry.GetInfo().Name)
 	var results []*decisionResult
 	for _, decision := range decisions {
-
-		result, err := handler.handleDecisionWithResult(ctx, decision)
+		var result *decisionResult
+		switch decision.GetDecisionType() {
+		case types.DecisionTypeScheduleActivityTask:
+			result, err = handler.handleDecisionScheduleActivity(&maxActivitySyncMatchCount, decision.ScheduleActivityTaskDecisionAttributes)
+		default:
+			err = handler.handleDecision(ctx, decision)
+		}
 		if err != nil || handler.stopProcessing {
 			return nil, err
 		} else if result != nil {
 			results = append(results, result)
 		}
-
 	}
 	handler.mutableState.GetExecutionInfo().ExecutionContext = executionContext
 	return results, nil
 }
-
-func (handler *taskHandlerImpl) handleDecisionWithResult(
-	ctx context.Context,
-	decision *types.Decision,
-) (*decisionResult, error) {
-	switch decision.GetDecisionType() {
-	case types.DecisionTypeScheduleActivityTask:
-		return handler.handleDecisionScheduleActivity(ctx, decision.ScheduleActivityTaskDecisionAttributes)
-	default:
-		return nil, handler.handleDecision(ctx, decision)
-	}
-}
-
 func (handler *taskHandlerImpl) handleDecision(
 	ctx context.Context,
 	decision *types.Decision,
@@ -207,7 +198,7 @@ func (handler *taskHandlerImpl) handleDecision(
 }
 
 func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
-	ctx context.Context,
+	maxActivitySyncMatchCount *int,
 	attr *types.ScheduleActivityTaskDecisionAttributes,
 ) (*decisionResult, error) {
 
@@ -254,12 +245,16 @@ func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
 		return nil, err
 	}
 
-	event, ai, activityDispatchInfo, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr)
+	event, ai, activityDispatchInfo, syncMatch, err := handler.mutableState.AddActivityTaskScheduledEvent(handler.decisionTaskCompletedID, attr, *maxActivitySyncMatchCount > 0)
 	switch err.(type) {
 	case nil:
-		if activityDispatchInfo != nil {
-			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.GetEventID(), uuid.New(), handler.identity); err1 != nil {
+		if activityDispatchInfo != nil || syncMatch {
+			if _, err1 := handler.mutableState.AddActivityTaskStartedEvent(ai, event.EventID, uuid.New(), handler.identity); err1 != nil {
 				return nil, err1
+			}
+			if syncMatch {
+				*maxActivitySyncMatchCount--
+				return nil, nil
 			}
 			token := &common.TaskToken{
 				DomainID:        executionInfo.DomainID,

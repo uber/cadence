@@ -2099,11 +2099,12 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	decisionCompletedEventID int64,
 	attributes *types.ScheduleActivityTaskDecisionAttributes,
-) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, error) {
+	trySyncMatch bool,
+) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, error) {
 
 	opTag := tag.WorkflowActionActivityTaskScheduled
 	if err := e.checkMutability(opTag); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 
 	_, ok := e.GetActivityByActivityID(attributes.GetActivityID())
@@ -2111,7 +2112,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction)
-		return nil, nil, nil, e.createCallerError(opTag)
+		return nil, nil, nil, false, e.createCallerError(opTag)
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
@@ -2127,19 +2128,42 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
-		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, nil
+		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, false, nil
+	}
+	if trySyncMatch {
+		e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).IncCounter(metrics.DecisionTypeScheduleActivityTrySyncMatchCounter)
+		e.logInfo(fmt.Sprintf("trying to sync match.. domain %s tasklist %s", e.domainEntry.GetInfo().Name, ai.TaskList))
+
+		err := e.shard.GetService().GetMatchingClient().AddActivityTask(context.Background(), &types.AddActivityTaskRequest{
+			DomainUUID:       e.executionInfo.DomainID,
+			SourceDomainUUID: e.domainEntry.GetInfo().ID,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: e.executionInfo.WorkflowID,
+				RunID:      e.executionInfo.RunID,
+			},
+			TaskList:                      &types.TaskList{Name: ai.TaskList},
+			ScheduleID:                    event.EventID,
+			ScheduleToStartTimeoutSeconds: common.Int32Ptr(ai.ScheduleToStartTimeout),
+			SyncMatchOnly:                 common.BoolPtr(true),
+		})
+		if err == nil {
+			e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).IncCounter(metrics.DecisionTypeScheduleActivitySyncMatchSucceedCounter)
+			e.logInfo(fmt.Sprintf("success to sync match.. domain %s tasklist %s", e.domainEntry.GetInfo().Name, ai.TaskList))
+			return event, ai, nil, false, nil
+		}
+		e.logInfo(fmt.Sprintf("failed to sync match.. domain %s tasklist %s", e.domainEntry.GetInfo().Name, ai.TaskList))
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
 		event,
 	); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 
-	return event, ai, nil, err
+	return event, ai, nil, false, err
 }
 
 func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(

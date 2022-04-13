@@ -1549,6 +1549,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableActivityLocalDispatchByDomain
+	// MaxActivityCountDispatchedForSyncMatchByDomain allows to dispatch activity tasks directly to matching for sync match. This is an performance optimization to skip activity scheduling efforts.
+	// KeyName: history.activityDispatchForSyncMatchCountByDomain
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	MaxActivityCountDispatchedForSyncMatchByDomain
 	// HistoryErrorInjectionRate is rate for injecting random error in history client
 	// KeyName: history.errorInjectionRate
 	// Value type: Float64

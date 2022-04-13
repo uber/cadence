@@ -348,6 +348,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		taskInfo:      taskInfo,
 		source:        request.GetSource(),
 		forwardedFrom: request.GetForwardedFrom(),
+		syncMatchOnly: common.BoolDefault(request.SyncMatchOnly),
 	})
 }
 
@@ -503,6 +504,10 @@ pollLoop:
 
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
+			return task.pollForActivityResponse(), nil
+		}
+		if task.syncMatchOnly {
+			task.finish(nil)
 			return task.pollForActivityResponse(), nil
 		}
 

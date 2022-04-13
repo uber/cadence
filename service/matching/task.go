@@ -54,6 +54,7 @@ type (
 		forwardedFrom    string     // name of the child partition this task is forwarded from (empty if not forwarded)
 		responseC        chan error // non-nil only where there is a caller waiting for response (sync-match)
 		backlogCountHint int64
+		syncMatchOnly    bool
 	}
 )
 
@@ -63,6 +64,7 @@ func newInternalTask(
 	source types.TaskSource,
 	forwardedFrom string,
 	forSyncMatch bool,
+	syncMatchOnly bool,
 ) *InternalTask {
 	task := &InternalTask{
 		event: &genericTaskInfo{
@@ -71,6 +73,7 @@ func newInternalTask(
 		},
 		source:        source,
 		forwardedFrom: forwardedFrom,
+		syncMatchOnly: syncMatchOnly,
 	}
 	if forSyncMatch {
 		task.responseC = make(chan error, 1)

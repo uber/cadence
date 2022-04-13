@@ -230,9 +230,13 @@ type Config struct {
 	NumParentClosePolicySystemWorkflows dynamicconfig.IntPropertyFn
 
 	// Archival settings
-	NumArchiveSystemWorkflows       dynamicconfig.IntPropertyFn
-	ArchiveRequestRPS               dynamicconfig.IntPropertyFn
-	AllowArchivingIncompleteHistory dynamicconfig.BoolPropertyFn
+	NumArchiveSystemWorkflows        dynamicconfig.IntPropertyFn
+	ArchiveRequestRPS                dynamicconfig.IntPropertyFn
+	ArchiveInlineHistoryRPS          dynamicconfig.IntPropertyFn
+	ArchiveInlineHistoryGlobalRPS    dynamicconfig.IntPropertyFn
+	ArchiveInlineVisibilityRPS       dynamicconfig.IntPropertyFn
+	ArchiveInlineVisibilityGlobalRPS dynamicconfig.IntPropertyFn
+	AllowArchivingIncompleteHistory  dynamicconfig.BoolPropertyFn
 
 	// Size limit related settings
 	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
@@ -303,6 +307,8 @@ type Config struct {
 
 	// Allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	// Allows to dispatch activity tasks directly to matching for sync match. This is an performance optimization to skip activity scheduling efforts.
+	MaxActivityCountDispatchedForSyncMatchByDomain dynamicconfig.IntPropertyFnWithDomainFilter
 
 	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
 
@@ -429,7 +435,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TimerProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TimerProcessorMaxRedispatchQueueSize, 10000),
 		TimerProcessorMaxTimeShift:                        dc.GetDurationProperty(dynamicconfig.TimerProcessorMaxTimeShift, 1*time.Second),
 		TimerProcessorHistoryArchivalSizeLimit:            dc.GetIntProperty(dynamicconfig.TimerProcessorHistoryArchivalSizeLimit, 500*1024),
-		TimerProcessorArchivalTimeLimit:                   dc.GetDurationProperty(dynamicconfig.TimerProcessorArchivalTimeLimit, 1*time.Second),
+		TimerProcessorArchivalTimeLimit:                   dc.GetDurationProperty(dynamicconfig.TimerProcessorArchivalTimeLimit, 2*time.Second),
 
 		TransferTaskBatchSize:                                dc.GetIntProperty(dynamicconfig.TransferTaskBatchSize, 100),
 		TransferTaskDeleteBatchSize:                          dc.GetIntProperty(dynamicconfig.TransferTaskDeleteBatchSize, 4000),
@@ -447,7 +453,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		TransferProcessorMaxRedispatchQueueSize:              dc.GetIntProperty(dynamicconfig.TransferProcessorMaxRedispatchQueueSize, 10000),
 		TransferProcessorEnableValidator:                     dc.GetBoolProperty(dynamicconfig.TransferProcessorEnableValidator, false),
 		TransferProcessorValidationInterval:                  dc.GetDurationProperty(dynamicconfig.TransferProcessorValidationInterval, 30*time.Second),
-		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 200*time.Millisecond),
+		TransferProcessorVisibilityArchivalTimeLimit:         dc.GetDurationProperty(dynamicconfig.TransferProcessorVisibilityArchivalTimeLimit, 400*time.Millisecond),
 
 		CrossClusterTaskBatchSize:                                     dc.GetIntProperty(dynamicconfig.CrossClusterTaskBatchSize, 100),
 		CrossClusterTaskDeleteBatchSize:                               dc.GetIntProperty(dynamicconfig.CrossClusterTaskDeleteBatchSize, 4000),
@@ -561,7 +567,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		NotifyFailoverMarkerTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.NotifyFailoverMarkerTimerJitterCoefficient, 0.15),
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, true),
 
-		EnableActivityLocalDispatchByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, false),
+		EnableActivityLocalDispatchByDomain:            dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, true),
+		MaxActivityCountDispatchedForSyncMatchByDomain: dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxActivityCountDispatchedForSyncMatchByDomain, 1),
 
 		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry, 30*time.Minute),
 

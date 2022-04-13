@@ -159,6 +159,7 @@ message AddActivityTaskRequest {
   google.protobuf.Duration schedule_to_start_timeout = 6;
   shared.v1.TaskSource source = 7;
   string forwarded_from = 8;
+  bool sync_match_only = 9;
 }
 
 message AddActivityTaskResponse {
