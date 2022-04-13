@@ -1549,6 +1549,18 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableActivityLocalDispatchByDomain
+	// MaxActivityCountDispatchedForSyncMatchByDomain allows to dispatch activity tasks directly to matching for sync match. This is an performance optimization to skip activity scheduling efforts.
+	// KeyName: history.activityDispatchForSyncMatchCountByDomain
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	MaxActivityCountDispatchedForSyncMatchByDomain
+	// EnableActivitySyncMatchDispatcthByDomain allows to dispatch activity tasks directly to matching for sync match. This is an performance optimization to skip activity scheduling efforts.
+	// KeyName: history.activityDispatchForSyncMatchCountByDomain
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	EnableActivitySyncMatchDispatcthByDomain
 	// HistoryErrorInjectionRate is rate for injecting random error in history client
 	// KeyName: history.errorInjectionRate
 	// Value type: Float64
@@ -2416,6 +2428,8 @@ var Keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:         "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                      "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                "history.enableActivityLocalDispatchByDomain",
+	MaxActivityCountDispatchedForSyncMatchByDomain:     "history.maxActivityCountDispatchedForSyncMatchByDomain",
+	EnableActivitySyncMatchDispatcthByDomain:           "history.enableActivitySyncMatchDispatcthByDomain",
 	HistoryErrorInjectionRate:                          "history.errorInjectionRate",
 	HistoryEnableTaskInfoLogByDomainID:                 "history.enableTaskInfoLogByDomainID",
 	ActivityMaxScheduleToStartTimeoutForRetry:          "history.activityMaxScheduleToStartTimeoutForRetry",

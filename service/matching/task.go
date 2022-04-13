@@ -46,14 +46,15 @@ type (
 	// this struct is more like a union and only one of [ query, event, forwarded ] is
 	// non-nil for any given task
 	InternalTask struct {
-		event            *genericTaskInfo // non-nil for activity or decision task that's locally generated
-		query            *queryTaskInfo   // non-nil for a query task that's locally sync matched
-		started          *startedTaskInfo // non-nil for a task received from a parent partition which is already started
-		domainName       string
-		source           types.TaskSource
-		forwardedFrom    string     // name of the child partition this task is forwarded from (empty if not forwarded)
-		responseC        chan error // non-nil only where there is a caller waiting for response (sync-match)
-		backlogCountHint int64
+		event                     *genericTaskInfo // non-nil for activity or decision task that's locally generated
+		query                     *queryTaskInfo   // non-nil for a query task that's locally sync matched
+		started                   *startedTaskInfo // non-nil for a task received from a parent partition which is already started
+		domainName                string
+		source                    types.TaskSource
+		forwardedFrom             string     // name of the child partition this task is forwarded from (empty if not forwarded)
+		responseC                 chan error // non-nil only where there is a caller waiting for response (sync-match)
+		backlogCountHint          int64
+		syncMatchActivityTaskInfo *types.SyncMatchActivityTaskInfo
 	}
 )
 
@@ -63,14 +64,16 @@ func newInternalTask(
 	source types.TaskSource,
 	forwardedFrom string,
 	forSyncMatch bool,
+	syncMatchActivityTaskInfo *types.SyncMatchActivityTaskInfo,
 ) *InternalTask {
 	task := &InternalTask{
 		event: &genericTaskInfo{
 			TaskInfo:       info,
 			completionFunc: completionFunc,
 		},
-		source:        source,
-		forwardedFrom: forwardedFrom,
+		source:                    source,
+		forwardedFrom:             forwardedFrom,
+		syncMatchActivityTaskInfo: syncMatchActivityTaskInfo,
 	}
 	if forSyncMatch {
 		task.responseC = make(chan error, 1)

@@ -315,6 +315,8 @@ func (handler *handlerImpl) HandleDecisionTaskCompleted(
 	}
 	defer func() { release(retError) }()
 
+	handler.logger.Info(fmt.Sprintf("HandleDecisionTaskCompleted start to sync match.. domain %s", req.GetDomainUUID()))
+
 Update_History_Loop:
 	for attempt := 0; attempt < workflow.ConditionalRetryCount; attempt++ {
 		msBuilder, err := wfContext.LoadWorkflowExecution(ctx)

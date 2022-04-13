@@ -1768,7 +1768,10 @@ func (e *historyEngineImpl) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	req *types.HistoryRespondDecisionTaskCompletedRequest,
 ) (*types.HistoryRespondDecisionTaskCompletedResponse, error) {
-	return e.decisionHandler.HandleDecisionTaskCompleted(ctx, req)
+	e.logger.Info(fmt.Sprintf("RespondDecisionTaskCompleted start to sync match.. domain %s", req.GetDomainUUID()))
+	res, err := e.decisionHandler.HandleDecisionTaskCompleted(ctx, req)
+	e.logger.Info(fmt.Sprintf("RespondDecisionTaskCompleted end to sync match.. domain %s", req.GetDomainUUID()))
+	return res, err
 }
 
 // RespondDecisionTaskFailed fails a decision

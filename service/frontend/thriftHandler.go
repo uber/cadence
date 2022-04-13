@@ -187,6 +187,10 @@ func (t ThriftHandler) RequestCancelWorkflowExecution(ctx context.Context, reque
 	return thrift.FromError(err)
 }
 
+func (t ThriftHandler) RefreshWorkflowTasks(ctx context.Context, request *shared.RefreshWorkflowTasksRequest) error {
+	return nil
+}
+
 // ResetStickyTaskList forwards request to the underlying handler
 func (t ThriftHandler) ResetStickyTaskList(ctx context.Context, request *shared.ResetStickyTaskListRequest) (*shared.ResetStickyTaskListResponse, error) {
 	response, err := t.h.ResetStickyTaskList(ctx, thrift.ToResetStickyTaskListRequest(request))

@@ -93,7 +93,7 @@ dispatchLoop:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
-			task := newInternalTask(taskInfo, tr.tlMgr.completeTask, types.TaskSourceDbBacklog, "", false)
+			task := newInternalTask(taskInfo, tr.tlMgr.completeTask, types.TaskSourceDbBacklog, "", false, nil)
 			for {
 				err := tr.tlMgr.DispatchTask(tr.cancelCtx, task)
 				if err == nil {

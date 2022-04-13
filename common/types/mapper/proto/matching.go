@@ -31,14 +31,15 @@ func FromMatchingAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matchi
 		return nil
 	}
 	return &matchingv1.AddActivityTaskRequest{
-		DomainId:               t.DomainUUID,
-		WorkflowExecution:      FromWorkflowExecution(t.Execution),
-		SourceDomainId:         t.SourceDomainUUID,
-		TaskList:               FromTaskList(t.TaskList),
-		ScheduleId:             t.ScheduleID,
-		ScheduleToStartTimeout: secondsToDuration(t.ScheduleToStartTimeoutSeconds),
-		Source:                 FromTaskSource(t.Source),
-		ForwardedFrom:          t.ForwardedFrom,
+		DomainId:                  t.DomainUUID,
+		WorkflowExecution:         FromWorkflowExecution(t.Execution),
+		SourceDomainId:            t.SourceDomainUUID,
+		TaskList:                  FromTaskList(t.TaskList),
+		ScheduleId:                t.ScheduleID,
+		ScheduleToStartTimeout:    secondsToDuration(t.ScheduleToStartTimeoutSeconds),
+		Source:                    FromTaskSource(t.Source),
+		ForwardedFrom:             t.ForwardedFrom,
+		SyncMatchActivityTaskInfo: FromSyncMatchActivityTaskInfo(t.SyncMatchActivityTaskInfo),
 	}
 }
 
@@ -55,6 +56,7 @@ func ToMatchingAddActivityTaskRequest(t *matchingv1.AddActivityTaskRequest) *typ
 		ScheduleToStartTimeoutSeconds: durationToSeconds(t.ScheduleToStartTimeout),
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.ForwardedFrom,
+		SyncMatchActivityTaskInfo:     ToSyncMatchActivityTaskInfo(t.SyncMatchActivityTaskInfo),
 	}
 }
 
@@ -85,6 +87,36 @@ func ToMatchingAddDecisionTaskRequest(t *matchingv1.AddDecisionTaskRequest) *typ
 		ScheduleToStartTimeoutSeconds: durationToSeconds(t.ScheduleToStartTimeout),
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.ForwardedFrom,
+	}
+}
+
+func FromSyncMatchActivityTaskInfo(t *types.SyncMatchActivityTaskInfo) *matchingv1.SyncMatchActivityTaskInfo {
+	if t == nil {
+		return nil
+	}
+	return &matchingv1.SyncMatchActivityTaskInfo{
+		ScheduledEvent:             FromHistoryEvent(t.ScheduledEvent),
+		StartedTime:                unixNanoToTime(t.StartedTimestamp),
+		Attempt:                    int32(common.Int64Default(t.Attempt)),
+		ScheduledTimeOfThisAttempt: unixNanoToTime(t.ScheduledTimestampOfThisAttempt),
+		HeartbeatDetails:           FromPayload(t.HeartbeatDetails),
+		WorkflowType:               FromWorkflowType(t.WorkflowType),
+		WorkflowDomain:             t.WorkflowDomain,
+	}
+}
+
+func ToSyncMatchActivityTaskInfo(t *matchingv1.SyncMatchActivityTaskInfo) *types.SyncMatchActivityTaskInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.SyncMatchActivityTaskInfo{
+		ScheduledEvent:                  ToHistoryEvent(t.ScheduledEvent),
+		StartedTimestamp:                timeToUnixNano(t.StartedTime),
+		Attempt:                         common.Int64Ptr(int64(t.Attempt)),
+		ScheduledTimestampOfThisAttempt: timeToUnixNano(t.ScheduledTimeOfThisAttempt),
+		HeartbeatDetails:                ToPayload(t.HeartbeatDetails),
+		WorkflowType:                    ToWorkflowType(t.WorkflowType),
+		WorkflowDomain:                  t.WorkflowDomain,
 	}
 }
 

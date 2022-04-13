@@ -138,6 +138,11 @@ type Interface interface {
 		HeartbeatRequest *shared.RecordActivityTaskHeartbeatByIDRequest,
 	) (*shared.RecordActivityTaskHeartbeatResponse, error)
 
+	RefreshWorkflowTasks(
+		ctx context.Context,
+		Request *shared.RefreshWorkflowTasksRequest,
+	) error
+
 	RegisterDomain(
 		ctx context.Context,
 		RegisterRequest *shared.RegisterDomainRequest,
@@ -486,6 +491,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RefreshWorkflowTasks",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RefreshWorkflowTasks),
+					NoWire: refreshworkflowtasks_NoWireHandler{impl},
+				},
+				Signature:    "RefreshWorkflowTasks(Request *shared.RefreshWorkflowTasksRequest)",
+				ThriftModule: cadence.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "RegisterDomain",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -715,7 +732,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 39)
+	procedures := make([]transport.Procedure, 0, 40)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1307,6 +1324,36 @@ func (h handler) RecordActivityTaskHeartbeatByID(ctx context.Context, body wire.
 
 	hadError := appErr != nil
 	result, err := cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.WrapResponse(success, appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) RefreshWorkflowTasks(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args cadence.WorkflowService_RefreshWorkflowTasks_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'WorkflowService' procedure 'RefreshWorkflowTasks': %w", err)
+	}
+
+	appErr := h.impl.RefreshWorkflowTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := cadence.WorkflowService_RefreshWorkflowTasks_Helper.WrapResponse(appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -2618,6 +2665,43 @@ func (h recordactivitytaskheartbeatbyid_NoWireHandler) HandleNoWire(ctx context.
 
 	hadError := appErr != nil
 	result, err := cadence.WorkflowService_RecordActivityTaskHeartbeatByID_Helper.WrapResponse(success, appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type refreshworkflowtasks_NoWireHandler struct{ impl Interface }
+
+func (h refreshworkflowtasks_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args cadence.WorkflowService_RefreshWorkflowTasks_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'WorkflowService' procedure 'RefreshWorkflowTasks': %w", err)
+	}
+
+	appErr := h.impl.RefreshWorkflowTasks(ctx, args.Request)
+
+	hadError := appErr != nil
+	result, err := cadence.WorkflowService_RefreshWorkflowTasks_Helper.WrapResponse(appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError
