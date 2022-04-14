@@ -2131,6 +2131,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		return nil, nil, nil, false, err
 	}
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
+		e.logInfo(fmt.Sprintf("local dispatch to sync match.. domain %s tasklist %s", e.domainEntry.GetInfo().Name, ai.TaskList))
 		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, false, nil
 	}
 	if trySyncMatch {
