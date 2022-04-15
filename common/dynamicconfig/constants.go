@@ -1073,7 +1073,7 @@ const (
 	// TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival
 	// KeyName: history.timerProcessorArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 1s (1*time.Second)
+	// Default value: 2s (2*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorArchivalTimeLimit
 
@@ -1179,7 +1179,7 @@ const (
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	// KeyName: history.transferProcessorVisibilityArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 200ms (200*time.Millisecond)
+	// Default value: 400ms (400*time.Millisecond)
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
 

@@ -93,6 +93,11 @@ func (g grpcClient) GetWorkflowExecutionRawHistoryV2(ctx context.Context, reques
 	return proto.ToAdminGetWorkflowExecutionRawHistoryV2Response(response), proto.ToError(err)
 }
 
+func (g grpcClient) CountDLQMessages(ctx context.Context, request *types.CountDLQMessagesRequest, opts ...yarpc.CallOption) (*types.CountDLQMessagesResponse, error) {
+	response, err := g.c.CountDLQMessages(ctx, proto.FromAdminCountDLQMessagesRequest(request), opts...)
+	return proto.ToAdminCountDLQMessagesResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) MergeDLQMessages(ctx context.Context, request *types.MergeDLQMessagesRequest, opts ...yarpc.CallOption) (*types.MergeDLQMessagesResponse, error) {
 	response, err := g.c.MergeDLQMessages(ctx, proto.FromAdminMergeDLQMessagesRequest(request), opts...)
 	return proto.ToAdminMergeDLQMessagesResponse(response), proto.ToError(err)

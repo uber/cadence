@@ -79,6 +79,7 @@ type (
 		GetDomainReplicationMessages(context.Context, *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error)
 		GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error)
 		GetWorkflowExecutionRawHistoryV2(context.Context, *types.GetWorkflowExecutionRawHistoryV2Request) (*types.GetWorkflowExecutionRawHistoryV2Response, error)
+		CountDLQMessages(context.Context, *types.CountDLQMessagesRequest) (*types.CountDLQMessagesResponse, error)
 		MergeDLQMessages(context.Context, *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error)
 		PurgeDLQMessages(context.Context, *types.PurgeDLQMessagesRequest) error
 		ReadDLQMessages(context.Context, *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error)
@@ -160,6 +161,7 @@ func NewAdminHandler(
 			domainReplicationTaskExecutor,
 			resource.GetDomainReplicationQueue(),
 			resource.GetLogger(),
+			resource.GetMetricsClient(),
 		),
 		domainFailoverWatcher: domain.NewFailoverWatcher(
 			resource.GetDomainCache(),
@@ -181,6 +183,7 @@ func NewAdminHandler(
 
 // Start starts the handler
 func (adh *adminHandlerImpl) Start() {
+	adh.domainDLQHandler.Start()
 
 	if adh.config.EnableGracefulFailover() {
 		adh.domainFailoverWatcher.Start()
@@ -189,6 +192,7 @@ func (adh *adminHandlerImpl) Start() {
 
 // Stop stops the handler
 func (adh *adminHandlerImpl) Stop() {
+	adh.domainDLQHandler.Stop()
 	adh.domainFailoverWatcher.Stop()
 }
 
@@ -1183,6 +1187,31 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	}
 
 	return nil
+}
+
+func (adh *adminHandlerImpl) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+) (resp *types.CountDLQMessagesResponse, err error) {
+	defer log.CapturePanic(adh.GetLogger(), &err)
+
+	scope, sw := adh.startRequestProfile(ctx, metrics.AdminCountDLQMessagesScope)
+	defer sw.Stop()
+
+	domain, err := adh.domainDLQHandler.Count(ctx, request.ForceFetch)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+
+	history, err := adh.GetHistoryClient().CountDLQMessages(ctx, request)
+	if err != nil {
+		err = adh.error(err, scope)
+	}
+
+	return &types.CountDLQMessagesResponse{
+		History: history.Entries,
+		Domain:  domain,
+	}, err
 }
 
 // MergeDLQMessages merges DLQ messages
