@@ -2202,7 +2202,7 @@ const (
 	// WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering
 	// KeyName: system.workflowDeletionJitterRange
 	// Value type: Duration
-	// Default value: 60 minutes
+	// Default value: 1 (no jittering)
 	WorkflowDeletionJitterRange
 
 	// LastKeyForTest must be the last one in this const group for testing purpose
