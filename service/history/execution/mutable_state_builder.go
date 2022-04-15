@@ -2551,7 +2551,7 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event,
+		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
 	); err != nil {
 		return nil, err
 	}
@@ -2591,7 +2591,7 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event,
+		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
 	); err != nil {
 		return nil, err
 	}
@@ -2630,7 +2630,7 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event,
+		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
 	); err != nil {
 		return nil, err
 	}
@@ -2709,7 +2709,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event,
+		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
 	); err != nil {
 		return nil, err
 	}
@@ -3215,7 +3215,7 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event,
+		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
 	); err != nil {
 		return nil, err
 	}
@@ -3332,7 +3332,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		continueAsNewEvent,
+		continueAsNewEvent, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
 	); err != nil {
 		return nil, nil, err
 	}

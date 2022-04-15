@@ -2199,6 +2199,12 @@ const (
 	// Default value: false
 	Lockdown
 
+	// WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering
+	// KeyName: system.workflowDeletionJitterRange
+	// Value type: Duration
+	// Default value: 1 (no jittering)
+	WorkflowDeletionJitterRange
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2252,6 +2258,7 @@ var Keys = map[Key]string{
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
 	EnableWatchDog:                      "system.EnableWatchDog",
 	Lockdown:                            "system.Lockdown",
+	WorkflowDeletionJitterRange:         "system.workflowDeletionJitterRange",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",

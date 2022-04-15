@@ -261,8 +261,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTimedOut()
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionTimedoutEvent(event.ID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		event,
+		event, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -291,8 +293,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionTerminated
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionTerminatedEvent(event.ID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		event,
+		event, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 	_, err := s.stateBuilder.ApplyEvents(constants.TestDomainID, requestID, workflowExecution, s.toHistory(event), nil)
@@ -320,8 +324,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionFailed() {
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionFailedEvent(event.ID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		event,
+		event, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -350,8 +356,10 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCompleted(
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionCompletedEvent(event.ID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		event,
+		event, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -379,9 +387,11 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionCanceled()
 
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionCanceledEvent(event.ID, event).Return(nil).Times(1)
 	s.mockUpdateVersion(event)
+	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		event,
+		event, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -474,8 +484,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
 	s.mockUpdateVersion(continueAsNewEvent)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		continueAsNewEvent,
+		continueAsNewEvent, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
@@ -529,8 +540,9 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 	s.mockMutableState.EXPECT().GetDomainEntry().Return(constants.TestGlobalDomainEntry).AnyTimes()
 	s.mockUpdateVersion(continueAsNewEvent)
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
+	s.mockShard.GetConfig().WorkflowDeletionJitterRange = func(domain string) int { return 60 }
 	s.mockTaskGenerator.EXPECT().GenerateWorkflowCloseTasks(
-		continueAsNewEvent,
+		continueAsNewEvent, 60,
 	).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 
