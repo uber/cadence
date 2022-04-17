@@ -24,6 +24,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"hash/fnv"
 	"sort"
 	"strconv"
@@ -617,8 +618,7 @@ func (c *domainCache) getDomain(
 	if cacheHit {
 		return c.getDomainByID(id, true)
 	}
-	// impossible case
-	return nil, &types.InternalServiceError{Message: "domainCache encounter case where domain exists but cannot be loaded"}
+	return nil, fmt.Errorf("failure to load domain %s: domain exists but cannot be loaded - %w", name, &types.InternalServiceError{})
 }
 
 // getDomainByID retrieves the information from the cache if it exists, otherwise retrieves the information from metadata
@@ -669,8 +669,7 @@ func (c *domainCache) getDomainByID(
 		entry.RUnlock()
 		return result, nil
 	}
-	// impossible case
-	return nil, &types.InternalServiceError{Message: "domainCache encounter case where domain exists but cannot be loaded"}
+	return nil, fmt.Errorf("failure to load domain id %s: domain exists but cannot be loaded: %w", id, &types.InternalServiceError{})
 }
 
 func (c *domainCache) triggerDomainChangePrepareCallbackLocked() {
