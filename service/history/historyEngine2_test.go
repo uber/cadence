@@ -74,6 +74,7 @@ type (
 		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
+		mockShardManager *mocks.ShardManager
 
 		config *config.Config
 		logger log.Logger
@@ -115,6 +116,7 @@ func (s *engine2Suite) SetupTest() {
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockShardManager = s.mockShard.Resource.ShardMgr
 	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockEventsCache = s.mockShard.MockEventsCache
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
@@ -1300,6 +1302,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &p.TimeoutError{}).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.True(p.IsTimeoutError(err))
