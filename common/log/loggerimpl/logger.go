@@ -44,6 +44,30 @@ const (
 	defaultMsgForEmpty = "none"
 )
 
+// Complex loggable values may define Tags() method, which can return additional custom tags to be logged.
+// These tags will be prefixed with key of that complex value (with following dash -).
+//
+// One use case - error types may define Tags() to emit additional tags for error fields. For example:
+// type MyCustomError struct {
+//   WorkflowId string
+// }
+// func (e MyCustomError) Error() string {
+//   return "custom error"
+// }
+// func (e MyCustomError) Tags() []tag.Tag {
+//   return []tag.Tag{tag.WorkflowID(e.WorkflowId)}
+// }
+//
+// Logging this error as:
+// err := &MyCustomError{"workflow123"}
+// logger.Error("oh no", tag.Error(err))
+//
+// Will end up in the following log entry emitted:
+// {"level":"error", "msg":"oh no", "error":"custom error", "error-wf-id":"workflow123", ...}
+type taggable interface {
+	Tags() []tag.Tag
+}
+
 // NewNopLogger returns a no-op logger
 func NewNopLogger() log.Logger {
 	return &loggerImpl{
@@ -82,12 +106,12 @@ func caller(skip int) string {
 }
 
 func (lg *loggerImpl) buildFieldsWithCallat(tags []tag.Tag) []zap.Field {
-	fs := lg.buildFields(tags)
+	fs := lg.buildFields(tags, "")
 	fs = append(fs, zap.String(tag.LoggingCallAtKey, caller(lg.skip)))
 	return fs
 }
 
-func (lg *loggerImpl) buildFields(tags []tag.Tag) []zap.Field {
+func (lg *loggerImpl) buildFields(tags []tag.Tag, keyPrefix string) []zap.Field {
 	fs := make([]zap.Field, 0, len(tags))
 	for _, t := range tags {
 		f := t.Field()
@@ -95,7 +119,12 @@ func (lg *loggerImpl) buildFields(tags []tag.Tag) []zap.Field {
 			// ignore empty field(which can be constructed manually)
 			continue
 		}
+		f.Key = keyPrefix + f.Key
 		fs = append(fs, f)
+
+		if withTags, ok := f.Interface.(taggable); ok {
+			fs = append(fs, lg.buildFields(withTags.Tags(), fmt.Sprintf("%s-", f.Key))...)
+		}
 	}
 	return fs
 }
@@ -138,7 +167,7 @@ func (lg *loggerImpl) Fatal(msg string, tags ...tag.Tag) {
 }
 
 func (lg *loggerImpl) WithTags(tags ...tag.Tag) log.Logger {
-	fields := lg.buildFields(tags)
+	fields := lg.buildFields(tags, "")
 	zapLogger := lg.zapLogger.With(fields...)
 	return &loggerImpl{
 		zapLogger: zapLogger,

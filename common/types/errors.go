@@ -20,140 +20,153 @@
 
 package types
 
-import (
-	"fmt"
-	"strings"
-)
+import "github.com/uber/cadence/common/log/tag"
 
 func (err AccessDeniedError) Error() string {
-	return fmt.Sprintf("AccessDeniedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err BadRequestError) Error() string {
-	return fmt.Sprintf("BadRequestError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err CancellationAlreadyRequestedError) Error() string {
-	return fmt.Sprintf("CancellationAlreadyRequestedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err ClientVersionNotSupportedError) Error() string {
-	return fmt.Sprintf("ClientVersionNotSupportedError{FeatureVersion: %v, ClientImpl: %v, SupportedVersions: %v}",
-		err.FeatureVersion,
-		err.ClientImpl,
-		err.SupportedVersions)
+	return "client version not supported"
+}
+
+func (err ClientVersionNotSupportedError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.FeatureVersion(err.FeatureVersion),
+		tag.ClientImplementation(err.ClientImpl),
+		tag.SupportedVersions(err.SupportedVersions),
+	}
 }
 
 func (err FeatureNotEnabledError) Error() string {
-	return fmt.Sprintf("FeatureNotEnabledError{FeatureFlag: %v}",
-		err.FeatureFlag,
-	)
+	return "feature not enabled"
+}
+
+func (err FeatureNotEnabledError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.FeatureFlag(err.FeatureFlag),
+	}
 }
 
 func (err CurrentBranchChangedError) Error() string {
-	return fmt.Sprintf("CurrentBranchChangedError{Message: %v, CurrentBranchToken: %v}",
-		err.Message,
-		err.CurrentBranchToken)
+	return err.Message
+}
+
+func (err CurrentBranchChangedError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.WorkflowBranchToken(string(err.CurrentBranchToken)),
+	}
 }
 
 func (err DomainAlreadyExistsError) Error() string {
-	return fmt.Sprintf("DomainAlreadyExistsError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err DomainNotActiveError) Error() string {
-	return fmt.Sprintf("DomainNotActiveError{Message: %v, DomainName: %v, CurrentCluster: %v, ActiveCluster: %v}",
-		err.Message,
-		err.DomainName,
-		err.CurrentCluster,
-		err.ActiveCluster,
-	)
+	return err.Message
+}
+
+func (err DomainNotActiveError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.WorkflowDomainName(err.DomainName),
+		tag.ClusterName(err.CurrentCluster),
+		tag.ActiveClusterName(err.ActiveCluster),
+	}
 }
 
 func (err EntityNotExistsError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	if err.CurrentCluster != "" {
-		printField(sb, "CurrentCluster", err.CurrentCluster)
+	return err.Message
+}
+
+func (err EntityNotExistsError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.ClusterName(err.CurrentCluster),
+		tag.ActiveClusterName(err.ActiveCluster),
 	}
-	if err.ActiveCluster != "" {
-		printField(sb, "ActiveCluster", err.ActiveCluster)
-	}
-	return fmt.Sprintf("EntityNotExistsError{%s}", sb.String())
 }
 
 func (err WorkflowExecutionAlreadyCompletedError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	return fmt.Sprintf("WorkflowExecutionAlreadyCompletedError{%s}", sb.String())
+	return err.Message
 }
 
 func (err InternalDataInconsistencyError) Error() string {
-	return fmt.Sprintf("InternalDataInconsistencyError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err InternalServiceError) Error() string {
-	return fmt.Sprintf("InternalServiceError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err LimitExceededError) Error() string {
-	return fmt.Sprintf("LimitExceededError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err QueryFailedError) Error() string {
-	return fmt.Sprintf("QueryFailedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err RemoteSyncMatchedError) Error() string {
-	return fmt.Sprintf("RemoteSyncMatchedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err RetryTaskV2Error) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	printField(sb, "DomainID", err.DomainID)
-	printField(sb, "WorkflowID", err.WorkflowID)
-	printField(sb, "RunID", err.RunID)
+	return err.Message
+}
+
+func (err RetryTaskV2Error) Tags() []tag.Tag {
+	tags := []tag.Tag{
+		tag.WorkflowDomainID(err.DomainID),
+		tag.WorkflowID(err.WorkflowID),
+		tag.WorkflowRunID(err.RunID),
+	}
 	if err.StartEventID != nil {
-		printField(sb, "StartEventID", *err.StartEventID)
+		tags = append(tags, tag.WorkflowStartEventID(*err.StartEventID))
 	}
 	if err.StartEventVersion != nil {
-		printField(sb, "StartEventVersion", *err.StartEventVersion)
+		tags = append(tags, tag.WorkflowStartEventVersion(*err.StartEventVersion))
 	}
 	if err.EndEventID != nil {
-		printField(sb, "EndEventID", *err.EndEventID)
+		tags = append(tags, tag.WorkflowEndEventID(*err.EndEventID))
 	}
 	if err.EndEventVersion != nil {
-		printField(sb, "EndEventVersion", *err.EndEventVersion)
+		tags = append(tags, tag.WorkflowEndEventVersion(*err.EndEventVersion))
 	}
-	return fmt.Sprintf("RetryTaskV2Error{%s}", sb.String())
+	return tags
 }
 
 func (err ServiceBusyError) Error() string {
-	return fmt.Sprintf("ServiceBusyError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err WorkflowExecutionAlreadyStartedError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	printField(sb, "StartRequestID", err.StartRequestID)
-	printField(sb, "RunID", err.RunID)
-	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{%s}", sb.String())
+	return err.Message
+}
+
+func (err WorkflowExecutionAlreadyStartedError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.RequestID(err.StartRequestID),
+		tag.WorkflowRunID(err.RunID),
+	}
 }
 
 func (err ShardOwnershipLostError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	printField(sb, "Owner", err.Owner)
-	return fmt.Sprintf("ShardOwnershipLostError{%s}", sb.String())
+	return err.Message
+}
+
+func (err ShardOwnershipLostError) Tags() []tag.Tag {
+	return []tag.Tag{
+		tag.ShardOwner(err.Owner),
+	}
 }
 
 func (err EventAlreadyStartedError) Error() string {
-	return fmt.Sprintf("EventAlreadyStartedError{Message: %v}", err.Message)
-}
-
-func printField(sb *strings.Builder, field string, value interface{}) {
-	if sb.Len() > 0 {
-		fmt.Fprintf(sb, ", ")
-	}
-	fmt.Fprintf(sb, "%s: %v", field, value)
+	return err.Message
 }

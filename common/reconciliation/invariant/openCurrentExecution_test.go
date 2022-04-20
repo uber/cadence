@@ -107,7 +107,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   OpenCurrentExecution,
 				Info:            "execution is open without having current execution",
-				InfoDetails:     "EntityNotExistsError{Message: }",
+				InfoDetails:     "",
 			},
 		},
 		{

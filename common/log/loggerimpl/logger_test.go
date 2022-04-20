@@ -31,6 +31,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/tag"
@@ -132,3 +133,22 @@ func TestEmptyMsg(t *testing.T) {
 	assert.Equal(t, out, `{"level":"info","msg":"`+defaultMsgForEmpty+`","error":"test error","wf-action":"add-workflow-started-event","logging-call-at":"logger_test.go:`+lineNum+`"}`+"\n")
 
 }
+
+func TestTaggableValues(t *testing.T) {
+	sb := &strings.Builder{}
+	zapLogger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zapcore.EncoderConfig{MessageKey: "msg"}), zapcore.AddSync(sb), zap.DebugLevel))
+	logger := NewLogger(zapLogger)
+
+	err := &testError{"workflow123"}
+	logger.Error("oh no", tag.Error(err))
+	zapLogger.Sync()
+
+	assert.Contains(t, sb.String(), `"msg":"oh no","error":"test error","error-wf-id":"workflow123"`)
+}
+
+type testError struct {
+	WorkflowId string
+}
+
+func (e testError) Error() string   { return "test error" }
+func (e testError) Tags() []tag.Tag { return []tag.Tag{tag.WorkflowID(e.WorkflowId)} }
