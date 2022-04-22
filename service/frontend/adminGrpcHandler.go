@@ -96,6 +96,11 @@ func (g adminGRPCHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, 
 	return proto.FromAdminGetWorkflowExecutionRawHistoryV2Response(response), proto.FromError(err)
 }
 
+func (g adminGRPCHandler) CountDLQMessages(ctx context.Context, request *adminv1.CountDLQMessagesRequest) (*adminv1.CountDLQMessagesResponse, error) {
+	response, err := g.h.CountDLQMessages(ctx, proto.ToAdminCountDLQMessagesRequest(request))
+	return proto.FromAdminCountDLQMessagesResponse(response), proto.FromError(err)
+}
+
 func (g adminGRPCHandler) MergeDLQMessages(ctx context.Context, request *adminv1.MergeDLQMessagesRequest) (*adminv1.MergeDLQMessagesResponse, error) {
 	response, err := g.h.MergeDLQMessages(ctx, proto.ToAdminMergeDLQMessagesRequest(request))
 	return proto.FromAdminMergeDLQMessagesResponse(response), proto.FromError(err)

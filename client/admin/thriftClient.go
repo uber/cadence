@@ -104,6 +104,10 @@ func (t thriftClient) PurgeDLQMessages(ctx context.Context, request *types.Purge
 	return thrift.ToError(err)
 }
 
+func (t thriftClient) CountDLQMessages(ctx context.Context, request *types.CountDLQMessagesRequest, opts ...yarpc.CallOption) (*types.CountDLQMessagesResponse, error) {
+	return nil, thrift.ToError(&types.BadRequestError{Message: "Feature not supported on TChannel"})
+}
+
 func (t thriftClient) ReadDLQMessages(ctx context.Context, request *types.ReadDLQMessagesRequest, opts ...yarpc.CallOption) (*types.ReadDLQMessagesResponse, error) {
 	response, err := t.c.ReadDLQMessages(ctx, thrift.FromReadDLQMessagesRequest(request), opts...)
 	return thrift.ToReadDLQMessagesResponse(response), thrift.ToError(err)

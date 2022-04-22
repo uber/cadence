@@ -129,7 +129,7 @@ func (s *mutableStateTaskGeneratorSuite) TestIsCrossClusterTask() {
 	}
 }
 
-func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
+func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_JitteredDeletion() {
 	now := time.Now()
 	version := int64(123)
 	closeEvent := &types.HistoryEvent{
@@ -140,214 +140,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 	domainEntry, err := s.mockDomainCache.GetDomainByID(constants.TestDomainID)
 	s.NoError(err)
 	retention := time.Duration(domainEntry.GetRetentionDays(constants.TestWorkflowID)) * time.Hour * 24
-	testCases := []struct {
-		setupFn        func(mockMutableState *MockMutableState)
-		generatedTasks []persistence.Task
-	}{
-		{
-			// no parent, no children
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:   constants.TestDomainID,
-					WorkflowID: constants.TestWorkflowID,
-					RunID:      constants.TestRunID,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(false).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(nil).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.CloseExecutionTask{
-					VisibilityTimestamp: now,
-					Version:             version,
-				},
-				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
-				},
-			},
-		},
-		{
-			// parent and children all active in current cluster
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestParentDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyAbandon},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.CloseExecutionTask{
-					VisibilityTimestamp: now,
-					Version:             version,
-				},
-				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
-				},
-			},
-		},
-		{
-			// parent active in cluster cluster,
-			// one child active in cluster, one child active in remote
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestParentDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.RecordChildExecutionCompletedTask{
-					VisibilityTimestamp: now,
-					TargetDomainID:      constants.TestParentDomainID,
-					TargetWorkflowID:    "parent workflowID",
-					TargetRunID:         "parent runID",
-					Version:             version,
-				},
-				&persistence.ApplyParentClosePolicyTask{
-					VisibilityTimestamp: now,
-					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}},
-					Version:             version,
-				},
-				&persistence.RecordWorkflowClosedTask{
-					VisibilityTimestamp: now,
-					Version:             version,
-				},
-				&persistence.CrossClusterApplyParentClosePolicyTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						VisibilityTimestamp: now,
-						TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-						Version:             version,
-					},
-				},
-				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
-				},
-			},
-		},
-		{
-			// parent active in remote cluster, all children active in current cluster
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestRemoteTargetDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestChildDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					VisibilityTimestamp: now,
-					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
-					Version:             version,
-				},
-				&persistence.RecordWorkflowClosedTask{
-					VisibilityTimestamp: now,
-					Version:             version,
-				},
-				&persistence.CrossClusterRecordChildExecutionCompletedTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						VisibilityTimestamp: now,
-						TargetDomainID:      constants.TestRemoteTargetDomainID,
-						TargetWorkflowID:    "parent workflowID",
-						TargetRunID:         "parent runID",
-						Version:             version,
-					},
-				},
-				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
-				},
-			},
-		},
-		{
-			// parent active in remote cluster
-			// two children active in current cluster, one child active in remote cluster
-			setupFn: func(mockMutableState *MockMutableState) {
-				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
-					DomainID:         constants.TestDomainID,
-					WorkflowID:       constants.TestWorkflowID,
-					RunID:            constants.TestRunID,
-					ParentDomainID:   constants.TestRemoteTargetDomainID,
-					ParentWorkflowID: "parent workflowID",
-					ParentRunID:      "parent runID",
-					InitiatedID:      101,
-					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
-				}).AnyTimes()
-				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
-				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
-					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
-					103: {DomainID: constants.TestChildDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-					104: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
-				}).AnyTimes()
-			},
-			generatedTasks: []persistence.Task{
-				&persistence.ApplyParentClosePolicyTask{
-					VisibilityTimestamp: now,
-					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
-					Version:             version,
-				},
-				&persistence.RecordWorkflowClosedTask{
-					VisibilityTimestamp: now,
-					Version:             version,
-				},
-				&persistence.CrossClusterRecordChildExecutionCompletedTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
-						VisibilityTimestamp: now,
-						TargetDomainID:      constants.TestRemoteTargetDomainID,
-						TargetWorkflowID:    "parent workflowID",
-						TargetRunID:         "parent runID",
-						Version:             version,
-					},
-				},
-				&persistence.CrossClusterApplyParentClosePolicyTask{
-					TargetCluster: cluster.TestAlternativeClusterName,
-					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
-						VisibilityTimestamp: now,
-						TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
-						Version:             version,
-					},
-				},
-				&persistence.DeleteHistoryEventTask{
-					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
-					Version:             version,
-				},
-			},
-		},
-	}
+	testCases := GenerateWorkflowCloseTasksTestCases(retention, closeEvent, now)
 
 	for _, tc := range testCases {
 		// create new mockMutableState so can we can setup separete mock for each test case
@@ -374,7 +167,67 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		}).MaxTimes(1)
 
 		tc.setupFn(mockMutableState)
-		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent)
+		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 60)
+		s.NoError(err)
+
+		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
+		for _, task := range actualGeneratedTasks {
+			// force set visibility timestamp since that field is not assigned
+			// for transfer and cross cluster in GenerateWorkflowCloseTasks
+			// it will be set by shard context
+			// set it to now so that we can easily test if other fields are equal
+			task.SetVisibilityTimestamp(now)
+		}
+		for _, task := range timerTasks {
+			// force set timer tasks because with jittering the timertask visibility time stamp
+			// is not consistent for each run.
+			// as long as code doesn't break during generation we should be ok
+			task.SetVisibilityTimestamp(time.Unix(0, closeEvent.GetTimestamp()).Add(retention))
+		}
+		actualGeneratedTasks = append(actualGeneratedTasks, timerTasks...)
+		s.Equal(tc.generatedTasks, actualGeneratedTasks)
+	}
+}
+
+func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
+	now := time.Now()
+	version := int64(123)
+	closeEvent := &types.HistoryEvent{
+		EventType: types.EventTypeWorkflowExecutionCompleted.Ptr(),
+		Timestamp: common.Int64Ptr(now.UnixNano()),
+		Version:   version,
+	}
+	domainEntry, err := s.mockDomainCache.GetDomainByID(constants.TestDomainID)
+	s.NoError(err)
+	retention := time.Duration(domainEntry.GetRetentionDays(constants.TestWorkflowID)) * time.Hour * 24
+	testCases := GenerateWorkflowCloseTasksTestCases(retention, closeEvent, now)
+
+	for _, tc := range testCases {
+		// create new mockMutableState so can we can setup separete mock for each test case
+		mockMutableState := NewMockMutableState(s.controller)
+		taskGenerator := NewMutableStateTaskGenerator(
+			constants.TestClusterMetadata,
+			s.mockDomainCache,
+			loggerimpl.NewLoggerForTest(s.Suite),
+			mockMutableState,
+		)
+
+		var transferTasks []persistence.Task
+		var crossClusterTasks []persistence.Task
+		var timerTasks []persistence.Task
+		mockMutableState.EXPECT().GetDomainEntry().Return(domainEntry).AnyTimes()
+		mockMutableState.EXPECT().AddTransferTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
+			transferTasks = tasks
+		}).MaxTimes(1)
+		mockMutableState.EXPECT().AddCrossClusterTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
+			crossClusterTasks = tasks
+		}).MaxTimes(1)
+		mockMutableState.EXPECT().AddTimerTasks(gomock.Any()).Do(func(tasks ...persistence.Task) {
+			timerTasks = tasks
+		}).MaxTimes(1)
+
+		tc.setupFn(mockMutableState)
+		err := taskGenerator.GenerateWorkflowCloseTasks(closeEvent, 1)
 		s.NoError(err)
 
 		actualGeneratedTasks := append(transferTasks, crossClusterTasks...)
@@ -818,4 +671,219 @@ func (s *mutableStateTaskGeneratorSuite) TestGetNextDecisionTimeout() {
 func getNextBackoffRange(duration time.Duration) (time.Duration, time.Duration) {
 	rangeMin := time.Duration((1 - defaultJitterCoefficient) * float64(duration))
 	return rangeMin, duration
+}
+
+func GenerateWorkflowCloseTasksTestCases(retention time.Duration, closeEvent *types.HistoryEvent, now time.Time) []struct {
+	setupFn        func(mockMutableState *MockMutableState)
+	generatedTasks []persistence.Task
+} {
+	version := int64(123)
+	return []struct {
+		setupFn        func(mockMutableState *MockMutableState)
+		generatedTasks []persistence.Task
+	}{
+		{
+			// no parent, no children
+			setupFn: func(mockMutableState *MockMutableState) {
+				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
+					DomainID:   constants.TestDomainID,
+					WorkflowID: constants.TestWorkflowID,
+					RunID:      constants.TestRunID,
+				}).AnyTimes()
+				mockMutableState.EXPECT().HasParentExecution().Return(false).AnyTimes()
+				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(nil).AnyTimes()
+			},
+			generatedTasks: []persistence.Task{
+				&persistence.CloseExecutionTask{
+					VisibilityTimestamp: now,
+					Version:             version,
+				},
+				&persistence.DeleteHistoryEventTask{
+					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+					Version:             version,
+				},
+			},
+		},
+		{
+			// parent and children all active in current cluster
+			setupFn: func(mockMutableState *MockMutableState) {
+				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
+					DomainID:         constants.TestDomainID,
+					WorkflowID:       constants.TestWorkflowID,
+					RunID:            constants.TestRunID,
+					ParentDomainID:   constants.TestParentDomainID,
+					ParentWorkflowID: "parent workflowID",
+					ParentRunID:      "parent runID",
+					InitiatedID:      101,
+					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
+				}).AnyTimes()
+				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
+				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
+					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
+					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyAbandon},
+				}).AnyTimes()
+			},
+			generatedTasks: []persistence.Task{
+				&persistence.CloseExecutionTask{
+					VisibilityTimestamp: now,
+					Version:             version,
+				},
+				&persistence.DeleteHistoryEventTask{
+					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+					Version:             version,
+				},
+			},
+		},
+		{
+			// parent active in cluster cluster,
+			// one child active in cluster, one child active in remote
+			setupFn: func(mockMutableState *MockMutableState) {
+				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
+					DomainID:         constants.TestDomainID,
+					WorkflowID:       constants.TestWorkflowID,
+					RunID:            constants.TestRunID,
+					ParentDomainID:   constants.TestParentDomainID,
+					ParentWorkflowID: "parent workflowID",
+					ParentRunID:      "parent runID",
+					InitiatedID:      101,
+					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
+				}).AnyTimes()
+				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
+				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
+					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
+					103: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
+				}).AnyTimes()
+			},
+			generatedTasks: []persistence.Task{
+				&persistence.RecordChildExecutionCompletedTask{
+					VisibilityTimestamp: now,
+					TargetDomainID:      constants.TestParentDomainID,
+					TargetWorkflowID:    "parent workflowID",
+					TargetRunID:         "parent runID",
+					Version:             version,
+				},
+				&persistence.ApplyParentClosePolicyTask{
+					VisibilityTimestamp: now,
+					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}},
+					Version:             version,
+				},
+				&persistence.RecordWorkflowClosedTask{
+					VisibilityTimestamp: now,
+					Version:             version,
+				},
+				&persistence.CrossClusterApplyParentClosePolicyTask{
+					TargetCluster: cluster.TestAlternativeClusterName,
+					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+						VisibilityTimestamp: now,
+						TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
+						Version:             version,
+					},
+				},
+				&persistence.DeleteHistoryEventTask{
+					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+					Version:             version,
+				},
+			},
+		},
+		{
+			// parent active in remote cluster, all children active in current cluster
+			setupFn: func(mockMutableState *MockMutableState) {
+				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
+					DomainID:         constants.TestDomainID,
+					WorkflowID:       constants.TestWorkflowID,
+					RunID:            constants.TestRunID,
+					ParentDomainID:   constants.TestRemoteTargetDomainID,
+					ParentWorkflowID: "parent workflowID",
+					ParentRunID:      "parent runID",
+					InitiatedID:      101,
+					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
+				}).AnyTimes()
+				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
+				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
+					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
+					103: {DomainID: constants.TestChildDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
+				}).AnyTimes()
+			},
+			generatedTasks: []persistence.Task{
+				&persistence.ApplyParentClosePolicyTask{
+					VisibilityTimestamp: now,
+					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
+					Version:             version,
+				},
+				&persistence.RecordWorkflowClosedTask{
+					VisibilityTimestamp: now,
+					Version:             version,
+				},
+				&persistence.CrossClusterRecordChildExecutionCompletedTask{
+					TargetCluster: cluster.TestAlternativeClusterName,
+					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
+						VisibilityTimestamp: now,
+						TargetDomainID:      constants.TestRemoteTargetDomainID,
+						TargetWorkflowID:    "parent workflowID",
+						TargetRunID:         "parent runID",
+						Version:             version,
+					},
+				},
+				&persistence.DeleteHistoryEventTask{
+					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+					Version:             version,
+				},
+			},
+		},
+		{
+			// parent active in remote cluster
+			// two children active in current cluster, one child active in remote cluster
+			setupFn: func(mockMutableState *MockMutableState) {
+				mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{
+					DomainID:         constants.TestDomainID,
+					WorkflowID:       constants.TestWorkflowID,
+					RunID:            constants.TestRunID,
+					ParentDomainID:   constants.TestRemoteTargetDomainID,
+					ParentWorkflowID: "parent workflowID",
+					ParentRunID:      "parent runID",
+					InitiatedID:      101,
+					CloseStatus:      persistence.WorkflowCloseStatusCompleted,
+				}).AnyTimes()
+				mockMutableState.EXPECT().HasParentExecution().Return(true).AnyTimes()
+				mockMutableState.EXPECT().GetPendingChildExecutionInfos().Return(map[int64]*persistence.ChildExecutionInfo{
+					102: {DomainID: constants.TestTargetDomainID, ParentClosePolicy: types.ParentClosePolicyTerminate},
+					103: {DomainID: constants.TestChildDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
+					104: {DomainID: constants.TestRemoteTargetDomainID, ParentClosePolicy: types.ParentClosePolicyRequestCancel},
+				}).AnyTimes()
+			},
+			generatedTasks: []persistence.Task{
+				&persistence.ApplyParentClosePolicyTask{
+					VisibilityTimestamp: now,
+					TargetDomainIDs:     map[string]struct{}{constants.TestTargetDomainID: {}, constants.TestChildDomainID: {}},
+					Version:             version,
+				},
+				&persistence.RecordWorkflowClosedTask{
+					VisibilityTimestamp: now,
+					Version:             version,
+				},
+				&persistence.CrossClusterRecordChildExecutionCompletedTask{
+					TargetCluster: cluster.TestAlternativeClusterName,
+					RecordChildExecutionCompletedTask: persistence.RecordChildExecutionCompletedTask{
+						VisibilityTimestamp: now,
+						TargetDomainID:      constants.TestRemoteTargetDomainID,
+						TargetWorkflowID:    "parent workflowID",
+						TargetRunID:         "parent runID",
+						Version:             version,
+					},
+				},
+				&persistence.CrossClusterApplyParentClosePolicyTask{
+					TargetCluster: cluster.TestAlternativeClusterName,
+					ApplyParentClosePolicyTask: persistence.ApplyParentClosePolicyTask{
+						VisibilityTimestamp: now,
+						TargetDomainIDs:     map[string]struct{}{constants.TestRemoteTargetDomainID: {}},
+						Version:             version,
+					},
+				},
+				&persistence.DeleteHistoryEventTask{
+					VisibilityTimestamp: time.Unix(0, closeEvent.GetTimestamp()).Add(retention),
+					Version:             version,
+				},
+			},
+		},
+	}
 }
