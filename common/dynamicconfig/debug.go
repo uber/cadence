@@ -128,12 +128,12 @@ func getDynamicConfigs(
 		if dv != cv || includeDefaults {
 			var fs map[Filter]interface{}
 			if len(filters) > 0 {
-				m := make(map[Filter]interface{}, len(filters))
+				fs = make(map[Filter]interface{}, len(filters))
 				for _, f := range filters {
-					if _, ok := m[f.Filter]; !ok {
+					if _, ok := fs[f.Filter]; ok {
 						panic(fmt.Sprintf("coding error, duplicate filter type: %v", f.Filter))
 					}
-					m[f.Filter] = f.Value
+					fs[f.Filter] = f.Value
 				}
 			}
 			list = append(list, FilterResult{
