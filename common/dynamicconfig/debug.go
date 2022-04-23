@@ -1,8 +1,31 @@
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package dynamicconfig
 
 import (
 	"context"
 	"fmt"
+	"reflect"
 )
 
 type FilterResult struct {
@@ -90,14 +113,15 @@ func getDynamicConfigs(
 	workflowTypes []string,
 ) map[Key][]FilterResult {
 
-	addUnfilterable := func(r map[Key][]FilterResult, k Key, dv, cv interface{}) {
-		if dv != cv || includeDefaults {
-			r[k] = []FilterResult{{
+	unfilterable := func(k Key, dv, cv interface{}) []FilterResult {
+		if includeDefaults || !reflect.DeepEqual(dv, cv) {
+			return []FilterResult{{
 				Filters: nil,
 				Current: cv,
 				Default: dv,
 			}}
 		}
+		return nil
 	}
 
 	appendFiltered := func(list []FilterResult, dv, cv interface{}, filters ...FilterValue) []FilterResult {
@@ -137,19 +161,19 @@ outer:
 		// no recognized argument types == can't filter it in any meaningful / computationally-feasible way.
 		// perhaps we can eliminate these one day.
 		case PropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 		case BoolPropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 		case StringPropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 		case MapPropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 		case IntPropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 		case FloatPropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 		case DurationPropertyFn:
-			addUnfilterable(result, k, v, prop())
+			list = unfilterable(k, v.defaultValue, prop())
 
 		// all shard IDs are treated the same
 		case IntPropertyFnWithShardIDFilter:
@@ -310,7 +334,9 @@ outer:
 			}}
 		}
 
-		result[k] = list
+		if len(list) != 0 {
+			result[k] = list
+		}
 	}
 
 	return result

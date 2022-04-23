@@ -187,7 +187,7 @@ type DurationPropertyFnWithWorkflowTypeFilter func(domainName string, workflowTy
 // nearly all code should get and retain a reference to individual properties instead.
 func (c *Collection) AllProperties() map[Key]ConfigWithDefault {
 	dup := make(map[Key]ConfigWithDefault, len(Keys))
-	c.allProperties.Range(func(key, value any) bool {
+	c.allProperties.Range(func(key, value interface{}) bool {
 		// any failed casts will panic and likely end the process at startup, should never pass CI
 		dup[key.(Key)] = value.(ConfigWithDefault)
 		return true

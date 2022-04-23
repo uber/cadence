@@ -622,25 +622,25 @@ install-schema-xdc: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 update-schema -d ./schema/cassandra/visibility/versioned
 
-start-xdc-cluster0: bins
+start-xdc-cluster0: cadence-server
 	./cadence-server --zone xdc_cluster0 start
 
-start-xdc-cluster1: bins
+start-xdc-cluster1: cadence-server
 	./cadence-server --zone xdc_cluster1 start
 
-start-xdc-cluster2: bins
+start-xdc-cluster2: cadence-server
 	./cadence-server --zone xdc_cluster2 start
 
-start-canary: bins
+start-canary: cadence-canary
 	./cadence-canary start
 
-start-bench: bins
+start-bench: cadence-bench
 	./cadence-bench start
 
-start-mysql: bins
+start-mysql: cadence-server
 	./cadence-server --zone mysql start
 
-start-postgres: bins
+start-postgres: cadence-server
 	./cadence-server --zone postgres start
 
 # broken up into multiple += so I can interleave comments.
