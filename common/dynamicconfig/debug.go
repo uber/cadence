@@ -43,67 +43,34 @@ type FilterValue struct {
 	Value  interface{}
 }
 
-// GetAllDynamicConfigs will step through every known dynamic config property in this collection,
-// for each combination of the passed arguments possible (where applicable, most configs only support a couple),
-// and every value will be returned.
+// DebugDynamicConfigs will step through every known dynamic config property in this collection (i.e. retrieved in
+// this process), for each combination of the passed arguments possible (where applicable, most configs only support
+// a couple), optionally returning every value or only the ones that do not match the hardcoded default value (passed
+// as an argument when the property is retrieved).
 //
-// This is not every config / every value possible, only ones that have been accessed so far in this process.
-// For a more complete list, consider checking logs.
+// This API is explicitly unstable, and it is only intended for human consumption, not any kind of automated behavior.
+// By default this is not exposed anywhere / on any endpoint.  If you want to make use of this, you probably want to
+// expose it behind a debug-only HTTP handler or custom RPC endpoint or something.
 //
-// Note that this will potentially result in an enormous number of requests to the dynamic config client.
-// As such, you are cautioned to only do this when it won't be dangerous, and to pass a context with a reasonable timeout.
+// The list returned by this API is NOT every config / every value possible, only ones that have been accessed so far
+// in this process.  For a more complete list, consider checking logs.  In particular, frontend processes will likely
+// not access e.g. matching processes' keys, and shards are often "owned" by individual processes - you may need to
+// check multiple processes to get a more complete list.
 //
-// See GetNonDefaultDynamicConfigs for only values that do not match in-code config.
-func GetAllDynamicConfigs(
-	ctx context.Context,
-	c *Collection,
-	// one per filter option type.
-	// clusterName is ignored because it is inferred from the current runtime environment.
-	domainNames []string,
-	domainIds []string,
-	taskListNames []string,
-	taskListTypes []int,
-	shardIDs []int,
-	workflowIDs []string,
-	workflowTypes []string,
-) map[Key][]FilterResult {
-	return getDynamicConfigs(ctx, c, true, domainNames, domainIds, taskListNames, taskListTypes, shardIDs, workflowIDs, workflowTypes)
-}
-
-// GetNonDefaultDynamicConfigs will step through every known dynamic config property,
-// for each combination of the passed arguments possible (where applicable, most configs only support a couple),
-// and every value that does not match the hardcoded default value will be returned.
-//
-// This is not every config / every value possible, only ones that have been accessed so far in this process.
-// For a more complete list, consider checking logs.
+// Passing a zero-length list in any field will effectively exclude all configs that apply to that value kind.
+// E.g. if you do not pass domain names, you will get *no configs* that are based on domain name.
+// Pass at least one empty or placeholder value if you want these configs.
 //
 // Note that this will potentially result in an enormous number of requests to the dynamic config client.
-// As such, you are cautioned to only do this when it won't be dangerous, and to pass a context with a reasonable timeout.
+// Only call this when you know it won't be dangerous, and pass a context with a reasonable timeout.
 //
-// See GetAllDynamicConfigs to retrieve all values.
-func GetNonDefaultDynamicConfigs(
-	ctx context.Context,
-	c *Collection,
-	// one per filter option type.
-	// clusterName is ignored because it is inferred from the current runtime environment.
-	domainNames []string,
-	domainIds []string,
-	taskListNames []string,
-	taskListTypes []int,
-	shardIDs []int,
-	workflowIDs []string,
-	workflowTypes []string,
-) map[Key][]FilterResult {
-	return getDynamicConfigs(ctx, c, false, domainNames, domainIds, taskListNames, taskListTypes, shardIDs, workflowIDs, workflowTypes)
-}
-
-func getDynamicConfigs(
+// deprecated: deprecated only to discourage use, there is no currently-planned replacement.
+func DebugDynamicConfigs(
 	ctx context.Context,
 	c *Collection,
 	includeDefaults bool,
 	// one per filter option type.
 	// clusterName is ignored because it is inferred from the current runtime environment.
-
 	domainNames []string,
 	domainIds []string,
 	taskListNames []string,
@@ -327,9 +294,13 @@ outer:
 			}
 		default:
 			// should not make it past CI, but just in case
+			keyStr, ok := Keys[k]
+			if !ok {
+				keyStr = "<unrecognized>"
+			}
 			result[k] = []FilterResult{{
 				Filters: nil,
-				Current: fmt.Sprintf("ERROR: unrecognized property type: %T", prop),
+				Current: fmt.Sprintf("ERROR: unrecognized property type: %T, for key: %q (%v)", prop, keyStr, k),
 				Default: nil,
 			}}
 		}
