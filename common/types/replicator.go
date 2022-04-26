@@ -420,6 +420,26 @@ func (v *HistoryTaskV2Attributes) GetNewRunEvents() (o *DataBlob) {
 	return
 }
 
+type CountDLQMessagesRequest struct {
+	// ForceFetch will force fetching current values from DB
+	// instead of using cached values used for emitting metrics.
+	ForceFetch bool
+}
+
+type CountDLQMessagesResponse struct {
+	History map[HistoryDLQCountKey]int64
+	Domain  int64
+}
+
+type HistoryDLQCountKey struct {
+	ShardID       int32
+	SourceCluster string
+}
+
+type HistoryCountDLQMessagesResponse struct {
+	Entries map[HistoryDLQCountKey]int64
+}
+
 // MergeDLQMessagesRequest is an internal type (TBD...)
 type MergeDLQMessagesRequest struct {
 	Type                  *DLQType `json:"type,omitempty"`

@@ -218,6 +218,7 @@ func (r *mutableStateTaskRefresherImpl) refreshTasksForWorkflowClose(
 		}
 		return taskGenerator.GenerateWorkflowCloseTasks(
 			closeEvent,
+			r.config.WorkflowDeletionJitterRange(mutableState.GetDomainEntry().GetInfo().Name),
 		)
 	}
 

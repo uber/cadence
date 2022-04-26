@@ -25,28 +25,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"os"
 	"strconv"
 	"time"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
-	"github.com/uber/cadence/common/persistence/sql"
-	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
-	"github.com/uber/cadence/tools/common/flag"
 )
 
 const (
@@ -268,7 +257,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	}
 	histV2 := initializeHistoryManager(c)
 	defer histV2.Close()
-	exeStore := initializeExecutionStore(c, shardIDInt, 0)
+	exeStore := initializeExecutionStore(c, shardIDInt)
 
 	branchInfo := shared.HistoryBranch{}
 	thriftrwEncoder := codec.NewThriftRWEncoder()
@@ -334,84 +323,6 @@ func AdminDeleteWorkflow(c *cli.Context) {
 	fmt.Println("delete current row successfully")
 }
 
-func connectToCassandra(c *cli.Context) (nosqlplugin.DB, nosqlplugin.AdminDB) {
-	host := getRequiredOption(c, FlagDBAddress)
-	if !c.IsSet(FlagDBPort) {
-		ErrorAndExit("cassandra port is required", nil)
-	}
-
-	cfg := config.NoSQL{
-		PluginName:   cassandra_db.PluginName,
-		Hosts:        host,
-		Port:         c.Int(FlagDBPort),
-		Region:       c.String(FlagDBRegion),
-		User:         c.String(FlagUsername),
-		Password:     c.String(FlagPassword),
-		Keyspace:     getRequiredOption(c, FlagKeyspace),
-		ProtoVersion: c.Int(FlagProtoVersion),
-		MaxConns:     20,
-	}
-	if c.Bool(FlagEnableTLS) {
-		cfg.TLS = &config.TLS{
-			Enabled:                true,
-			CertFile:               c.String(FlagTLSCertPath),
-			KeyFile:                c.String(FlagTLSKeyPath),
-			CaFile:                 c.String(FlagTLSCaPath),
-			EnableHostVerification: c.Bool(FlagTLSEnableHostVerification),
-		}
-	}
-
-	db, err := nosql.NewNoSQLDB(&cfg, loggerimpl.NewNopLogger())
-	if err != nil {
-		ErrorAndExit("connect to Cassandra failed", err)
-	}
-	adminDB, err := nosql.NewNoSQLAdminDB(&cfg, loggerimpl.NewNopLogger())
-	if err != nil {
-		ErrorAndExit("connect to Cassandra failed", err)
-	}
-	return db, adminDB
-}
-
-func connectToSQL(c *cli.Context) sqlplugin.DB {
-	host := getRequiredOption(c, FlagDBAddress)
-	if !c.IsSet(FlagDBPort) {
-		ErrorAndExit("sql port is required", nil)
-	}
-	encodingType := c.String(FlagEncodingType)
-	decodingTypesStr := c.StringSlice(FlagDecodingTypes)
-	connectAttributes := c.Generic(FlagConnectionAttributes).(*flag.StringMap)
-
-	sqlConfig := &config.SQL{
-		ConnectAddr: net.JoinHostPort(
-			host,
-			c.String(FlagDBPort),
-		),
-		PluginName:        c.String(FlagDBType),
-		User:              c.String(FlagUsername),
-		Password:          c.String(FlagPassword),
-		DatabaseName:      getRequiredOption(c, FlagDatabaseName),
-		EncodingType:      encodingType,
-		DecodingTypes:     decodingTypesStr,
-		ConnectAttributes: connectAttributes.Value(),
-	}
-
-	if c.Bool(FlagEnableTLS) {
-		sqlConfig.TLS = &config.TLS{
-			Enabled:                true,
-			CertFile:               c.String(FlagTLSCertPath),
-			KeyFile:                c.String(FlagTLSKeyPath),
-			CaFile:                 c.String(FlagTLSCaPath),
-			EnableHostVerification: c.Bool(FlagTLSEnableHostVerification),
-		}
-	}
-
-	db, err := sql.NewSQLDB(sqlConfig)
-	if err != nil {
-		ErrorAndExit("connect to SQL failed", err)
-	}
-	return db
-}
-
 // AdminGetDomainIDOrName map domain
 func AdminGetDomainIDOrName(c *cli.Context) {
 	domainID := c.String(FlagDomainID)
@@ -420,18 +331,18 @@ func AdminGetDomainIDOrName(c *cli.Context) {
 		ErrorAndExit("Need either domainName or domainID", nil)
 	}
 
-	db, _ := connectToCassandra(c)
+	domainManager := initializeDomainManager(c)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
 	if len(domainID) > 0 {
-		domain, err := db.SelectDomain(ctx, &domainID, nil)
+		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{ID: domainID})
 		if err != nil {
 			ErrorAndExit("SelectDomain error", err)
 		}
 		fmt.Printf("domainName for domainID %v is %v \n", domainID, domain.Info.Name)
 	} else {
-		domain, err := db.SelectDomain(ctx, nil, &domainName)
+		domain, err := domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: domainName})
 		if err != nil {
 			ErrorAndExit("SelectDomain error", err)
 		}
@@ -550,6 +461,11 @@ func AdminCloseShard(c *cli.Context) {
 	}
 }
 
+type ShardRow struct {
+	ShardID  int32  `header:"ShardID"`
+	Identity string `header:"Identity"`
+}
+
 // AdminDescribeShardDistribution describes shard distribution
 func AdminDescribeShardDistribution(c *cli.Context) {
 	adminClient := cFactory.ServerAdminClient(c)
@@ -574,31 +490,23 @@ func AdminDescribeShardDistribution(c *cli.Context) {
 		return
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetBorder(false)
-	table.SetColumnSeparator("|")
-	header := []string{"ShardID", "Identity"}
-	headerColor := []tablewriter.Colors{tableHeaderBlue, tableHeaderBlue}
-	table.SetHeader(header)
-	table.SetHeaderColor(headerColor...)
-	table.SetHeaderLine(false)
-
+	table := []ShardRow{}
+	opts := RenderOptions{DefaultTemplate: templateTable, Color: true}
 	outputPageSize := tableRenderSize
 	for shardID, identity := range resp.Shards {
 		if outputPageSize == 0 {
-			table.Render()
-			table.ClearRows()
+			Render(c, table, opts)
+			table = []ShardRow{}
 			if !showNextPage() {
 				break
 			}
 			outputPageSize = tableRenderSize
 		}
-		table.Append([]string{strconv.Itoa(int(shardID)), identity})
+		table = append(table, ShardRow{ShardID: shardID, Identity: identity})
 		outputPageSize--
 	}
 	// output the remaining rows
-	table.Render()
-	table.ClearRows()
+	Render(c, table, opts)
 }
 
 // AdminDescribeHistoryHost describes history host

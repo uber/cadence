@@ -69,6 +69,10 @@ func (t thriftClient) GetCrossClusterTasks(ctx context.Context, request *types.G
 	return thrift.ToGetCrossClusterTasksResponse(response), thrift.ToError(err)
 }
 
+func (t thriftClient) CountDLQMessages(ctx context.Context, request *types.CountDLQMessagesRequest, opts ...yarpc.CallOption) (*types.HistoryCountDLQMessagesResponse, error) {
+	return nil, thrift.ToError(&types.BadRequestError{Message: "Feature not supported on TChannel"})
+}
+
 func (t thriftClient) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
 	response, err := t.c.GetDLQReplicationMessages(ctx, thrift.FromGetDLQReplicationMessagesRequest(request), opts...)
 	return thrift.ToGetDLQReplicationMessagesResponse(response), thrift.ToError(err)

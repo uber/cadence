@@ -168,6 +168,7 @@ func NewConfig(params *resource.Params) *Config {
 			ESAnalyzerMaxNumDomains:                  dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumDomains, common.DefaultESAnalyzerMaxNumDomains),
 			ESAnalyzerMaxNumWorkflowTypes:            dc.GetIntProperty(dynamicconfig.ESAnalyzerMaxNumWorkflowTypes, common.DefaultESAnalyzerMaxNumWorkflowTypes),
 			ESAnalyzerLimitToTypes:                   dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToTypes, common.DefaultESAnalyzerLimitToTypes),
+			ESAnalyzerEnableAvgDurationBasedChecks:   dc.GetBoolProperty(dynamicconfig.ESAnalyzerEnableAvgDurationBasedChecks, common.DefaultESAnalyzerEnableAvgDurationBasedChecks),
 			ESAnalyzerLimitToDomains:                 dc.GetStringProperty(dynamicconfig.ESAnalyzerLimitToDomains, common.DefaultESAnalyzerLimitToDomains),
 			ESAnalyzerNumWorkflowsToRefresh:          dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerNumWorkflowsToRefresh, common.DefaultESAnalyzerNumWorkflowsToRefresh),
 			ESAnalyzerBufferWaitTime:                 dc.GetDurationPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTime, common.DefaultESAnalyzerBufferWaitTime),

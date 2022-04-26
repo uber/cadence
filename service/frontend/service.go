@@ -50,12 +50,16 @@ type Config struct {
 	ESVisibilityListMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
 	ESIndexMaxResultWindow          dynamicconfig.IntPropertyFn
 	HistoryMaxPageSize              dynamicconfig.IntPropertyFnWithDomainFilter
-	RPS                             dynamicconfig.IntPropertyFn
-	MaxDomainRPSPerInstance         dynamicconfig.IntPropertyFnWithDomainFilter
-	GlobalDomainRPS                 dynamicconfig.IntPropertyFnWithDomainFilter
+	UserRPS                         dynamicconfig.IntPropertyFn
+	WorkerRPS                       dynamicconfig.IntPropertyFn
+	MaxDomainUserRPSPerInstance     dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxDomainWorkerRPSPerInstance   dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainUserRPS             dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainWorkerRPS           dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
 	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
+	Lockdown                        dynamicconfig.BoolPropertyFnWithDomainFilter
 
 	// id length limits
 	MaxIDLengthWarnLimit  dynamicconfig.IntPropertyFn
@@ -101,7 +105,7 @@ type Config struct {
 	// max number of decisions per RespondDecisionTaskCompleted request (unlimited by default)
 	DecisionResultCountLimit dynamicconfig.IntPropertyFnWithDomainFilter
 
-	//Debugging
+	// Debugging
 
 	// Emit signal related metrics with signal name tag. Be aware of cardinality.
 	EmitSignalNameMetricsTag dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -121,9 +125,12 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES, enableReadFromES),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow, 10000),
 		HistoryMaxPageSize:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
-		RPS:                                         dc.GetIntProperty(dynamicconfig.FrontendRPS, 1200),
-		MaxDomainRPSPerInstance:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainRPSPerInstance, 1200),
-		GlobalDomainRPS:                             dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainRPS, 0),
+		UserRPS:                                     dc.GetIntProperty(dynamicconfig.FrontendUserRPS, 1200),
+		WorkerRPS:                                   dc.GetIntProperty(dynamicconfig.FrontendWorkerRPS, dynamicconfig.UnlimitedRPS),
+		MaxDomainUserRPSPerInstance:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainUserRPSPerInstance, 1200),
+		MaxDomainWorkerRPSPerInstance:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainWorkerRPSPerInstance, dynamicconfig.UnlimitedRPS),
+		GlobalDomainUserRPS:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainUserRPS, 0),
+		GlobalDomainWorkerRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainWorkerRPS, dynamicconfig.UnlimitedRPS),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, common.DefaultIDLengthWarnLimit),
 		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, common.DefaultIDLengthErrorLimit),
 		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength, common.DefaultIDLengthErrorLimit),
@@ -154,6 +161,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		SendRawWorkflowHistory:                      dc.GetBoolPropertyFilteredByDomain(dynamicconfig.SendRawWorkflowHistory, sendRawWorkflowHistory),
 		DecisionResultCountLimit:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDecisionResultCountLimit, 0),
 		EmitSignalNameMetricsTag:                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.FrontendEmitSignalNameMetricsTag, false),
+		Lockdown:                                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.Lockdown, false),
 		domainConfig: domain.Config{
 			MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries, domain.MaxBadBinaries),
 			MinRetentionDays:       dc.GetIntProperty(dynamicconfig.MinRetentionDays, domain.DefaultMinWorkflowRetentionInDays),

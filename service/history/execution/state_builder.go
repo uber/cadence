@@ -523,7 +523,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				event,
+				event, b.shard.GetConfig().WorkflowDeletionJitterRange(b.mutableState.GetDomainEntry().GetInfo().Name),
 			); err != nil {
 				return nil, err
 			}
@@ -537,7 +537,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				event,
+				event, b.shard.GetConfig().WorkflowDeletionJitterRange(b.mutableState.GetDomainEntry().GetInfo().Name),
 			); err != nil {
 				return nil, err
 			}
@@ -551,7 +551,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				event,
+				event, b.shard.GetConfig().WorkflowDeletionJitterRange(b.mutableState.GetDomainEntry().GetInfo().Name),
 			); err != nil {
 				return nil, err
 			}
@@ -565,7 +565,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				event,
+				event, b.shard.GetConfig().WorkflowDeletionJitterRange(b.mutableState.GetDomainEntry().GetInfo().Name),
 			); err != nil {
 				return nil, err
 			}
@@ -579,7 +579,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				event,
+				event, b.shard.GetConfig().WorkflowDeletionJitterRange(b.mutableState.GetDomainEntry().GetInfo().Name),
 			); err != nil {
 				return nil, err
 			}
@@ -621,7 +621,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			}
 
 			if err := taskGenerator.GenerateWorkflowCloseTasks(
-				event,
+				event, b.shard.GetConfig().WorkflowDeletionJitterRange(b.mutableState.GetDomainEntry().GetInfo().Name),
 			); err != nil {
 				return nil, err
 			}

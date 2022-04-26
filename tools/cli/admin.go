@@ -22,16 +22,13 @@
 package cli
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/service/worker/scanner/executions"
-	"github.com/uber/cadence/tools/common/flag"
 )
 
 func newAdminWorkflowCommands() []cli.Command {
@@ -117,7 +114,7 @@ func newAdminWorkflowCommands() []cli.Command {
 					Usage: "skip errors when deleting history",
 				},
 				cli.BoolFlag{
-					Name:  FlagRemoteWithAlias,
+					Name:  FlagRemote,
 					Usage: "Executes deletion on server side",
 				}),
 			Action: func(c *cli.Context) {
@@ -181,6 +178,7 @@ func newAdminShardManagementCommands() []cli.Command {
 					Value: 0,
 					Usage: "Option to show results offset from pagesize * page_id",
 				},
+				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) {
 				AdminDescribeShardDistribution(c)
@@ -261,11 +259,6 @@ func newAdminShardManagementCommands() []cli.Command {
 					Name:  FlagPageSize,
 					Usage: "page size used to query db executions table",
 					Value: 500,
-				},
-				cli.IntFlag{
-					Name:  FlagRPS,
-					Usage: "target rps of database queries",
-					Value: 100,
 				},
 				cli.StringFlag{
 					Name:  FlagStartDate,
@@ -456,8 +449,9 @@ func newAdminDomainCommands() []cli.Command {
 				},
 				cli.BoolFlag{
 					Name:  FlagPrintJSONWithAlias,
-					Usage: "Print in raw json format",
+					Usage: "Print in raw json format (DEPRECATED: instead use --format json)",
 				},
+				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) {
 				newDomainCLI(c, false).ListDomains(c)
@@ -556,6 +550,7 @@ func newAdminElasticSearchCommands() []cli.Command {
 					Name:  FlagURL,
 					Usage: "URL of ElasticSearch cluster",
 				},
+				getFormatFlag(),
 			},
 			Action: func(c *cli.Context) {
 				AdminCatIndices(c)
@@ -754,42 +749,61 @@ func newAdminClusterCommands() []cli.Command {
 	}
 }
 
+func getDLQFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagShards,
+			Usage: "Comma separated shard IDs or inclusive ranges. Example: \"2,5-6,10\".  Alternatively, feed one shard ID per line via STDIN.",
+		},
+		cli.StringFlag{
+			Name:  FlagDLQTypeWithAlias,
+			Usage: "Type of DLQ to manage. (Options: domain, history)",
+			Value: "history",
+		},
+		cli.StringFlag{
+			Name:  FlagSourceCluster,
+			Usage: "The cluster where the task is generated",
+		},
+		cli.IntFlag{
+			Name:  FlagLastMessageIDWithAlias,
+			Usage: "The upper boundary of the read message",
+		},
+	}
+}
+
 func newAdminDLQCommands() []cli.Command {
 	return []cli.Command{
+		{
+			Name:    "count",
+			Aliases: []string{"c"},
+			Usage:   "Count DLQ Messages",
+			Flags: []cli.Flag{
+				getFormatFlag(),
+				cli.StringFlag{
+					Name:  FlagDLQTypeWithAlias,
+					Usage: "Type of DLQ to manage. (Options: domain, history)",
+					Value: "history",
+				},
+				cli.BoolFlag{
+					Name:  FlagForce,
+					Usage: "Force fetch latest counts (will put additional stress on DB)",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminCountDLQMessages(c)
+			},
+		},
 		{
 			Name:    "read",
 			Aliases: []string{"r"},
 			Usage:   "Read DLQ Messages",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage. (Options: domain, history)",
-				},
-				cli.StringFlag{
-					Name:  FlagSourceCluster,
-					Usage: "The cluster where the task is generated",
-				},
-				cli.IntFlag{
-					Name:  FlagShardIDWithAlias,
-					Usage: "ShardID",
-				},
+			Flags: append(getDLQFlags(),
 				cli.IntFlag{
 					Name:  FlagMaxMessageCountWithAlias,
 					Usage: "Max message size to fetch",
 				},
-				cli.IntFlag{
-					Name:  FlagLastMessageIDWithAlias,
-					Usage: "The upper boundary of the read message",
-				},
-				cli.StringFlag{
-					Name:  FlagOutputFilenameWithAlias,
-					Usage: "Output file to write to, if not provided output is written to stdout",
-				},
-				cli.BoolFlag{
-					Name:  FlagDLQRawTask,
-					Usage: "Show DLQ raw task information",
-				},
-			},
+				getFormatFlag(),
+			),
 			Action: func(c *cli.Context) {
 				AdminGetDLQMessages(c)
 			},
@@ -798,28 +812,7 @@ func newAdminDLQCommands() []cli.Command {
 			Name:    "purge",
 			Aliases: []string{"p"},
 			Usage:   "Delete DLQ messages with equal or smaller ids than the provided task id",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage. (Options: domain, history)",
-				},
-				cli.StringFlag{
-					Name:  FlagSourceCluster,
-					Usage: "The cluster where the task is generated",
-				},
-				cli.IntFlag{
-					Name:  FlagLowerShardBound,
-					Usage: "lower bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagUpperShardBound,
-					Usage: "upper bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagLastMessageIDWithAlias,
-					Usage: "The upper boundary of the read message",
-				},
-			},
+			Flags:   getDLQFlags(),
 			Action: func(c *cli.Context) {
 				AdminPurgeDLQMessages(c)
 			},
@@ -828,28 +821,7 @@ func newAdminDLQCommands() []cli.Command {
 			Name:    "merge",
 			Aliases: []string{"m"},
 			Usage:   "Merge DLQ messages with equal or smaller ids than the provided task id",
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  FlagDLQTypeWithAlias,
-					Usage: "Type of DLQ to manage. (Options: domain, history)",
-				},
-				cli.StringFlag{
-					Name:  FlagSourceCluster,
-					Usage: "The cluster where the task is generated",
-				},
-				cli.IntFlag{
-					Name:  FlagLowerShardBound,
-					Usage: "lower bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagUpperShardBound,
-					Usage: "upper bound of shard to merge (inclusive)",
-				},
-				cli.IntFlag{
-					Name:  FlagLastMessageIDWithAlias,
-					Usage: "The upper boundary of the read message",
-				},
-			},
+			Flags:   getDLQFlags(),
 			Action: func(c *cli.Context) {
 				AdminMergeDLQMessages(c)
 			},
@@ -975,91 +947,6 @@ func newDBCommands() []cli.Command {
 			Action: func(c *cli.Context) {
 				AdminDBDataDecodeThrift(c)
 			},
-		},
-	}
-}
-
-func getDBFlags() []cli.Flag {
-	supportedDBs := append(sql.GetRegisteredPluginNames(), "cassandra")
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:  FlagDBType,
-			Value: "cassandra",
-			Usage: fmt.Sprintf("persistence type. Current supported options are %v", supportedDBs),
-		},
-		cli.StringFlag{
-			Name:  FlagDBAddress,
-			Value: "127.0.0.1",
-			Usage: "persistence address (right now only cassandra is fully supported)",
-		},
-		cli.IntFlag{
-			Name:  FlagDBPort,
-			Value: 9042,
-			Usage: "persistence port",
-		},
-		cli.StringFlag{
-			Name:  FlagDBRegion,
-			Usage: "persistence region",
-		},
-		cli.StringFlag{
-			Name:  FlagUsername,
-			Usage: "persistence username",
-		},
-		cli.StringFlag{
-			Name:  FlagPassword,
-			Usage: "persistence password",
-		},
-		cli.StringFlag{
-			Name:  FlagKeyspace,
-			Value: "cadence",
-			Usage: "cassandra keyspace",
-		},
-		cli.StringFlag{
-			Name:  FlagDatabaseName,
-			Value: "cadence",
-			Usage: "sql database name",
-		},
-		cli.StringFlag{
-			Name:  FlagEncodingType,
-			Value: "thriftrw",
-			Usage: "sql database encoding type",
-		},
-		cli.StringSliceFlag{
-			Name: FlagDecodingTypes,
-			Value: &cli.StringSlice{
-				"thriftrw",
-			},
-			Usage: "sql database decoding types",
-		},
-		cli.IntFlag{
-			Name:  FlagProtoVersion,
-			Value: 4,
-			Usage: "cassandra protocol version",
-		},
-		cli.BoolFlag{
-			Name:  FlagEnableTLS,
-			Usage: "enable TLS over cassandra connection",
-		},
-		cli.StringFlag{
-			Name:  FlagTLSCertPath,
-			Usage: "cassandra tls client cert path (tls must be enabled)",
-		},
-		cli.StringFlag{
-			Name:  FlagTLSKeyPath,
-			Usage: "cassandra tls client key path (tls must be enabled)",
-		},
-		cli.StringFlag{
-			Name:  FlagTLSCaPath,
-			Usage: "cassandra tls client ca path (tls must be enabled)",
-		},
-		cli.BoolFlag{
-			Name:  FlagTLSEnableHostVerification,
-			Usage: "cassandra tls verify hostname and server cert (tls must be enabled)",
-		},
-		cli.GenericFlag{
-			Name:  FlagConnectionAttributes,
-			Usage: "a key-value set of sql database connection attributes (must be in key1=value1,key2=value2,...,keyN=valueN format, e.g. cluster=dca or cluster=dca,instance=cadence)",
-			Value: &flag.StringMap{},
 		},
 	}
 }

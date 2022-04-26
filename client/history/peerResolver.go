@@ -81,3 +81,20 @@ func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 	}
 	return host.GetNamedAddress(pr.namedPort)
 }
+
+// GetAllPeers returns all history service peers in the cluster ring.
+func (pr PeerResolver) GetAllPeers() ([]string, error) {
+	hosts, err := pr.resolver.Members(service.History)
+	if err != nil {
+		return nil, err
+	}
+	peers := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		peer, err := host.GetNamedAddress(pr.namedPort)
+		if err != nil {
+			return nil, err
+		}
+		peers = append(peers, peer)
+	}
+	return peers, nil
+}

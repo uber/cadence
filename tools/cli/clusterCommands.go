@@ -24,9 +24,26 @@ import (
 	"os"
 	"sort"
 
-	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
+
+type (
+	SearchAttributesRow struct {
+		Key       string `header:"Key"`
+		ValueType string `header:"Value type"`
+	}
+	SearchAttributesTable []SearchAttributesRow
+)
+
+func (s SearchAttributesTable) Len() int {
+	return len(s)
+}
+func (s SearchAttributesTable) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s SearchAttributesTable) Less(i, j int) bool {
+	return s[i].Key < s[j].Key
+}
 
 // GetSearchAttributes get valid search attributes
 func GetSearchAttributes(c *cli.Context) {
@@ -39,15 +56,10 @@ func GetSearchAttributes(c *cli.Context) {
 		ErrorAndExit("Failed to get search attributes.", err)
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	header := []string{"Key", "Value type"}
-	table.SetHeader(header)
-	table.SetHeaderColor(tableHeaderBlue, tableHeaderBlue)
-	rows := [][]string{}
+	table := SearchAttributesTable{}
 	for k, v := range resp.Keys {
-		rows = append(rows, []string{k, v.String()})
+		table = append(table, SearchAttributesRow{Key: k, ValueType: v.String()})
 	}
-	sort.Sort(byKey(rows))
-	table.AppendBulk(rows)
-	table.Render()
+	sort.Sort(table)
+	RenderTable(os.Stdout, table, RenderOptions{Color: true, Border: true})
 }

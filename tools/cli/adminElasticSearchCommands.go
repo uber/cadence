@@ -71,6 +71,18 @@ func timeValProcess(timeStr string) (string, error) {
 	return fmt.Sprintf("%v", parsedTime.UnixNano()), nil
 }
 
+type ESIndexRow struct {
+	Health             string `header:"Health"`
+	Status             string `header:"Status"`
+	Index              string `header:"Index"`
+	PrimaryShards      int    `header:"Pri"`
+	ReplicaShards      int    `header:"Rep"`
+	DocsCount          int    `header:"Docs Count"`
+	DocsDeleted        int    `header:"Docs Deleted"`
+	StorageSize        string `header:"Store Size"`
+	PrimaryStorageSize string `header:"Pri Store Size"`
+}
+
 // AdminCatIndices cat indices for ES cluster
 func AdminCatIndices(c *cli.Context) {
 	esClient := cFactory.ElasticSearchClient(c)
@@ -81,23 +93,21 @@ func AdminCatIndices(c *cli.Context) {
 		ErrorAndExit("Unable to cat indices", err)
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	header := []string{"health", "status", "index", "pri", "rep", "docs.count", "docs.deleted", "store.size", "pri.store.size"}
-	table.SetHeader(header)
+	table := []ESIndexRow{}
 	for _, row := range resp {
-		data := make([]string, len(header))
-		data[0] = row.Health
-		data[1] = row.Status
-		data[2] = row.Index
-		data[3] = strconv.Itoa(row.Pri)
-		data[4] = strconv.Itoa(row.Rep)
-		data[5] = strconv.Itoa(row.DocsCount)
-		data[6] = strconv.Itoa(row.DocsDeleted)
-		data[7] = row.StoreSize
-		data[8] = row.PriStoreSize
-		table.Append(data)
+		table = append(table, ESIndexRow{
+			Health:             row.Health,
+			Status:             row.Status,
+			Index:              row.Index,
+			PrimaryShards:      row.Pri,
+			ReplicaShards:      row.Rep,
+			DocsCount:          row.DocsCount,
+			DocsDeleted:        row.DocsDeleted,
+			StorageSize:        row.StoreSize,
+			PrimaryStorageSize: row.PriStoreSize,
+		})
 	}
-	table.Render()
+	Render(c, table, RenderOptions{DefaultTemplate: templateTable, Color: true, Border: true})
 }
 
 // AdminIndex used to bulk insert message from kafka parse
@@ -291,7 +301,6 @@ func toTimeStr(s interface{}) string {
 // GenerateReport generate report for an aggregation query to ES
 func GenerateReport(c *cli.Context) {
 	// use url command argument to create client
-	url := getRequiredOption(c, FlagURL)
 	index := getRequiredOption(c, FlagIndex)
 	sql := getRequiredOption(c, FlagListQuery)
 	var reportFormat, reportFilePath string
@@ -303,10 +312,7 @@ func GenerateReport(c *cli.Context) {
 	} else {
 		reportFilePath = "./report." + reportFormat
 	}
-	esClient, err := elastic.NewClient(elastic.SetURL(url))
-	if err != nil {
-		ErrorAndExit("Fail to create elastic client", err)
-	}
+	esClient := cFactory.ElasticSearchClient(c)
 	ctx := context.Background()
 
 	// convert sql to dsl

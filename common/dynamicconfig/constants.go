@@ -20,6 +20,8 @@
 
 package dynamicconfig
 
+import "math"
+
 // Key represents a key/property stored in dynamic config
 type Key int
 
@@ -30,6 +32,15 @@ func (k Key) String() string {
 	}
 	return keyName
 }
+
+// UnlimitedRPS represents an integer to use for "unlimited" RPS values.
+//
+// Since our ratelimiters do int/float conversions, and zero or negative values
+// result in not allowing any requests, math.MaxInt is unsafe:
+//   int(float64(math.MaxInt)) // -9223372036854775808
+//
+// Much higher values are possible, but we can't handle 2 billion RPS, this is good enough.
+const UnlimitedRPS = math.MaxInt32
 
 /***
 * !!!Important!!!
@@ -355,24 +366,42 @@ const (
 	// Default value: 1000 (see common.GetHistoryMaxPageSize)
 	// Allowed filters: DomainName
 	FrontendHistoryMaxPageSize
-	// FrontendRPS is workflow rate limit per second
+	// FrontendUserRPS is workflow rate limit per second
 	// KeyName: frontend.rps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: N/A
-	FrontendRPS
-	// FrontendMaxDomainRPSPerInstance is workflow domain rate limit per second
+	FrontendUserRPS
+	// FrontendWorkerRPS is background-processing workflow rate limit per second
+	// KeyName: frontend.workerrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: N/A
+	FrontendWorkerRPS
+	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
 	// KeyName: frontend.domainrps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: DomainName
-	FrontendMaxDomainRPSPerInstance
-	// FrontendGlobalDomainRPS is workflow domain rate limit per second for the whole Cadence cluster
+	FrontendMaxDomainUserRPSPerInstance
+	// FrontendMaxDomainWorkerRPSPerInstance is background-processing workflow domain rate limit per second
+	// KeyName: frontend.domainworkerrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	FrontendMaxDomainWorkerRPSPerInstance
+	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
 	// Default value: 0
 	// Allowed filters: DomainName
-	FrontendGlobalDomainRPS
+	FrontendGlobalDomainUserRPS
+	// FrontendGlobalDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster
+	// KeyName: frontend.globalDomainWorkerrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	FrontendGlobalDomainWorkerRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
 	// KeyName: frontend.decisionResultCountLimit
 	// Value type: Int
@@ -478,18 +507,30 @@ const (
 
 	// key for matching
 
-	// MatchingRPS is request rate per second for each matching host
+	// MatchingUserRPS is request rate per second for each matching host
 	// KeyName: matching.rps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: N/A
-	MatchingRPS
-	// MatchingDomainRPS is request rate per domain per second for each matching host
+	MatchingUserRPS
+	// MatchingWorkerRPS is background-processing request rate per second for each matching host
+	// KeyName: matching.workerrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: N/A
+	MatchingWorkerRPS
+	// MatchingDomainUserRPS is request rate per domain per second for each matching host
 	// KeyName: matching.domainrps
 	// Value type: Int
 	// Default value: 1200
 	// Allowed filters: N/A
-	MatchingDomainRPS
+	MatchingDomainUserRPS
+	// MatchingDomainWorkerRPS is background-processing request rate per domain per second for each matching host
+	// KeyName: matching.domainworkerrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: N/A
+	MatchingDomainWorkerRPS
 	// MatchingPersistenceMaxQPS is the max qps matching host can query DB
 	// KeyName: matching.persistenceMaxQPS
 	// Value type: Int
@@ -1032,7 +1073,7 @@ const (
 	// TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival
 	// KeyName: history.timerProcessorArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 1s (1*time.Second)
+	// Default value: 2s (2*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorArchivalTimeLimit
 
@@ -1138,7 +1179,7 @@ const (
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	// KeyName: history.transferProcessorVisibilityArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 200ms (200*time.Millisecond)
+	// Default value: 400ms (400*time.Millisecond)
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
 
@@ -1555,6 +1596,12 @@ const (
 	// Default value: 0
 	// Allowed filters: N/A
 	MutableStateChecksumInvalidateBefore
+	// EnableHistoryCorruptionCheck enables additional sanity check for corrupted history. This allows early catches of DB corruptions but potiantally increased latency.
+	// KeyName: history.enableHistoryCorruptionCheck
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: DomainName
+	EnableHistoryCorruptionCheck
 	// NotifyFailoverMarkerInterval is determines the frequency to notify failover marker
 	// KeyName: history.NotifyFailoverMarkerInterval
 	// Value type: Duration
@@ -2124,6 +2171,11 @@ const (
 	// Value type: Int
 	// Default value: "" => means no limitation
 	ESAnalyzerLimitToTypes
+	// ESAnalyzerEnableAvgDurationBasedChecks controls if we want to enable avg duration based task refreshes
+	// KeyName: worker.ESAnalyzerEnableAvgDurationBasedChecks
+	// Value type: Bool
+	// Default value: false
+	ESAnalyzerEnableAvgDurationBasedChecks
 	// ESAnalyzerLimitToDomains controls if we want to limit ESAnalyzer only to some domains
 	// KeyName: worker.ESAnalyzerLimitToDomains
 	// Value type: Int
@@ -2131,7 +2183,7 @@ const (
 	ESAnalyzerLimitToDomains
 	// ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types
 	// KeyName: worker.ESAnalyzerWorkflowDurationWarnThresholds
-	// Value type: string (json of a dictionary {"<domainName>/<workflowType>":<value>,...})
+	// Value type: string [{"DomainName":"<domain>", "WorkflowType":"<workflowType>", "Threshold":"<duration>", "Refresh":<shouldRefresh>, "MaxNumWorkflows":<maxNumber>}]
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
 
@@ -2140,6 +2192,18 @@ const (
 	// Value type: bool
 	// Default value: false
 	CorruptWorkflowWatchdogPause
+
+	// Lockdown defines if we want to allow failovers of domains to this cluster
+	// KeyName: system.Lockdown
+	// Value type: bool
+	// Default value: false
+	Lockdown
+
+	// WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering
+	// KeyName: system.workflowDeletionJitterRange
+	// Value type: Duration
+	// Default value: 1 (no jittering)
+	WorkflowDeletionJitterRange
 
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
@@ -2193,6 +2257,8 @@ var Keys = map[Key]string{
 	EnableGRPCOutbound:                  "system.enableGRPCOutbound",
 	GRPCMaxSizeInByte:                   "system.grpcMaxSizeInByte",
 	EnableWatchDog:                      "system.EnableWatchDog",
+	Lockdown:                            "system.Lockdown",
+	WorkflowDeletionJitterRange:         "system.workflowDeletionJitterRange",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -2229,10 +2295,13 @@ var Keys = map[Key]string{
 	FrontendFailoverCoolDown:                    "frontend.failoverCoolDown",
 	FrontendESIndexMaxResultWindow:              "frontend.esIndexMaxResultWindow",
 	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
-	FrontendRPS:                                 "frontend.rps",
-	FrontendMaxDomainRPSPerInstance:             "frontend.domainrps",
+	FrontendUserRPS:                             "frontend.rps",
+	FrontendWorkerRPS:                           "frontend.workerrps",
+	FrontendMaxDomainUserRPSPerInstance:         "frontend.domainrps",
+	FrontendMaxDomainWorkerRPSPerInstance:       "frontend.domainworkerrps",
 	FrontendDecisionResultCountLimit:            "frontend.decisionResultCountLimit",
-	FrontendGlobalDomainRPS:                     "frontend.globalDomainrps",
+	FrontendGlobalDomainUserRPS:                 "frontend.globalDomainrps",
+	FrontendGlobalDomainWorkerRPS:               "frontend.globalDomainWorkerrps",
 	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
 	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
 	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
@@ -2249,8 +2318,10 @@ var Keys = map[Key]string{
 	FrontendErrorInjectionRate:                  "frontend.errorInjectionRate",
 	FrontendEmitSignalNameMetricsTag:            "frontend.emitSignalNameMetricsTag",
 	// matching settings
-	MatchingRPS:                             "matching.rps",
-	MatchingDomainRPS:                       "matching.domainrps",
+	MatchingUserRPS:                         "matching.rps",
+	MatchingWorkerRPS:                       "matching.workerrps",
+	MatchingDomainUserRPS:                   "matching.domainrps",
+	MatchingDomainWorkerRPS:                 "matching.domainworkerrps",
 	MatchingPersistenceMaxQPS:               "matching.persistenceMaxQPS",
 	MatchingPersistenceGlobalMaxQPS:         "matching.persistenceGlobalMaxQPS",
 	MatchingMinTaskThrottlingBurstSize:      "matching.minTaskThrottlingBurstSize",
@@ -2453,6 +2524,7 @@ var Keys = map[Key]string{
 	MutableStateChecksumGenProbability:                 "history.mutableStateChecksumGenProbability",
 	MutableStateChecksumVerifyProbability:              "history.mutableStateChecksumVerifyProbability",
 	MutableStateChecksumInvalidateBefore:               "history.mutableStateChecksumInvalidateBefore",
+	EnableHistoryCorruptionCheck:                       "history.enableHistoryCorruptionCheck",
 	NotifyFailoverMarkerInterval:                       "history.NotifyFailoverMarkerInterval",
 	NotifyFailoverMarkerTimerJitterCoefficient:         "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                      "history.DropStuckTaskByDomain",
@@ -2528,6 +2600,7 @@ var Keys = map[Key]string{
 	ESAnalyzerBufferWaitTime:                 "worker.ESAnalyzerBufferWaitTime",
 	ESAnalyzerMinNumWorkflowsForAvg:          "worker.ESAnalyzerMinNumWorkflowsForAvg",
 	ESAnalyzerLimitToTypes:                   "worker.ESAnalyzerLimitToTypes",
+	ESAnalyzerEnableAvgDurationBasedChecks:   "worker.ESAnalyzerEnableAvgDurationBasedChecks",
 	ESAnalyzerLimitToDomains:                 "worker.ESAnalyzerLimitToDomains",
 	ESAnalyzerWorkflowDurationWarnThresholds: "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 
