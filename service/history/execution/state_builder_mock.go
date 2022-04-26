@@ -28,6 +28,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
 	types "github.com/uber/cadence/common/types"
 )
 
