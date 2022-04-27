@@ -606,7 +606,7 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 	_ context.Context,
 	taskInfo Info,
 	postActionInfo interface{},
-	log log.Logger,
+	_ log.Logger,
 ) error {
 
 	if postActionInfo == nil {
@@ -645,7 +645,9 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 			tag.WorkflowDomainID(transferTask.DomainID),
 			tag.WorkflowID(transferTask.WorkflowID),
 			tag.WorkflowRunID(transferTask.RunID),
-			tag.SourceCluster(t.clusterName))
+			tag.SourceCluster(t.clusterName),
+			tag.Error(err),
+		)
 	}
 
 	// return error so task processing logic will retry
