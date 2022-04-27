@@ -51,7 +51,7 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
 
 
 # Alpine base image
-FROM alpine:3.11 AS alpine
+FROM alpine:3.15 AS alpine
 
 RUN apk add --update --no-cache ca-certificates tzdata bash curl
 
