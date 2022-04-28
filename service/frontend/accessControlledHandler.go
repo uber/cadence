@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-var errUnauthorized = &types.BadRequestError{Message: "Request unauthorized."}
+var errUnauthorized = &types.AccessDeniedError{Message: "Request unauthorized."}
 
 // AccessControlledWorkflowHandler frontend handler wrapper for authentication and authorization
 type AccessControlledWorkflowHandler struct {
