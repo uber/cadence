@@ -82,6 +82,8 @@ const (
 	FlagInputWithAlias                    = FlagInput + ", i"
 	FlagInputFile                         = "input_file"
 	FlagInputFileWithAlias                = FlagInputFile + ", if"
+	FlagInputEncoding                     = "encoding"
+	FlagInputEncodingWithAlias            = FlagInputEncoding + ", enc"
 	FlagSignalInput                       = "signal_input"
 	FlagSignalInputWithAlias              = FlagSignalInput + ", si"
 	FlagSignalInputFile                   = "signal_input_file"
