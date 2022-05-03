@@ -410,19 +410,28 @@ func (wh *WorkflowHandler) UpdateDomain(
 			return nil, err
 		}
 	} else {
+		wh.GetLogger().Info("Failover request received, checking failover permission.", tag.WorkflowDomainName(updateRequest.GetName()))
 		// reject the failover if the cluster is in lockdown
 		if err := checkFailOverPermission(wh.config, updateRequest.Name); err != nil {
+			wh.GetLogger().Error(fmt.Sprintf("Failover rejected for domain %s", updateRequest.GetName()),
+				tag.Error(err))
 			return nil, err
 		}
+		wh.GetLogger().Info("Failover permission checked successfully.", tag.WorkflowDomainName(updateRequest.GetName()))
 	}
 
 	if isGraceFailoverRequest(updateRequest) {
+		wh.GetLogger().Info("Grace failover request received, checking ongoing failovers.", tag.WorkflowDomainName(updateRequest.GetName()))
 		if err := wh.checkOngoingFailover(
 			ctx,
 			&updateRequest.Name,
 		); err != nil {
+			wh.GetLogger().Error(
+				fmt.Sprintf("Failed to check ongoing failover for domain %s", updateRequest.GetName()),
+				tag.Error(err))
 			return nil, err
 		}
+		wh.GetLogger().Info("Ongoing failovers checked successfully.", tag.WorkflowDomainName(updateRequest.GetName()))
 	}
 
 	if updateRequest.GetName() == "" {
