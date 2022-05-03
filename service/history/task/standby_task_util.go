@@ -53,7 +53,7 @@ func standbyTaskPostActionNoOp(
 	}
 
 	// return error so task processing logic will retry
-	return &RedispatchError{Reason: fmt.Sprintf("post action is %T", postActionInfo)}
+	return &redispatchError{Reason: fmt.Sprintf("post action is %T", postActionInfo)}
 }
 
 func standbyTransferTaskPostActionTaskDiscarded(

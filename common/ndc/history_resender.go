@@ -294,7 +294,6 @@ func (n *HistoryResenderImpl) getHistory(
 		NextPageToken:     token,
 	})
 	if err != nil {
-		logger.Error("error getting history", tag.Error(err))
 		return nil, err
 	}
 

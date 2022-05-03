@@ -51,18 +51,18 @@ const (
 	stickyTaskMaxRetryCount = 100
 )
 
-// RedispatchError is the error indicating that the timer / transfer task should be redispatched and retried.
-type RedispatchError struct {
+// redispatchError is the error indicating that the timer / transfer task should be redispatched and retried.
+type redispatchError struct {
 	Reason string
 }
 
 // Error explains why this task should be redispatched
-func (r *RedispatchError) Error() string {
+func (r *redispatchError) Error() string {
 	return fmt.Sprintf("Redispatch reason: %q", r.Reason)
 }
 
 func isRedispatchErr(err error) bool {
-	var redispatchErr *RedispatchError
+	var redispatchErr *redispatchError
 	return errors.As(err, &redispatchErr)
 }
 

@@ -651,7 +651,7 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 	}
 
 	// return error so task processing logic will retry
-	return &RedispatchError{Reason: "fetchHistoryFromRemote"}
+	return &redispatchError{Reason: "fetchHistoryFromRemote"}
 }
 
 func (t *transferStandbyTaskExecutor) getCurrentTime() time.Time {
