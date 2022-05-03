@@ -123,7 +123,7 @@ func (lg *loggerImpl) buildFields(tags []tag.Tag, keyPrefix string) []zap.Field 
 		fs = append(fs, f)
 
 		if withTags, ok := f.Interface.(taggable); ok {
-			fs = append(fs, lg.buildFields(withTags.Tags(), fmt.Sprintf("%s-", f.Key))...)
+			fs = append(fs, lg.buildFields(withTags.Tags(), f.Key + "-"))...)
 		}
 	}
 	return fs
