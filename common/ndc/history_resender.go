@@ -25,6 +25,7 @@ package ndc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	adminClient "github.com/uber/cadence/client/admin"
@@ -141,13 +142,9 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 	for historyIterator.HasNext() {
 		result, err := historyIterator.Next()
 		if err != nil {
-			n.logger.Error("failed to get history events",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
-			return err
+			return fmt.Errorf("history iterator: %w", err)
 		}
+
 		historyBatch := result.(*historyBatch)
 		replicationRequest := n.createReplicationRawRequest(
 			domainID,
@@ -164,22 +161,12 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 		case *types.EntityNotExistsError:
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
-			if skipTask := n.fixCurrentExecution(
-				ctx,
-				domainID,
-				workflowID,
-				runID,
-			); skipTask {
+			if skipTask := n.fixCurrentExecution(ctx, domainID, workflowID, runID); skipTask {
 				return ErrSkipTask
 			}
 			return err
 		default:
-			n.logger.Error("failed to replicate events",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
-			return err
+			return fmt.Errorf("sending replication request: %w", err)
 		}
 	}
 	return nil
@@ -270,12 +257,9 @@ func (n *HistoryResenderImpl) getHistory(
 	pageSize int32,
 ) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 
-	logger := n.logger.WithTags(tag.WorkflowRunID(runID))
-
 	domainName, err := n.domainCache.GetDomainName(domainID)
 	if err != nil {
-		logger.Error("error getting domain", tag.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("getting domain: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
@@ -294,8 +278,7 @@ func (n *HistoryResenderImpl) getHistory(
 		NextPageToken:     token,
 	})
 	if err != nil {
-		logger.Error("error getting history", tag.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("getting history: %w", err)
 	}
 
 	return response, nil
