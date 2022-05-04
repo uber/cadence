@@ -10,7 +10,7 @@ CREATE TABLE closed_executions_v2 (
   workflow_type_name   text,
   history_length       bigint,
   PRIMARY KEY  ((domain_id, domain_partition), close_time, run_id)
-) WITH CLUSTERING ORDER BY (close_time DESC)
+) WITH CLUSTERING ORDER BY (close_time DESC, run_id DESC)
   AND COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }

@@ -6,7 +6,7 @@ CREATE TABLE open_executions (
   start_time           timestamp,
   workflow_type_name   text,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
-) WITH CLUSTERING ORDER BY (start_time DESC)
+) WITH CLUSTERING ORDER BY (start_time DESC, run_id DESC)
   AND COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }
@@ -27,7 +27,7 @@ CREATE TABLE closed_executions (
   workflow_type_name   text,
   history_length       bigint,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
-) WITH CLUSTERING ORDER BY (start_time DESC)
+) WITH CLUSTERING ORDER BY (start_time DESC, run_id DESC)
   AND COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }

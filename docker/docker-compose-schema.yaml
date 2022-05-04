@@ -1,0 +1,71 @@
+version: "3.5"
+services:
+  cql-proxy:
+    container_name: cqlproxy-cadence
+    image: datastax/cql-proxy:v0.1.2
+    healthcheck:
+      test: 'printf "GET /readiness HTTP/1.0\r\nHost: localhost\r\n\r\n" | nc localhost 8000 | grep "200 OK"'
+      interval: 1s
+      timeout: 5s
+      retries: 5
+    ports:
+      - 9042:9042
+      - 8000:8000
+    environment:
+      - ASTRA_TOKEN=${ASTRA_TOKEN}
+      - ASTRA_DATABASE_ID=${ASTRA_DATABASE_ID}
+      - HEALTH_CHECK=true
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus_config.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+  node-exporter:
+    image: prom/node-exporter
+    ports:
+      - '9100:9100'
+  cadence:
+    container_name: cadence
+    image: ubercadence/server:master-auto-setup
+    entrypoint: /usr/local/bin/cadence-cassandra-tool
+    volumes:
+      - ./schema/cassandra/:/etc/cadence/schema/cassandra/
+    ports:
+     - "8000:8000"
+     - "8001:8001"
+     - "8002:8002"
+     - "8003:8003"
+     - "7933:7933"
+     - "7934:7934"
+     - "7935:7935"
+     - "7939:7939"
+     - "7833:7833"
+    environment:
+      - "CASSANDRA_SEEDS=cql-proxy"
+      - "PROMETHEUS_ENDPOINT_0=0.0.0.0:8000"
+      - "PROMETHEUS_ENDPOINT_1=0.0.0.0:8001"
+      - "PROMETHEUS_ENDPOINT_2=0.0.0.0:8002"
+      - "PROMETHEUS_ENDPOINT_3=0.0.0.0:8003"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml"
+    depends_on:
+      #- prometheus
+      cql-proxy:
+        condition: service_healthy
+  cadence-web:
+    image: ubercadence/web:latest
+    environment:
+      - "CADENCE_TCHANNEL_PEERS=cadence:7933"
+    ports:
+      - "8088:8088"
+    depends_on:
+      - cadence
+  grafana:
+    image: grafana/grafana
+    user: "1000"
+    depends_on:
+      - prometheus
+    ports:
+      - '3000:3000'

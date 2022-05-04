@@ -12,7 +12,7 @@ CREATE TABLE open_executions (
   is_cron              boolean,
   num_clusters         int,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
-) WITH CLUSTERING ORDER BY (start_time DESC)
+) WITH CLUSTERING ORDER BY (start_time DESC, run_id DESC)
   AND COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy',
     'tombstone_threshold': 0.6
@@ -40,7 +40,7 @@ CREATE TABLE closed_executions (
   is_cron              boolean,
   num_clusters         int,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
-) WITH CLUSTERING ORDER BY (start_time DESC)
+) WITH CLUSTERING ORDER BY (start_time DESC, run_id DESC)
   AND COMPACTION = {
     'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'
   }

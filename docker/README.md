@@ -39,6 +39,7 @@ We also provide several other compose files for different features/modes:
 * docker-compose-postgres.yml uses PostgreSQL as persistence storage
 * docker-compose-statsd.yaml runs with Statsd+Graphite
 * docker-compose-multiclusters.yaml runs with 2 cadence clusters
+* docker-compose-astra.yaml uses DataStax Astra as persistence storage (see below for step by step instructions)
 
 For example:
 ```
@@ -57,6 +58,33 @@ and
 ```
 docker-compose -f docker-compose-canary.yml up
 ``` 
+
+Using DataStax Astra as persistence
+-----------------------
+1. Create an Astra DB at [https://astra.datastax.com/](https://astra.datastax.com/)
+2. Add two keyspaces in the Astra DB UI via "Add Keyspace": `cadence` and `cadence_visibility`
+3. Create a new [Astra token](https://docs.datastax.com/en/astra/docs/manage-application-tokens.html) and get your DB's identifier
+  * DB identifer is the "Datacenter ID" without the `-1` at the end (you'll have to copy and remove that trailing `-1`)
+4. Update the `.env` file with your `ASTRA_TOKEN` and `ASTRA_DATABASE_ID`
+5. Update the Temporal schema by running these commands:
+
+```bash
+docker-compose -f docker-compose-schema.yaml run cadence \
+  -ep cqlproxy-cadence -k cadence setup-schema -v 0.0
+docker-compose -f docker-compose-schema.yaml run cadence \
+  -ep cql-proxy -k cadence update-schema -d schema/cassandra/cadence/versioned/
+
+docker-compose -f docker-compose-schema.yaml run cadence \
+  -ep cql-proxy -k cadence_visibility setup-schema -v 0.0
+docker-compose -f docker-compose-schema.yaml run cadence \
+  -ep cql-proxy -k cadence_visibility update-schema -d schema/cassandra/visibility/versioned/
+```
+
+6. Run Cadence!
+
+```bash
+docker-compose -f docker-compose-astra.yml up
+```
 
 
 Using a released image
