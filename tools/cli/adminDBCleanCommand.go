@@ -24,6 +24,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -43,13 +44,12 @@ import (
 
 // AdminDBDataDecodeThrift is the command to decode thrift binary into JSON
 func AdminDBDataDecodeThrift(c *cli.Context) {
-	input := getRequiredOption(c, FlagInput)
+	dataInput, err := decodeInput(c)
+	if err != nil {
+		ErrorAndExit("failed to decode input", err)
+	}
 
 	encoder := codec.NewThriftRWEncoder()
-	dataInput, err := hex.DecodeString(input)
-	if err != nil {
-		ErrorAndExit("input is not a valid hex string", err)
-	}
 	// this is an inconsistency in the code base, some place use ThriftRWEncoder(version0Thriftrw.go) some use thriftEncoder(thrift_encoder.go)
 	dataWithPrepend := []byte{0x59}
 	dataWithPrepend = append(dataWithPrepend, dataInput...)
@@ -77,7 +77,20 @@ func AdminDBDataDecodeThrift(c *cli.Context) {
 	if !found {
 		ErrorAndExit("input data cannot be decoded into any struct", nil)
 	}
+}
 
+func decodeInput(c *cli.Context) ([]byte, error) {
+	input := getRequiredOption(c, FlagInput)
+	encoding := c.String(FlagInputEncoding)
+
+	switch encoding {
+	case "", "hex":
+		return hex.DecodeString(input)
+	case "base64":
+		return base64.StdEncoding.DecodeString(input)
+	}
+
+	return nil, fmt.Errorf("unknown input encoding: %s", encoding)
 }
 
 // AdminDBClean is the command to clean up unhealthy executions.

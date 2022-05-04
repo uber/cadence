@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
@@ -71,7 +72,7 @@ func TestUpdateHelper(t *testing.T) {
 		{
 			msg: "update workflow conflict",
 			mockSetupFn: func(mockContext *execution.MockContext, mockMutableState *execution.MockMutableState) {
-				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(execution.ErrConflict).Times(ConditionalRetryCount - 1)
+				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(execution.NewConflictError(t, assert.AnError)).Times(ConditionalRetryCount - 1)
 				mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 			actionFn: func(context execution.Context, mutableState execution.MutableState) (*UpdateAction, error) {

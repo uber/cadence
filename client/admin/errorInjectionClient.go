@@ -414,6 +414,32 @@ func (c *errorInjectionClient) ReapplyEvents(
 	return clientErr
 }
 
+func (c *errorInjectionClient) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.CountDLQMessagesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.CountDLQMessagesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.CountDLQMessages(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationCountDLQMessages,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
 func (c *errorInjectionClient) ReadDLQMessages(
 	ctx context.Context,
 	request *types.ReadDLQMessagesRequest,

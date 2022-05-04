@@ -137,8 +137,8 @@ func (s *taskSuite) TestHandleErr_ErrTaskRetry() {
 		return true, nil
 	}, nil)
 
-	err := ErrTaskRedispatch
-	s.Equal(ErrTaskRedispatch, taskBase.HandleErr(err))
+	err := &redispatchError{Reason: "random-reason"}
+	s.Equal(err, taskBase.HandleErr(err))
 }
 
 func (s *taskSuite) TestHandleErr_ErrTaskDiscarded() {

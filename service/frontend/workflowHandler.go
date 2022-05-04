@@ -4217,7 +4217,9 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 			continue
 		}
 		frontendClient := wh.GetRemoteFrontendClient(clusterName)
-		g.Go(func() error {
+		g.Go(func() (e error) {
+			defer log.CapturePanic(wh.GetLogger(), &e)
+
 			resp, _ := frontendClient.DescribeDomain(ctx, &types.DescribeDomainRequest{Name: domainName})
 			respChan <- resp
 			return nil

@@ -104,6 +104,16 @@ func TestHistoryGetReplicationMessagesResponse(t *testing.T) {
 		assert.Equal(t, item, ToHistoryGetReplicationMessagesResponse(FromHistoryGetReplicationMessagesResponse(item)))
 	}
 }
+func TestHistoryCountDLQMessagesRequest(t *testing.T) {
+	for _, item := range []*types.CountDLQMessagesRequest{nil, {}, &testdata.HistoryCountDLQMessagesRequest} {
+		assert.Equal(t, item, ToHistoryCountDLQMessagesRequest(FromHistoryCountDLQMessagesRequest(item)))
+	}
+}
+func TestHistoryCountDLQMessagesResponse(t *testing.T) {
+	for _, item := range []*types.HistoryCountDLQMessagesResponse{nil, {}, &testdata.HistoryCountDLQMessagesResponse} {
+		assert.Equal(t, item, ToHistoryCountDLQMessagesResponse(FromHistoryCountDLQMessagesResponse(item)))
+	}
+}
 func TestHistoryMergeDLQMessagesRequest(t *testing.T) {
 	for _, item := range []*types.MergeDLQMessagesRequest{nil, {}, &testdata.HistoryMergeDLQMessagesRequest} {
 		assert.Equal(t, item, ToHistoryMergeDLQMessagesRequest(FromHistoryMergeDLQMessagesRequest(item)))
