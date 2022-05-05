@@ -255,14 +255,14 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
 		}
-		if params.syncMatchActivityTaskInfo != nil {
-			c.logger.Error("Error to sync match.. ",
-				tag.Error(err),
-				tag.WorkflowTaskListName(c.taskListID.name),
-				tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
-				tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
-			return nil, errRemoteSyncMatchFailed
-		}
+		//if params.syncMatchActivityTaskInfo != nil {
+		//	c.logger.Error("Error to sync match.. ",
+		//		tag.Error(err),
+		//		tag.WorkflowTaskListName(c.taskListID.name),
+		//		tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
+		//		tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
+		//	return nil, errRemoteSyncMatchFailed
+		//}
 
 		if isForwarded {
 			// forwarded from child partition - only do sync match
@@ -551,38 +551,38 @@ func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskPa
 	}
 	var matched bool
 	var err error
-	if params.syncMatchActivityTaskInfo != nil {
-		c.logger.Info("Trying to sync match.. ",
-			tag.Error(err),
-			tag.WorkflowTaskListName(c.taskListID.name),
-			tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
-			tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
-		matched, err = c.matcher.offerOrTimeout(childCtx, task)
-		if err == nil {
-			if matched {
-				c.logger.Info("Success to sync match.. ",
-					tag.Error(err),
-					tag.WorkflowTaskListName(c.taskListID.name),
-					tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
-					tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
-			} else {
-				c.logger.Info("Fail 1 to sync match.. ",
-					tag.Error(err),
-					tag.WorkflowTaskListName(c.taskListID.name),
-					tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
-					tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
-				return matched, errRemoteSyncMatchFailed
-			}
-		} else {
-			c.logger.Info("Fail 2 to sync match.. ",
-				tag.Error(err),
-				tag.WorkflowTaskListName(c.taskListID.name),
-				tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
-				tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
-		}
-	} else {
-		matched, err = c.matcher.Offer(childCtx, task)
-	}
+	//if params.syncMatchActivityTaskInfo != nil {
+	//	c.logger.Info("Trying to sync match.. ",
+	//		tag.Error(err),
+	//		tag.WorkflowTaskListName(c.taskListID.name),
+	//		tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
+	//		tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
+	//	matched, err = c.matcher.offerOrTimeout(childCtx, task)
+	//	if err == nil {
+	//		if matched {
+	//			c.logger.Info("Success to sync match.. ",
+	//				tag.Error(err),
+	//				tag.WorkflowTaskListName(c.taskListID.name),
+	//				tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
+	//				tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
+	//		} else {
+	//			c.logger.Info("Fail 1 to sync match.. ",
+	//				tag.Error(err),
+	//				tag.WorkflowTaskListName(c.taskListID.name),
+	//				tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
+	//				tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
+	//			return matched, errRemoteSyncMatchFailed
+	//		}
+	//	} else {
+	//		c.logger.Info("Fail 2 to sync match.. ",
+	//			tag.Error(err),
+	//			tag.WorkflowTaskListName(c.taskListID.name),
+	//			tag.WorkflowType(params.syncMatchActivityTaskInfo.WorkflowType.Name),
+	//			tag.Name(params.syncMatchActivityTaskInfo.WorkflowDomain))
+	//	}
+	//} else {
+	matched, err = c.matcher.Offer(childCtx, task)
+	//}
 	cancel()
 	return matched, err
 }
