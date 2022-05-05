@@ -1041,7 +1041,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(
 	retryPolicy *types.RetryPolicy,
 	requestLocalDispatch bool,
 ) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo) {
-	event, ai, activityDispatchInfo, err, _, _ := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
+	event, ai, activityDispatchInfo, _, _, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    activityID,
 			ActivityType:                  &types.ActivityType{Name: activityType},
