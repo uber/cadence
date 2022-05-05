@@ -1992,6 +1992,8 @@ const (
 	AckLevelUpdateCounter
 	AckLevelUpdateFailedCounter
 	DecisionTypeScheduleActivityCounter
+	DecisionTypeScheduleActivityDispatchSucceedCounter
+	DecisionTypeScheduleActivityDispatchCounter
 	DecisionTypeCompleteWorkflowCounter
 	DecisionTypeFailWorkflowCounter
 	DecisionTypeCancelWorkflowCounter
@@ -2534,6 +2536,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		AckLevelUpdateCounter:                               {metricName: "ack_level_update", metricType: Counter},
 		AckLevelUpdateFailedCounter:                         {metricName: "ack_level_update_failed", metricType: Counter},
 		DecisionTypeScheduleActivityCounter:                 {metricName: "schedule_activity_decision", metricType: Counter},
+		DecisionTypeScheduleActivityDispatchSucceedCounter:  {metricName: "schedule_activity_decision_sync_match_succeed", metricType: Counter},
+		DecisionTypeScheduleActivityDispatchCounter:         {metricName: "schedule_activity_decision_try_sync_match", metricType: Counter},
 		DecisionTypeCompleteWorkflowCounter:                 {metricName: "complete_workflow_decision", metricType: Counter},
 		DecisionTypeFailWorkflowCounter:                     {metricName: "fail_workflow_decision", metricType: Counter},
 		DecisionTypeCancelWorkflowCounter:                   {metricName: "cancel_workflow_decision", metricType: Counter},
