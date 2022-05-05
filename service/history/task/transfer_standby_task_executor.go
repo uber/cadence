@@ -22,6 +22,7 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -73,7 +74,6 @@ func (t *transferStandbyTaskExecutor) Execute(
 	task Task,
 	shouldProcessTask bool,
 ) error {
-
 	transferTask, ok := task.GetInfo().(*persistence.TransferTaskInfo)
 	if !ok {
 		return errUnexpectedTask
@@ -535,7 +535,7 @@ func (t *transferStandbyTaskExecutor) processTransfer(
 		return err
 	}
 	defer func() {
-		if retError == ErrTaskRedispatch {
+		if isRedispatchErr(err) {
 			release(nil)
 		} else {
 			release(retError)
@@ -613,7 +613,7 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 		return nil
 	}
 
-	transferTask := taskInfo.(*persistence.TransferTaskInfo)
+	task := taskInfo.(*persistence.TransferTaskInfo)
 	resendInfo := postActionInfo.(*historyResendInfo)
 
 	t.metricsClient.IncCounter(metrics.HistoryRereplicationByTransferTaskScope, metrics.CadenceClientRequests)
@@ -625,9 +625,9 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 		// note history resender doesn't take in a context parameter, there's a separate dynamicconfig for
 		// controlling the timeout for resending history.
 		err = t.historyResender.SendSingleWorkflowHistory(
-			transferTask.DomainID,
-			transferTask.WorkflowID,
-			transferTask.RunID,
+			task.DomainID,
+			task.WorkflowID,
+			task.RunID,
 			resendInfo.lastEventID,
 			resendInfo.lastEventVersion,
 			nil,
@@ -635,23 +635,23 @@ func (t *transferStandbyTaskExecutor) fetchHistoryFromRemote(
 		)
 	} else {
 		err = &types.InternalServiceError{
-			Message: "transferQueueStandbyProcessor encounter empty historyResendInfo",
+			Message: fmt.Sprintf("incomplete historyResendInfo: %v", resendInfo),
 		}
 	}
 
 	if err != nil {
 		t.logger.Error("Error re-replicating history from remote.",
 			tag.ShardID(t.shard.GetShardID()),
-			tag.WorkflowDomainID(transferTask.DomainID),
-			tag.WorkflowID(transferTask.WorkflowID),
-			tag.WorkflowRunID(transferTask.RunID),
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
 			tag.SourceCluster(t.clusterName),
 			tag.Error(err),
 		)
 	}
 
 	// return error so task processing logic will retry
-	return ErrTaskRedispatch
+	return &redispatchError{Reason: "fetchHistoryFromRemote"}
 }
 
 func (t *transferStandbyTaskExecutor) getCurrentTime() time.Time {
