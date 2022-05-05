@@ -1620,6 +1620,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableActivityLocalDispatchByDomain
+	// MaxActivityCountDispatchByDomain max # of activity tasks to dispatch to matching before creating transfer tasks. This is an performance optimization to skip activity scheduling efforts.
+	// KeyName: history.activityDispatchForSyncMatchCountByDomain
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	MaxActivityCountDispatchByDomain
 	// HistoryErrorInjectionRate is rate for injecting random error in history client
 	// KeyName: history.errorInjectionRate
 	// Value type: Float64
@@ -2510,6 +2516,7 @@ var Keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:         "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                      "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                "history.enableActivityLocalDispatchByDomain",
+	MaxActivityCountDispatchByDomain:                   "history.maxActivityCountDispatchByDomain",
 	HistoryErrorInjectionRate:                          "history.errorInjectionRate",
 	HistoryEnableTaskInfoLogByDomainID:                 "history.enableTaskInfoLogByDomainID",
 	ActivityMaxScheduleToStartTimeoutForRetry:          "history.activityMaxScheduleToStartTimeoutForRetry",
