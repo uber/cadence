@@ -410,28 +410,39 @@ func (wh *WorkflowHandler) UpdateDomain(
 			return nil, err
 		}
 	} else {
-		wh.GetLogger().Info("Failover request received, checking failover permission.", tag.WorkflowDomainName(updateRequest.GetName()))
+		wh.GetLogger().Info("Failover request received, checking failover permission.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"))
 		// reject the failover if the cluster is in lockdown
 		if err := checkFailOverPermission(wh.config, updateRequest.Name); err != nil {
-			wh.GetLogger().Error(fmt.Sprintf("Failover rejected for domain %s", updateRequest.GetName()),
+			wh.GetLogger().Error("Failover rejected",
+				tag.WorkflowDomainName(updateRequest.GetName()),
+				tag.OperationName("DomainUpdate"),
 				tag.Error(err))
 			return nil, err
 		}
-		wh.GetLogger().Info("Failover permission checked successfully.", tag.WorkflowDomainName(updateRequest.GetName()))
+		wh.GetLogger().Info("Failover permission checked successfully.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"))
 	}
 
 	if isGraceFailoverRequest(updateRequest) {
-		wh.GetLogger().Info("Grace failover request received, checking ongoing failovers.", tag.WorkflowDomainName(updateRequest.GetName()))
+		wh.GetLogger().Info("Grace failover request received, checking ongoing failovers.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"))
 		if err := wh.checkOngoingFailover(
 			ctx,
 			&updateRequest.Name,
 		); err != nil {
-			wh.GetLogger().Error(
-				fmt.Sprintf("Failed to check ongoing failover for domain %s", updateRequest.GetName()),
+			wh.GetLogger().Error("Failed to check ongoing failovers",
+				tag.WorkflowDomainName(updateRequest.GetName()),
+				tag.OperationName("DomainUpdate"),
 				tag.Error(err))
 			return nil, err
 		}
-		wh.GetLogger().Info("Ongoing failovers checked successfully.", tag.WorkflowDomainName(updateRequest.GetName()))
+		wh.GetLogger().Info("Ongoing failovers checked successfully.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"))
 	}
 
 	if updateRequest.GetName() == "" {
