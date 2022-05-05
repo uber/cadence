@@ -67,6 +67,8 @@ type (
 		// debugging configuration
 		EnableDebugMode             bool // note that this value is initialized once on service start
 		EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
+
+		ActivityTaskSyncMatchWaitTime dynamicconfig.DurationPropertyFnWithDomainFilter
 	}
 
 	forwarderConfig struct {
@@ -126,6 +128,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		ShutdownDrainDuration:           dc.GetDurationProperty(dynamicconfig.MatchingShutdownDrainDuration, 0),
 		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode, false)(),
 		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID, false),
+		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval, time.Millisecond*100),
 	}
 }
 

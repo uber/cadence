@@ -663,6 +663,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
+	// MatchingActivityTaskSyncMatchWaitTime is the amount of time activity task will wait to be sync matched
+	// KeyName: matching.activityTaskSyncMatchWaitTime
+	// Value type: Duration
+	// Default value: 100ms
+	// Allowed filters: DomainName
+	MatchingActivityTaskSyncMatchWaitTime
 
 	// key for history
 
