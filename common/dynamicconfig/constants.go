@@ -2356,6 +2356,7 @@ var Keys = map[Key]string{
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
 	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
 	MatchingEnableTaskInfoLogByDomainID:     "matching.enableTaskInfoLogByDomainID",
+	MatchingActivityTaskSyncMatchWaitTime:   "matching.activityTaskSyncMatchWaitTime",
 
 	// history settings
 	HistoryRPS:                                         "history.rps",
