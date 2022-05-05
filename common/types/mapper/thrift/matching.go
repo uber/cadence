@@ -21,6 +21,7 @@
 package thrift
 
 import (
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/matching"
@@ -40,6 +41,7 @@ func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddAc
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        FromTaskSource(t.Source),
 		ForwardedFrom:                 &t.ForwardedFrom,
+		ActivityTaskDispatchInfo:      FromSyncMatchActivityTaskInfo(t.ActivityTaskDispatchInfo),
 	}
 }
 
@@ -57,6 +59,38 @@ func ToAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActi
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.GetForwardedFrom(),
+		ActivityTaskDispatchInfo:      ToSyncMatchActivityTaskInfo(t.ActivityTaskDispatchInfo),
+	}
+}
+
+func FromSyncMatchActivityTaskInfo(t *types.ActivityTaskDispatchInfo) *matching.ActivityTaskDispatchInfo {
+	if t == nil {
+		return nil
+	}
+	return &matching.ActivityTaskDispatchInfo{
+		ScheduledEvent:                  FromHistoryEvent(t.ScheduledEvent),
+		StartedTimestamp:                t.StartedTimestamp,
+		Attempt:                         t.Attempt,
+		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		HeartbeatDetails:                t.HeartbeatDetails,
+		WorkflowType:                    FromWorkflowType(t.WorkflowType),
+		WorkflowDomain:                  &t.WorkflowDomain,
+	}
+}
+
+// ToRecordActivityTaskStartedResponse converts thrift RecordActivityTaskStartedResponse type to internal
+func ToSyncMatchActivityTaskInfo(t *matching.ActivityTaskDispatchInfo) *types.ActivityTaskDispatchInfo {
+	if t == nil {
+		return nil
+	}
+	return &types.ActivityTaskDispatchInfo{
+		ScheduledEvent:                  ToHistoryEvent(t.ScheduledEvent),
+		StartedTimestamp:                t.StartedTimestamp,
+		Attempt:                         t.Attempt,
+		ScheduledTimestampOfThisAttempt: t.ScheduledTimestampOfThisAttempt,
+		HeartbeatDetails:                t.HeartbeatDetails,
+		WorkflowType:                    ToWorkflowType(t.WorkflowType),
+		WorkflowDomain:                  common.StringDefault(t.WorkflowDomain),
 	}
 }
 
