@@ -392,44 +392,55 @@ func (wh *WorkflowHandler) UpdateDomain(
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendUpdateDomainScope)
 	defer sw.Stop()
 
+	wh.GetLogger().Info(fmt.Sprintf("Domain Update requested. Request: %#v", updateRequest),
+		tag.WorkflowDomainName(updateRequest.GetName()),
+		tag.OperationName("DomainUpdate"))
+
 	if wh.isShuttingDown() {
+		wh.GetLogger().Error("Workflow handler is shutting down.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"),
+			tag.Error(errShuttingDown))
 		return nil, errShuttingDown
 	}
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		wh.GetLogger().Error("Client version is not supported.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"),
+			tag.Error(err))
 		return nil, wh.error(err, scope)
 	}
 
 	if updateRequest == nil {
+		wh.GetLogger().Error("Null update request.",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"),
+			tag.Error(errRequestNotSet))
 		return nil, errRequestNotSet
 	}
 
 	// don't require permission for failover request
 	if !isFailoverRequest(updateRequest) {
 		if err := checkPermission(wh.config, updateRequest.SecurityToken); err != nil {
-			return nil, err
-		}
-	} else {
-		wh.GetLogger().Info("Failover request received, checking failover permission.",
-			tag.WorkflowDomainName(updateRequest.GetName()),
-			tag.OperationName("DomainUpdate"))
-		// reject the failover if the cluster is in lockdown
-		if err := checkFailOverPermission(wh.config, updateRequest.Name); err != nil {
-			wh.GetLogger().Error("Failover rejected",
+			wh.GetLogger().Error("Request rejected",
 				tag.WorkflowDomainName(updateRequest.GetName()),
 				tag.OperationName("DomainUpdate"),
 				tag.Error(err))
 			return nil, err
 		}
-		wh.GetLogger().Info("Failover permission checked successfully.",
-			tag.WorkflowDomainName(updateRequest.GetName()),
-			tag.OperationName("DomainUpdate"))
+	} else {
+		// reject the failover if the cluster is in lockdown
+		if err := checkFailOverPermission(wh.config, updateRequest.GetName()); err != nil {
+			wh.GetLogger().Error("Failover request rejected",
+				tag.WorkflowDomainName(updateRequest.GetName()),
+				tag.OperationName("DomainUpdate"),
+				tag.Error(err))
+			return nil, err
+		}
 	}
 
 	if isGraceFailoverRequest(updateRequest) {
-		wh.GetLogger().Info("Grace failover request received, checking ongoing failovers.",
-			tag.WorkflowDomainName(updateRequest.GetName()),
-			tag.OperationName("DomainUpdate"))
 		if err := wh.checkOngoingFailover(
 			ctx,
 			&updateRequest.Name,
@@ -440,9 +451,6 @@ func (wh *WorkflowHandler) UpdateDomain(
 				tag.Error(err))
 			return nil, err
 		}
-		wh.GetLogger().Info("Ongoing failovers checked successfully.",
-			tag.WorkflowDomainName(updateRequest.GetName()),
-			tag.OperationName("DomainUpdate"))
 	}
 
 	if updateRequest.GetName() == "" {
@@ -451,8 +459,15 @@ func (wh *WorkflowHandler) UpdateDomain(
 	// TODO: call remote clusters to verify domain data
 	resp, err := wh.domainHandler.UpdateDomain(ctx, updateRequest)
 	if err != nil {
+		wh.GetLogger().Error("DomainUpdate failed with error logged",
+			tag.WorkflowDomainName(updateRequest.GetName()),
+			tag.OperationName("DomainUpdate"),
+			tag.Error(err))
 		return resp, wh.error(err, scope)
 	}
+	wh.GetLogger().Info("DomainUpdate was successful",
+		tag.WorkflowDomainName(updateRequest.GetName()),
+		tag.OperationName("DomainUpdate"))
 	return resp, err
 }
 
