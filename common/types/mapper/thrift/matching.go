@@ -41,7 +41,7 @@ func FromAddActivityTaskRequest(t *types.AddActivityTaskRequest) *matching.AddAc
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        FromTaskSource(t.Source),
 		ForwardedFrom:                 &t.ForwardedFrom,
-		ActivityTaskDispatchInfo:      FromSyncMatchActivityTaskInfo(t.ActivityTaskDispatchInfo),
+		ActivityTaskDispatchInfo:      FromActivityTaskDispatchInfo(t.ActivityTaskDispatchInfo),
 	}
 }
 
@@ -59,11 +59,11 @@ func ToAddActivityTaskRequest(t *matching.AddActivityTaskRequest) *types.AddActi
 		ScheduleToStartTimeoutSeconds: t.ScheduleToStartTimeoutSeconds,
 		Source:                        ToTaskSource(t.Source),
 		ForwardedFrom:                 t.GetForwardedFrom(),
-		ActivityTaskDispatchInfo:      ToSyncMatchActivityTaskInfo(t.ActivityTaskDispatchInfo),
+		ActivityTaskDispatchInfo:      ToActivityTaskDispatchInfo(t.ActivityTaskDispatchInfo),
 	}
 }
 
-func FromSyncMatchActivityTaskInfo(t *types.ActivityTaskDispatchInfo) *matching.ActivityTaskDispatchInfo {
+func FromActivityTaskDispatchInfo(t *types.ActivityTaskDispatchInfo) *matching.ActivityTaskDispatchInfo {
 	if t == nil {
 		return nil
 	}
@@ -79,7 +79,7 @@ func FromSyncMatchActivityTaskInfo(t *types.ActivityTaskDispatchInfo) *matching.
 }
 
 // ToRecordActivityTaskStartedResponse converts thrift RecordActivityTaskStartedResponse type to internal
-func ToSyncMatchActivityTaskInfo(t *matching.ActivityTaskDispatchInfo) *types.ActivityTaskDispatchInfo {
+func ToActivityTaskDispatchInfo(t *matching.ActivityTaskDispatchInfo) *types.ActivityTaskDispatchInfo {
 	if t == nil {
 		return nil
 	}
