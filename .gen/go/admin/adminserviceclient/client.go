@@ -53,6 +53,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	DeleteWorkflow(
+		ctx context.Context,
+		Request *admin.AdminDeleteWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.AdminDeleteWorkflowResponse, error)
+
 	DescribeCluster(
 		ctx context.Context,
 		opts ...yarpc.CallOption,
@@ -123,6 +129,12 @@ type Interface interface {
 		Request *admin.ListDynamicConfigRequest,
 		opts ...yarpc.CallOption,
 	) (*admin.ListDynamicConfigResponse, error)
+
+	MaintainCorruptWorkflow(
+		ctx context.Context,
+		Request *admin.AdminMaintainWorkflowRequest,
+		opts ...yarpc.CallOption,
+	) (*admin.AdminMaintainWorkflowResponse, error)
 
 	MergeDLQMessages(
 		ctx context.Context,
@@ -273,6 +285,34 @@ func (c client) CloseShard(
 	}
 
 	err = admin.AdminService_CloseShard_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) DeleteWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.AdminDeleteWorkflowResponse, err error) {
+
+	var result admin.AdminService_DeleteWorkflow_Result
+	args := admin.AdminService_DeleteWorkflow_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_DeleteWorkflow_Helper.UnwrapResponse(&result)
 	return
 }
 
@@ -608,6 +648,34 @@ func (c client) ListDynamicConfig(
 	}
 
 	success, err = admin.AdminService_ListDynamicConfig_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) MaintainCorruptWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminMaintainWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.AdminMaintainWorkflowResponse, err error) {
+
+	var result admin.AdminService_MaintainCorruptWorkflow_Result
+	args := admin.AdminService_MaintainCorruptWorkflow_Helper.Args(_Request)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = admin.AdminService_MaintainCorruptWorkflow_Helper.UnwrapResponse(&result)
 	return
 }
 

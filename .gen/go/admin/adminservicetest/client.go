@@ -130,6 +130,39 @@ func (mr *_MockClientRecorder) CloseShard(
 	return mr.mock.ctrl.RecordCall(mr.mock, "CloseShard", args...)
 }
 
+// DeleteWorkflow responds to a DeleteWorkflow call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().DeleteWorkflow(gomock.Any(), ...).Return(...)
+// 	... := client.DeleteWorkflow(...)
+func (m *MockClient) DeleteWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminDeleteWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.AdminDeleteWorkflowResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "DeleteWorkflow", args...)
+	success, _ = ret[i].(*admin.AdminDeleteWorkflowResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) DeleteWorkflow(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "DeleteWorkflow", args...)
+}
+
 // DescribeCluster responds to a DescribeCluster call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -522,6 +555,39 @@ func (mr *_MockClientRecorder) ListDynamicConfig(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "ListDynamicConfig", args...)
+}
+
+// MaintainCorruptWorkflow responds to a MaintainCorruptWorkflow call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().MaintainCorruptWorkflow(gomock.Any(), ...).Return(...)
+// 	... := client.MaintainCorruptWorkflow(...)
+func (m *MockClient) MaintainCorruptWorkflow(
+	ctx context.Context,
+	_Request *admin.AdminMaintainWorkflowRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.AdminMaintainWorkflowResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "MaintainCorruptWorkflow", args...)
+	success, _ = ret[i].(*admin.AdminMaintainWorkflowResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) MaintainCorruptWorkflow(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "MaintainCorruptWorkflow", args...)
 }
 
 // MergeDLQMessages responds to a MergeDLQMessages call based on the mock expectations. This

@@ -46,6 +46,21 @@ func (t AdminThriftHandler) register(dispatcher *yarpc.Dispatcher) {
 	dispatcher.Register(adminserviceserver.New(t))
 }
 
+// DeleteWorkflow to be implemented
+func (t AdminThriftHandler) DeleteWorkflow(
+	ctx context.Context,
+	Request *admin.AdminDeleteWorkflowRequest,
+) (*admin.AdminDeleteWorkflowResponse, error) {
+	return nil, nil
+}
+
+func (t AdminThriftHandler) MaintainCorruptWorkflow(
+	ctx context.Context,
+	Request *admin.AdminMaintainWorkflowRequest,
+) (*admin.AdminMaintainWorkflowResponse, error) {
+	return nil, nil
+}
+
 // AddSearchAttribute forwards request to the underlying handler
 func (t AdminThriftHandler) AddSearchAttribute(ctx context.Context, request *admin.AddSearchAttributeRequest) error {
 	err := t.h.AddSearchAttribute(ctx, thrift.ToAddSearchAttributeRequest(request))
