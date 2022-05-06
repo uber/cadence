@@ -52,10 +52,11 @@ var (
 
 type (
 	addTaskParams struct {
-		execution     *types.WorkflowExecution
-		taskInfo      *persistence.TaskInfo
-		source        types.TaskSource
-		forwardedFrom string
+		execution                *types.WorkflowExecution
+		taskInfo                 *persistence.TaskInfo
+		source                   types.TaskSource
+		forwardedFrom            string
+		activityTaskDispatchInfo *types.ActivityTaskDispatchInfo
 	}
 
 	taskListManager interface {
@@ -253,6 +254,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		syncMatch, err = c.trySyncMatch(ctx, params)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
+		}
+		if params.activityTaskDispatchInfo != nil {
+			return false, errRemoteSyncMatchFailed
 		}
 
 		if isForwarded {
@@ -528,15 +532,25 @@ func (c *taskListManagerImpl) executeWithRetry(
 }
 
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true)
+	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
 	childCtx := ctx
 	cancel := func() {}
+	waitTime := maxSyncMatchWaitTime
+	if params.activityTaskDispatchInfo != nil {
+		waitTime = c.engine.config.ActivityTaskSyncMatchWaitTime(params.activityTaskDispatchInfo.WorkflowDomain)
+	}
 	if !task.isForwarded() {
 		// when task is forwarded from another matching host, we trust the context as is
 		// otherwise, we override to limit the amount of time we can block on sync match
-		childCtx, cancel = c.newChildContext(ctx, maxSyncMatchWaitTime, time.Second)
+		childCtx, cancel = c.newChildContext(ctx, waitTime, time.Second)
 	}
-	matched, err := c.matcher.Offer(childCtx, task)
+	var matched bool
+	var err error
+	if params.activityTaskDispatchInfo != nil {
+		matched, err = c.matcher.offerOrTimeout(childCtx, task)
+	} else {
+		matched, err = c.matcher.Offer(childCtx, task)
+	}
 	cancel()
 	return matched, err
 }
