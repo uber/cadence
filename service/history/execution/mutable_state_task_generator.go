@@ -128,14 +128,12 @@ var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
 func NewMutableStateTaskGenerator(
 	clusterMetadata cluster.Metadata,
 	domainCache cache.DomainCache,
-	logger log.Logger,
 	mutableState MutableState,
 ) MutableStateTaskGenerator {
 
 	return &mutableStateTaskGeneratorImpl{
 		clusterMetadata: clusterMetadata,
 		domainCache:     domainCache,
-		logger:          logger,
 
 		mutableState: mutableState,
 	}

@@ -233,9 +233,8 @@ func newMutableStateBuilder(
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
 	}
-	s.hBuilder = NewHistoryBuilder(s, logger)
-
-	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s.logger, s)
+	s.hBuilder = NewHistoryBuilder(s)
+	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s)
 	s.decisionTaskManager = newMutableStateDecisionTaskManager(s)
 
 	return s
@@ -4206,7 +4205,7 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 func (e *mutableStateBuilder) cleanupTransaction() error {
 
 	// Clear all updates to prepare for the next session
-	e.hBuilder = NewHistoryBuilder(e, e.logger)
+	e.hBuilder = NewHistoryBuilder(e)
 
 	e.updateActivityInfos = make(map[int64]*persistence.ActivityInfo)
 	e.deleteActivityInfos = make(map[int64]struct{})
