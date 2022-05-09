@@ -134,7 +134,7 @@ func TestEmptyMsg(t *testing.T) {
 
 }
 
-func TestTaggableValues(t *testing.T) {
+func TestErrorWithDetails(t *testing.T) {
 	sb := &strings.Builder{}
 	zapLogger := zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(zapcore.EncoderConfig{MessageKey: "msg"}), zapcore.AddSync(sb), zap.DebugLevel))
 	logger := NewLogger(zapLogger)
@@ -143,12 +143,15 @@ func TestTaggableValues(t *testing.T) {
 	logger.Error("oh no", tag.Error(err))
 	zapLogger.Sync()
 
-	assert.Contains(t, sb.String(), `"msg":"oh no","error":"test error","error-wf-id":"workflow123"`)
+	assert.Contains(t, sb.String(), `"msg":"oh no","error":"test error","error-details":{"workflow-id":"workflow123"}`)
 }
 
 type testError struct {
 	WorkflowId string
 }
 
-func (e testError) Error() string   { return "test error" }
-func (e testError) Tags() []tag.Tag { return []tag.Tag{tag.WorkflowID(e.WorkflowId)} }
+func (e testError) Error() string { return "test error" }
+func (e testError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("workflow-id", e.WorkflowId)
+	return nil
+}

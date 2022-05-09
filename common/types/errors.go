@@ -20,7 +20,9 @@
 
 package types
 
-import "github.com/uber/cadence/common/log/tag"
+import (
+	"go.uber.org/zap/zapcore"
+)
 
 func (err AccessDeniedError) Error() string {
 	return err.Message
@@ -38,32 +40,29 @@ func (err ClientVersionNotSupportedError) Error() string {
 	return "client version not supported"
 }
 
-func (err ClientVersionNotSupportedError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.FeatureVersion(err.FeatureVersion),
-		tag.ClientImplementation(err.ClientImpl),
-		tag.SupportedVersions(err.SupportedVersions),
-	}
+func (err ClientVersionNotSupportedError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("feature-version", err.FeatureVersion)
+	enc.AddString("client-implementation", err.ClientImpl)
+	enc.AddString("supported-versions", err.SupportedVersions)
+	return nil
 }
 
 func (err FeatureNotEnabledError) Error() string {
 	return "feature not enabled"
 }
 
-func (err FeatureNotEnabledError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.FeatureFlag(err.FeatureFlag),
-	}
+func (err FeatureNotEnabledError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("feature-flag", err.FeatureFlag)
+	return nil
 }
 
 func (err CurrentBranchChangedError) Error() string {
 	return err.Message
 }
 
-func (err CurrentBranchChangedError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.WorkflowBranchToken(string(err.CurrentBranchToken)),
-	}
+func (err CurrentBranchChangedError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("wf-branch-token", string(err.CurrentBranchToken))
+	return nil
 }
 
 func (err DomainAlreadyExistsError) Error() string {
@@ -74,23 +73,15 @@ func (err DomainNotActiveError) Error() string {
 	return err.Message
 }
 
-func (err DomainNotActiveError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.WorkflowDomainName(err.DomainName),
-		tag.ClusterName(err.CurrentCluster),
-		tag.ActiveClusterName(err.ActiveCluster),
-	}
+func (err DomainNotActiveError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("domain-name", err.DomainName)
+	enc.AddString("current-cluster", err.CurrentCluster)
+	enc.AddString("active-cluster", err.ActiveCluster)
+	return nil
 }
 
 func (err EntityNotExistsError) Error() string {
 	return err.Message
-}
-
-func (err EntityNotExistsError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.ClusterName(err.CurrentCluster),
-		tag.ActiveClusterName(err.ActiveCluster),
-	}
 }
 
 func (err WorkflowExecutionAlreadyCompletedError) Error() string {
@@ -121,25 +112,23 @@ func (err RetryTaskV2Error) Error() string {
 	return err.Message
 }
 
-func (err RetryTaskV2Error) Tags() []tag.Tag {
-	tags := []tag.Tag{
-		tag.WorkflowDomainID(err.DomainID),
-		tag.WorkflowID(err.WorkflowID),
-		tag.WorkflowRunID(err.RunID),
-	}
+func (err RetryTaskV2Error) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("domain-id", err.DomainID)
+	enc.AddString("workflow-id", err.WorkflowID)
+	enc.AddString("run-id", err.RunID)
 	if err.StartEventID != nil {
-		tags = append(tags, tag.WorkflowStartEventID(*err.StartEventID))
+		enc.AddInt64("start-event-id", *err.StartEventID)
 	}
 	if err.StartEventVersion != nil {
-		tags = append(tags, tag.WorkflowStartEventVersion(*err.StartEventVersion))
+		enc.AddInt64("start-event-version", *err.StartEventVersion)
 	}
 	if err.EndEventID != nil {
-		tags = append(tags, tag.WorkflowEndEventID(*err.EndEventID))
+		enc.AddInt64("end-event-id", *err.EndEventID)
 	}
 	if err.EndEventVersion != nil {
-		tags = append(tags, tag.WorkflowEndEventVersion(*err.EndEventVersion))
+		enc.AddInt64("end-event-version", *err.EndEventVersion)
 	}
-	return tags
+	return nil
 }
 
 func (err ServiceBusyError) Error() string {
@@ -150,21 +139,19 @@ func (err WorkflowExecutionAlreadyStartedError) Error() string {
 	return err.Message
 }
 
-func (err WorkflowExecutionAlreadyStartedError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.RequestID(err.StartRequestID),
-		tag.WorkflowRunID(err.RunID),
-	}
+func (err WorkflowExecutionAlreadyStartedError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("start-request-id", err.StartRequestID)
+	enc.AddString("run-id", err.RunID)
+	return nil
 }
 
 func (err ShardOwnershipLostError) Error() string {
 	return err.Message
 }
 
-func (err ShardOwnershipLostError) Tags() []tag.Tag {
-	return []tag.Tag{
-		tag.ShardOwner(err.Owner),
-	}
+func (err ShardOwnershipLostError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("shard-owner", err.Owner)
+	return nil
 }
 
 func (err EventAlreadyStartedError) Error() string {

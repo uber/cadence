@@ -44,11 +44,6 @@ func ClusterName(clusterName string) Tag {
 	return newStringTag("cluster-name", clusterName)
 }
 
-// ActiveClusterName returns tag for ActiveClusterName
-func ActiveClusterName(clusterName string) Tag {
-	return newStringTag("active-cluster-name", clusterName)
-}
-
 // Timestamp returns tag for Timestamp
 func Timestamp(timestamp time.Time) Tag {
 	return newTimeTag("timestamp", timestamp)
@@ -153,11 +148,6 @@ func QueryID(queryID string) Tag {
 	return newStringTag("query-id", queryID)
 }
 
-// RequestID returns tag for RequestID
-func RequestID(requestID string) Tag {
-	return newStringTag("request-id", requestID)
-}
-
 // BlobSizeViolationOperation returns tag for BlobSizeViolationOperation
 func BlobSizeViolationOperation(operation string) Tag {
 	return newStringTag("blob-size-violation-operation", operation)
@@ -212,26 +202,6 @@ func WorkflowNextEventID(nextEventID int64) Tag {
 	return newInt64("wf-next-event-id", nextEventID)
 }
 
-// WorkflowStartEventID returns tag for WorkflowStartEventID
-func WorkflowStartEventID(id int64) Tag {
-	return newInt64("wf-start-event-id", id)
-}
-
-// WorkflowStartEventVersion returns tag for WorkflowStartEventVersion
-func WorkflowStartEventVersion(version int64) Tag {
-	return newInt64("wf-start-event-version", version)
-}
-
-// WorkflowEndEventID returns tag for WorkflowEndEventID
-func WorkflowEndEventID(id int64) Tag {
-	return newInt64("wf-end-event-id", id)
-}
-
-// WorkflowEndEventVersion returns tag for WorkflowEndEventVersion
-func WorkflowEndEventVersion(version int64) Tag {
-	return newInt64("wf-end-event-version", version)
-}
-
 // WorkflowResetNextEventID returns tag for WorkflowResetNextEventID
 func WorkflowResetNextEventID(resetNextEventID int64) Tag {
 	return newInt64("wf-reset-next-event-id", resetNextEventID)
@@ -247,11 +217,6 @@ func WorkflowTreeID(treeID string) Tag {
 // WorkflowBranchID returns tag for WorkflowBranchID
 func WorkflowBranchID(branchID string) Tag {
 	return newStringTag("wf-branch-id", branchID)
-}
-
-// WorkflowBranchToken returns tag for WorkflowBranchToken
-func WorkflowBranchToken(branchToken string) Tag {
-	return newStringTag("wf-branch-token", branchToken)
 }
 
 // workflow task
@@ -468,11 +433,6 @@ func Bool(b bool) Tag {
 // ShardID returns tag for ShardID
 func ShardID(shardID int) Tag {
 	return newInt("shard-id", shardID)
-}
-
-// ShardOwner returns tag for ShardOwner
-func ShardOwner(shardOwner string) Tag {
-	return newStringTag("shard-owner", shardOwner)
 }
 
 // ShardTime returns tag for ShardTime
@@ -853,26 +813,4 @@ func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag 
 // VisibilityQuery returns tag for the query for getting visibility records
 func VisibilityQuery(query string) Tag {
 	return newStringTag("visibility-query", query)
-}
-
-// Client version and feature flag related
-
-// FeatureVersion returns tag for feature version
-func FeatureVersion(version string) Tag {
-	return newStringTag("feature-version", version)
-}
-
-// FeatureVersion returns tag for client implementation
-func ClientImplementation(impl string) Tag {
-	return newStringTag("client-implementation", impl)
-}
-
-// SupportedVersions returns tag for supported versions
-func SupportedVersions(versions string) Tag {
-	return newStringTag("supported-versions", versions)
-}
-
-// FeatureFlag returns tag for feature flag
-func FeatureFlag(flag string) Tag {
-	return newStringTag("feature-flag", flag)
 }
