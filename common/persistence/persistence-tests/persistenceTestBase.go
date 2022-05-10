@@ -27,11 +27,16 @@ import (
 	"math"
 	"math/rand"
 	"sync/atomic"
+	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -108,11 +113,8 @@ const (
 )
 
 // NewTestBaseFromParams returns a customized test base from given input
-func NewTestBaseFromParams(params TestBaseParams) TestBase {
-	logger, err := loggerimpl.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
+func NewTestBaseFromParams(t *testing.T, params TestBaseParams) TestBase {
+	logger := loggerimpl.NewLoggerForTest(t)
 	return TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
@@ -123,7 +125,7 @@ func NewTestBaseFromParams(params TestBaseParams) TestBase {
 }
 
 // NewTestBaseWithNoSQL returns a persistence test base backed by nosql datastore
-func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
+func NewTestBaseWithNoSQL(t *testing.T, options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
@@ -137,11 +139,11 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
 	}
-	return NewTestBaseFromParams(params)
+	return NewTestBaseFromParams(t, params)
 }
 
 // NewTestBaseWithSQL returns a new persistence test base backed by SQL
-func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
+func NewTestBaseWithSQL(t *testing.T, options *TestBaseOptions) TestBase {
 	if options.DBName == "" {
 		options.DBName = "test_" + GenerateRandomDBName(10)
 	}
@@ -155,7 +157,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
 	}
-	return NewTestBaseFromParams(params)
+	return NewTestBaseFromParams(t, params)
 }
 
 // Config returns the persistence configuration for this test
@@ -171,8 +173,13 @@ func (s *TestBase) Config() config.Persistence {
 }
 
 // Setup sets up the test base, must be called as part of SetupSuite
-func (s *TestBase) Setup() {
-	var err error
+func (s *TestBase) Setup(t *testing.T) {
+	s.SetT(t)
+	zl := zaptest.NewLogger(t)
+	_ = zap.ReplaceGlobals(zl)                             // ignore restore func
+	_, err := zap.RedirectStdLogAt(zl, zapcore.DebugLevel) // ignore restore func
+	require.NoError(t, err)
+
 	shardID := 10
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
 

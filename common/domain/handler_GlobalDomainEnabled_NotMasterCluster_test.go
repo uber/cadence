@@ -22,8 +22,6 @@ package domain
 
 import (
 	"context"
-	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -69,14 +67,10 @@ func TestDomainHandlerGlobalDomainEnabledNotPrimaryClusterSuite(t *testing.T) {
 }
 
 func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) SetupSuite() {
-	if testing.Verbose() {
-		log.SetOutput(os.Stdout)
-	}
-
-	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
+	s.TestBase = public.NewTestBaseWithPublicCassandra(s.T(), &persistencetests.TestBaseOptions{
 		ClusterMetadata: cluster.GetTestClusterMetadata(true, false),
 	})
-	s.TestBase.Setup()
+	s.TestBase.Setup(s.T())
 }
 
 func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TearDownSuite() {

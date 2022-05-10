@@ -58,7 +58,7 @@ func (s *transmissionTaskSuite) SetupTest() {
 	s.kafkaProducer = &mocks.KafkaProducer{}
 	s.domainReplicator = NewDomainReplicator(
 		s.kafkaProducer,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.T()),
 	).(*domainReplicatorImpl)
 }
 

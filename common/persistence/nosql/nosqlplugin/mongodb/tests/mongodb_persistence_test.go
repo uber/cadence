@@ -34,7 +34,7 @@ import (
 func TestConfigStorePersistence(t *testing.T) {
 	s := new(persistencetests.ConfigStorePersistenceSuite)
 	s.TestBase = NewTestBaseWithMongo()
-	s.TestBase.Setup()
+	s.TestBase.Setup(t)
 	suite.Run(t, s)
 }
 
@@ -102,7 +102,7 @@ func TestConfigStorePersistence(t *testing.T) {
 // 	suite.Run(t, s)
 // }
 
-func NewTestBaseWithMongo() persistencetests.TestBase {
+func NewTestBaseWithMongo(t *testing.T) persistencetests.TestBase {
 	options := &persistencetests.TestBaseOptions{
 		DBPluginName: mongodb.PluginName,
 		DBHost:       getTestConfig().Hosts,
@@ -110,7 +110,7 @@ func NewTestBaseWithMongo() persistencetests.TestBase {
 		DBPassword:   getTestConfig().Password,
 		DBPort:       getTestConfig().Port,
 	}
-	return persistencetests.NewTestBaseWithNoSQL(options)
+	return persistencetests.NewTestBaseWithNoSQL(t, options)
 }
 
 func getTestConfig() *config.NoSQL {

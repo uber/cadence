@@ -24,7 +24,6 @@
 package cadence
 
 import (
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -63,12 +62,12 @@ func (s *ServerSuite) TestServerStartup() {
 	rootDir := "../../../"
 	configDir := constructPathIfNeed(rootDir, "config")
 
-	log.Printf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
+	s.T().Logf("Loading config; env=%v,zone=%v,configDir=%v\n", env, zone, configDir)
 
 	var cfg config.Config
 	err := config.Load(env, configDir, zone, &cfg)
 	if err != nil {
-		log.Fatal("Config file corrupted.", err)
+		s.T().Fatal("Config file corrupted.", err)
 	}
 
 	if os.Getenv("CASSANDRA_SEEDS") == "cassandra" {
@@ -83,16 +82,16 @@ func (s *ServerSuite) TestServerStartup() {
 		cfg.Persistence.DataStores[cfg.Persistence.VisibilityStore] = ds
 	}
 
-	log.Printf("config=\n%v\n", cfg.String())
+	s.T().Logf("config=\n%v\n", cfg.String())
 
 	cfg.DynamicConfig.FileBased.Filepath = constructPathIfNeed(rootDir, cfg.DynamicConfig.FileBased.Filepath)
 
 	if err := cfg.ValidateAndFillDefaults(); err != nil {
-		log.Fatalf("config validation failed: %v", err)
+		s.T().Fatalf("config validation failed: %v", err)
 	}
 	// cassandra schema version validation
 	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
-		log.Fatal("cassandra schema version compatibility check failed: ", err)
+		s.T().Fatal("cassandra schema version compatibility check failed: ", err)
 	}
 
 	var daemons []common.Daemon

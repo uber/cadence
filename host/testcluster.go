@@ -24,6 +24,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -109,9 +110,9 @@ const (
 )
 
 // NewCluster creates and sets up the test cluster
-func NewCluster(options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
-	testBase := persistencetests.NewTestBaseFromParams(params)
-	testBase.Setup()
+func NewCluster(t *testing.T, options *TestClusterConfig, logger log.Logger, params persistencetests.TestBaseParams) (*TestCluster, error) {
+	testBase := persistencetests.NewTestBaseFromParams(t, params)
+	testBase.Setup(t)
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
