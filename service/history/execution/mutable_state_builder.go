@@ -331,6 +331,8 @@ func (e *mutableStateBuilder) Load(
 	e.replicationState = state.ReplicationState
 	e.checksum = state.Checksum
 
+	e.fillForBackwardsCompatibility()
+
 	if len(state.Checksum.Value) > 0 {
 		switch {
 		case e.shouldInvalidateChecksum():
@@ -344,6 +346,21 @@ func (e *mutableStateBuilder) Load(
 				e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
 				e.logError("mutable state checksum mismatch", tag.Error(err))
 			}
+		}
+	}
+}
+
+func (e *mutableStateBuilder) fillForBackwardsCompatibility() {
+	// With https://github.com/uber/cadence/pull/4601 newly introduced DomainID may not be set for older workflows.
+	// Here we will fill its value based on previously used domain name.
+	for _, info := range e.pendingChildExecutionInfoIDs {
+		if info.DomainID == "" && info.DomainNameDEPRECATED != "" {
+			domainID, err := e.shard.GetDomainCache().GetDomainID(info.DomainNameDEPRECATED)
+			if err != nil {
+				e.logError("failed to fill domainId for pending child executions", tag.Error(err))
+			}
+
+			info.DomainID = domainID
 		}
 	}
 }
