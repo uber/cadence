@@ -26,7 +26,6 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
@@ -60,9 +59,7 @@ func (s *domainReplicationTaskExecutorSuite) TearDownSuite() {
 func (s *domainReplicationTaskExecutorSuite) SetupTest() {
 	s.TestBase = public.NewTestBaseWithPublicCassandra(s.T(), &persistencetests.TestBaseOptions{})
 	s.TestBase.Setup(s.T())
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := loggerimpl.NewLoggerForTest(s.T())
 	s.domainReplicator = NewReplicationTaskExecutor(
 		s.DomainManager,
 		clock.NewRealTimeSource(),

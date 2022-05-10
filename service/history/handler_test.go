@@ -64,8 +64,8 @@ func (s *handlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.History)
-	s.mockResource.Logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.History)
+	s.mockResource.Logger = loggerimpl.NewLoggerForTest(s.T())
 	s.mockShardController = shard.NewMockController(s.controller)
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()

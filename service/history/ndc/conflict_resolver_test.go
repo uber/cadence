@@ -73,6 +73,7 @@ func (s *conflictResolverSuite) SetupTest() {
 	s.mockStateBuilder = execution.NewMockStateRebuilder(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,

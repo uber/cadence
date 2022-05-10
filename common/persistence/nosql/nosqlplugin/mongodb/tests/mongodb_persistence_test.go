@@ -33,7 +33,7 @@ import (
 
 func TestConfigStorePersistence(t *testing.T) {
 	s := new(persistencetests.ConfigStorePersistenceSuite)
-	s.TestBase = NewTestBaseWithMongo()
+	s.TestBase = NewTestBaseWithMongo(t)
 	s.TestBase.Setup(t)
 	suite.Run(t, s)
 }

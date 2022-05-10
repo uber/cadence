@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/tchannel"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common"
@@ -109,7 +108,7 @@ func (s *IntegrationBase) setupSuite() {
 			VisibilityTestCluster: s.visibilityTestCluster,
 			ClusterMetadata:       clusterMetadata,
 		}
-		cluster, err := NewCluster(s.testClusterConfig, s.Logger, params)
+		cluster, err := NewCluster(s.T(), s.testClusterConfig, s.Logger, params)
 		s.Require().NoError(err)
 		s.testCluster = cluster
 		s.engine = s.testCluster.GetFrontendClient()
@@ -133,9 +132,7 @@ func (s *IntegrationBase) setupSuite() {
 }
 
 func (s *IntegrationBase) setupLogger() {
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-	s.Logger = loggerimpl.NewLogger(zapLogger)
+	s.Logger = loggerimpl.NewLoggerForTest(s.T())
 }
 
 // GetTestClusterConfig return test cluster config

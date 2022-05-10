@@ -28,7 +28,6 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
@@ -80,12 +79,9 @@ func (s *esProcessorSuite) SetupTest() {
 	s.mockMetricClient = &mmocks.Client{}
 	s.mockBulkProcessor = &esMocks.GenericBulkProcessor{}
 
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-
 	p := &esProcessorImpl{
 		config:        config,
-		logger:        loggerimpl.NewLogger(zapLogger),
+		logger:        loggerimpl.NewLoggerForTest(s.T()),
 		metricsClient: s.mockMetricClient,
 		msgEncoder:    codec.NewThriftRWEncoder(),
 	}

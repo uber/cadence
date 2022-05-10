@@ -61,7 +61,7 @@ func TestDomainReplicationSuite(t *testing.T) {
 func (s *domainReplicationSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
-	resource := resource.NewTest(s.controller, metrics.Worker)
+	resource := resource.NewTest(s.T(), s.controller, metrics.Worker)
 
 	s.sourceCluster = "active"
 	s.currentCluster = "standby"

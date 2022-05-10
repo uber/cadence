@@ -93,7 +93,7 @@ func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 	env := s.NewTestActivityEnvironment()
 	controller := gomock.NewController(s.T())
 	defer controller.Finish()
-	mockResource := resource.NewTest(controller, metrics.Worker)
+	mockResource := resource.NewTest(s.T(), controller, metrics.Worker)
 	defer mockResource.Finish(s.T())
 	fixList := []entity.Execution{
 		{

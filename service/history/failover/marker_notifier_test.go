@@ -69,6 +69,7 @@ func (s *markerNotifierSuite) SetupTest() {
 	config.NotifyFailoverMarkerInterval = dynamicconfig.GetDurationPropertyFn(time.Millisecond)
 	s.coordinator = NewMockCoordinator(s.controller)
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,

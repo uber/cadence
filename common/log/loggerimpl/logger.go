@@ -57,15 +57,6 @@ func NewLoggerForTest(t *testing.T) log.Logger {
 	return NewLogger(zaptest.NewLogger(t))
 }
 
-// NewDevelopment returns a logger at debug level and log into STDERR
-func NewDevelopment() (log.Logger, error) {
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		return nil, err
-	}
-	return NewLogger(zapLogger), nil
-}
-
 // NewLogger returns a new logger
 func NewLogger(zapLogger *zap.Logger) log.Logger {
 	return &loggerImpl{

@@ -67,7 +67,7 @@ func (s *redispatcherSuite) SetupTest() {
 	s.mockTimeSource = clock.NewEventTimeSource()
 
 	s.metricsScope = metrics.NewClient(tally.NoopScope, metrics.History).Scope(0)
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 
 	s.redispatcher = s.newTestRedispatcher()
 }

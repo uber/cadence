@@ -86,6 +86,7 @@ func (s *stateBuilderSuite) SetupTest() {
 	s.mockTaskGeneratorForNew = NewMockMutableStateTaskGenerator(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,

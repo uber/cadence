@@ -37,7 +37,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 
 	"github.com/uber/cadence/common"
@@ -90,10 +89,7 @@ var (
 )
 
 func (s *esCrossDCTestSuite) SetupSuite() {
-	zapLogger, err := zap.NewDevelopment()
-	// cannot use s.Nil since it is not initialized
-	s.Require().NoError(err)
-	s.logger = loggerimpl.NewLogger(zapLogger)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 
 	fileName := "../testdata/xdc_integration_es_clusters.yaml"
 	if host.TestFlags.TestClusterConfigFile != "" {
@@ -118,7 +114,7 @@ func (s *esCrossDCTestSuite) SetupSuite() {
 	s.cluster2 = c
 
 	s.esClient = esutils.CreateESClient(s.Suite, s.clusterConfigs[0].ESConfig.URL.String(), "v6")
-	//TODO Do we also want to run v7 test here?
+	// TODO Do we also want to run v7 test here?
 	s.esClient.PutIndexTemplate(s.Suite, "../testdata/es_index_v6_template.json", "test-visibility-template")
 	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[0].ESConfig.Indices[common.VisibilityAppName])
 	s.esClient.CreateIndex(s.Suite, s.clusterConfigs[1].ESConfig.Indices[common.VisibilityAppName])

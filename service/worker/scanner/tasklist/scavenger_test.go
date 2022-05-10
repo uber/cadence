@@ -30,7 +30,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -64,11 +63,7 @@ func (s *ScavengerTestSuite) SetupTest() {
 	s.taskMgr = &mocks.TaskManager{}
 	s.taskListTable = &mockTaskListTable{}
 	s.taskTables = make(map[string]*mockTaskTable)
-	zapLogger, err := zap.NewDevelopment()
-	if err != nil {
-		s.Require().NoError(err)
-	}
-	logger := loggerimpl.NewLogger(zapLogger)
+	logger := loggerimpl.NewLoggerForTest(s.T())
 
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
 	s.scvgr = NewScavenger(
@@ -188,12 +183,20 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 func (s *ScavengerTestSuite) runScavenger() {
 	s.scvgr.Start()
 	timer := time.NewTimer(scavengerTestTimeout)
+	done := make(chan struct{})
+	go func() {
+		s.scvgr.Wait()
+		close(done)
+	}()
 	select {
-	case <-s.scvgr.stopC:
+	case <-done:
 		timer.Stop()
 		return
 	case <-timer.C:
 		s.Fail("timed out waiting for scavenger to finish")
+		// stop waiting.
+		// this may cause a data race in the test logger, if it finishes shutting down
+		// after the test has completed, but at that point it's a failure anyway.
 	}
 }
 

@@ -21,6 +21,8 @@
 package resource
 
 import (
+	"testing"
+
 	"github.com/golang/mock/gomock"
 
 	"github.com/uber/cadence/common/metrics"
@@ -40,11 +42,12 @@ var _ Resource = (*Test)(nil)
 
 // NewTest returns a new test resource instance
 func NewTest(
+	t *testing.T,
 	controller *gomock.Controller,
 	serviceMetricsIndex metrics.ServiceIdx,
 ) *Test {
 	return &Test{
-		Test:       resource.NewTest(controller, serviceMetricsIndex),
+		Test:       resource.NewTest(t, controller, serviceMetricsIndex),
 		EventCache: events.NewMockCache(controller),
 	}
 }

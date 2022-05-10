@@ -107,6 +107,10 @@ func TestFailedLookupWillAskProvider(t *testing.T) {
 	hr.Start()
 	_, err := hr.Lookup("a")
 
+	// shut down the ring so no further calls occur in the background
+	pp.EXPECT().Stop().Times(1)
+	hr.Stop()
+
 	assert.Error(t, err)
 }
 
@@ -123,6 +127,11 @@ func TestRefreshUpdatesRingOnlyWhenRingHasChanged(t *testing.T) {
 	hr.refresh()
 	updatedAt := hr.members.refreshed
 	hr.refresh()
+
+	// shut down the ring so no further calls occur in the background
+	pp.EXPECT().Stop().Times(1)
+	hr.Stop()
+
 	assert.Equal(t, updatedAt, hr.members.refreshed)
 
 }
@@ -232,4 +241,7 @@ func TestLookupAndRefreshRaceCondition(t *testing.T) {
 	}()
 
 	wg.Wait()
+	// shut down the ring so no further calls occur in the background
+	pp.EXPECT().Stop().Times(1)
+	hr.Stop()
 }

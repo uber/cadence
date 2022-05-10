@@ -131,8 +131,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	s.currentClusterName = cluster.TestCurrentClusterName
 	s.alternativeClusterName = cluster.TestAlternativeClusterName
 
-	logger, err := loggerimpl.NewDevelopment()
-	s.Nil(err)
+	logger := loggerimpl.NewLoggerForTest(s.T())
 
 	s.mockConfig = NewConfig(dynamicconfig.NewCollection(
 		dynamicconfig.NewNopClient(),

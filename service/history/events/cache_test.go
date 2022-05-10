@@ -68,7 +68,7 @@ func (s *eventsCacheSuite) TearDownSuite() {
 func (s *eventsCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 	s.mockHistoryManager = &mocks.HistoryV2Manager{}

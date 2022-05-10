@@ -140,10 +140,7 @@ func createTestTaskListManager(controller *gomock.Controller) *taskListManagerIm
 }
 
 func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Config) *taskListManagerImpl {
-	logger, err := loggerimpl.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
+	logger := loggerimpl.NewLoggerForTest(controller.T)
 	tm := newTestTaskManager(logger)
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()

@@ -197,8 +197,12 @@ func (s *Scavenger) Stop() {
 	s.logger.Info("Tasklist scavenger stopping")
 	close(s.stopC)
 	s.executor.Stop()
-	s.stopWG.Wait()
 	s.logger.Info("Tasklist scavenger stopped")
+	s.stopWG.Done()
+}
+
+func (s *Scavenger) Wait() {
+	s.stopWG.Wait()
 }
 
 // Alive returns true if the scavenger is still running
@@ -210,8 +214,7 @@ func (s *Scavenger) Alive() bool {
 func (s *Scavenger) run() {
 	defer func() {
 		s.emitStats()
-		go s.Stop()
-		s.stopWG.Done()
+		go s.Stop() // asynchronously stop, callers can Wait() to ensure shutdown is complete
 	}()
 
 	// Start a task to delete orphaned tasks from the tasks table, if enabled

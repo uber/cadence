@@ -44,7 +44,7 @@ func TestFactorySuite(t *testing.T) {
 }
 
 func (s *factorySuite) SetupTest() {
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 }
 
 func cfgNoop() config.Authorization {

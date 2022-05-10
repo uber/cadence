@@ -66,7 +66,7 @@ func (s *parallelTaskProcessorSuite) SetupTest() {
 	s.controller = gomock.NewController(s.T())
 
 	s.processor = NewParallelTaskProcessor(
-		loggerimpl.NewLoggerForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.T()),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   0,
@@ -274,7 +274,7 @@ func (s *parallelTaskProcessorSuite) TestProcessorContract() {
 	}
 
 	processor := NewParallelTaskProcessor(
-		loggerimpl.NewLoggerForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.T()),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		&ParallelTaskProcessorOptions{
 			QueueSize:   100,

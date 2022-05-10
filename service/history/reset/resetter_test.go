@@ -80,11 +80,12 @@ func (s *workflowResetterSuite) TearDownSuite() {
 func (s *workflowResetterSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	s.controller = gomock.NewController(s.T())
 	s.mockStateRebuilder = execution.NewMockStateRebuilder(s.controller)
 
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          0,

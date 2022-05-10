@@ -67,6 +67,7 @@ func (s *transferQueueProcessorBaseSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID:          10,
@@ -79,7 +80,7 @@ func (s *transferQueueProcessorBaseSuite) SetupTest() {
 	s.mockQueueSplitPolicy = NewMockProcessingQueueSplitPolicy(s.controller)
 	s.mockTaskProcessor = task.NewMockProcessor(s.controller)
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
 	s.metricsScope = s.metricsClient.Scope(metrics.TransferQueueProcessorScope)
 }

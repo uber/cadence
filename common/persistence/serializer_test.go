@@ -52,9 +52,7 @@ func TestCadenceSerializerSuite(t *testing.T) {
 }
 
 func (s *cadenceSerializerSuite) SetupTest() {
-	var err error
-	s.logger, err = loggerimpl.NewDevelopment()
-	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	// Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 	s.Assertions = require.New(s.T())
 }

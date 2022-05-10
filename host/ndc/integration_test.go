@@ -34,7 +34,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
@@ -77,11 +76,8 @@ func TestNDCIntegrationTestSuite(t *testing.T) {
 }
 
 func (s *NDCIntegrationTestSuite) SetupSuite() {
-	zapLogger, err := zap.NewDevelopment()
-	// cannot use s.Nil since it is not initialized
-	s.Require().NoError(err)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	s.serializer = persistence.NewPayloadSerializer()
-	s.logger = loggerimpl.NewLogger(zapLogger)
 
 	s.standByReplicationTasksChan = make(chan *types.ReplicationTask, 100)
 
@@ -119,7 +115,7 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 		VisibilityTestCluster: s.visibilityTestCluster,
 		ClusterMetadata:       clusterMetadata,
 	}
-	cluster, err := host.NewCluster(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
+	cluster, err := host.NewCluster(s.T(), s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
 	s.Require().NoError(err)
 	s.active = cluster
 

@@ -29,8 +29,7 @@ import (
 )
 
 func TestAckManager(t *testing.T) {
-	logger, err := loggerimpl.NewDevelopment()
-	assert.Nil(t, err)
+	logger := loggerimpl.NewLoggerForTest(t)
 	m := NewAckManager(logger)
 	m.SetAckLevel(100)
 	assert.EqualValues(t, 100, m.GetAckLevel())
@@ -41,7 +40,7 @@ func TestAckManager(t *testing.T) {
 	const t4 = 340
 	const t5 = 360
 
-	err = m.ReadItem(t1)
+	err := m.ReadItem(t1)
 	assert.Nil(t, err)
 	assert.EqualValues(t, 100, m.GetAckLevel())
 	assert.EqualValues(t, t1, m.GetReadLevel())

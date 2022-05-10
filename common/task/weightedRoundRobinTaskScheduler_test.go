@@ -288,7 +288,7 @@ func (s *weightedRoundRobinTaskSchedulerSuite) newTestWeightedRoundRobinTaskSche
 	options *WeightedRoundRobinTaskSchedulerOptions,
 ) *weightedRoundRobinTaskSchedulerImpl {
 	scheduler, err := NewWeightedRoundRobinTaskScheduler(
-		loggerimpl.NewLoggerForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.T()),
 		metrics.NewClient(tally.NoopScope, metrics.Common),
 		options,
 	)

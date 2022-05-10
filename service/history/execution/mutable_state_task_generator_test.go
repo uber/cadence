@@ -74,7 +74,7 @@ func (s *mutableStateTaskGeneratorSuite) SetupTest() {
 	s.taskGenerator = NewMutableStateTaskGenerator(
 		constants.TestClusterMetadata,
 		s.mockDomainCache,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.T()),
 		s.mockMutableState,
 	).(*mutableStateTaskGeneratorImpl)
 }
@@ -148,7 +148,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		taskGenerator := NewMutableStateTaskGenerator(
 			constants.TestClusterMetadata,
 			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
+			loggerimpl.NewLoggerForTest(s.T()),
 			mockMutableState,
 		)
 
@@ -208,7 +208,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		taskGenerator := NewMutableStateTaskGenerator(
 			constants.TestClusterMetadata,
 			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
+			loggerimpl.NewLoggerForTest(s.T()),
 			mockMutableState,
 		)
 
@@ -618,7 +618,7 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		taskGenerator := NewMutableStateTaskGenerator(
 			constants.TestClusterMetadata,
 			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
+			loggerimpl.NewLoggerForTest(s.T()),
 			mockMutableState,
 		)
 

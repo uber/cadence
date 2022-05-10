@@ -72,7 +72,7 @@ func (s *domainCacheSuite) TearDownSuite() {
 func (s *domainCacheSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	s.clusterMetadata = &mocks.ClusterMetadata{}
 	s.metadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)

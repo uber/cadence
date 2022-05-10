@@ -81,7 +81,7 @@ func TestMatchingEngineSuite(t *testing.T) {
 }
 
 func (s *matchingEngineSuite) SetupSuite() {
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	http.Handle("/test/tasks", http.HandlerFunc(s.TasksHandler))
 }
 
@@ -116,7 +116,7 @@ func (s *matchingEngineSuite) SetupTest() {
 		&types.TaskList{Name: matchingTestTaskList, Kind: &tlKindNormal},
 		metrics.NewClient(tally.NoopScope, metrics.Matching),
 		metrics.MatchingTaskListMgrScope,
-		loggerimpl.NewLoggerForTest(s.Suite),
+		loggerimpl.NewLoggerForTest(s.T()),
 	)
 
 	s.matchingEngine = s.newMatchingEngine(defaultTestConfig(), s.taskManager)
@@ -692,7 +692,7 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		}
 
 		taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
-		//s.EqualValues(scheduleID, result.TaskToken)
+		// s.EqualValues(scheduleID, result.TaskToken)
 
 		s.EqualValues(string(taskToken), string(result.TaskToken))
 	}
@@ -877,8 +877,8 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				resultToken, err := s.matchingEngine.tokenSerializer.Deserialize(result.TaskToken)
 				s.NoError(err)
 
-				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
-				//s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
+				// taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
+				// s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
 				s.EqualValues(token, resultToken, fmt.Sprintf("%v!=%v", token, resultToken))
 				i++
 			}
@@ -999,8 +999,8 @@ func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
 					panic(err)
 				}
 
-				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
-				//s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
+				// taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
+				// s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
 				s.EqualValues(token, resultToken, fmt.Sprintf("%v!=%v", token, resultToken))
 				i++
 			}
@@ -1179,8 +1179,8 @@ func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
 				if err != nil {
 					panic(err)
 				}
-				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
-				//s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
+				// taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
+				// s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
 				s.EqualValues(token, resultToken, fmt.Sprintf("%v!=%v", token, resultToken))
 				i++
 			}
@@ -1315,8 +1315,8 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 					panic(err)
 				}
 
-				//taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
-				//s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
+				// taskToken, _ := s.matchingEngine.tokenSerializer.Serialize(token)
+				// s.EqualValues(taskToken, result.TaskToken, fmt.Sprintf("%v!=%v", string(taskToken)))
 				s.EqualValues(token, resultToken, fmt.Sprintf("%v!=%v", token, resultToken))
 				i++
 			}

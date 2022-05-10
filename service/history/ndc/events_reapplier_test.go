@@ -60,7 +60,7 @@ func (s *eventReapplicationSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 
-	logger := loggerimpl.NewLoggerForTest(s.Suite)
+	logger := loggerimpl.NewLoggerForTest(s.T())
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.reapplication = NewEventsReapplier(
 		metricsClient,

@@ -30,7 +30,7 @@ import (
 
 func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
 	s := new(pt.HistoryV2PersistenceSuite)
-	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
+	s.TestBase = pt.NewTestBaseWithSQL(t, GetTestClusterOption())
 	s.TestBase.Setup(t)
 	suite.Run(t, s)
 }

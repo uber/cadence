@@ -79,7 +79,7 @@ func (s *historyResenderSuite) SetupTest() {
 	s.mockHistoryClient = history.NewMockClient(s.controller)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 	s.mockClusterMetadata = &mocks.ClusterMetadata{}
 	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 

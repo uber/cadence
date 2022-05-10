@@ -65,6 +65,7 @@ func (s *queueTaskProcessorSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockShard = shard.NewTestContext(
+		s.T(),
 		s.controller,
 		&persistence.ShardInfo{
 			ShardID: 10,
@@ -75,7 +76,7 @@ func (s *queueTaskProcessorSuite) SetupTest() {
 	s.mockPriorityAssigner = NewMockPriorityAssigner(s.controller)
 
 	s.metricsClient = metrics.NewClient(tally.NoopScope, metrics.History)
-	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
+	s.logger = loggerimpl.NewLoggerForTest(s.T())
 
 	s.processor = s.newTestQueueTaskProcessor()
 }
@@ -142,6 +143,7 @@ func (s *queueTaskProcessorSuite) TestStartStop() {
 
 	for i := 0; i != 10; i++ {
 		mockShard := shard.NewTestContext(
+			s.T(),
 			s.controller,
 			&persistence.ShardInfo{
 				ShardID: 10,

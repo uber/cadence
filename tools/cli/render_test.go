@@ -78,9 +78,9 @@ func Test_RenderTable(t *testing.T) {
 			data: testTable,
 			opts: RenderOptions{OptionalColumns: map[string]bool{"map": true, "slice": false}, PrintDateTime: true},
 			expectOutput: "" +
-				"        STRING        | INTEGER | BOOL  |         TIME         |    MAP      \n" +
-				"  text                |     123 | true  | 2000-01-02T03:04:05Z | A:AA, B:BB  \n" +
-				"  ...g long long long |     456 | false | 2000-11-12T13:14:15Z |             \n",
+				"        STRING        | INTEGER | BOOL  |           TIME            |    MAP      \n" +
+				"  text                |     123 | true  | 2000-01-02T03:04:05Z      | A:AA, B:BB  \n" +
+				"  ...g long long long |     456 | false | 2000-11-12T13:14:15-08:00 |             \n",
 		},
 		{
 			name:      "non-struct element",

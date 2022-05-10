@@ -59,7 +59,7 @@ func TestAccessControlledHandlerSuite(t *testing.T) {
 func (s *accessControlledHandlerSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 	s.controller = gomock.NewController(s.T())
-	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
+	s.mockResource = resource.NewTest(s.T(), s.controller, metrics.Frontend)
 	s.mockFrontendHandler = NewMockHandler(s.controller)
 	s.mockAuthorizer = authorization.NewMockAuthorizer(s.controller)
 	s.mockMetricsScope = &mocks.Scope{}

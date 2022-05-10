@@ -21,6 +21,7 @@
 package shard
 
 import (
+	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -46,11 +47,12 @@ var _ Context = (*TestContext)(nil)
 
 // NewTestContext create a new shardContext for test
 func NewTestContext(
+	t *testing.T,
 	ctrl *gomock.Controller,
 	shardInfo *persistence.ShardInfo,
 	config *config.Config,
 ) *TestContext {
-	resource := resource.NewTest(ctrl, metrics.History)
+	resource := resource.NewTest(t, ctrl, metrics.History)
 	eventsCache := events.NewMockCache(ctrl)
 	if shardInfo.TransferProcessingQueueStates == nil {
 		shardInfo.TransferProcessingQueueStates = &types.ProcessingQueueStates{
