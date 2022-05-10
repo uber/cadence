@@ -43,10 +43,34 @@ const (
 	// 5. TerminateWorkflowExecution
 	// 6. QueryWorkflowStrongConsistency
 	// 7. ResetWorkflow
-	// please also reference selectedAPIsForwardingRedirectionPolicyAPIAllowlist
+	// please also reference selectedAPIsForwardingRedirectionPolicyAPIAllowlist and DCRedirectionPolicySelectedAPIsForwardingV2
 	DCRedirectionPolicySelectedAPIsForwarding = "selected-apis-forwarding"
-	// DCRedirectionPolicyAllDomainAPIsForwarding means forwarding all the worker and non-worker APIs based domain
+	// DCRedirectionPolicySelectedAPIsForwardingV2 forwards everything in DCRedirectionPolicySelectedAPIsForwarding,
+	// as well as activity completions (sync and async) and heartbeats.
+	// This is done because activity results are generally deemed "useful" and relatively costly to re-do (when it is
+	// even possible to redo), but activity workers themselves may be datacenter-specific.
+	//
+	// This will likely replace DCRedirectionPolicySelectedAPIsForwarding soon.
+	//
+	// 1-7. from DCRedirectionPolicySelectedAPIsForwarding
+	// 8. RecordActivityTaskHeartbeat
+	// 9. RecordActivityTaskHeartbeatByID
+	// 10. RespondActivityTaskCanceled
+	// 11. RespondActivityTaskCanceledByID
+	// 12. RespondActivityTaskCompleted
+	// 13. RespondActivityTaskCompletedByID
+	// 14. RespondActivityTaskFailed
+	// 15. RespondActivityTaskFailedByID
+	// please also reference selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2
+	DCRedirectionPolicySelectedAPIsForwardingV2 = "selected-apis-forwarding-v2"
+	// DCRedirectionPolicyAllDomainAPIsForwarding means forwarding all the worker and non-worker APIs based domain,
+	// and falling back to DCRedirectionPolicySelectedAPIsForwarding when the current active cluster is not the
+	// cluster migration target.
 	DCRedirectionPolicyAllDomainAPIsForwarding = "all-domain-apis-forwarding"
+	// DCRedirectionPolicyAllDomainAPIsForwardingV2 means forwarding all the worker and non-worker APIs based domain,
+	// and falling back to DCRedirectionPolicySelectedAPIsForwardingV2 when the current active cluster is not the
+	// cluster migration target.
+	DCRedirectionPolicyAllDomainAPIsForwardingV2 = "all-domain-apis-forwarding-v2"
 )
 
 type (
@@ -68,11 +92,13 @@ type (
 		config             *Config
 		domainCache        cache.DomainCache
 		allDomainAPIs      bool
+		selectedAPIs       map[string]struct{}
 		targetCluster      string
 	}
 )
 
-// selectedAPIsForwardingRedirectionPolicyAPIAllowlist contains a list of non-worker APIs which can be redirected
+// selectedAPIsForwardingRedirectionPolicyAPIAllowlist contains a list of non-worker APIs which can be redirected.
+// This is paired with DCRedirectionPolicySelectedAPIsForwarding - keep both lists up to date.
 var selectedAPIsForwardingRedirectionPolicyAPIAllowlist = map[string]struct{}{
 	"StartWorkflowExecution":           {},
 	"SignalWithStartWorkflowExecution": {},
@@ -81,6 +107,28 @@ var selectedAPIsForwardingRedirectionPolicyAPIAllowlist = map[string]struct{}{
 	"TerminateWorkflowExecution":       {},
 	"QueryWorkflowStrongConsistency":   {},
 	"ResetWorkflowExecution":           {},
+}
+
+// selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2 contains a list of non-worker APIs which can be redirected.
+// This is paired with DCRedirectionPolicySelectedAPIsForwardingV2 - keep both lists up to date.
+var selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2 = map[string]struct{}{
+	// from selectedAPIsForwardingRedirectionPolicyAPIAllowlist
+	"StartWorkflowExecution":           {},
+	"SignalWithStartWorkflowExecution": {},
+	"SignalWorkflowExecution":          {},
+	"RequestCancelWorkflowExecution":   {},
+	"TerminateWorkflowExecution":       {},
+	"QueryWorkflowStrongConsistency":   {},
+	"ResetWorkflowExecution":           {},
+	// additional endpoints
+	"RecordActivityTaskHeartbeat":      {},
+	"RecordActivityTaskHeartbeatByID":  {},
+	"RespondActivityTaskCanceled":      {},
+	"RespondActivityTaskCanceledByID":  {},
+	"RespondActivityTaskCompleted":     {},
+	"RespondActivityTaskCompletedByID": {},
+	"RespondActivityTaskFailed":        {},
+	"RespondActivityTaskFailedByID":    {},
 }
 
 // RedirectionPolicyGenerator generate corresponding redirection policy
@@ -94,10 +142,17 @@ func RedirectionPolicyGenerator(clusterMetadata cluster.Metadata, config *Config
 		return newNoopRedirectionPolicy(clusterMetadata.GetCurrentClusterName())
 	case DCRedirectionPolicySelectedAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false, "")
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false, selectedAPIsForwardingRedirectionPolicyAPIAllowlist, "")
+	case DCRedirectionPolicySelectedAPIsForwardingV2:
+		currentClusterName := clusterMetadata.GetCurrentClusterName()
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, false, selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2, "")
 	case DCRedirectionPolicyAllDomainAPIsForwarding:
 		currentClusterName := clusterMetadata.GetCurrentClusterName()
-		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true, policy.AllDomainApisForwardingTargetCluster)
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true, selectedAPIsForwardingRedirectionPolicyAPIAllowlist, policy.AllDomainApisForwardingTargetCluster)
+	case DCRedirectionPolicyAllDomainAPIsForwardingV2:
+		currentClusterName := clusterMetadata.GetCurrentClusterName()
+		return newSelectedOrAllAPIsForwardingPolicy(currentClusterName, config, domainCache, true, selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2, policy.AllDomainApisForwardingTargetCluster)
+
 	default:
 		panic(fmt.Sprintf("Unknown DC redirection policy %v", policy.Policy))
 	}
@@ -121,12 +176,13 @@ func (policy *noopRedirectionPolicy) WithDomainNameRedirect(ctx context.Context,
 }
 
 // newSelectedOrAllAPIsForwardingPolicy creates a forwarding policy for selected APIs based on domain
-func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool, targetCluster string) *selectedOrAllAPIsForwardingRedirectionPolicy {
+func newSelectedOrAllAPIsForwardingPolicy(currentClusterName string, config *Config, domainCache cache.DomainCache, allDoaminAPIs bool, selectedAPIs map[string]struct{}, targetCluster string) *selectedOrAllAPIsForwardingRedirectionPolicy {
 	return &selectedOrAllAPIsForwardingRedirectionPolicy{
 		currentClusterName: currentClusterName,
 		config:             config,
 		domainCache:        domainCache,
 		allDomainAPIs:      allDoaminAPIs,
+		selectedAPIs:       selectedAPIs,
 		targetCluster:      targetCluster,
 	}
 }
@@ -190,11 +246,11 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndI
 			if policy.targetCluster == currentActiveCluster {
 				return currentActiveCluster, true
 			}
-			// fallback to selectedAPIsForwardingRedirectionPolicy if targetCluster is not empty and not the same as currentActiveCluster
+			// fallback to selected APIs if targetCluster is not empty and not the same as currentActiveCluster
 		}
 	}
 
-	_, ok := selectedAPIsForwardingRedirectionPolicyAPIAllowlist[apiName]
+	_, ok := policy.selectedAPIs[apiName]
 	if !ok {
 		// do not do dc redirection if API is not whitelisted
 		return policy.currentClusterName, false
