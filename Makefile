@@ -471,7 +471,7 @@ test: bins ## Build and run all tests. This target is for local development. The
 	@rm -f test
 	@rm -f test.log
 	@echo Running special test cases without race detector:
-	@go test $(if $(filter -v,$(TEST_ARG)),-v,) ./cmd/server/cadence/
+	@go test $(if $(filter -v,$(TEST_ARG)),-v,$(if $(test_v),-v)) ./cmd/server/cadence/
 	@for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
