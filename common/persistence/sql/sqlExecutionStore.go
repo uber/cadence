@@ -344,14 +344,7 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 
 	err := g.Wait()
 	if err != nil {
-		switch err := err.(type) {
-		case *types.EntityNotExistsError:
-			return nil, err
-		default:
-			return nil, &types.InternalServiceError{
-				Message: fmt.Sprintf("GetWorkflowExecution: failed. Error: %v", err),
-			}
-		}
+		return nil, err
 	}
 
 	state, err := m.populateWorkflowMutableState(executions[0])
@@ -707,13 +700,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 		})
 		return e
 	})
-	err := g.Wait()
-	if err != nil {
-		return &types.InternalServiceError{
-			Message: fmt.Sprintf("DeleteWorkflowExecution: failed. Error: %v", err),
-		}
-	}
-	return nil
+	return g.Wait()
 }
 
 // its possible for a new run of the same workflow to have started after the run we are deleting
