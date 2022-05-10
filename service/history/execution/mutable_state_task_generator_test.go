@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/constants"
@@ -74,7 +73,6 @@ func (s *mutableStateTaskGeneratorSuite) SetupTest() {
 	s.taskGenerator = NewMutableStateTaskGenerator(
 		constants.TestClusterMetadata,
 		s.mockDomainCache,
-		loggerimpl.NewLoggerForTest(s.Suite),
 		s.mockMutableState,
 	).(*mutableStateTaskGeneratorImpl)
 }
@@ -148,7 +146,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks_Jittered
 		taskGenerator := NewMutableStateTaskGenerator(
 			constants.TestClusterMetadata,
 			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
 			mockMutableState,
 		)
 
@@ -208,7 +205,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateWorkflowCloseTasks() {
 		taskGenerator := NewMutableStateTaskGenerator(
 			constants.TestClusterMetadata,
 			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
 			mockMutableState,
 		)
 
@@ -618,7 +614,6 @@ func (s *mutableStateTaskGeneratorSuite) TestGenerateFromCrossClusterTask() {
 		taskGenerator := NewMutableStateTaskGenerator(
 			constants.TestClusterMetadata,
 			s.mockDomainCache,
-			loggerimpl.NewLoggerForTest(s.Suite),
 			mockMutableState,
 		)
 
