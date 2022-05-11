@@ -2272,7 +2272,7 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFail
 		},
 	})
 
-	s.EqualError(err, "BadRequestError{Message: RunID is not valid UUID.}")
+	s.EqualError(err, "RunID is not valid UUID.")
 }
 
 func (s *engineSuite) TestRespondDecisionTaskCompletedSignalExternalWorkflowFailed_UnKnownDomain() {
@@ -2452,7 +2452,7 @@ func (s *engineSuite) TestRespondActivityTaskCompletedIfNoAIdProvided() {
 			Identity:  identity,
 		},
 	})
-	s.EqualError(err, "BadRequestError{Message: Neither ActivityID nor ScheduleID is provided}")
+	s.EqualError(err, "Neither ActivityID nor ScheduleID is provided")
 }
 
 func (s *engineSuite) TestRespondActivityTaskCompletedIfNotFound() {
@@ -3022,7 +3022,7 @@ func (s *engineSuite) TestRespondActivityTaskFailededIfNoAIdProvided() {
 			Identity:  identity,
 		},
 	})
-	s.EqualError(err, "BadRequestError{Message: Neither ActivityID nor ScheduleID is provided}")
+	s.EqualError(err, "Neither ActivityID nor ScheduleID is provided")
 }
 
 func (s *engineSuite) TestRespondActivityTaskFailededIfNotFound() {
@@ -3865,7 +3865,7 @@ func (s *engineSuite) TestRespondActivityTaskCanceledIfNoAIdProvided() {
 			Identity:  identity,
 		},
 	})
-	s.EqualError(err, "BadRequestError{Message: Neither ActivityID nor ScheduleID is provided}")
+	s.EqualError(err, "Neither ActivityID nor ScheduleID is provided")
 }
 
 func (s *engineSuite) TestRespondActivityTaskCanceledIfNotFound() {
@@ -5078,7 +5078,7 @@ func (s *engineSuite) TestSignalWorkflowExecution_WorkflowCompleted() {
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 
 	err := s.mockHistoryEngine.SignalWorkflowExecution(context.Background(), signalRequest)
-	s.EqualError(err, "WorkflowExecutionAlreadyCompletedError{Message: workflow execution already completed}")
+	s.EqualError(err, "workflow execution already completed")
 }
 
 func (s *engineSuite) TestRemoveSignalMutableState() {
