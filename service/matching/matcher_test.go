@@ -94,7 +94,7 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 		}
 	})
 
-	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true)
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	syncMatch, err := t.matcher.Offer(ctx, task)
 	cancel()
@@ -143,7 +143,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource) {
 		},
 	).AnyTimes()
 
-	task := newInternalTask(t.newTaskInfo(), nil, taskSource, "", true)
+	task := newInternalTask(t.newTaskInfo(), nil, taskSource, "", true, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 	var err error
@@ -176,7 +176,7 @@ func (t *MatcherTestSuite) testRemoteSyncMatch(taskSource types.TaskSource) {
 }
 
 func (t *MatcherTestSuite) TestSyncMatchFailure() {
-	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true)
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", true, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 
 	var req *types.AddDecisionTaskRequest
@@ -309,7 +309,7 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 		}
 	})
 
-	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", false)
+	task := newInternalTask(t.newTaskInfo(), nil, types.TaskSourceHistory, "", false, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	err := t.matcher.MustOffer(ctx, task)
 	cancel()
@@ -341,7 +341,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 		taskCompleted = true
 	}
 
-	task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false)
+	task := newInternalTask(t.newTaskInfo(), completionFunc, types.TaskSourceDbBacklog, "", false, nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 
 	var err error
@@ -351,7 +351,7 @@ func (t *MatcherTestSuite) TestMustOfferRemoteMatch() {
 	t.client.EXPECT().AddDecisionTask(gomock.Any(), gomock.Any()).Do(
 		func(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, option ...yarpc.CallOption) {
 			req = arg1
-			task := newInternalTask(task.event.TaskInfo, nil, types.TaskSourceDbBacklog, req.GetForwardedFrom(), true)
+			task := newInternalTask(task.event.TaskInfo, nil, types.TaskSourceDbBacklog, req.GetForwardedFrom(), true, nil)
 			close(pollSigC)
 			remoteSyncMatch, err = t.rootMatcher.Offer(ctx, task)
 		},
