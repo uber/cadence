@@ -115,7 +115,6 @@ func (s *historyResenderSuite) SetupTest() {
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
-		persistence.NewPayloadSerializer(),
 		nil,
 		nil,
 		s.logger,
@@ -365,7 +364,6 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
-		persistence.NewPayloadSerializer(),
 		nil,
 		invariantMock,
 		s.logger,
