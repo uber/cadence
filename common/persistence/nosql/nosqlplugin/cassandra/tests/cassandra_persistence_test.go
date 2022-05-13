@@ -88,6 +88,8 @@ func TestQueuePersistence(t *testing.T) {
 func TestConfigStorePersistence(t *testing.T) {
 	s := new(persistencetests.ConfigStorePersistenceSuite)
 	s.TestBase = public.NewTestBaseWithPublicCassandra(t, &persistencetests.TestBaseOptions{})
-	s.TestBase.Setup(t)
+	// sadly using t is unsafe, logging races with test shutdown due to gocql's async event logging code.
+	// I'm not sure why this one seems more problematic than others.
+	s.TestBase.Setup(nil)
 	suite.Run(t, s)
 }

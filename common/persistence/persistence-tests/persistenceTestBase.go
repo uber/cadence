@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
@@ -172,13 +171,30 @@ func (s *TestBase) Config() config.Persistence {
 	return cfg
 }
 
-// Setup sets up the test base, must be called as part of SetupSuite
+// Setup sets up the test base, must be called as part of SetupSuite.
 func (s *TestBase) Setup(t *testing.T) {
-	s.SetT(t)
-	zl := zaptest.NewLogger(t)
+	// note: t must only be used for logging in most cases, as some tests cannot use the *testing.T logger
+	// due to race conditions that are currently too difficult to fix, or are in third party libraries and unfixable.
+	//
+	// current known races / logging after tests that causes races and failures:
+	// - gocql's event logging is async, does not shut down reliably
+	var zl *zap.Logger
+	if t != nil {
+		s.SetT(t)
+		zl = zaptest.NewLogger(t)
+	} else {
+		// cannot SetT, and must use a non-test logger
+		var err error
+		zl, err = zap.NewDevelopment()
+		if err != nil {
+			panic(err)
+		}
+	}
 	_ = zap.ReplaceGlobals(zl)                             // ignore restore func
 	_, err := zap.RedirectStdLogAt(zl, zapcore.DebugLevel) // ignore restore func
-	require.NoError(t, err)
+	if err != nil {
+		panic(err)
+	}
 
 	shardID := 10
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
