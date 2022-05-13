@@ -71,13 +71,6 @@ func TestHistoryResenderSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *historyResenderSuite) SetupSuite() {
-}
-
-func (s *historyResenderSuite) TearDownSuite() {
-
-}
-
 func (s *historyResenderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
@@ -339,7 +332,7 @@ func (s *historyResenderSuite) TestGetHistory() {
 
 	out, err := s.rereplicator.getHistory(
 		context.Background(),
-		s.domainID,
+		s.domainName,
 		workflowID,
 		runID,
 		&startEventID,
