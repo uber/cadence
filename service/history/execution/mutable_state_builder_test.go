@@ -110,6 +110,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 	version := int64(12)
 	runID := uuid.New()
 	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.T(),
 		s.mockShard,
 		s.logger,
 		version,
@@ -140,6 +141,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 	version := int64(12)
 	runID := uuid.New()
 	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.T(),
 		s.mockShard,
 		s.logger,
 		version,
@@ -158,6 +160,7 @@ func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_
 	version := int64(12)
 	runID := uuid.New()
 	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.T(),
 		s.mockShard,
 		s.logger,
 		version,
@@ -539,6 +542,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskSchedule_CurrentVersionChan
 	version := int64(2000)
 	runID := uuid.New()
 	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.T(),
 		s.mockShard,
 		s.logger,
 		version,
@@ -573,6 +577,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 	version := int64(2000)
 	runID := uuid.New()
 	s.msBuilder = NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		s.T(),
 		s.mockShard,
 		s.logger,
 		version,

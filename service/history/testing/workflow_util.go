@@ -49,6 +49,7 @@ func StartWorkflow(
 	}
 	version := entry.GetFailoverVersion()
 	mutableState := execution.NewMutableStateBuilderWithVersionHistoriesWithEventV2(
+		nil, // TODO: forward from calling tests
 		mockShard,
 		mockShard.GetLogger(),
 		version,
