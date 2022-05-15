@@ -557,7 +557,7 @@ func getCurrentUserFromEnv() string {
 			return os.Getenv(n)
 		}
 	}
-	return "unkown"
+	return "unknown"
 }
 
 func prettyPrintJSONObject(o interface{}) {

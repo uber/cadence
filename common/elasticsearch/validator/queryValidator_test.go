@@ -79,12 +79,12 @@ func TestValidateQuery(t *testing.T) {
 		{
 			msg:   "invalid search attribute in comparison",
 			query: "Invalid = 'a' and 1 < 2",
-			err:   "invalid search attribute",
+			err:   "invalid search attribute \"Invalid\"",
 		},
 		{
 			msg:   "invalid search attribute in range",
 			query: "Invalid between 1 and 2 or WorkflowID = 'wid'",
-			err:   "invalid search attribute",
+			err:   "invalid search attribute \"Invalid\"",
 		},
 		{
 			msg:       "only order by",
