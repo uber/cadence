@@ -128,10 +128,9 @@ func NewTransferQueueProcessor(
 			func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
-			shard.GetService().GetPayloadSerializer(),
 			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
-			shard.GetLogger().WithTags(tag.ComponentHistoryResender),
+			shard.GetLogger(),
 		)
 		standbyTaskExecutor := task.NewTransferStandbyTaskExecutor(
 			shard,
