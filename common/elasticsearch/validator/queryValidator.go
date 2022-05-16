@@ -136,17 +136,19 @@ func (qv *VisibilityQueryValidator) validateComparisonExpr(expr sqlparser.Expr) 
 		return errors.New("invalid comparison expression")
 	}
 	colNameStr := colName.Name.String()
-	if qv.isValidSearchAttributes(colNameStr) {
-		if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
-			comparisonExpr.Left = &sqlparser.ColName{
-				Metadata:  colName.Metadata,
-				Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
-				Qualifier: colName.Qualifier,
-			}
-		}
-		return nil
+	if !qv.isValidSearchAttributes(colNameStr) {
+		return fmt.Errorf("invalid search attribute %q", colNameStr)
 	}
-	return errors.New("invalid search attribute")
+
+	if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
+		comparisonExpr.Left = &sqlparser.ColName{
+			Metadata:  colName.Metadata,
+			Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
+			Qualifier: colName.Qualifier,
+		}
+	}
+
+	return nil
 }
 
 func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) error {
@@ -156,17 +158,20 @@ func (qv *VisibilityQueryValidator) validateRangeExpr(expr sqlparser.Expr) error
 		return errors.New("invalid range expression")
 	}
 	colNameStr := colName.Name.String()
-	if qv.isValidSearchAttributes(colNameStr) {
-		if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
-			rangeCond.Left = &sqlparser.ColName{
-				Metadata:  colName.Metadata,
-				Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
-				Qualifier: colName.Qualifier,
-			}
-		}
-		return nil
+
+	if !qv.isValidSearchAttributes(colNameStr) {
+		return fmt.Errorf("invalid search attribute %q", colNameStr)
 	}
-	return errors.New("invalid search attribute")
+
+	if !definition.IsSystemIndexedKey(colNameStr) { // add search attribute prefix
+		rangeCond.Left = &sqlparser.ColName{
+			Metadata:  colName.Metadata,
+			Name:      sqlparser.NewColIdent(definition.Attr + "." + colNameStr),
+			Qualifier: colName.Qualifier,
+		}
+	}
+
+	return nil
 }
 
 func (qv *VisibilityQueryValidator) validateOrderByExpr(orderBy sqlparser.OrderBy) error {

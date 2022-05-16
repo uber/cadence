@@ -27,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/uber/cadence/common/log"
@@ -96,6 +97,10 @@ func (lg *loggerImpl) buildFields(tags []tag.Tag) []zap.Field {
 			continue
 		}
 		fs = append(fs, f)
+
+		if obj, ok := f.Interface.(zapcore.ObjectMarshaler); ok && f.Type == zapcore.ErrorType {
+			fs = append(fs, zap.Object(f.Key+"-details", obj))
+		}
 	}
 	return fs
 }

@@ -39,6 +39,8 @@ const (
 	TaskList        = "TaskList"
 	IsCron          = "IsCron"
 	NumClusters     = "NumClusters"
+	CustomDomain    = "CustomDomain" // to support batch workflow
+	Operator        = "Operator"     // to support batch workflow
 
 	CustomStringField    = "CustomStringField"
 	CustomKeywordField   = "CustomKeywordField"
@@ -70,6 +72,8 @@ func createDefaultIndexedKeys() map[string]interface{} {
 		CustomDatetimeField:  shared.IndexedValueTypeDatetime,
 		CadenceChangeVersion: shared.IndexedValueTypeKeyword,
 		BinaryChecksums:      shared.IndexedValueTypeKeyword,
+		CustomDomain:         shared.IndexedValueTypeString,
+		Operator:             shared.IndexedValueTypeString,
 	}
 	for k, v := range systemIndexedKeys {
 		defaultIndexedKeys[k] = v

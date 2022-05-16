@@ -135,7 +135,7 @@ func (v *nosqlVisibilityStore) UpsertWorkflowExecution(
 	if p.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.NewOperationNotSupportErrorForVis()
+	return p.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) ListOpenWorkflowExecutions(
@@ -352,21 +352,21 @@ func (v *nosqlVisibilityStore) DeleteWorkflowExecution(
 }
 
 func (v *nosqlVisibilityStore) ListWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) CountWorkflowExecutions(
-	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
+	_ context.Context,
+	_ *p.CountWorkflowExecutionsRequest,
 ) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }

@@ -59,32 +59,32 @@ func TestValidateQuery(t *testing.T) {
 		{
 			msg:   "invalid SQL",
 			query: "Invalid SQL",
-			err:   "BadRequestError{Message: Invalid query.}",
+			err:   "Invalid query.",
 		},
 		{
 			msg:   "invalid where expression",
 			query: "InvalidWhereExpr",
-			err:   "BadRequestError{Message: invalid where clause}",
+			err:   "invalid where clause",
 		},
 		{
 			msg:   "invalid comparison",
 			query: "WorkflowID = 'wid' and 1 < 2",
-			err:   "BadRequestError{Message: invalid comparison expression}",
+			err:   "invalid comparison expression",
 		},
 		{
 			msg:   "invalid range",
 			query: "1 between 1 and 2 or WorkflowID = 'wid'",
-			err:   "BadRequestError{Message: invalid range expression}",
+			err:   "invalid range expression",
 		},
 		{
 			msg:   "invalid search attribute in comparison",
 			query: "Invalid = 'a' and 1 < 2",
-			err:   "BadRequestError{Message: invalid search attribute}",
+			err:   "invalid search attribute \"Invalid\"",
 		},
 		{
 			msg:   "invalid search attribute in range",
 			query: "Invalid between 1 and 2 or WorkflowID = 'wid'",
-			err:   "BadRequestError{Message: invalid search attribute}",
+			err:   "invalid search attribute \"Invalid\"",
 		},
 		{
 			msg:       "only order by",
@@ -104,27 +104,27 @@ func TestValidateQuery(t *testing.T) {
 		{
 			msg:   "invalid order by attribute",
 			query: "order by InvalidField desc",
-			err:   "BadRequestError{Message: invalid order by attribute}",
+			err:   "invalid order by attribute",
 		},
 		{
 			msg:   "invalid order by attribute expr",
 			query: "order by 123",
-			err:   "BadRequestError{Message: invalid order by expression}",
+			err:   "invalid order by expression",
 		},
 		{
 			msg:   "security SQL injection - with another statement",
 			query: "WorkflowID = 'wid'; SELECT * FROM important_table;",
-			err:   "BadRequestError{Message: Invalid query.}",
+			err:   "Invalid query.",
 		},
 		{
 			msg:   "security SQL injection - with always true expression",
 			query: "WorkflowID = 'wid' and (RunID = 'rid' or 1 = 1)",
-			err:   "BadRequestError{Message: invalid comparison expression}",
+			err:   "invalid comparison expression",
 		},
 		{
 			msg:   "security SQL injection - with union",
 			query: "WorkflowID = 'wid' union select * from dummy",
-			err:   "BadRequestError{Message: Invalid select query.}",
+			err:   "Invalid select query.",
 		},
 	}
 

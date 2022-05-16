@@ -95,6 +95,8 @@ func (s *mutableStateSuite) SetupTest() {
 	s.testScope = s.mockShard.Resource.MetricsScope
 	s.logger = s.mockShard.GetLogger()
 
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
+
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, constants.TestLocalDomainEntry)
 }
 
@@ -787,6 +789,14 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	return newDecisionScheduleEvent, newDecisionStartedEvent
 }
 
+func (s *mutableStateSuite) TestLoad_BackwardsCompatibility() {
+	mutableState := s.buildWorkflowMutableState()
+
+	s.msBuilder.Load(mutableState)
+
+	s.Equal(constants.TestDomainID, s.msBuilder.pendingChildExecutionInfoIDs[81].DomainID)
+}
+
 func (s *mutableStateSuite) TestUpdateCurrentVersion_WorkflowOpen() {
 	mutableState := s.buildWorkflowMutableState()
 
@@ -890,6 +900,16 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 			StartedID:             common.EmptyEventID,
 			CreateRequestID:       uuid.New(),
 			DomainID:              constants.TestDomainID,
+			WorkflowTypeName:      "code.uber.internal/test/foobar",
+		},
+		81: {
+			Version:               failoverVersion,
+			InitiatedID:           80,
+			InitiatedEventBatchID: 20,
+			InitiatedEvent:        &types.HistoryEvent{},
+			StartedID:             common.EmptyEventID,
+			CreateRequestID:       uuid.New(),
+			DomainNameDEPRECATED:  constants.TestDomainName,
 			WorkflowTypeName:      "code.uber.internal/test/foobar",
 		},
 	}

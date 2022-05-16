@@ -193,12 +193,10 @@ func (vc *versionChecker) ClientSupported(ctx context.Context, enableClientVersi
 		return nil
 	}
 	version, err := version.NewVersion(clientFeatureVersion)
-	if err != nil {
+	if err != nil || !supportedVersions.Check(version) {
 		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
 	}
-	if !supportedVersions.Check(version) {
-		return &types.ClientVersionNotSupportedError{FeatureVersion: clientFeatureVersion, ClientImpl: clientImpl, SupportedVersions: supportedVersions.String()}
-	}
+
 	return nil
 }
 

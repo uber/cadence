@@ -297,7 +297,10 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 	domainName, err := c.domainCache.GetDomainName(domainID)
 	if err != nil {
 		c.logger.Error("Coordinator failed to get domain after receiving all failover markers",
-			tag.WorkflowDomainID(domainID))
+			tag.WorkflowDomainID(domainID),
+			tag.Error(err),
+		)
+
 		c.scope.Tagged(metrics.DomainTag(domainName)).IncCounter(metrics.CadenceFailures)
 		return
 	}
@@ -310,7 +313,9 @@ func (c *coordinatorImpl) handleFailoverMarkers(
 			c.retryPolicy,
 		); err != nil {
 			c.logger.Error("Coordinator failed to update domain after receiving all failover markers",
-				tag.WorkflowDomainID(domainID))
+				tag.WorkflowDomainID(domainID),
+				tag.Error(err),
+			)
 			c.scope.IncCounter(metrics.CadenceFailures)
 			return
 		}

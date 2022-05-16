@@ -71,13 +71,6 @@ func TestHistoryResenderSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *historyResenderSuite) SetupSuite() {
-}
-
-func (s *historyResenderSuite) TearDownSuite() {
-
-}
-
 func (s *historyResenderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
@@ -115,7 +108,6 @@ func (s *historyResenderSuite) SetupTest() {
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
-		persistence.NewPayloadSerializer(),
 		nil,
 		nil,
 		s.logger,
@@ -340,7 +332,7 @@ func (s *historyResenderSuite) TestGetHistory() {
 
 	out, err := s.rereplicator.getHistory(
 		context.Background(),
-		s.domainID,
+		s.domainName,
 		workflowID,
 		runID,
 		&startEventID,
@@ -365,7 +357,6 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
-		persistence.NewPayloadSerializer(),
 		nil,
 		invariantMock,
 		s.logger,
