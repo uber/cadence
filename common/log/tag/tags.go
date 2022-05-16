@@ -172,7 +172,7 @@ func WorkflowDomainIDs(domainIDs interface{}) Tag {
 
 //	OperationName returns tag for OperationName
 func OperationName(operationName string) Tag {
-	return newStringTag("wf-operation-name", operationName)
+	return newStringTag("operation-name", operationName)
 }
 
 // history event ID related
