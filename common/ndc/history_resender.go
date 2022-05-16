@@ -74,7 +74,6 @@ type (
 		domainCache           cache.DomainCache
 		adminClient           adminClient.Client
 		historyReplicationFn  nDCHistoryReplicationFn
-		serializer            persistence.PayloadSerializer
 		rereplicationTimeout  dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		currentExecutionCheck invariant.Invariant
 		logger                log.Logger
@@ -91,7 +90,6 @@ func NewHistoryResender(
 	domainCache cache.DomainCache,
 	adminClient adminClient.Client,
 	historyReplicationFn nDCHistoryReplicationFn,
-	serializer persistence.PayloadSerializer,
 	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
 	currentExecutionCheck invariant.Invariant,
 	logger log.Logger,
@@ -101,10 +99,9 @@ func NewHistoryResender(
 		domainCache:           domainCache,
 		adminClient:           adminClient,
 		historyReplicationFn:  historyReplicationFn,
-		serializer:            serializer,
 		rereplicationTimeout:  rereplicationTimeout,
 		currentExecutionCheck: currentExecutionCheck,
-		logger:                logger,
+		logger:                logger.WithTags(tag.ComponentHistoryResender),
 	}
 }
 
@@ -119,6 +116,11 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 	endEventVersion *int64,
 ) error {
 
+	domainName, err := n.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return fmt.Errorf("getting domain: %w", err)
+	}
+
 	ctx := context.Background()
 	var cancel context.CancelFunc
 	if n.rereplicationTimeout != nil {
@@ -131,7 +133,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 
 	historyIterator := collection.NewPagingIterator(n.getPaginationFn(
 		ctx,
-		domainID,
+		domainName,
 		workflowID,
 		runID,
 		startEventID,
@@ -174,7 +176,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 
 func (n *HistoryResenderImpl) getPaginationFn(
 	ctx context.Context,
-	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 	startEventID *int64,
@@ -187,7 +189,7 @@ func (n *HistoryResenderImpl) getPaginationFn(
 
 		response, err := n.getHistory(
 			ctx,
-			domainID,
+			domainName,
 			workflowID,
 			runID,
 			startEventID,
@@ -246,7 +248,7 @@ func (n *HistoryResenderImpl) sendReplicationRawRequest(
 
 func (n *HistoryResenderImpl) getHistory(
 	ctx context.Context,
-	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 	startEventID *int64,
@@ -256,11 +258,6 @@ func (n *HistoryResenderImpl) getHistory(
 	token []byte,
 	pageSize int32,
 ) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
-
-	domainName, err := n.domainCache.GetDomainName(domainID)
-	if err != nil {
-		return nil, fmt.Errorf("getting domain: %w", err)
-	}
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
