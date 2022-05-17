@@ -1649,7 +1649,7 @@ func (s *IntegrationSuite) TestRateLimitBufferedEvents() {
 	// first decision to send 101 signals, the last signal will force fail decision and flush buffered events.
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
-	s.EqualError(err, "EntityNotExistsError{Message: Decision task not found.}")
+	s.EqualError(err, "Decision task not found.")
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTask(false, false)

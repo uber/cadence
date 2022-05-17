@@ -302,7 +302,6 @@ func NewEngineWithShardContext(
 			shard.GetDomainCache(),
 			adminRetryableClient,
 			resendFunc,
-			shard.GetService().GetPayloadSerializer(),
 			nil,
 			openExecutionCheck,
 			shard.GetLogger(),

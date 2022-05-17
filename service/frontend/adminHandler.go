@@ -1319,7 +1319,6 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
-		adh.eventSerializer,
 		nil,
 		nil,
 		adh.GetLogger(),
