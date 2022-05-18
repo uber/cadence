@@ -63,6 +63,11 @@ type (
 	}
 )
 
+func TestForwardingPolicyV2ContainsV1(t *testing.T) {
+	require.NotEqual(t, selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2, selectedAPIsForwardingRedirectionPolicyAPIAllowlist)
+	require.Subset(t, selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2, selectedAPIsForwardingRedirectionPolicyAPIAllowlist)
+}
+
 func TestClusterRedirectionHandlerSuite(t *testing.T) {
 	s := new(clusterRedirectionHandlerSuite)
 	suite.Run(t, s)
