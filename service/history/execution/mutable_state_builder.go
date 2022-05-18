@@ -2170,7 +2170,11 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 	ai *persistence.ActivityInfo,
 	ctx context.Context,
 ) bool {
-	e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).IncCounter(metrics.DecisionTypeScheduleActivityDispatchCounter)
+	taggedScope := e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).Tagged(
+		metrics.DomainTag(e.domainEntry.GetInfo().Name),
+		metrics.WorkflowTypeTag(e.GetWorkflowType().Name),
+		metrics.TaskListTag(ai.TaskList))
+	taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchCounter)
 	err := e.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:       e.executionInfo.DomainID,
 		SourceDomainUUID: e.domainEntry.GetInfo().ID,
@@ -2189,9 +2193,8 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 			ScheduledTimestampOfThisAttempt: common.Int64Ptr(ai.ScheduledTime.UnixNano()),
 		},
 	})
-
 	if err == nil {
-		e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
+		taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
 		return true
 	}
 	return false
