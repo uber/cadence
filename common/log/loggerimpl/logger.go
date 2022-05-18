@@ -57,6 +57,17 @@ func NewLoggerForTest(t *testing.T) log.Logger {
 	return NewLogger(zaptest.NewLogger(t))
 }
 
+// NewDevelopment returns a logger at debug level and log into STDERR.
+// Currently this is only used in tests that cannot use NewLoggerForTest due to logging race conditions.
+// It should likely never be used anywhere else, and should be removed if those races are fixed.
+func NewDevelopment(_ *testing.T) (log.Logger, error) {
+	zapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+	return NewLogger(zapLogger), nil
+}
+
 // NewLogger returns a new logger
 func NewLogger(zapLogger *zap.Logger) log.Logger {
 	return &loggerImpl{

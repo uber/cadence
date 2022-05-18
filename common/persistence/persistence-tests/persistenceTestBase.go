@@ -33,10 +33,6 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
@@ -52,6 +48,8 @@ import (
 	"github.com/uber/cadence/common/persistence/sql"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type (
@@ -89,9 +87,11 @@ type (
 		ClusterMetadata           cluster.Metadata
 		DefaultTestCluster        testcluster.PersistenceTestCluster
 		VisibilityTestCluster     testcluster.PersistenceTestCluster
-		Logger                    log.Logger
-		PayloadSerializer         persistence.PayloadSerializer
-		ConfigStoreManager        persistence.ConfigStoreManager
+		// Logger caution: gocql has racy shutdown-vs-logging code, so you MUST NOT use a *testing.T-based logger
+		// in tests, or they will be inherently flaky.
+		Logger             log.Logger
+		PayloadSerializer  persistence.PayloadSerializer
+		ConfigStoreManager persistence.ConfigStoreManager
 	}
 
 	// TestBaseParams defines the input of TestBase
@@ -113,7 +113,10 @@ const (
 
 // NewTestBaseFromParams returns a customized test base from given input
 func NewTestBaseFromParams(t *testing.T, params TestBaseParams) TestBase {
-	logger := loggerimpl.NewLoggerForTest(t)
+	logger, err := loggerimpl.NewDevelopment(t)
+	if err != nil {
+		panic(err)
+	}
 	return TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
@@ -173,27 +176,20 @@ func (s *TestBase) Config() config.Persistence {
 
 // Setup sets up the test base, must be called as part of SetupSuite.
 func (s *TestBase) Setup(t *testing.T) {
-	// note: t must only be used for logging in most cases, as some tests cannot use the *testing.T logger
-	// due to race conditions that are currently too difficult to fix, or are in third party libraries and unfixable.
+	// note: t must only be used for "direct" logging/asserting  in most cases, as some tests cannot use the
+	// *testing.T logger due to race conditions that are currently too difficult to fix, or are in third party
+	// libraries and unfixable.
 	//
 	// current known races / logging after tests that causes races and failures:
-	// - gocql's event logging is async, does not shut down reliably
-	var zl *zap.Logger
-	if t != nil {
-		s.SetT(t)
-		zl = zaptest.NewLogger(t)
-	} else {
-		// cannot SetT, and must use a non-test logger
-		var err error
-		zl, err = zap.NewDevelopment()
-		if err != nil {
-			panic(err)
-		}
-	}
-	_ = zap.ReplaceGlobals(zl)                             // ignore restore func
-	_, err := zap.RedirectStdLogAt(zl, zapcore.DebugLevel) // ignore restore func
+	// - gocql's event logging is async and does not shut down reliably, so we cannot hand it a *testing.T-based logger
+	zl, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
+	}
+	_ = zap.ReplaceGlobals(zl)                            // ignore restore func, better to leak than be flaky
+	_, err = zap.RedirectStdLogAt(zl, zapcore.DebugLevel) // ignore restore func, better to leak than be flaky
+	if err != nil {
+		panic(err) // should never fail
 	}
 
 	shardID := 10
