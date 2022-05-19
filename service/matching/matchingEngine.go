@@ -113,7 +113,6 @@ func NewEngine(taskManager persistence.TaskManager,
 	domainCache cache.DomainCache,
 	resolver membership.Resolver,
 ) Engine {
-
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
 		historyService:       historyService,
