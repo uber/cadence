@@ -113,7 +113,6 @@ func NewEngine(taskManager persistence.TaskManager,
 	domainCache cache.DomainCache,
 	resolver membership.Resolver,
 ) Engine {
-
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
 		historyService:       historyService,
@@ -551,11 +550,11 @@ func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
 	response.Input = attributes.Input
 	response.WorkflowExecution = task.workflowExecution()
 	response.ScheduledTimestampOfThisAttempt = activityTaskDispatchInfo.ScheduledTimestampOfThisAttempt
-	response.ScheduledTimestamp = common.Int64Ptr(*scheduledEvent.Timestamp)
-	response.ScheduleToCloseTimeoutSeconds = common.Int32Ptr(*attributes.ScheduleToCloseTimeoutSeconds)
+	response.ScheduledTimestamp = scheduledEvent.Timestamp
+	response.ScheduleToCloseTimeoutSeconds = attributes.ScheduleToCloseTimeoutSeconds
 	response.StartedTimestamp = activityTaskDispatchInfo.StartedTimestamp
-	response.StartToCloseTimeoutSeconds = common.Int32Ptr(*attributes.StartToCloseTimeoutSeconds)
-	response.HeartbeatTimeoutSeconds = common.Int32Ptr(*attributes.HeartbeatTimeoutSeconds)
+	response.StartToCloseTimeoutSeconds = attributes.StartToCloseTimeoutSeconds
+	response.HeartbeatTimeoutSeconds = attributes.HeartbeatTimeoutSeconds
 
 	token := &common.TaskToken{
 		DomainID:        task.event.DomainID,

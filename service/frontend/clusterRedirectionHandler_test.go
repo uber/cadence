@@ -63,6 +63,14 @@ type (
 	}
 )
 
+func TestForwardingPolicyV2ContainsV1(t *testing.T) {
+	require.NotEqual(t, selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2, selectedAPIsForwardingRedirectionPolicyAPIAllowlist)
+	for k := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
+		_, ok := selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2[k]
+		require.True(t, ok, "v2 does not contain a key that is in v1: %v", k)
+	}
+}
+
 func TestClusterRedirectionHandlerSuite(t *testing.T) {
 	s := new(clusterRedirectionHandlerSuite)
 	suite.Run(t, s)

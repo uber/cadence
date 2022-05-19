@@ -1,7 +1,6 @@
 # Cadence Roadmap
 
 The following is a high-level quarterly roadmap of the [Cadence](https://cadenceworkflow.io/) project.
-Please contact [Cadence discussion group](https://groups.google.com/d/forum/cadence-discussion) for more information.
 
 ## Q3 2019
 
