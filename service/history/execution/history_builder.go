@@ -52,26 +52,6 @@ func NewHistoryBuilderFromEvents(history []*types.HistoryEvent, logger log.Logge
 	}
 }
 
-// GetFirstEvent gets the first event in workflow history
-// it returns the first transient history event if exists
-func (b *HistoryBuilder) GetFirstEvent() *types.HistoryEvent {
-	// Transient decision events are always written before other events
-	if b.transientHistory != nil && len(b.transientHistory) > 0 {
-		return b.transientHistory[0]
-	}
-
-	if b.history != nil && len(b.history) > 0 {
-		return b.history[0]
-	}
-
-	return nil
-}
-
-// HasTransientEvents returns true if there are transient history events
-func (b *HistoryBuilder) HasTransientEvents() bool {
-	return b.transientHistory != nil && len(b.transientHistory) > 0
-}
-
 // AddWorkflowExecutionStartedEvent adds WorkflowExecutionStarted event to history
 // originalRunID is the runID when the WorkflowExecutionStarted event is written
 // firstRunID is the very first runID along the chain of ContinueAsNew and Reset
@@ -879,9 +859,4 @@ func getDecisionTaskStartedEventAttributes(scheduledEventID int64, requestID str
 func (b *HistoryBuilder) GetHistory() *types.History {
 	history := types.History{Events: b.history}
 	return &history
-}
-
-// SetHistory sets workflow history inside history builder
-func (b *HistoryBuilder) SetHistory(history *types.History) {
-	b.history = history.Events
 }
