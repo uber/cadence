@@ -584,11 +584,11 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		targetDomainName,
 		requestCancelInfo.CancelRequestID,
 	); err != nil {
-		t.logger.Debug(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
+		t.logger.Info(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
 
 		// Check to see if the error is non-transient, in which case add RequestCancelFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) || err == errTargetDomainNotActive {
+		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
 			// for retryable error just return
 			return err
 		}
@@ -694,11 +694,11 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		targetDomainName,
 		signalInfo,
 	); err != nil {
-		t.logger.Debug(fmt.Sprintf("Failed to signal external workflow execution. Error: %v", err))
+		t.logger.Info(fmt.Sprintf("Failed to signal external workflow execution. Error: %v", err))
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) || err == errTargetDomainNotActive {
+		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
 			// for retryable error just return
 			return err
 		}
