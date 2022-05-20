@@ -561,7 +561,7 @@ func (s *IntegrationSuite) TestDelayStartWorkflow() {
 		"Backoff duration(%f s) should have been at least 5 seconds",
 		time.Duration(backoffDuration).Round(time.Millisecond).Seconds(),
 	)
-	s.True(
+	s.False(
 		backoffDuration < targetBackoffDuration+backoffDurationTolerance,
 		"Integration test too long: %f seconds",
 		time.Duration(backoffDuration).Round(time.Millisecond).Seconds(),

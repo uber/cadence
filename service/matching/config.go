@@ -128,7 +128,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		ShutdownDrainDuration:           dc.GetDurationProperty(dynamicconfig.MatchingShutdownDrainDuration, 0),
 		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode, false)(),
 		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID, false),
-		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime, 100*time.Millisecond),
+		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime, 2*time.Millisecond),
 	}
 }
 
