@@ -2061,7 +2061,7 @@ func (h *handlerImpl) convertError(err error) error {
 
 		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
 	case *persistence.WorkflowExecutionAlreadyStartedError:
-		return &types.InternalServiceError{Message: err.Msg}
+		return &types.WorkflowExecutionAlreadyStartedError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.TransactionSizeLimitError:

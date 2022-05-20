@@ -91,7 +91,6 @@ func NewStateRebuilder(
 			shard.GetClusterMetadata(),
 			shard.GetDomainCache(),
 			shard.GetEventsCache(),
-			logger,
 			shard.GetShardID(),
 		),
 		rebuiltHistorySize: 0,
@@ -205,7 +204,7 @@ func (r *stateRebuilderImpl) initializeBuilders(
 		r.logger,
 		resetMutableStateBuilder,
 		func(mutableState MutableState) MutableStateTaskGenerator {
-			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), r.logger, mutableState)
+			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), mutableState)
 		},
 	)
 	return resetMutableStateBuilder, stateBuilder
@@ -230,9 +229,9 @@ func (r *stateRebuilderImpl) applyEvents(
 	)
 	if err != nil {
 		r.logger.Error("nDCStateRebuilder unable to rebuild mutable state.", tag.Error(err))
-		return err
 	}
-	return nil
+
+	return err
 }
 
 func (r *stateRebuilderImpl) getPaginationFn(
