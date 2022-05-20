@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -109,7 +108,6 @@ type (
 	mutableStateTaskGeneratorImpl struct {
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
-		logger          log.Logger
 
 		mutableState MutableState
 	}
@@ -128,14 +126,12 @@ var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
 func NewMutableStateTaskGenerator(
 	clusterMetadata cluster.Metadata,
 	domainCache cache.DomainCache,
-	logger log.Logger,
 	mutableState MutableState,
 ) MutableStateTaskGenerator {
 
 	return &mutableStateTaskGeneratorImpl{
 		clusterMetadata: clusterMetadata,
 		domainCache:     domainCache,
-		logger:          logger,
 
 		mutableState: mutableState,
 	}

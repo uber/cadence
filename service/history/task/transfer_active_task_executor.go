@@ -1448,7 +1448,6 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 	taskGenerator := execution.NewMutableStateTaskGenerator(
 		t.shard.GetClusterMetadata(),
 		t.shard.GetDomainCache(),
-		t.logger,
 		mutableState,
 	)
 	for _, generator := range generators {

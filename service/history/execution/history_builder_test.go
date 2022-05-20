@@ -104,7 +104,7 @@ func (s *historyBuilderSuite) SetupTest() {
 	s.mockShard.Resource.ClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.logger, s.domainEntry)
-	s.builder = NewHistoryBuilder(s.msBuilder, s.logger)
+	s.builder = NewHistoryBuilder(s.msBuilder)
 }
 
 func (s *historyBuilderSuite) TearDownTest() {

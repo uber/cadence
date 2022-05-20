@@ -22,7 +22,6 @@ package execution
 
 import (
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -37,7 +36,7 @@ type (
 )
 
 // NewHistoryBuilder creates a new history builder
-func NewHistoryBuilder(msBuilder MutableState, logger log.Logger) *HistoryBuilder {
+func NewHistoryBuilder(msBuilder MutableState) *HistoryBuilder {
 	return &HistoryBuilder{
 		transientHistory: []*types.HistoryEvent{},
 		history:          []*types.HistoryEvent{},
@@ -46,7 +45,7 @@ func NewHistoryBuilder(msBuilder MutableState, logger log.Logger) *HistoryBuilde
 }
 
 // NewHistoryBuilderFromEvents creates a new history builder based on the given workflow history events
-func NewHistoryBuilderFromEvents(history []*types.HistoryEvent, logger log.Logger) *HistoryBuilder {
+func NewHistoryBuilderFromEvents(history []*types.HistoryEvent) *HistoryBuilder {
 	return &HistoryBuilder{
 		history: history,
 	}
