@@ -28,14 +28,15 @@ import (
 
 // AddActivityTaskRequest is an internal type (TBD...)
 type AddActivityTaskRequest struct {
-	DomainUUID                    string             `json:"domainUUID,omitempty"`
-	Execution                     *WorkflowExecution `json:"execution,omitempty"`
-	SourceDomainUUID              string             `json:"sourceDomainUUID,omitempty"`
-	TaskList                      *TaskList          `json:"taskList,omitempty"`
-	ScheduleID                    int64              `json:"scheduleId,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
-	Source                        *TaskSource        `json:"source,omitempty"`
-	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
+	DomainUUID                    string                    `json:"domainUUID,omitempty"`
+	Execution                     *WorkflowExecution        `json:"execution,omitempty"`
+	SourceDomainUUID              string                    `json:"sourceDomainUUID,omitempty"`
+	TaskList                      *TaskList                 `json:"taskList,omitempty"`
+	ScheduleID                    int64                     `json:"scheduleId,omitempty"`
+	ScheduleToStartTimeoutSeconds *int32                    `json:"scheduleToStartTimeoutSeconds,omitempty"`
+	Source                        *TaskSource               `json:"source,omitempty"`
+	ForwardedFrom                 string                    `json:"forwardedFrom,omitempty"`
+	ActivityTaskDispatchInfo      *ActivityTaskDispatchInfo `json:"activityTaskDispatchInfo,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -100,6 +101,17 @@ func (v *AddActivityTaskRequest) GetForwardedFrom() (o string) {
 		return v.ForwardedFrom
 	}
 	return
+}
+
+// ActivityTaskDispatchInfo is an internal type (TBD...)
+type ActivityTaskDispatchInfo struct {
+	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
+	StartedTimestamp                *int64        `json:"startedTimestamp,omitempty"`
+	Attempt                         *int64        `json:"attempt,omitempty"`
+	ScheduledTimestampOfThisAttempt *int64        `json:"scheduledTimestampOfThisAttempt,omitempty"`
+	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
+	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
+	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
 }
 
 // AddDecisionTaskRequest is an internal type (TBD...)

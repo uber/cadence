@@ -149,6 +149,7 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 		s.mockConfig,
 		s.mockDomainCache,
 		false,
+		selectedAPIsForwardingRedirectionPolicyAPIAllowlist,
 		"",
 	)
 }

@@ -302,7 +302,6 @@ func NewEngineWithShardContext(
 			shard.GetDomainCache(),
 			adminRetryableClient,
 			resendFunc,
-			shard.GetService().GetPayloadSerializer(),
 			nil,
 			openExecutionCheck,
 			shard.GetLogger(),
@@ -1691,6 +1690,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 		RunID:      request.WorkflowExecution.RunID,
 	}
 
+	var resurrectError error
 	response := &types.RecordActivityTaskStartedResponse{}
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
@@ -1701,6 +1701,38 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			scheduleID := request.GetScheduleID()
 			requestID := request.GetRequestID()
 			ai, isRunning := mutableState.GetActivityInfo(scheduleID)
+
+			// RecordActivityTaskStarted is already past scheduleToClose timeout.
+			// If at this point pending activity is still in mutable state it may be resurrected.
+			// Otherwise it would be completed or timed out already.
+			if isRunning && e.timeSource.Now().After(ai.ScheduledTime.Add(time.Duration(ai.ScheduleToCloseTimeout)*time.Second)) {
+				resurrectedActivities, err := execution.GetResurrectedActivities(ctx, e.shard, mutableState)
+				if err != nil {
+					e.logger.Error("Activity resurrection check failed", tag.Error(err))
+					return err
+				}
+
+				if _, ok := resurrectedActivities[scheduleID]; ok {
+					// found activity resurrection
+					domainName := mutableState.GetDomainEntry().GetInfo().Name
+					e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.ActivityResurrectionCounter)
+					e.logger.Error("Encounter resurrected activity, skip",
+						tag.WorkflowDomainName(domainName),
+						tag.WorkflowID(workflowExecution.GetWorkflowID()),
+						tag.WorkflowRunID(workflowExecution.GetRunID()),
+						tag.WorkflowScheduleID(scheduleID),
+					)
+
+					// remove resurrected activity from mutable state
+					if err := mutableState.DeleteActivity(scheduleID); err != nil {
+						return err
+					}
+
+					// save resurrection error but return nil here, so that mutable state would get updated in DB
+					resurrectError = workflow.ErrActivityTaskNotFound
+					return nil
+				}
+			}
 
 			// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 			// some extreme cassandra failure cases.
@@ -1764,6 +1796,9 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 
 	if err != nil {
 		return nil, err
+	}
+	if resurrectError != nil {
+		return nil, resurrectError
 	}
 
 	return response, err
@@ -3390,7 +3425,6 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetClusterMetadata(),
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
-		e.shard.GetLogger(),
 		e.shard.GetShardID(),
 	)
 

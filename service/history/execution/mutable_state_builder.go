@@ -233,9 +233,9 @@ func newMutableStateBuilder(
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
 	}
-	s.hBuilder = NewHistoryBuilder(s, logger)
+	s.hBuilder = NewHistoryBuilder(s)
 
-	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s.logger, s)
+	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s)
 	s.decisionTaskManager = newMutableStateDecisionTaskManager(s)
 
 	return s
@@ -331,6 +331,8 @@ func (e *mutableStateBuilder) Load(
 	e.replicationState = state.ReplicationState
 	e.checksum = state.Checksum
 
+	e.fillForBackwardsCompatibility()
+
 	if len(state.Checksum.Value) > 0 {
 		switch {
 		case e.shouldInvalidateChecksum():
@@ -344,6 +346,21 @@ func (e *mutableStateBuilder) Load(
 				e.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.MutableStateChecksumMismatch)
 				e.logError("mutable state checksum mismatch", tag.Error(err))
 			}
+		}
+	}
+}
+
+func (e *mutableStateBuilder) fillForBackwardsCompatibility() {
+	// With https://github.com/uber/cadence/pull/4601 newly introduced DomainID may not be set for older workflows.
+	// Here we will fill its value based on previously used domain name.
+	for _, info := range e.pendingChildExecutionInfoIDs {
+		if info.DomainID == "" && info.DomainNameDEPRECATED != "" {
+			domainID, err := e.shard.GetDomainCache().GetDomainID(info.DomainNameDEPRECATED)
+			if err != nil {
+				e.logError("failed to fill domainId for pending child executions", tag.Error(err))
+			}
+
+			info.DomainID = domainID
 		}
 	}
 }
@@ -2096,11 +2113,13 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	decisionCompletedEventID int64,
 	attributes *types.ScheduleActivityTaskDecisionAttributes,
-) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, error) {
+	ctx context.Context,
+	dispatch bool,
+) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, bool, error) {
 
 	opTag := tag.WorkflowActionActivityTaskScheduled
 	if err := e.checkMutability(opTag); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, false, err
 	}
 
 	_, ok := e.GetActivityByActivityID(attributes.GetActivityID())
@@ -2108,7 +2127,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		e.logger.Warn(mutableStateInvalidHistoryActionMsg, opTag,
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction)
-		return nil, nil, nil, e.createCallerError(opTag)
+		return nil, nil, nil, false, false, e.createCallerError(opTag)
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
@@ -2124,19 +2143,61 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 
 	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, false, err
 	}
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
-		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, nil
+		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, false, false, nil
+	}
+	started := false
+	if dispatch {
+		started = e.tryDispatchActivityTask(event, ai, ctx)
+	}
+	if started {
+		return event, ai, nil, true, true, nil
 	}
 	// TODO merge active & passive task generation
 	if err := e.taskGenerator.GenerateActivityTransferTasks(
 		event,
 	); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, dispatch, false, err
 	}
 
-	return event, ai, nil, err
+	return event, ai, nil, dispatch, false, err
+}
+
+func (e *mutableStateBuilder) tryDispatchActivityTask(
+	scheduledEvent *types.HistoryEvent,
+	ai *persistence.ActivityInfo,
+	ctx context.Context,
+) bool {
+	taggedScope := e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).Tagged(
+		metrics.DomainTag(e.domainEntry.GetInfo().Name),
+		metrics.WorkflowTypeTag(e.GetWorkflowType().Name),
+		metrics.TaskListTag(ai.TaskList))
+	taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchCounter)
+	err := e.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
+		DomainUUID:       e.executionInfo.DomainID,
+		SourceDomainUUID: e.domainEntry.GetInfo().ID,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: e.executionInfo.WorkflowID,
+			RunID:      e.executionInfo.RunID,
+		},
+		TaskList:                      &types.TaskList{Name: ai.TaskList},
+		ScheduleID:                    scheduledEvent.ID,
+		ScheduleToStartTimeoutSeconds: common.Int32Ptr(ai.ScheduleToStartTimeout),
+		ActivityTaskDispatchInfo: &types.ActivityTaskDispatchInfo{
+			ScheduledEvent:                  scheduledEvent,
+			StartedTimestamp:                common.Int64Ptr(e.timeSource.Now().UnixNano()),
+			WorkflowType:                    e.GetWorkflowType(),
+			WorkflowDomain:                  e.GetDomainEntry().GetInfo().Name,
+			ScheduledTimestampOfThisAttempt: common.Int64Ptr(ai.ScheduledTime.UnixNano()),
+		},
+	})
+	if err == nil {
+		taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
+		return true
+	}
+	return false
 }
 
 func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
@@ -4165,7 +4226,7 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 func (e *mutableStateBuilder) cleanupTransaction() error {
 
 	// Clear all updates to prepare for the next session
-	e.hBuilder = NewHistoryBuilder(e, e.logger)
+	e.hBuilder = NewHistoryBuilder(e)
 
 	e.updateActivityInfos = make(map[int64]*persistence.ActivityInfo)
 	e.deleteActivityInfos = make(map[int64]struct{})

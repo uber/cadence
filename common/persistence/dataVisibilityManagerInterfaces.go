@@ -32,8 +32,10 @@ import (
 // executions store, and stores workflow execution records for visibility
 // purposes.
 
-type (
+// ErrVisibilityOperationNotSupported is an error which indicates that operation is not supported in selected persistence
+var ErrVisibilityOperationNotSupported = &types.BadRequestError{Message: "Operation is not supported. Please use ElasticSearch"}
 
+type (
 	// RecordWorkflowExecutionStartedRequest is used to add a record of a newly
 	// started execution
 	RecordWorkflowExecutionStartedRequest struct {
@@ -201,11 +203,6 @@ type (
 		GetClosedWorkflowExecution(ctx context.Context, request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error)
 	}
 )
-
-// NewOperationNotSupportErrorForVis create error for operation not support in visibility
-func NewOperationNotSupportErrorForVis() error {
-	return &types.BadRequestError{Message: "Operation not support. Please use on ElasticSearch"}
-}
 
 // IsNopUpsertWorkflowRequest return whether upsert request should be no-op
 func IsNopUpsertWorkflowRequest(request *InternalUpsertWorkflowExecutionRequest) bool {

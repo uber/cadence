@@ -170,6 +170,11 @@ func WorkflowDomainIDs(domainIDs interface{}) Tag {
 	return newObjectTag("wf-domain-ids", domainIDs)
 }
 
+//	OperationName returns tag for OperationName
+func OperationName(operationName string) Tag {
+	return newStringTag("operation-name", operationName)
+}
+
 // history event ID related
 
 // WorkflowEventID returns tag for WorkflowEventID
@@ -200,16 +205,6 @@ func WorkflowFirstEventID(firstEventID int64) Tag {
 // WorkflowNextEventID returns tag for WorkflowNextEventID
 func WorkflowNextEventID(nextEventID int64) Tag {
 	return newInt64("wf-next-event-id", nextEventID)
-}
-
-// WorkflowBeginningFirstEventID returns tag for WorkflowBeginningFirstEventID
-func WorkflowBeginningFirstEventID(beginningFirstEventID int64) Tag {
-	return newInt64("wf-begining-first-event-id", beginningFirstEventID)
-}
-
-// WorkflowEndingNextEventID returns tag for WorkflowEndingNextEventID
-func WorkflowEndingNextEventID(endingNextEventID int64) Tag {
-	return newInt64("wf-ending-next-event-id", endingNextEventID)
 }
 
 // WorkflowResetNextEventID returns tag for WorkflowResetNextEventID

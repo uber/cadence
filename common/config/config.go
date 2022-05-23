@@ -343,12 +343,15 @@ type (
 		// 6. QueryWorkflow
 		// 7. ResetWorkflow
 		//
-		// Both "selected-apis-forwarding" and "all-domain-apis-forwarding" can work with EnableDomainNotActiveAutoForwarding dynamicconfig to select certain domains using the policy.
+		// 4) "selected-apis-forwarding-v2" will forward all of "selected-apis-forwarding", and also activity responses
+		// and heartbeats, but not other worker APIs.
 		//
-		// Usage recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding" or "selected-apis-forwarding" should be used to ensure seamless domain failover(high availability)
-		// Depending on the cost of cross cluster calls :
+		// "selected-apis-forwarding(-v2)" and "all-domain-apis-forwarding" can work with EnableDomainNotActiveAutoForwarding dynamicconfig to select certain domains using the policy.
 		//
-		// 1) If the network communication overhead is high(e.g., clusters are in remote datacenters of different region), then should use "selected-apis-forwarding".
+		// Usage recommendation: when enabling XDC(global domain) feature, either "all-domain-apis-forwarding" or "selected-apis-forwarding(-v2)" should be used to ensure seamless domain failover(high availability)
+		// Depending on the cost of cross cluster calls:
+		//
+		// 1) If the network communication overhead is high(e.g., clusters are in remote datacenters of different region), then should use "selected-apis-forwarding(-v2)".
 		// But you must ensure a different set of workers with the same workflow & activity code are connected to each Cadence cluster.
 		//
 		// 2) If the network communication overhead is low (e.g. in the same datacenter, mostly for cluster migration usage), then you can use "all-domain-apis-forwarding". Then only one set of
