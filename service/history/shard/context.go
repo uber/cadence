@@ -657,7 +657,6 @@ Create_Loop:
 					// Shard is stolen, trigger shutdown of history engine
 					s.logger.Warn(
 						"Closing shard: CreateWorkflowExecution failed due to stolen shard.",
-						tag.ShardID(s.GetShardID()),
 						tag.Error(err),
 					)
 					s.closeShard()
@@ -677,7 +676,6 @@ Create_Loop:
 					// gets a new RangeID when it's reloaded.
 					s.logger.Warn(
 						"Closing shard: CreateWorkflowExecution failed due to unknown error.",
-						tag.ShardID(s.GetShardID()),
 						tag.Error(err),
 					)
 					s.closeShard()
@@ -785,7 +783,6 @@ Update_Loop:
 					// Shard is stolen, trigger shutdown of history engine
 					s.logger.Warn(
 						"Closing shard: UpdateWorkflowExecution failed due to stolen shard.",
-						tag.ShardID(s.GetShardID()),
 						tag.Error(err),
 					)
 					s.closeShard()
@@ -805,7 +802,6 @@ Update_Loop:
 					// gets a new RangeID when it's reloaded.
 					s.logger.Warn(
 						"Closing shard: UpdateWorkflowExecution failed due to unknown error.",
-						tag.ShardID(s.GetShardID()),
 						tag.Error(err),
 					)
 					s.closeShard()
@@ -921,7 +917,6 @@ Conflict_Resolve_Loop:
 					// Shard is stolen, trigger shutdown of history engine
 					s.logger.Warn(
 						"Closing shard: ConflictResolveWorkflowExecution failed due to stolen shard.",
-						tag.ShardID(s.GetShardID()),
 						tag.Error(err),
 					)
 					s.closeShard()
@@ -941,7 +936,6 @@ Conflict_Resolve_Loop:
 					// gets a new RangeID when it's reloaded.
 					s.logger.Warn(
 						"Closing shard: ConflictResolveWorkflowExecution failed due to unknown error.",
-						tag.ShardID(s.GetShardID()),
 						tag.Error(err),
 					)
 					s.closeShard()
@@ -1111,7 +1105,6 @@ Retry_Loop:
 			// Shard is stolen, trigger history engine shutdown
 			s.logger.Warn(
 				"Closing shard: renewRangeLocked failed due to stolen shard.",
-				tag.ShardID(s.GetShardID()),
 				tag.Error(err),
 				tag.Attempt(attempt),
 			)
@@ -1144,7 +1137,6 @@ Retry_Loop:
 	s.shardInfo = updatedShardInfo
 
 	s.logger.Info("Range updated for shardID",
-		tag.ShardID(s.shardInfo.ShardID),
 		tag.ShardRangeID(s.shardInfo.RangeID),
 		tag.Number(s.transferSequenceNumber),
 		tag.NextNumber(s.maxTransferSequenceNumber))
@@ -1192,7 +1184,6 @@ func (s *contextImpl) persistShardInfoLocked(
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
 			s.logger.Warn(
 				"Closing shard: updateShardInfoLocked failed due to stolen shard.",
-				tag.ShardID(s.GetShardID()),
 				tag.Error(err),
 			)
 			s.closeShard()
@@ -1470,7 +1461,6 @@ Retry_Loop:
 			// do not retry on ShardOwnershipLostError
 			s.logger.Warn(
 				"Closing shard: ReplicateFailoverMarkers failed due to stolen shard.",
-				tag.ShardID(s.GetShardID()),
 				tag.Error(err),
 			)
 			s.closeShard()
@@ -1592,7 +1582,7 @@ func acquireShard(
 	)
 	err := throttleRetry.Do(context.Background(), getShard)
 	if err != nil {
-		shardItem.logger.Error("Fail to acquire shard.", tag.ShardID(shardItem.shardID), tag.Error(err))
+		shardItem.logger.Error("Fail to acquire shard.", tag.Error(err))
 		return nil, err
 	}
 
