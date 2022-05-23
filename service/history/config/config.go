@@ -310,6 +310,8 @@ type Config struct {
 
 	// Allows worker to dispatch activity tasks through local tunnel after decisions are made. This is an performance optimization to skip activity scheduling efforts.
 	EnableActivityLocalDispatchByDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	// Max # of activity tasks to dispatch to matching before creating transfer tasks. This is an performance optimization to skip activity scheduling efforts.
+	MaxActivityCountDispatchByDomain dynamicconfig.IntPropertyFnWithDomainFilter
 
 	ActivityMaxScheduleToStartTimeoutForRetry dynamicconfig.DurationPropertyFnWithDomainFilter
 
@@ -575,6 +577,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		EnableGracefulFailover:                     dc.GetBoolProperty(dynamicconfig.EnableGracefulFailover, true),
 
 		EnableActivityLocalDispatchByDomain: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, false),
+		MaxActivityCountDispatchByDomain:    dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxActivityCountDispatchByDomain, 0),
 
 		ActivityMaxScheduleToStartTimeoutForRetry: dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ActivityMaxScheduleToStartTimeoutForRetry, 30*time.Minute),
 
@@ -601,6 +604,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.ReplicationTaskProcessorShardQPS = dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS, 10000)
 	config.ReplicationTaskProcessorStartWait = dc.GetDurationPropertyFilteredByShardID(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond)
 	config.EnableActivityLocalDispatchByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableActivityLocalDispatchByDomain, true)
+	config.MaxActivityCountDispatchByDomain = dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxActivityCountDispatchByDomain, 0)
 	config.EnableCrossClusterOperations = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperations, true)
 	config.NormalDecisionScheduleToStartMaxAttempts = dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3)
 	return config

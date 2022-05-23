@@ -130,8 +130,8 @@ func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *types
 	ret1, _ := ret[1].(*persistence.ActivityInfo)
 	ret2, _ := ret[2].(*types.ActivityLocalDispatchInfo)
 	ret3, _ := ret[3].(bool)
-	ret4, _ := ret[3].(bool)
-	ret5, _ := ret[3].(error)
+	ret4, _ := ret[4].(bool)
+	ret5, _ := ret[5].(error)
 	return ret0, ret1, ret2, ret3, ret4, ret5
 }
 
