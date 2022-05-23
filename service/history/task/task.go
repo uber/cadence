@@ -300,7 +300,8 @@ func (t *taskImpl) HandleErr(
 	// so that a cross-cluster task can be created.
 	if err == errTargetDomainNotActive {
 		t.scope.IncCounter(metrics.TaskTargetNotActiveCounterPerDomain)
-		return err
+		t.logger.Error("Dropping 'domain-not-active' error as non-retriable", tag.Error(err))
+		return nil
 	}
 
 	// this is a transient error, and means source domain not active
