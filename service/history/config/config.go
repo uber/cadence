@@ -184,19 +184,10 @@ type Config struct {
 	CrossClusterFetcherJitterCoefficient          dynamicconfig.FloatPropertyFn
 
 	// ReplicatorQueueProcessor settings
-	ReplicatorTaskBatchSize                               dynamicconfig.IntPropertyFn
-	ReplicatorTaskDeleteBatchSize                         dynamicconfig.IntPropertyFn
-	ReplicatorTaskWorkerCount                             dynamicconfig.IntPropertyFn
-	ReplicatorReadTaskMaxRetryCount                       dynamicconfig.IntPropertyFn
-	ReplicatorProcessorMaxPollRPS                         dynamicconfig.IntPropertyFn
-	ReplicatorProcessorMaxPollInterval                    dynamicconfig.DurationPropertyFn
-	ReplicatorProcessorMaxPollIntervalJitterCoefficient   dynamicconfig.FloatPropertyFn
-	ReplicatorProcessorUpdateAckInterval                  dynamicconfig.DurationPropertyFn
-	ReplicatorProcessorUpdateAckIntervalJitterCoefficient dynamicconfig.FloatPropertyFn
-	ReplicatorProcessorMaxRedispatchQueueSize             dynamicconfig.IntPropertyFn
-	ReplicatorProcessorEnablePriorityTaskProcessor        dynamicconfig.BoolPropertyFn
-	ReplicatorProcessorFetchTasksBatchSize                dynamicconfig.IntPropertyFnWithShardIDFilter
-	ReplicatorUpperLatency                                dynamicconfig.DurationPropertyFn
+	ReplicatorTaskDeleteBatchSize          dynamicconfig.IntPropertyFn
+	ReplicatorReadTaskMaxRetryCount        dynamicconfig.IntPropertyFn
+	ReplicatorProcessorFetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
+	ReplicatorUpperLatency                 dynamicconfig.DurationPropertyFn
 
 	// Persistence settings
 	ExecutionMgrNumConns dynamicconfig.IntPropertyFn
@@ -483,19 +474,10 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		CrossClusterFetcherErrorBackoffInterval:       dc.GetDurationProperty(dynamicconfig.CrossClusterFetcherServiceBusyBackoffInterval, time.Second),
 		CrossClusterFetcherJitterCoefficient:          dc.GetFloat64Property(dynamicconfig.CrossClusterFetcherJitterCoefficient, 0.15),
 
-		ReplicatorTaskBatchSize:                               dc.GetIntProperty(dynamicconfig.ReplicatorTaskBatchSize, 100),
-		ReplicatorTaskDeleteBatchSize:                         dc.GetIntProperty(dynamicconfig.ReplicatorTaskDeleteBatchSize, 4000),
-		ReplicatorTaskWorkerCount:                             dc.GetIntProperty(dynamicconfig.ReplicatorTaskWorkerCount, 10),
-		ReplicatorReadTaskMaxRetryCount:                       dc.GetIntProperty(dynamicconfig.ReplicatorReadTaskMaxRetryCount, 3),
-		ReplicatorProcessorMaxPollRPS:                         dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxPollRPS, 20),
-		ReplicatorProcessorMaxPollInterval:                    dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorMaxPollInterval, 1*time.Minute),
-		ReplicatorProcessorMaxPollIntervalJitterCoefficient:   dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorMaxPollIntervalJitterCoefficient, 0.15),
-		ReplicatorProcessorUpdateAckInterval:                  dc.GetDurationProperty(dynamicconfig.ReplicatorProcessorUpdateAckInterval, 5*time.Second),
-		ReplicatorProcessorUpdateAckIntervalJitterCoefficient: dc.GetFloat64Property(dynamicconfig.ReplicatorProcessorUpdateAckIntervalJitterCoefficient, 0.15),
-		ReplicatorProcessorMaxRedispatchQueueSize:             dc.GetIntProperty(dynamicconfig.ReplicatorProcessorMaxRedispatchQueueSize, 10000),
-		ReplicatorProcessorEnablePriorityTaskProcessor:        dc.GetBoolProperty(dynamicconfig.ReplicatorProcessorEnablePriorityTaskProcessor, false),
-		ReplicatorProcessorFetchTasksBatchSize:                dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicatorTaskBatchSize, 25),
-		ReplicatorUpperLatency:                                dc.GetDurationProperty(dynamicconfig.ReplicatorUpperLatency, 40*time.Second),
+		ReplicatorTaskDeleteBatchSize:          dc.GetIntProperty(dynamicconfig.ReplicatorTaskDeleteBatchSize, 4000),
+		ReplicatorReadTaskMaxRetryCount:        dc.GetIntProperty(dynamicconfig.ReplicatorReadTaskMaxRetryCount, 3),
+		ReplicatorProcessorFetchTasksBatchSize: dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicatorTaskBatchSize, 25),
+		ReplicatorUpperLatency:                 dc.GetDurationProperty(dynamicconfig.ReplicatorUpperLatency, 40*time.Second),
 
 		ExecutionMgrNumConns:       dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns, 50),
 		HistoryMgrNumConns:         dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns, 50),
