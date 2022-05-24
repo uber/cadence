@@ -115,6 +115,10 @@ func (db *ddb) SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID,
 	panic("TODO")
 }
 
+func (db *ddb) CountReplicationTasks(ctx context.Context, shardID int, exclusiveMinTaskID, inclusiveMaxTaskID int64) (int64, error) {
+	panic("TODO")
+}
+
 func (db *ddb) DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error {
 	panic("TODO")
 }

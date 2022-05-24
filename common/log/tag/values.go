@@ -196,6 +196,7 @@ var (
 	StoreOperationGetTransferTasks                  = storeOperation("get-transfer-tasks")
 	StoreOperationGetCrossClusterTasks              = storeOperation("get-cross-cluster-tasks")
 	StoreOperationGetReplicationTasks               = storeOperation("get-replication-tasks")
+	StoreOperationCountReplicationTasks             = storeOperation("count-replication-tasks")
 	StoreOperationCompleteTransferTask              = storeOperation("complete-transfer-task")
 	StoreOperationRangeCompleteTransferTask         = storeOperation("range-complete-transfer-task")
 	StoreOperationCompleteCrossClusterTask          = storeOperation("complete-cross-cluster-task")

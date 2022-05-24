@@ -607,6 +607,31 @@ func (p *workflowExecutionErrorInjectionPersistenceClient) GetReplicationTasks(
 	return response, persistenceErr
 }
 
+func (p *workflowExecutionErrorInjectionPersistenceClient) CountReplicationTasks(
+	ctx context.Context,
+	request *CountReplicationTasksRequest,
+) (*CountReplicationTasksResponse, error) {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var response *CountReplicationTasksResponse
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		response, persistenceErr = p.persistence.CountReplicationTasks(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationCountReplicationTasks,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return nil, fakeErr
+	}
+	return response, persistenceErr
+}
+
 func (p *workflowExecutionErrorInjectionPersistenceClient) CompleteTransferTask(
 	ctx context.Context,
 	request *CompleteTransferTaskRequest,

@@ -574,6 +574,17 @@ workflow_state = ? ` +
 		`and task_id > ? ` +
 		`and task_id <= ?`
 
+	templateCountReplicationTasksQuery = `SELECT count(1) as count ` +
+		`FROM executions ` +
+		`WHERE shard_id = ? ` +
+		`and type = ? ` +
+		`and domain_id = ? ` +
+		`and workflow_id = ? ` +
+		`and run_id = ? ` +
+		`and visibility_ts = ? ` +
+		`and task_id > ? ` +
+		`and task_id <= ?`
+
 	templateGetDLQSizeQuery = `SELECT count(1) as count ` +
 		`FROM executions ` +
 		`WHERE shard_id = ? ` +

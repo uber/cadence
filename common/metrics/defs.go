@@ -179,6 +179,8 @@ const (
 	PersistenceRangeCompleteCrossClusterTaskScope
 	// PersistenceGetReplicationTasksScope tracks GetReplicationTasks calls made by service to persistence layer
 	PersistenceGetReplicationTasksScope
+	// PersistenceCountReplicationTasksScope tracks CountReplicationTasks calls made by service to persistence layer
+	PersistenceCountReplicationTasksScope
 	// PersistenceCompleteReplicationTaskScope tracks CompleteReplicationTasks calls made by service to persistence layer
 	PersistenceCompleteReplicationTaskScope
 	// PersistenceRangeCompleteReplicationTaskScope tracks RangeCompleteReplicationTasks calls made by service to persistence layer
@@ -1129,6 +1131,8 @@ const (
 	ReplicationTaskFetcherScope
 	// ReplicationTaskCleanupScope is scope used by all metrics emitted by ReplicationTaskProcessor cleanup
 	ReplicationTaskCleanupScope
+	// ReplicationStatsScope is scope used by all metrics emitted related to replication stats
+	ReplicationStatsScope
 	// ReplicationDLQStatsScope is scope used by all metrics emitted related to replication DLQ
 	ReplicationDLQStatsScope
 	// FailoverMarkerScope is scope used by all metrics emitted related to failover marker
@@ -1240,6 +1244,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceCompleteCrossClusterTaskScope:                 {operation: "GetCrossClusterTasks"},
 		PersistenceRangeCompleteCrossClusterTaskScope:            {operation: "GetCrossClusterTasks"},
 		PersistenceGetReplicationTasksScope:                      {operation: "GetReplicationTasks"},
+		PersistenceCountReplicationTasksScope:                    {operation: "CountReplicationTasks"},
 		PersistenceCompleteReplicationTaskScope:                  {operation: "CompleteReplicationTask"},
 		PersistenceRangeCompleteReplicationTaskScope:             {operation: "RangeCompleteReplicationTask"},
 		PersistencePutReplicationTaskToDLQScope:                  {operation: "PutReplicationTaskToDLQ"},
@@ -1716,6 +1721,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ArchiverClientScope:                                             {operation: "ArchiverClient"},
 		ReplicationTaskFetcherScope:                                     {operation: "ReplicationTaskFetcher"},
 		ReplicationTaskCleanupScope:                                     {operation: "ReplicationTaskCleanup"},
+		ReplicationStatsScope:                                           {operation: "ReplicationStats"},
 		ReplicationDLQStatsScope:                                        {operation: "ReplicationDLQStats"},
 		FailoverMarkerScope:                                             {operation: "FailoverMarker"},
 		HistoryReplicationV2TaskScope:                                   {operation: "HistoryReplicationV2Task"},
@@ -2121,6 +2127,7 @@ const (
 	ArchiverClientVisibilityInlineArchiveThrottledCount
 	LastRetrievedMessageID
 	LastProcessedMessageID
+	ReplicationBacklog
 	ReplicationTasksApplied
 	ReplicationTasksFailed
 	ReplicationTasksLag
@@ -2661,6 +2668,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverClientVisibilityInlineArchiveThrottledCount: {metricName: "archiver_client_visibility_inline_archive_throttled", metricType: Counter},
 		LastRetrievedMessageID:                              {metricName: "last_retrieved_message_id", metricType: Gauge},
 		LastProcessedMessageID:                              {metricName: "last_processed_message_id", metricType: Gauge},
+		ReplicationBacklog:                                  {metricName: "replication_backlog", metricType: Gauge},
 		ReplicationTasksApplied:                             {metricName: "replication_tasks_applied", metricType: Counter},
 		ReplicationTasksFailed:                              {metricName: "replication_tasks_failed", metricType: Counter},
 		ReplicationTasksLag:                                 {metricName: "replication_tasks_lag", metricType: Timer},

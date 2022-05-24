@@ -530,6 +530,23 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 	return resp, nil
 }
 
+func (p *workflowExecutionPersistenceClient) CountReplicationTasks(
+	ctx context.Context,
+	request *CountReplicationTasksRequest,
+) (*CountReplicationTasksResponse, error) {
+	var resp *CountReplicationTasksResponse
+	op := func() error {
+		var err error
+		resp, err = p.persistence.CountReplicationTasks(ctx, request)
+		return err
+	}
+	err := p.call(metrics.PersistenceCountReplicationTasksScope, op)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 func (p *workflowExecutionPersistenceClient) CompleteTransferTask(
 	ctx context.Context,
 	request *CompleteTransferTaskRequest,

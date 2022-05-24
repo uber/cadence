@@ -53,11 +53,16 @@ var (
 	errUnknownReplicationTask = errors.New("unknown replication task")
 	defaultHistoryPageSize    = 1000
 	minReadTaskSize           = 20
+
+	replicationBacklogEmitTimerInterval    = time.Minute
+	replicationBacklogEmitTimerCoefficient = 0.05
 )
 
 type (
 	// TaskAckManager is the ack manager for replication tasks
 	TaskAckManager interface {
+		common.Daemon
+
 		GetTask(
 			ctx context.Context,
 			taskInfo *types.ReplicationTaskInfo,
@@ -84,6 +89,9 @@ type (
 
 		metricsClient metrics.Client
 		logger        log.Logger
+
+		done   chan struct{}
+		status int32
 
 		// This is the batch size used by pull based RPC replicator.
 		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
@@ -121,7 +129,78 @@ func NewTaskAckManager(
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
+		done:                 make(chan struct{}),
 	}
+}
+
+// Start starts the TaskAckManager
+func (t *taskAckManagerImpl) Start() {
+	if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+
+	go t.emitReplicationBacklogLoop()
+	t.logger.Info("TaskAckManager started.")
+}
+
+// Stop stops the TaskAckManager
+func (t *taskAckManagerImpl) Stop() {
+	if !atomic.CompareAndSwapInt32(&t.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+
+	t.logger.Debug("TaskAckManager shutting down.")
+	close(t.done)
+}
+
+func (t *taskAckManagerImpl) emitReplicationBacklogLoop() {
+	getInterval := func() time.Duration {
+		return backoff.JitDuration(
+			replicationBacklogEmitTimerInterval,
+			replicationBacklogEmitTimerCoefficient,
+		)
+	}
+
+	timer := time.NewTimer(getInterval())
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			t.fetchAndEmitReplicationBacklog(context.Background())
+			timer.Reset(getInterval())
+		case <-t.done:
+			return
+		}
+	}
+}
+
+func (t *taskAckManagerImpl) fetchAndEmitReplicationBacklog(ctx context.Context) error {
+	shardID := strconv.Itoa(t.shard.GetShardID())
+
+	clusterMetadata := t.shard.GetClusterMetadata()
+	for sourceCluster := range clusterMetadata.GetAllClusterInfo() {
+		if sourceCluster == clusterMetadata.GetCurrentClusterName() {
+			continue
+		}
+
+		request := persistence.CountReplicationTasksRequest{
+			ExclusiveBeginTaskID: t.shard.GetClusterReplicationLevel(sourceCluster),
+			InclusiveEndTaskID:   t.shard.GetTransferMaxReadLevel(),
+		}
+		response, err := t.shard.GetExecutionManager().CountReplicationTasks(ctx, &request)
+		if err != nil {
+			return err
+		}
+
+		t.metricsClient.Scope(
+			metrics.ReplicationStatsScope,
+			metrics.SourceClusterTag(sourceCluster),
+			metrics.InstanceTag(shardID),
+		).UpdateGauge(metrics.ReplicationBacklog, float64(response.Count))
+	}
+
+	return nil
 }
 
 func (t *taskAckManagerImpl) GetTask(

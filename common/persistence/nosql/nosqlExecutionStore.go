@@ -619,6 +619,18 @@ func (d *nosqlExecutionStore) GetReplicationTasks(
 	}, nil
 }
 
+func (d *nosqlExecutionStore) CountReplicationTasks(
+	ctx context.Context,
+	request *p.CountReplicationTasksRequest,
+) (*p.CountReplicationTasksResponse, error) {
+
+	count, err := d.db.CountReplicationTasks(ctx, d.shardID, request.ExclusiveBeginTaskID, request.InclusiveEndTaskID)
+	if err != nil {
+		return nil, convertCommonErrors(d.db, "CountReplicationTasks", err)
+	}
+	return &p.CountReplicationTasksResponse{Count: count}, nil
+}
+
 func (d *nosqlExecutionStore) CompleteTransferTask(
 	ctx context.Context,
 	request *p.CompleteTransferTaskRequest,

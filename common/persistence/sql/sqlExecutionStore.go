@@ -1028,6 +1028,26 @@ func (m *sqlExecutionStore) GetReplicationTasks(
 	}
 }
 
+func (m *sqlExecutionStore) CountReplicationTasks(
+	ctx context.Context,
+	request *p.CountReplicationTasksRequest,
+) (*p.CountReplicationTasksResponse, error) {
+
+	count, err := m.db.CountFromReplicationTasks(
+		ctx,
+		&sqlplugin.ReplicationTasksFilter{
+			ShardID:   m.shardID,
+			MinTaskID: request.ExclusiveBeginTaskID,
+			MaxTaskID: request.InclusiveEndTaskID,
+		})
+
+	if err != nil {
+		return nil, convertCommonErrors(m.db, "CountFromReplicationTasks", "", err)
+	}
+
+	return &p.CountReplicationTasksResponse{Count: count}, nil
+}
+
 func getReadLevels(request *p.GetReplicationTasksRequest) (readLevel int64, maxReadLevelInclusive int64, err error) {
 	readLevel = request.ReadLevel
 	if len(request.NextPageToken) > 0 {

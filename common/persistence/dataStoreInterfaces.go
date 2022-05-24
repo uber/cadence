@@ -117,6 +117,7 @@ type (
 
 		// Replication task related methods
 		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*InternalGetReplicationTasksResponse, error)
+		CountReplicationTasks(ctx context.Context, request *CountReplicationTasksRequest) (*CountReplicationTasksResponse, error)
 		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
 		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) (*RangeCompleteReplicationTaskResponse, error)
 		PutReplicationTaskToDLQ(ctx context.Context, request *InternalPutReplicationTaskToDLQRequest) error

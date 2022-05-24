@@ -870,6 +870,13 @@ func (m *executionManagerImpl) GetReplicationTasks(
 	}, nil
 }
 
+func (m *executionManagerImpl) CountReplicationTasks(
+	ctx context.Context,
+	request *CountReplicationTasksRequest,
+) (*CountReplicationTasksResponse, error) {
+	return m.persistence.CountReplicationTasks(ctx, request)
+}
+
 func (m *executionManagerImpl) CompleteReplicationTask(
 	ctx context.Context,
 	request *CompleteReplicationTaskRequest,

@@ -125,6 +125,11 @@ task_id > ? AND
 task_id <= ?
 ORDER BY task_id LIMIT ?`
 
+	countReplicationTasksQuery = `SELECT count(1) as count FROM replication_tasks WHERE
+shard_id = ? AND
+task_id > ? AND
+task_id <= ?`
+
 	deleteReplicationTaskQuery             = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id = ?`
 	rangeDeleteReplicationTaskQuery        = `DELETE FROM replication_tasks WHERE shard_id = ? AND task_id <= ?`
 	rangeDeleteReplicationTaskByBatchQuery = rangeDeleteReplicationTaskQuery + ` ORDER BY task_id LIMIT ?`
@@ -452,6 +457,17 @@ func (mdb *db) RangeDeleteFromReplicationTasks(ctx context.Context, filter *sqlp
 		return mdb.driver.ExecContext(ctx, dbShardID, rangeDeleteReplicationTaskByBatchQuery, filter.ShardID, filter.InclusiveEndTaskID, filter.PageSize)
 	}
 	return mdb.driver.ExecContext(ctx, dbShardID, rangeDeleteReplicationTaskQuery, filter.ShardID, filter.InclusiveEndTaskID)
+}
+
+// CountFromReplicationTasks counts rows from replication_tasks table
+func (mdb *db) CountFromReplicationTasks(ctx context.Context, filter *sqlplugin.ReplicationTasksFilter) (int64, error) {
+	var count []int64
+	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(filter.ShardID, mdb.GetTotalNumDBShards())
+	err := mdb.driver.SelectContext(ctx, dbShardID, &count, countReplicationTasksQuery, filter.ShardID, filter.MinTaskID, filter.MaxTaskID)
+	if err != nil {
+		return 0, err
+	}
+	return count[0], nil
 }
 
 // InsertIntoReplicationTasksDLQ inserts one or more rows into replication_tasks_dlq table

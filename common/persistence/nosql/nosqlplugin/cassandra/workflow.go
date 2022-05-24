@@ -556,6 +556,27 @@ func (db *cdb) SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID,
 	return populateGetReplicationTasks(query)
 }
 
+func (db *cdb) CountReplicationTasks(ctx context.Context, shardID int, exclusiveMinTaskID, inclusiveMaxTaskID int64) (int64, error) {
+	query := db.session.Query(templateCountReplicationTasksQuery,
+		shardID,
+		rowTypeReplicationTask,
+		rowTypeReplicationDomainID,
+		rowTypeReplicationWorkflowID,
+		rowTypeReplicationRunID,
+		defaultVisibilityTimestamp,
+		exclusiveMinTaskID,
+		inclusiveMaxTaskID,
+	).WithContext(ctx)
+
+	result := make(map[string]interface{})
+	if err := query.MapScan(result); err != nil {
+		return -1, err
+	}
+
+	count := result["count"].(int64)
+	return count, nil
+}
+
 func (db *cdb) DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error {
 	query := db.session.Query(templateCompleteReplicationTaskQuery,
 		shardID,

@@ -306,6 +306,29 @@ func (_m *ExecutionManager) GetReplicationTasks(ctx context.Context, request *pe
 	return r0, r1
 }
 
+// CountReplicationTasks provides a mock function with given fields: ctx, request
+func (_m *ExecutionManager) CountReplicationTasks(ctx context.Context, request *persistence.CountReplicationTasksRequest) (*persistence.CountReplicationTasksResponse, error) {
+	ret := _m.Called(ctx, request)
+
+	var r0 *persistence.CountReplicationTasksResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.CountReplicationTasksRequest) *persistence.CountReplicationTasksResponse); ok {
+		r0 = rf(ctx, request)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*persistence.CountReplicationTasksResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *persistence.CountReplicationTasksRequest) error); ok {
+		r1 = rf(ctx, request)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetReplicationTasksFromDLQ provides a mock function with given fields: ctx, request
 func (_m *ExecutionManager) GetReplicationTasksFromDLQ(ctx context.Context, request *persistence.GetReplicationTasksFromDLQRequest) (*persistence.GetReplicationTasksResponse, error) {
 	ret := _m.Called(ctx, request)

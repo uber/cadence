@@ -483,6 +483,8 @@ type (
 		// replication_task table
 		// within a shard, paging through replication tasks order by taskID(ASC), filtered by minTaskID(exclusive) and maxTaskID(inclusive)
 		SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*ReplicationTask, []byte, error)
+		// count replication tasks within a task range
+		CountReplicationTasks(ctx context.Context, shardID int, exclusiveMinTaskID, inclusiveMaxTaskID int64) (int64, error)
 		// delete a single replication task
 		DeleteReplicationTask(ctx context.Context, shardID int, taskID int64) error
 		// delete a range of replication tasks

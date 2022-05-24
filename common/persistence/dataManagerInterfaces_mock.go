@@ -560,6 +560,21 @@ func (mr *MockExecutionManagerMockRecorder) GetReplicationTasks(ctx, request int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicationTasks", reflect.TypeOf((*MockExecutionManager)(nil).GetReplicationTasks), ctx, request)
 }
 
+// CountReplicationTasks mocks base method
+func (m *MockExecutionManager) CountReplicationTasks(ctx context.Context, request *CountReplicationTasksRequest) (*CountReplicationTasksResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountReplicationTasks", ctx, request)
+	ret0, _ := ret[0].(*CountReplicationTasksResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountReplicationTasks indicates an expected call of CountReplicationTasks
+func (mr *MockExecutionManagerMockRecorder) CountReplicationTasks(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountReplicationTasks", reflect.TypeOf((*MockExecutionManager)(nil).CountReplicationTasks), ctx, request)
+}
+
 // CompleteReplicationTask mocks base method
 func (m *MockExecutionManager) CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error {
 	m.ctrl.T.Helper()

@@ -404,6 +404,18 @@ func (p *workflowExecutionRateLimitedPersistenceClient) GetReplicationTasks(
 	return response, err
 }
 
+func (p *workflowExecutionRateLimitedPersistenceClient) CountReplicationTasks(
+	ctx context.Context,
+	request *CountReplicationTasksRequest,
+) (*CountReplicationTasksResponse, error) {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return nil, ErrPersistenceLimitExceeded
+	}
+
+	response, err := p.persistence.CountReplicationTasks(ctx, request)
+	return response, err
+}
+
 func (p *workflowExecutionRateLimitedPersistenceClient) CompleteTransferTask(
 	ctx context.Context,
 	request *CompleteTransferTaskRequest,

@@ -1089,6 +1089,17 @@ type (
 		NextPageToken []byte
 	}
 
+	// CountReplicationTasksRequest is used to count tasks in the replication task queue
+	CountReplicationTasksRequest struct {
+		ExclusiveBeginTaskID int64
+		InclusiveEndTaskID   int64
+	}
+
+	// CountReplicationTasksResponse is the response to CountReplicationTasks
+	CountReplicationTasksResponse struct {
+		Count int64
+	}
+
 	// CompleteTransferTaskRequest is used to complete a task in the transfer task queue
 	CompleteTransferTaskRequest struct {
 		TaskID int64
@@ -1722,6 +1733,7 @@ type (
 		GetReplicationTasks(ctx context.Context, request *GetReplicationTasksRequest) (*GetReplicationTasksResponse, error)
 		CompleteReplicationTask(ctx context.Context, request *CompleteReplicationTaskRequest) error
 		RangeCompleteReplicationTask(ctx context.Context, request *RangeCompleteReplicationTaskRequest) (*RangeCompleteReplicationTaskResponse, error)
+		CountReplicationTasks(ctx context.Context, request *CountReplicationTasksRequest) (*CountReplicationTasksResponse, error)
 		PutReplicationTaskToDLQ(ctx context.Context, request *PutReplicationTaskToDLQRequest) error
 		GetReplicationTasksFromDLQ(ctx context.Context, request *GetReplicationTasksFromDLQRequest) (*GetReplicationTasksFromDLQResponse, error)
 		GetReplicationDLQSize(ctx context.Context, request *GetReplicationDLQSizeRequest) (*GetReplicationDLQSizeResponse, error)

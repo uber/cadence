@@ -689,6 +689,9 @@ type (
 		// SelectFromReplicationTasks returns one or more rows from replication_tasks table
 		// Required filter params - {shardID, minTaskID, maxTaskID, pageSize}
 		SelectFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) ([]ReplicationTasksRow, error)
+		// CountFromReplicationTasks return row count from replication_tasks table
+		// Required filter params - {shardID, minTaskID, maxTaskID}
+		CountFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) (int64, error)
 		// DeleteFromReplicationTasks deletes a row from replication_tasks table
 		// Required filter params - {shardID, taskID}
 		DeleteFromReplicationTasks(ctx context.Context, filter *ReplicationTasksFilter) (sql.Result, error)
