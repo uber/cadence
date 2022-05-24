@@ -15,7 +15,7 @@ services:
     ports:
       - '9090:9090'
   cadence:
-    image: ubercadence/server:master-auto-setup
+    image: ubercadence/server:0.24.0-auto-setup
     ports:
       - "8000:8000"
       - "8001:8001"
@@ -40,7 +40,7 @@ services:
       - mysql
       - prometheus
   cadence-web:
-    image: ubercadence/web:latest
+    image: ubercadence/web:v3.29.6
     environment:
       - "CADENCE_TCHANNEL_PEERS=cadence:7933"
     ports:
