@@ -59,6 +59,7 @@ type (
 	getReplicationMessagesWithSize struct {
 		response *types.GetReplicationMessagesResponse
 		size     int
+		peer     string
 	}
 )
 
@@ -831,6 +832,7 @@ func (c *clientImpl) GetReplicationMessages(
 			peerResponses = append(peerResponses, &getReplicationMessagesWithSize{
 				response: resp,
 				size:     responseInfo.Size,
+				peer:     peer,
 			})
 			responseMutex.Unlock()
 			return nil
@@ -854,12 +856,26 @@ func (c *clientImpl) GetReplicationMessages(
 
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
 	responseTotalSize := 0
+	rpcMaxResponseSize := c.rpcMaxSizeInBytes()
 	for _, resp := range peerResponses {
-		// return partial response if the response size exceeded supported max size
-		responseTotalSize += resp.size
-		if responseTotalSize >= c.rpcMaxSizeInBytes() {
-			return response, nil
+		if (responseTotalSize + resp.size) >= rpcMaxResponseSize {
+			// Log shards that did not fit for debugging purposes
+			for shardID := range resp.response.GetMessagesByShard() {
+				c.logger.Warn("Replication messages did not fit in the response",
+					tag.ShardID(int(shardID)),
+					tag.Address(resp.peer),
+					tag.ResponseSize(resp.size),
+					tag.ResponseTotalSize(responseTotalSize),
+					tag.ResponseMaxSize(rpcMaxResponseSize),
+				)
+			}
+
+			// return partial response if the response size exceeded supported max size
+			// but continue with next peer response, as it may still fit
+			continue
 		}
+
+		responseTotalSize += resp.size
 
 		for shardID, tasks := range resp.response.GetMessagesByShard() {
 			response.MessagesByShard[shardID] = tasks
