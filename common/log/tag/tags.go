@@ -704,6 +704,21 @@ func TokenLastEventVersion(version int64) Tag {
 	return newInt64("xdc-token-last-event-version", version)
 }
 
+// ResponseSize returns tag for ResponseSize
+func ResponseSize(size int) Tag {
+	return newInt("response-size", size)
+}
+
+// ResponseTotalSize returns tag for ResponseTotalSize
+func ResponseTotalSize(size int) Tag {
+	return newInt("response-total-size", size)
+}
+
+// ResponseMaxSize returns tag for ResponseMaxSize
+func ResponseMaxSize(size int) Tag {
+	return newInt("response-max-size", size)
+}
+
 ///////////////////  Archival tags defined here: archival- ///////////////////
 // archival request tags
 
