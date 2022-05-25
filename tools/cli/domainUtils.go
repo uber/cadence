@@ -241,10 +241,7 @@ func initializeAdminDomainHandler(
 
 	metricsClient := initializeMetricsClient()
 	logger := initializeLogger(configuration)
-	clusterMetadata := initializeClusterMetadata(
-		configuration,
-		logger,
-	)
+	clusterMetadata := initializeClusterMetadata(configuration)
 	metadataMgr := initializeDomainManager(context)
 	dynamicConfig := initializeDynamicConfig(configuration, logger)
 	return initializeDomainHandler(
@@ -305,15 +302,10 @@ func initializeLogger(
 	return loggerimpl.NewLogger(zapLogger)
 }
 
-func initializeClusterMetadata(
-	serviceConfig *config.Config,
-	logger log.Logger,
-) cluster.Metadata {
+func initializeClusterMetadata(serviceConfig *config.Config) cluster.Metadata {
 
 	clusterGroupMetadata := serviceConfig.ClusterGroupMetadata
 	return cluster.NewMetadata(
-		logger,
-		dynamicconfig.GetBoolPropertyFn(clusterGroupMetadata.EnableGlobalDomain),
 		clusterGroupMetadata.FailoverVersionIncrement,
 		clusterGroupMetadata.PrimaryClusterName,
 		clusterGroupMetadata.CurrentClusterName,

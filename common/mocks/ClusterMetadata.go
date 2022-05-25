@@ -131,20 +131,6 @@ func (_m *ClusterMetadata) IsVersionFromSameCluster(_a0 int64, _a1 int64) bool {
 	return r0
 }
 
-// IsGlobalDomainEnabled provides a mock function with given fields:
-func (_m *ClusterMetadata) IsGlobalDomainEnabled() bool {
-	ret := _m.Called()
-
-	var r0 bool
-	if rf, ok := ret.Get(0).(func() bool); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	return r0
-}
-
 // IsPrimaryCluster provides a mock function with given fields:
 func (_m *ClusterMetadata) IsPrimaryCluster() bool {
 	ret := _m.Called()

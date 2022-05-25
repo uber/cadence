@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
@@ -56,8 +55,6 @@ type (
 
 		domainID   string
 		domainName string
-
-		mockClusterMetadata *mocks.ClusterMetadata
 
 		serializer persistence.PayloadSerializer
 		logger     log.Logger
@@ -80,8 +77,6 @@ func (s *historyResenderSuite) SetupTest() {
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 
 	s.domainID = uuid.New()
 	s.domainName = "some random domain name"

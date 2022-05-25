@@ -56,7 +56,7 @@ var (
 	TestRunID = "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 
 	// TestClusterMetadata is the cluster metadata for test
-	TestClusterMetadata = cluster.GetTestClusterMetadata(true, true)
+	TestClusterMetadata = cluster.GetTestClusterMetadata(true)
 
 	// TestLocalDomainEntry is the local domain cache entry for test
 	TestLocalDomainEntry = cache.NewLocalDomainCacheEntryForTest(

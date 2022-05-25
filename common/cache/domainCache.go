@@ -571,10 +571,8 @@ func (c *domainCache) updateIDToDomainCache(
 	entry.Lock()
 	defer entry.Unlock()
 
-	triggerCallback := c.clusterMetadata.IsGlobalDomainEnabled() &&
-		// initialized will be true when the entry contains valid data
-		entry.initialized &&
-		record.notificationVersion > entry.notificationVersion
+	// initialized will be true when the entry contains valid data
+	triggerCallback := entry.initialized && record.notificationVersion > entry.notificationVersion
 
 	entry.info = record.info
 	entry.config = record.config

@@ -103,10 +103,8 @@ func (c *crossClusterQueueProcessor) Start() {
 		return
 	}
 
-	if c.shard.GetClusterMetadata().IsGlobalDomainEnabled() {
-		for _, queueProcessor := range c.queueProcessors {
-			queueProcessor.Start()
-		}
+	for _, queueProcessor := range c.queueProcessors {
+		queueProcessor.Start()
 	}
 }
 

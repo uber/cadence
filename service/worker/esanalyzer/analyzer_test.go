@@ -98,7 +98,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 			},
 		},
 		1234,
-		cluster.GetTestClusterMetadata(true, true),
+		cluster.GetTestClusterMetadata(true),
 	)
 
 	s.config = Config{

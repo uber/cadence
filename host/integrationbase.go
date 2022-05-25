@@ -103,7 +103,7 @@ func (s *IntegrationBase) setupSuite() {
 		s.adminClient = NewAdminClient(dispatcher)
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
-		clusterMetadata := NewClusterMetadata(s.testClusterConfig, s.Logger)
+		clusterMetadata := NewClusterMetadata(s.testClusterConfig)
 		params := pt.TestBaseParams{
 			DefaultTestCluster:    s.defaultTestCluster,
 			VisibilityTestCluster: s.visibilityTestCluster,

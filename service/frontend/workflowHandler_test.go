@@ -125,7 +125,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 	mockMonitor := s.mockResource.MembershipResolver
 	mockMonitor.EXPECT().MemberCount(service.Frontend).Return(5, nil).AnyTimes()
 	s.mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-
+	s.mockClusterMetadata.EXPECT().IsPrimaryCluster().Return(true).AnyTimes()
 }
 
 func (s *workflowHandlerSuite) TearDownTest() {
@@ -504,7 +504,6 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey()
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName)
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
@@ -527,7 +526,6 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failure_InvalidArchivalURI() {
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoArchivalURI() {
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", testHistoryArchivalURI))
@@ -549,7 +547,6 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithNoArchivalU
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithArchivalURI() {
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "invalidURI"))
@@ -576,7 +573,6 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_EnabledWithArchivalURI
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_ClusterNotConfiguredForArchival() {
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewDisabledArchvialConfig())
@@ -599,7 +595,6 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Success_ClusterNotConfiguredFo
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Success_NotEnabled() {
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false)
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "some random URI"))

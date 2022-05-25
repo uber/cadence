@@ -51,9 +51,8 @@ type (
 		historyEngine engine.Engine
 		taskProcessor task.Processor
 
-		config                *config.Config
-		isGlobalDomainEnabled bool
-		currentClusterName    string
+		config             *config.Config
+		currentClusterName string
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -147,9 +146,8 @@ func NewTimerQueueProcessor(
 		historyEngine: historyEngine,
 		taskProcessor: taskProcessor,
 
-		config:                config,
-		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
-		currentClusterName:    currentClusterName,
+		config:             config,
+		currentClusterName: currentClusterName,
 
 		metricsClient: shard.GetMetricsClient(),
 		logger:        logger,
@@ -172,10 +170,8 @@ func (t *timerQueueProcessor) Start() {
 	}
 
 	t.activeQueueProcessor.Start()
-	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			standbyQueueProcessor.Start()
-		}
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		standbyQueueProcessor.Start()
 	}
 
 	t.shutdownWG.Add(1)
@@ -188,10 +184,8 @@ func (t *timerQueueProcessor) Stop() {
 	}
 
 	t.activeQueueProcessor.Stop()
-	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			standbyQueueProcessor.Stop()
-		}
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		standbyQueueProcessor.Stop()
 	}
 
 	close(t.shutdownChan)
@@ -393,21 +387,19 @@ func (t *timerQueueProcessor) completeTimer() error {
 		newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 	}
 
-	if t.isGlobalDomainEnabled {
-		for standbyClusterName := range t.standbyQueueProcessors {
-			actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
-			if err != nil {
-				return err
-			}
-			for _, queueState := range actionResult.GetStateActionResult.States {
-				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
-			}
+	for standbyClusterName := range t.standbyQueueProcessors {
+		actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
+		if err != nil {
+			return err
 		}
+		for _, queueState := range actionResult.GetStateActionResult.States {
+			newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
+		}
+	}
 
-		for _, failoverInfo := range t.shard.GetAllTimerFailoverLevels() {
-			failoverLevel := newTimerTaskKey(failoverInfo.MinLevel, 0)
-			newAckLevel = minTaskKey(newAckLevel, failoverLevel)
-		}
+	for _, failoverInfo := range t.shard.GetAllTimerFailoverLevels() {
+		failoverLevel := newTimerTaskKey(failoverInfo.MinLevel, 0)
+		newAckLevel = minTaskKey(newAckLevel, failoverLevel)
 	}
 
 	if newAckLevel == maximumTimerTaskKey {

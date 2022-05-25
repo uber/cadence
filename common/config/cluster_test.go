@@ -176,7 +176,6 @@ func TestClusterGroupMetadataValidate(t *testing.T) {
 
 func validClusterGroupMetadata() *ClusterGroupMetadata {
 	return &ClusterGroupMetadata{
-		EnableGlobalDomain:       true,
 		FailoverVersionIncrement: 10,
 		PrimaryClusterName:       "active",
 		CurrentClusterName:       "standby",

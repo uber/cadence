@@ -175,15 +175,10 @@ func noopAuthorizationConfig() config.Authorization {
 }
 
 // NewClusterMetadata returns cluster metdata from config
-func NewClusterMetadata(options *TestClusterConfig, logger log.Logger) cluster.Metadata {
-	clusterMetadata := cluster.GetTestClusterMetadata(
-		options.ClusterGroupMetadata.EnableGlobalDomain,
-		options.IsPrimaryCluster,
-	)
+func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
+	clusterMetadata := cluster.GetTestClusterMetadata(options.IsPrimaryCluster)
 	if !options.IsPrimaryCluster && options.ClusterGroupMetadata.PrimaryClusterName != "" { // xdc cluster metadata setup
 		clusterMetadata = cluster.NewMetadata(
-			logger,
-			dynamicconfig.GetBoolPropertyFn(options.ClusterGroupMetadata.EnableGlobalDomain),
 			options.ClusterGroupMetadata.FailoverVersionIncrement,
 			options.ClusterGroupMetadata.PrimaryClusterName,
 			options.ClusterGroupMetadata.CurrentClusterName,

@@ -248,20 +248,17 @@ func NewEngineWithShardContext(
 
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
-	// Only start the replicator processor if global domain is enabled
-	if shard.GetClusterMetadata().IsGlobalDomainEnabled() {
-		historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
-			shard,
-			executionCache,
-			historyEngImpl.eventsReapplier,
-			logger,
-		)
-		historyEngImpl.nDCActivityReplicator = ndc.NewActivityReplicator(
-			shard,
-			executionCache,
-			logger,
-		)
-	}
+	historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
+		shard,
+		executionCache,
+		historyEngImpl.eventsReapplier,
+		logger,
+	)
+	historyEngImpl.nDCActivityReplicator = ndc.NewActivityReplicator(
+		shard,
+		executionCache,
+		logger,
+	)
 
 	historyEngImpl.crossClusterTaskProcessors = task.NewCrossClusterTaskProcessors(
 		shard,

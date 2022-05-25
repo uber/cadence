@@ -193,7 +193,6 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomain(s.childDomainName).Return(s.childDomainEntry, nil).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()

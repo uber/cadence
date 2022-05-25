@@ -69,7 +69,6 @@ services:
       port: 7941
 
 clusterGroupMetadata:
-  enableGlobalDomain: true
   failoverVersionIncrement: 10
   primaryClusterName: "cluster0"
   currentClusterName: "cluster0"

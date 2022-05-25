@@ -98,7 +98,6 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
 
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.currentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	s.config = NewConfig(
 		dynamicconfig.NewCollection(

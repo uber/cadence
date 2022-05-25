@@ -67,12 +67,6 @@ const (
 
 	// key for common & admin
 
-	// EnableGlobalDomain is key for enable global domain
-	// KeyName: system.enableGlobalDomain
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: N/A
-	EnableGlobalDomain
 	// EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility
 	// KeyName: system.enableVisibilitySampling
 	// Value type: Bool
@@ -2241,7 +2235,6 @@ var Keys = map[Key]string{
 	TestGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:                  "system.enableGlobalDomain",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
 	AdvancedVisibilityWritingMode:       "system.advancedVisibilityWritingMode",

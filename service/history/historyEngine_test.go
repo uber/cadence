@@ -137,7 +137,6 @@ func (s *engineSuite) SetupTest() {
 	s.mockShardManager = s.mockShard.Resource.ShardMgr
 	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestSingleDCClusterInfo).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
