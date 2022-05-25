@@ -26,7 +26,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -55,7 +54,6 @@ type (
 	}
 
 	workflowImpl struct {
-		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
 
 		ctx          context.Context
@@ -68,7 +66,6 @@ type (
 // NewWorkflow creates a new NDC workflow
 func NewWorkflow(
 	ctx context.Context,
-	domainCache cache.DomainCache,
 	clusterMetadata cluster.Metadata,
 	context Context,
 	mutableState MutableState,
@@ -77,7 +74,6 @@ func NewWorkflow(
 
 	return &workflowImpl{
 		ctx:             ctx,
-		domainCache:     domainCache,
 		clusterMetadata: clusterMetadata,
 
 		context:      context,
