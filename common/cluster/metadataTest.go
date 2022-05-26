@@ -85,6 +85,22 @@ var (
 			RPCTransport:           TestClusterXDCTransport,
 		},
 	}
+
+	// TestActiveClusterMetadata is metadata for an active cluster
+	TestActiveClusterMetadata = NewMetadata(
+		TestFailoverVersionIncrement,
+		TestCurrentClusterName,
+		TestCurrentClusterName,
+		TestAllClusterInfo,
+	)
+
+	// TestPassiveClusterMetadata is metadata for a passive cluster
+	TestPassiveClusterMetadata = NewMetadata(
+		TestFailoverVersionIncrement,
+		TestCurrentClusterName,
+		TestAlternativeClusterName,
+		TestAllClusterInfo,
+	)
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized

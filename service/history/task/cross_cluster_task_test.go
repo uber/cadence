@@ -52,15 +52,14 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
-		mockExecutionMgr    *mocks.ExecutionManager
-		mockExecutor        *MockExecutor
-		mockProcessor       *MockProcessor
-		mockRedispatcher    *MockRedispatcher
-		executionCache      *execution.Cache
+		controller       *gomock.Controller
+		mockShard        *shard.TestContext
+		mockDomainCache  *cache.MockDomainCache
+		mockExecutionMgr *mocks.ExecutionManager
+		mockExecutor     *MockExecutor
+		mockProcessor    *MockProcessor
+		mockRedispatcher *MockRedispatcher
+		executionCache   *execution.Cache
 	}
 )
 
@@ -90,7 +89,6 @@ func (s *crossClusterTaskSuite) SetupTest() {
 		s.mockShard.GetMetricsClient(),
 	))
 
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 
@@ -106,8 +104,6 @@ func (s *crossClusterTaskSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestParentDomainName).Return(constants.TestParentDomainID, nil).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 
 	s.mockExecutor = NewMockExecutor(s.controller)
 	s.mockProcessor = NewMockProcessor(s.controller)

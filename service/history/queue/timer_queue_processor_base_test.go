@@ -94,9 +94,6 @@ func (s *timerQueueProcessorBaseSuite) TearDownTest() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestIsProcessNow() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	timerQueueProcessBase := s.newTestTimerQueueProcessorBase(nil, nil, nil, nil, nil)
 	s.True(timerQueueProcessBase.isProcessNow(time.Time{}))
 
@@ -189,9 +186,6 @@ func (s *timerQueueProcessorBaseSuite) TestGetTimerTasks_NoMore() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadLookAheadTask() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	shardMaxReadLevel := s.mockShard.UpdateTimerMaxReadLevel(s.clusterName)
 	readLevel := newTimerTaskKey(shardMaxReadLevel, 0)
 	maxReadLevel := newTimerTaskKey(shardMaxReadLevel.Add(10*time.Second), 0)
@@ -231,9 +225,6 @@ func (s *timerQueueProcessorBaseSuite) TestReadLookAheadTask() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_NoNextPage() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	readLevel := newTimerTaskKey(time.Now().Add(-10*time.Second), 0)
 	maxReadLevel := newTimerTaskKey(time.Now().Add(1*time.Second), 0)
 
@@ -281,9 +272,6 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_NoNext
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNextPage() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	readLevel := newTimerTaskKey(time.Now().Add(-10*time.Second), 0)
 	maxReadLevel := newTimerTaskKey(time.Now().Add(1*time.Second), 0)
 
@@ -323,9 +311,6 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_NoLookAhead_HasNex
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNextPage() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	readLevel := newTimerTaskKey(time.Now().Add(-10*time.Second), 0)
 	maxReadLevel := newTimerTaskKey(time.Now().Add(1*time.Second), 0)
 
@@ -376,9 +361,6 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_NoNex
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNextPage() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	readLevel := newTimerTaskKey(time.Now().Add(-10*time.Second), 0)
 	maxReadLevel := newTimerTaskKey(time.Now().Add(1*time.Second), 0)
 
@@ -429,9 +411,6 @@ func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_HasLookAhead_HasNe
 }
 
 func (s *timerQueueProcessorBaseSuite) TestReadAndFilterTasks_LookAheadFailed_NoNextPage() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	readLevel := newTimerTaskKey(time.Now().Add(-10*time.Second), 0)
 	maxReadLevel := newTimerTaskKey(time.Now().Add(1*time.Second), 0)
 
@@ -535,9 +514,6 @@ func (s *timerQueueProcessorBaseSuite) TestNotifyNewTimes() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessQueueCollections_SkipRead() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	now := time.Now()
 	queueLevel := 0
 	shardMaxReadLevel := newTimerTaskKey(now, 0)
@@ -579,9 +555,6 @@ func (s *timerQueueProcessorBaseSuite) TestProcessQueueCollections_SkipRead() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessBatch_HasNextPage() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	now := time.Now()
 	queueLevel := 0
 	ackLevel := newTimerTaskKey(now.Add(-5*time.Second), 0)
@@ -670,9 +643,6 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_HasNextPage() {
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_HasLookAhead() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	now := time.Now()
 	queueLevel := 0
 	ackLevel := newTimerTaskKey(now.Add(-5*time.Second), 0)
@@ -763,9 +733,6 @@ func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_HasLookAhead(
 }
 
 func (s *timerQueueProcessorBaseSuite) TestProcessBatch_NoNextPage_NoLookAhead() {
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.clusterName).AnyTimes()
-
 	now := time.Now()
 	queueLevel := 0
 	ackLevel := newTimerTaskKey(now.Add(-5*time.Second), 0)

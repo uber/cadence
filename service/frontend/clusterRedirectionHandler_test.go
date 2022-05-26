@@ -49,7 +49,6 @@ type (
 		mockResource             *resource.Test
 		mockFrontendHandler      *MockHandler
 		mockRemoteFrontendClient *frontend.MockClient
-		mockClusterMetadata      *cluster.MockMetadata
 
 		mockClusterRedirectionPolicy *MockClusterRedirectionPolicy
 
@@ -94,10 +93,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
-	s.mockClusterMetadata = s.mockResource.ClusterMetadata
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
-
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.currentClusterName).AnyTimes()
 
 	s.config = NewConfig(
 		dynamicconfig.NewCollection(
