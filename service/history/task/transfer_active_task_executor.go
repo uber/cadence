@@ -1766,7 +1766,6 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 		uuid.New(),
 		execution.NewWorkflow(
 			resetCtx,
-			t.shard.GetDomainCache(),
 			t.shard.GetClusterMetadata(),
 			currentContext,
 			currentMutableState,
