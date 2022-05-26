@@ -33,6 +33,7 @@ const (
 
 	instance               = "instance"
 	domain                 = "domain"
+	operation              = "operation"
 	sourceCluster          = "source_cluster"
 	targetCluster          = "target_cluster"
 	activeCluster          = "active_cluster"
@@ -81,6 +82,10 @@ func metricWithUnknown(key, value string) Tag {
 // this converts that to an unknown domain.
 func DomainTag(value string) Tag {
 	return metricWithUnknown(domain, value)
+}
+
+func OperationTag(value string) Tag {
+	return metricWithUnknown(operation, value)
 }
 
 // DomainUnknownTag returns a new domain:unknown tag-value

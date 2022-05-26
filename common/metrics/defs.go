@@ -297,6 +297,8 @@ const (
 	PersistenceFetchDynamicConfigScope
 	// PersistenceUpdateDynamicConfigScope tracks UpdateDynamicConfig calls made by service to persistence layer
 	PersistenceUpdateDynamicConfigScope
+	// PersistenceEmptyResponseScope tracks empty read calls made by service to persistence layer
+	PersistenceEmptyResponseScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -1306,6 +1308,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetDLQSizeScope:                               {operation: "GetDLQSize"},
 		PersistenceFetchDynamicConfigScope:                       {operation: "FetchDynamicConfig"},
 		PersistenceUpdateDynamicConfigScope:                      {operation: "UpdateDynamicConfig"},
+		PersistenceEmptyResponseScope:                            {operation: "EmptyServiceCallResponse"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1811,6 +1814,7 @@ const (
 	PersistenceErrDomainAlreadyExistsCounter
 	PersistenceErrBadRequestCounter
 	PersistenceSampledCounter
+	PersistenceEmptyResponseCounter
 
 	CadenceClientRequests
 	CadenceClientFailures
@@ -2341,6 +2345,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrDomainAlreadyExistsCounter:            {metricName: "persistence_errors_domain_already_exists", metricType: Counter},
 		PersistenceErrBadRequestCounter:                     {metricName: "persistence_errors_bad_request", metricType: Counter},
 		PersistenceSampledCounter:                           {metricName: "persistence_sampled", metricType: Counter},
+		PersistenceEmptyResponseCounter:                     {metricName: "persistence_empty_response", metricType: Counter},
 		CadenceClientRequests:                               {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                               {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                {metricName: "cadence_client_latency", metricType: Timer},
