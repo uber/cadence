@@ -74,8 +74,6 @@ func (s *historyCacheSuite) SetupTest() {
 		},
 		config.NewForTest(),
 	)
-
-	s.mockShard.Resource.ClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false).AnyTimes()
 }
 
 func (s *historyCacheSuite) TearDownTest() {

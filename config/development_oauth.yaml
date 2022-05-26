@@ -41,7 +41,6 @@ authorization:
       publicKey: "config/credentials/keytest.pub"
 
 clusterGroupMetadata:
-  enableGlobalDomain: true
   failoverVersionIncrement: 10
   masterClusterName: "cluster0"
   currentClusterName: "cluster0"

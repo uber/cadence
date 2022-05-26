@@ -85,7 +85,7 @@ func (s *workflowSuite) SetupTest() {
 			},
 		},
 		1234,
-		cluster.GetTestClusterMetadata(true, true),
+		cluster.GetTestClusterMetadata(true),
 	)
 	s.mockDomainCache.EXPECT().GetDomain(testActiveDomainName).Return(activeDomainCache, nil).AnyTimes()
 
@@ -100,7 +100,7 @@ func (s *workflowSuite) SetupTest() {
 			},
 		},
 		1234,
-		cluster.GetTestClusterMetadata(true, true),
+		cluster.GetTestClusterMetadata(true),
 	)
 	s.mockDomainCache.EXPECT().GetDomain(testStandbyDomainName).Return(standbyDomainCache, nil).AnyTimes()
 

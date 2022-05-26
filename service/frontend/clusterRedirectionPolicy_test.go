@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -60,8 +59,7 @@ type (
 		alternativeClusterName string
 		mockConfig             *Config
 
-		mockClusterMetadata *mocks.ClusterMetadata
-		policy              *selectedOrAllAPIsForwardingRedirectionPolicy
+		policy *selectedOrAllAPIsForwardingRedirectionPolicy
 	}
 )
 
@@ -142,8 +140,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 		false,
 		false,
 	)
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.policy = newSelectedOrAllAPIsForwardingPolicy(
 		s.currentClusterName,
 		s.mockConfig,

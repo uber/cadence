@@ -225,9 +225,8 @@ func (s *Service) Start() {
 		s.startIndexer()
 	}
 
-	if s.GetClusterMetadata().IsGlobalDomainEnabled() {
-		s.startReplicator()
-	}
+	s.startReplicator()
+
 	if s.GetArchivalMetadata().GetHistoryConfig().ClusterConfiguredForArchival() {
 		s.startArchiver()
 	}

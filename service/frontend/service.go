@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 )
@@ -257,16 +256,8 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("frontend starting")
 
-	var replicationMessageSink messaging.Producer
-	clusterMetadata := s.GetClusterMetadata()
-	if clusterMetadata.IsGlobalDomainEnabled() {
-		replicationMessageSink = s.GetDomainReplicationQueue()
-	} else {
-		replicationMessageSink = messaging.NewNoopProducer()
-	}
-
 	// Base handler
-	s.handler = NewWorkflowHandler(s, s.config, replicationMessageSink, client.NewVersionChecker())
+	s.handler = NewWorkflowHandler(s, s.config, s.GetDomainReplicationQueue(), client.NewVersionChecker())
 
 	// Additional decorations
 	var handler Handler = s.handler
