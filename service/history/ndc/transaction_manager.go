@@ -29,7 +29,6 @@ import (
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -146,7 +145,6 @@ type (
 
 	transactionManagerImpl struct {
 		shard            shard.Context
-		domainCache      cache.DomainCache
 		executionCache   *execution.Cache
 		clusterMetadata  cluster.Metadata
 		historyV2Manager persistence.HistoryManager
@@ -172,7 +170,6 @@ func newTransactionManager(
 
 	transactionManager := &transactionManagerImpl{
 		shard:            shard,
-		domainCache:      shard.GetDomainCache(),
 		executionCache:   executionCache,
 		clusterMetadata:  shard.GetClusterMetadata(),
 		historyV2Manager: shard.GetHistoryManager(),
@@ -457,7 +454,7 @@ func (r *transactionManagerImpl) loadNDCWorkflow(
 		release(err)
 		return nil, err
 	}
-	return execution.NewWorkflow(ctx, r.domainCache, r.clusterMetadata, context, msBuilder, release), nil
+	return execution.NewWorkflow(ctx, r.clusterMetadata, context, msBuilder, release), nil
 }
 
 func (r *transactionManagerImpl) isWorkflowCurrent(

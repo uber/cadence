@@ -2784,7 +2784,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		request.GetRequestID(),
 		execution.NewWorkflow(
 			ctx,
-			e.shard.GetDomainCache(),
 			e.shard.GetClusterMetadata(),
 			currentContext,
 			currentMutableState,
@@ -3295,7 +3294,6 @@ func (e *historyEngineImpl) ReapplyEvents(
 					uuid.New(),
 					execution.NewWorkflow(
 						ctx,
-						e.shard.GetDomainCache(),
 						e.shard.GetClusterMetadata(),
 						wfContext,
 						mutableState,
