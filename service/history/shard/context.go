@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -1486,7 +1485,7 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 		return err
 	}
 	// domain is active, the marker is expired
-	isActive, _ := domain.IsActive(domainEntry, s.GetClusterMetadata())
+	isActive, _ := domainEntry.IsActiveIn(s.GetClusterMetadata().GetCurrentClusterName())
 	if isActive || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
 		s.logger.Info("Skipped out-of-date failover marker", tag.WorkflowDomainName(domainEntry.GetInfo().Name))
 		return nil
@@ -1509,7 +1508,7 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarke
 			s.RUnlock()
 			return nil, err
 		}
-		isActive, _ := domain.IsActive(domainEntry, s.GetClusterMetadata())
+		isActive, _ := domainEntry.IsActiveIn(s.GetClusterMetadata().GetCurrentClusterName())
 		if isActive || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
 			completedFailoverMarkers[marker] = struct{}{}
 		}

@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -792,7 +791,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 	var targetCluster string
 
 	sourceDomainEntry := r.mutableState.GetDomainEntry()
-	if isActive, _ := domain.IsActive(sourceDomainEntry, r.clusterMetadata); !isActive && !sourceDomainEntry.IsDomainPendingActive() {
+	if isActive, _ := sourceDomainEntry.IsActiveIn(r.clusterMetadata.GetCurrentClusterName()); !isActive && !sourceDomainEntry.IsDomainPendingActive() {
 		// domain is passive, generate (passive) transfer task
 		generateTransferTask = true
 	}
@@ -949,7 +948,7 @@ func (r *mutableStateTaskGeneratorImpl) isCrossClusterTask(
 	}
 
 	// case 2: source domain is not active in the current cluster
-	if isActive, _ := domain.IsActive(sourceDomainEntry, r.clusterMetadata); !isActive {
+	if isActive, _ := sourceDomainEntry.IsActiveIn(r.clusterMetadata.GetCurrentClusterName()); !isActive {
 		return "", false, nil
 	}
 
@@ -978,7 +977,7 @@ func getTargetCluster(
 		return "", false, err
 	}
 
-	isActive, _ := domain.IsActive(domainEntry, clusterMetadata)
+	isActive, _ := domainEntry.IsActiveIn(clusterMetadata.GetCurrentClusterName())
 	if !isActive {
 		// treat pending active as active
 		isActive = domainEntry.IsDomainPendingActive()

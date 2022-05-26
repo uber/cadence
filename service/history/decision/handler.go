@@ -31,7 +31,6 @@ import (
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/client"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -887,5 +886,5 @@ func (handler *handlerImpl) failDecisionHelper(
 }
 
 func (handler *handlerImpl) getActiveDomainByID(id string) (*cache.DomainCacheEntry, error) {
-	return domain.GetActiveDomainByID(handler.shard.GetDomainCache(), handler.shard.GetClusterMetadata(), id)
+	return cache.GetActiveDomainByID(handler.shard.GetDomainCache(), handler.shard.GetClusterMetadata().GetCurrentClusterName(), id)
 }

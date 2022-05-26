@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/domain"
 	ce "github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -973,7 +972,7 @@ func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error
 			return err // if could not access domain cache simply return original error
 		}
 
-		if _, domainNotActiveErr := domain.IsActive(domainEntry, e.clusterMetadata); domainNotActiveErr != nil {
+		if _, domainNotActiveErr := domainEntry.IsActiveIn(e.clusterMetadata.GetCurrentClusterName()); domainNotActiveErr != nil {
 			domainNotActiveErrCasted := domainNotActiveErr.(*types.DomainNotActiveError)
 			return &types.EntityNotExistsError{
 				Message:        "Workflow execution not found in non-active cluster",
@@ -1177,7 +1176,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// 2. the workflow is not running, whenever a workflow is not running dispatching query directly is consistent
 	// 3. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
 	// 4. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
-	isActive, _ := domain.IsActive(de, e.clusterMetadata)
+	isActive, _ := de.IsActiveIn(e.clusterMetadata.GetCurrentClusterName())
 	safeToDispatchDirectly := !isActive ||
 		!mutableState.IsWorkflowExecutionRunning() ||
 		req.GetQueryConsistencyLevel() == types.QueryConsistencyLevelEventual ||
@@ -1268,7 +1267,7 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		return nil, err
 	}
 	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
-	domainIsActive, _ := domain.IsActive(de, e.clusterMetadata)
+	domainIsActive, _ := de.IsActiveIn(e.clusterMetadata.GetCurrentClusterName())
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
@@ -3475,5 +3474,5 @@ func (e *historyEngineImpl) newChildContext(
 }
 
 func (e *historyEngineImpl) getActiveDomainByID(id string) (*cache.DomainCacheEntry, error) {
-	return domain.GetActiveDomainByID(e.shard.GetDomainCache(), e.clusterMetadata, id)
+	return cache.GetActiveDomainByID(e.shard.GetDomainCache(), e.clusterMetadata.GetCurrentClusterName(), id)
 }
