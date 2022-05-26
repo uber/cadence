@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -154,7 +153,6 @@ func (s *domainCacheSuite) TestListDomain() {
 	pageToken := []byte("some random page token")
 
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
@@ -197,7 +195,6 @@ func (s *domainCacheSuite) TestListDomain() {
 }
 
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	domainRecord := &persistence.GetDomainResponse{
@@ -241,7 +238,6 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByName() {
 }
 
 func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	domainRecord := &persistence.GetDomainResponse{
@@ -280,7 +276,6 @@ func (s *domainCacheSuite) TestGetDomain_NonLoaded_GetByID() {
 }
 
 func (s *domainCacheSuite) TestGetActiveDomainEntry_LocalDomain() {
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 
@@ -317,7 +312,6 @@ func (s *domainCacheSuite) TestGetActiveDomainEntry_LocalDomain() {
 }
 
 func (s *domainCacheSuite) TestGetActiveDomainEntry_ActiveGlobalDomain() {
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.clusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
@@ -356,7 +350,6 @@ func (s *domainCacheSuite) TestGetActiveDomainEntry_ActiveGlobalDomain() {
 }
 
 func (s *domainCacheSuite) TestGetActiveDomainEntry_PassiveGlobalDomain() {
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.clusterMetadata.On("GetCurrentClusterName").Return(cluster.TestCurrentClusterName)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
@@ -441,7 +434,6 @@ func (s *domainCacheSuite) TestRegisterCallback_CatchUp() {
 	domainNotificationVersion++
 
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
@@ -519,7 +511,6 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 	domainNotificationVersion++
 
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil).Once()
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.metadataMgr.On("ListDomains", mock.Anything, &persistence.ListDomainsRequest{
 		PageSize:      domainCacheRefreshPageSize,
 		NextPageToken: nil,
@@ -605,7 +596,6 @@ func (s *domainCacheSuite) TestUpdateCache_TriggerCallBack() {
 }
 
 func (s *domainCacheSuite) TestGetTriggerListAndUpdateCache_ConcurrentAccess() {
-	s.clusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	domainNotificationVersion := int64(999999) // make this notification version really large for test
 	s.metadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{NotificationVersion: domainNotificationVersion}, nil)
 	id := uuid.New()
@@ -764,8 +754,6 @@ func Test_IsSampledForLongerRetention(t *testing.T) {
 
 func Test_DomainCacheEntry_GetDomainNotActiveErr(t *testing.T) {
 	clusterMetadata := cluster.NewMetadata(
-		loggerimpl.NewNopLogger(),
-		dynamicconfig.GetBoolPropertyFn(true),
 		int64(10),
 		cluster.TestCurrentClusterName,
 		cluster.TestCurrentClusterName,

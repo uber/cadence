@@ -22,8 +22,6 @@ package cluster
 
 import (
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -90,29 +88,16 @@ var (
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
-func GetTestClusterMetadata(enableGlobalDomain bool, isPrimaryCluster bool) Metadata {
+func GetTestClusterMetadata(isPrimaryCluster bool) Metadata {
 	primaryClusterName := TestCurrentClusterName
 	if !isPrimaryCluster {
 		primaryClusterName = TestAlternativeClusterName
 	}
 
-	if enableGlobalDomain {
-		return NewMetadata(
-			loggerimpl.NewNopLogger(),
-			dynamicconfig.GetBoolPropertyFn(true),
-			TestFailoverVersionIncrement,
-			primaryClusterName,
-			TestCurrentClusterName,
-			TestAllClusterInfo,
-		)
-	}
-
 	return NewMetadata(
-		loggerimpl.NewNopLogger(),
-		dynamicconfig.GetBoolPropertyFn(false),
 		TestFailoverVersionIncrement,
+		primaryClusterName,
 		TestCurrentClusterName,
-		TestCurrentClusterName,
-		TestSingleDCClusterInfo,
+		TestAllClusterInfo,
 	)
 }

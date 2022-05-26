@@ -193,7 +193,6 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomain(s.childDomainName).Return(s.childDomainEntry, nil).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
@@ -974,26 +973,6 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_CrossCluste
 	)
 }
 
-func (s *transferActiveTaskExecutorSuite) TestProcessCancelExecution_TargetNotActive() {
-	s.testProcessCancelExecutionWithError(
-		s.targetDomainID,
-		func(
-			mutableState execution.MutableState,
-			workflowExecution, targetExecution types.WorkflowExecution,
-			event *types.HistoryEvent,
-			transferTask Task,
-			requestCancelInfo *persistence.RequestCancelInfo,
-		) {
-			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
-			s.NoError(err)
-			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-			cancelRequest := createTestRequestCancelWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), requestCancelInfo.CancelRequestID)
-			s.mockHistoryClient.EXPECT().RequestCancelWorkflowExecution(gomock.Any(), cancelRequest).Return(&types.DomainNotActiveError{}).Times(1)
-		},
-		errTargetDomainNotActive,
-	)
-}
-
 func (s *transferActiveTaskExecutorSuite) testProcessCancelExecution(
 	targetDomainID string,
 	setupMockFn func(
@@ -1103,26 +1082,6 @@ func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_Failure() {
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 		},
-	)
-}
-
-func (s *transferActiveTaskExecutorSuite) TestProcessSignalExecution_TargetNotActive() {
-	s.testProcessSignalExecutionWithError(
-		s.targetDomainID,
-		func(
-			mutableState execution.MutableState,
-			workflowExecution, targetExecution types.WorkflowExecution,
-			event *types.HistoryEvent,
-			transferTask Task,
-			signalInfo *persistence.SignalInfo,
-		) {
-			persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
-			s.NoError(err)
-			s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-			signalRequest := createTestSignalWorkflowExecutionRequest(s.targetDomainName, transferTask.GetInfo().(*persistence.TransferTaskInfo), signalInfo)
-			s.mockHistoryClient.EXPECT().SignalWorkflowExecution(gomock.Any(), signalRequest).Return(&types.DomainNotActiveError{}).Times(1)
-		},
-		errTargetDomainNotActive,
 	)
 }
 

@@ -550,34 +550,34 @@ install-schema: cadence-cassandra-tool
 	./cadence-cassandra-tool -k cadence_visibility update-schema -d ./schema/cassandra/visibility/versioned
 
 install-schema-mysql: cadence-sql-tool
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence_visibility
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence_visibility setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
+	./cadence-sql-tool --user root --pw cadence create --db cadence
+	./cadence-sql-tool --user root --pw cadence --db cadence setup-schema -v 0.0
+	./cadence-sql-tool --user root --pw cadence --db cadence update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence create --db cadence_visibility
+	./cadence-sql-tool --user root --pw cadence --db cadence_visibility setup-schema -v 0.0
+	./cadence-sql-tool --user root --pw cadence --db cadence_visibility update-schema -d ./schema/mysql/v57/visibility/versioned
 
 install-schema-multiple-mysql: cadence-sql-tool install-schema-es-v7
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence0 setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence0 update-schema -d ./schema/mysql/v57/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence1
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence1 setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence1 update-schema -d ./schema/mysql/v57/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence2
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence2 setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence2 update-schema -d ./schema/mysql/v57/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence create --db cadence3
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence3 setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 --user root --pw cadence --db cadence3 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence create --db cadence0
+	./cadence-sql-tool --user root --pw cadence --db cadence0 setup-schema -v 0.0
+	./cadence-sql-tool --user root --pw cadence --db cadence0 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence create --db cadence1
+	./cadence-sql-tool --user root --pw cadence --db cadence1 setup-schema -v 0.0
+	./cadence-sql-tool --user root --pw cadence --db cadence1 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence create --db cadence2
+	./cadence-sql-tool --user root --pw cadence --db cadence2 setup-schema -v 0.0
+	./cadence-sql-tool --user root --pw cadence --db cadence2 update-schema -d ./schema/mysql/v57/cadence/versioned
+	./cadence-sql-tool --user root --pw cadence create --db cadence3
+	./cadence-sql-tool --user root --pw cadence --db cadence3 setup-schema -v 0.0
+	./cadence-sql-tool --user root --pw cadence --db cadence3 update-schema -d ./schema/mysql/v57/cadence/versioned
 
 install-schema-postgres: cadence-sql-tool
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence setup -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence update-schema -d ./schema/postgres/cadence/versioned
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres create --db cadence_visibility
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility setup-schema -v 0.0
-	./cadence-sql-tool --ep 127.0.0.1 -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
+	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres create --db cadence
+	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres --db cadence setup -v 0.0
+	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres --db cadence update-schema -d ./schema/postgres/cadence/versioned
+	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres create --db cadence_visibility
+	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility setup-schema -v 0.0
+	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
 
 install-schema-es-v7:
 	export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
@@ -622,25 +622,25 @@ install-schema-xdc: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster2 update-schema -d ./schema/cassandra/visibility/versioned
 
-start-xdc-cluster0: bins
+start-xdc-cluster0: cadence-server
 	./cadence-server --zone xdc_cluster0 start
 
-start-xdc-cluster1: bins
+start-xdc-cluster1: cadence-server
 	./cadence-server --zone xdc_cluster1 start
 
-start-xdc-cluster2: bins
+start-xdc-cluster2: cadence-server
 	./cadence-server --zone xdc_cluster2 start
 
-start-canary: bins
+start-canary: cadence-canary
 	./cadence-canary start
 
-start-bench: bins
+start-bench: cadence-bench
 	./cadence-bench start
 
-start-mysql: bins
+start-mysql: cadence-server
 	./cadence-server --zone mysql start
 
-start-postgres: bins
+start-postgres: cadence-server
 	./cadence-server --zone postgres start
 
 # broken up into multiple += so I can interleave comments.

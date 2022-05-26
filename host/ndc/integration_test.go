@@ -113,7 +113,7 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 	s.mockAdminClient["other"] = mockOtherClient
 	s.clusterConfigs[0].MockAdminClient = s.mockAdminClient
 
-	clusterMetadata := host.NewClusterMetadata(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])))
+	clusterMetadata := host.NewClusterMetadata(s.clusterConfigs[0])
 	params := pt.TestBaseParams{
 		DefaultTestCluster:    s.defaultTestCluster,
 		VisibilityTestCluster: s.visibilityTestCluster,

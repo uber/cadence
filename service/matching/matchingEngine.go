@@ -113,7 +113,6 @@ func NewEngine(taskManager persistence.TaskManager,
 	domainCache cache.DomainCache,
 	resolver membership.Resolver,
 ) Engine {
-
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
 		historyService:       historyService,
@@ -344,10 +343,11 @@ func (e *matchingEngineImpl) AddActivityTask(
 		CreatedTime:            time.Now(),
 	}
 	return tlMgr.AddTask(hCtx.Context, addTaskParams{
-		execution:     request.Execution,
-		taskInfo:      taskInfo,
-		source:        request.GetSource(),
-		forwardedFrom: request.GetForwardedFrom(),
+		execution:                request.Execution,
+		taskInfo:                 taskInfo,
+		source:                   request.GetSource(),
+		forwardedFrom:            request.GetForwardedFrom(),
+		activityTaskDispatchInfo: request.ActivityTaskDispatchInfo,
 	})
 }
 
@@ -505,6 +505,10 @@ pollLoop:
 			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForActivityResponse(), nil
 		}
+		if task.activityTaskDispatchInfo != nil {
+			task.finish(nil)
+			return e.createSyncMatchPollForActivityTaskResponse(task, task.activityTaskDispatchInfo), nil
+		}
 
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
 		if err != nil {
@@ -530,6 +534,45 @@ pollLoop:
 		task.finish(nil)
 		return e.createPollForActivityTaskResponse(task, resp, hCtx.scope), nil
 	}
+}
+
+func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
+	task *InternalTask,
+	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
+) *types.PollForActivityTaskResponse {
+
+	scheduledEvent := activityTaskDispatchInfo.ScheduledEvent
+	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
+	response := &types.PollForActivityTaskResponse{}
+	response.ActivityID = attributes.ActivityID
+	response.ActivityType = attributes.ActivityType
+	response.Header = attributes.Header
+	response.Input = attributes.Input
+	response.WorkflowExecution = task.workflowExecution()
+	response.ScheduledTimestampOfThisAttempt = activityTaskDispatchInfo.ScheduledTimestampOfThisAttempt
+	response.ScheduledTimestamp = scheduledEvent.Timestamp
+	response.ScheduleToCloseTimeoutSeconds = attributes.ScheduleToCloseTimeoutSeconds
+	response.StartedTimestamp = activityTaskDispatchInfo.StartedTimestamp
+	response.StartToCloseTimeoutSeconds = attributes.StartToCloseTimeoutSeconds
+	response.HeartbeatTimeoutSeconds = attributes.HeartbeatTimeoutSeconds
+
+	token := &common.TaskToken{
+		DomainID:        task.event.DomainID,
+		WorkflowID:      task.event.WorkflowID,
+		WorkflowType:    activityTaskDispatchInfo.WorkflowType.GetName(),
+		RunID:           task.event.RunID,
+		ScheduleID:      task.event.ScheduleID,
+		ScheduleAttempt: common.Int64Default(activityTaskDispatchInfo.Attempt),
+		ActivityID:      attributes.GetActivityID(),
+		ActivityType:    attributes.GetActivityType().GetName(),
+	}
+
+	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
+	response.Attempt = int32(token.ScheduleAttempt)
+	response.HeartbeatDetails = activityTaskDispatchInfo.HeartbeatDetails
+	response.WorkflowType = activityTaskDispatchInfo.WorkflowType
+	response.WorkflowDomain = activityTaskDispatchInfo.WorkflowDomain
+	return response
 }
 
 // QueryWorkflow creates a DecisionTask with query data, send it through sync match channel, wait for that DecisionTask

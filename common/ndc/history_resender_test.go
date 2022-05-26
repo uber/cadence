@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/reconciliation/invariant"
@@ -57,8 +56,6 @@ type (
 		domainID   string
 		domainName string
 
-		mockClusterMetadata *mocks.ClusterMetadata
-
 		serializer persistence.PayloadSerializer
 		logger     log.Logger
 
@@ -71,13 +68,6 @@ func TestHistoryResenderSuite(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func (s *historyResenderSuite) SetupSuite() {
-}
-
-func (s *historyResenderSuite) TearDownSuite() {
-
-}
-
 func (s *historyResenderSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
@@ -87,8 +77,6 @@ func (s *historyResenderSuite) SetupTest() {
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 
 	s.domainID = uuid.New()
 	s.domainName = "some random domain name"
@@ -115,7 +103,6 @@ func (s *historyResenderSuite) SetupTest() {
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
-		persistence.NewPayloadSerializer(),
 		nil,
 		nil,
 		s.logger,
@@ -340,7 +327,7 @@ func (s *historyResenderSuite) TestGetHistory() {
 
 	out, err := s.rereplicator.getHistory(
 		context.Background(),
-		s.domainID,
+		s.domainName,
 		workflowID,
 		runID,
 		&startEventID,
@@ -365,7 +352,6 @@ func (s *historyResenderSuite) TestCurrentExecutionCheck() {
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return s.mockHistoryClient.ReplicateEventsV2(ctx, request)
 		},
-		persistence.NewPayloadSerializer(),
 		nil,
 		invariantMock,
 		s.logger,

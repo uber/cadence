@@ -91,6 +91,7 @@ type (
 		GetDLQAckLevel(ctx context.Context) (int64, error)
 		RangeDeleteMessagesFromDLQ(ctx context.Context, firstMessageID int64, lastMessageID int64) error
 		DeleteMessageFromDLQ(ctx context.Context, messageID int64) error
+		GetDLQSize(ctx context.Context) (int64, error)
 	}
 )
 
@@ -99,7 +100,6 @@ func (q *replicationQueueImpl) Start() {
 		return
 	}
 	go q.purgeProcessor()
-	go q.emitDLQSize()
 }
 
 func (q *replicationQueueImpl) Stop() {
@@ -262,6 +262,10 @@ func (q *replicationQueueImpl) DeleteMessageFromDLQ(
 	return q.queue.DeleteMessageFromDLQ(ctx, messageID)
 }
 
+func (q *replicationQueueImpl) GetDLQSize(ctx context.Context) (int64, error) {
+	return q.queue.GetDLQSize(ctx)
+}
+
 func (q *replicationQueueImpl) purgeAckedMessages() error {
 	ackLevelByCluster, err := q.GetAckLevels(context.Background())
 	if err != nil {
@@ -298,35 +302,6 @@ func (q *replicationQueueImpl) purgeProcessor() {
 		case <-ticker.C:
 			if err := q.purgeAckedMessages(); err != nil {
 				q.logger.Warn("Failed to purge acked domain replication messages.", tag.Error(err))
-			}
-		}
-	}
-}
-
-func (q *replicationQueueImpl) emitDLQSize() {
-	ticker := time.NewTicker(queueSizeQueryInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-q.done:
-			return
-		case <-ticker.C:
-			size, err := q.queue.GetDLQSize(context.Background())
-			if err != nil {
-				q.logger.Warn("Failed to get DLQ size.", tag.Error(err))
-				q.metricsClient.Scope(
-					metrics.DomainReplicationQueueScope,
-				).IncCounter(
-					metrics.DomainReplicationQueueSizeErrorCount,
-				)
-			} else {
-				q.metricsClient.Scope(
-					metrics.DomainReplicationQueueScope,
-				).UpdateGauge(
-					metrics.DomainReplicationQueueSizeGauge,
-					float64(size),
-				)
 			}
 		}
 	}

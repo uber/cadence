@@ -104,7 +104,7 @@ func (s *historyBuilderSuite) SetupTest() {
 	s.mockShard.Resource.ClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	s.msBuilder = NewMutableStateBuilder(s.mockShard, s.logger, s.domainEntry)
-	s.builder = NewHistoryBuilder(s.msBuilder, s.logger)
+	s.builder = NewHistoryBuilder(s.msBuilder)
 }
 
 func (s *historyBuilderSuite) TearDownTest() {
@@ -1041,7 +1041,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(
 	retryPolicy *types.RetryPolicy,
 	requestLocalDispatch bool,
 ) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo) {
-	event, ai, activityDispatchInfo, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
+	event, ai, activityDispatchInfo, _, _, err := s.msBuilder.AddActivityTaskScheduledEvent(decisionCompletedID,
 		&types.ScheduleActivityTaskDecisionAttributes{
 			ActivityID:                    activityID,
 			ActivityType:                  &types.ActivityType{Name: activityType},
@@ -1054,7 +1054,7 @@ func (s *historyBuilderSuite) addActivityTaskScheduledEvent(
 			StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
 			RetryPolicy:                   retryPolicy,
 			RequestLocalDispatch:          requestLocalDispatch,
-		},
+		}, nil, false,
 	)
 	s.Nil(err)
 	if domain == "" {

@@ -88,7 +88,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   HistoryExists,
 				Info:            "concrete execution exists but history does not exist",
-				InfoDetails:     "EntityNotExistsError{Message: got entity not exists error}",
+				InfoDetails:     "got entity not exists error",
 			},
 			expectedResourcePopulated: false,
 		},

@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -49,6 +48,7 @@ type (
 		) error
 		GenerateWorkflowCloseTasks(
 			closeEvent *types.HistoryEvent,
+			workflowDeletionTaskJitterRange int,
 		) error
 		GenerateRecordWorkflowStartedTasks(
 			startEvent *types.HistoryEvent,
@@ -108,7 +108,6 @@ type (
 	mutableStateTaskGeneratorImpl struct {
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
-		logger          log.Logger
 
 		mutableState MutableState
 	}
@@ -127,14 +126,12 @@ var _ MutableStateTaskGenerator = (*mutableStateTaskGeneratorImpl)(nil)
 func NewMutableStateTaskGenerator(
 	clusterMetadata cluster.Metadata,
 	domainCache cache.DomainCache,
-	logger log.Logger,
 	mutableState MutableState,
 ) MutableStateTaskGenerator {
 
 	return &mutableStateTaskGeneratorImpl{
 		clusterMetadata: clusterMetadata,
 		domainCache:     domainCache,
-		logger:          logger,
 
 		mutableState: mutableState,
 	}
@@ -167,6 +164,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowStartTasks(
 
 func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	closeEvent *types.HistoryEvent,
+	workflowDeletionTaskJitterRange int,
 ) error {
 
 	executionInfo := r.mutableState.GetExecutionInfo()
@@ -247,7 +245,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	}
 
 	closeTimestamp := time.Unix(0, closeEvent.GetTimestamp())
-	retentionDuration := time.Duration(retentionInDays) * time.Hour * 24
+	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24) + (time.Duration(rand.Intn(workflowDeletionTaskJitterRange)) * time.Minute)
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: closeTimestamp.Add(retentionDuration),

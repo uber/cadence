@@ -150,7 +150,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.clusterName).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
@@ -205,7 +204,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending() {
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 }
 
 func (s *transferStandbyTaskExecutorSuite) TestProcessActivityTask_Pending_PushToMatching() {
@@ -310,7 +309,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Pending() {
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 }
 
 func (s *transferStandbyTaskExecutorSuite) TestProcessDecisionTask_Pending_PushToMatching() {
@@ -487,7 +486,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
 	s.mockNDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
@@ -500,7 +499,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessCancelExecution_Pending() 
 		nil,
 	).Return(nil).Times(1)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
@@ -594,7 +593,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
 	s.mockNDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
@@ -607,7 +606,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessSignalExecution_Pending() 
 		nil,
 	).Return(nil).Times(1)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
@@ -701,7 +700,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.fetchHistoryDuration))
 	s.mockNDCHistoryResender.EXPECT().SendSingleWorkflowHistory(
@@ -714,7 +713,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessStartChildExecution_Pendin
 		nil,
 	).Return(nil).Times(1)
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)
-	s.Equal(ErrTaskRedispatch, err)
+	s.True(isRedispatchErr(err))
 
 	s.mockShard.SetCurrentTime(s.clusterName, now.Add(s.discardDuration))
 	err = s.transferStandbyTaskExecutor.Execute(transferTask, true)

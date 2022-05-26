@@ -774,6 +774,26 @@ func getDLQFlags() []cli.Flag {
 func newAdminDLQCommands() []cli.Command {
 	return []cli.Command{
 		{
+			Name:    "count",
+			Aliases: []string{"c"},
+			Usage:   "Count DLQ Messages",
+			Flags: []cli.Flag{
+				getFormatFlag(),
+				cli.StringFlag{
+					Name:  FlagDLQTypeWithAlias,
+					Usage: "Type of DLQ to manage. (Options: domain, history)",
+					Value: "history",
+				},
+				cli.BoolFlag{
+					Name:  FlagForce,
+					Usage: "Force fetch latest counts (will put additional stress on DB)",
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminCountDLQMessages(c)
+			},
+		},
+		{
 			Name:    "read",
 			Aliases: []string{"r"},
 			Usage:   "Read DLQ Messages",
@@ -916,12 +936,16 @@ func newDBCommands() []cli.Command {
 		},
 		{
 			Name:  "decode_thrift",
-			Usage: "decode thrift object of HEX, print into JSON if the HEX data is matching with any supported struct",
+			Usage: "decode thrift object, print into JSON if the data is matching with any supported struct",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:   FlagInputWithAlias,
 					EnvVar: "Input",
-					Usage:  "HEX input of the binary data, you may get from database query like SELECT HEX(...) FROM ...",
+					Usage:  "Input of Thrift encoded data structure.",
+				},
+				cli.StringFlag{
+					Name:  FlagInputEncodingWithAlias,
+					Usage: "Encoding of the input: [hex|base64] (Default: hex)",
 				},
 			},
 			Action: func(c *cli.Context) {

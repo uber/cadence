@@ -248,20 +248,17 @@ func NewEngineWithShardContext(
 
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
-	// Only start the replicator processor if global domain is enabled
-	if shard.GetClusterMetadata().IsGlobalDomainEnabled() {
-		historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
-			shard,
-			executionCache,
-			historyEngImpl.eventsReapplier,
-			logger,
-		)
-		historyEngImpl.nDCActivityReplicator = ndc.NewActivityReplicator(
-			shard,
-			executionCache,
-			logger,
-		)
-	}
+	historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
+		shard,
+		executionCache,
+		historyEngImpl.eventsReapplier,
+		logger,
+	)
+	historyEngImpl.nDCActivityReplicator = ndc.NewActivityReplicator(
+		shard,
+		executionCache,
+		logger,
+	)
 
 	historyEngImpl.crossClusterTaskProcessors = task.NewCrossClusterTaskProcessors(
 		shard,
@@ -302,7 +299,6 @@ func NewEngineWithShardContext(
 			shard.GetDomainCache(),
 			adminRetryableClient,
 			resendFunc,
-			shard.GetService().GetPayloadSerializer(),
 			nil,
 			openExecutionCheck,
 			shard.GetLogger(),
@@ -345,6 +341,7 @@ func (e *historyEngineImpl) Start() {
 	e.txProcessor.Start()
 	e.timerProcessor.Start()
 	e.crossClusterProcessor.Start()
+	e.replicationDLQHandler.Start()
 
 	// failover callback will try to create a failover queue processor to scan all inflight tasks
 	// if domain needs to be failovered. However, in the multicursor queue logic, the scan range
@@ -371,6 +368,7 @@ func (e *historyEngineImpl) Stop() {
 	e.txProcessor.Stop()
 	e.timerProcessor.Stop()
 	e.crossClusterProcessor.Stop()
+	e.replicationDLQHandler.Stop()
 
 	e.crossClusterTaskProcessors.Stop()
 
@@ -868,7 +866,7 @@ UpdateWorkflowLoop:
 			newMutableState,
 		)
 		if updateErr != nil {
-			if updateErr == execution.ErrConflict {
+			if execution.IsConflictError(updateErr) {
 				e.metricsClient.IncCounter(metrics.HistoryStartWorkflowExecutionScope, metrics.ConcurrencyUpdateFailureCounter)
 				continue UpdateWorkflowLoop
 			}
@@ -1689,6 +1687,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 		RunID:      request.WorkflowExecution.RunID,
 	}
 
+	var resurrectError error
 	response := &types.RecordActivityTaskStartedResponse{}
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
@@ -1699,6 +1698,38 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			scheduleID := request.GetScheduleID()
 			requestID := request.GetRequestID()
 			ai, isRunning := mutableState.GetActivityInfo(scheduleID)
+
+			// RecordActivityTaskStarted is already past scheduleToClose timeout.
+			// If at this point pending activity is still in mutable state it may be resurrected.
+			// Otherwise it would be completed or timed out already.
+			if isRunning && e.timeSource.Now().After(ai.ScheduledTime.Add(time.Duration(ai.ScheduleToCloseTimeout)*time.Second)) {
+				resurrectedActivities, err := execution.GetResurrectedActivities(ctx, e.shard, mutableState)
+				if err != nil {
+					e.logger.Error("Activity resurrection check failed", tag.Error(err))
+					return err
+				}
+
+				if _, ok := resurrectedActivities[scheduleID]; ok {
+					// found activity resurrection
+					domainName := mutableState.GetDomainEntry().GetInfo().Name
+					e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.ActivityResurrectionCounter)
+					e.logger.Error("Encounter resurrected activity, skip",
+						tag.WorkflowDomainName(domainName),
+						tag.WorkflowID(workflowExecution.GetWorkflowID()),
+						tag.WorkflowRunID(workflowExecution.GetRunID()),
+						tag.WorkflowScheduleID(scheduleID),
+					)
+
+					// remove resurrected activity from mutable state
+					if err := mutableState.DeleteActivity(scheduleID); err != nil {
+						return err
+					}
+
+					// save resurrection error but return nil here, so that mutable state would get updated in DB
+					resurrectError = workflow.ErrActivityTaskNotFound
+					return nil
+				}
+			}
 
 			// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 			// some extreme cassandra failure cases.
@@ -1762,6 +1793,9 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 
 	if err != nil {
 		return nil, err
+	}
+	if resurrectError != nil {
+		return nil, resurrectError
 	}
 
 	return response, err
@@ -2389,7 +2423,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			// We apply the update to execution using optimistic concurrency.  If it fails due to a conflict then reload
 			// the history and try the operation again.
 			if err := wfContext.UpdateWorkflowExecutionAsActive(ctx, e.shard.GetTimeSource().Now()); err != nil {
-				if err == execution.ErrConflict {
+				if execution.IsConflictError(err) {
 					continue Just_Signal_Loop
 				}
 				return nil, err
@@ -2747,7 +2781,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		request.GetRequestID(),
 		execution.NewWorkflow(
 			ctx,
-			e.shard.GetDomainCache(),
 			e.shard.GetClusterMetadata(),
 			currentContext,
 			currentMutableState,
@@ -3258,7 +3291,6 @@ func (e *historyEngineImpl) ReapplyEvents(
 					uuid.New(),
 					execution.NewWorkflow(
 						ctx,
-						e.shard.GetDomainCache(),
 						e.shard.GetClusterMetadata(),
 						wfContext,
 						mutableState,
@@ -3300,6 +3332,10 @@ func (e *historyEngineImpl) ReapplyEvents(
 			return postActions, nil
 		},
 	)
+}
+
+func (e *historyEngineImpl) CountDLQMessages(ctx context.Context, forceFetch bool) (map[string]int64, error) {
+	return e.replicationDLQHandler.GetMessageCount(ctx, forceFetch)
 }
 
 func (e *historyEngineImpl) ReadDLQMessages(
@@ -3384,7 +3420,6 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetClusterMetadata(),
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
-		e.shard.GetLogger(),
 		e.shard.GetShardID(),
 	)
 

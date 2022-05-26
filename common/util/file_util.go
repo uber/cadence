@@ -76,15 +76,15 @@ func WriteFile(filepath string, data []byte, fileMode os.FileMode) (retErr error
 		return err
 	}
 	f, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
 	defer func() {
 		err := f.Close()
 		if err != nil {
 			retErr = err
 		}
 	}()
-	if err != nil {
-		return err
-	}
 	if err = f.Chmod(fileMode); err != nil {
 		return err
 	}

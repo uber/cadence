@@ -21,139 +21,139 @@
 package types
 
 import (
-	"fmt"
-	"strings"
+	"go.uber.org/zap/zapcore"
 )
 
 func (err AccessDeniedError) Error() string {
-	return fmt.Sprintf("AccessDeniedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err BadRequestError) Error() string {
-	return fmt.Sprintf("BadRequestError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err CancellationAlreadyRequestedError) Error() string {
-	return fmt.Sprintf("CancellationAlreadyRequestedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err ClientVersionNotSupportedError) Error() string {
-	return fmt.Sprintf("ClientVersionNotSupportedError{FeatureVersion: %v, ClientImpl: %v, SupportedVersions: %v}",
-		err.FeatureVersion,
-		err.ClientImpl,
-		err.SupportedVersions)
+	return "client version not supported"
+}
+
+func (err ClientVersionNotSupportedError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("feature-version", err.FeatureVersion)
+	enc.AddString("client-implementation", err.ClientImpl)
+	enc.AddString("supported-versions", err.SupportedVersions)
+	return nil
 }
 
 func (err FeatureNotEnabledError) Error() string {
-	return fmt.Sprintf("FeatureNotEnabledError{FeatureFlag: %v}",
-		err.FeatureFlag,
-	)
+	return "feature not enabled"
+}
+
+func (err FeatureNotEnabledError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("feature-flag", err.FeatureFlag)
+	return nil
 }
 
 func (err CurrentBranchChangedError) Error() string {
-	return fmt.Sprintf("CurrentBranchChangedError{Message: %v, CurrentBranchToken: %v}",
-		err.Message,
-		err.CurrentBranchToken)
+	return err.Message
+}
+
+func (err CurrentBranchChangedError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("wf-branch-token", string(err.CurrentBranchToken))
+	return nil
 }
 
 func (err DomainAlreadyExistsError) Error() string {
-	return fmt.Sprintf("DomainAlreadyExistsError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err DomainNotActiveError) Error() string {
-	return fmt.Sprintf("DomainNotActiveError{Message: %v, DomainName: %v, CurrentCluster: %v, ActiveCluster: %v}",
-		err.Message,
-		err.DomainName,
-		err.CurrentCluster,
-		err.ActiveCluster,
-	)
+	return err.Message
+}
+
+func (err DomainNotActiveError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("domain-name", err.DomainName)
+	enc.AddString("current-cluster", err.CurrentCluster)
+	enc.AddString("active-cluster", err.ActiveCluster)
+	return nil
 }
 
 func (err EntityNotExistsError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	if err.CurrentCluster != "" {
-		printField(sb, "CurrentCluster", err.CurrentCluster)
-	}
-	if err.ActiveCluster != "" {
-		printField(sb, "ActiveCluster", err.ActiveCluster)
-	}
-	return fmt.Sprintf("EntityNotExistsError{%s}", sb.String())
+	return err.Message
 }
 
 func (err WorkflowExecutionAlreadyCompletedError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	return fmt.Sprintf("WorkflowExecutionAlreadyCompletedError{%s}", sb.String())
+	return err.Message
 }
 
 func (err InternalDataInconsistencyError) Error() string {
-	return fmt.Sprintf("InternalDataInconsistencyError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err InternalServiceError) Error() string {
-	return fmt.Sprintf("InternalServiceError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err LimitExceededError) Error() string {
-	return fmt.Sprintf("LimitExceededError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err QueryFailedError) Error() string {
-	return fmt.Sprintf("QueryFailedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err RemoteSyncMatchedError) Error() string {
-	return fmt.Sprintf("RemoteSyncMatchedError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err RetryTaskV2Error) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	printField(sb, "DomainID", err.DomainID)
-	printField(sb, "WorkflowID", err.WorkflowID)
-	printField(sb, "RunID", err.RunID)
+	return err.Message
+}
+
+func (err RetryTaskV2Error) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("domain-id", err.DomainID)
+	enc.AddString("workflow-id", err.WorkflowID)
+	enc.AddString("run-id", err.RunID)
 	if err.StartEventID != nil {
-		printField(sb, "StartEventID", *err.StartEventID)
+		enc.AddInt64("start-event-id", *err.StartEventID)
 	}
 	if err.StartEventVersion != nil {
-		printField(sb, "StartEventVersion", *err.StartEventVersion)
+		enc.AddInt64("start-event-version", *err.StartEventVersion)
 	}
 	if err.EndEventID != nil {
-		printField(sb, "EndEventID", *err.EndEventID)
+		enc.AddInt64("end-event-id", *err.EndEventID)
 	}
 	if err.EndEventVersion != nil {
-		printField(sb, "EndEventVersion", *err.EndEventVersion)
+		enc.AddInt64("end-event-version", *err.EndEventVersion)
 	}
-	return fmt.Sprintf("RetryTaskV2Error{%s}", sb.String())
+	return nil
 }
 
 func (err ServiceBusyError) Error() string {
-	return fmt.Sprintf("ServiceBusyError{Message: %v}", err.Message)
+	return err.Message
 }
 
 func (err WorkflowExecutionAlreadyStartedError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	printField(sb, "StartRequestID", err.StartRequestID)
-	printField(sb, "RunID", err.RunID)
-	return fmt.Sprintf("WorkflowExecutionAlreadyStartedError{%s}", sb.String())
+	return err.Message
+}
+
+func (err WorkflowExecutionAlreadyStartedError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("start-request-id", err.StartRequestID)
+	enc.AddString("run-id", err.RunID)
+	return nil
 }
 
 func (err ShardOwnershipLostError) Error() string {
-	sb := &strings.Builder{}
-	printField(sb, "Message", err.Message)
-	printField(sb, "Owner", err.Owner)
-	return fmt.Sprintf("ShardOwnershipLostError{%s}", sb.String())
+	return err.Message
+}
+
+func (err ShardOwnershipLostError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("shard-owner", err.Owner)
+	return nil
 }
 
 func (err EventAlreadyStartedError) Error() string {
-	return fmt.Sprintf("EventAlreadyStartedError{Message: %v}", err.Message)
-}
-
-func printField(sb *strings.Builder, field string, value interface{}) {
-	if sb.Len() > 0 {
-		fmt.Fprintf(sb, ", ")
-	}
-	fmt.Fprintf(sb, "%s: %v", field, value)
+	return err.Message
 }

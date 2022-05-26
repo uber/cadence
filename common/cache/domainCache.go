@@ -252,7 +252,7 @@ func (c *domainCache) GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID i
 	return int64(c.cacheByID.Load().(Cache).Size()), int64(c.cacheNameToID.Load().(Cache).Size())
 }
 
-// Start start the background refresh of domain
+// Start starts the background refresh of domain
 func (c *domainCache) Start() {
 	if !atomic.CompareAndSwapInt32(&c.status, domainCacheInitialized, domainCacheStarted) {
 		return
@@ -266,7 +266,7 @@ func (c *domainCache) Start() {
 	go c.refreshLoop()
 }
 
-// Start start the background refresh of domain
+// Stop stops background refresh of domain
 func (c *domainCache) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.status, domainCacheStarted, domainCacheStopped) {
 		return
@@ -348,8 +348,9 @@ func (c *domainCache) GetDomain(
 ) (*DomainCacheEntry, error) {
 
 	if name == "" {
-		return nil, &types.BadRequestError{Message: "Domain is empty."}
+		return nil, &types.BadRequestError{Message: "Domain name is empty"}
 	}
+
 	return c.getDomain(name)
 }
 
@@ -452,7 +453,7 @@ func (c *domainCache) refreshDomainsLocked() error {
 	if err != nil {
 		return err
 	}
-	domainNotificationVersion := metadata.NotificationVersion
+
 	var token []byte
 	request := &persistence.ListDomainsRequest{PageSize: domainCacheRefreshPageSize}
 	var domains DomainCacheEntries
@@ -487,15 +488,17 @@ func (c *domainCache) refreshDomainsLocked() error {
 		newCacheByID.Put(domain.info.ID, domain)
 	}
 
+	scopedMetrics := c.metricsClient.Scope(metrics.DomainCacheScope)
+
 UpdateLoop:
 	for _, domain := range domains {
-		if domain.notificationVersion >= domainNotificationVersion {
+		if domain.notificationVersion >= metadata.NotificationVersion {
 			// this guarantee that domain change events before the
 			// domainNotificationVersion is loaded into the cache.
 
 			// the domain change events after the domainNotificationVersion
 			// will be loaded into cache in the next refresh
-			c.logger.Info("Received larger domain notification version", tag.WorkflowDomainName(domain.GetInfo().Name))
+			c.logger.Info("Domain notification is not less than than metadata notification version", tag.WorkflowDomainName(domain.GetInfo().Name))
 			break UpdateLoop
 		}
 		triggerCallback, nextEntry, err := c.updateIDToDomainCache(newCacheByID, domain.info.ID, domain)
@@ -503,7 +506,7 @@ UpdateLoop:
 			return err
 		}
 
-		c.metricsClient.Scope(metrics.DomainCacheScope).Tagged(
+		scopedMetrics.Tagged(
 			metrics.DomainTag(nextEntry.info.Name),
 			metrics.ActiveClusterTag(nextEntry.replicationConfig.ActiveClusterName),
 		).UpdateGauge(metrics.ActiveClusterGauge, 1)
@@ -528,9 +531,7 @@ UpdateLoop:
 	c.lastRefreshTime = now
 	if now.Sub(c.lastCallbackEmitTime) > 30*time.Minute {
 		c.lastCallbackEmitTime = now
-		for range c.callbacks {
-			c.metricsClient.IncCounter(metrics.DomainCacheScope, metrics.DomainCacheCallbacksCount)
-		}
+		scopedMetrics.AddCounter(metrics.DomainCacheCallbacksCount, int64(len(c.callbacks)))
 	}
 
 	return nil
@@ -570,10 +571,8 @@ func (c *domainCache) updateIDToDomainCache(
 	entry.Lock()
 	defer entry.Unlock()
 
-	triggerCallback := c.clusterMetadata.IsGlobalDomainEnabled() &&
-		// initialized will be true when the entry contains valid data
-		entry.initialized &&
-		record.notificationVersion > entry.notificationVersion
+	// initialized will be true when the entry contains valid data
+	triggerCallback := entry.initialized && record.notificationVersion > entry.notificationVersion
 
 	entry.info = record.info
 	entry.config = record.config

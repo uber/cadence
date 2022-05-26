@@ -59,6 +59,7 @@ type (
 	getReplicationMessagesWithSize struct {
 		response *types.GetReplicationMessagesResponse
 		size     int
+		peer     string
 	}
 )
 
@@ -811,7 +812,9 @@ func (c *clientImpl) GetReplicationMessages(
 
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
-		g.Go(func() error {
+		g.Go(func() (e error) {
+			defer log.CapturePanic(c.logger, &e)
+
 			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
 
@@ -829,6 +832,7 @@ func (c *clientImpl) GetReplicationMessages(
 			peerResponses = append(peerResponses, &getReplicationMessagesWithSize{
 				response: resp,
 				size:     responseInfo.Size,
+				peer:     peer,
 			})
 			responseMutex.Unlock()
 			return nil
@@ -852,12 +856,26 @@ func (c *clientImpl) GetReplicationMessages(
 
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
 	responseTotalSize := 0
+	rpcMaxResponseSize := c.rpcMaxSizeInBytes()
 	for _, resp := range peerResponses {
-		// return partial response if the response size exceeded supported max size
-		responseTotalSize += resp.size
-		if responseTotalSize >= c.rpcMaxSizeInBytes() {
-			return response, nil
+		if (responseTotalSize + resp.size) >= rpcMaxResponseSize {
+			// Log shards that did not fit for debugging purposes
+			for shardID := range resp.response.GetMessagesByShard() {
+				c.logger.Warn("Replication messages did not fit in the response",
+					tag.ShardID(int(shardID)),
+					tag.Address(resp.peer),
+					tag.ResponseSize(resp.size),
+					tag.ResponseTotalSize(responseTotalSize),
+					tag.ResponseMaxSize(rpcMaxResponseSize),
+				)
+			}
+
+			// return partial response if the response size exceeded supported max size
+			// but continue with next peer response, as it may still fit
+			continue
 		}
+
+		responseTotalSize += resp.size
 
 		for shardID, tasks := range resp.response.GetMessagesByShard() {
 			response.MessagesByShard[shardID] = tasks
@@ -901,6 +919,48 @@ func (c *clientImpl) ReapplyEvents(
 	}
 	err = c.executeWithRedirect(ctx, peer, op)
 	return err
+}
+
+func (c *clientImpl) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.HistoryCountDLQMessagesResponse, error) {
+
+	peers, err := c.peerResolver.GetAllPeers()
+	if err != nil {
+		return nil, err
+	}
+
+	var mu sync.Mutex
+	responses := make([]*types.HistoryCountDLQMessagesResponse, 0, len(peers))
+
+	g := &errgroup.Group{}
+	for _, peer := range peers {
+		peer := peer
+		g.Go(func() (e error) {
+			defer log.CapturePanic(c.logger, &e)
+
+			response, err := c.client.CountDLQMessages(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+			if err == nil {
+				mu.Lock()
+				responses = append(responses, response)
+				mu.Unlock()
+			}
+
+			return err
+		})
+	}
+
+	err = g.Wait()
+
+	entries := map[types.HistoryDLQCountKey]int64{}
+	for _, response := range responses {
+		for key, count := range response.Entries {
+			entries[key] = count
+		}
+	}
+	return &types.HistoryCountDLQMessagesResponse{Entries: entries}, err
 }
 
 func (c *clientImpl) ReadDLQMessages(
@@ -986,7 +1046,9 @@ func (c *clientImpl) NotifyFailoverMarkers(
 	g := &errgroup.Group{}
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
-		g.Go(func() error {
+		g.Go(func() (e error) {
+			defer log.CapturePanic(c.logger, &e)
+
 			ctx, cancel := c.createContext(ctx)
 			defer cancel()
 

@@ -30,6 +30,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/uber/cadence/common/membership"
 
 	"github.com/pborman/uuid"
@@ -70,6 +72,7 @@ type (
 		DescribeQueue(context.Context, *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error)
 		DescribeWorkflowExecution(context.Context, *types.HistoryDescribeWorkflowExecutionRequest) (*types.DescribeWorkflowExecutionResponse, error)
 		GetCrossClusterTasks(context.Context, *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error)
+		CountDLQMessages(context.Context, *types.CountDLQMessagesRequest) (*types.HistoryCountDLQMessagesResponse, error)
 		GetDLQReplicationMessages(context.Context, *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error)
 		GetMutableState(context.Context, *types.GetMutableStateRequest) (*types.GetMutableStateResponse, error)
 		GetReplicationMessages(context.Context, *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error)
@@ -1753,6 +1756,52 @@ func (h *handlerImpl) ReapplyEvents(
 	return nil
 }
 
+func (h *handlerImpl) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+) (resp *types.HistoryCountDLQMessagesResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryCountDLQMessagesScope)
+	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	g := &errgroup.Group{}
+	var mu sync.Mutex
+	entries := map[types.HistoryDLQCountKey]int64{}
+	for _, shardID := range h.controller.ShardIDs() {
+		shardID := shardID
+		g.Go(func() (e error) {
+			defer log.CapturePanic(h.GetLogger(), &e)
+
+			engine, err := h.controller.GetEngineForShard(int(shardID))
+			if err != nil {
+				return fmt.Errorf("dlq count for shard %d: %w", shardID, err)
+			}
+
+			counts, err := engine.CountDLQMessages(ctx, request.ForceFetch)
+			if err != nil {
+				return fmt.Errorf("dlq count for shard %d: %w", shardID, err)
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			for sourceCluster, count := range counts {
+				key := types.HistoryDLQCountKey{ShardID: shardID, SourceCluster: sourceCluster}
+				entries[key] = count
+			}
+			return nil
+		})
+	}
+
+	err := g.Wait()
+	return &types.HistoryCountDLQMessagesResponse{Entries: entries}, h.error(err, scope, "", "")
+}
+
 // ReadDLQMessages reads replication DLQ messages
 func (h *handlerImpl) ReadDLQMessages(
 	ctx context.Context,
@@ -2012,7 +2061,7 @@ func (h *handlerImpl) convertError(err error) error {
 
 		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
 	case *persistence.WorkflowExecutionAlreadyStartedError:
-		return &types.InternalServiceError{Message: err.Msg}
+		return &types.WorkflowExecutionAlreadyStartedError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.TransactionSizeLimitError:

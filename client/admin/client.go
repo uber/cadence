@@ -206,6 +206,17 @@ func (c *clientImpl) ReapplyEvents(
 	return c.client.ReapplyEvents(ctx, request, opts...)
 }
 
+func (c *clientImpl) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.CountDLQMessagesResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.CountDLQMessages(ctx, request, opts...)
+}
+
 func (c *clientImpl) ReadDLQMessages(
 	ctx context.Context,
 	request *types.ReadDLQMessagesRequest,

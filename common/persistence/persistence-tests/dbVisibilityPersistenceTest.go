@@ -834,7 +834,7 @@ func (s *DBVisibilityPersistenceSuite) TestUpsertWorkflowExecution() {
 				Memo:               nil,
 				SearchAttributes:   nil,
 			},
-			expected: p.NewOperationNotSupportErrorForVis(),
+			expected: p.ErrVisibilityOperationNotSupported,
 		},
 	}
 

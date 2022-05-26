@@ -163,7 +163,6 @@ func (p *taskProcessorImpl) Start() {
 	go p.processorLoop()
 	go p.syncShardStatusLoop()
 	go p.cleanupReplicationTaskLoop()
-	go p.emitDLQSizeMetricsLoop()
 	p.logger.Info("ReplicationTaskProcessor started.")
 }
 
@@ -603,40 +602,6 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 		SignalInput:                         fixExecutionInput,
 	})
 	return err
-}
-
-func (p *taskProcessorImpl) emitDLQSizeMetricsLoop() {
-	timer := time.NewTimer(backoff.JitDuration(
-		dlqMetricsEmitTimerInterval,
-		dlqMetricsEmitTimerCoefficient,
-	))
-	staticRequest := &persistence.GetReplicationDLQSizeRequest{
-		SourceClusterName: p.sourceCluster,
-	}
-	defer timer.Stop()
-
-	for {
-		select {
-		case <-timer.C:
-			resp, err := p.shard.GetExecutionManager().GetReplicationDLQSize(context.Background(), staticRequest)
-			timer.Reset(backoff.JitDuration(
-				dlqMetricsEmitTimerInterval,
-				dlqMetricsEmitTimerCoefficient,
-			))
-			if err != nil {
-				p.logger.Error("failed to get replication DLQ size", tag.Error(err))
-				p.metricsClient.Scope(metrics.ReplicationDLQStatsScope).IncCounter(metrics.ReplicationDLQProbeFailed)
-			} else {
-				p.metricsClient.Scope(
-					metrics.ReplicationDLQStatsScope,
-					metrics.SourceClusterTag(p.sourceCluster),
-					metrics.InstanceTag(strconv.Itoa(p.shard.GetShardID())),
-				).UpdateGauge(metrics.ReplicationDLQSize, float64(resp.Size))
-			}
-		case <-p.done:
-			return
-		}
-	}
 }
 
 func isTransientRetryableError(err error) bool {

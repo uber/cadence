@@ -25,6 +25,7 @@ package ndc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	adminClient "github.com/uber/cadence/client/admin"
@@ -73,7 +74,6 @@ type (
 		domainCache           cache.DomainCache
 		adminClient           adminClient.Client
 		historyReplicationFn  nDCHistoryReplicationFn
-		serializer            persistence.PayloadSerializer
 		rereplicationTimeout  dynamicconfig.DurationPropertyFnWithDomainIDFilter
 		currentExecutionCheck invariant.Invariant
 		logger                log.Logger
@@ -90,7 +90,6 @@ func NewHistoryResender(
 	domainCache cache.DomainCache,
 	adminClient adminClient.Client,
 	historyReplicationFn nDCHistoryReplicationFn,
-	serializer persistence.PayloadSerializer,
 	rereplicationTimeout dynamicconfig.DurationPropertyFnWithDomainIDFilter,
 	currentExecutionCheck invariant.Invariant,
 	logger log.Logger,
@@ -100,10 +99,9 @@ func NewHistoryResender(
 		domainCache:           domainCache,
 		adminClient:           adminClient,
 		historyReplicationFn:  historyReplicationFn,
-		serializer:            serializer,
 		rereplicationTimeout:  rereplicationTimeout,
 		currentExecutionCheck: currentExecutionCheck,
-		logger:                logger,
+		logger:                logger.WithTags(tag.ComponentHistoryResender),
 	}
 }
 
@@ -118,6 +116,11 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 	endEventVersion *int64,
 ) error {
 
+	domainName, err := n.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return fmt.Errorf("getting domain: %w", err)
+	}
+
 	ctx := context.Background()
 	var cancel context.CancelFunc
 	if n.rereplicationTimeout != nil {
@@ -130,7 +133,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 
 	historyIterator := collection.NewPagingIterator(n.getPaginationFn(
 		ctx,
-		domainID,
+		domainName,
 		workflowID,
 		runID,
 		startEventID,
@@ -141,13 +144,9 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 	for historyIterator.HasNext() {
 		result, err := historyIterator.Next()
 		if err != nil {
-			n.logger.Error("failed to get history events",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
-			return err
+			return fmt.Errorf("history iterator: %w", err)
 		}
+
 		historyBatch := result.(*historyBatch)
 		replicationRequest := n.createReplicationRawRequest(
 			domainID,
@@ -164,22 +163,12 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 		case *types.EntityNotExistsError:
 			// Case 1: the workflow pass the retention period
 			// Case 2: the workflow is corrupted
-			if skipTask := n.fixCurrentExecution(
-				ctx,
-				domainID,
-				workflowID,
-				runID,
-			); skipTask {
+			if skipTask := n.fixCurrentExecution(ctx, domainID, workflowID, runID); skipTask {
 				return ErrSkipTask
 			}
 			return err
 		default:
-			n.logger.Error("failed to replicate events",
-				tag.WorkflowDomainID(domainID),
-				tag.WorkflowID(workflowID),
-				tag.WorkflowRunID(runID),
-				tag.Error(err))
-			return err
+			return fmt.Errorf("sending replication request: %w", err)
 		}
 	}
 	return nil
@@ -187,7 +176,7 @@ func (n *HistoryResenderImpl) SendSingleWorkflowHistory(
 
 func (n *HistoryResenderImpl) getPaginationFn(
 	ctx context.Context,
-	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 	startEventID *int64,
@@ -200,7 +189,7 @@ func (n *HistoryResenderImpl) getPaginationFn(
 
 		response, err := n.getHistory(
 			ctx,
-			domainID,
+			domainName,
 			workflowID,
 			runID,
 			startEventID,
@@ -259,7 +248,7 @@ func (n *HistoryResenderImpl) sendReplicationRawRequest(
 
 func (n *HistoryResenderImpl) getHistory(
 	ctx context.Context,
-	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 	startEventID *int64,
@@ -269,14 +258,6 @@ func (n *HistoryResenderImpl) getHistory(
 	token []byte,
 	pageSize int32,
 ) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
-
-	logger := n.logger.WithTags(tag.WorkflowRunID(runID))
-
-	domainName, err := n.domainCache.GetDomainName(domainID)
-	if err != nil {
-		logger.Error("error getting domain", tag.Error(err))
-		return nil, err
-	}
 
 	ctx, cancel := context.WithTimeout(ctx, resendContextTimeout)
 	defer cancel()
@@ -294,8 +275,7 @@ func (n *HistoryResenderImpl) getHistory(
 		NextPageToken:     token,
 	})
 	if err != nil {
-		logger.Error("error getting history", tag.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("getting history: %w", err)
 	}
 
 	return response, nil

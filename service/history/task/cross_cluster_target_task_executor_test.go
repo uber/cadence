@@ -83,7 +83,6 @@ func (s *crossClusterTargetTaskExecutorSuite) SetupTest() {
 	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
 	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	s.executor = NewCrossClusterTargetTaskExecutor(s.mockShard, s.mockShard.GetLogger(), config)
 }

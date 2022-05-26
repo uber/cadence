@@ -291,6 +291,23 @@ func (c *metricClient) ReapplyEvents(
 	return err
 }
 
+func (c *metricClient) CountDLQMessages(
+	ctx context.Context,
+	request *types.CountDLQMessagesRequest,
+	opts ...yarpc.CallOption,
+) (*types.CountDLQMessagesResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.AdminClientCountDLQMessagesScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.AdminClientCountDLQMessagesScope, metrics.CadenceClientLatency)
+	resp, err := c.client.CountDLQMessages(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientCountDLQMessagesScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
 func (c *metricClient) ReadDLQMessages(
 	ctx context.Context,
 	request *types.ReadDLQMessagesRequest,

@@ -523,7 +523,6 @@ func (t *crossClusterSourceTaskExecutor) generateNewTask(
 	taskGenerator := execution.NewMutableStateTaskGenerator(
 		clusterMetadata,
 		t.shard.GetDomainCache(),
-		t.logger,
 		mutableState,
 	)
 	taskInfo := task.GetInfo().(*persistence.CrossClusterTaskInfo)

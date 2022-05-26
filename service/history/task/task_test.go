@@ -137,8 +137,8 @@ func (s *taskSuite) TestHandleErr_ErrTaskRetry() {
 		return true, nil
 	}, nil)
 
-	err := ErrTaskRedispatch
-	s.Equal(ErrTaskRedispatch, taskBase.HandleErr(err))
+	err := &redispatchError{Reason: "random-reason"}
+	s.Equal(err, taskBase.HandleErr(err))
 }
 
 func (s *taskSuite) TestHandleErr_ErrTaskDiscarded() {
@@ -160,10 +160,10 @@ func (s *taskSuite) TestHandleErr_ErrTargetDomainNotActive() {
 	// we should always return the target domain not active error
 	// no matter that the submit time is
 	taskBase.submitTime = time.Now().Add(-cache.DomainCacheRefreshInterval * time.Duration(2))
-	s.Equal(err, taskBase.HandleErr(err))
+	s.Equal(nil, taskBase.HandleErr(err))
 
 	taskBase.submitTime = time.Now()
-	s.Equal(err, taskBase.HandleErr(err))
+	s.Equal(nil, taskBase.HandleErr(err))
 }
 
 func (s *taskSuite) TestHandleErr_ErrDomainNotActive() {

@@ -67,12 +67,6 @@ const (
 
 	// key for common & admin
 
-	// EnableGlobalDomain is key for enable global domain
-	// KeyName: system.enableGlobalDomain
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: N/A
-	EnableGlobalDomain
 	// EnableVisibilitySampling is key for enable visibility sampling for basic(DB based) visibility
 	// KeyName: system.enableVisibilitySampling
 	// Value type: Bool
@@ -669,6 +663,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainID
 	MatchingEnableTaskInfoLogByDomainID
+	// MatchingActivityTaskSyncMatchWaitTime is the amount of time activity task will wait to be sync matched
+	// KeyName: matching.activityTaskSyncMatchWaitTime
+	// Value type: Duration
+	// Default value: 100ms
+	// Allowed filters: DomainName
+	MatchingActivityTaskSyncMatchWaitTime
 
 	// key for history
 
@@ -1079,7 +1079,7 @@ const (
 	// TimerProcessorArchivalTimeLimit is the upper time limit for inline history archival
 	// KeyName: history.timerProcessorArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 1s (1*time.Second)
+	// Default value: 2s (2*time.Second)
 	// Allowed filters: N/A
 	TimerProcessorArchivalTimeLimit
 
@@ -1185,7 +1185,7 @@ const (
 	// TransferProcessorVisibilityArchivalTimeLimit is the upper time limit for archiving visibility records
 	// KeyName: history.transferProcessorVisibilityArchivalTimeLimit
 	// Value type: Duration
-	// Default value: 200ms (200*time.Millisecond)
+	// Default value: 400ms (400*time.Millisecond)
 	// Allowed filters: N/A
 	TransferProcessorVisibilityArchivalTimeLimit
 
@@ -1327,7 +1327,7 @@ const (
 	// ReplicatorTaskBatchSize is batch size for ReplicatorProcessor
 	// KeyName: history.replicatorTaskBatchSize
 	// Value type: Int
-	// Default value: 100
+	// Default value: 25
 	// Allowed filters: N/A
 	ReplicatorTaskBatchSize
 	// ReplicatorTaskDeleteBatchSize is batch size for ReplicatorProcessor to delete replication tasks
@@ -1336,60 +1336,12 @@ const (
 	// Default value: 4000
 	// Allowed filters: N/A
 	ReplicatorTaskDeleteBatchSize
-	// ReplicatorTaskWorkerCount is number of worker for ReplicatorProcessor
-	// KeyName: history.replicatorTaskWorkerCount
-	// Value type: Int
-	// Default value: 10
-	// Allowed filters: N/A
-	ReplicatorTaskWorkerCount
 	// ReplicatorReadTaskMaxRetryCount is the number of read replication task retry time
 	// KeyName: history.replicatorReadTaskMaxRetryCount
 	// Value type: Int
 	// Default value: 3
 	// Allowed filters: N/A
 	ReplicatorReadTaskMaxRetryCount
-	// ReplicatorProcessorMaxPollRPS is max poll rate per second for ReplicatorProcessor
-	// KeyName: history.replicatorProcessorMaxPollRPS
-	// Value type: Int
-	// Default value: 20
-	// Allowed filters: N/A
-	ReplicatorProcessorMaxPollRPS
-	// ReplicatorProcessorMaxPollInterval is max poll interval for ReplicatorProcessor
-	// KeyName: history.replicatorProcessorMaxPollInterval
-	// Value type: Duration
-	// Default value: 1m (1*time.Minute)
-	// Allowed filters: N/A
-	ReplicatorProcessorMaxPollInterval
-	// ReplicatorProcessorMaxPollIntervalJitterCoefficient is the max poll interval jitter coefficient
-	// KeyName: history.replicatorProcessorMaxPollIntervalJitterCoefficient
-	// Value type: Float64
-	// Default value: 0.15
-	// Allowed filters: N/A
-	ReplicatorProcessorMaxPollIntervalJitterCoefficient
-	// ReplicatorProcessorUpdateAckInterval is update interval for ReplicatorProcessor
-	// KeyName: history.replicatorProcessorUpdateAckInterval
-	// Value type: Duration
-	// Default value: 5s (5*time.Second)
-	// Allowed filters: N/A
-	ReplicatorProcessorUpdateAckInterval
-	// ReplicatorProcessorUpdateAckIntervalJitterCoefficient is the update interval jitter coefficient
-	// KeyName: history.replicatorProcessorUpdateAckIntervalJitterCoefficient
-	// Value type: Float64
-	// Default value: 0.15
-	// Allowed filters: N/A
-	ReplicatorProcessorUpdateAckIntervalJitterCoefficient
-	// ReplicatorProcessorMaxRedispatchQueueSize is the threshold of the number of tasks in the redispatch queue for ReplicatorProcessor
-	// KeyName: history.replicatorProcessorMaxRedispatchQueueSize
-	// Value type: Int
-	// Default value: 10000
-	// Allowed filters: N/A
-	ReplicatorProcessorMaxRedispatchQueueSize
-	// ReplicatorProcessorEnablePriorityTaskProcessor is indicates whether priority task processor should be used for ReplicatorProcessor
-	// KeyName: history.replicatorProcessorEnablePriorityTaskProcessor
-	// Value type: Bool
-	// Default value: false
-	// Allowed filters: N/A
-	ReplicatorProcessorEnablePriorityTaskProcessor
 	// ReplicatorUpperLatency indicates the max allowed replication latency between clusters
 	// KeyName: history.replicatorUpperLatency
 	// Value type: Duration
@@ -1626,6 +1578,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	EnableActivityLocalDispatchByDomain
+	// MaxActivityCountDispatchByDomain max # of activity tasks to dispatch to matching before creating transfer tasks. This is an performance optimization to skip activity scheduling efforts.
+	// KeyName: history.activityDispatchForSyncMatchCountByDomain
+	// Value type: Int
+	// Default value: 0
+	// Allowed filters: DomainName
+	MaxActivityCountDispatchByDomain
 	// HistoryErrorInjectionRate is rate for injecting random error in history client
 	// KeyName: history.errorInjectionRate
 	// Value type: Float64
@@ -2205,6 +2163,12 @@ const (
 	// Default value: false
 	Lockdown
 
+	// WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering
+	// KeyName: system.workflowDeletionJitterRange
+	// Value type: Duration
+	// Default value: 1 (no jittering)
+	WorkflowDeletionJitterRange
+
 	// LastKeyForTest must be the last one in this const group for testing purpose
 	LastKeyForTest
 )
@@ -2229,7 +2193,6 @@ var Keys = map[Key]string{
 	TestGetBoolPropertyFilteredByTaskListInfoKey:     "testGetBoolPropertyFilteredByTaskListInfoKey",
 
 	// system settings
-	EnableGlobalDomain:                  "system.enableGlobalDomain",
 	EnableVisibilitySampling:            "system.enableVisibilitySampling",
 	EnableReadFromClosedExecutionV2:     "system.enableReadFromClosedExecutionV2",
 	AdvancedVisibilityWritingMode:       "system.advancedVisibilityWritingMode",
@@ -2259,6 +2222,7 @@ var Keys = map[Key]string{
 	EnableSQLAsyncTransaction:           "system.enableSQLAsyncTransaction",
 	EnableWatchDog:                      "system.EnableWatchDog",
 	Lockdown:                            "system.Lockdown",
+	WorkflowDeletionJitterRange:         "system.workflowDeletionJitterRange",
 
 	// size limit
 	BlobSizeLimitError:     "limit.blobSize.error",
@@ -2344,6 +2308,7 @@ var Keys = map[Key]string{
 	MatchingShutdownDrainDuration:           "matching.shutdownDrainDuration",
 	MatchingErrorInjectionRate:              "matching.errorInjectionRate",
 	MatchingEnableTaskInfoLogByDomainID:     "matching.enableTaskInfoLogByDomainID",
+	MatchingActivityTaskSyncMatchWaitTime:   "matching.activityTaskSyncMatchWaitTime",
 
 	// history settings
 	HistoryRPS:                                         "history.rps",
@@ -2458,18 +2423,10 @@ var Keys = map[Key]string{
 	CrossClusterFetcherErrorBackoffInterval:       "history.crossClusterFetcherErrorBackoffInterval",
 	CrossClusterFetcherJitterCoefficient:          "history.crossClusterFetcherJitterCoefficient",
 
-	ReplicatorTaskBatchSize:                               "history.replicatorTaskBatchSize",
-	ReplicatorTaskDeleteBatchSize:                         "history.replicatorTaskDeleteBatchSize",
-	ReplicatorTaskWorkerCount:                             "history.replicatorTaskWorkerCount",
-	ReplicatorReadTaskMaxRetryCount:                       "history.replicatorReadTaskMaxRetryCount",
-	ReplicatorProcessorMaxPollRPS:                         "history.replicatorProcessorMaxPollRPS",
-	ReplicatorProcessorMaxPollInterval:                    "history.replicatorProcessorMaxPollInterval",
-	ReplicatorProcessorMaxPollIntervalJitterCoefficient:   "history.replicatorProcessorMaxPollIntervalJitterCoefficient",
-	ReplicatorProcessorUpdateAckInterval:                  "history.replicatorProcessorUpdateAckInterval",
-	ReplicatorProcessorUpdateAckIntervalJitterCoefficient: "history.replicatorProcessorUpdateAckIntervalJitterCoefficient",
-	ReplicatorProcessorMaxRedispatchQueueSize:             "history.replicatorProcessorMaxRedispatchQueueSize",
-	ReplicatorProcessorEnablePriorityTaskProcessor:        "history.replicatorProcessorEnablePriorityTaskProcessor",
-	ReplicatorUpperLatency:                                "history.replicatorUpperLatency",
+	ReplicatorTaskBatchSize:         "history.replicatorTaskBatchSize",
+	ReplicatorTaskDeleteBatchSize:   "history.replicatorTaskDeleteBatchSize",
+	ReplicatorReadTaskMaxRetryCount: "history.replicatorReadTaskMaxRetryCount",
+	ReplicatorUpperLatency:          "history.replicatorUpperLatency",
 
 	ExecutionMgrNumConns:                               "history.executionMgrNumConns",
 	HistoryMgrNumConns:                                 "history.historyMgrNumConns",
@@ -2529,6 +2486,7 @@ var Keys = map[Key]string{
 	NotifyFailoverMarkerTimerJitterCoefficient:         "history.NotifyFailoverMarkerTimerJitterCoefficient",
 	EnableDropStuckTaskByDomainID:                      "history.DropStuckTaskByDomain",
 	EnableActivityLocalDispatchByDomain:                "history.enableActivityLocalDispatchByDomain",
+	MaxActivityCountDispatchByDomain:                   "history.maxActivityCountDispatchByDomain",
 	HistoryErrorInjectionRate:                          "history.errorInjectionRate",
 	HistoryEnableTaskInfoLogByDomainID:                 "history.enableTaskInfoLogByDomainID",
 	ActivityMaxScheduleToStartTimeoutForRetry:          "history.activityMaxScheduleToStartTimeoutForRetry",

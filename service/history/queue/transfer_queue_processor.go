@@ -65,9 +65,8 @@ type (
 		historyEngine engine.Engine
 		taskProcessor task.Processor
 
-		config                *config.Config
-		isGlobalDomainEnabled bool
-		currentClusterName    string
+		config             *config.Config
+		currentClusterName string
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -128,10 +127,9 @@ func NewTransferQueueProcessor(
 			func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
-			shard.GetService().GetPayloadSerializer(),
 			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
-			shard.GetLogger().WithTags(tag.ComponentHistoryResender),
+			shard.GetLogger(),
 		)
 		standbyTaskExecutor := task.NewTransferStandbyTaskExecutor(
 			shard,
@@ -158,9 +156,8 @@ func NewTransferQueueProcessor(
 		historyEngine: historyEngine,
 		taskProcessor: taskProcessor,
 
-		config:                config,
-		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
-		currentClusterName:    currentClusterName,
+		config:             config,
+		currentClusterName: currentClusterName,
 
 		metricsClient: shard.GetMetricsClient(),
 		logger:        logger,
@@ -182,10 +179,8 @@ func (t *transferQueueProcessor) Start() {
 	}
 
 	t.activeQueueProcessor.Start()
-	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			standbyQueueProcessor.Start()
-		}
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		standbyQueueProcessor.Start()
 	}
 
 	t.shutdownWG.Add(1)
@@ -198,10 +193,8 @@ func (t *transferQueueProcessor) Stop() {
 	}
 
 	t.activeQueueProcessor.Stop()
-	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			standbyQueueProcessor.Stop()
-		}
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		standbyQueueProcessor.Stop()
 	}
 
 	close(t.shutdownChan)
@@ -401,24 +394,22 @@ func (t *transferQueueProcessor) completeTransfer() error {
 		newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 	}
 
-	if t.isGlobalDomainEnabled {
-		for standbyClusterName := range t.standbyQueueProcessors {
-			actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
-			if err != nil {
-				return err
-			}
-			for _, queueState := range actionResult.GetStateActionResult.States {
-				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
-			}
+	for standbyClusterName := range t.standbyQueueProcessors {
+		actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
+		if err != nil {
+			return err
 		}
+		for _, queueState := range actionResult.GetStateActionResult.States {
+			newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
+		}
+	}
 
-		for _, failoverInfo := range t.shard.GetAllTransferFailoverLevels() {
-			failoverLevel := newTransferTaskKey(failoverInfo.MinLevel)
-			if newAckLevel == nil {
-				newAckLevel = failoverLevel
-			} else {
-				newAckLevel = minTaskKey(newAckLevel, failoverLevel)
-			}
+	for _, failoverInfo := range t.shard.GetAllTransferFailoverLevels() {
+		failoverLevel := newTransferTaskKey(failoverInfo.MinLevel)
+		if newAckLevel == nil {
+			newAckLevel = failoverLevel
+		} else {
+			newAckLevel = minTaskKey(newAckLevel, failoverLevel)
 		}
 	}
 

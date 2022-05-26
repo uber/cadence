@@ -74,6 +74,7 @@ type (
 		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
+		mockShardManager *mocks.ShardManager
 
 		config *config.Config
 		logger log.Logger
@@ -115,6 +116,7 @@ func (s *engine2Suite) SetupTest() {
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
+	s.mockShardManager = s.mockShard.Resource.ShardMgr
 	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockEventsCache = s.mockShard.MockEventsCache
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
@@ -128,7 +130,6 @@ func (s *engine2Suite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainID, nil).AnyTimes()
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(false).AnyTimes()
 	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 
@@ -762,6 +763,52 @@ func (s *engine2Suite) TestRecordActivityTaskStartedSuccess() {
 	s.Equal(scheduledEvent, response.ScheduledEvent)
 }
 
+func (s *engine2Suite) TestRecordActivityTaskStartedResurrected() {
+	domainID := constants.TestDomainID
+	workflowExecution := types.WorkflowExecution{WorkflowID: constants.TestWorkflowID, RunID: constants.TestRunID}
+	identity := "testIdentity"
+	tl := "testTaskList"
+
+	timeSource := clock.NewEventTimeSource()
+	s.historyEngine.timeSource = timeSource
+	timeSource.Update(time.Now())
+
+	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, true)
+	decisionCompletedEvent := test.AddDecisionTaskCompletedEvent(msBuilder, int64(2), int64(3), nil, identity)
+	scheduledEvent, _ := test.AddActivityTaskScheduledEvent(msBuilder, decisionCompletedEvent.ID, "activity1_id", "activity_type1", tl, []byte("input1"), 100, 10, 1, 5)
+
+	// Use mutable state snapshot before start/completion of the activity (to indicate resurrected state)
+	msSnapshot := execution.CreatePersistenceMutableState(msBuilder)
+
+	startedEvent := test.AddActivityTaskStartedEvent(msBuilder, scheduledEvent.ID, identity)
+	test.AddActivityTaskCompletedEvent(msBuilder, scheduledEvent.ID, startedEvent.ID, nil, identity)
+
+	// Use full history after the activity start/completion
+	historySnapshot := msBuilder.GetHistoryBuilder().GetHistory()
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: msSnapshot}, nil).Once()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&p.ReadHistoryBranchResponse{HistoryEvents: historySnapshot.Events}, nil).Once()
+
+	// Expect that mutable state will be updated to delete resurrected activity
+	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.UpdateWorkflowExecutionRequest) bool {
+		return len(request.UpdateWorkflowMutation.DeleteActivityInfos) == 1
+	})).Return(&p.UpdateWorkflowExecutionResponse{}, nil).Once()
+
+	// Ensure enough time passed
+	timeSource.Update(timeSource.Now().Add(time.Hour))
+
+	_, err := s.historyEngine.RecordActivityTaskStarted(context.Background(), &types.RecordActivityTaskStartedRequest{
+		DomainUUID:        domainID,
+		WorkflowExecution: &workflowExecution,
+		ScheduleID:        scheduledEvent.ID,
+		TaskID:            100,
+		RequestID:         "reqId",
+		PollRequest:       &types.PollForActivityTaskRequest{TaskList: &types.TaskList{Name: tl}, Identity: identity},
+	})
+
+	s.Equal(err, workflow.ErrActivityTaskNotFound)
+}
+
 func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 	domainID := constants.TestDomainID
 	workflowExecution := types.WorkflowExecution{
@@ -1300,6 +1347,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_CreateTimeout() {
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.Anything).Return(nil, &p.TimeoutError{}).Once()
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.True(p.IsTimeoutError(err))

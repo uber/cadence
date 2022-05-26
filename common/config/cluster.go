@@ -34,7 +34,6 @@ import (
 type (
 	// ClusterGroupMetadata contains all the clusters participating in a replication group(aka XDC/GlobalDomain)
 	ClusterGroupMetadata struct {
-		EnableGlobalDomain bool `yaml:"enableGlobalDomain"`
 		// FailoverVersionIncrement is the increment of each cluster version when failover happens
 		// It decides the maximum number clusters in this replication groups
 		FailoverVersionIncrement int64 `yaml:"failoverVersionIncrement"`
@@ -88,11 +87,6 @@ type (
 func (m *ClusterGroupMetadata) Validate() error {
 	if m == nil {
 		return errors.New("ClusterGroupMetadata cannot be empty")
-	}
-
-	if !m.EnableGlobalDomain {
-		log.Println("[WARN] Local domain is now deprecated. Please update config to enable global domain(ClusterGroupMetadata->EnableGlobalDomain)." +
-			"Global domain of single cluster has zero overhead, but only advantages for future migration and fail over. Please check Cadence documentation for more details.")
 	}
 
 	var errs error

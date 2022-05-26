@@ -27,16 +27,11 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
 )
 
 type (
 	// Metadata provides information about clusters
 	Metadata interface {
-		// IsGlobalDomainEnabled whether the global domain is enabled,
-		// this attr should be discarded when cross DC is made public
-		IsGlobalDomainEnabled() bool
 		// IsPrimaryCluster whether current cluster is the primary cluster
 		IsPrimaryCluster() bool
 		// GetNextFailoverVersion return the next failover version for domain failover
@@ -54,10 +49,6 @@ type (
 	}
 
 	metadataImpl struct {
-		logger log.Logger
-		// EnableGlobalDomain whether the global domain is enabled,
-		// this attr should be discarded when cross DC is made public
-		enableGlobalDomain dynamicconfig.BoolPropertyFn
 		// failoverVersionIncrement is the increment of each cluster's version when failover happen
 		failoverVersionIncrement int64
 		// primaryClusterName is the name of the primary cluster, only the primary cluster can register / update domain
@@ -74,8 +65,6 @@ type (
 
 // NewMetadata create a new instance of Metadata
 func NewMetadata(
-	logger log.Logger,
-	enableGlobalDomain dynamicconfig.BoolPropertyFn,
 	failoverVersionIncrement int64,
 	primaryClusterName string,
 	currentClusterName string,
@@ -87,20 +76,12 @@ func NewMetadata(
 	}
 
 	return &metadataImpl{
-		logger:                   logger,
-		enableGlobalDomain:       enableGlobalDomain,
 		failoverVersionIncrement: failoverVersionIncrement,
 		primaryClusterName:       primaryClusterName,
 		currentClusterName:       currentClusterName,
 		clusterGroup:             clusterGroup,
 		versionToClusterName:     versionToClusterName,
 	}
-}
-
-// IsGlobalDomainEnabled whether the global domain is enabled,
-// this attr should be discarded when cross DC is made public
-func (metadata *metadataImpl) IsGlobalDomainEnabled() bool {
-	return metadata.enableGlobalDomain()
 }
 
 // GetNextFailoverVersion return the next failover version based on input

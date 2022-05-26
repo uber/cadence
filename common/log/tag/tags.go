@@ -170,6 +170,11 @@ func WorkflowDomainIDs(domainIDs interface{}) Tag {
 	return newObjectTag("wf-domain-ids", domainIDs)
 }
 
+//	OperationName returns tag for OperationName
+func OperationName(operationName string) Tag {
+	return newStringTag("operation-name", operationName)
+}
+
 // history event ID related
 
 // WorkflowEventID returns tag for WorkflowEventID
@@ -200,16 +205,6 @@ func WorkflowFirstEventID(firstEventID int64) Tag {
 // WorkflowNextEventID returns tag for WorkflowNextEventID
 func WorkflowNextEventID(nextEventID int64) Tag {
 	return newInt64("wf-next-event-id", nextEventID)
-}
-
-// WorkflowBeginningFirstEventID returns tag for WorkflowBeginningFirstEventID
-func WorkflowBeginningFirstEventID(beginningFirstEventID int64) Tag {
-	return newInt64("wf-begining-first-event-id", beginningFirstEventID)
-}
-
-// WorkflowEndingNextEventID returns tag for WorkflowEndingNextEventID
-func WorkflowEndingNextEventID(endingNextEventID int64) Tag {
-	return newInt64("wf-ending-next-event-id", endingNextEventID)
 }
 
 // WorkflowResetNextEventID returns tag for WorkflowResetNextEventID
@@ -707,6 +702,21 @@ func LastEventVersion(version int64) Tag {
 // TokenLastEventVersion returns tag for TokenLastEventVersion
 func TokenLastEventVersion(version int64) Tag {
 	return newInt64("xdc-token-last-event-version", version)
+}
+
+// ResponseSize returns tag for ResponseSize
+func ResponseSize(size int) Tag {
+	return newInt("response-size", size)
+}
+
+// ResponseTotalSize returns tag for ResponseTotalSize
+func ResponseTotalSize(size int) Tag {
+	return newInt("response-total-size", size)
+}
+
+// ResponseMaxSize returns tag for ResponseMaxSize
+func ResponseMaxSize(size int) Tag {
+	return newInt("response-max-size", size)
 }
 
 ///////////////////  Archival tags defined here: archival- ///////////////////

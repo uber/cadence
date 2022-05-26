@@ -366,7 +366,6 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 	resetContext.SetHistorySize(resetHistorySize)
 	return execution.NewWorkflow(
 		ctx,
-		r.domainCache,
 		r.clusterMetadata,
 		resetContext,
 		resetMutableState,

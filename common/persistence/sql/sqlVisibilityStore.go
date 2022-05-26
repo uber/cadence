@@ -123,13 +123,13 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 }
 
 func (s *sqlVisibilityStore) UpsertWorkflowExecution(
-	ctx context.Context,
+	_ context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	if p.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.NewOperationNotSupportErrorForVis()
+	return p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(
@@ -293,24 +293,24 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(
 }
 
 func (s *sqlVisibilityStore) ListWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) CountWorkflowExecutions(
-	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
+	_ context.Context,
+	_ *p.CountWorkflowExecutionsRequest,
 ) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.InternalVisibilityWorkflowExecutionInfo {

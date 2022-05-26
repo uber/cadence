@@ -134,7 +134,7 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion, "")
 	metadata := options.ClusterMetadata
 	if metadata == nil {
-		metadata = cluster.GetTestClusterMetadata(false, false)
+		metadata = cluster.GetTestClusterMetadata(false)
 	}
 	dc := persistence.DynamicConfiguration{
 		EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
@@ -156,7 +156,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	testCluster := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	metadata := options.ClusterMetadata
 	if metadata == nil {
-		metadata = cluster.GetTestClusterMetadata(false, false)
+		metadata = cluster.GetTestClusterMetadata(false)
 	}
 	dc := persistence.DynamicConfiguration{
 		EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),

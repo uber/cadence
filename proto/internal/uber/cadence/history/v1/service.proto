@@ -204,6 +204,9 @@ service HistoryAPI {
   // RefreshWorkflowTasks refreshes all tasks of a workflow.
   rpc RefreshWorkflowTasks(RefreshWorkflowTasksRequest) returns (RefreshWorkflowTasksResponse);
 
+  // CountDLQMessages returns DLQ message count for each shard / source cluster.
+  rpc CountDLQMessages(CountDLQMessagesRequest) returns (CountDLQMessagesResponse);
+
   // ReadDLQMessages returns messages from DLQ.
   rpc ReadDLQMessages(ReadDLQMessagesRequest) returns (ReadDLQMessagesResponse);
 
@@ -647,6 +650,14 @@ message RefreshWorkflowTasksRequest {
 }
 
 message RefreshWorkflowTasksResponse {
+}
+
+message CountDLQMessagesRequest {
+  bool forceFetch = 1;
+}
+
+message CountDLQMessagesResponse {
+  repeated shared.v1.HistoryDLQCountEntry entries = 1;
 }
 
 message ReadDLQMessagesRequest {

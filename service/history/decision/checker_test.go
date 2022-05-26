@@ -131,20 +131,20 @@ func (s *attrValidatorSuite) TestValidateSignalExternalWorkflowExecutionAttribut
 	var attributes *types.SignalExternalWorkflowExecutionDecisionAttributes
 
 	err := s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes, metrics.HistoryRespondDecisionTaskCompletedScope)
-	s.EqualError(err, "BadRequestError{Message: SignalExternalWorkflowExecutionDecisionAttributes is not set on decision.}")
+	s.EqualError(err, "SignalExternalWorkflowExecutionDecisionAttributes is not set on decision.")
 
 	attributes = &types.SignalExternalWorkflowExecutionDecisionAttributes{}
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes, metrics.HistoryRespondDecisionTaskCompletedScope)
-	s.EqualError(err, "BadRequestError{Message: Execution is nil on decision.}")
+	s.EqualError(err, "Execution is nil on decision.")
 
 	attributes.Execution = &types.WorkflowExecution{}
 	attributes.Execution.WorkflowID = "workflow-id"
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes, metrics.HistoryRespondDecisionTaskCompletedScope)
-	s.EqualError(err, "BadRequestError{Message: SignalName is not set on decision.}")
+	s.EqualError(err, "SignalName is not set on decision.")
 
 	attributes.Execution.RunID = "run-id"
 	err = s.validator.validateSignalExternalWorkflowExecutionAttributes(s.testDomainID, s.testTargetDomainID, attributes, metrics.HistoryRespondDecisionTaskCompletedScope)
-	s.EqualError(err, "BadRequestError{Message: Invalid RunId set on decision.}")
+	s.EqualError(err, "Invalid RunId set on decision.")
 	attributes.Execution.RunID = constants.TestRunID
 
 	attributes.SignalName = "my signal name"
@@ -161,15 +161,15 @@ func (s *attrValidatorSuite) TestValidateUpsertWorkflowSearchAttributes() {
 	var attributes *types.UpsertWorkflowSearchAttributesDecisionAttributes
 
 	err := s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
-	s.EqualError(err, "BadRequestError{Message: UpsertWorkflowSearchAttributesDecisionAttributes is not set on decision.}")
+	s.EqualError(err, "UpsertWorkflowSearchAttributesDecisionAttributes is not set on decision.")
 
 	attributes = &types.UpsertWorkflowSearchAttributesDecisionAttributes{}
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
-	s.EqualError(err, "BadRequestError{Message: SearchAttributes is not set on decision.}")
+	s.EqualError(err, "SearchAttributes is not set on decision.")
 
 	attributes.SearchAttributes = &types.SearchAttributes{}
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)
-	s.EqualError(err, "BadRequestError{Message: IndexedFields is empty on decision.}")
+	s.EqualError(err, "IndexedFields is empty on decision.")
 
 	attributes.SearchAttributes.IndexedFields = map[string][]byte{"CustomKeywordField": []byte(`"bytes"`)}
 	err = s.validator.validateUpsertWorkflowSearchAttributes(domainName, attributes)

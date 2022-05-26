@@ -68,6 +68,11 @@ func (g grpcClient) GetCrossClusterTasks(ctx context.Context, request *types.Get
 	return proto.ToHistoryGetCrossClusterTasksResponse(response), proto.ToError(err)
 }
 
+func (g grpcClient) CountDLQMessages(ctx context.Context, request *types.CountDLQMessagesRequest, opts ...yarpc.CallOption) (*types.HistoryCountDLQMessagesResponse, error) {
+	response, err := g.c.CountDLQMessages(ctx, proto.FromHistoryCountDLQMessagesRequest(request), opts...)
+	return proto.ToHistoryCountDLQMessagesResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest, opts ...yarpc.CallOption) (*types.GetDLQReplicationMessagesResponse, error) {
 	response, err := g.c.GetDLQReplicationMessages(ctx, proto.FromHistoryGetDLQReplicationMessagesRequest(request), opts...)
 	return proto.ToHistoryGetDLQReplicationMessagesResponse(response), proto.ToError(err)

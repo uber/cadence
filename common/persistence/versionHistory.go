@@ -303,7 +303,7 @@ func (v *VersionHistory) GetFirstItem() (*VersionHistoryItem, error) {
 func (v *VersionHistory) GetLastItem() (*VersionHistoryItem, error) {
 
 	if len(v.Items) == 0 {
-		return nil, &types.BadRequestError{Message: "version history is empty."}
+		return nil, &types.BadRequestError{Message: "version history is empty"}
 	}
 
 	return v.Items[len(v.Items)-1].Duplicate(), nil
@@ -440,7 +440,7 @@ func (h *VersionHistories) GetVersionHistory(
 ) (*VersionHistory, error) {
 
 	if branchIndex < 0 || branchIndex >= len(h.Histories) {
-		return nil, &types.BadRequestError{Message: "invalid branch index."}
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("getting branch index: %d, available branch count: %d", branchIndex, len(h.Histories))}
 	}
 
 	return h.Histories[branchIndex], nil
