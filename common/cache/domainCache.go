@@ -33,8 +33,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -95,20 +93,17 @@ type (
 		GetDomainName(id string) (string, error)
 		GetAllDomain() map[string]*DomainCacheEntry
 		GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheByID int64)
-
-		GetActiveDomainByID(id string) (*DomainCacheEntry, error)
 	}
 
 	domainCache struct {
-		status          int32
-		shutdownChan    chan struct{}
-		cacheNameToID   *atomic.Value
-		cacheByID       *atomic.Value
-		domainManager   persistence.DomainManager
-		clusterMetadata cluster.Metadata
-		timeSource      clock.TimeSource
-		metricsClient   metrics.Client
-		logger          log.Logger
+		status        int32
+		shutdownChan  chan struct{}
+		cacheNameToID *atomic.Value
+		cacheByID     *atomic.Value
+		domainManager persistence.DomainManager
+		timeSource    clock.TimeSource
+		metricsClient metrics.Client
+		logger        log.Logger
 
 		// refresh lock is used to guarantee at most one
 		// coroutine is doing domain refreshment
@@ -127,7 +122,6 @@ type (
 
 	// DomainCacheEntry contains the info and config for a domain
 	DomainCacheEntry struct {
-		clusterMetadata cluster.Metadata
 		sync.RWMutex
 		info                        *persistence.DomainInfo
 		config                      *persistence.DomainConfig
@@ -146,7 +140,6 @@ type (
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
 func NewDomainCache(
 	domainManager persistence.DomainManager,
-	clusterMetadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) DomainCache {
@@ -157,7 +150,6 @@ func NewDomainCache(
 		cacheNameToID:    &atomic.Value{},
 		cacheByID:        &atomic.Value{},
 		domainManager:    domainManager,
-		clusterMetadata:  clusterMetadata,
 		timeSource:       clock.NewRealTimeSource(),
 		metricsClient:    metricsClient,
 		logger:           logger,
@@ -176,13 +168,10 @@ func newDomainCache() Cache {
 	})
 }
 
-func newDomainCacheEntry(
-	clusterMetadata cluster.Metadata,
-) *DomainCacheEntry {
+func newDomainCacheEntry() *DomainCacheEntry {
 
 	return &DomainCacheEntry{
-		clusterMetadata: clusterMetadata,
-		initialized:     false,
+		initialized: false,
 	}
 }
 
@@ -192,7 +181,6 @@ func NewGlobalDomainCacheEntryForTest(
 	config *persistence.DomainConfig,
 	repConfig *persistence.DomainReplicationConfig,
 	failoverVersion int64,
-	clusterMetadata cluster.Metadata,
 ) *DomainCacheEntry {
 
 	return &DomainCacheEntry{
@@ -201,7 +189,6 @@ func NewGlobalDomainCacheEntryForTest(
 		isGlobalDomain:    true,
 		replicationConfig: repConfig,
 		failoverVersion:   failoverVersion,
-		clusterMetadata:   clusterMetadata,
 	}
 }
 
@@ -210,7 +197,6 @@ func NewLocalDomainCacheEntryForTest(
 	info *persistence.DomainInfo,
 	config *persistence.DomainConfig,
 	targetCluster string,
-	clusterMetadata cluster.Metadata,
 ) *DomainCacheEntry {
 
 	return &DomainCacheEntry{
@@ -222,7 +208,6 @@ func NewLocalDomainCacheEntryForTest(
 			Clusters:          []*persistence.ClusterReplicationConfig{{ClusterName: targetCluster}},
 		},
 		failoverVersion: common.EmptyVersion,
-		clusterMetadata: clusterMetadata,
 	}
 }
 
@@ -234,7 +219,6 @@ func NewDomainCacheEntryForTest(
 	repConfig *persistence.DomainReplicationConfig,
 	failoverVersion int64,
 	failoverEndtime *int64,
-	clusterMetadata cluster.Metadata,
 ) *DomainCacheEntry {
 
 	return &DomainCacheEntry{
@@ -244,7 +228,6 @@ func NewDomainCacheEntryForTest(
 		replicationConfig: repConfig,
 		failoverVersion:   failoverVersion,
 		failoverEndTime:   failoverEndtime,
-		clusterMetadata:   clusterMetadata,
 	}
 }
 
@@ -388,25 +371,6 @@ func (c *domainCache) GetDomainName(
 		return "", err
 	}
 	return entry.info.Name, nil
-}
-
-func (c *domainCache) GetActiveDomainByID(
-	id string,
-) (*DomainCacheEntry, error) {
-	if err := common.ValidateDomainUUID(id); err != nil {
-		return nil, err
-	}
-
-	domainEntry, err := c.GetDomainByID(id)
-	if err != nil {
-		return nil, err
-	}
-	if err = domainEntry.GetDomainNotActiveErr(); err != nil {
-		// TODO: currently reapply events API will check if returned domainEntry is nil or not
-		// when there's an error.
-		return domainEntry, err
-	}
-	return domainEntry, nil
 }
 
 func (c *domainCache) refreshLoop() {
@@ -562,7 +526,7 @@ func (c *domainCache) updateIDToDomainCache(
 	id string,
 	record *DomainCacheEntry,
 ) (bool, *DomainCacheEntry, error) {
-	elem, err := cacheByID.PutIfNotExist(id, newDomainCacheEntry(c.clusterMetadata))
+	elem, err := cacheByID.PutIfNotExist(id, newDomainCacheEntry())
 	if err != nil {
 		return false, nil, err
 	}
@@ -699,7 +663,7 @@ func (c *domainCache) buildEntryFromRecord(
 
 	// this is a shallow copy, but since the record is generated by persistence
 	// and only accessible here, it would be fine
-	newEntry := newDomainCacheEntry(c.clusterMetadata)
+	newEntry := newDomainCacheEntry()
 	newEntry.info = record.Info
 	newEntry.config = record.Config
 	newEntry.replicationConfig = record.ReplicationConfig
@@ -726,7 +690,7 @@ func copyResetBinary(bins types.BadBinaries) types.BadBinaries {
 
 func (entry *DomainCacheEntry) duplicate() *DomainCacheEntry {
 	// this is a deep copy
-	result := newDomainCacheEntry(entry.clusterMetadata)
+	result := newDomainCacheEntry()
 	result.info = &persistence.DomainInfo{
 		ID:          entry.info.ID,
 		Name:        entry.info.Name,
@@ -814,15 +778,6 @@ func (entry *DomainCacheEntry) GetFailoverEndTime() *int64 {
 	return entry.failoverEndTime
 }
 
-// IsDomainActive return whether the domain is active, i.e. non global domain or global domain which active cluster is the current cluster
-func (entry *DomainCacheEntry) IsDomainActive() bool {
-	if !entry.isGlobalDomain {
-		// domain is not a global domain, meaning domain is always "active" within each cluster
-		return true
-	}
-	return entry.clusterMetadata.GetCurrentClusterName() == entry.replicationConfig.ActiveClusterName && !entry.IsDomainPendingActive()
-}
-
 // IsDomainPendingActive returns whether the domain is in pending active state
 func (entry *DomainCacheEntry) IsDomainPendingActive() bool {
 	if !entry.isGlobalDomain {
@@ -840,25 +795,6 @@ func (entry *DomainCacheEntry) GetReplicationPolicy() ReplicationPolicy {
 		return ReplicationPolicyMultiCluster
 	}
 	return ReplicationPolicyOneCluster
-}
-
-// GetDomainNotActiveErr return err if domain is not active, nil otherwise
-func (entry *DomainCacheEntry) GetDomainNotActiveErr() error {
-	if entry.IsDomainActive() {
-		// domain is consider active
-		return nil
-	}
-	if entry.IsDomainPendingActive() {
-		return errors.NewDomainPendingActiveError(
-			entry.info.Name,
-			entry.clusterMetadata.GetCurrentClusterName(),
-		)
-	}
-	return errors.NewDomainNotActiveError(
-		entry.info.Name,
-		entry.clusterMetadata.GetCurrentClusterName(),
-		entry.replicationConfig.ActiveClusterName,
-	)
 }
 
 // HasReplicationCluster returns true if the domain has replication in the cluster

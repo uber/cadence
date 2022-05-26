@@ -27,6 +27,7 @@ import (
 	"fmt"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -552,7 +553,7 @@ func (t *crossClusterSourceTaskExecutor) verifyDomainActive(
 		return ErrTaskPendingActive
 	}
 
-	if !entry.IsDomainActive() {
+	if isActive, _ := domain.IsActive(entry, t.shard.GetClusterMetadata()); !isActive {
 		// set processing state to invalidated so that a new task can be created
 		t.setTaskState(task, ctask.TaskStatePending, processingStateInvalidated)
 		return nil

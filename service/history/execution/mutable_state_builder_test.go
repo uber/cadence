@@ -835,7 +835,6 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 		&persistence.DomainReplicationConfig{},
 		1,
 		nil,
-		nil,
 	)
 }
 

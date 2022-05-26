@@ -229,7 +229,6 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_True() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	isNDC, err := s.ackManager.isNewRunNDCEnabled(
@@ -270,7 +269,6 @@ func (s *taskAckManagerSuite) TestIsNewRunNDCEnabled_False() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	isNDC, err := s.ackManager.isNewRunNDCEnabled(
@@ -397,7 +395,6 @@ func (s *taskAckManagerSuite) TestProcessReplication_OK() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	_, err := s.ackManager.processReplication(
@@ -497,7 +494,6 @@ func (s *taskAckManagerSuite) TestProcessReplication_Error() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	_, err := s.ackManager.processReplication(
@@ -598,7 +594,6 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	task, err := s.ackManager.generateSyncActivityTask(context.Background(), taskInfo)
@@ -664,7 +659,6 @@ func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	task, err := s.ackManager.generateSyncActivityTask(context.Background(), taskInfo)
@@ -722,7 +716,6 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
@@ -822,7 +815,6 @@ func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	task, err := s.ackManager.toReplicationTask(context.Background(), taskInfo)
@@ -891,7 +883,6 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
@@ -942,7 +933,6 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 
 	_, err := s.ackManager.GetTasks(context.Background(), clusterName, 10)
@@ -1004,7 +994,6 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 			},
 		},
 		1,
-		nil,
 	), nil).AnyTimes()
 	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
 		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
@@ -1052,7 +1041,6 @@ func (s *taskAckManagerSuite) TestSkipTask_ReturnTrue() {
 			},
 		},
 		1,
-		nil,
 	)
 	s.True(skipTask("test", domainEntity))
 }
@@ -1070,7 +1058,6 @@ func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
 			},
 		},
 		1,
-		nil,
 	)
 	s.False(skipTask(cluster.TestAlternativeClusterName, domainEntity))
 }

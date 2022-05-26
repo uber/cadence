@@ -156,7 +156,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -200,7 +199,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -263,7 +261,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -314,7 +311,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -392,7 +388,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -467,7 +462,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -557,7 +551,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -645,7 +638,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -722,7 +714,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -778,7 +769,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(nil, false).AnyTimes()
@@ -835,7 +825,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(&persistence.ActivityInfo{
@@ -905,7 +894,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -982,7 +970,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -1059,7 +1046,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -1135,7 +1121,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -1224,7 +1209,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{

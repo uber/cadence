@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -170,7 +171,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	executionInfo := r.mutableState.GetExecutionInfo()
 	transferTasks := []persistence.Task{}
 	crossClusterTasks := []persistence.Task{}
-	_, isActive, err := getTargetCluster(executionInfo.DomainID, r.domainCache)
+	_, isActive, err := getTargetCluster(executionInfo.DomainID, r.domainCache, r.clusterMetadata)
 	if err != nil {
 		return err
 	}
@@ -183,7 +184,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 		})
 	} else {
 		// 1. check if parent is cross cluster
-		parentTargetCluster, isActive, err := getParentCluster(r.mutableState, r.domainCache)
+		parentTargetCluster, isActive, err := getParentCluster(r.mutableState, r.domainCache, r.clusterMetadata)
 		if err != nil {
 			return err
 		}
@@ -758,7 +759,7 @@ func (r *mutableStateTaskGeneratorImpl) generateApplyParentCloseTasks(
 		return transferTasks, crossClusterTasks, nil
 	}
 
-	sameClusterDomainIDs, remoteClusterDomainIDs, err := getChildrenClusters(childDomainIDs, r.mutableState, r.domainCache)
+	sameClusterDomainIDs, remoteClusterDomainIDs, err := getChildrenClusters(childDomainIDs, r.mutableState, r.domainCache, r.clusterMetadata)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -791,7 +792,7 @@ func (r *mutableStateTaskGeneratorImpl) GenerateFromCrossClusterTask(
 	var targetCluster string
 
 	sourceDomainEntry := r.mutableState.GetDomainEntry()
-	if !sourceDomainEntry.IsDomainActive() && !sourceDomainEntry.IsDomainPendingActive() {
+	if isActive, _ := domain.IsActive(sourceDomainEntry, r.clusterMetadata); !isActive && !sourceDomainEntry.IsDomainPendingActive() {
 		// domain is passive, generate (passive) transfer task
 		generateTransferTask = true
 	}
@@ -948,7 +949,7 @@ func (r *mutableStateTaskGeneratorImpl) isCrossClusterTask(
 	}
 
 	// case 2: source domain is not active in the current cluster
-	if !sourceDomainEntry.IsDomainActive() {
+	if isActive, _ := domain.IsActive(sourceDomainEntry, r.clusterMetadata); !isActive {
 		return "", false, nil
 	}
 
@@ -970,13 +971,14 @@ func (r *mutableStateTaskGeneratorImpl) isCrossClusterTask(
 func getTargetCluster(
 	domainID string,
 	domainCache cache.DomainCache,
+	clusterMetadata cluster.Metadata,
 ) (string, bool, error) {
 	domainEntry, err := domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return "", false, err
 	}
 
-	isActive := domainEntry.IsDomainActive()
+	isActive, _ := domain.IsActive(domainEntry, clusterMetadata)
 	if !isActive {
 		// treat pending active as active
 		isActive = domainEntry.IsDomainPendingActive()
@@ -989,6 +991,7 @@ func getTargetCluster(
 func getParentCluster(
 	mutableState MutableState,
 	domainCache cache.DomainCache,
+	clusterMetadata cluster.Metadata,
 ) (string, bool, error) {
 	executionInfo := mutableState.GetExecutionInfo()
 	if !mutableState.HasParentExecution() ||
@@ -997,13 +1000,14 @@ func getParentCluster(
 		return "", false, nil
 	}
 
-	return getTargetCluster(executionInfo.ParentDomainID, domainCache)
+	return getTargetCluster(executionInfo.ParentDomainID, domainCache, clusterMetadata)
 }
 
 func getChildrenClusters(
 	childDomainIDs map[string]struct{},
 	mutableState MutableState,
 	domainCache cache.DomainCache,
+	clusterMetadata cluster.Metadata,
 ) (map[string]struct{}, map[string]map[string]struct{}, error) {
 
 	if len(childDomainIDs) == 0 {
@@ -1028,7 +1032,7 @@ func getChildrenClusters(
 	sameClusterDomainIDs := make(map[string]struct{})
 	remoteClusterDomainIDs := make(map[string]map[string]struct{})
 	for childDomainID := range childDomainIDs {
-		childCluster, isActive, err := getTargetCluster(childDomainID, domainCache)
+		childCluster, isActive, err := getTargetCluster(childDomainID, domainCache, clusterMetadata)
 		if err != nil {
 			return nil, nil, err
 		}

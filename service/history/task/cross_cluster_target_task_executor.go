@@ -26,6 +26,7 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -447,7 +448,7 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 		return "", ErrTaskPendingActive
 	}
 
-	if !entry.IsDomainActive() {
+	if isActive, _ := domain.IsActive(entry, t.shard.GetClusterMetadata()); !isActive {
 		return "", errTargetDomainNotActive
 	}
 
