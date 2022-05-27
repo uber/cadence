@@ -86,6 +86,7 @@ func (s *Service) Start() {
 
 	engine := NewEngine(
 		s.GetTaskManager(),
+		s.GetClusterMetadata(),
 		s.GetHistoryClient(),
 		s.GetMatchingRawClient(), // Use non retry client inside matching
 		s.config,

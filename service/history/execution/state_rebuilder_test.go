@@ -51,12 +51,11 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockEventsCache     *events.MockCache
-		mockTaskRefresher   *MockMutableStateTaskRefresher
-		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
+		controller        *gomock.Controller
+		mockShard         *shard.TestContext
+		mockEventsCache   *events.MockCache
+		mockTaskRefresher *MockMutableStateTaskRefresher
+		mockDomainCache   *cache.MockDomainCache
 
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
 		logger           log.Logger
@@ -92,9 +91,7 @@ func (s *stateRebuilderSuite) SetupTest() {
 
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockEventsCache = s.mockShard.MockEventsCache
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
@@ -301,7 +298,6 @@ func (s *stateRebuilderSuite) TestRebuild() {
 			},
 		},
 		1234,
-		s.mockClusterMetadata,
 	), nil).AnyTimes()
 	s.mockTaskRefresher.EXPECT().RefreshTasks(gomock.Any(), now, gomock.Any()).Return(nil).Times(1)
 

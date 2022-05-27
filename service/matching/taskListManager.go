@@ -239,7 +239,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 
 		isForwarded := params.forwardedFrom != ""
 
-		if domainEntry.GetDomainNotActiveErr() != nil {
+		if _, err := domainEntry.IsActiveIn(c.engine.clusterMetadata.GetCurrentClusterName()); err != nil {
 			// standby task, only persist when task is not forwarded from child partition
 			syncMatch = false
 			if isForwarded {
@@ -356,7 +356,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	// value. Last poller wins if different pollers provide different values
 	c.matcher.UpdateRatelimit(maxDispatchPerSecond)
 
-	if domainEntry.GetDomainNotActiveErr() != nil {
+	if _, err := domainEntry.IsActiveIn(c.engine.clusterMetadata.GetCurrentClusterName()); err != nil {
 		return c.matcher.PollForQuery(childCtx)
 	}
 

@@ -146,7 +146,6 @@ func (s *taskExecutorSuite) TestFilterTask() {
 					},
 				}},
 			0,
-			s.clusterMetadata,
 		), nil)
 	ok, err := s.taskHandler.filterTask(domainID, false)
 	s.NoError(err)
