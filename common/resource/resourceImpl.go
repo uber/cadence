@@ -169,6 +169,7 @@ func New(
 		params.ClusterMetadata.GetCurrentClusterName(),
 		params.MetricsClient,
 		logger,
+		persistence.NewDynamicConfiguration(dynamicCollection),
 	), &persistenceClient.Params{
 		PersistenceConfig: params.PersistenceConfig,
 		MetricsClient:     params.MetricsClient,

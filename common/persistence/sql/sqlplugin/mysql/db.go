@@ -150,3 +150,8 @@ func (mdb *db) SupportsTTL() bool {
 func (mdb *db) MaxAllowedTTL() (*time.Duration, error) {
 	return nil, sqlplugin.ErrTTLNotSupported
 }
+
+// SupportsTTL returns weather MySQL supports Asynchronous transaction
+func (mdb *db) SupportsAsyncTransaction() bool {
+	return false
+}

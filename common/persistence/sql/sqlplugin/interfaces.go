@@ -801,6 +801,7 @@ type (
 		// The follow provide information about the underlying sql crud implementation
 		SupportsTTL() bool
 		MaxAllowedTTL() (*time.Duration, error)
+		SupportsAsyncTransaction() bool
 	}
 
 	// adminCRUD defines admin operations for CLI and test suites

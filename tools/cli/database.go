@@ -223,6 +223,9 @@ func initPersistenceFactory(c *cli.Context) client.Factory {
 		cfg.ClusterGroupMetadata.CurrentClusterName,
 		metrics.NewNoopMetricsClient(),
 		log.NewNoop(),
+		&persistence.DynamicConfiguration{
+			EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
+		},
 	)
 }
 

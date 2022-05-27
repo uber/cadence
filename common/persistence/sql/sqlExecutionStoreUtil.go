@@ -26,7 +26,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"runtime/debug"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence/serialization"
@@ -402,6 +405,233 @@ func applyWorkflowSnapshotTxAsReset(
 		runID)
 }
 
+func applyWorkflowMutationAsyncTx(
+	ctx context.Context,
+	tx sqlplugin.Tx,
+	shardID int,
+	workflowMutation *p.InternalWorkflowMutation,
+	parser serialization.Parser,
+) error {
+
+	executionInfo := workflowMutation.ExecutionInfo
+	versionHistories := workflowMutation.VersionHistories
+	startVersion := workflowMutation.StartVersion
+	lastWriteVersion := workflowMutation.LastWriteVersion
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
+	workflowID := executionInfo.WorkflowID
+	runID := serialization.MustParseUUID(executionInfo.RunID)
+
+	recoverPanic := func(err *error) {
+		if r := recover(); r != nil {
+			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
+		}
+	}
+
+	// TODO Remove me if UPDATE holds the lock to the end of a transaction
+	if err := lockAndCheckNextEventID(
+		ctx,
+		tx,
+		shardID,
+		domainID,
+		workflowID,
+		runID,
+		workflowMutation.Condition); err != nil {
+		return err
+	}
+
+	if err := updateExecution(
+		ctx,
+		tx,
+		executionInfo,
+		versionHistories,
+		startVersion,
+		lastWriteVersion,
+		shardID,
+		parser); err != nil {
+		return err
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createTransferTasks(
+			ctx,
+			tx,
+			workflowMutation.TransferTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createCrossClusterTasks(
+			ctx,
+			tx,
+			workflowMutation.CrossClusterTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createReplicationTasks(
+			ctx,
+			tx,
+			workflowMutation.ReplicationTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createTimerTasks(
+			ctx,
+			tx,
+			workflowMutation.TimerTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateActivityInfos(
+			ctx,
+			tx,
+			workflowMutation.UpsertActivityInfos,
+			workflowMutation.DeleteActivityInfos,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateTimerInfos(
+			ctx,
+			tx,
+			workflowMutation.UpsertTimerInfos,
+			workflowMutation.DeleteTimerInfos,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser,
+		)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateChildExecutionInfos(
+			ctx,
+			tx,
+			workflowMutation.UpsertChildExecutionInfos,
+			workflowMutation.DeleteChildExecutionInfos,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser,
+		)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateRequestCancelInfos(
+			ctx,
+			tx,
+			workflowMutation.UpsertRequestCancelInfos,
+			workflowMutation.DeleteRequestCancelInfos,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser,
+		)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateSignalInfos(
+			ctx,
+			tx,
+			workflowMutation.UpsertSignalInfos,
+			workflowMutation.DeleteSignalInfos,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser,
+		)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateSignalsRequested(
+			ctx,
+			tx,
+			workflowMutation.UpsertSignalRequestedIDs,
+			workflowMutation.DeleteSignalRequestedIDs,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+		)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		if workflowMutation.ClearBufferedEvents {
+			if e = deleteBufferedEvents(
+				ctx,
+				tx,
+				shardID,
+				domainID,
+				workflowID,
+				runID,
+			); e != nil {
+				return e
+			}
+		}
+
+		e = updateBufferedEvents(
+			ctx,
+			tx,
+			workflowMutation.NewBufferedEvents,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+		)
+		return e
+	})
+	return g.Wait()
+}
+
 func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
 	ctx context.Context,
 	tx sqlplugin.Tx,
@@ -520,6 +750,190 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotTxAsNew(
 		domainID,
 		workflowID,
 		runID)
+}
+
+func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
+	ctx context.Context,
+	tx sqlplugin.Tx,
+	shardID int,
+	workflowSnapshot *p.InternalWorkflowSnapshot,
+	parser serialization.Parser,
+) error {
+
+	executionInfo := workflowSnapshot.ExecutionInfo
+	versionHistories := workflowSnapshot.VersionHistories
+	startVersion := workflowSnapshot.StartVersion
+	lastWriteVersion := workflowSnapshot.LastWriteVersion
+	domainID := serialization.MustParseUUID(executionInfo.DomainID)
+	workflowID := executionInfo.WorkflowID
+	runID := serialization.MustParseUUID(executionInfo.RunID)
+
+	recoverPanic := func(err *error) {
+		if r := recover(); r != nil {
+			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
+		}
+	}
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = m.createExecution(
+			ctx,
+			tx,
+			executionInfo,
+			versionHistories,
+			startVersion,
+			lastWriteVersion,
+			shardID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createTransferTasks(
+			ctx,
+			tx,
+			workflowSnapshot.TransferTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createCrossClusterTasks(
+			ctx,
+			tx,
+			workflowSnapshot.CrossClusterTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createReplicationTasks(
+			ctx,
+			tx,
+			workflowSnapshot.ReplicationTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = createTimerTasks(
+			ctx,
+			tx,
+			workflowSnapshot.TimerTasks,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateActivityInfos(
+			ctx,
+			tx,
+			workflowSnapshot.ActivityInfos,
+			nil,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateTimerInfos(
+			ctx,
+			tx,
+			workflowSnapshot.TimerInfos,
+			nil,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateChildExecutionInfos(
+			ctx,
+			tx,
+			workflowSnapshot.ChildExecutionInfos,
+			nil,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateRequestCancelInfos(
+			ctx,
+			tx,
+			workflowSnapshot.RequestCancelInfos,
+			nil,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateSignalInfos(
+			ctx,
+			tx,
+			workflowSnapshot.SignalInfos,
+			nil,
+			shardID,
+			domainID,
+			workflowID,
+			runID,
+			parser)
+		return e
+	})
+
+	g.Go(func() (e error) {
+		defer recoverPanic(&e)
+		e = updateSignalsRequested(
+			ctx,
+			tx,
+			workflowSnapshot.SignalRequestedIDs,
+			nil,
+			shardID,
+			domainID,
+			workflowID,
+			runID)
+		return e
+	})
+	return g.Wait()
 }
 
 func applyTasks(
