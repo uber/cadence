@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -88,6 +89,7 @@ type (
 		Logger                    log.Logger
 		PayloadSerializer         persistence.PayloadSerializer
 		ConfigStoreManager        persistence.ConfigStoreManager
+		DynamicConfiguration      persistence.DynamicConfiguration
 	}
 
 	// TestBaseParams defines the input of TestBase
@@ -95,6 +97,7 @@ type (
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		ClusterMetadata       cluster.Metadata
+		DynamicConfiguration  persistence.DynamicConfiguration
 	}
 
 	// TestTransferTaskIDGenerator helper
@@ -119,6 +122,7 @@ func NewTestBaseFromParams(params TestBaseParams) TestBase {
 		ClusterMetadata:       params.ClusterMetadata,
 		PayloadSerializer:     persistence.NewPayloadSerializer(),
 		Logger:                logger,
+		DynamicConfiguration:  params.DynamicConfiguration,
 	}
 }
 
@@ -132,10 +136,14 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false)
 	}
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
+	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
+		DynamicConfiguration:  dc,
 	}
 	return NewTestBaseFromParams(params)
 }
@@ -150,10 +158,14 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	if metadata == nil {
 		metadata = cluster.GetTestClusterMetadata(false)
 	}
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
+	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
+		DynamicConfiguration:  dc,
 	}
 	return NewTestBaseFromParams(params)
 }
@@ -181,7 +193,7 @@ func (s *TestBase) Setup() {
 	cfg := s.DefaultTestCluster.Config()
 	scope := tally.NewTestScope(service.History, make(map[string]string))
 	metricsClient := metrics.NewClient(scope, service.GetMetricsServiceIdx(service.History, s.Logger))
-	factory := client.NewFactory(&cfg, nil, clusterName, metricsClient, s.Logger)
+	factory := client.NewFactory(&cfg, nil, clusterName, metricsClient, s.Logger, &s.DynamicConfiguration)
 
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
