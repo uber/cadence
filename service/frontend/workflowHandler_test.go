@@ -997,7 +997,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_ArchivalURIEmpty()
 			VisibilityArchivalURI:    "",
 		},
 		"",
-		nil)
+	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
@@ -1017,7 +1017,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Failure_InvalidURI() {
 			VisibilityArchivalURI:    "",
 		},
 		"",
-		nil)
+	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
 
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
@@ -1037,7 +1037,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 			VisibilityArchivalURI:    "",
 		},
 		"",
-		nil)
+	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(domainEntry, nil).AnyTimes()
 
 	nextPageToken := []byte{'1', '2', '3'}
@@ -1148,7 +1148,6 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_DomainNotConfi
 			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 		},
 		"",
-		nil,
 	), nil)
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
 
@@ -1167,7 +1166,6 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Failure_InvalidURI() {
 			VisibilityArchivalURI:    "uri without scheme",
 		},
 		"",
-		nil,
 	), nil)
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
 
@@ -1186,7 +1184,6 @@ func (s *workflowHandlerSuite) TestListArchivedVisibility_Success() {
 			VisibilityArchivalURI:    testVisibilityArchivalURI,
 		},
 		"",
-		nil,
 	), nil).AnyTimes()
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("enabled"), dc.GetBoolPropertyFn(true), "disabled", "random URI"))
 	s.mockVisibilityArchiver.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(&archiver.QueryVisibilityResponse{}, nil)

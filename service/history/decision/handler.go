@@ -104,7 +104,7 @@ func (handler *handlerImpl) HandleDecisionTaskScheduled(
 	req *types.ScheduleDecisionTaskRequest,
 ) error {
 
-	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := handler.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (handler *handlerImpl) HandleDecisionTaskStarted(
 	req *types.RecordDecisionTaskStartedRequest,
 ) (*types.RecordDecisionTaskStartedResponse, error) {
 
-	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := handler.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (handler *handlerImpl) HandleDecisionTaskFailed(
 	req *types.HistoryRespondDecisionTaskFailedRequest,
 ) (retError error) {
 
-	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := handler.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func (handler *handlerImpl) HandleDecisionTaskCompleted(
 	req *types.HistoryRespondDecisionTaskCompletedRequest,
 ) (resp *types.HistoryRespondDecisionTaskCompletedResponse, retError error) {
 
-	domainEntry, err := handler.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := handler.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -883,4 +883,8 @@ func (handler *handlerImpl) failDecisionHelper(
 
 	// Return new builder back to the caller for further updates
 	return mutableState, nil
+}
+
+func (handler *handlerImpl) getActiveDomainByID(id string) (*cache.DomainCacheEntry, error) {
+	return cache.GetActiveDomainByID(handler.shard.GetDomainCache(), handler.shard.GetClusterMetadata().GetCurrentClusterName(), id)
 }

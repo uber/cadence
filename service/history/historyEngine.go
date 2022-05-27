@@ -547,7 +547,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	startRequest *types.HistoryStartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(startRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(startRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -967,12 +967,12 @@ func (e *historyEngineImpl) PollMutableState(
 func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error, domainID string) error {
 	switch err.(type) {
 	case *types.EntityNotExistsError:
-		domainCache, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
+		domainEntry, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
 		if domainCacheErr != nil {
 			return err // if could not access domain cache simply return original error
 		}
 
-		if domainNotActiveErr := domainCache.GetDomainNotActiveErr(); domainNotActiveErr != nil {
+		if _, domainNotActiveErr := domainEntry.IsActiveIn(e.clusterMetadata.GetCurrentClusterName()); domainNotActiveErr != nil {
 			domainNotActiveErrCasted := domainNotActiveErr.(*types.DomainNotActiveError)
 			return &types.EntityNotExistsError{
 				Message:        "Workflow execution not found in non-active cluster",
@@ -1176,7 +1176,8 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// 2. the workflow is not running, whenever a workflow is not running dispatching query directly is consistent
 	// 3. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
 	// 4. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
-	safeToDispatchDirectly := !de.IsDomainActive() ||
+	isActive, _ := de.IsActiveIn(e.clusterMetadata.GetCurrentClusterName())
+	safeToDispatchDirectly := !isActive ||
 		!mutableState.IsWorkflowExecutionRunning() ||
 		req.GetQueryConsistencyLevel() == types.QueryConsistencyLevelEventual ||
 		(!mutableState.HasPendingDecision() && !mutableState.HasInFlightDecision())
@@ -1266,11 +1267,12 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		return nil, err
 	}
 	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
+	domainIsActive, _ := de.IsActiveIn(e.clusterMetadata.GetCurrentClusterName())
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
 		e.config.EnableStickyQuery(queryRequest.GetDomain()) &&
-		de.IsDomainActive() {
+		domainIsActive {
 
 		stickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
 			DomainUUID:   domainID,
@@ -1672,7 +1674,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	request *types.RecordActivityTaskStartedRequest,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -1839,7 +1841,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	req *types.HistoryRespondActivityTaskCompletedRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1920,7 +1922,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	req *types.HistoryRespondActivityTaskFailedRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2017,7 +2019,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	req *types.HistoryRespondActivityTaskCanceledRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2107,7 +2109,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	req *types.HistoryRecordActivityTaskHeartbeatRequest,
 ) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -2184,7 +2186,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	req *types.HistoryRequestCancelWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2238,7 +2240,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 	signalRequest *types.HistorySignalWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(signalRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2332,7 +2334,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest,
 ) (retResp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalWithStartRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(signalWithStartRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -2491,7 +2493,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	request *types.RemoveSignalMutableStateRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2519,7 +2521,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	terminateRequest *types.HistoryTerminateWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(terminateRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(terminateRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2572,7 +2574,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	completionRequest *types.RecordChildExecutionCompletedRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(completionRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(completionRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -3199,7 +3201,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyEvents []*types.HistoryEvent,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
+	domainEntry, err := e.getActiveDomainByID(domainUUID)
 	if err != nil {
 		switch {
 		case domainEntry != nil && domainEntry.IsDomainPendingActive():
@@ -3469,4 +3471,8 @@ func (e *historyEngineImpl) newChildContext(
 		}
 	}
 	return context.WithTimeout(context.Background(), ctxTimeout)
+}
+
+func (e *historyEngineImpl) getActiveDomainByID(id string) (*cache.DomainCacheEntry, error) {
+	return cache.GetActiveDomainByID(e.shard.GetDomainCache(), e.clusterMetadata.GetCurrentClusterName(), id)
 }

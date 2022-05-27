@@ -63,7 +63,6 @@ var (
 		&persistence.DomainInfo{ID: TestDomainID, Name: TestDomainName},
 		&persistence.DomainConfig{Retention: 1},
 		cluster.TestCurrentClusterName,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalDomainEntry is the global domain cache entry for test
@@ -82,7 +81,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalParentDomainEntry is the global parent domain cache entry for test
@@ -97,7 +95,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalTargetDomainEntry is the global target domain cache entry for test
@@ -112,7 +109,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalRemoteTargetDomainEntry is the global target domain cache entry for test
@@ -127,7 +123,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalChildDomainEntry is the global child domain cache entry for test
@@ -142,6 +137,5 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 )

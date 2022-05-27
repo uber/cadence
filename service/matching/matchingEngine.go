@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service"
 
 	"github.com/pborman/uuid"
@@ -70,6 +71,7 @@ type (
 
 	matchingEngineImpl struct {
 		taskManager          persistence.TaskManager
+		clusterMetadata      cluster.Metadata
 		historyService       history.Client
 		matchingClient       matching.Client
 		tokenSerializer      common.TaskTokenSerializer
@@ -105,6 +107,7 @@ var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed im
 
 // NewEngine creates an instance of matching engine
 func NewEngine(taskManager persistence.TaskManager,
+	clusterMetadata cluster.Metadata,
 	historyService history.Client,
 	matchingClient matching.Client,
 	config *Config,
@@ -115,6 +118,7 @@ func NewEngine(taskManager persistence.TaskManager,
 ) Engine {
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
+		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		taskLists:            make(map[taskListID]taskListManager),
