@@ -77,7 +77,6 @@ func (s *crossClusterTaskProcessorSuite) SetupTest() {
 		config.NewForTest(),
 	)
 	s.mockProcessor = NewMockProcessor(s.controller)
-	s.mockShard.Resource.ClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	s.processorOptions = &CrossClusterTaskProcessorOptions{

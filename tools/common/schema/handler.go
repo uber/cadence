@@ -67,6 +67,14 @@ func Setup(cli *cli.Context, db SchemaClient) error {
 	return newSetupSchemaTask(db, cfg).Run()
 }
 
+// UpdateFromConfig updates the schema for the specified database based on the given config
+func UpdateFromConfig(config *UpdateConfig, db SchemaClient) error {
+	if err := validateUpdateConfig(config); err != nil {
+		return err
+	}
+	return newUpdateSchemaTask(db, config).Run()
+}
+
 // Update updates the schema for the specified database
 func Update(cli *cli.Context, db SchemaClient) error {
 	cfg, err := newUpdateConfig(cli)

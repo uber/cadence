@@ -52,11 +52,10 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockDomainCache     *cache.MockDomainCache
-		mockMutableState    *execution.MockMutableState
-		mockClusterMetadata *cluster.MockMetadata
+		controller       *gomock.Controller
+		mockShard        *shard.TestContext
+		mockDomainCache  *cache.MockDomainCache
+		mockMutableState *execution.MockMutableState
 
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryMgr   *mocks.HistoryV2Manager
@@ -100,9 +99,6 @@ func (s *taskAckManagerSuite) SetupTest() {
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryMgr = s.mockShard.Resource.HistoryMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	executionCache := execution.NewCache(s.mockShard)

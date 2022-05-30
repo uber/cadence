@@ -56,7 +56,6 @@ type (
 		mockUpdateManager    *MocktransactionManagerForExistingWorkflow
 		mockEventsReapplier  *MockEventsReapplier
 		mockWorkflowResetter *reset.MockWorkflowResetter
-		mockClusterMetadata  *cluster.MockMetadata
 
 		mockExecutionManager *mocks.ExecutionManager
 
@@ -91,7 +90,6 @@ func (s *transactionManagerSuite) SetupTest() {
 		config.NewForTest(),
 	)
 
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockExecutionManager = s.mockShard.Resource.ExecutionMgr
 
 	s.logger = s.mockShard.GetLogger()
@@ -155,9 +153,6 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Op
 	workflow.EXPECT().GetMutableState().Return(mutableState).AnyTimes()
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
 
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.domainEntry.GetFailoverVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
-
 	s.mockEventsReapplier.EXPECT().ReapplyEvents(ctx, mutableState, workflowEvents.Events, runID).Return(workflowEvents.Events, nil).Times(1)
 
 	mutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(true).AnyTimes()
@@ -200,9 +195,6 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Active_Cl
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
 	workflow.EXPECT().GetMutableState().Return(mutableState).AnyTimes()
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
-
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.domainEntry.GetFailoverVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	mutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(false).AnyTimes()
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
@@ -266,9 +258,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_O
 	workflow.EXPECT().GetMutableState().Return(mutableState).AnyTimes()
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
 
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.domainEntry.GetFailoverVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestAlternativeClusterName).AnyTimes()
-
+	s.transactionManager.clusterMetadata = cluster.TestPassiveClusterMetadata
 	mutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(true).AnyTimes()
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
@@ -303,9 +293,7 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_CurrentWorkflow_Passive_C
 	workflow.EXPECT().GetMutableState().Return(mutableState).AnyTimes()
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
 
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.domainEntry.GetFailoverVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestAlternativeClusterName).AnyTimes()
-
+	s.transactionManager.clusterMetadata = cluster.TestPassiveClusterMetadata
 	mutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(false).AnyTimes()
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
@@ -358,9 +346,6 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Active
 	workflow.EXPECT().GetMutableState().Return(mutableState).AnyTimes()
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
 
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.domainEntry.GetFailoverVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-
 	mutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(false).AnyTimes()
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
 	mutableState.EXPECT().GetDomainEntry().Return(s.domainEntry).AnyTimes()
@@ -411,9 +396,6 @@ func (s *transactionManagerSuite) TestBackfillWorkflow_NotCurrentWorkflow_Passiv
 	workflow.EXPECT().GetContext().Return(context).AnyTimes()
 	workflow.EXPECT().GetMutableState().Return(mutableState).AnyTimes()
 	workflow.EXPECT().GetReleaseFn().Return(releaseFn).AnyTimes()
-
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.domainEntry.GetFailoverVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestAlternativeClusterName).AnyTimes()
 
 	mutableState.EXPECT().IsCurrentWorkflowGuaranteed().Return(false).AnyTimes()
 	mutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
