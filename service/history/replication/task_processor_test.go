@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -68,7 +67,6 @@ type (
 		mockClientBean     *client.MockBean
 		mockFrontendClient *frontend.MockClient
 		adminClient        *admin.MockClient
-		clusterMetadata    *cluster.MockMetadata
 		executionManager   *mocks.ExecutionManager
 		requestChan        chan *request
 		taskExecutor       *MockTaskExecutor
@@ -108,7 +106,6 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.mockClientBean = s.mockShard.Resource.ClientBean
 	s.mockFrontendClient = s.mockShard.Resource.RemoteFrontendClient
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
-	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
 	s.taskExecutor = NewMockTaskExecutor(s.controller)
 
@@ -125,7 +122,6 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.taskFetcher.EXPECT().GetSourceCluster().Return("standby").AnyTimes()
 	s.taskFetcher.EXPECT().GetRequestChan().Return(s.requestChan).AnyTimes()
 	s.taskFetcher.EXPECT().GetRateLimiter().Return(rateLimiter).AnyTimes()
-	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 
 	s.taskProcessor = NewTaskProcessor(
 		s.mockShard,
@@ -300,7 +296,6 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 			s.Equal(reconciliation.CheckDataCorruptionWorkflowSignalName, request.GetSignalName())
 			s.Equal(jsArray, request.GetSignalInput())
 		}).Return(&types.StartWorkflowExecutionResponse{}, nil)
-	s.clusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(100)).Return("active")
 
 	err = s.taskProcessor.triggerDataInconsistencyScan(task)
 	s.NoError(err)

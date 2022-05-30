@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -50,7 +49,6 @@ type (
 		config           *config.Config
 		mockClientBean   *client.MockBean
 		adminClient      *admin.MockClient
-		clusterMetadata  *cluster.MockMetadata
 		executionManager *mocks.ExecutionManager
 		shardManager     *mocks.ShardManager
 		taskExecutor     *MockTaskExecutor
@@ -92,11 +90,9 @@ func (s *dlqHandlerSuite) SetupTest() {
 
 	s.mockClientBean = s.mockShard.Resource.ClientBean
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
-	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
 	s.shardManager = s.mockShard.Resource.ShardMgr
 
-	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 	s.taskExecutors = make(map[string]TaskExecutor)
 	s.taskExecutor = NewMockTaskExecutor(s.controller)
 	s.sourceCluster = "test"

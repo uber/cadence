@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -35,9 +34,8 @@ type (
 	attrValidatorSuite struct {
 		suite.Suite
 
-		minRetentionDays    int
-		mockClusterMetadata *mocks.ClusterMetadata
-		validator           *AttrValidatorImpl
+		minRetentionDays int
+		validator        *AttrValidatorImpl
 	}
 )
 
@@ -54,8 +52,7 @@ func (s *attrValidatorSuite) TearDownSuite() {
 
 func (s *attrValidatorSuite) SetupTest() {
 	s.minRetentionDays = 1
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.validator = newAttrValidator(s.mockClusterMetadata, int32(s.minRetentionDays))
+	s.validator = newAttrValidator(cluster.TestActiveClusterMetadata, int32(s.minRetentionDays))
 }
 
 func (s *attrValidatorSuite) TearDownTest() {
@@ -88,10 +85,6 @@ func (s *attrValidatorSuite) TestValidateConfigRetentionPeriod() {
 }
 
 func (s *attrValidatorSuite) TestClusterName() {
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(
-		cluster.TestAllClusterInfo,
-	)
-
 	err := s.validator.validateClusterName("some random foo bar")
 	s.IsType(&types.BadRequestError{}, err)
 
@@ -103,13 +96,6 @@ func (s *attrValidatorSuite) TestClusterName() {
 }
 
 func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForLocalDomain() {
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(
-		cluster.TestCurrentClusterName,
-	)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(
-		cluster.TestAllClusterInfo,
-	)
-
 	err := s.validator.validateDomainReplicationConfigForLocalDomain(
 		&persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestAlternativeClusterName,
@@ -154,13 +140,6 @@ func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForLocalDomain()
 }
 
 func (s *attrValidatorSuite) TestValidateDomainReplicationConfigForGlobalDomain() {
-	s.mockClusterMetadata.On("GetCurrentClusterName").Return(
-		cluster.TestCurrentClusterName,
-	)
-	s.mockClusterMetadata.On("GetAllClusterInfo").Return(
-		cluster.TestAllClusterInfo,
-	)
-
 	err := s.validator.validateDomainReplicationConfigForGlobalDomain(
 		&persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.TestCurrentClusterName,

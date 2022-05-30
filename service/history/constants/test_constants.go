@@ -29,7 +29,7 @@ import (
 
 var (
 	// TestVersion is the workflow version for test
-	TestVersion = int64(1234)
+	TestVersion = cluster.TestCurrentClusterInitialFailoverVersion + (cluster.TestFailoverVersionIncrement * 5)
 	// TestDomainID is the domainID for test
 	TestDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
 	// TestDomainName is the domainName for test

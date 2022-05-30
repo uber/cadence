@@ -133,7 +133,7 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 	}
 	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion, "")
 	metadata := options.ClusterMetadata
-	if metadata == nil {
+	if metadata.GetCurrentClusterName() == "" {
 		metadata = cluster.GetTestClusterMetadata(false)
 	}
 	dc := persistence.DynamicConfiguration{
@@ -155,7 +155,7 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	}
 	testCluster := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	metadata := options.ClusterMetadata
-	if metadata == nil {
+	if metadata.GetCurrentClusterName() == "" {
 		metadata = cluster.GetTestClusterMetadata(false)
 	}
 	dc := persistence.DynamicConfiguration{

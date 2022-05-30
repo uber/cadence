@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -47,13 +46,12 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockEventsCache     *events.MockCache
-		mockDomainCache     *cache.MockDomainCache
-		mockTaskGenerator   *MockMutableStateTaskGenerator
-		mockMutableState    *MockMutableState
-		mockClusterMetadata *cluster.MockMetadata
+		controller        *gomock.Controller
+		mockShard         *shard.TestContext
+		mockEventsCache   *events.MockCache
+		mockDomainCache   *cache.MockDomainCache
+		mockTaskGenerator *MockMutableStateTaskGenerator
+		mockMutableState  *MockMutableState
 
 		mockTaskGeneratorForNew *MockMutableStateTaskGenerator
 
@@ -96,9 +94,7 @@ func (s *stateBuilderSuite) SetupTest() {
 	)
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockEventsCache = s.mockShard.MockEventsCache
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
@@ -474,7 +470,6 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionContinuedA
 		newRunStartedEvent, newRunSignalEvent, newRunDecisionEvent,
 	}
 
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(continueAsNewEvent.Version).Return(s.sourceCluster).AnyTimes()
 	s.mockMutableState.EXPECT().ReplicateWorkflowExecutionContinuedAsNewEvent(
 		continueAsNewEvent.ID,
 		constants.TestDomainID,
