@@ -379,26 +379,10 @@ type MatchingPollForDecisionTaskResponse struct {
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 }
 
-// GetTaskToken is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetTaskToken() (o []byte) {
-	if v != nil && v.TaskToken != nil {
-		return v.TaskToken
-	}
-	return
-}
-
 // GetWorkflowExecution is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetWorkflowExecution() (o *WorkflowExecution) {
 	if v != nil && v.WorkflowExecution != nil {
 		return v.WorkflowExecution
-	}
-	return
-}
-
-// GetWorkflowType is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetWorkflowType() (o *WorkflowType) {
-	if v != nil && v.WorkflowType != nil {
-		return v.WorkflowType
 	}
 	return
 }
@@ -411,34 +395,10 @@ func (v *MatchingPollForDecisionTaskResponse) GetPreviousStartedEventID() (o int
 	return
 }
 
-// GetStartedEventID is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetStartedEventID() (o int64) {
-	if v != nil {
-		return v.StartedEventID
-	}
-	return
-}
-
-// GetAttempt is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetAttempt() (o int64) {
-	if v != nil {
-		return v.Attempt
-	}
-	return
-}
-
 // GetNextEventID is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetNextEventID() (o int64) {
 	if v != nil {
 		return v.NextEventID
-	}
-	return
-}
-
-// GetBacklogCountHint is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetBacklogCountHint() (o int64) {
-	if v != nil {
-		return v.BacklogCountHint
 	}
 	return
 }
@@ -451,66 +411,10 @@ func (v *MatchingPollForDecisionTaskResponse) GetStickyExecutionEnabled() (o boo
 	return
 }
 
-// GetQuery is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetQuery() (o *WorkflowQuery) {
-	if v != nil && v.Query != nil {
-		return v.Query
-	}
-	return
-}
-
-// GetDecisionInfo is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetDecisionInfo() (o *TransientDecisionInfo) {
-	if v != nil && v.DecisionInfo != nil {
-		return v.DecisionInfo
-	}
-	return
-}
-
-// GetWorkflowExecutionTaskList is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetWorkflowExecutionTaskList() (o *TaskList) {
-	if v != nil && v.WorkflowExecutionTaskList != nil {
-		return v.WorkflowExecutionTaskList
-	}
-	return
-}
-
-// GetEventStoreVersion is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetEventStoreVersion() (o int32) {
-	if v != nil {
-		return v.EventStoreVersion
-	}
-	return
-}
-
 // GetBranchToken is an internal getter (TBD...)
 func (v *MatchingPollForDecisionTaskResponse) GetBranchToken() (o []byte) {
 	if v != nil && v.BranchToken != nil {
 		return v.BranchToken
-	}
-	return
-}
-
-// GetScheduledTimestamp is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetScheduledTimestamp() (o int64) {
-	if v != nil && v.ScheduledTimestamp != nil {
-		return *v.ScheduledTimestamp
-	}
-	return
-}
-
-// GetStartedTimestamp is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetStartedTimestamp() (o int64) {
-	if v != nil && v.StartedTimestamp != nil {
-		return *v.StartedTimestamp
-	}
-	return
-}
-
-// GetQueries is an internal getter (TBD...)
-func (v *MatchingPollForDecisionTaskResponse) GetQueries() (o map[string]*WorkflowQuery) {
-	if v != nil && v.Queries != nil {
-		return v.Queries
 	}
 	return
 }

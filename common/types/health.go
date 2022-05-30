@@ -25,19 +25,3 @@ type HealthStatus struct {
 	Ok  bool   `json:"ok,required"`
 	Msg string `json:"msg,omitempty"`
 }
-
-// GetOk is an internal getter (TBD...)
-func (v *HealthStatus) GetOk() (o bool) {
-	if v != nil {
-		return v.Ok
-	}
-	return
-}
-
-// GetMsg is an internal getter (TBD...)
-func (v *HealthStatus) GetMsg() (o string) {
-	if v != nil {
-		return v.Msg
-	}
-	return
-}
