@@ -292,7 +292,7 @@ func trimString(str string, maxLength int) string {
 
 	items := strings.Split(str, "/")
 	lastItem := items[len(items)-1]
-	if len(str) < maxLength {
+	if len(lastItem) < maxLength {
 		return ".../" + lastItem
 	}
 
