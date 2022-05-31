@@ -436,6 +436,10 @@ func (p *workflowExecutionPersistenceClient) ListCurrentExecutions(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ListCurrentExecutions(ctx, request)
+		if err == nil && len(resp.Executions) == 0 {
+			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
+				metrics.OperationTag("ListCurrentExecutions")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceListCurrentExecutionsScope, op)
@@ -641,6 +645,10 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetReplicationTasksFromDLQ(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
+				metrics.OperationTag("GetReplicationTasksFromDLQ")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetReplicationTasksFromDLQScope, op)
@@ -980,6 +988,10 @@ func (p *metadataPersistenceClient) ListDomains(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ListDomains(ctx, request)
+		if err == nil && len(resp.Domains) == 0 {
+			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
+				metrics.OperationTag("ListDomains")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceListDomainScope, op)
@@ -1365,6 +1377,10 @@ func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetAllHistoryTreeBranches(ctx, request)
+		if err == nil && len(resp.Branches) == 0 {
+			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
+				metrics.OperationTag("GetAllHistoryTreeBranches")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetAllHistoryTreeBranchesScope, op)
@@ -1411,6 +1427,10 @@ func (p *queuePersistenceClient) ReadMessages(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
+		if err == nil && len(resp) == 0 {
+			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
+				metrics.OperationTag("ReadMessages")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceReadQueueMessagesScope, op)
