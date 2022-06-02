@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/client/admin"
 	historyClient "github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/ndc"
@@ -58,7 +57,6 @@ type (
 		mockDomainCache    *cache.MockDomainCache
 		mockClientBean     *client.MockBean
 		adminClient        *admin.MockClient
-		clusterMetadata    *cluster.MockMetadata
 		executionManager   *mocks.ExecutionManager
 		nDCHistoryResender *ndc.MockHistoryResender
 
@@ -97,13 +95,10 @@ func (s *taskExecutorSuite) SetupTest() {
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockClientBean = s.mockShard.Resource.ClientBean
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
-	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
 	s.nDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.historyClient = s.mockShard.Resource.HistoryClient
-
-	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 
 	s.taskHandler = NewTaskExecutor(
 		s.mockShard,
@@ -146,7 +141,6 @@ func (s *taskExecutorSuite) TestFilterTask() {
 					},
 				}},
 			0,
-			s.clusterMetadata,
 		), nil)
 	ok, err := s.taskHandler.filterTask(domainID, false)
 	s.NoError(err)

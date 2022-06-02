@@ -35,7 +35,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -57,13 +56,12 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockTxProcessor     *queue.MockProcessor
-		mockTimerProcessor  *queue.MockProcessor
-		mockEventsCache     *events.MockCache
-		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
+		controller         *gomock.Controller
+		mockShard          *shard.TestContext
+		mockTxProcessor    *queue.MockProcessor
+		mockTimerProcessor *queue.MockProcessor
+		mockEventsCache    *events.MockCache
+		mockDomainCache    *cache.MockDomainCache
 
 		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager
@@ -107,12 +105,9 @@ func (s *engine3Suite) SetupTest() {
 
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockEventsCache = s.mockShard.MockEventsCache
 
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
@@ -120,7 +115,7 @@ func (s *engine3Suite) SetupTest() {
 	h := &historyEngineImpl{
 		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
-		clusterMetadata:      s.mockClusterMetadata,
+		clusterMetadata:      s.mockShard.Resource.ClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		executionCache:       execution.NewCache(s.mockShard),
@@ -147,10 +142,9 @@ func (s *engine3Suite) TearDownTest() {
 
 func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "",
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
@@ -228,10 +222,9 @@ func (s *engine3Suite) TestRecordDecisionTaskStartedSuccessStickyEnabled() {
 
 func (s *engine3Suite) TestStartWorkflowExecution_BrandNew() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "",
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
@@ -272,10 +265,10 @@ func (s *engine3Suite) TestStartWorkflowExecution_DeprecatedDomain() {
 	identity := "testIdentity"
 	requestID := uuid.New()
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: domainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: domainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "",
 	)
 
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil)
 
 	_, err := s.historyEngine.StartWorkflowExecution(context.Background(), &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID: domainID,
@@ -294,13 +287,9 @@ func (s *engine3Suite) TestStartWorkflowExecution_DeprecatedDomain() {
 }
 func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "",
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID("").Return(nil, &types.BadRequestError{
-		Message: "Missing domain UUID.",
-	}).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Not("")).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
@@ -349,13 +338,9 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_JustSignal() {
 
 func (s *engine3Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName}, &p.DomainConfig{Retention: 1}, "",
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID("").Return(nil, &types.BadRequestError{
-		Message: "Missing domain UUID.",
-	}).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Not("")).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
 
@@ -411,7 +396,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_DeprecatedDomain() {
 	requestID := uuid.New()
 
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: domainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: domainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "",
 	)
 
 	sRequest := &types.HistorySignalWithStartWorkflowExecutionRequest{
@@ -430,7 +415,7 @@ func (s *engine3Suite) TestSignalWithStartWorkflowExecution_DeprecatedDomain() {
 		},
 	}
 
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil)
 
 	_, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
 	s.IsType(&types.BadRequestError{}, err)
@@ -456,10 +441,10 @@ func (s *engine3Suite) TestSignalWorkflowExecution_DeprecatedDomain() {
 	}
 
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID, Name: constants.TestDomainName, Status: p.DomainStatusDeprecated}, &p.DomainConfig{Retention: 1}, "",
 	)
 
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Any()).Return(testDomainEntry, nil)
+	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil)
 
 	err := s.historyEngine.SignalWorkflowExecution(context.Background(), signalRequest)
 	s.IsType(&types.BadRequestError{}, err)

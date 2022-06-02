@@ -102,7 +102,6 @@ func (s *oauthSuite) SetupTest() {
 			},
 		},
 		1234, // not used
-		nil,
 	)
 
 	s.controller = gomock.NewController(s.T())

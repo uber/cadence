@@ -348,7 +348,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupLocalDomain() {
 		&persistence.DomainInfo{ID: s.domainID, Name: s.domainName},
 		&persistence.DomainConfig{Retention: 1},
 		cluster.TestCurrentClusterName,
-		nil,
 	)
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(domainEntry, nil).AnyTimes()
@@ -371,7 +370,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithTwoR
 			},
 		},
 		1234, // not used
-		nil,
 	)
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(domainEntry, nil).AnyTimes()

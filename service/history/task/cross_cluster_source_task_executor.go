@@ -552,7 +552,7 @@ func (t *crossClusterSourceTaskExecutor) verifyDomainActive(
 		return ErrTaskPendingActive
 	}
 
-	if !entry.IsDomainActive() {
+	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
 		// set processing state to invalidated so that a new task can be created
 		t.setTaskState(task, ctask.TaskStatePending, processingStateInvalidated)
 		return nil

@@ -76,7 +76,6 @@ type (
 		mockDomainCache      *cache.MockDomainCache
 		mockHistoryClient    *hclient.MockClient
 		mockMatchingClient   *matching.MockClient
-		mockClusterMetadata  *cluster.MockMetadata
 		mockEventsReapplier  *ndc.MockEventsReapplier
 		mockWorkflowResetter *reset.MockWorkflowResetter
 
@@ -135,16 +134,8 @@ func (s *engineSuite) SetupTest() {
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
 	s.mockShardManager = s.mockShard.Resource.ShardMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestSingleDCClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestDomainID).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID("").Return(nil, &types.BadRequestError{
-		Message: "Missing domain UUID.",
-	}).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(constants.TestDomainID).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(constants.TestDomainName).Return(constants.TestLocalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
@@ -161,7 +152,7 @@ func (s *engineSuite) SetupTest() {
 		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
 		timeSource:           s.mockShard.GetTimeSource(),
-		clusterMetadata:      s.mockClusterMetadata,
+		clusterMetadata:      s.mockShard.Resource.ClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		executionCache:       execution.NewCache(s.mockShard),
@@ -1641,7 +1632,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 			},
 		},
 		cluster.TestCurrentClusterName,
-		nil,
 	)
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
@@ -1664,7 +1654,6 @@ func (s *engineSuite) TestRespondDecisionTaskCompletedBadBinary() {
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{Size: 0}, nil).Once()
 	s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(domainID).Return(domainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(constants.TestDomainName, nil).AnyTimes()
 
 	_, err := s.mockHistoryEngine.RespondDecisionTaskCompleted(context.Background(), &types.HistoryRespondDecisionTaskCompletedRequest{

@@ -50,14 +50,13 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
-		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
-		mockExecutionMgr    *mocks.ExecutionManager
-		mockHistoryV2Mgr    *mocks.HistoryV2Manager
-		executionCache      *execution.Cache
+		controller       *gomock.Controller
+		mockShard        *shard.TestContext
+		mockEngine       *engine.MockEngine
+		mockDomainCache  *cache.MockDomainCache
+		mockExecutionMgr *mocks.ExecutionManager
+		mockHistoryV2Mgr *mocks.HistoryV2Manager
+		executionCache   *execution.Cache
 
 		executor Executor
 	}
@@ -95,7 +94,6 @@ func (s *crossClusterSourceTaskExecutorSuite) SetupTest() {
 	s.mockEngine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any(), gomock.Any()).AnyTimes()
 	s.mockShard.SetEngine(s.mockEngine)
 
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
@@ -112,8 +110,6 @@ func (s *crossClusterSourceTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestParentDomainID).Return(constants.TestGlobalParentDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestParentDomainID).Return(constants.TestParentDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestParentDomainName).Return(constants.TestParentDomainID, nil).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
 
 	s.executionCache = execution.NewCache(s.mockShard)
 	s.executor = NewCrossClusterSourceTaskExecutor(
@@ -168,7 +164,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecute_DomainNotActive() {
 						return transferTask.GetType() == p.TransferTaskTypeCancelExecution
 					},
 				)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-				s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestAlternativeClusterName).AnyTimes()
 			},
 			func(task *crossClusterSourceTask) {
 				s.Equal(ctask.TaskStateAcked, task.state)
@@ -250,8 +245,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteRecordChildCompleteExec
 				s.NoError(err)
 				s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(
 					&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-				s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(
-					s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 				if tc.willGenerateNewTask {
 					s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 						func(request *p.UpdateWorkflowExecutionRequest) bool {
@@ -368,7 +361,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicy() {
 					persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, lastEvent.ID, lastEvent.Version)
 					s.NoError(err)
 					s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-					s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 					if tc.willGenerateNewTask {
 						s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(
 							func(request *p.UpdateWorkflowExecutionRequest) bool {
@@ -575,7 +567,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestApplyParentClosePolicyPartialR
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&p.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID("remote-domain-1").Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID("remote-domain-2").Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID("remote-domain-3").Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
@@ -655,7 +646,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Success
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
 			)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
 		},
 		func(task *crossClusterSourceTask) {
 			s.Equal(ctask.TaskStateAcked, task.state)
@@ -693,7 +683,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteCancelExecution_Failure
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
 			)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
 		},
 		func(task *crossClusterSourceTask) {
 			s.Equal(ctask.TaskStateAcked, task.state)
@@ -822,7 +811,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
 			)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
 		},
 		func(task *crossClusterSourceTask) {
 			s.Equal(ctask.TaskStatePending, task.state)
@@ -861,7 +849,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteSignalExecution_InitSta
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
 			)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
 		},
 		func(task *crossClusterSourceTask) {
 			s.Equal(ctask.TaskStateAcked, task.state)
@@ -1023,7 +1010,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
 			)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
 		},
 		func(task *crossClusterSourceTask) {
 			s.Equal(ctask.TaskStatePending, task.state)
@@ -1062,7 +1048,6 @@ func (s *crossClusterSourceTaskExecutorSuite) TestExecuteStartChildExecution_Ini
 						len(req.UpdateWorkflowMutation.TransferTasks) == 1 // one decision task
 				},
 			)).Return(&p.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &p.MutableStateUpdateSessionStats{}}, nil).Once()
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(mutableState.GetCurrentVersion()).Return(cluster.TestCurrentClusterName).AnyTimes()
 		},
 		func(task *crossClusterSourceTask) {
 			s.Equal(ctask.TaskStateAcked, task.state)

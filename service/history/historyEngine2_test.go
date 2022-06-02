@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -63,13 +62,12 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockTxProcessor     *queue.MockProcessor
-		mockTimerProcessor  *queue.MockProcessor
-		mockEventsCache     *events.MockCache
-		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
+		controller         *gomock.Controller
+		mockShard          *shard.TestContext
+		mockTxProcessor    *queue.MockProcessor
+		mockTimerProcessor *queue.MockProcessor
+		mockEventsCache    *events.MockCache
+		mockDomainCache    *cache.MockDomainCache
 
 		historyEngine    *historyEngineImpl
 		mockExecutionMgr *mocks.ExecutionManager
@@ -117,21 +115,13 @@ func (s *engine2Suite) SetupTest() {
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
 	s.mockShardManager = s.mockShard.Resource.ShardMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockEventsCache = s.mockShard.MockEventsCache
 	testDomainEntry := cache.NewLocalDomainCacheEntryForTest(
-		&p.DomainInfo{ID: constants.TestDomainID}, &p.DomainConfig{}, "", nil,
+		&p.DomainInfo{ID: constants.TestDomainID}, &p.DomainConfig{}, "",
 	)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(testDomainEntry, nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID("").Return(nil, &types.BadRequestError{
-		Message: "Missing domain UUID.",
-	}).AnyTimes()
-	s.mockDomainCache.EXPECT().GetActiveDomainByID(gomock.Not("")).Return(testDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainID, nil).AnyTimes()
 	s.mockEventsCache.EXPECT().PutEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(common.EmptyVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 
@@ -139,7 +129,7 @@ func (s *engine2Suite) SetupTest() {
 	h := &historyEngineImpl{
 		currentClusterName:   s.mockShard.GetClusterMetadata().GetCurrentClusterName(),
 		shard:                s.mockShard,
-		clusterMetadata:      s.mockClusterMetadata,
+		clusterMetadata:      s.mockShard.Resource.ClusterMetadata,
 		executionManager:     s.mockExecutionMgr,
 		historyV2Mgr:         s.mockHistoryV2Mgr,
 		executionCache:       executionCache,

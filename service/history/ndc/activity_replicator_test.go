@@ -52,12 +52,11 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
-		mockDomainCache     *cache.MockDomainCache
-		mockClusterMetadata *cluster.MockMetadata
-		mockMutableState    *execution.MockMutableState
+		controller       *gomock.Controller
+		mockShard        *shard.TestContext
+		mockEngine       *engine.MockEngine
+		mockDomainCache  *cache.MockDomainCache
+		mockMutableState *execution.MockMutableState
 
 		mockExecutionMgr *mocks.ExecutionManager
 
@@ -99,10 +98,6 @@ func (s *activityReplicatorSuite) SetupTest() {
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-
 	s.logger = s.mockShard.GetLogger()
 
 	s.executionCache = execution.NewCache(s.mockShard)
@@ -156,7 +151,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowNotFound() {
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -200,7 +194,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -263,7 +256,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -314,7 +306,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -392,7 +383,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -467,7 +457,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -557,7 +546,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -645,7 +633,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -722,7 +709,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 
@@ -778,7 +764,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(nil, false).AnyTimes()
@@ -835,7 +820,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 				},
 			},
 			lastWriteVersion,
-			nil,
 		), nil,
 	).AnyTimes()
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(&persistence.ActivityInfo{
@@ -905,7 +889,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -914,7 +897,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 		Attempt:    attempt,
 	}
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(activityInfo, true).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(version, activityInfo.Version).Return(true).AnyTimes()
 
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
 	s.mockMutableState.EXPECT().ReplicateActivityInfo(request, false).Return(expectedErr).Times(1)
@@ -982,7 +964,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -991,7 +972,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 		Attempt:    attempt - 1,
 	}
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(activityInfo, true).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(version, activityInfo.Version).Return(true).AnyTimes()
 
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
 	s.mockMutableState.EXPECT().ReplicateActivityInfo(request, true).Return(expectedErr).Times(1)
@@ -1059,7 +1039,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -1068,7 +1047,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 		Attempt:    attempt + 1,
 	}
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(activityInfo, true).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(version, activityInfo.Version).Return(false).AnyTimes()
 
 	expectedErr := errors.New("this is error is used to by pass lots of mocking")
 	s.mockMutableState.EXPECT().ReplicateActivityInfo(request, true).Return(expectedErr).Times(1)
@@ -1135,7 +1113,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -1146,7 +1123,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(activityInfo, true).AnyTimes()
 	activityInfos := map[int64]*persistence.ActivityInfo{activityInfo.ScheduleID: activityInfo}
 	s.mockMutableState.EXPECT().GetPendingActivityInfos().Return(activityInfos).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(version, activityInfo.Version).Return(false).AnyTimes()
 
 	s.mockMutableState.EXPECT().ReplicateActivityInfo(request, true).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().UpdateActivity(activityInfo).Return(nil).Times(1)
@@ -1224,7 +1200,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 				},
 			},
 			version,
-			nil,
 		), nil,
 	).AnyTimes()
 	activityInfo := &persistence.ActivityInfo{
@@ -1235,7 +1210,6 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 	s.mockMutableState.EXPECT().GetActivityInfo(scheduleID).Return(activityInfo, true).AnyTimes()
 	activityInfos := map[int64]*persistence.ActivityInfo{activityInfo.ScheduleID: activityInfo}
 	s.mockMutableState.EXPECT().GetPendingActivityInfos().Return(activityInfos).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsVersionFromSameCluster(version, activityInfo.Version).Return(false).AnyTimes()
 
 	s.mockMutableState.EXPECT().ReplicateActivityInfo(request, true).Return(nil).Times(1)
 	s.mockMutableState.EXPECT().UpdateActivity(activityInfo).Return(nil).Times(1)

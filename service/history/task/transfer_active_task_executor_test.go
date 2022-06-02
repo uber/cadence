@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/archiver/provider"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
@@ -64,13 +63,12 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
-		mockDomainCache     *cache.MockDomainCache
-		mockHistoryClient   *hclient.MockClient
-		mockMatchingClient  *matching.MockClient
-		mockClusterMetadata *cluster.MockMetadata
+		controller         *gomock.Controller
+		mockShard          *shard.TestContext
+		mockEngine         *engine.MockEngine
+		mockDomainCache    *cache.MockDomainCache
+		mockHistoryClient  *hclient.MockClient
+		mockMatchingClient *matching.MockClient
 
 		mockVisibilityMgr           *mocks.VisibilityManager
 		mockExecutionMgr            *mocks.ExecutionManager
@@ -167,7 +165,6 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
 	s.mockVisibilityMgr = s.mockShard.Resource.VisibilityMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockArchivalMetadata = s.mockShard.Resource.ArchivalMetadata
 	s.mockArchiverProvider = s.mockShard.Resource.ArchiverProvider
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
@@ -191,9 +188,6 @@ func (s *transferActiveTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainName(s.childDomainID).Return(s.childDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(s.childDomainName).Return(s.childDomainID, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.childDomainName).Return(s.childDomainEntry, nil).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	s.transferActiveTaskExecutor = NewTransferActiveTaskExecutor(
@@ -471,7 +465,6 @@ func (s *transferActiveTaskExecutorSuite) TestProcessCloseExecution_HasParentCro
 		) {
 			s.mockVisibilityMgr.On("RecordWorkflowExecutionClosed", mock.Anything, mock.Anything).Return(nil).Once()
 			s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewDisabledArchvialConfig())
-			s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(common.EmptyVersion)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *persistence.UpdateWorkflowExecutionRequest) bool {
 				s.Equal(persistence.UpdateWorkflowModeIgnoreCurrent, request.Mode)
 				crossClusterTasks := request.UpdateWorkflowMutation.CrossClusterTasks
@@ -703,7 +696,6 @@ func (s *transferActiveTaskExecutorSuite) expectCrossClusterApplyParentPolicyCal
 		s.Equal(persistence.CrossClusterTaskTypeApplyParentClosePolicy, crossClusterTasks[0].GetType())
 		return true
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(common.EmptyVersion)).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.remoteTargetDomainName).Return(s.remoteTargetDomainEntry, nil).AnyTimes()
 }
 
