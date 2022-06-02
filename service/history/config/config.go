@@ -182,6 +182,7 @@ type Config struct {
 	CrossClusterFetcherServiceBusyBackoffInterval dynamicconfig.DurationPropertyFn
 	CrossClusterFetcherErrorBackoffInterval       dynamicconfig.DurationPropertyFn
 	CrossClusterFetcherJitterCoefficient          dynamicconfig.FloatPropertyFn
+	CrossClusterTaskProcessorHostQPS              dynamicconfig.FloatPropertyFn
 
 	// ReplicatorQueueProcessor settings
 	ReplicatorTaskDeleteBatchSize          dynamicconfig.IntPropertyFn

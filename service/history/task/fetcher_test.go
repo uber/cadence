@@ -170,6 +170,7 @@ func (s *fetcherSuite) TestNewTaskFetchers() {
 }
 
 func (s *fetcherSuite) TestFetch() {
+
 	fetcher := newTaskFetcher(
 		cluster.TestCurrentClusterName,
 		cluster.TestAlternativeClusterName,

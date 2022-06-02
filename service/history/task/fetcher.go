@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -47,6 +48,7 @@ type (
 		ServiceBusyBackoffInterval dynamicconfig.DurationPropertyFn
 		ErrorRetryInterval         dynamicconfig.DurationPropertyFn
 		TimerJitterCoefficient     dynamicconfig.FloatPropertyFn
+		RateLimitRPS               *dynamicconfig.FloatPropertyFn
 	}
 
 	fetchRequest struct {
@@ -76,6 +78,7 @@ type (
 		shutdownWG  sync.WaitGroup
 		shutdownCh  chan struct{}
 		requestChan chan fetchRequest
+		rateLimiter *quotas.DynamicRateLimiter
 
 		fetchCtx       context.Context
 		fetchCtxCancel context.CancelFunc
@@ -204,6 +207,10 @@ func newTaskFetcher(
 	logger log.Logger,
 ) *fetcherImpl {
 	fetchCtx, fetchCtxCancel := context.WithCancel(context.Background())
+	var rateLimiter *quotas.DynamicRateLimiter
+	if options.RateLimitRPS != nil {
+		rateLimiter = quotas.NewDynamicRateLimiter(options.RateLimitRPS.AsFloat64())
+	}
 	return &fetcherImpl{
 		status:         common.DaemonStatusInitialized,
 		currentCluster: currentCluster,
@@ -221,6 +228,7 @@ func newTaskFetcher(
 		shutdownCh:     make(chan struct{}),
 		requestChan:    make(chan fetchRequest, defaultRequestChanBufferSize),
 		fetchCtx:       fetchCtx,
+		rateLimiter:    rateLimiter,
 		fetchCtxCancel: fetchCtxCancel,
 		fetchTaskFunc:  fetchTaskFunc,
 	}
@@ -313,6 +321,9 @@ func (f *fetcherImpl) aggregator() {
 			}
 			outstandingRequests[request.shardID] = request
 		case <-fetchTimer.C:
+			if f.rateLimiter != nil {
+				f.rateLimiter.Wait(f.fetchCtx)
+			}
 			var nextFetchInterval time.Duration
 			if err := f.fetch(outstandingRequests); err != nil {
 				f.logger.Error("Failed to fetch cross cluster tasks", tag.Error(err))
@@ -381,4 +392,9 @@ func (f *fetcherImpl) drainRequestCh() {
 			return
 		}
 	}
+}
+
+// GetRateLimiter returns the host level rate limiter for the fetcher
+func (f *fetcherImpl) GetRateLimiter() *quotas.DynamicRateLimiter {
+	return f.rateLimiter
 }
