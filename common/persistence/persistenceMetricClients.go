@@ -437,8 +437,7 @@ func (p *workflowExecutionPersistenceClient) ListCurrentExecutions(
 		var err error
 		resp, err = p.persistence.ListCurrentExecutions(ctx, request)
 		if err == nil && len(resp.Executions) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("ListCurrentExecutions")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceListCurrentExecutionsScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -492,8 +491,7 @@ func (p *workflowExecutionPersistenceClient) GetTransferTasks(
 		var err error
 		resp, err = p.persistence.GetTransferTasks(ctx, request)
 		if err == nil && len(resp.Tasks) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetTransferTasks")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetTransferTasksScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -513,8 +511,7 @@ func (p *workflowExecutionPersistenceClient) GetCrossClusterTasks(
 		var err error
 		resp, err = p.persistence.GetCrossClusterTasks(ctx, request)
 		if err == nil && len(resp.Tasks) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetCrossClusterTasks")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -534,8 +531,7 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 		var err error
 		resp, err = p.persistence.GetReplicationTasks(ctx, request)
 		if err == nil && len(resp.Tasks) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetReplicationTasks")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetReplicationTasksScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -646,8 +642,7 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
 		var err error
 		resp, err = p.persistence.GetReplicationTasksFromDLQ(ctx, request)
 		if err == nil && len(resp.Tasks) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetReplicationTasksFromDLQ")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetReplicationTasksFromDLQScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -721,8 +716,7 @@ func (p *workflowExecutionPersistenceClient) GetTimerIndexTasks(
 		var err error
 		resp, err = p.persistence.GetTimerIndexTasks(ctx, request)
 		if err == nil && len(resp.Timers) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetTimerIndexTasks")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetTimerIndexTasksScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -794,8 +788,7 @@ func (p *taskPersistenceClient) GetTasks(
 		var err error
 		resp, err = p.persistence.GetTasks(ctx, request)
 		if err == nil && len(resp.Tasks) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetTasks")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetTasksScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -989,8 +982,7 @@ func (p *metadataPersistenceClient) ListDomains(
 		var err error
 		resp, err = p.persistence.ListDomains(ctx, request)
 		if err == nil && len(resp.Domains) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("ListDomains")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceListDomainScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -1292,8 +1284,7 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 		var err error
 		resp, err = p.persistence.ReadHistoryBranch(ctx, request)
 		if err == nil && len(resp.HistoryEvents) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("ReadHistoryBranch")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -1378,8 +1369,7 @@ func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
 		var err error
 		resp, err = p.persistence.GetAllHistoryTreeBranches(ctx, request)
 		if err == nil && len(resp.Branches) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("GetAllHistoryTreeBranches")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
@@ -1428,8 +1418,7 @@ func (p *queuePersistenceClient) ReadMessages(
 		var err error
 		resp, err = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
 		if err == nil && len(resp) == 0 {
-			p.metricClient.Scope(metrics.PersistenceEmptyResponseScope,
-				metrics.OperationTag("ReadMessages")).IncCounter(metrics.PersistenceEmptyResponseCounter)
+			p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
