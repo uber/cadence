@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
@@ -46,11 +45,10 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockContext         *execution.MockContext
-		mockMutableState    *execution.MockMutableState
-		mockClusterMetadata *cluster.MockMetadata
+		controller       *gomock.Controller
+		mockShard        *shard.TestContext
+		mockContext      *execution.MockContext
+		mockMutableState *execution.MockMutableState
 
 		mockHistoryV2Manager *mocks.HistoryV2Manager
 
@@ -88,8 +86,6 @@ func (s *branchManagerSuite) SetupTest() {
 	)
 
 	s.mockHistoryV2Manager = s.mockShard.Resource.HistoryMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 
@@ -203,9 +199,6 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 		int64(0),
 	).Return(&types.HistoryEvent{}, nil).Times(1)
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
-
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(lastWriteVersion).Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
 
 	s.mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 

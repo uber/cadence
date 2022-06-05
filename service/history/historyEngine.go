@@ -248,20 +248,17 @@ func NewEngineWithShardContext(
 
 	historyEngImpl.eventsReapplier = ndc.NewEventsReapplier(shard.GetMetricsClient(), logger)
 
-	// Only start the replicator processor if global domain is enabled
-	if shard.GetClusterMetadata().IsGlobalDomainEnabled() {
-		historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
-			shard,
-			executionCache,
-			historyEngImpl.eventsReapplier,
-			logger,
-		)
-		historyEngImpl.nDCActivityReplicator = ndc.NewActivityReplicator(
-			shard,
-			executionCache,
-			logger,
-		)
-	}
+	historyEngImpl.nDCReplicator = ndc.NewHistoryReplicator(
+		shard,
+		executionCache,
+		historyEngImpl.eventsReapplier,
+		logger,
+	)
+	historyEngImpl.nDCActivityReplicator = ndc.NewActivityReplicator(
+		shard,
+		executionCache,
+		logger,
+	)
 
 	historyEngImpl.crossClusterTaskProcessors = task.NewCrossClusterTaskProcessors(
 		shard,
@@ -302,7 +299,6 @@ func NewEngineWithShardContext(
 			shard.GetDomainCache(),
 			adminRetryableClient,
 			resendFunc,
-			shard.GetService().GetPayloadSerializer(),
 			nil,
 			openExecutionCheck,
 			shard.GetLogger(),
@@ -551,7 +547,7 @@ func (e *historyEngineImpl) StartWorkflowExecution(
 	startRequest *types.HistoryStartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(startRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(startRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -971,12 +967,12 @@ func (e *historyEngineImpl) PollMutableState(
 func (e *historyEngineImpl) updateEntityNotExistsErrorOnPassiveCluster(err error, domainID string) error {
 	switch err.(type) {
 	case *types.EntityNotExistsError:
-		domainCache, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
+		domainEntry, domainCacheErr := e.shard.GetDomainCache().GetDomainByID(domainID)
 		if domainCacheErr != nil {
 			return err // if could not access domain cache simply return original error
 		}
 
-		if domainNotActiveErr := domainCache.GetDomainNotActiveErr(); domainNotActiveErr != nil {
+		if _, domainNotActiveErr := domainEntry.IsActiveIn(e.clusterMetadata.GetCurrentClusterName()); domainNotActiveErr != nil {
 			domainNotActiveErrCasted := domainNotActiveErr.(*types.DomainNotActiveError)
 			return &types.EntityNotExistsError{
 				Message:        "Workflow execution not found in non-active cluster",
@@ -1180,7 +1176,8 @@ func (e *historyEngineImpl) QueryWorkflow(
 	// 2. the workflow is not running, whenever a workflow is not running dispatching query directly is consistent
 	// 3. the client requested eventual consistency, in this case there are no consistency requirements so dispatching directly through matching is safe
 	// 4. if there is no pending or started decision it means no events came before query arrived, so its safe to dispatch directly
-	safeToDispatchDirectly := !de.IsDomainActive() ||
+	isActive, _ := de.IsActiveIn(e.clusterMetadata.GetCurrentClusterName())
+	safeToDispatchDirectly := !isActive ||
 		!mutableState.IsWorkflowExecutionRunning() ||
 		req.GetQueryConsistencyLevel() == types.QueryConsistencyLevelEventual ||
 		(!mutableState.HasPendingDecision() && !mutableState.HasInFlightDecision())
@@ -1270,11 +1267,12 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 		return nil, err
 	}
 	supportsStickyQuery := e.clientChecker.SupportsStickyQuery(msResp.GetClientImpl(), msResp.GetClientFeatureVersion()) == nil
+	domainIsActive, _ := de.IsActiveIn(e.clusterMetadata.GetCurrentClusterName())
 	if msResp.GetIsStickyTaskListEnabled() &&
 		len(msResp.GetStickyTaskList().GetName()) != 0 &&
 		supportsStickyQuery &&
 		e.config.EnableStickyQuery(queryRequest.GetDomain()) &&
-		de.IsDomainActive() {
+		domainIsActive {
 
 		stickyMatchingRequest := &types.MatchingQueryWorkflowRequest{
 			DomainUUID:   domainID,
@@ -1676,7 +1674,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	request *types.RecordActivityTaskStartedRequest,
 ) (*types.RecordActivityTaskStartedResponse, error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -1691,6 +1689,7 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 		RunID:      request.WorkflowExecution.RunID,
 	}
 
+	var resurrectError error
 	response := &types.RecordActivityTaskStartedResponse{}
 	err = workflow.UpdateWithAction(ctx, e.executionCache, domainID, workflowExecution, false, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) error {
@@ -1701,6 +1700,38 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 			scheduleID := request.GetScheduleID()
 			requestID := request.GetRequestID()
 			ai, isRunning := mutableState.GetActivityInfo(scheduleID)
+
+			// RecordActivityTaskStarted is already past scheduleToClose timeout.
+			// If at this point pending activity is still in mutable state it may be resurrected.
+			// Otherwise it would be completed or timed out already.
+			if isRunning && e.timeSource.Now().After(ai.ScheduledTime.Add(time.Duration(ai.ScheduleToCloseTimeout)*time.Second)) {
+				resurrectedActivities, err := execution.GetResurrectedActivities(ctx, e.shard, mutableState)
+				if err != nil {
+					e.logger.Error("Activity resurrection check failed", tag.Error(err))
+					return err
+				}
+
+				if _, ok := resurrectedActivities[scheduleID]; ok {
+					// found activity resurrection
+					domainName := mutableState.GetDomainEntry().GetInfo().Name
+					e.metricsClient.IncCounter(metrics.HistoryRecordActivityTaskStartedScope, metrics.ActivityResurrectionCounter)
+					e.logger.Error("Encounter resurrected activity, skip",
+						tag.WorkflowDomainName(domainName),
+						tag.WorkflowID(workflowExecution.GetWorkflowID()),
+						tag.WorkflowRunID(workflowExecution.GetRunID()),
+						tag.WorkflowScheduleID(scheduleID),
+					)
+
+					// remove resurrected activity from mutable state
+					if err := mutableState.DeleteActivity(scheduleID); err != nil {
+						return err
+					}
+
+					// save resurrection error but return nil here, so that mutable state would get updated in DB
+					resurrectError = workflow.ErrActivityTaskNotFound
+					return nil
+				}
+			}
 
 			// First check to see if cache needs to be refreshed as we could potentially have stale workflow execution in
 			// some extreme cassandra failure cases.
@@ -1765,6 +1796,9 @@ func (e *historyEngineImpl) RecordActivityTaskStarted(
 	if err != nil {
 		return nil, err
 	}
+	if resurrectError != nil {
+		return nil, resurrectError
+	}
 
 	return response, err
 }
@@ -1807,7 +1841,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 	req *types.HistoryRespondActivityTaskCompletedRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1888,7 +1922,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 	req *types.HistoryRespondActivityTaskFailedRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -1985,7 +2019,7 @@ func (e *historyEngineImpl) RespondActivityTaskCanceled(
 	req *types.HistoryRespondActivityTaskCanceledRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2075,7 +2109,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 	req *types.HistoryRecordActivityTaskHeartbeatRequest,
 ) (*types.RecordActivityTaskHeartbeatResponse, error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -2152,7 +2186,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	req *types.HistoryRequestCancelWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(req.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(req.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2206,7 +2240,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 	signalRequest *types.HistorySignalWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(signalRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2300,7 +2334,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	signalWithStartRequest *types.HistorySignalWithStartWorkflowExecutionRequest,
 ) (retResp *types.StartWorkflowExecutionResponse, retError error) {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(signalWithStartRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(signalWithStartRequest.DomainUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -2459,7 +2493,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 	request *types.RemoveSignalMutableStateRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(request.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(request.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2487,7 +2521,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	terminateRequest *types.HistoryTerminateWorkflowExecutionRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(terminateRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(terminateRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2540,7 +2574,7 @@ func (e *historyEngineImpl) RecordChildExecutionCompleted(
 	completionRequest *types.RecordChildExecutionCompletedRequest,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(completionRequest.DomainUUID)
+	domainEntry, err := e.getActiveDomainByID(completionRequest.DomainUUID)
 	if err != nil {
 		return err
 	}
@@ -2749,7 +2783,6 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 		request.GetRequestID(),
 		execution.NewWorkflow(
 			ctx,
-			e.shard.GetDomainCache(),
 			e.shard.GetClusterMetadata(),
 			currentContext,
 			currentMutableState,
@@ -3168,7 +3201,7 @@ func (e *historyEngineImpl) ReapplyEvents(
 	reapplyEvents []*types.HistoryEvent,
 ) error {
 
-	domainEntry, err := e.shard.GetDomainCache().GetActiveDomainByID(domainUUID)
+	domainEntry, err := e.getActiveDomainByID(domainUUID)
 	if err != nil {
 		switch {
 		case domainEntry != nil && domainEntry.IsDomainPendingActive():
@@ -3260,7 +3293,6 @@ func (e *historyEngineImpl) ReapplyEvents(
 					uuid.New(),
 					execution.NewWorkflow(
 						ctx,
-						e.shard.GetDomainCache(),
 						e.shard.GetClusterMetadata(),
 						wfContext,
 						mutableState,
@@ -3390,7 +3422,6 @@ func (e *historyEngineImpl) RefreshWorkflowTasks(
 		e.shard.GetClusterMetadata(),
 		e.shard.GetDomainCache(),
 		e.shard.GetEventsCache(),
-		e.shard.GetLogger(),
 		e.shard.GetShardID(),
 	)
 
@@ -3440,4 +3471,8 @@ func (e *historyEngineImpl) newChildContext(
 		}
 	}
 	return context.WithTimeout(context.Background(), ctxTimeout)
+}
+
+func (e *historyEngineImpl) getActiveDomainByID(id string) (*cache.DomainCacheEntry, error) {
+	return cache.GetActiveDomainByID(e.shard.GetDomainCache(), e.clusterMetadata.GetCurrentClusterName(), id)
 }

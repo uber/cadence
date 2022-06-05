@@ -49,7 +49,6 @@ type (
 		mockResource             *resource.Test
 		mockFrontendHandler      *MockHandler
 		mockRemoteFrontendClient *frontend.MockClient
-		mockClusterMetadata      *cluster.MockMetadata
 
 		mockClusterRedirectionPolicy *MockClusterRedirectionPolicy
 
@@ -62,6 +61,14 @@ type (
 		handler *ClusterRedirectionHandlerImpl
 	}
 )
+
+func TestForwardingPolicyV2ContainsV1(t *testing.T) {
+	require.NotEqual(t, selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2, selectedAPIsForwardingRedirectionPolicyAPIAllowlist)
+	for k := range selectedAPIsForwardingRedirectionPolicyAPIAllowlist {
+		_, ok := selectedAPIsForwardingRedirectionPolicyAPIAllowlistV2[k]
+		require.True(t, ok, "v2 does not contain a key that is in v1: %v", k)
+	}
+}
 
 func TestClusterRedirectionHandlerSuite(t *testing.T) {
 	s := new(clusterRedirectionHandlerSuite)
@@ -86,11 +93,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 
 	s.controller = gomock.NewController(s.T())
 	s.mockResource = resource.NewTest(s.controller, metrics.Frontend)
-	s.mockClusterMetadata = s.mockResource.ClusterMetadata
 	s.mockRemoteFrontendClient = s.mockResource.RemoteFrontendClient
-
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(s.currentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	s.config = NewConfig(
 		dynamicconfig.NewCollection(

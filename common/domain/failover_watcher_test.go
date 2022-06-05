@@ -240,7 +240,6 @@ func (s *failoverWatcherSuite) TestHandleFailoverTimeout() {
 		replicationConfig,
 		1,
 		endtime,
-		nil,
 	)
 	s.watcher.handleFailoverTimeout(domainEntry)
 }

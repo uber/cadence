@@ -165,7 +165,6 @@ func (s *timerQueueTaskExecutorBaseSuite) TestArchiveHistory_NoErr_InlineArchiva
 		nil,
 		0,
 		nil,
-		nil,
 	)
 	err := s.timerQueueTaskExecutorBase.archiveWorkflow(
 		context.Background(),
@@ -196,7 +195,6 @@ func (s *timerQueueTaskExecutorBaseSuite) TestArchiveHistory_SendSignalErr() {
 		false,
 		nil,
 		0,
-		nil,
 		nil,
 	)
 	err := s.timerQueueTaskExecutorBase.archiveWorkflow(

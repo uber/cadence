@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination metadata_mock.go
-
 package cluster
 
 import (
@@ -27,37 +25,11 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
 )
 
 type (
 	// Metadata provides information about clusters
-	Metadata interface {
-		// IsGlobalDomainEnabled whether the global domain is enabled,
-		// this attr should be discarded when cross DC is made public
-		IsGlobalDomainEnabled() bool
-		// IsPrimaryCluster whether current cluster is the primary cluster
-		IsPrimaryCluster() bool
-		// GetNextFailoverVersion return the next failover version for domain failover
-		GetNextFailoverVersion(string, int64) int64
-		// IsVersionFromSameCluster return true if 2 version are used for the same cluster
-		IsVersionFromSameCluster(version1 int64, version2 int64) bool
-		// GetPrimaryClusterName return the primary cluster name
-		GetPrimaryClusterName() string
-		// GetCurrentClusterName return the current cluster name
-		GetCurrentClusterName() string
-		// GetAllClusterInfo return the all cluster name -> corresponding info
-		GetAllClusterInfo() map[string]config.ClusterInformation
-		// ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
-		ClusterNameForFailoverVersion(failoverVersion int64) string
-	}
-
-	metadataImpl struct {
-		logger log.Logger
-		// EnableGlobalDomain whether the global domain is enabled,
-		// this attr should be discarded when cross DC is made public
-		enableGlobalDomain dynamicconfig.BoolPropertyFn
+	Metadata struct {
 		// failoverVersionIncrement is the increment of each cluster's version when failover happen
 		failoverVersionIncrement int64
 		// primaryClusterName is the name of the primary cluster, only the primary cluster can register / update domain
@@ -74,8 +46,6 @@ type (
 
 // NewMetadata create a new instance of Metadata
 func NewMetadata(
-	logger log.Logger,
-	enableGlobalDomain dynamicconfig.BoolPropertyFn,
 	failoverVersionIncrement int64,
 	primaryClusterName string,
 	currentClusterName string,
@@ -86,9 +56,7 @@ func NewMetadata(
 		versionToClusterName[info.InitialFailoverVersion] = clusterName
 	}
 
-	return &metadataImpl{
-		logger:                   logger,
-		enableGlobalDomain:       enableGlobalDomain,
+	return Metadata{
 		failoverVersionIncrement: failoverVersionIncrement,
 		primaryClusterName:       primaryClusterName,
 		currentClusterName:       currentClusterName,
@@ -97,67 +65,56 @@ func NewMetadata(
 	}
 }
 
-// IsGlobalDomainEnabled whether the global domain is enabled,
-// this attr should be discarded when cross DC is made public
-func (metadata *metadataImpl) IsGlobalDomainEnabled() bool {
-	return metadata.enableGlobalDomain()
-}
-
 // GetNextFailoverVersion return the next failover version based on input
-func (metadata *metadataImpl) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
-	info, ok := metadata.clusterGroup[cluster]
+func (m Metadata) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
+	info, ok := m.clusterGroup[cluster]
 	if !ok {
 		panic(fmt.Sprintf(
 			"Unknown cluster name: %v with given cluster initial failover version map: %v.",
 			cluster,
-			metadata.clusterGroup,
+			m.clusterGroup,
 		))
 	}
-	failoverVersion := currentFailoverVersion/metadata.failoverVersionIncrement*metadata.failoverVersionIncrement + info.InitialFailoverVersion
+	failoverVersion := currentFailoverVersion/m.failoverVersionIncrement*m.failoverVersionIncrement + info.InitialFailoverVersion
 	if failoverVersion < currentFailoverVersion {
-		return failoverVersion + metadata.failoverVersionIncrement
+		return failoverVersion + m.failoverVersionIncrement
 	}
 	return failoverVersion
 }
 
 // IsVersionFromSameCluster return true if 2 version are used for the same cluster
-func (metadata *metadataImpl) IsVersionFromSameCluster(version1 int64, version2 int64) bool {
-	return (version1-version2)%metadata.failoverVersionIncrement == 0
+func (m Metadata) IsVersionFromSameCluster(version1 int64, version2 int64) bool {
+	return (version1-version2)%m.failoverVersionIncrement == 0
 }
 
-func (metadata *metadataImpl) IsPrimaryCluster() bool {
-	return metadata.primaryClusterName == metadata.currentClusterName
-}
-
-// GetPrimaryClusterName return the primary cluster name
-func (metadata *metadataImpl) GetPrimaryClusterName() string {
-	return metadata.primaryClusterName
+func (m Metadata) IsPrimaryCluster() bool {
+	return m.primaryClusterName == m.currentClusterName
 }
 
 // GetCurrentClusterName return the current cluster name
-func (metadata *metadataImpl) GetCurrentClusterName() string {
-	return metadata.currentClusterName
+func (m Metadata) GetCurrentClusterName() string {
+	return m.currentClusterName
 }
 
 // GetAllClusterInfo return the all cluster name -> corresponding information
-func (metadata *metadataImpl) GetAllClusterInfo() map[string]config.ClusterInformation {
-	return metadata.clusterGroup
+func (m Metadata) GetAllClusterInfo() map[string]config.ClusterInformation {
+	return m.clusterGroup
 }
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
-func (metadata *metadataImpl) ClusterNameForFailoverVersion(failoverVersion int64) string {
+func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
 	if failoverVersion == common.EmptyVersion {
-		return metadata.currentClusterName
+		return m.currentClusterName
 	}
 
-	initialFailoverVersion := failoverVersion % metadata.failoverVersionIncrement
-	clusterName, ok := metadata.versionToClusterName[initialFailoverVersion]
+	initialFailoverVersion := failoverVersion % m.failoverVersionIncrement
+	clusterName, ok := m.versionToClusterName[initialFailoverVersion]
 	if !ok {
 		panic(fmt.Sprintf(
 			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
 			initialFailoverVersion,
-			metadata.clusterGroup,
-			metadata.failoverVersionIncrement,
+			m.clusterGroup,
+			m.failoverVersionIncrement,
 		))
 	}
 	return clusterName

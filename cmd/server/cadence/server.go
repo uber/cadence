@@ -190,8 +190,6 @@ func (s *server) startService() common.Daemon {
 	params.MetricsClient = metrics.NewClient(params.MetricScope, service.GetMetricsServiceIdx(params.Name, params.Logger))
 
 	params.ClusterMetadata = cluster.NewMetadata(
-		params.Logger,
-		dc.GetBoolProperty(dynamicconfig.EnableGlobalDomain, clusterGroupMetadata.EnableGlobalDomain),
 		clusterGroupMetadata.FailoverVersionIncrement,
 		clusterGroupMetadata.PrimaryClusterName,
 		clusterGroupMetadata.CurrentClusterName,

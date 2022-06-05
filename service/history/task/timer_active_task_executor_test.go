@@ -36,7 +36,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
@@ -57,12 +56,11 @@ type (
 		suite.Suite
 		*require.Assertions
 
-		controller          *gomock.Controller
-		mockShard           *shard.TestContext
-		mockEngine          *engine.MockEngine
-		mockDomainCache     *cache.MockDomainCache
-		mockMatchingClient  *matching.MockClient
-		mockClusterMetadata *cluster.MockMetadata
+		controller         *gomock.Controller
+		mockShard          *shard.TestContext
+		mockEngine         *engine.MockEngine
+		mockDomainCache    *cache.MockDomainCache
+		mockMatchingClient *matching.MockClient
 
 		mockExecutionMgr *mocks.ExecutionManager
 		mockHistoryV2Mgr *mocks.HistoryV2Manager
@@ -127,14 +125,9 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.mockMatchingClient = s.mockShard.Resource.MatchingClient
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockHistoryV2Mgr = s.mockShard.Resource.HistoryMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	// ack manager will use the domain information
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.mockClusterMetadata.GetCurrentClusterName()).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	s.executionCache = execution.NewCache(s.mockShard)

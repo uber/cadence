@@ -447,7 +447,7 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 		return "", ErrTaskPendingActive
 	}
 
-	if !entry.IsDomainActive() {
+	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
 		return "", errTargetDomainNotActive
 	}
 

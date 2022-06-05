@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -141,6 +142,7 @@ func newMatchingEngine(
 ) *matchingEngineImpl {
 	return &matchingEngineImpl{
 		taskManager:     taskMgr,
+		clusterMetadata: cluster.GetTestClusterMetadata(true),
 		historyService:  mockHistoryClient,
 		taskLists:       make(map[taskListID]taskListManager),
 		logger:          logger,

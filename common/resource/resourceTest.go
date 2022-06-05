@@ -56,7 +56,7 @@ type (
 	// Test is the test implementation used for testing
 	Test struct {
 		MetricsScope    tally.TestScope
-		ClusterMetadata *cluster.MockMetadata
+		ClusterMetadata cluster.Metadata
 
 		// other common resources
 
@@ -151,8 +151,10 @@ func NewTest(
 	scope := tally.NewTestScope("test", nil)
 
 	return &Test{
-		MetricsScope:    scope,
-		ClusterMetadata: cluster.NewMockMetadata(controller),
+		MetricsScope: scope,
+
+		// By default tests will run on active cluster unless overridden otherwise
+		ClusterMetadata: cluster.TestActiveClusterMetadata,
 
 		// other common resources
 

@@ -233,9 +233,9 @@ func newMutableStateBuilder(
 		CloseStatus:        persistence.WorkflowCloseStatusNone,
 		LastProcessedEvent: common.EmptyEventID,
 	}
-	s.hBuilder = NewHistoryBuilder(s, logger)
+	s.hBuilder = NewHistoryBuilder(s)
 
-	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s.logger, s)
+	s.taskGenerator = NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), s)
 	s.decisionTaskManager = newMutableStateDecisionTaskManager(s)
 
 	return s
@@ -2170,7 +2170,11 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 	ai *persistence.ActivityInfo,
 	ctx context.Context,
 ) bool {
-	e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).IncCounter(metrics.DecisionTypeScheduleActivityDispatchCounter)
+	taggedScope := e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).Tagged(
+		metrics.DomainTag(e.domainEntry.GetInfo().Name),
+		metrics.WorkflowTypeTag(e.GetWorkflowType().Name),
+		metrics.TaskListTag(ai.TaskList))
+	taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchCounter)
 	err := e.shard.GetService().GetMatchingClient().AddActivityTask(ctx, &types.AddActivityTaskRequest{
 		DomainUUID:       e.executionInfo.DomainID,
 		SourceDomainUUID: e.domainEntry.GetInfo().ID,
@@ -2189,9 +2193,8 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 			ScheduledTimestampOfThisAttempt: common.Int64Ptr(ai.ScheduledTime.UnixNano()),
 		},
 	})
-
 	if err == nil {
-		e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
+		taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
 		return true
 	}
 	return false
@@ -4223,7 +4226,7 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 func (e *mutableStateBuilder) cleanupTransaction() error {
 
 	// Clear all updates to prepare for the next session
-	e.hBuilder = NewHistoryBuilder(e, e.logger)
+	e.hBuilder = NewHistoryBuilder(e)
 
 	e.updateActivityInfos = make(map[int64]*persistence.ActivityInfo)
 	e.deleteActivityInfos = make(map[int64]struct{})

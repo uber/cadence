@@ -60,7 +60,6 @@ type (
 		controller             *gomock.Controller
 		mockShard              *shard.TestContext
 		mockDomainCache        *cache.MockDomainCache
-		mockClusterMetadata    *cluster.MockMetadata
 		mockNDCHistoryResender *ndc.MockHistoryResender
 		mockMatchingClient     *matching.MockClient
 
@@ -131,7 +130,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockMatchingClient = s.mockShard.Resource.MatchingClient
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
 	s.mockVisibilityMgr = s.mockShard.Resource.VisibilityMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockArchivalClient = &warchiver.ClientMock{}
 	s.mockArchivalMetadata = s.mockShard.Resource.ArchivalMetadata
 	s.mockArchiverProvider = s.mockShard.Resource.ArchiverProvider
@@ -148,10 +146,6 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestChildDomainID).Return(constants.TestGlobalChildDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestChildDomainID).Return(constants.TestChildDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainID(constants.TestChildDomainName).Return(constants.TestChildDomainID, nil).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.clusterName).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	s.clusterName = cluster.TestAlternativeClusterName

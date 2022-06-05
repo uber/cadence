@@ -58,7 +58,6 @@ type (
 		mockShard              *shard.TestContext
 		mockEngine             *engine.MockEngine
 		mockDomainCache        *cache.MockDomainCache
-		mockClusterMetadata    *cluster.MockMetadata
 		mockNDCHistoryResender *ndc.MockHistoryResender
 
 		mockExecutionMgr *mocks.ExecutionManager
@@ -130,13 +129,8 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 	// ack manager will use the domain information
 	s.mockDomainCache = s.mockShard.Resource.DomainCache
 	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
-	s.mockClusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(constants.TestDomainName, nil).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	s.mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	s.mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
-	s.mockClusterMetadata.EXPECT().ClusterNameForFailoverVersion(s.version).Return(s.clusterName).AnyTimes()
 
 	s.logger = s.mockShard.GetLogger()
 	s.timerStandbyTaskExecutor = NewTimerStandbyTaskExecutor(
