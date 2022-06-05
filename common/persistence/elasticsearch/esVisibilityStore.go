@@ -106,7 +106,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.IsCron,
 		request.NumClusters,
 		request.SearchAttributes,
-		common.WorkflowExecutionStarted,
+		common.RecordStarted,
 		0, // will not be used
 		0, // will not be used
 		0, // will not be used
@@ -133,7 +133,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.IsCron,
 		request.NumClusters,
 		request.SearchAttributes,
-		common.WorkflowExecutionStarted,
+		common.RecordClosed,
 		request.CloseTimestamp.UnixNano(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
@@ -146,7 +146,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
-	msg := getVisibilityMessage(
+	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -160,6 +160,10 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.IsCron,
 		request.NumClusters,
 		request.SearchAttributes,
+		common.UpsertSearchAttributes,
+		0, // will not be used
+		0, // will not be used
+		0, // will not be used
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -726,7 +730,7 @@ func createVisibilityMessage(
 	isCron bool,
 	NumClusters int16,
 	searchAttributes map[string][]byte,
-	notificationType string,
+	notificationType common.VisibilityOperation,
 	// specific to certain status
 	endTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
@@ -741,7 +745,7 @@ func createVisibilityMessage(
 		es.TaskList:         {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:           {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 		es.NumClusters:      {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
-		es.NotificationType: {Type: &es.FieldTypeString, StringData: common.StringPtr(notificationType)},
+		es.NotificationType: {Type: &es.FieldTypeString, StringData: common.StringPtr(string(notificationType))},
 	}
 
 	if len(memo) != 0 {
@@ -753,105 +757,11 @@ func createVisibilityMessage(
 	}
 
 	switch notificationType {
-	case common.WorkflowExecutionStarted:
-	case common.WorkflowExecutionClosed:
+	case common.RecordStarted:
+	case common.RecordClosed:
 		fields[es.CloseTime] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)}
 		fields[es.CloseStatus] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))}
 		fields[es.HistoryLength] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)}
-	}
-
-	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(wid),
-		RunID:       common.StringPtr(rid),
-		Version:     common.Int64Ptr(taskID),
-		Fields:      fields,
-	}
-	return msg
-}
-
-func getVisibilityMessage(
-	domainID string,
-	wid,
-	rid string,
-	workflowTypeName string,
-	taskList string,
-	startTimeUnixNano,
-	executionTimeUnixNano int64,
-	taskID int64,
-	memo []byte,
-	encoding common.EncodingType,
-	isCron bool,
-	NumClusters int16,
-	searchAttributes map[string][]byte,
-) *indexer.Message {
-
-	msgType := indexer.MessageTypeIndex
-	fields := map[string]*indexer.Field{
-		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
-		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
-		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
-	}
-	if len(memo) != 0 {
-		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
-		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
-	}
-	for k, v := range searchAttributes {
-		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
-	}
-
-	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(wid),
-		RunID:       common.StringPtr(rid),
-		Version:     common.Int64Ptr(taskID),
-		Fields:      fields,
-	}
-	return msg
-}
-
-func getVisibilityMessageForCloseExecution(
-	domainID string,
-	wid,
-	rid string,
-	workflowTypeName string,
-	startTimeUnixNano int64,
-	executionTimeUnixNano int64,
-	endTimeUnixNano int64,
-	closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64,
-	taskID int64,
-	memo []byte,
-	taskList string,
-	encoding common.EncodingType,
-	isCron bool,
-	NumClusters int16,
-	searchAttributes map[string][]byte,
-) *indexer.Message {
-
-	msgType := indexer.MessageTypeIndex
-	fields := map[string]*indexer.Field{
-		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
-		es.CloseTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)},
-		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
-		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
-		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
-		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
-	}
-	if len(memo) != 0 {
-		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
-		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
-	}
-	for k, v := range searchAttributes {
-		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
 	msg := &indexer.Message{
