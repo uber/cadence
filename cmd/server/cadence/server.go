@@ -200,7 +200,7 @@ func (s *server) startService() common.Daemon {
 		dynamicconfig.AdvancedVisibilityWritingMode,
 		common.GetDefaultAdvancedVisibilityWritingMode(params.PersistenceConfig.IsAdvancedVisibilityConfigExist()),
 	)()
-	isAdvancedVisEnabled := advancedVisMode != common.AdvancedVisibilityWritingModeOff
+	isAdvancedVisEnabled := common.IsAdvancedVisibilityWritingEnabled(advancedVisMode, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 	if isAdvancedVisEnabled {
 		params.MessagingClient = kafka.NewKafkaClient(&s.cfg.Kafka, params.MetricsClient, params.Logger, params.MetricScope, isAdvancedVisEnabled)
 	} else {

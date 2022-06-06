@@ -166,31 +166,34 @@ func (v *visibilityDualManager) chooseVisibilityManagerForWrite(ctx context.Cont
 
 	switch writeMode {
 	case common.AdvancedVisibilityWritingModeOff:
-		if v.dbVisibilityManager == nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
-			}
+		if v.dbVisibilityManager != nil {
+			return dbVisFunc()
+		} else {
+			v.logger.Warn("basic visibility is not available to write, fall back to advanced visibility")
+			return esVisFunc()
 		}
-		return dbVisFunc()
 	case common.AdvancedVisibilityWritingModeOn:
-		if v.esVisibilityManager == nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
-			}
+		if v.esVisibilityManager != nil {
+			return esVisFunc()
+		} else {
+			v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
+			return dbVisFunc()
 		}
-
-		return esVisFunc()
 	case common.AdvancedVisibilityWritingModeDual:
-		if v.dbVisibilityManager == nil || v.esVisibilityManager == nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
+		if v.esVisibilityManager != nil {
+			if err := esVisFunc(); err != nil {
+				return err
 			}
+			if v.dbVisibilityManager != nil {
+				return dbVisFunc()
+			} else {
+				v.logger.Warn("basic visibility is not available to write")
+				return nil
+			}
+		} else {
+			v.logger.Warn("advanced visibility is not available to write")
+			return dbVisFunc()
 		}
-
-		if err := esVisFunc(); err != nil {
-			return err
-		}
-		return dbVisFunc()
 	default:
 		return &types.InternalServiceError{
 			Message: fmt.Sprintf("Unknown visibility writing mode: %s", writeMode),
