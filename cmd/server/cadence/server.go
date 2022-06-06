@@ -198,7 +198,7 @@ func (s *server) startService() common.Daemon {
 
 	advancedVisMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
-		common.GetDefaultAdvancedVisibilityWritingMode(params.PersistenceConfig.IsAdvancedVisibilityConfigExist()),
+		common.AdvancedVisibilityWritingModeOn,
 	)()
 	isAdvancedVisEnabled := common.IsAdvancedVisibilityWritingEnabled(advancedVisMode, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 	if isAdvancedVisEnabled {

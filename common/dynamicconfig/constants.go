@@ -82,13 +82,13 @@ const (
 	// AdvancedVisibilityWritingMode is key for how to write to advanced visibility. The most useful option is "dual", which can be used for seamless migration from db visibility to advanced visibility, usually using with EnableReadVisibilityFromES
 	// KeyName: system.advancedVisibilityWritingMode
 	// Value type: String enum: "on"(means writing to advancedVisibility only, "off" (means writing to db visibility only), or "dual" (means writing to both)
-	// Default value: "on" if advanced visibility persistence is configured, otherwise "off" (see common.GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist))
+	// Default value: "on"
 	// Allowed filters: N/A
 	AdvancedVisibilityWritingMode
 	// EnableReadVisibilityFromES is key for enable read from elastic search or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility
 	// KeyName: system.enableReadVisibilityFromES
 	// Value type: Bool
-	// Default value: true if advanced visibility persistence is configured, otherwise false
+	// Default value: true
 	// Allowed filters: DomainName
 	EnableReadVisibilityFromES
 	// EmitShardDiffLog is whether emit the shard diff log
@@ -106,25 +106,25 @@ const (
 	// HistoryArchivalStatus is key for the status of history archival to override the value from static config.
 	// KeyName: system.historyArchivalStatus
 	// Value type: string enum: "enabled" or "disabled"
-	// Default value: the value in static config: common.Config.Archival.History.Status
+	// Default value: "enabled"
 	// Allowed filters: N/A
 	HistoryArchivalStatus
 	// EnableReadFromHistoryArchival is key for enabling reading history from archival store
 	// KeyName: system.enableReadFromHistoryArchival
-	// Value type: string enum: "enabled" or "disabled"
-	// Default value: the value in static config: common.Config.Archival.History.EnableRead
+	// Value type: Bool
+	// Default value: true
 	// Allowed filters: N/A
 	EnableReadFromHistoryArchival
 	// VisibilityArchivalStatus is key for the status of visibility archival to override the value from static config.
 	// KeyName: system.visibilityArchivalStatus
 	// Value type: string enum: "enabled" or "disabled"
-	// Default value: the value in static config: common.Config.Archival.Visibility.Status
+	// Default value: "enabled"
 	// Allowed filters: N/A
 	VisibilityArchivalStatus
 	// EnableReadFromVisibilityArchival is key for enabling reading visibility from archival store to override the value from static config.
 	// KeyName: system.enableReadFromVisibilityArchival
-	// Value type: string enum: "enabled" or "disabled"
-	// Default value: the value in static config: common.Config.Archival.Visibility.EnableRead
+	// Value type: Bool
+	// Default value: true
 	// Allowed filters: N/A
 	EnableReadFromVisibilityArchival
 	// EnableDomainNotActiveAutoForwarding decides requests form which domain will be forwarded to active cluster if domain is not active in current cluster.

@@ -842,15 +842,6 @@ func DeserializeSearchAttributeValue(value []byte, valueType workflow.IndexedVal
 	}
 }
 
-// GetDefaultAdvancedVisibilityWritingMode get default advancedVisibilityWritingMode based on
-// whether related config exists in static config file.
-func GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist bool) string {
-	if isAdvancedVisConfigExist {
-		return AdvancedVisibilityWritingModeOn
-	}
-	return AdvancedVisibilityWritingModeOff
-}
-
 // IsAdvancedVisibilityWritingEnabled returns true if we should write to advanced visibility
 func IsAdvancedVisibilityWritingEnabled(advancedVisibilityWritingMode string, isAdvancedVisConfigExist bool) bool {
 	return advancedVisibilityWritingMode != AdvancedVisibilityWritingModeOff && isAdvancedVisConfigExist
