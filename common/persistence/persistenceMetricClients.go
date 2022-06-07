@@ -436,6 +436,9 @@ func (p *workflowExecutionPersistenceClient) ListCurrentExecutions(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ListCurrentExecutions(ctx, request)
+		if err == nil && len(resp.Executions) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceListCurrentExecutionsScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceListCurrentExecutionsScope, op)
@@ -487,6 +490,9 @@ func (p *workflowExecutionPersistenceClient) GetTransferTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetTransferTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetTransferTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetTransferTasksScope, op)
@@ -504,6 +510,9 @@ func (p *workflowExecutionPersistenceClient) GetCrossClusterTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetCrossClusterTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetCrossClusterTasksScope, op)
@@ -521,6 +530,9 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetReplicationTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetReplicationTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetReplicationTasksScope, op)
@@ -629,6 +641,9 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetReplicationTasksFromDLQ(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetReplicationTasksFromDLQScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetReplicationTasksFromDLQScope, op)
@@ -700,6 +715,9 @@ func (p *workflowExecutionPersistenceClient) GetTimerIndexTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetTimerIndexTasks(ctx, request)
+		if err == nil && len(resp.Timers) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetTimerIndexTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetTimerIndexTasksScope, op)
@@ -769,6 +787,9 @@ func (p *taskPersistenceClient) GetTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetTasksScope, op)
@@ -960,6 +981,9 @@ func (p *metadataPersistenceClient) ListDomains(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ListDomains(ctx, request)
+		if err == nil && len(resp.Domains) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceListDomainScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceListDomainScope, op)
@@ -1259,6 +1283,9 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ReadHistoryBranch(ctx, request)
+		if err == nil && len(resp.HistoryEvents) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
@@ -1341,6 +1368,9 @@ func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetAllHistoryTreeBranches(ctx, request)
+		if err == nil && len(resp.Branches) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetAllHistoryTreeBranchesScope, op)
@@ -1387,6 +1417,9 @@ func (p *queuePersistenceClient) ReadMessages(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
+		if err == nil && len(resp) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceReadQueueMessagesScope, op)
