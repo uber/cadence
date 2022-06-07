@@ -25,6 +25,9 @@ test_eventsV2.log
 test_eventsV2_xdc
 test_eventsV2_xdc.log
 
+# Do not commit generated code
+.gen
+
 # Executables produced by cadence repo
 /cadence
 /cadence-server
