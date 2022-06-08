@@ -164,7 +164,7 @@ func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *InternalTask) (
 				return false, nil
 			}
 		}
-		return false, nil
+		return task.activityTaskDispatchInfo != nil, nil
 	case <-ctx.Done():
 		return false, nil
 	}
