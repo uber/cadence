@@ -28,10 +28,10 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "uber/cadence/api/v1/common.proto";
 import "uber/cadence/api/v1/visibility.proto";
-import "uber/cadence/shared/v1/cluster.proto";
-import "uber/cadence/shared/v1/history.proto";
-import "uber/cadence/shared/v1/queue.proto";
-import "uber/cadence/shared/v1/replication.proto";
+import "uber/cadence/admin/v1/cluster.proto";
+import "uber/cadence/admin/v1/history.proto";
+import "uber/cadence/admin/v1/queue.proto";
+import "uber/cadence/admin/v1/replication.proto";
 
 // AdminAPI provides advanced APIs for debugging and analysis with admin privilege.
 service AdminAPI {
@@ -156,7 +156,7 @@ message DescribeShardDistributionResponse {
 message DescribeHistoryHostResponse {
   int32 number_of_shards = 1;
   repeated int32 shard_ids = 2;
-  shared.v1.DomainCacheInfo domain_cache = 3;
+  DomainCacheInfo domain_cache = 3;
   string shard_controller_status = 4;
   string address = 5;
 }
@@ -170,7 +170,7 @@ message CloseShardResponse {
 
 message RemoveTaskRequest {
   int32 shard_id = 1;
-  shared.v1.TaskType task_type = 2;
+  TaskType task_type = 2;
   int64 task_id = 3;
   google.protobuf.Timestamp visibility_time = 4;
   string cluster_name = 5;
@@ -182,7 +182,7 @@ message RemoveTaskResponse {
 message ResetQueueRequest {
   int32 shard_id = 1;
   string cluster_name = 2;
-  shared.v1.TaskType task_type = 3;
+  TaskType task_type = 3;
 }
 
 message ResetQueueResponse {
@@ -191,7 +191,7 @@ message ResetQueueResponse {
 message DescribeQueueRequest {
   int32 shard_id = 1;
   string cluster_name = 2;
-  shared.v1.TaskType task_type = 3;
+  TaskType task_type = 3;
 }
 
 message DescribeQueueResponse {
@@ -201,8 +201,8 @@ message DescribeQueueResponse {
 message GetWorkflowExecutionRawHistoryV2Request {
   string domain = 1;
   api.v1.WorkflowExecution workflow_execution = 2;
-  shared.v1.VersionHistoryItem start_event = 3;
-  shared.v1.VersionHistoryItem end_event = 4;
+  VersionHistoryItem start_event = 3;
+  VersionHistoryItem end_event = 4;
   int32 page_size = 5;
   bytes next_page_token = 6;
 }
@@ -210,24 +210,24 @@ message GetWorkflowExecutionRawHistoryV2Request {
 message GetWorkflowExecutionRawHistoryV2Response {
   bytes next_page_token = 1;
   repeated api.v1.DataBlob history_batches = 2;
-  shared.v1.VersionHistory version_history = 3;
+  VersionHistory version_history = 3;
 }
 
 message GetReplicationMessagesRequest {
-  repeated shared.v1.ReplicationToken tokens = 1;
+  repeated ReplicationToken tokens = 1;
   string cluster_name = 2;
 }
 
 message GetReplicationMessagesResponse {
-  map<int32, shared.v1.ReplicationMessages> shard_messages = 1;
+  map<int32, ReplicationMessages> shard_messages = 1;
 }
 
 message GetDLQReplicationMessagesRequest {
-  repeated shared.v1.ReplicationTaskInfo task_infos = 1;
+  repeated ReplicationTaskInfo task_infos = 1;
 }
 
 message GetDLQReplicationMessagesResponse {
-  repeated shared.v1.ReplicationTask replication_tasks = 1;
+  repeated ReplicationTask replication_tasks = 1;
 }
 
 message GetDomainReplicationMessagesRequest {
@@ -241,7 +241,7 @@ message GetDomainReplicationMessagesRequest {
 }
 
 message GetDomainReplicationMessagesResponse {
-  shared.v1.ReplicationMessages messages = 1;
+  ReplicationMessages messages = 1;
 }
 
 // ReapplyEventsRequest is the request for reapply events API.
@@ -267,8 +267,8 @@ message DescribeClusterRequest {
 
 message DescribeClusterResponse {
   api.v1.SupportedClientVersions supported_client_versions = 1;
-  shared.v1.MembershipInfo membership_info = 2;
-  map<string,shared.v1.PersistenceInfo> persistence_info = 3;
+  MembershipInfo membership_info = 2;
+  map<string,PersistenceInfo> persistence_info = 3;
 }
 
 message CountDLQMessagesRequest {
@@ -276,12 +276,12 @@ message CountDLQMessagesRequest {
 }
 
 message CountDLQMessagesResponse {
-  repeated shared.v1.HistoryDLQCountEntry history = 1;
+  repeated HistoryDLQCountEntry history = 1;
   int64 domain = 2;
 }
 
 message ReadDLQMessagesRequest {
-  shared.v1.DLQType type = 1;
+  DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   google.protobuf.Int64Value inclusive_end_message_id = 4;
@@ -290,14 +290,14 @@ message ReadDLQMessagesRequest {
 }
 
 message ReadDLQMessagesResponse {
-  shared.v1.DLQType type = 1;
-  repeated shared.v1.ReplicationTask replication_tasks = 2;
-  repeated shared.v1.ReplicationTaskInfo replication_tasks_info = 3;
+  DLQType type = 1;
+  repeated ReplicationTask replication_tasks = 2;
+  repeated ReplicationTaskInfo replication_tasks_info = 3;
   bytes next_page_token = 4;
 }
 
 message PurgeDLQMessagesRequest {
-  shared.v1.DLQType type = 1;
+  DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   google.protobuf.Int64Value inclusive_end_message_id = 4;
@@ -307,7 +307,7 @@ message PurgeDLQMessagesResponse {
 }
 
 message MergeDLQMessagesRequest {
-  shared.v1.DLQType type = 1;
+  DLQType type = 1;
   int32 shard_id = 2;
   string source_cluster = 3;
   google.protobuf.Int64Value inclusive_end_message_id = 4;
@@ -331,8 +331,8 @@ message ResendReplicationTasksRequest {
   string domain_id = 1;
   api.v1.WorkflowExecution workflow_execution = 2;
   string remote_cluster = 3;
-  shared.v1.VersionHistoryItem start_event = 4;
-  shared.v1.VersionHistoryItem end_event = 5;
+  VersionHistoryItem start_event = 4;
+  VersionHistoryItem end_event = 5;
 }
 
 message ResendReplicationTasksResponse {
@@ -344,19 +344,19 @@ message GetCrossClusterTasksRequest {
 }
 
 message GetCrossClusterTasksResponse {
-  map<int32, shared.v1.CrossClusterTaskRequests> tasks_by_shard = 1;
-  map<int32, shared.v1.GetTaskFailedCause> failed_cause_by_shard = 2;
+  map<int32, CrossClusterTaskRequests> tasks_by_shard = 1;
+  map<int32, GetTaskFailedCause> failed_cause_by_shard = 2;
 }
 
 message RespondCrossClusterTasksCompletedRequest {
   int32 shard_id = 1;
   string target_cluster = 2;
-  repeated shared.v1.CrossClusterTaskResponse task_responses = 3;
+  repeated CrossClusterTaskResponse task_responses = 3;
   bool fetchNewTasks = 4;
 }
 
 message RespondCrossClusterTasksCompletedResponse {
-  shared.v1.CrossClusterTaskRequests tasks = 1;
+  CrossClusterTaskRequests tasks = 1;
 }
 
 /* If get_all is True, then all provided filters are ignored and all values associated with config_name
