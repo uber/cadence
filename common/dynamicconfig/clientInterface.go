@@ -41,15 +41,15 @@ type Client interface {
 	GetValue(name Key, defaultValue interface{}) (interface{}, error)
 	GetValueWithFilters(name Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error)
 
-	GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error)
-	GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error)
-	GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error)
-	GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error)
+	GetIntValue(name IntKey, filters map[Filter]interface{}, defaultValue int) (int, error)
+	GetFloatValue(name FloatKey, filters map[Filter]interface{}, defaultValue float64) (float64, error)
+	GetBoolValue(name BoolKey, filters map[Filter]interface{}, defaultValue bool) (bool, error)
+	GetStringValue(name StringKey, filters map[Filter]interface{}, defaultValue string) (string, error)
 	GetMapValue(
-		name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+		name MapKey, filters map[Filter]interface{}, defaultValue map[string]interface{},
 	) (map[string]interface{}, error)
 	GetDurationValue(
-		name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+		name DurationKey, filters map[Filter]interface{}, defaultValue time.Duration,
 	) (time.Duration, error)
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error

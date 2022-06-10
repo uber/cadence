@@ -1599,7 +1599,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
@@ -1639,11 +1639,11 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminUpdateDynamicConfigScope)
 	defer sw.Stop()
 
-	if request == nil {
+	if request == nil || request.ConfigName == "" {
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -1660,7 +1660,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -1687,9 +1687,9 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
-	if err != nil {
-		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
+	if err != nil || request.ConfigName == "" {
+		entries, err2 := adh.params.DynamicConfig.ListValue(nil)
 		if err2 != nil {
 			return nil, adh.error(err2, scope)
 		}
@@ -1707,15 +1707,6 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil
-}
-
-func checkValidKey(keyName string) (dc.Key, error) {
-	keyVal, ok := dc.KeyNames[keyName]
-	if !ok || keyVal == dc.UnknownKey {
-		return dc.UnknownKey, errors.New(fmt.Sprintf(
-			"invalid dynamic config parameter name: %s", keyName))
-	}
-	return keyVal, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

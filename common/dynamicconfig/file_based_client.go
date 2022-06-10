@@ -103,7 +103,7 @@ func (fc *fileBasedClient) GetValueWithFilters(name Key, filters map[Filter]inte
 	return fc.getValueWithFilters(name, filters, defaultValue)
 }
 
-func (fc *fileBasedClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (fc *fileBasedClient) GetIntValue(name IntKey, filters map[Filter]interface{}, defaultValue int) (int, error) {
 	val, err := fc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -115,7 +115,7 @@ func (fc *fileBasedClient) GetIntValue(name Key, filters map[Filter]interface{},
 	return defaultValue, errors.New("value type is not int")
 }
 
-func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (fc *fileBasedClient) GetFloatValue(name FloatKey, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
 	val, err := fc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -129,7 +129,7 @@ func (fc *fileBasedClient) GetFloatValue(name Key, filters map[Filter]interface{
 	return defaultValue, errors.New("value type is not float64")
 }
 
-func (fc *fileBasedClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (fc *fileBasedClient) GetBoolValue(name BoolKey, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
 	val, err := fc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -141,7 +141,7 @@ func (fc *fileBasedClient) GetBoolValue(name Key, filters map[Filter]interface{}
 	return defaultValue, errors.New("value type is not bool")
 }
 
-func (fc *fileBasedClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (fc *fileBasedClient) GetStringValue(name StringKey, filters map[Filter]interface{}, defaultValue string) (string, error) {
 	val, err := fc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -154,7 +154,7 @@ func (fc *fileBasedClient) GetStringValue(name Key, filters map[Filter]interface
 }
 
 func (fc *fileBasedClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name MapKey, filters map[Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
 	val, err := fc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
@@ -167,7 +167,7 @@ func (fc *fileBasedClient) GetMapValue(
 }
 
 func (fc *fileBasedClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name DurationKey, filters map[Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
 	val, err := fc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
@@ -187,7 +187,7 @@ func (fc *fileBasedClient) GetDurationValue(
 }
 
 func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
-	keyName := Keys[name]
+	keyName := name.String()
 	currentValues := make(map[string][]*constrainedValue)
 
 	confContent, err := ioutil.ReadFile(fc.config.Filepath)
@@ -269,7 +269,7 @@ func (fc *fileBasedClient) storeValues(newValues map[string][]*constrainedValue)
 }
 
 func (fc *fileBasedClient) getValueWithFilters(key Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	keyName := Keys[key]
+	keyName := key.String()
 	values := fc.values.Load().(map[string][]*constrainedValue)
 	found := false
 	for _, constrainedValue := range values[keyName] {

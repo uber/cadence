@@ -640,7 +640,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 	handler := s.handler
 	handler.config = &Config{
 		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(true),
-		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(common.DefaultAdminOperationToken),
+		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(dynamicconfig.AdminOperationToken.DefaultString()),
 	}
 
 	type test struct {
@@ -659,7 +659,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 		{
 			Name: "correct token",
 			Request: &types.AddSearchAttributeRequest{
-				SecurityToken: common.DefaultAdminOperationToken,
+				SecurityToken: dynamicconfig.AdminOperationToken.DefaultString(),
 			},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},

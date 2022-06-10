@@ -26,7 +26,6 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -186,9 +185,7 @@ func AdminListDynamicConfig(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &types.ListDynamicConfigRequest{
-		ConfigName: dynamicconfig.UnknownKey.String(),
-	}
+	req := &types.ListDynamicConfigRequest{}
 
 	val, err := adminClient.ListDynamicConfig(ctx, req)
 	if err != nil {

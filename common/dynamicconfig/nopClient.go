@@ -41,33 +41,33 @@ func (mc *nopClient) GetValueWithFilters(
 	return nil, NotFoundError
 }
 
-func (mc *nopClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (mc *nopClient) GetIntValue(name IntKey, filters map[Filter]interface{}, defaultValue int) (int, error) {
 	return defaultValue, NotFoundError
 }
 
-func (mc *nopClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (mc *nopClient) GetFloatValue(name FloatKey, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
 	return defaultValue, NotFoundError
 }
 
-func (mc *nopClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (mc *nopClient) GetBoolValue(name BoolKey, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
 	if filters[DomainName] == "TestRawHistoryDomain" {
 		return true, NotFoundError
 	}
 	return defaultValue, NotFoundError
 }
 
-func (mc *nopClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (mc *nopClient) GetStringValue(name StringKey, filters map[Filter]interface{}, defaultValue string) (string, error) {
 	return defaultValue, NotFoundError
 }
 
 func (mc *nopClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name MapKey, filters map[Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
 	return defaultValue, NotFoundError
 }
 
 func (mc *nopClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name DurationKey, filters map[Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
 	return defaultValue, NotFoundError
 }

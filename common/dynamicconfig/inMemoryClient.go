@@ -67,7 +67,7 @@ func (mc *inMemoryClient) GetValueWithFilters(
 	return mc.GetValue(name, defaultValue)
 }
 
-func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (mc *inMemoryClient) GetIntValue(name IntKey, filters map[Filter]interface{}, defaultValue int) (int, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
@@ -77,7 +77,7 @@ func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, 
 	return defaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (mc *inMemoryClient) GetFloatValue(name FloatKey, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
@@ -87,7 +87,7 @@ func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}
 	return defaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (mc *inMemoryClient) GetBoolValue(name BoolKey, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
@@ -97,7 +97,7 @@ func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{},
 	return defaultValue, NotFoundError
 }
 
-func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (mc *inMemoryClient) GetStringValue(name StringKey, filters map[Filter]interface{}, defaultValue string) (string, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
@@ -108,7 +108,7 @@ func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{
 }
 
 func (mc *inMemoryClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
+	name MapKey, filters map[Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
@@ -120,7 +120,7 @@ func (mc *inMemoryClient) GetMapValue(
 }
 
 func (mc *inMemoryClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
+	name DurationKey, filters map[Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
 	mc.RLock()
 	defer mc.RUnlock()

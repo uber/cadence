@@ -141,7 +141,7 @@ func (csc *configStoreClient) GetValueWithFilters(name dc.Key, filters map[dc.Fi
 	return csc.getValueWithFilters(name, filters, defaultValue)
 }
 
-func (csc *configStoreClient) GetIntValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue int) (int, error) {
+func (csc *configStoreClient) GetIntValue(name dc.IntKey, filters map[dc.Filter]interface{}, defaultValue int) (int, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -159,7 +159,7 @@ func (csc *configStoreClient) GetIntValue(name dc.Key, filters map[dc.Filter]int
 	return int(floatVal), nil
 }
 
-func (csc *configStoreClient) GetFloatValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
+func (csc *configStoreClient) GetFloatValue(name dc.FloatKey, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -171,7 +171,7 @@ func (csc *configStoreClient) GetFloatValue(name dc.Key, filters map[dc.Filter]i
 	return defaultValue, errors.New("value type is not float64")
 }
 
-func (csc *configStoreClient) GetBoolValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue bool) (bool, error) {
+func (csc *configStoreClient) GetBoolValue(name dc.BoolKey, filters map[dc.Filter]interface{}, defaultValue bool) (bool, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -183,7 +183,7 @@ func (csc *configStoreClient) GetBoolValue(name dc.Key, filters map[dc.Filter]in
 	return defaultValue, errors.New("value type is not bool")
 }
 
-func (csc *configStoreClient) GetStringValue(name dc.Key, filters map[dc.Filter]interface{}, defaultValue string) (string, error) {
+func (csc *configStoreClient) GetStringValue(name dc.StringKey, filters map[dc.Filter]interface{}, defaultValue string) (string, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -198,7 +198,7 @@ func (csc *configStoreClient) GetStringValue(name dc.Key, filters map[dc.Filter]
 // Note that all number types (ex: ints) will be returned as float64.
 // It is the caller's responsibility to convert based on their context for value type.
 func (csc *configStoreClient) GetMapValue(
-	name dc.Key, filters map[dc.Filter]interface{}, defaultValue map[string]interface{},
+	name dc.MapKey, filters map[dc.Filter]interface{}, defaultValue map[string]interface{},
 ) (map[string]interface{}, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
@@ -211,7 +211,7 @@ func (csc *configStoreClient) GetMapValue(
 }
 
 func (csc *configStoreClient) GetDurationValue(
-	name dc.Key, filters map[dc.Filter]interface{}, defaultValue time.Duration,
+	name dc.DurationKey, filters map[dc.Filter]interface{}, defaultValue time.Duration,
 ) (time.Duration, error) {
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
@@ -251,8 +251,8 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 		return dc.NotFoundError
 	}
 
-	val, ok := currentCached.dcEntries[dc.Keys[name]]
-	if !ok || name == dc.UnknownKey {
+	val, ok := currentCached.dcEntries[name.String()]
+	if !ok {
 		return dc.NotFoundError
 	}
 
@@ -286,8 +286,15 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 	if currentCached.dcEntries == nil {
 		return nil, nil
 	}
-
-	if val, ok := currentCached.dcEntries[dc.Keys[name]]; !ok || name == dc.UnknownKey {
+	listAll := false
+	if name == nil {
+		//if key is not specified, return all entries
+		listAll = true
+	} else if _, ok := currentCached.dcEntries[name.String()]; !ok {
+		//if key is not known, return all entries
+		listAll = true
+	}
+	if listAll {
 		//if key is not known/specified, return all entries
 		resList = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 		for _, entry := range currentCached.dcEntries {
@@ -296,7 +303,7 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 	} else {
 		//if key is known, return just that specific entry
 		resList = make([]*types.DynamicConfigEntry, 0, 1)
-		resList = append(resList, val)
+		resList = append(resList, currentCached.dcEntries[name.String()])
 	}
 
 	return resList, nil
@@ -318,7 +325,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 		currentCached = loaded.(cacheEntry)
 	}
 
-	keyName := dc.Keys[name]
+	keyName := name.String()
 	var newEntries []*types.DynamicConfigEntry
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
@@ -514,7 +521,7 @@ func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSna
 }
 
 func (csc *configStoreClient) getValueWithFilters(key dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	keyName := dc.Keys[key]
+	keyName := key.String()
 	loaded := csc.values.Load()
 	if loaded == nil {
 		return defaultValue, nil
