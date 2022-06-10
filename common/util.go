@@ -851,6 +851,16 @@ func GetDefaultAdvancedVisibilityWritingMode(isAdvancedVisConfigExist bool) stri
 	return AdvancedVisibilityWritingModeOff
 }
 
+// IsAdvancedVisibilityWritingEnabled returns true if we should write to advanced visibility
+func IsAdvancedVisibilityWritingEnabled(advancedVisibilityWritingMode string, isAdvancedVisConfigExist bool) bool {
+	return advancedVisibilityWritingMode != AdvancedVisibilityWritingModeOff && isAdvancedVisConfigExist
+}
+
+// IsAdvancedVisibilityReadingEnabled returns true if we should read from advanced visibility
+func IsAdvancedVisibilityReadingEnabled(isAdvancedVisReadEnabled, isAdvancedVisConfigExist bool) bool {
+	return isAdvancedVisReadEnabled && isAdvancedVisConfigExist
+}
+
 // ConvertIntMapToDynamicConfigMapProperty converts a map whose key value type are both int to
 // a map value that is compatible with dynamic config's map property
 func ConvertIntMapToDynamicConfigMapProperty(

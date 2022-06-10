@@ -33,6 +33,7 @@ import (
 // Config represents configuration for cadence-history service
 type Config struct {
 	NumberOfShards                  int
+	IsAdvancedVisConfigExist        bool
 	RPS                             dynamicconfig.IntPropertyFn
 	MaxIDLengthWarnLimit            dynamicconfig.IntPropertyFn
 	DomainNameMaxLength             dynamicconfig.IntPropertyFnWithDomainFilter
@@ -342,6 +343,7 @@ var (
 func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
+		IsAdvancedVisConfigExist:             isAdvancedVisConfigExist,
 		RPS:                                  dc.GetIntProperty(dynamicconfig.HistoryRPS, 3000),
 		MaxIDLengthWarnLimit:                 dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, common.DefaultIDLengthWarnLimit),
 		DomainNameMaxLength:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, common.DefaultIDLengthErrorLimit),

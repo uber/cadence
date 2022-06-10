@@ -155,7 +155,7 @@ func (r *mutableStateTaskRefresherImpl) RefreshTasks(
 		return err
 	}
 
-	if r.config.AdvancedVisibilityWritingMode() != common.AdvancedVisibilityWritingModeOff {
+	if common.IsAdvancedVisibilityWritingEnabled(r.config.AdvancedVisibilityWritingMode(), r.config.IsAdvancedVisConfigExist) {
 		if err := r.refreshTasksForWorkflowSearchAttr(
 			ctx,
 			mutableState,
