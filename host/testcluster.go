@@ -115,6 +115,8 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 	setupShards(testBase, options.HistoryConfig.NumHistoryShards, logger)
 	archiverBase := newArchiverBase(options.EnableArchival, logger)
 	messagingClient := getMessagingClient(options.MessagingClientConfig, logger)
+	pConfig := testBase.Config()
+	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
 	var esClient elasticsearch.GenericClient
 	if options.WorkerConfig.EnableIndexer {
 		var err error
@@ -122,10 +124,9 @@ func NewCluster(options *TestClusterConfig, logger log.Logger, params persistenc
 		if err != nil {
 			return nil, err
 		}
+		pConfig.AdvancedVisibilityStore = "es-visibility"
 	}
 
-	pConfig := testBase.Config()
-	pConfig.NumHistoryShards = options.HistoryConfig.NumHistoryShards
 	scope := tally.NewTestScope("integration-test", nil)
 	metricsClient := metrics.NewClient(scope, metrics.ServiceIdx(0))
 	domainReplicationQueue := domain.NewReplicationQueue(
