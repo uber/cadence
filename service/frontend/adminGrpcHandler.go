@@ -25,7 +25,7 @@ import (
 
 	"go.uber.org/yarpc"
 
-	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	"github.com/uber/cadence/common/types/mapper/proto"
 )
 
@@ -166,12 +166,12 @@ func (g adminGRPCHandler) RestoreDynamicConfig(ctx context.Context, request *adm
 	return &adminv1.RestoreDynamicConfigResponse{}, proto.FromError(err)
 }
 
-func (g adminGRPCHandler) DeleteWorkflow(ctx context.Context, request *adminv1.AdminDeleteWorkflowRequest) (*adminv1.AdminDeleteWorkflowResponse, error) {
+func (g adminGRPCHandler) DeleteWorkflow(ctx context.Context, request *adminv1.DeleteWorkflowRequest) (*adminv1.DeleteWorkflowResponse, error) {
 	response, err := g.h.DeleteWorkflow(ctx, proto.ToAdminDeleteWorkflowRequest(request))
 	return proto.FromAdminDeleteWorkflowResponse(response), proto.FromError(err)
 }
 
-func (g adminGRPCHandler) MaintainCorruptWorkflow(ctx context.Context, request *adminv1.AdminMaintainWorkflowRequest) (*adminv1.AdminMaintainWorkflowResponse, error) {
+func (g adminGRPCHandler) MaintainCorruptWorkflow(ctx context.Context, request *adminv1.MaintainCorruptWorkflowRequest) (*adminv1.MaintainCorruptWorkflowResponse, error) {
 	response, err := g.h.MaintainCorruptWorkflow(ctx, proto.ToAdminMaintainWorkflowRequest(request))
 	return proto.FromAdminMaintainWorkflowResponse(response), proto.FromError(err)
 }

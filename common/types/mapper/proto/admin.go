@@ -21,7 +21,7 @@
 package proto
 
 import (
-	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -894,18 +894,18 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 }
 
 //FromAdminDeleteWorkflowRequest converts internal AdminDeleteWorkflowRequest type to proto
-func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv1.AdminDeleteWorkflowRequest {
+func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv1.DeleteWorkflowRequest {
 	if t == nil {
 		return nil
 	}
-	return &adminv1.AdminDeleteWorkflowRequest{
+	return &adminv1.DeleteWorkflowRequest{
 		Domain:            t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.Execution),
 	}
 }
 
 //ToAdminDeleteWorkflowRequest converts proto AdminDeleteWorkflowRequest type to internal
-func ToAdminDeleteWorkflowRequest(t *adminv1.AdminDeleteWorkflowRequest) *types.AdminDeleteWorkflowRequest {
+func ToAdminDeleteWorkflowRequest(t *adminv1.DeleteWorkflowRequest) *types.AdminDeleteWorkflowRequest {
 	if t == nil {
 		return nil
 	}
@@ -916,11 +916,11 @@ func ToAdminDeleteWorkflowRequest(t *adminv1.AdminDeleteWorkflowRequest) *types.
 }
 
 //FromAdminDeleteWorkflowResponse converts internal AdminDeleteWorkflowRequest type to proto
-func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *adminv1.AdminDeleteWorkflowResponse {
+func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *adminv1.DeleteWorkflowResponse {
 	if t == nil {
 		return nil
 	}
-	return &adminv1.AdminDeleteWorkflowResponse{
+	return &adminv1.DeleteWorkflowResponse{
 		HistoryDeleted:    t.HistoryDeleted,
 		ExecutionsDeleted: t.ExecutionsDeleted,
 		VisibilityDeleted: t.VisibilityDeleted,
@@ -928,7 +928,7 @@ func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *admi
 }
 
 //ToAdminDeleteWorkflowResponse converts proto AdminDeleteWorkflowResponse type to internal
-func ToAdminDeleteWorkflowResponse(t *adminv1.AdminDeleteWorkflowResponse) *types.AdminDeleteWorkflowResponse {
+func ToAdminDeleteWorkflowResponse(t *adminv1.DeleteWorkflowResponse) *types.AdminDeleteWorkflowResponse {
 	if t == nil {
 		return nil
 	}
@@ -940,18 +940,18 @@ func ToAdminDeleteWorkflowResponse(t *adminv1.AdminDeleteWorkflowResponse) *type
 }
 
 //FromAdminMaintainWorkflowRequest converts internal AdminMaintainWorkflowRequest type to proto
-func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *adminv1.AdminMaintainWorkflowRequest {
+func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *adminv1.MaintainCorruptWorkflowRequest {
 	if t == nil {
 		return nil
 	}
-	return &adminv1.AdminMaintainWorkflowRequest{
+	return &adminv1.MaintainCorruptWorkflowRequest{
 		Domain:            t.Domain,
 		WorkflowExecution: FromWorkflowExecution(t.Execution),
 	}
 }
 
 //ToAdminMaintainWorkflowRequest converts proto AdminMaintainWorkflowRequest type to internal
-func ToAdminMaintainWorkflowRequest(t *adminv1.AdminMaintainWorkflowRequest) *types.AdminMaintainWorkflowRequest {
+func ToAdminMaintainWorkflowRequest(t *adminv1.MaintainCorruptWorkflowRequest) *types.AdminMaintainWorkflowRequest {
 	if t == nil {
 		return nil
 	}
@@ -962,11 +962,11 @@ func ToAdminMaintainWorkflowRequest(t *adminv1.AdminMaintainWorkflowRequest) *ty
 }
 
 //FromAdminMaintainWorkflowResponse converts internal AdminMaintainWorkflowResponse type to proto
-func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *adminv1.AdminMaintainWorkflowResponse {
+func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *adminv1.MaintainCorruptWorkflowResponse {
 	if t == nil {
 		return nil
 	}
-	return &adminv1.AdminMaintainWorkflowResponse{
+	return &adminv1.MaintainCorruptWorkflowResponse{
 		HistoryDeleted:    t.HistoryDeleted,
 		ExecutionsDeleted: t.ExecutionsDeleted,
 		VisibilityDeleted: t.VisibilityDeleted,
@@ -974,7 +974,7 @@ func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *
 }
 
 //ToAdminMaintainWorkflowResponse converts proto AdminMaintainWorkflowResponse type to internal
-func ToAdminMaintainWorkflowResponse(t *adminv1.AdminMaintainWorkflowResponse) *types.AdminMaintainWorkflowResponse {
+func ToAdminMaintainWorkflowResponse(t *adminv1.MaintainCorruptWorkflowResponse) *types.AdminMaintainWorkflowResponse {
 	if t == nil {
 		return nil
 	}
