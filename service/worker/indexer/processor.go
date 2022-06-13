@@ -252,8 +252,8 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[s
 			continue
 		}
 
-		// skip processing NotificationType since it's for kafka usage only
-		if k == es.NotificationType {
+		// skip processing NotificationType since it's for kafka
+		if k == es.VisibilityOperation {
 			continue
 		}
 
@@ -283,7 +283,7 @@ func (p *indexProcessor) isValidFieldToES(field string) bool {
 	if _, ok := p.config.ValidSearchAttributes()[field]; ok {
 		return true
 	}
-	if field == definition.Memo || field == definition.KafkaKey || field == definition.Encoding || field == es.NotificationType {
+	if field == definition.Memo || field == definition.KafkaKey || field == definition.Encoding || field == es.VisibilityOperation {
 		return true
 	}
 	return false

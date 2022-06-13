@@ -730,7 +730,7 @@ func createVisibilityMessage(
 	isCron bool,
 	NumClusters int16,
 	searchAttributes map[string][]byte,
-	notificationType common.VisibilityOperation,
+	visibilityOperation common.VisibilityOperation,
 	// specific to certain status
 	endTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
@@ -739,13 +739,13 @@ func createVisibilityMessage(
 	msgType := indexer.MessageTypeIndex
 
 	fields := map[string]*indexer.Field{
-		es.WorkflowType:     {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-		es.StartTime:        {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-		es.ExecutionTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
-		es.TaskList:         {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
-		es.IsCron:           {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:      {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
-		es.NotificationType: {Type: &es.FieldTypeString, StringData: common.StringPtr(string(notificationType))},
+		es.WorkflowType:        {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.StartTime:           {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
+		es.ExecutionTime:       {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
+		es.TaskList:            {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
+		es.IsCron:              {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
+		es.NumClusters:         {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
+		es.VisibilityOperation: {Type: &es.FieldTypeString, StringData: common.StringPtr(string(visibilityOperation))},
 	}
 
 	if len(memo) != 0 {
@@ -756,7 +756,7 @@ func createVisibilityMessage(
 		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
-	switch notificationType {
+	switch visibilityOperation {
 	case common.RecordStarted:
 	case common.RecordClosed:
 		fields[es.CloseTime] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)}

@@ -221,7 +221,7 @@ const MemoKeyForOperator = "operator"
 const ReservedTaskListPrefix = "/__cadence_sys/"
 
 type (
-	// EncodingType is an enum that represents various data encoding types
+	// VisibilityOperation is an enum that represents visibility message types
 	VisibilityOperation string
 )
 
