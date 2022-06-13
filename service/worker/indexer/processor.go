@@ -252,7 +252,7 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[s
 			continue
 		}
 
-		// skip processing NotificationType since it's for kafka
+		// skip VisibilityOperation since it’s not being used for advanced visibility
 		if k == es.VisibilityOperation {
 			continue
 		}
