@@ -1892,7 +1892,7 @@ func (e *historyEngineImpl) RespondActivityTaskCompleted(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				e.logger.Error(fmt.Sprintf(
+				e.logger.Warn(fmt.Sprintf(
 					"Encounter non existing activity in RecordActivityTaskCompleted: isRunning: %t, ai: %#v, token: %#v.",
 					isRunning, ai, token),
 					tag.WorkflowDomainName(domainName),
@@ -1987,7 +1987,7 @@ func (e *historyEngineImpl) RespondActivityTaskFailed(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				e.logger.Error(fmt.Sprintf(
+				e.logger.Warn(fmt.Sprintf(
 					"Encounter non existing activity in RecordActivityTaskFailed: isRunning: %t, ai: %#v, token: %#v.",
 					isRunning, ai, token),
 					tag.WorkflowDomainName(domainName),
@@ -2177,7 +2177,7 @@ func (e *historyEngineImpl) RecordActivityTaskHeartbeat(
 
 			if !isRunning || ai.StartedID == common.EmptyEventID ||
 				(token.ScheduleID != common.EmptyEventID && token.ScheduleAttempt != int64(ai.Attempt)) {
-				e.logger.Error(fmt.Sprintf(
+				e.logger.Warn(fmt.Sprintf(
 					"Encounter non existing activity in RecordActivityTaskHeartbeat: isRunning: %t, ai: %#v, token: %#v.",
 					isRunning, ai, token),
 					tag.WorkflowDomainName(domainEntry.GetInfo().Name),
