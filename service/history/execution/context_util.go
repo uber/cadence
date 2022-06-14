@@ -159,7 +159,7 @@ func emitWorkflowCompletionStats(
 		scope.IncCounter(metrics.WorkflowContinuedAsNew)
 	default:
 		scope.IncCounter(metrics.WorkflowCompletedUnknownType)
-		logger.Info("NOT emitting completion stats for event type",
+		logger.Warn("Workflow completed with an unknown event type",
 			tag.WorkflowEventType(event.EventType.String()),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
