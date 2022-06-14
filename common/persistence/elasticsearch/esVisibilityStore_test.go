@@ -137,6 +137,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
+		s.Equal(string(common.RecordStarted), fields[es.VisibilityOperation].GetStringData())
 		return true
 	})).Return(nil).Once()
 
@@ -202,6 +203,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
+		s.Equal(string(common.RecordClosed), fields[es.VisibilityOperation].GetStringData())
 		return true
 	})).Return(nil).Once()
 
