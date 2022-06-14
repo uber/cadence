@@ -21,7 +21,6 @@
 package execution
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common/log"
@@ -158,14 +157,10 @@ func emitWorkflowCompletionStats(
 		)
 	case types.EventTypeWorkflowExecutionContinuedAsNew:
 		scope.IncCounter(metrics.WorkflowContinuedAsNew)
-		logger.Info("workflow continued as new",
-			tag.WorkflowID(workflowID),
-			tag.WorkflowRunID(runID),
-			tag.WorkflowDomainName(domainName),
-		)
 	default:
 		scope.IncCounter(metrics.WorkflowCompletedUnknownType)
-		logger.Warn(fmt.Sprintf("Workflow completed with an unknown event type %s", event.EventType.String()),
+		logger.Info("NOT emitting completion stats for event type",
+			tag.WorkflowEventType(event.EventType.String()),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
 			tag.WorkflowDomainName(domainName),
