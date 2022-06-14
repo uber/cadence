@@ -219,3 +219,15 @@ const MemoKeyForOperator = "operator"
 
 // ReservedTaskListPrefix is the required naming prefix for any task list partition other than partition 0
 const ReservedTaskListPrefix = "/__cadence_sys/"
+
+type (
+	// VisibilityOperation is an enum that represents visibility message types
+	VisibilityOperation string
+)
+
+// Enum for visibility message type
+const (
+	RecordStarted          VisibilityOperation = "RecordStarted"
+	RecordClosed           VisibilityOperation = "RecordClosed"
+	UpsertSearchAttributes VisibilityOperation = "UpsertSearchAttributes"
+)
