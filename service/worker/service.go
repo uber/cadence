@@ -192,7 +192,7 @@ func NewConfig(params *resource.Params) *Config {
 	}
 	advancedVisWritingMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
-		common.GetDefaultAdvancedVisibilityWritingMode(params.PersistenceConfig.IsAdvancedVisibilityConfigExist()),
+		common.AdvancedVisibilityWritingModeOn,
 	)
 	if common.IsAdvancedVisibilityWritingEnabled(advancedVisWritingMode(), params.PersistenceConfig.IsAdvancedVisibilityConfigExist()) {
 		config.IndexerCfg = &indexer.Config{

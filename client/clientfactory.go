@@ -117,7 +117,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
-	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)
+	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, 4*1024*1024)
 	if maxSizeConfig() > supportedMessageSize {
 		return nil, fmt.Errorf(
 			"GRPCMaxSizeInByte dynamic config value %v is larger than supported value %v",
