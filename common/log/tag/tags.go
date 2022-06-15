@@ -283,6 +283,10 @@ func WorkflowEventCount(eventCount int) Tag {
 	return newInt("wf-event-count", eventCount)
 }
 
+func WorkflowEventType(eventType string) Tag {
+	return newStringTag("wf-event-type", eventType)
+}
+
 ///////////////////  System tags defined here:  ///////////////////
 // Tags with pre-define values
 

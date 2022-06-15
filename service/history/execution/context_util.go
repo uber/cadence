@@ -155,5 +155,15 @@ func emitWorkflowCompletionStats(
 			tag.WorkflowRunID(runID),
 			tag.WorkflowDomainName(domainName),
 		)
+	case types.EventTypeWorkflowExecutionContinuedAsNew:
+		scope.IncCounter(metrics.WorkflowContinuedAsNew)
+	default:
+		scope.IncCounter(metrics.WorkflowCompletedUnknownType)
+		logger.Warn("Workflow completed with an unknown event type",
+			tag.WorkflowEventType(event.EventType.String()),
+			tag.WorkflowID(workflowID),
+			tag.WorkflowRunID(runID),
+			tag.WorkflowDomainName(domainName),
+		)
 	}
 }
