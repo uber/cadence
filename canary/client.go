@@ -37,6 +37,7 @@ import (
 // a union of all the client interfaces that
 // the library exposes
 type cadenceClient struct {
+	Domain string
 	client.Client
 	// domainClient only exposes domain API
 	client.DomainClient
@@ -46,17 +47,25 @@ type cadenceClient struct {
 
 // createDomain creates a cadence domain with the given name and description
 // if the domain already exist, this method silently returns success
-func (client *cadenceClient) createDomain(name string, desc string, owner string, archivalStatus *shared.ArchivalStatus) error {
+func (client *cadenceClient) createDomain(name string, desc string, owner string, archivalStatus *shared.ArchivalStatus, isGlobalDomain bool, clusters []string) error {
 	emitMetric := true
-	isGlobalDomain := false
 	retention := int32(workflowRetentionDays)
 	if archivalStatus != nil && *archivalStatus == shared.ArchivalStatusEnabled {
 		retention = int32(0)
 	}
+	var clusterCfg []*shared.ClusterReplicationConfiguration
+
+	for i := range clusters {
+		clusterCfg = append(clusterCfg, &shared.ClusterReplicationConfiguration{
+			ClusterName: &clusters[i],
+		})
+	}
+
 	req := &shared.RegisterDomainRequest{
 		Name:                                   &name,
 		Description:                            &desc,
 		OwnerEmail:                             &owner,
+		Clusters:                               clusterCfg,
 		WorkflowExecutionRetentionPeriodInDays: &retention,
 		EmitMetric:                             &emitMetric,
 		HistoryArchivalStatus:                  archivalStatus,
@@ -91,6 +100,7 @@ func newCadenceClient(domain string, runtime *RuntimeContext) cadenceClient {
 		},
 	)
 	return cadenceClient{
+		Domain:       domain,
 		Client:       cclient,
 		DomainClient: domainClient,
 		Service:      runtime.service,
