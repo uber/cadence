@@ -1304,7 +1304,19 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			scope.IncCounter(metrics.DirectQueryDispatchStickySuccessCount)
 			return &types.HistoryQueryWorkflowResponse{Response: matchingResp}, nil
 		}
-		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
+		switch v := err.(type) {
+		case *types.StickyWorkerUnavailableError:
+		case *yarpcerrors.Status:
+			if v.Code() != yarpcerrors.CodeDeadlineExceeded {
+				e.logger.Error("query directly though matching on sticky failed, will not attempt query on non-sticky",
+					tag.WorkflowDomainName(queryRequest.GetDomain()),
+					tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+					tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
+					tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+					tag.Error(err))
+				return nil, err
+			}
+		default:
 			e.logger.Error("query directly though matching on sticky failed, will not attempt query on non-sticky",
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),

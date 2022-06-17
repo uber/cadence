@@ -48,6 +48,10 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+// If sticky poller is not seem in last 10s, we treat it as sticky worker unavailable
+// This seems aggressive, but the default sticky schedule_to_start timeout is 5s, so 10s seems reasonable.
+const _stickyPollerUnavailableWindow = 10 * time.Second
+
 // Implements matching.Engine
 // TODO: Switch implementation from lock/channel based to a partitioned agent
 // to simplify code and reduce possibility of synchronization errors.
@@ -101,6 +105,8 @@ var (
 
 	pollerIDKey pollerIDCtxKey = "pollerID"
 	identityKey identityCtxKey = "identity"
+
+	_stickyPollerUnavailableError = &types.StickyWorkerUnavailableError{Message: "sticky worker is unavailable, please use non-sticky task list."}
 )
 
 var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed implemented
@@ -288,6 +294,13 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return false, err
+	}
+
+	if taskListKind != nil && *taskListKind == types.TaskListKindSticky {
+		// check if the sticky worker is still available, if not, fail this request early
+		if !tlMgr.HasPollerAfter(time.Now().Add(-_stickyPollerUnavailableWindow)) {
+			return false, _stickyPollerUnavailableError
+		}
 	}
 
 	taskInfo := &persistence.TaskInfo{
@@ -597,6 +610,14 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
+
+	if taskListKind != nil && *taskListKind == types.TaskListKindSticky {
+		// check if the sticky worker is still available, if not, fail this request early
+		if !tlMgr.HasPollerAfter(time.Now().Add(-_stickyPollerUnavailableWindow)) {
+			return nil, _stickyPollerUnavailableError
+		}
+	}
+
 	taskID := uuid.New()
 	resp, err := tlMgr.DispatchQueryTask(hCtx.Context, taskID, queryRequest)
 

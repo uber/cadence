@@ -177,6 +177,12 @@ func (t *transferStandbyTaskExecutor) processDecisionTask(
 		executionInfo := mutableState.GetExecutionInfo()
 		workflowTimeout := executionInfo.WorkflowTimeout
 		decisionTimeout := common.MinInt32(workflowTimeout, common.MaxTaskTimeout)
+		if executionInfo.TaskList != transferTask.TaskList {
+			// Experimental: try to push sticky task as regular task with sticky timeout as TTL.
+			// workflow might be sticky before namespace become standby
+			// there shall already be a schedule_to_start timer created
+			decisionTimeout = executionInfo.StickyScheduleToStartTimeout
+		}
 
 		ok, err := verifyTaskVersion(t.shard, t.logger, transferTask.DomainID, decisionInfo.Version, transferTask.Version, transferTask)
 		if err != nil || !ok {
@@ -186,7 +192,7 @@ func (t *transferStandbyTaskExecutor) processDecisionTask(
 		if decisionInfo.StartedID == common.EmptyEventID {
 			return newPushDecisionToMatchingInfo(
 				decisionTimeout,
-				types.TaskList{Name: transferTask.TaskList},
+				types.TaskList{Name: executionInfo.TaskList}, // at standby, always use non-sticky tasklist
 			), nil
 		}
 
