@@ -105,4 +105,7 @@ var (
 		StartRequestID: RequestID,
 		RunID:          RunID,
 	}
+	StickyWorkerUnavailableError = types.StickyWorkerUnavailableError{
+		Message: ErrorMessage,
+	}
 )

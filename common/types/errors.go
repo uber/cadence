@@ -157,3 +157,7 @@ func (err ShardOwnershipLostError) MarshalLogObject(enc zapcore.ObjectEncoder) e
 func (err EventAlreadyStartedError) Error() string {
 	return err.Message
 }
+
+func (err StickyWorkerUnavailableError) Error() string {
+	return err.Message
+}

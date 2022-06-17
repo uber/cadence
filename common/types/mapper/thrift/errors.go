@@ -73,6 +73,8 @@ func FromError(err error) error {
 		return FromShardOwnershipLostError(e)
 	case *types.EventAlreadyStartedError:
 		return FromEventAlreadyStartedError(e)
+	case *types.StickyWorkerUnavailableError:
+		return FromStickyWorkerUnavailableError(e)
 	default:
 		return err
 	}
@@ -125,6 +127,8 @@ func ToError(err error) error {
 		return ToShardOwnershipLostError(e)
 	case *history.EventAlreadyStartedError:
 		return ToEventAlreadyStartedError(e)
+	case *shared.StickyWorkerUnavailableError:
+		return ToStickyWorkerUnavailableError(e)
 	default:
 		return err
 	}

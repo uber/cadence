@@ -7735,3 +7735,8 @@ func (v *RespondCrossClusterTasksCompletedRequest) GetFetchNewTasks() (o bool) {
 type RespondCrossClusterTasksCompletedResponse struct {
 	Tasks []*CrossClusterTaskRequest `json:"tasks,omitempty"`
 }
+
+// StickyWorkerUnavailableError is an internal type (TBD...)
+type StickyWorkerUnavailableError struct {
+	Message string `json:"message,required"`
+}
