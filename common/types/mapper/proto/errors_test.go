@@ -53,6 +53,7 @@ func TestErrors(t *testing.T) {
 		&testdata.ServiceBusyError,
 		&testdata.ShardOwnershipLostError,
 		&testdata.WorkflowExecutionAlreadyStartedError,
+		&testdata.StickyWorkerUnavailableError,
 		errors.New("unknown error"),
 	} {
 		name := "OK"

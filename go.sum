@@ -428,6 +428,8 @@ github.com/uber-go/tally v3.3.15+incompatible/go.mod h1:YDTIBxdXyOU/sCWilKB4bgyu
 github.com/uber/cadence-idl v0.0.0-20211111101836-d6b70b60eb8c/go.mod h1:oyUK7GCNCRHCCyWyzifSzXpVrRYVBbAMHAzF5dXiKws=
 github.com/uber/cadence-idl v0.0.0-20220609170219-57c717b37a36 h1:+8w/bSjduBBzmA2rG6pUCjXUpLIe2iMCYdjl52R4jXY=
 github.com/uber/cadence-idl v0.0.0-20220609170219-57c717b37a36/go.mod h1:oyUK7GCNCRHCCyWyzifSzXpVrRYVBbAMHAzF5dXiKws=
+github.com/uber/cadence-idl v0.0.0-20220616233716-0707912133c4 h1:BLwMsPqg8u0WtYrs5H+mibplsYtOY4P7tMoFVNoDBaU=
+github.com/uber/cadence-idl v0.0.0-20220616233716-0707912133c4/go.mod h1:oyUK7GCNCRHCCyWyzifSzXpVrRYVBbAMHAzF5dXiKws=
 github.com/uber/jaeger-client-go v2.22.1+incompatible h1:NHcubEkVbahf9t3p75TOCR83gdUHXjRJvjoBh1yACsM=
 github.com/uber/jaeger-client-go v2.22.1+incompatible/go.mod h1:WVhlPFC8FDjOFMMWRy2pZqQJSXxYSwNYOkTr/Z6d3Kk=
 github.com/uber/jaeger-lib v2.2.0+incompatible h1:MxZXOiR2JuoANZ3J6DE/U0kSFv/eJ/GfSYVCjK7dyaw=
