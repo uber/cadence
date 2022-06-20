@@ -55,6 +55,14 @@ const (
 	MessageType_MESSAGE_TYPE_DELETE  MessageType = 2
 )
 
+type VisibilityOperation string
+
+const (
+	VisibilityOperation_RECORD_STARTED           VisibilityOperation = "RecordStarted"
+	VisibilityOperation_RECORD_CLOSED            VisibilityOperation = "RecordClosed"
+	VisibilityOperation_UPSERT_SEARCH_ATTRIBUTES VisibilityOperation = "UpsertSearchAttributes"
+)
+
 var MessageType_name = map[int32]string{
 	0: "MESSAGE_TYPE_INVALID",
 	1: "MESSAGE_TYPE_INDEX",
@@ -80,6 +88,7 @@ type Message struct {
 	DomainId             string                `protobuf:"bytes,2,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
 	WorkflowExecution    *v1.WorkflowExecution `protobuf:"bytes,3,opt,name=workflow_execution,json=workflowExecution,proto3" json:"workflow_execution,omitempty"`
 	Version              int64                 `protobuf:"varint,4,opt,name=version,proto3" json:"version,omitempty"`
+	VisibilityOperation  VisibilityOperation   `protobuf:"bytes,6,opt,name=visibility_operation,json=visibilityOperation,proto3" json:"visibility_operation,omitempty"`
 	Fields               map[string]*Field     `protobuf:"bytes,5,rep,name=fields,proto3" json:"fields,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`

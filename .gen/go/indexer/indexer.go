@@ -41,6 +41,7 @@ import (
 	zapcore "go.uber.org/zap/zapcore"
 
 	shared "github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 )
 
 type Field struct {
@@ -783,12 +784,13 @@ func (v *FieldType) UnmarshalJSON(text []byte) error {
 }
 
 type Message struct {
-	MessageType *MessageType      `json:"messageType,omitempty"`
-	DomainID    *string           `json:"domainID,omitempty"`
-	WorkflowID  *string           `json:"workflowID,omitempty"`
-	RunID       *string           `json:"runID,omitempty"`
-	Version     *int64            `json:"version,omitempty"`
-	Fields      map[string]*Field `json:"fields,omitempty"`
+	MessageType         *MessageType                `json:"messageType,omitempty"`
+	DomainID            *string                     `json:"domainID,omitempty"`
+	WorkflowID          *string                     `json:"workflowID,omitempty"`
+	RunID               *string                     `json:"runID,omitempty"`
+	Version             *int64                      `json:"version,omitempty"`
+	VisibilityOperation *common.VisibilityOperation `json:"visibilityOperation,omitempty"`
+	Fields              map[string]*Field           `json:"fields,omitempty"`
 }
 
 type _Map_String_Field_MapItemList map[string]*Field
@@ -1485,6 +1487,21 @@ func (v *Message) GetVersion() (o int64) {
 // IsSetVersion returns true if Version is not nil.
 func (v *Message) IsSetVersion() bool {
 	return v != nil && v.Version != nil
+}
+
+// GetVisibilityOperation returns the value of VisibilityOperation if it is set or its
+// zero value if it is unset.
+func (v *Message) GetVisibilityOperation() common.VisibilityOperation {
+	if v != nil && v.VisibilityOperation != nil {
+		return *v.VisibilityOperation
+	}
+
+	return common.VisibilityOperation("")
+}
+
+// IsSetVisibilityOperation returns true if VisibilityOperation is not nil.
+func (v *Message) IsSetVisibilityOperation() bool {
+	return v != nil && v.VisibilityOperation != nil
 }
 
 // GetFields returns the value of Fields if it is set or its

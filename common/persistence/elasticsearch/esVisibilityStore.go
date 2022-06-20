@@ -739,13 +739,12 @@ func createVisibilityMessage(
 	msgType := indexer.MessageTypeIndex
 
 	fields := map[string]*indexer.Field{
-		es.WorkflowType:        {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-		es.StartTime:           {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-		es.ExecutionTime:       {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
-		es.TaskList:            {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
-		es.IsCron:              {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:         {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
-		es.VisibilityOperation: {Type: &es.FieldTypeString, StringData: common.StringPtr(string(visibilityOperation))},
+		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
+		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
+		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
+		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
+		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
 	}
 
 	if len(memo) != 0 {
@@ -765,12 +764,13 @@ func createVisibilityMessage(
 	}
 
 	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(wid),
-		RunID:       common.StringPtr(rid),
-		Version:     common.Int64Ptr(taskID),
-		Fields:      fields,
+		MessageType:         &msgType,
+		DomainID:            common.StringPtr(domainID),
+		WorkflowID:          common.StringPtr(wid),
+		RunID:               common.StringPtr(rid),
+		Version:             common.Int64Ptr(taskID),
+		VisibilityOperation: &visibilityOperation,
+		Fields:              fields,
 	}
 	return msg
 }
