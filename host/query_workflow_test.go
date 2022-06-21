@@ -148,6 +148,7 @@ func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string) {
+		time.Sleep(100 * time.Millisecond) // sleep for a short time, otherwise sticky tasklist will not have workers available
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{

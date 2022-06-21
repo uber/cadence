@@ -1330,7 +1330,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
 				tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
-				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+				tag.Error(err))
 			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			clearStickinessStopWatch := scope.StartTimer(metrics.DirectQueryDispatchClearStickinessLatency)
 			_, err := e.ResetStickyTaskList(resetContext, &types.HistoryResetStickyTaskListRequest{
