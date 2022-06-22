@@ -34,13 +34,11 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 	exec "github.com/uber/cadence/service/history/execution"
@@ -51,7 +49,6 @@ import (
 var (
 	errUnknownQueueTask       = errors.New("unknown task type")
 	errUnknownReplicationTask = errors.New("unknown replication task")
-	defaultHistoryPageSize    = 1000
 	minReadTaskSize           = 20
 )
 
@@ -368,33 +365,6 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	return eventBatchBlobs[0].ToInternal(), nil
 }
 
-func (t *taskAckManagerImpl) isNewRunNDCEnabled(
-	ctx context.Context,
-	domainID string,
-	workflowID string,
-	runID string,
-) (isNDCWorkflow bool, retError error) {
-
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(
-		ctx,
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	if err != nil {
-		return false, err
-	}
-	defer func() { release(retError) }()
-
-	mutableState, err := context.LoadWorkflowExecution(ctx)
-	if err != nil {
-		return false, err
-	}
-	return mutableState.GetVersionHistories() != nil, nil
-}
-
 func (t *taskAckManagerImpl) readTasksWithBatchSize(
 	ctx context.Context,
 	readLevel int64,
@@ -420,74 +390,6 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 	}
 
 	return tasks, len(response.NextPageToken) != 0, nil
-}
-
-func (t *taskAckManagerImpl) getAllHistory(
-	ctx context.Context,
-	firstEventID int64,
-	nextEventID int64,
-	branchToken []byte,
-) (*types.History, error) {
-
-	// overall result
-	shardID := t.shard.GetShardID()
-	var historyEvents []*types.HistoryEvent
-	historySize := 0
-	iterator := collection.NewPagingIterator(
-		t.getPaginationFunc(
-			ctx,
-			firstEventID,
-			nextEventID,
-			branchToken,
-			shardID,
-			&historySize,
-		),
-	)
-	for iterator.HasNext() {
-		event, err := iterator.Next()
-		if err != nil {
-			return nil, err
-		}
-		historyEvents = append(historyEvents, event.(*types.HistoryEvent))
-	}
-	t.metricsClient.RecordTimer(metrics.ReplicatorQueueProcessorScope, metrics.HistorySize, time.Duration(historySize))
-	history := &types.History{
-		Events: historyEvents,
-	}
-	return history, nil
-}
-
-func (t *taskAckManagerImpl) getPaginationFunc(
-	ctx context.Context,
-	firstEventID int64,
-	nextEventID int64,
-	branchToken []byte,
-	shardID int,
-	historySize *int,
-) collection.PaginationFn {
-
-	return func(paginationToken []byte) ([]interface{}, []byte, error) {
-		events, _, pageToken, pageHistorySize, err := persistenceutils.PaginateHistory(
-			ctx,
-			t.historyManager,
-			false,
-			branchToken,
-			firstEventID,
-			nextEventID,
-			paginationToken,
-			defaultHistoryPageSize,
-			common.IntPtr(shardID),
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-		*historySize += pageHistorySize
-		var paginateItems []interface{}
-		for _, event := range events {
-			paginateItems = append(paginateItems, event)
-		}
-		return paginateItems, pageToken, nil
-	}
 }
 
 func (t *taskAckManagerImpl) generateFailoverMarkerTask(

@@ -209,6 +209,17 @@ func (e *ServiceBusyError) YARPCErrorCode() *yarpcerrors.Code {
 // Name is the error name for ServiceBusyError.
 func (e *ServiceBusyError) YARPCErrorName() string { return "ServiceBusyError" }
 
+// YARPCErrorCode returns nil for StickyWorkerUnavailableError.
+//
+// This is derived from the rpc.code annotation on the Thrift exception.
+func (e *StickyWorkerUnavailableError) YARPCErrorCode() *yarpcerrors.Code {
+
+	return nil
+}
+
+// Name is the error name for StickyWorkerUnavailableError.
+func (e *StickyWorkerUnavailableError) YARPCErrorName() string { return "StickyWorkerUnavailableError" }
+
 // YARPCErrorCode returns nil for WorkflowExecutionAlreadyCompletedError.
 //
 // This is derived from the rpc.code annotation on the Thrift exception.

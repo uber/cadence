@@ -7853,3 +7853,23 @@ func ToRespondCrossClusterTasksCompletedResponse(t *shared.RespondCrossClusterTa
 		Tasks: ToCrossClusterTaskRequestArray(t.Tasks),
 	}
 }
+
+// FromStickyWorkerUnavailableError converts internal StickyWorkerUnavailableError type to thrift
+func FromStickyWorkerUnavailableError(t *types.StickyWorkerUnavailableError) *shared.StickyWorkerUnavailableError {
+	if t == nil {
+		return nil
+	}
+	return &shared.StickyWorkerUnavailableError{
+		Message: t.Message,
+	}
+}
+
+// ToStickyWorkerUnavailableError converts thrift StickyWorkerUnavailableError type to internal
+func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *types.StickyWorkerUnavailableError {
+	if t == nil {
+		return nil
+	}
+	return &types.StickyWorkerUnavailableError{
+		Message: t.Message,
+	}
+}

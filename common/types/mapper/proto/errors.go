@@ -102,6 +102,8 @@ func FromError(err error) error {
 		return protobuf.NewError(yarpcerrors.CodeResourceExhausted, e.Message, protobuf.WithErrorDetails(&apiv1.ServiceBusyError{}))
 	case *types.RemoteSyncMatchedError:
 		return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&sharedv1.RemoteSyncMatchedError{}))
+	case *types.StickyWorkerUnavailableError:
+		return protobuf.NewError(yarpcerrors.CodeUnavailable, e.Message, protobuf.WithErrorDetails(&apiv1.StickyWorkerUnavailableError{}))
 	}
 
 	return protobuf.NewError(yarpcerrors.CodeUnknown, err.Error())
@@ -230,6 +232,10 @@ func ToError(err error) error {
 		switch getErrorDetails(err).(type) {
 		case *sharedv1.RemoteSyncMatchedError:
 			return &types.RemoteSyncMatchedError{
+				Message: status.Message(),
+			}
+		case *apiv1.StickyWorkerUnavailableError:
+			return &types.StickyWorkerUnavailableError{
 				Message: status.Message(),
 			}
 		}
