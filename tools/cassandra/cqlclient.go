@@ -58,7 +58,7 @@ var errGetSchemaVersion = errors.New("failed to get current schema version from 
 
 const (
 	DefaultTimeout        = 30 // Timeout in seconds
-	DefaultConnectTimeout = 2  // Connet timeout in seconds
+	DefaultConnectTimeout = 2  // Connect timeout in seconds
 	DefaultCassandraPort  = 9042
 	SystemKeyspace        = "system"
 )
