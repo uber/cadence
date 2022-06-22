@@ -71,6 +71,8 @@ func initSession(
 	cluster.Consistency = mustConvertConsistency(config.Consistency)
 	cluster.SerialConsistency = mustConvertSerialConsistency(config.SerialConsistency)
 	cluster.Timeout = config.Timeout
+	cluster.ConnectTimeout = config.ConnectTimeout
+
 	return cluster.CreateSession()
 }
 

@@ -47,6 +47,7 @@ type (
 		AllowedAuthenticators []string
 		Keyspace              string
 		Timeout               int
+		ConnectTimeout        int
 		NumReplicas           int
 		ProtoVersion          int
 		TLS                   *config.TLS
@@ -56,9 +57,10 @@ type (
 var errGetSchemaVersion = errors.New("failed to get current schema version from cassandra")
 
 const (
-	DefaultTimeout       = 30 // Timeout in seconds
-	DefaultCassandraPort = 9042
-	SystemKeyspace       = "system"
+	DefaultTimeout        = 30 // Timeout in seconds
+	DefaultConnectTimeout = 2  // Connet timeout in seconds
+	DefaultCassandraPort  = 9042
+	SystemKeyspace        = "system"
 )
 
 const (
@@ -105,6 +107,7 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 		Keyspace:              cfg.Keyspace,
 		TLS:                   cfg.TLS,
 		Timeout:               time.Duration(cfg.Timeout) * time.Second,
+		ConnectTimeout:        time.Duration(cfg.ConnectTimeout) * time.Second,
 		ProtoVersion:          cfg.ProtoVersion,
 		Consistency:           gocql.All,
 	})
