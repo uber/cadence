@@ -129,7 +129,6 @@ var (
 		VersionHistory:     &VersionHistory,
 	}
 	HistoryTaskV2Attributes = types.HistoryTaskV2Attributes{
-		TaskID:              TaskID,
 		DomainID:            DomainID,
 		WorkflowID:          WorkflowID,
 		RunID:               RunID,

@@ -300,7 +300,6 @@ func FromHistoryTaskV2Attributes(t *types.HistoryTaskV2Attributes) *replicator.H
 		return nil
 	}
 	return &replicator.HistoryTaskV2Attributes{
-		TaskId:              &t.TaskID,
 		DomainId:            &t.DomainID,
 		WorkflowId:          &t.WorkflowID,
 		RunId:               &t.RunID,
@@ -316,7 +315,6 @@ func ToHistoryTaskV2Attributes(t *replicator.HistoryTaskV2Attributes) *types.His
 		return nil
 	}
 	return &types.HistoryTaskV2Attributes{
-		TaskID:              t.GetTaskId(),
 		DomainID:            t.GetDomainId(),
 		WorkflowID:          t.GetWorkflowId(),
 		RunID:               t.GetRunId(),
