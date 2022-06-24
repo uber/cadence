@@ -181,35 +181,35 @@ func (s *configSuite) TestUpdateConfig() {
 }
 
 func TestDynamicConfigKeyIsMapped(t *testing.T) {
-	for i := UnknownIntKey; i < LastIntKey; i++ {
+	for i := UnknownIntKey + 1; i < LastIntKey; i++ {
 		key, ok := IntKeys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+		require.True(t, ok, "missing IntKey: %d", i)
+		require.NotEmpty(t, key, "empty IntKey: %d", i)
 	}
-	for i := UnknownBoolKey; i < LastBoolKey; i++ {
+	for i := UnknownBoolKey + 1; i < LastBoolKey; i++ {
 		key, ok := BoolKeys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+		require.True(t, ok, "missing BoolKey: %d", i)
+		require.NotEmpty(t, key, "empty BoolKey: %d", i)
 	}
-	for i := UnknownFloatKey; i < LastFloatKey; i++ {
+	for i := UnknownFloatKey + 1; i < LastFloatKey; i++ {
 		key, ok := FloatKeys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+		require.True(t, ok, "missing FloatKey: %d", i)
+		require.NotEmpty(t, key, "empty FloatKey: %d", i)
 	}
-	for i := UnknownStringKey; i < LastStringKey; i++ {
+	for i := UnknownStringKey + 1; i < LastStringKey; i++ {
 		key, ok := StringKeys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+		require.True(t, ok, "missing StringKey: %d", i)
+		require.NotEmpty(t, key, "empty StringKey: %d", i)
 	}
-	for i := UnknownDurationKey; i < LastDurationKey; i++ {
+	for i := UnknownDurationKey + 1; i < LastDurationKey; i++ {
 		key, ok := DurationKeys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+		require.True(t, ok, "missing DurationKey: %d", i)
+		require.NotEmpty(t, key, "empty DurationKey: %d", i)
 	}
-	for i := UnknownMapKey; i < LastMapKey; i++ {
+	for i := UnknownMapKey + 1; i < LastMapKey; i++ {
 		key, ok := MapKeys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+		require.True(t, ok, "missing MapKey: %d", i)
+		require.NotEmpty(t, key, "empty MapKey: %d", i)
 	}
 }
 

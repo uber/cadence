@@ -221,8 +221,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	searchAttr := request.GetSearchAttribute()
-	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
-		dc.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
+	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(dc.ValidSearchAttributes, nil)
 	if err != nil {
 		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
@@ -1606,7 +1605,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 
 	var value interface{}
 	if request.Filters == nil {
-		value, err = adh.params.DynamicConfig.GetValue(keyVal, nil)
+		value, err = adh.params.DynamicConfig.GetValue(keyVal)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -1615,7 +1614,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
-		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}

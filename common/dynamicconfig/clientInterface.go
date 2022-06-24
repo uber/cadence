@@ -38,19 +38,15 @@ const (
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
 // options right now. In the interest of keeping it minimal, we can add when requirement arises.
 type Client interface {
-	GetValue(name Key, defaultValue interface{}) (interface{}, error)
-	GetValueWithFilters(name Key, filters map[Filter]interface{}, defaultValue interface{}) (interface{}, error)
+	GetValue(name Key) (interface{}, error)
+	GetValueWithFilters(name Key, filters map[Filter]interface{}) (interface{}, error)
 
-	GetIntValue(name IntKey, filters map[Filter]interface{}, defaultValue int) (int, error)
-	GetFloatValue(name FloatKey, filters map[Filter]interface{}, defaultValue float64) (float64, error)
-	GetBoolValue(name BoolKey, filters map[Filter]interface{}, defaultValue bool) (bool, error)
-	GetStringValue(name StringKey, filters map[Filter]interface{}, defaultValue string) (string, error)
-	GetMapValue(
-		name MapKey, filters map[Filter]interface{}, defaultValue map[string]interface{},
-	) (map[string]interface{}, error)
-	GetDurationValue(
-		name DurationKey, filters map[Filter]interface{}, defaultValue time.Duration,
-	) (time.Duration, error)
+	GetIntValue(name IntKey, filters map[Filter]interface{}) (int, error)
+	GetFloatValue(name FloatKey, filters map[Filter]interface{}) (float64, error)
+	GetBoolValue(name BoolKey, filters map[Filter]interface{}) (bool, error)
+	GetStringValue(name StringKey, filters map[Filter]interface{}) (string, error)
+	GetMapValue(name MapKey, filters map[Filter]interface{}) (map[string]interface{}, error)
+	GetDurationValue(name DurationKey, filters map[Filter]interface{}) (time.Duration, error)
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error
 	RestoreValue(name Key, filters map[Filter]interface{}) error

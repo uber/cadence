@@ -315,30 +315,30 @@ type Config struct {
 // New returns new service config with default values
 func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
-		NumberOfShards:                  numberOfShards,
-		IsAdvancedVisConfigExist:        isAdvancedVisConfigExist,
-		RPS:                             dc.GetIntProperty(dynamicconfig.HistoryRPS),
-		MaxIDLengthWarnLimit:            dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit),
-		DomainNameMaxLength:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength),
-		IdentityMaxLength:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength),
-		WorkflowIDMaxLength:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDMaxLength),
-		SignalNameMaxLength:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.SignalNameMaxLength),
-		WorkflowTypeMaxLength:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowTypeMaxLength),
-		RequestIDMaxLength:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIDMaxLength),
-		TaskListNameMaxLength:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskListNameMaxLength),
-		ActivityIDMaxLength:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.ActivityIDMaxLength),
-		ActivityTypeMaxLength:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.ActivityTypeMaxLength),
-		MarkerNameMaxLength:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.MarkerNameMaxLength),
-		TimerIDMaxLength:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.TimerIDMaxLength),
-		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS),
-		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.HistoryPersistenceGlobalMaxQPS),
-		ShutdownDrainDuration:           dc.GetDurationProperty(dynamicconfig.HistoryShutdownDrainDuration),
-		EnableVisibilitySampling:        dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling),
-		EnableReadFromClosedExecutionV2: dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2),
-		VisibilityOpenMaxQPS:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS),
-		VisibilityClosedMaxQPS:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS),
-		MaxAutoResetPoints:              dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints),
-		MaxDecisionStartToCloseSeconds:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseSeconds),
+		NumberOfShards:                       numberOfShards,
+		IsAdvancedVisConfigExist:             isAdvancedVisConfigExist,
+		RPS:                                  dc.GetIntProperty(dynamicconfig.HistoryRPS),
+		MaxIDLengthWarnLimit:                 dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit),
+		DomainNameMaxLength:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength),
+		IdentityMaxLength:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength),
+		WorkflowIDMaxLength:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowIDMaxLength),
+		SignalNameMaxLength:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.SignalNameMaxLength),
+		WorkflowTypeMaxLength:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowTypeMaxLength),
+		RequestIDMaxLength:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.RequestIDMaxLength),
+		TaskListNameMaxLength:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskListNameMaxLength),
+		ActivityIDMaxLength:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.ActivityIDMaxLength),
+		ActivityTypeMaxLength:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.ActivityTypeMaxLength),
+		MarkerNameMaxLength:                  dc.GetIntPropertyFilteredByDomain(dynamicconfig.MarkerNameMaxLength),
+		TimerIDMaxLength:                     dc.GetIntPropertyFilteredByDomain(dynamicconfig.TimerIDMaxLength),
+		PersistenceMaxQPS:                    dc.GetIntProperty(dynamicconfig.HistoryPersistenceMaxQPS),
+		PersistenceGlobalMaxQPS:              dc.GetIntProperty(dynamicconfig.HistoryPersistenceGlobalMaxQPS),
+		ShutdownDrainDuration:                dc.GetDurationProperty(dynamicconfig.HistoryShutdownDrainDuration),
+		EnableVisibilitySampling:             dc.GetBoolProperty(dynamicconfig.EnableVisibilitySampling),
+		EnableReadFromClosedExecutionV2:      dc.GetBoolProperty(dynamicconfig.EnableReadFromClosedExecutionV2),
+		VisibilityOpenMaxQPS:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityOpenMaxQPS),
+		VisibilityClosedMaxQPS:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryVisibilityClosedMaxQPS),
+		MaxAutoResetPoints:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryMaxAutoResetPoints),
+		MaxDecisionStartToCloseSeconds:       dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxDecisionStartToCloseSeconds),
 		AdvancedVisibilityWritingMode:        dc.GetStringProperty(dynamicconfig.AdvancedVisibilityWritingMode),
 		EmitShardDiffLog:                     dc.GetBoolProperty(dynamicconfig.EmitShardDiffLog),
 		HistoryCacheInitialSize:              dc.GetIntProperty(dynamicconfig.HistoryCacheInitialSize),
@@ -376,7 +376,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ResurrectionCheckMinDelay:               dc.GetDurationPropertyFilteredByDomain(dynamicconfig.ResurrectionCheckMinDelay),
 
 		QueueProcessorEnableSplit:                          dc.GetBoolProperty(dynamicconfig.QueueProcessorEnableSplit),
-		QueueProcessorSplitMaxLevel:                        dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel), // 3 levels, start from 0
+		QueueProcessorSplitMaxLevel:                        dc.GetIntProperty(dynamicconfig.QueueProcessorSplitMaxLevel),
 		QueueProcessorEnableRandomSplitByDomainID:          dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnableRandomSplitByDomainID),
 		QueueProcessorRandomSplitProbability:               dc.GetFloat64Property(dynamicconfig.QueueProcessorRandomSplitProbability),
 		QueueProcessorEnablePendingTaskSplitByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.QueueProcessorEnablePendingTaskSplitByDomainID),
@@ -454,10 +454,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicatorProcessorFetchTasksBatchSize: dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicatorTaskBatchSize),
 		ReplicatorUpperLatency:                 dc.GetDurationProperty(dynamicconfig.ReplicatorUpperLatency),
 
-		ExecutionMgrNumConns:       dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns),
-		HistoryMgrNumConns:         dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns),
-		MaximumBufferedEventsBatch: dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch),
-		// 10K signals should big enough given workflow execution has 200K history lengh limit. It needs to be non-zero to protect continueAsNew from infinit loop
+		ExecutionMgrNumConns:            dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns),
+		HistoryMgrNumConns:              dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns),
+		MaximumBufferedEventsBatch:      dc.GetIntProperty(dynamicconfig.MaximumBufferedEventsBatch),
 		MaximumSignalsPerExecution:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaximumSignalsPerExecution),
 		ShardUpdateMinInterval:          dc.GetDurationProperty(dynamicconfig.ShardUpdateMinInterval),
 		ShardSyncMinInterval:            dc.GetDurationProperty(dynamicconfig.ShardSyncMinInterval),
@@ -472,7 +471,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ParentClosePolicyThreshold:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.ParentClosePolicyThreshold),
 
 		NumArchiveSystemWorkflows:        dc.GetIntProperty(dynamicconfig.NumArchiveSystemWorkflows),
-		ArchiveRequestRPS:                dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS), // should be much smaller than frontend RPS
+		ArchiveRequestRPS:                dc.GetIntProperty(dynamicconfig.ArchiveRequestRPS),
 		ArchiveInlineHistoryRPS:          dc.GetIntProperty(dynamicconfig.ArchiveInlineHistoryRPS),
 		ArchiveInlineHistoryGlobalRPS:    dc.GetIntProperty(dynamicconfig.ArchiveInlineHistoryGlobalRPS),
 		ArchiveInlineVisibilityRPS:       dc.GetIntProperty(dynamicconfig.ArchiveInlineVisibilityRPS),
@@ -495,7 +494,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		SearchAttributesTotalSizeLimit:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesTotalSizeLimit),
 		StickyTTL:                                dc.GetDurationPropertyFilteredByDomain(dynamicconfig.StickyTTL),
 		DecisionHeartbeatTimeout:                 dc.GetDurationPropertyFilteredByDomain(dynamicconfig.DecisionHeartbeatTimeout),
-		DecisionRetryCriticalAttempts:            dc.GetIntProperty(dynamicconfig.DecisionRetryCriticalAttempts), // about 30m
+		DecisionRetryCriticalAttempts:            dc.GetIntProperty(dynamicconfig.DecisionRetryCriticalAttempts),
 		DecisionRetryMaxAttempts:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.DecisionRetryMaxAttempts),
 		NormalDecisionScheduleToStartMaxAttempts: dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts),
 		NormalDecisionScheduleToStartTimeout:     dc.GetDurationPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartTimeout),
@@ -554,16 +553,21 @@ func NewForTest() *Config {
 
 // NewForTestByShardNumber create new history service config for test
 func NewForTestByShardNumber(shardNumber int) *Config {
+	panicIfErr := func(err error) {
+		if err != nil {
+			panic(err)
+		}
+	}
 	inMem := dynamicconfig.NewInMemoryClient()
-	inMem.UpdateValue(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second)
-	inMem.UpdateValue(dynamicconfig.EnableConsistentQueryByDomain, true)
-	inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorHostQPS, 10000)
-	inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorShardQPS, 10000)
-	inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond)
-	inMem.UpdateValue(dynamicconfig.EnableActivityLocalDispatchByDomain, true)
-	inMem.UpdateValue(dynamicconfig.MaxActivityCountDispatchByDomain, 0)
-	inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperations, true)
-	inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3)
+	panicIfErr(inMem.UpdateValue(dynamicconfig.HistoryLongPollExpirationInterval, 10*time.Second))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableConsistentQueryByDomain, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorHostQPS, float64(10000)))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorShardQPS, float64(10000)))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.ReplicationTaskProcessorStartWait, time.Nanosecond))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableActivityLocalDispatchByDomain, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.MaxActivityCountDispatchByDomain, 0))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperations, true))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
 	config := New(dc, shardNumber, config.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed

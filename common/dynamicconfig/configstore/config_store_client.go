@@ -133,15 +133,16 @@ func (csc *configStoreClient) startUpdate() error {
 	return nil
 }
 
-func (csc *configStoreClient) GetValue(name dc.Key, defaultValue interface{}) (interface{}, error) {
-	return csc.getValueWithFilters(name, nil, defaultValue)
+func (csc *configStoreClient) GetValue(name dc.Key) (interface{}, error) {
+	return csc.getValueWithFilters(name, nil, name.DefaultValue())
 }
 
-func (csc *configStoreClient) GetValueWithFilters(name dc.Key, filters map[dc.Filter]interface{}, defaultValue interface{}) (interface{}, error) {
-	return csc.getValueWithFilters(name, filters, defaultValue)
+func (csc *configStoreClient) GetValueWithFilters(name dc.Key, filters map[dc.Filter]interface{}) (interface{}, error) {
+	return csc.getValueWithFilters(name, filters, name.DefaultValue())
 }
 
-func (csc *configStoreClient) GetIntValue(name dc.IntKey, filters map[dc.Filter]interface{}, defaultValue int) (int, error) {
+func (csc *configStoreClient) GetIntValue(name dc.IntKey, filters map[dc.Filter]interface{}) (int, error) {
+	defaultValue := name.DefaultInt()
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -159,7 +160,8 @@ func (csc *configStoreClient) GetIntValue(name dc.IntKey, filters map[dc.Filter]
 	return int(floatVal), nil
 }
 
-func (csc *configStoreClient) GetFloatValue(name dc.FloatKey, filters map[dc.Filter]interface{}, defaultValue float64) (float64, error) {
+func (csc *configStoreClient) GetFloatValue(name dc.FloatKey, filters map[dc.Filter]interface{}) (float64, error) {
+	defaultValue := name.DefaultFloat()
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -171,7 +173,8 @@ func (csc *configStoreClient) GetFloatValue(name dc.FloatKey, filters map[dc.Fil
 	return defaultValue, errors.New("value type is not float64")
 }
 
-func (csc *configStoreClient) GetBoolValue(name dc.BoolKey, filters map[dc.Filter]interface{}, defaultValue bool) (bool, error) {
+func (csc *configStoreClient) GetBoolValue(name dc.BoolKey, filters map[dc.Filter]interface{}) (bool, error) {
+	defaultValue := name.DefaultBool()
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -183,7 +186,8 @@ func (csc *configStoreClient) GetBoolValue(name dc.BoolKey, filters map[dc.Filte
 	return defaultValue, errors.New("value type is not bool")
 }
 
-func (csc *configStoreClient) GetStringValue(name dc.StringKey, filters map[dc.Filter]interface{}, defaultValue string) (string, error) {
+func (csc *configStoreClient) GetStringValue(name dc.StringKey, filters map[dc.Filter]interface{}) (string, error) {
+	defaultValue := name.DefaultString()
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -197,9 +201,8 @@ func (csc *configStoreClient) GetStringValue(name dc.StringKey, filters map[dc.F
 
 // Note that all number types (ex: ints) will be returned as float64.
 // It is the caller's responsibility to convert based on their context for value type.
-func (csc *configStoreClient) GetMapValue(
-	name dc.MapKey, filters map[dc.Filter]interface{}, defaultValue map[string]interface{},
-) (map[string]interface{}, error) {
+func (csc *configStoreClient) GetMapValue(name dc.MapKey, filters map[dc.Filter]interface{}) (map[string]interface{}, error) {
+	defaultValue := name.DefaultMap()
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -210,9 +213,8 @@ func (csc *configStoreClient) GetMapValue(
 	return defaultValue, errors.New("value type is not map")
 }
 
-func (csc *configStoreClient) GetDurationValue(
-	name dc.DurationKey, filters map[dc.Filter]interface{}, defaultValue time.Duration,
-) (time.Duration, error) {
+func (csc *configStoreClient) GetDurationValue(name dc.DurationKey, filters map[dc.Filter]interface{}) (time.Duration, error) {
+	defaultValue := name.DefaultDuration()
 	val, err := csc.getValueWithFilters(name, filters, defaultValue)
 	if err != nil {
 		return defaultValue, err
@@ -235,7 +237,11 @@ func (csc *configStoreClient) GetDurationValue(
 }
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
-	return csc.updateValue(name, value, csc.config.UpdateRetryAttempts)
+	dcValues, ok := value.([]*types.DynamicConfigValue)
+	if !ok && dcValues != nil {
+		return errors.New("invalid value")
+	}
+	return csc.updateValue(name, dcValues, csc.config.UpdateRetryAttempts)
 }
 
 func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]interface{}) error {
@@ -271,7 +277,7 @@ func (csc *configStoreClient) RestoreValue(name dc.Key, filters map[dc.Filter]in
 		}
 	}
 
-	return csc.UpdateValue(name, newValues)
+	return csc.updateValue(name, newValues, csc.config.UpdateRetryAttempts)
 }
 
 func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntry, error) {
@@ -309,10 +315,15 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 	return resList, nil
 }
 
-func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryAttempts int) error {
+func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.DynamicConfigValue, retryAttempts int) error {
 	//since values are not unique, no way to know if you are trying to update a specific value
 	//or if you want to add another of the same value with different filters.
 	//UpdateValue will replace everything associated with dc key.
+	for _, dcValue := range dcValues {
+		if err := validateKeyDataBlobPair(name, dcValue.Value); err != nil {
+			return err
+		}
+	}
 	loaded := csc.values.Load()
 	var currentCached cacheEntry
 	if loaded == nil {
@@ -330,7 +341,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 
 	existingEntry, entryExists := currentCached.dcEntries[keyName]
 
-	if value == nil || len(value.([]*types.DynamicConfigValue)) == 0 {
+	if dcValues == nil || len(dcValues) == 0 {
 		newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 
 		for _, entry := range currentCached.dcEntries {
@@ -341,11 +352,6 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 			}
 		}
 	} else {
-		dcValues, ok := value.([]*types.DynamicConfigValue)
-		if !ok {
-			return errors.New("invalid value")
-		}
-
 		if entryExists {
 			newEntries = make([]*types.DynamicConfigEntry, 0, len(currentCached.dcEntries))
 		} else {
@@ -400,7 +406,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, value interface{}, retryA
 				if err != nil {
 					return err
 				}
-				return csc.updateValue(name, value, retryAttempts-1)
+				return csc.updateValue(name, dcValues, retryAttempts-1)
 			}
 
 			if retryAttempts == 0 {
@@ -599,4 +605,53 @@ func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
 	default:
 		return nil, errors.New("unsupported blob encoding")
 	}
+}
+
+func validateKeyDataBlobPair(key dc.Key, blob *types.DataBlob) error {
+	value, err := convertFromDataBlob(blob)
+	if err != nil {
+		return err
+	}
+	err = fmt.Errorf("key value pair mismatch, key type: %T, value type: %T", key, value)
+	switch key.(type) {
+	case dc.IntKey:
+		if _, ok := value.(int); !ok {
+			floatVal, ok := value.(float64)
+			if !ok { // int can be decoded as float64
+				return err
+			}
+			if floatVal != math.Trunc(floatVal) {
+				return errors.New("value type is not int")
+			}
+		}
+	case dc.BoolKey:
+		if _, ok := value.(bool); !ok {
+			return err
+		}
+	case dc.FloatKey:
+		if _, ok := value.(float64); !ok {
+			return err
+		}
+	case dc.StringKey:
+		if _, ok := value.(string); !ok {
+			return err
+		}
+	case dc.DurationKey:
+		if _, ok := value.(time.Duration); !ok {
+			durationStr, ok := value.(string)
+			if !ok {
+				return err
+			}
+			if _, err = time.ParseDuration(durationStr); err != nil {
+				return errors.New("value string encoding cannot be parsed into duration")
+			}
+		}
+	case dc.MapKey:
+		if _, ok := value.(map[string]interface{}); !ok {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown key type: %T", key)
+	}
+	return nil
 }

@@ -185,7 +185,9 @@ func AdminListDynamicConfig(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	req := &types.ListDynamicConfigRequest{}
+	req := &types.ListDynamicConfigRequest{
+		ConfigName: "", // empty string means all config values
+	}
 
 	val, err := adminClient.ListDynamicConfig(ctx, req)
 	if err != nil {

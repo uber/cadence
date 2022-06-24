@@ -328,31 +328,31 @@ func defaultTestSetup(s *configStoreClientSuite) {
 
 func (s *configStoreClientSuite) TestGetValue() {
 	defaultTestSetup(s)
-	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey, true)
+	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey)
 	s.NoError(err)
 	s.Equal(false, v)
 }
 
 func (s *configStoreClientSuite) TestGetValue_NonExistKey() {
 	defaultTestSetup(s)
-	v, err := s.client.GetValue(dc.LastIntKey, 191231)
+	v, err := s.client.GetValue(dc.MaxRetentionDays)
 	s.Error(err)
-	s.Equal(v, 191231)
-	v, err = s.client.GetValue(dc.LastBoolKey, true)
+	s.Equal(dc.MaxRetentionDays.DefaultInt(), v)
+	v, err = s.client.GetValue(dc.EnableVisibilitySampling)
 	s.Error(err)
-	s.Equal(v, true)
-	v, err = s.client.GetValue(dc.LastFloatKey, 123120)
+	s.Equal(dc.EnableVisibilitySampling.DefaultBool(), v)
+	v, err = s.client.GetValue(dc.FrontendErrorInjectionRate)
 	s.Error(err)
-	s.Equal(v, 123120)
-	v, err = s.client.GetValue(dc.LastStringKey, "asdfasdf")
+	s.Equal(dc.FrontendErrorInjectionRate.DefaultFloat(), v)
+	v, err = s.client.GetValue(dc.AdvancedVisibilityWritingMode)
 	s.Error(err)
-	s.Equal(v, "asdfasdf")
-	v, err = s.client.GetValue(dc.LastDurationKey, time.Duration(1231237897))
+	s.Equal(dc.AdvancedVisibilityWritingMode.DefaultString(), v)
+	v, err = s.client.GetValue(dc.FrontendShutdownDrainDuration)
 	s.Error(err)
-	s.Equal(v, time.Duration(1231237897))
-	v, err = s.client.GetValue(dc.LastMapKey, map[string]interface{}{"asdfas": 1231})
+	s.Equal(dc.FrontendShutdownDrainDuration.DefaultDuration(), v)
+	v, err = s.client.GetValue(dc.RequiredDomainDataKeys)
 	s.Error(err)
-	s.Equal(v, map[string]interface{}{"asdfas": 1231})
+	s.Equal(dc.RequiredDomainDataKeys.DefaultMap(), v)
 }
 
 func (s *configStoreClientSuite) TestGetValueWithFilters() {
@@ -362,14 +362,14 @@ func (s *configStoreClientSuite) TestGetValueWithFilters() {
 		dc.DomainName: "global-samples-domain",
 	}
 
-	v, err := s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters, false)
+	v, err := s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters)
 	s.NoError(err)
 	s.Equal(true, v)
 
 	filters = map[dc.Filter]interface{}{
 		dc.DomainName: "non-exist-domain",
 	}
-	v, err = s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters, true)
+	v, err = s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters)
 	s.NoError(err)
 	s.Equal(false, v)
 
@@ -377,7 +377,7 @@ func (s *configStoreClientSuite) TestGetValueWithFilters() {
 		dc.DomainName:   "samples-domain",
 		dc.TaskListName: "non-exist-tasklist",
 	}
-	v, err = s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters, false)
+	v, err = s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters)
 	s.NoError(err)
 	s.Equal(true, v)
 }
@@ -388,14 +388,14 @@ func (s *configStoreClientSuite) TestGetValueWithFilters_UnknownFilter() {
 		dc.DomainName:    "global-samples-domain1",
 		dc.UnknownFilter: "unknown-filter1",
 	}
-	v, err := s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters, false)
+	v, err := s.client.GetValueWithFilters(dc.TestGetBoolPropertyKey, filters)
 	s.NoError(err)
 	s.Equal(false, v)
 }
 
 func (s *configStoreClientSuite) TestGetIntValue() {
 	defaultTestSetup(s)
-	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, nil, 1)
+	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, nil)
 	s.NoError(err)
 	s.Equal(1000, v)
 }
@@ -405,25 +405,24 @@ func (s *configStoreClientSuite) TestGetIntValue_FilterNotMatch() {
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "samples-domain",
 	}
-	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, filters, 500)
+	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, filters)
 	s.NoError(err)
 	s.Equal(1000, v)
 }
 
 func (s *configStoreClientSuite) TestGetIntValue_WrongType() {
 	defaultTestSetup(s)
-	defaultValue := 2000
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "global-samples-domain",
 	}
-	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, filters, defaultValue)
+	v, err := s.client.GetIntValue(dc.TestGetIntPropertyKey, filters)
 	s.Error(err)
-	s.Equal(defaultValue, v)
+	s.Equal(dc.TestGetIntPropertyKey.DefaultInt(), v)
 }
 
 func (s *configStoreClientSuite) TestGetFloatValue() {
 	defaultTestSetup(s)
-	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, nil, 1)
+	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, nil)
 	s.NoError(err)
 	s.Equal(12.0, v)
 }
@@ -433,15 +432,14 @@ func (s *configStoreClientSuite) TestGetFloatValue_WrongType() {
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "samples-domain",
 	}
-	defaultValue := 1.0
-	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, filters, defaultValue)
+	v, err := s.client.GetFloatValue(dc.TestGetFloat64PropertyKey, filters)
 	s.Error(err)
-	s.Equal(defaultValue, v)
+	s.Equal(dc.TestGetFloat64PropertyKey.DefaultFloat(), v)
 }
 
 func (s *configStoreClientSuite) TestGetBoolValue() {
 	defaultTestSetup(s)
-	v, err := s.client.GetBoolValue(dc.TestGetBoolPropertyKey, nil, true)
+	v, err := s.client.GetBoolValue(dc.TestGetBoolPropertyKey, nil)
 	s.NoError(err)
 	s.Equal(false, v)
 }
@@ -451,15 +449,14 @@ func (s *configStoreClientSuite) TestGetStringValue() {
 	filters := map[dc.Filter]interface{}{
 		dc.TaskListName: "random tasklist",
 	}
-	v, err := s.client.GetStringValue(dc.TestGetStringPropertyKey, filters, "defaultString")
+	v, err := s.client.GetStringValue(dc.TestGetStringPropertyKey, filters)
 	s.NoError(err)
 	s.Equal("constrained-string", v)
 }
 
 func (s *configStoreClientSuite) TestGetMapValue() {
 	defaultTestSetup(s)
-	var defaultVal map[string]interface{}
-	v, err := s.client.GetMapValue(dc.TestGetMapPropertyKey, nil, defaultVal)
+	v, err := s.client.GetMapValue(dc.TestGetMapPropertyKey, nil)
 	s.NoError(err)
 	expectedVal := map[string]interface{}{
 		"key1": "1",
@@ -477,18 +474,17 @@ func (s *configStoreClientSuite) TestGetMapValue() {
 
 func (s *configStoreClientSuite) TestGetMapValue_WrongType() {
 	defaultTestSetup(s)
-	var defaultVal map[string]interface{}
 	filters := map[dc.Filter]interface{}{
 		dc.TaskListName: "random tasklist",
 	}
-	v, err := s.client.GetMapValue(dc.TestGetMapPropertyKey, filters, defaultVal)
+	v, err := s.client.GetMapValue(dc.TestGetMapPropertyKey, filters)
 	s.Error(err)
-	s.Equal(defaultVal, v)
+	s.Equal(dc.TestGetMapPropertyKey.DefaultMap(), v)
 }
 
 func (s *configStoreClientSuite) TestGetDurationValue() {
 	defaultTestSetup(s)
-	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, nil, time.Second)
+	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, nil)
 	s.NoError(err)
 	s.Equal(time.Minute, v)
 }
@@ -498,9 +494,9 @@ func (s *configStoreClientSuite) TestGetDurationValue_NotStringRepresentation() 
 	filters := map[dc.Filter]interface{}{
 		dc.DomainName: "samples-domain",
 	}
-	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, filters, time.Second)
+	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, filters)
 	s.Error(err)
-	s.Equal(time.Second, v)
+	s.Equal(dc.TestGetDurationPropertyKey.DefaultDuration(), v)
 }
 
 func (s *configStoreClientSuite) TestGetDurationValue_ParseFailed() {
@@ -509,9 +505,9 @@ func (s *configStoreClientSuite) TestGetDurationValue_ParseFailed() {
 		dc.DomainName:   "samples-domain",
 		dc.TaskListName: "longIdleTimeTaskList",
 	}
-	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, filters, time.Second)
+	v, err := s.client.GetDurationValue(dc.TestGetDurationPropertyKey, filters)
 	s.Error(err)
-	s.Equal(time.Second, v)
+	s.Equal(dc.TestGetDurationPropertyKey.DefaultDuration(), v)
 }
 
 func (s *configStoreClientSuite) TestValidateConfig_InvalidConfig() {
@@ -731,7 +727,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 	err = s.client.update()
 	s.NoError(err)
 
-	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey, false)
+	v, err := s.client.GetValue(dc.TestGetBoolPropertyKey)
 	s.NoError(err)
 	s.Equal(true, v)
 }

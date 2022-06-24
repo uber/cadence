@@ -235,18 +235,27 @@ const (
 
 	// NoPriority is the value returned if no priority is ever assigned to the task
 	NoPriority = -1
+)
 
+const (
 	// HighPriorityClass is the priority class for high priority tasks
 	HighPriorityClass = iota << numBitsPerLevel
 	// DefaultPriorityClass is the priority class for default priority tasks
 	DefaultPriorityClass
 	// LowPriorityClass is the priority class for low priority tasks
 	LowPriorityClass
+)
 
+const (
 	// HighPrioritySubclass is the priority subclass for high priority tasks
 	HighPrioritySubclass = iota
 	// DefaultPrioritySubclass is the priority subclass for high priority tasks
 	DefaultPrioritySubclass
 	// LowPrioritySubclass is the priority subclass for high priority tasks
 	LowPrioritySubclass
+)
+
+const (
+	// DefaultHistoryMaxAutoResetPoints is the default maximum number for auto reset points
+	DefaultHistoryMaxAutoResetPoints = 20
 )
