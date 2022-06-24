@@ -49,7 +49,7 @@ require (
 	github.com/pierrec/lz4 v0.0.0-20190701081048-057d66e894a4 // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.4.2
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence-idl v0.0.0-20220616233716-0707912133c4
 	github.com/uber/ringpop-go v0.8.5
@@ -61,17 +61,18 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver v1.7.3
 	go.opencensus.io v0.22.5 // indirect
-	go.uber.org/atomic v1.7.0
+	go.uber.org/atomic v1.9.0
 	go.uber.org/cadence v0.19.0
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.13.1
-	go.uber.org/multierr v1.6.0
+	go.uber.org/multierr v1.8.0
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.58.0
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20220121210141-e204ce36a2ba
+	golang.org/x/net v0.0.0-20220622184535-263ec571b305
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sys v0.0.0-20220622161953-175b2fd9d664 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/tools v0.1.5
 	gonum.org/v1/gonum v0.7.0
