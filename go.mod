@@ -53,7 +53,7 @@ require (
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence-idl v0.0.0-20220616233716-0707912133c4
 	github.com/uber/ringpop-go v0.8.5
-	github.com/uber/tchannel-go v1.22.0
+	github.com/uber/tchannel-go v1.31.0
 	github.com/uber/tcheck v1.1.0
 	github.com/urfave/cli v1.22.4
 	github.com/valyala/fastjson v1.4.1
@@ -69,10 +69,9 @@ require (
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.58.0
 	go.uber.org/zap v1.13.0
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/net v0.0.0-20220121210141-e204ce36a2ba
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20211004093028-2c5d950f24ef // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/tools v0.1.5
 	gonum.org/v1/gonum v0.7.0
@@ -84,7 +83,7 @@ require (
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/validator.v2 v2.0.0-20180514200540-135c24b11c19
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.4.0
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )
 
