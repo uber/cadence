@@ -113,5 +113,6 @@ type (
 		Consistency           Consistency
 		SerialConsistency     SerialConsistency
 		Timeout               time.Duration
+		ConnectTimeout        time.Duration
 	}
 )
