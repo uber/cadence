@@ -254,11 +254,11 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	}
 
 	execution := types.WorkflowExecution{
-		WorkflowID: task.GetWorkflowID(),
-		RunID:      task.GetRunID(),
+		WorkflowID: task.WorkflowID,
+		RunID:      task.RunID,
 	}
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, task.GetDomainID(), execution)
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, task.DomainID, execution)
 	if err != nil {
 		return nil, err
 	}
@@ -358,10 +358,10 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
-		SourceTaskID: taskInfo.GetTaskID(),
+		SourceTaskID: taskInfo.TaskID,
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
-			DomainID:        taskInfo.GetDomainID(),
-			FailoverVersion: taskInfo.GetVersion(),
+			DomainID:        taskInfo.DomainID,
+			FailoverVersion: taskInfo.Version,
 		},
 		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
 	}
@@ -412,9 +412,9 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
 		SourceTaskID: taskInfo.TaskID,
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:           taskInfo.GetDomainID(),
-			WorkflowID:         taskInfo.GetWorkflowID(),
-			RunID:              taskInfo.GetRunID(),
+			DomainID:           taskInfo.DomainID,
+			WorkflowID:         taskInfo.WorkflowID,
+			RunID:              taskInfo.RunID,
 			Version:            activityInfo.Version,
 			ScheduledID:        activityInfo.ScheduleID,
 			ScheduledTime:      scheduledTime,
@@ -445,9 +445,9 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 
 	if versionHistories == nil {
 		t.logger.Error("encounter workflow without version histories",
-			tag.WorkflowDomainID(task.GetDomainID()),
-			tag.WorkflowID(task.GetWorkflowID()),
-			tag.WorkflowRunID(task.GetRunID()))
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID))
 		return nil, nil
 	}
 
