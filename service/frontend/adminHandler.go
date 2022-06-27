@@ -1460,12 +1460,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// this is a special case, target branch remains the same
 	} else {
 		endItem := persistence.NewVersionHistoryItem(request.GetEndEventID(), request.GetEndEventVersion())
-		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
-		if err != nil {
-			return nil, err
-		}
-
-		targetBranch, err = versionHistories.GetVersionHistory(idx)
+		_, targetBranch, err = versionHistories.FindFirstVersionHistoryByItem(endItem)
 		if err != nil {
 			return nil, err
 		}
@@ -1479,11 +1474,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// this is a special case, start event is on the same branch as target branch
 	} else {
 		if !targetBranch.ContainsItem(startItem) {
-			idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
-			if err != nil {
-				return nil, err
-			}
-			startBranch, err := versionHistories.GetVersionHistory(idx)
+			_, startBranch, err := versionHistories.FindFirstVersionHistoryByItem(startItem)
 			if err != nil {
 				return nil, err
 			}
