@@ -249,65 +249,37 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	}
 
 	switch task.TaskType {
-	case persistence.ReplicationTaskTypeSyncActivity:
-		return t.generateSyncActivityTask(ctx, task)
-	case persistence.ReplicationTaskTypeHistory:
-		return t.generateHistoryReplicationTask(ctx, task)
 	case persistence.ReplicationTaskTypeFailoverMarker:
 		return t.generateFailoverMarkerTask(task), nil
-	default:
-		return nil, errUnknownReplicationTask
 	}
-}
-
-func (t *taskAckManagerImpl) processReplication(
-	ctx context.Context,
-	processTaskIfClosed bool,
-	taskInfo *persistence.ReplicationTaskInfo,
-	action func(
-		activityInfo *persistence.ActivityInfo,
-		versionHistories *persistence.VersionHistories,
-	) (*types.ReplicationTask, error),
-) (retReplicationTask *types.ReplicationTask, retError error) {
 
 	execution := types.WorkflowExecution{
-		WorkflowID: taskInfo.GetWorkflowID(),
-		RunID:      taskInfo.GetRunID(),
+		WorkflowID: task.GetWorkflowID(),
+		RunID:      task.GetRunID(),
 	}
 
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, taskInfo.GetDomainID(), execution)
+	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, task.GetDomainID(), execution)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { release(retError) }()
+	defer func() { release(nil) }()
 
-	msBuilder, err := context.LoadWorkflowExecution(ctx)
-	switch err.(type) {
-	case nil:
-		if !processTaskIfClosed && !msBuilder.IsWorkflowExecutionRunning() {
-			// workflow already finished, no need to process the replication task
-			return nil, nil
-		}
-
-		var targetVersionHistory *persistence.VersionHistories
-		versionHistories := msBuilder.GetVersionHistories()
-		if versionHistories != nil {
-			targetVersionHistory = msBuilder.GetVersionHistories().Duplicate()
-		}
-
-		var targetActivityInfo *persistence.ActivityInfo
-		if activityInfo, ok := msBuilder.GetActivityInfo(
-			taskInfo.ScheduledID,
-		); ok {
-			targetActivityInfo = exec.CopyActivityInfo(activityInfo)
-		}
-		release(nil)
-
-		return action(targetActivityInfo, targetVersionHistory)
-	case *types.EntityNotExistsError:
+	ms, err := context.LoadWorkflowExecution(ctx)
+	if common.IsEntityNotExistsError(err) {
 		return nil, nil
-	default:
+	}
+	if err != nil {
+		release(err)
 		return nil, err
+	}
+
+	switch task.TaskType {
+	case persistence.ReplicationTaskTypeSyncActivity:
+		return t.generateSyncActivityTask(ctx, task, ms)
+	case persistence.ReplicationTaskTypeHistory:
+		return t.generateHistoryReplicationTask(ctx, task, ms)
+	default:
+		return nil, errUnknownReplicationTask
 	}
 }
 
@@ -398,136 +370,135 @@ func (t *taskAckManagerImpl) generateFailoverMarkerTask(
 func (t *taskAckManagerImpl) generateSyncActivityTask(
 	ctx context.Context,
 	taskInfo *persistence.ReplicationTaskInfo,
+	ms exec.MutableState,
 ) (*types.ReplicationTask, error) {
 
-	return t.processReplication(
-		ctx,
-		false, // not necessary to send out sync activity task if workflow closed
-		taskInfo,
-		func(
-			activityInfo *persistence.ActivityInfo,
-			versionHistories *persistence.VersionHistories,
-		) (*types.ReplicationTask, error) {
-			if activityInfo == nil {
-				return nil, nil
-			}
+	if !ms.IsWorkflowExecutionRunning() {
+		// workflow already finished, no need to process the replication task
+		return nil, nil
+	}
 
-			var startedTime *int64
-			var heartbeatTime *int64
-			scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
-			if activityInfo.StartedID != common.EmptyEventID {
-				startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
-			}
-			// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
-			heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
+	activityInfo, ok := ms.GetActivityInfo(taskInfo.ScheduledID)
+	if !ok {
+		return nil, nil
+	}
+	activityInfo = exec.CopyActivityInfo(activityInfo)
 
-			//Version history uses when replicate the sync activity task
-			var versionHistory *types.VersionHistory
-			if versionHistories != nil {
-				rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
-				if err != nil {
-					return nil, err
-				}
-				versionHistory = rawVersionHistory.ToInternalType()
-			}
+	var startedTime *int64
+	var heartbeatTime *int64
+	scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
+	if activityInfo.StartedID != common.EmptyEventID {
+		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
+	}
+	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
+	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
 
-			return &types.ReplicationTask{
-				TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
-				SourceTaskID: taskInfo.TaskID,
-				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-					DomainID:           taskInfo.GetDomainID(),
-					WorkflowID:         taskInfo.GetWorkflowID(),
-					RunID:              taskInfo.GetRunID(),
-					Version:            activityInfo.Version,
-					ScheduledID:        activityInfo.ScheduleID,
-					ScheduledTime:      scheduledTime,
-					StartedID:          activityInfo.StartedID,
-					StartedTime:        startedTime,
-					LastHeartbeatTime:  heartbeatTime,
-					Details:            activityInfo.Details,
-					Attempt:            activityInfo.Attempt,
-					LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
-					LastWorkerIdentity: activityInfo.LastWorkerIdentity,
-					LastFailureDetails: activityInfo.LastFailureDetails,
-					VersionHistory:     versionHistory,
-				},
-				CreationTime: common.Int64Ptr(taskInfo.CreationTime),
-			}, nil
+	versionHistories := ms.GetVersionHistories()
+	if versionHistories != nil {
+		versionHistories = versionHistories.Duplicate()
+	}
+
+	//Version history uses when replicate the sync activity task
+	var versionHistory *types.VersionHistory
+	if versionHistories != nil {
+		rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
+		if err != nil {
+			return nil, err
+		}
+		versionHistory = rawVersionHistory.ToInternalType()
+	}
+
+	return &types.ReplicationTask{
+		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
+		SourceTaskID: taskInfo.TaskID,
+		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+			DomainID:           taskInfo.GetDomainID(),
+			WorkflowID:         taskInfo.GetWorkflowID(),
+			RunID:              taskInfo.GetRunID(),
+			Version:            activityInfo.Version,
+			ScheduledID:        activityInfo.ScheduleID,
+			ScheduledTime:      scheduledTime,
+			StartedID:          activityInfo.StartedID,
+			StartedTime:        startedTime,
+			LastHeartbeatTime:  heartbeatTime,
+			Details:            activityInfo.Details,
+			Attempt:            activityInfo.Attempt,
+			LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
+			LastWorkerIdentity: activityInfo.LastWorkerIdentity,
+			LastFailureDetails: activityInfo.LastFailureDetails,
+			VersionHistory:     versionHistory,
 		},
-	)
+		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
+	}, nil
 }
 
 func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 	ctx context.Context,
 	task *persistence.ReplicationTaskInfo,
+	ms exec.MutableState,
 ) (*types.ReplicationTask, error) {
 
-	return t.processReplication(
+	versionHistories := ms.GetVersionHistories()
+	if versionHistories != nil {
+		versionHistories = versionHistories.Duplicate()
+	}
+
+	if versionHistories == nil {
+		t.logger.Error("encounter workflow without version histories",
+			tag.WorkflowDomainID(task.GetDomainID()),
+			tag.WorkflowID(task.GetWorkflowID()),
+			tag.WorkflowRunID(task.GetRunID()))
+		return nil, nil
+	}
+
+	_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(persistence.NewVersionHistoryItem(task.FirstEventID, task.Version))
+	if err != nil {
+		return nil, err
+	}
+
+	// BranchToken will not set in get dlq replication message request
+	if len(task.BranchToken) == 0 {
+		task.BranchToken = versionHistory.GetBranchToken()
+	}
+
+	eventsBlob, err := t.getEventsBlob(
 		ctx,
-		true, // still necessary to send out history replication message if workflow closed
-		task,
-		func(
-			activityInfo *persistence.ActivityInfo,
-			versionHistories *persistence.VersionHistories,
-		) (*types.ReplicationTask, error) {
-			if versionHistories == nil {
-				t.logger.Error("encounter workflow without version histories",
-					tag.WorkflowDomainID(task.GetDomainID()),
-					tag.WorkflowID(task.GetWorkflowID()),
-					tag.WorkflowRunID(task.GetRunID()))
-				return nil, nil
-			}
-
-			_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(persistence.NewVersionHistoryItem(task.FirstEventID, task.Version))
-			if err != nil {
-				return nil, err
-			}
-
-			// BranchToken will not set in get dlq replication message request
-			if len(task.BranchToken) == 0 {
-				task.BranchToken = versionHistory.GetBranchToken()
-			}
-
-			eventsBlob, err := t.getEventsBlob(
-				ctx,
-				task.BranchToken,
-				task.FirstEventID,
-				task.NextEventID,
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			var newRunEventsBlob *types.DataBlob
-			if len(task.NewRunBranchToken) != 0 {
-				// only get the first batch
-				newRunEventsBlob, err = t.getEventsBlob(
-					ctx,
-					task.NewRunBranchToken,
-					common.FirstEventID,
-					common.FirstEventID+1,
-				)
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			replicationTask := &types.ReplicationTask{
-				TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
-				SourceTaskID: task.TaskID,
-				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-					DomainID:            task.DomainID,
-					WorkflowID:          task.WorkflowID,
-					RunID:               task.RunID,
-					VersionHistoryItems: versionHistory.ToInternalType().Items,
-					Events:              eventsBlob,
-					NewRunEvents:        newRunEventsBlob,
-				},
-				CreationTime: common.Int64Ptr(task.CreationTime),
-			}
-			return replicationTask, nil
-		},
+		task.BranchToken,
+		task.FirstEventID,
+		task.NextEventID,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	var newRunEventsBlob *types.DataBlob
+	if len(task.NewRunBranchToken) != 0 {
+		// only get the first batch
+		newRunEventsBlob, err = t.getEventsBlob(
+			ctx,
+			task.NewRunBranchToken,
+			common.FirstEventID,
+			common.FirstEventID+1,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	replicationTask := &types.ReplicationTask{
+		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
+		SourceTaskID: task.TaskID,
+		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+			DomainID:            task.DomainID,
+			WorkflowID:          task.WorkflowID,
+			RunID:               task.RunID,
+			VersionHistoryItems: versionHistory.ToInternalType().Items,
+			Events:              eventsBlob,
+			NewRunEvents:        newRunEventsBlob,
+		},
+		CreationTime: common.Int64Ptr(task.CreationTime),
+	}
+	return replicationTask, nil
 }
 
 func (t *taskAckManagerImpl) getBatchSize() int {

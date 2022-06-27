@@ -216,9 +216,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	workflowContext.SetWorkflowExecution(s.mockMutableState)
 	release(nil)
 	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
 	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
 		&persistence.DomainConfig{Retention: 1},
@@ -534,8 +532,7 @@ func TestHydration_History(t *testing.T) {
 			name: "hydrates history with given branch token",
 			task: task,
 			prepareMutableState: func(ms *execution.MockMutableState) {
-				ms.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-				ms.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false)
+				ms.EXPECT().GetVersionHistories().Return(versionHistories)
 			},
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenTask, testBlobTask)
@@ -559,8 +556,7 @@ func TestHydration_History(t *testing.T) {
 			name: "hydrates history with branch token from version histories",
 			task: taskWithoutBranchToken,
 			prepareMutableState: func(ms *execution.MockMutableState) {
-				ms.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-				ms.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false)
+				ms.EXPECT().GetVersionHistories().Return(versionHistories)
 			},
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenVersionHistory, testBlobTokenVersionHistory)
@@ -584,8 +580,7 @@ func TestHydration_History(t *testing.T) {
 			name: "no version histories - return nil, no error",
 			task: task,
 			prepareMutableState: func(ms *execution.MockMutableState) {
-				ms.EXPECT().GetVersionHistories().Return(nil).AnyTimes()
-				ms.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false)
+				ms.EXPECT().GetVersionHistories().Return(nil)
 			},
 			expectTask: nil,
 		},
@@ -593,8 +588,7 @@ func TestHydration_History(t *testing.T) {
 			name: "bad version histories - return error",
 			task: task,
 			prepareMutableState: func(ms *execution.MockMutableState) {
-				ms.EXPECT().GetVersionHistories().Return(&persistence.VersionHistories{}).AnyTimes()
-				ms.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false)
+				ms.EXPECT().GetVersionHistories().Return(&persistence.VersionHistories{})
 			},
 			expectErr: "version histories does not contains given item.",
 		},
@@ -602,8 +596,7 @@ func TestHydration_History(t *testing.T) {
 			name: "failed reading history - return error",
 			task: task,
 			prepareMutableState: func(ms *execution.MockMutableState) {
-				ms.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-				ms.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false)
+				ms.EXPECT().GetVersionHistories().Return(versionHistories)
 			},
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("failed reading history"))
