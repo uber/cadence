@@ -71,7 +71,6 @@ type (
 		shard            shard.Context
 		executionCache   *exec.Cache
 		executionManager persistence.ExecutionManager
-		historyManager   persistence.HistoryManager
 		rateLimiter      *quotas.DynamicRateLimiter
 		retryPolicy      backoff.RetryPolicy
 		throttleRetry    *backoff.ThrottleRetry
@@ -104,11 +103,12 @@ func NewTaskAckManager(
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
 
+	logger := shard.GetLogger().WithTags(tag.ComponentReplicationAckManager)
+
 	return &taskAckManagerImpl{
 		shard:            shard,
 		executionCache:   executionCache,
 		executionManager: shard.GetExecutionManager(),
-		historyManager:   shard.GetHistoryManager(),
 		rateLimiter:      rateLimiter,
 		retryPolicy:      retryPolicy,
 		throttleRetry: backoff.NewThrottleRetry(
@@ -118,12 +118,12 @@ func NewTaskAckManager(
 		lastTaskCreationTime: atomic.Value{},
 		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
 		metricsClient:        shard.GetMetricsClient(),
-		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
+		logger:               logger,
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
 		hydrator: NewTaskHydrator(
 			shard.GetShardID(),
 			shard.GetHistoryManager(),
-			shard.GetLogger(),
+			logger,
 			shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize,
 		),
 	}
