@@ -251,10 +251,11 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	taskInfo task.Info,
 ) (*types.ReplicationTask, error) {
 
-	task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
+	taskPtr, ok := taskInfo.(*persistence.ReplicationTaskInfo)
 	if !ok {
 		return nil, errUnknownQueueTask
 	}
+	task := *taskPtr
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeFailoverMarker:

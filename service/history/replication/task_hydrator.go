@@ -64,7 +64,7 @@ type (
 )
 
 // HydrateFailoverMarkerTask hydrates failover marker replication task.
-func (t TaskHydrator) HydrateFailoverMarkerTask(task *persistence.ReplicationTaskInfo) *types.ReplicationTask {
+func (t TaskHydrator) HydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.ReplicationTask {
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskTypeFailoverMarker.Ptr(),
 		SourceTaskID: task.TaskID,
@@ -78,7 +78,7 @@ func (t TaskHydrator) HydrateFailoverMarkerTask(task *persistence.ReplicationTas
 
 // HydrateSyncActivityTask hydrates sync activity replication task.
 // It needs loaded mutable state to hydrate fields for this task.
-func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
+func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
 	if !ms.IsWorkflowExecutionRunning() {
 		// workflow already finished, no need to process the replication task
 		return nil, nil
@@ -137,7 +137,7 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persist
 // HydrateHistoryReplicationTask hydrates history replication task.
 // It needs loaded mutable state to hydrate fields for this task.
 // It may also load history branch from database with events specified in replication task.
-func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
+func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
 		versionHistories = versionHistories.Duplicate()

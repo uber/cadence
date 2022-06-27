@@ -90,7 +90,7 @@ func TestHydration_FailoverMarker(t *testing.T) {
 	}
 
 	hydrator := NewTaskHydrator(testShardID, nil, log.NewNoop(), nil)
-	actual := hydrator.HydrateFailoverMarkerTask(&task)
+	actual := hydrator.HydrateFailoverMarkerTask(task)
 	assert.Equal(t, &expected, actual)
 }
 
@@ -193,7 +193,7 @@ func TestHydration_SyncActivity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hydrator := NewTaskHydrator(testShardID, nil, log.NewNoop(), nil)
 
-			actualTask, err := hydrator.HydrateSyncActivityTask(context.Background(), &tt.task, &tt.mutableState)
+			actualTask, err := hydrator.HydrateSyncActivityTask(context.Background(), tt.task, &tt.mutableState)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
@@ -317,7 +317,7 @@ func TestHydration_History(t *testing.T) {
 
 			hydrator := NewTaskHydrator(testShardID, history, log.NewNoop(), dynamicconfig.GetIntPropertyFn(5))
 
-			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), &tt.task, &tt.mutableState)
+			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, &tt.mutableState)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
