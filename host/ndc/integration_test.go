@@ -2406,7 +2406,6 @@ func (s *NDCIntegrationTestSuite) applyEventsThroughFetcher(
 			TaskType:     &taskType,
 			SourceTaskID: 1,
 			HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-				TaskID:              1,
 				DomainID:            s.domainID,
 				WorkflowID:          workflowID,
 				RunID:               runID,

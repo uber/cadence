@@ -307,7 +307,6 @@ func (v *GetReplicationMessagesResponse) GetMessagesByShard() (o map[int32]*Repl
 
 // HistoryTaskV2Attributes is an internal type (TBD...)
 type HistoryTaskV2Attributes struct {
-	TaskID              int64                 `json:"taskId,omitempty"`
 	DomainID            string                `json:"domainId,omitempty"`
 	WorkflowID          string                `json:"workflowId,omitempty"`
 	RunID               string                `json:"runId,omitempty"`
