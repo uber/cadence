@@ -79,6 +79,11 @@ func (t TaskHydrator) HydrateFailoverMarkerTask(task persistence.ReplicationTask
 // HydrateSyncActivityTask hydrates sync activity replication task.
 // It needs loaded mutable state to hydrate fields for this task.
 func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
+	// Treat nil mutable state as if workflow does not exist (no longer exists)
+	if ms == nil {
+		return nil, nil
+	}
+
 	if !ms.IsWorkflowExecutionRunning() {
 		// workflow already finished, no need to process the replication task
 		return nil, nil
@@ -138,6 +143,11 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 // It needs loaded mutable state to hydrate fields for this task.
 // It may also load history branch from database with events specified in replication task.
 func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
+	// Treat nil mutable state as if workflow does not exist (no longer exists)
+	if ms == nil {
+		return nil, nil
+	}
+
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
 		versionHistories = versionHistories.Duplicate()

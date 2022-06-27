@@ -134,14 +134,14 @@ func TestHydration_SyncActivity(t *testing.T) {
 	tests := []struct {
 		name         string
 		task         persistence.ReplicationTaskInfo
-		mutableState fakeMutableState
+		mutableState MutableState
 		expectTask   *types.ReplicationTask
 		expectErr    string
 	}{
 		{
 			name: "hydrates sync activity task",
 			task: task,
-			mutableState: fakeMutableState{
+			mutableState: &fakeMutableState{
 				isWorkflowExecutionRunning: true,
 				versionHistories:           versionHistories,
 				activityInfos:              map[int64]persistence.ActivityInfo{testScheduleID: activityInfo},
@@ -175,17 +175,23 @@ func TestHydration_SyncActivity(t *testing.T) {
 		{
 			name:         "workflow is not running - return nil, no error",
 			task:         task,
-			mutableState: fakeMutableState{isWorkflowExecutionRunning: false},
+			mutableState: &fakeMutableState{isWorkflowExecutionRunning: false},
 			expectTask:   nil,
 		},
 		{
 			name: "no activity info - return nil, no error",
 			task: task,
-			mutableState: fakeMutableState{
+			mutableState: &fakeMutableState{
 				isWorkflowExecutionRunning: true,
 				activityInfos:              map[int64]persistence.ActivityInfo{},
 			},
 			expectTask: nil,
+		},
+		{
+			name:         "no mutable state - treat as workflow does not exist, return nil, no error",
+			task:         task,
+			mutableState: nil,
+			expectTask:   nil,
 		},
 	}
 
@@ -193,7 +199,7 @@ func TestHydration_SyncActivity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hydrator := NewTaskHydrator(testShardID, nil, log.NewNoop(), nil)
 
-			actualTask, err := hydrator.HydrateSyncActivityTask(context.Background(), tt.task, &tt.mutableState)
+			actualTask, err := hydrator.HydrateSyncActivityTask(context.Background(), tt.task, tt.mutableState)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
@@ -236,7 +242,7 @@ func TestHydration_History(t *testing.T) {
 	tests := []struct {
 		name           string
 		task           persistence.ReplicationTaskInfo
-		mutableState   fakeMutableState
+		mutableState   MutableState
 		prepareHistory func(hm *mocks.HistoryV2Manager)
 		expectTask     *types.ReplicationTask
 		expectErr      string
@@ -244,7 +250,7 @@ func TestHydration_History(t *testing.T) {
 		{
 			name:         "hydrates history with given branch token",
 			task:         task,
-			mutableState: fakeMutableState{versionHistories: versionHistories},
+			mutableState: &fakeMutableState{versionHistories: versionHistories},
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenTask, testBlobTask)
 				mockHistory(hm, 1, 2, testBranchTokenTaskNewRun, testBlobTaskNewRun)
@@ -266,7 +272,7 @@ func TestHydration_History(t *testing.T) {
 		{
 			name:         "hydrates history with branch token from version histories",
 			task:         taskWithoutBranchToken,
-			mutableState: fakeMutableState{versionHistories: versionHistories},
+			mutableState: &fakeMutableState{versionHistories: versionHistories},
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenVersionHistory, testBlobTokenVersionHistory)
 				mockHistory(hm, 1, 2, testBranchTokenTaskNewRun, testBlobTaskNewRun)
@@ -288,23 +294,29 @@ func TestHydration_History(t *testing.T) {
 		{
 			name:         "no version histories - return nil, no error",
 			task:         task,
-			mutableState: fakeMutableState{versionHistories: nil},
+			mutableState: &fakeMutableState{versionHistories: nil},
 			expectTask:   nil,
 		},
 		{
 			name:         "bad version histories - return error",
 			task:         task,
-			mutableState: fakeMutableState{versionHistories: &persistence.VersionHistories{}},
+			mutableState: &fakeMutableState{versionHistories: &persistence.VersionHistories{}},
 			expectErr:    "version histories does not contains given item.",
 		},
 		{
 			name:         "failed reading history - return error",
 			task:         task,
-			mutableState: fakeMutableState{versionHistories: versionHistories},
+			mutableState: &fakeMutableState{versionHistories: versionHistories},
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("failed reading history"))
 			},
 			expectErr: "failed reading history",
+		},
+		{
+			name:         "no mutable state - treat as workflow does not exist, return nil, no error",
+			task:         task,
+			mutableState: nil,
+			expectTask:   nil,
 		},
 	}
 
@@ -317,7 +329,7 @@ func TestHydration_History(t *testing.T) {
 
 			hydrator := NewTaskHydrator(testShardID, history, log.NewNoop(), dynamicconfig.GetIntPropertyFn(5))
 
-			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, &tt.mutableState)
+			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, tt.mutableState)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
