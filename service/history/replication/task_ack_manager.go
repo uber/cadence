@@ -84,6 +84,8 @@ type (
 
 		// This is the batch size used by pull based RPC replicator.
 		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
+
+		hydrator TaskHydrator
 	}
 )
 
@@ -118,6 +120,12 @@ func NewTaskAckManager(
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
+		hydrator: NewTaskHydrator(
+			shard.GetShardID(),
+			shard.GetHistoryManager(),
+			shard.GetLogger(),
+			shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize,
+		),
 	}
 }
 
@@ -250,7 +258,7 @@ func (t *taskAckManagerImpl) toReplicationTask(
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeFailoverMarker:
-		return t.generateFailoverMarkerTask(task), nil
+		return t.hydrator.HydrateFailoverMarkerTask(task), nil
 	}
 
 	execution := types.WorkflowExecution{
@@ -275,54 +283,12 @@ func (t *taskAckManagerImpl) toReplicationTask(
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
-		return t.generateSyncActivityTask(ctx, task, ms)
+		return t.hydrator.HydrateSyncActivityTask(ctx, task, ms)
 	case persistence.ReplicationTaskTypeHistory:
-		return t.generateHistoryReplicationTask(ctx, task, ms)
+		return t.hydrator.HydrateHistoryReplicationTask(ctx, task, ms)
 	default:
 		return nil, errUnknownReplicationTask
 	}
-}
-
-func (t *taskAckManagerImpl) getEventsBlob(
-	ctx context.Context,
-	branchToken []byte,
-	firstEventID int64,
-	nextEventID int64,
-) (*types.DataBlob, error) {
-
-	var eventBatchBlobs []*persistence.DataBlob
-	var pageToken []byte
-	batchSize := t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize()
-	req := &persistence.ReadHistoryBranchRequest{
-		BranchToken:   branchToken,
-		MinEventID:    firstEventID,
-		MaxEventID:    nextEventID,
-		PageSize:      batchSize,
-		NextPageToken: pageToken,
-		ShardID:       common.IntPtr(t.shard.GetShardID()),
-	}
-
-	for {
-		resp, err := t.historyManager.ReadRawHistoryBranch(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-
-		req.NextPageToken = resp.NextPageToken
-		eventBatchBlobs = append(eventBatchBlobs, resp.HistoryEventBlobs...)
-
-		if len(req.NextPageToken) == 0 {
-			break
-		}
-	}
-
-	if len(eventBatchBlobs) != 1 {
-		return nil, &types.InternalDataInconsistencyError{
-			Message: "replicatorQueueProcessor encounter more than 1 NDC raw event batch",
-		}
-	}
-
-	return eventBatchBlobs[0].ToInternal(), nil
 }
 
 func (t *taskAckManagerImpl) readTasksWithBatchSize(
@@ -350,134 +316,6 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 	}
 
 	return tasks, len(response.NextPageToken) != 0, nil
-}
-
-func (t *taskAckManagerImpl) generateFailoverMarkerTask(task *persistence.ReplicationTaskInfo) *types.ReplicationTask {
-
-	return &types.ReplicationTask{
-		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
-		SourceTaskID: task.TaskID,
-		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
-			DomainID:        task.DomainID,
-			FailoverVersion: task.Version,
-		},
-		CreationTime: common.Int64Ptr(task.CreationTime),
-	}
-}
-
-func (t *taskAckManagerImpl) generateSyncActivityTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms exec.MutableState) (*types.ReplicationTask, error) {
-
-	if !ms.IsWorkflowExecutionRunning() {
-		// workflow already finished, no need to process the replication task
-		return nil, nil
-	}
-
-	activityInfo, ok := ms.GetActivityInfo(task.ScheduledID)
-	if !ok {
-		return nil, nil
-	}
-	activityInfo = exec.CopyActivityInfo(activityInfo)
-
-	var startedTime *int64
-	var heartbeatTime *int64
-	scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
-	if activityInfo.StartedID != common.EmptyEventID {
-		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
-	}
-	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
-	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
-
-	versionHistories := ms.GetVersionHistories()
-	if versionHistories != nil {
-		versionHistories = versionHistories.Duplicate()
-	}
-
-	//Version history uses when replicate the sync activity task
-	var versionHistory *types.VersionHistory
-	if versionHistories != nil {
-		rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
-		if err != nil {
-			return nil, err
-		}
-		versionHistory = rawVersionHistory.ToInternalType()
-	}
-
-	return &types.ReplicationTask{
-		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
-		SourceTaskID: task.TaskID,
-		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:           task.DomainID,
-			WorkflowID:         task.WorkflowID,
-			RunID:              task.RunID,
-			Version:            activityInfo.Version,
-			ScheduledID:        activityInfo.ScheduleID,
-			ScheduledTime:      scheduledTime,
-			StartedID:          activityInfo.StartedID,
-			StartedTime:        startedTime,
-			LastHeartbeatTime:  heartbeatTime,
-			Details:            activityInfo.Details,
-			Attempt:            activityInfo.Attempt,
-			LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
-			LastWorkerIdentity: activityInfo.LastWorkerIdentity,
-			LastFailureDetails: activityInfo.LastFailureDetails,
-			VersionHistory:     versionHistory,
-		},
-		CreationTime: common.Int64Ptr(task.CreationTime),
-	}, nil
-}
-
-func (t *taskAckManagerImpl) generateHistoryReplicationTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms exec.MutableState) (*types.ReplicationTask, error) {
-
-	versionHistories := ms.GetVersionHistories()
-	if versionHistories != nil {
-		versionHistories = versionHistories.Duplicate()
-	}
-
-	if versionHistories == nil {
-		t.logger.Error("encounter workflow without version histories",
-			tag.WorkflowDomainID(task.DomainID),
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID))
-		return nil, nil
-	}
-
-	_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(persistence.NewVersionHistoryItem(task.FirstEventID, task.Version))
-	if err != nil {
-		return nil, err
-	}
-
-	// BranchToken will not set in get dlq replication message request
-	if len(task.BranchToken) == 0 {
-		task.BranchToken = versionHistory.GetBranchToken()
-	}
-
-	eventsBlob, err := t.getEventsBlob(ctx, task.BranchToken, task.FirstEventID, task.NextEventID)
-	if err != nil {
-		return nil, err
-	}
-
-	var newRunEventsBlob *types.DataBlob
-	if len(task.NewRunBranchToken) != 0 {
-		// only get the first batch
-		newRunEventsBlob, err = t.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &types.ReplicationTask{
-		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
-		SourceTaskID: task.TaskID,
-		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-			DomainID:            task.DomainID,
-			WorkflowID:          task.WorkflowID,
-			RunID:               task.RunID,
-			VersionHistoryItems: versionHistory.ToInternalType().Items,
-			Events:              eventsBlob,
-			NewRunEvents:        newRunEventsBlob,
-		},
-		CreationTime: common.Int64Ptr(task.CreationTime),
-	}, nil
 }
 
 func (t *taskAckManagerImpl) getBatchSize() int {
