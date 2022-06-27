@@ -98,16 +98,14 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 		startedTime = timeToUnixNano(activityInfo.StartedTime)
 	}
 
-	versionHistories := ms.GetVersionHistories()
-
 	//Version history uses when replicate the sync activity task
 	var versionHistory *types.VersionHistory
-	if versionHistories != nil {
-		rawVersionHistory, err := versionHistories.GetCurrentVersionHistory()
+	if versionHistories := ms.GetVersionHistories(); versionHistories != nil {
+		currentVersionHistory, err := versionHistories.GetCurrentVersionHistory()
 		if err != nil {
 			return nil, err
 		}
-		versionHistory = rawVersionHistory.ToInternalType()
+		versionHistory = currentVersionHistory.ToInternalType()
 	}
 
 	return &types.ReplicationTask{
