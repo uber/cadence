@@ -33,60 +33,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockTimerSequence is a mock of TimerSequence interface
+// MockTimerSequence is a mock of TimerSequence interface.
 type MockTimerSequence struct {
 	ctrl     *gomock.Controller
 	recorder *MockTimerSequenceMockRecorder
 }
 
-// MockTimerSequenceMockRecorder is the mock recorder for MockTimerSequence
+// MockTimerSequenceMockRecorder is the mock recorder for MockTimerSequence.
 type MockTimerSequenceMockRecorder struct {
 	mock *MockTimerSequence
 }
 
-// NewMockTimerSequence creates a new mock instance
+// NewMockTimerSequence creates a new mock instance.
 func NewMockTimerSequence(ctrl *gomock.Controller) *MockTimerSequence {
 	mock := &MockTimerSequence{ctrl: ctrl}
 	mock.recorder = &MockTimerSequenceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTimerSequence) EXPECT() *MockTimerSequenceMockRecorder {
 	return m.recorder
 }
 
-// IsExpired mocks base method
-func (m *MockTimerSequence) IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) (time.Duration, bool) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsExpired", referenceTime, TimerSequenceID)
-	ret0, _ := ret[0].(time.Duration)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
-}
-
-// IsExpired indicates an expected call of IsExpired
-func (mr *MockTimerSequenceMockRecorder) IsExpired(referenceTime, TimerSequenceID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsExpired", reflect.TypeOf((*MockTimerSequence)(nil).IsExpired), referenceTime, TimerSequenceID)
-}
-
-// CreateNextUserTimer mocks base method
-func (m *MockTimerSequence) CreateNextUserTimer() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNextUserTimer")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateNextUserTimer indicates an expected call of CreateNextUserTimer
-func (mr *MockTimerSequenceMockRecorder) CreateNextUserTimer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNextUserTimer", reflect.TypeOf((*MockTimerSequence)(nil).CreateNextUserTimer))
-}
-
-// CreateNextActivityTimer mocks base method
+// CreateNextActivityTimer mocks base method.
 func (m *MockTimerSequence) CreateNextActivityTimer() (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNextActivityTimer")
@@ -95,27 +65,43 @@ func (m *MockTimerSequence) CreateNextActivityTimer() (bool, error) {
 	return ret0, ret1
 }
 
-// CreateNextActivityTimer indicates an expected call of CreateNextActivityTimer
+// CreateNextActivityTimer indicates an expected call of CreateNextActivityTimer.
 func (mr *MockTimerSequenceMockRecorder) CreateNextActivityTimer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNextActivityTimer", reflect.TypeOf((*MockTimerSequence)(nil).CreateNextActivityTimer))
 }
 
-// LoadAndSortUserTimers mocks base method
-func (m *MockTimerSequence) LoadAndSortUserTimers() []TimerSequenceID {
+// CreateNextUserTimer mocks base method.
+func (m *MockTimerSequence) CreateNextUserTimer() (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LoadAndSortUserTimers")
-	ret0, _ := ret[0].([]TimerSequenceID)
-	return ret0
+	ret := m.ctrl.Call(m, "CreateNextUserTimer")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// LoadAndSortUserTimers indicates an expected call of LoadAndSortUserTimers
-func (mr *MockTimerSequenceMockRecorder) LoadAndSortUserTimers() *gomock.Call {
+// CreateNextUserTimer indicates an expected call of CreateNextUserTimer.
+func (mr *MockTimerSequenceMockRecorder) CreateNextUserTimer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadAndSortUserTimers", reflect.TypeOf((*MockTimerSequence)(nil).LoadAndSortUserTimers))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNextUserTimer", reflect.TypeOf((*MockTimerSequence)(nil).CreateNextUserTimer))
 }
 
-// LoadAndSortActivityTimers mocks base method
+// IsExpired mocks base method.
+func (m *MockTimerSequence) IsExpired(referenceTime time.Time, TimerSequenceID TimerSequenceID) (time.Duration, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsExpired", referenceTime, TimerSequenceID)
+	ret0, _ := ret[0].(time.Duration)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// IsExpired indicates an expected call of IsExpired.
+func (mr *MockTimerSequenceMockRecorder) IsExpired(referenceTime, TimerSequenceID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsExpired", reflect.TypeOf((*MockTimerSequence)(nil).IsExpired), referenceTime, TimerSequenceID)
+}
+
+// LoadAndSortActivityTimers mocks base method.
 func (m *MockTimerSequence) LoadAndSortActivityTimers() []TimerSequenceID {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadAndSortActivityTimers")
@@ -123,8 +109,22 @@ func (m *MockTimerSequence) LoadAndSortActivityTimers() []TimerSequenceID {
 	return ret0
 }
 
-// LoadAndSortActivityTimers indicates an expected call of LoadAndSortActivityTimers
+// LoadAndSortActivityTimers indicates an expected call of LoadAndSortActivityTimers.
 func (mr *MockTimerSequenceMockRecorder) LoadAndSortActivityTimers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadAndSortActivityTimers", reflect.TypeOf((*MockTimerSequence)(nil).LoadAndSortActivityTimers))
+}
+
+// LoadAndSortUserTimers mocks base method.
+func (m *MockTimerSequence) LoadAndSortUserTimers() []TimerSequenceID {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadAndSortUserTimers")
+	ret0, _ := ret[0].([]TimerSequenceID)
+	return ret0
+}
+
+// LoadAndSortUserTimers indicates an expected call of LoadAndSortUserTimers.
+func (mr *MockTimerSequenceMockRecorder) LoadAndSortUserTimers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadAndSortUserTimers", reflect.TypeOf((*MockTimerSequence)(nil).LoadAndSortUserTimers))
 }
