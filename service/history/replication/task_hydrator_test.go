@@ -227,7 +227,7 @@ func TestHydration_History(t *testing.T) {
 	taskWithoutBranchToken := task
 	taskWithoutBranchToken.BranchToken = nil
 
-	versionHistories := &persistence.VersionHistories{
+	versionHistories := persistence.VersionHistories{
 		CurrentVersionHistoryIndex: 0,
 		Histories: []*persistence.VersionHistory{
 			{
@@ -240,17 +240,17 @@ func TestHydration_History(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		task           persistence.ReplicationTaskInfo
-		mutableState   MutableState
-		prepareHistory func(hm *mocks.HistoryV2Manager)
-		expectTask     *types.ReplicationTask
-		expectErr      string
+		name             string
+		task             persistence.ReplicationTaskInfo
+		versionHistories *persistence.VersionHistories
+		prepareHistory   func(hm *mocks.HistoryV2Manager)
+		expectTask       *types.ReplicationTask
+		expectErr        string
 	}{
 		{
-			name:         "hydrates history with given branch token",
-			task:         task,
-			mutableState: &fakeMutableState{versionHistories: versionHistories},
+			name:             "hydrates history with given branch token",
+			task:             task,
+			versionHistories: &versionHistories,
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenTask, testBlobTask)
 				mockHistory(hm, 1, 2, testBranchTokenTaskNewRun, testBlobTaskNewRun)
@@ -270,9 +270,9 @@ func TestHydration_History(t *testing.T) {
 			},
 		},
 		{
-			name:         "hydrates history with branch token from version histories",
-			task:         taskWithoutBranchToken,
-			mutableState: &fakeMutableState{versionHistories: versionHistories},
+			name:             "hydrates history with branch token from version histories",
+			task:             taskWithoutBranchToken,
+			versionHistories: &versionHistories,
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenVersionHistory, testBlobTokenVersionHistory)
 				mockHistory(hm, 1, 2, testBranchTokenTaskNewRun, testBlobTaskNewRun)
@@ -292,31 +292,25 @@ func TestHydration_History(t *testing.T) {
 			},
 		},
 		{
-			name:         "no version histories - return nil, no error",
-			task:         task,
-			mutableState: &fakeMutableState{versionHistories: nil},
-			expectTask:   nil,
+			name:             "no version histories - return nil, no error",
+			task:             task,
+			versionHistories: nil,
+			expectTask:       nil,
 		},
 		{
-			name:         "bad version histories - return error",
-			task:         task,
-			mutableState: &fakeMutableState{versionHistories: &persistence.VersionHistories{}},
-			expectErr:    "version histories does not contains given item.",
+			name:             "bad version histories - return error",
+			task:             task,
+			versionHistories: &persistence.VersionHistories{},
+			expectErr:        "version histories does not contains given item.",
 		},
 		{
-			name:         "failed reading history - return error",
-			task:         task,
-			mutableState: &fakeMutableState{versionHistories: versionHistories},
+			name:             "failed reading history - return error",
+			task:             task,
+			versionHistories: &versionHistories,
 			prepareHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("failed reading history"))
 			},
 			expectErr: "failed reading history",
-		},
-		{
-			name:         "no mutable state - treat as workflow does not exist, return nil, no error",
-			task:         task,
-			mutableState: nil,
-			expectTask:   nil,
 		},
 	}
 
@@ -329,7 +323,7 @@ func TestHydration_History(t *testing.T) {
 
 			hydrator := NewTaskHydrator(testShardID, history, log.NewNoop(), dynamicconfig.GetIntPropertyFn(5))
 
-			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, tt.mutableState)
+			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, tt.versionHistories)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {

@@ -135,19 +135,8 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 }
 
 // HydrateHistoryReplicationTask hydrates history replication task.
-// It needs loaded mutable state to hydrate fields for this task.
-// It may also load history branch from database with events specified in replication task.
-func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
-	// Treat nil mutable state as if workflow does not exist (no longer exists)
-	if ms == nil {
-		return nil, nil
-	}
-
-	versionHistories := ms.GetVersionHistories()
-	if versionHistories != nil {
-		versionHistories = versionHistories.Duplicate()
-	}
-
+// It needs version histories to load history branch from database with events specified in replication task.
+func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, versionHistories *persistence.VersionHistories) (*types.ReplicationTask, error) {
 	if versionHistories == nil {
 		t.logger.Error("encounter workflow without version histories",
 			tag.WorkflowDomainID(task.DomainID),

@@ -286,7 +286,13 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	case persistence.ReplicationTaskTypeSyncActivity:
 		return t.hydrator.HydrateSyncActivityTask(ctx, task, ms)
 	case persistence.ReplicationTaskTypeHistory:
-		return t.hydrator.HydrateHistoryReplicationTask(ctx, task, ms)
+		versionHistories := ms.GetVersionHistories()
+		if versionHistories != nil {
+			// Create a copy to release workflow lock early, as hydration will make a DB call, which may take a while
+			versionHistories = versionHistories.Duplicate()
+		}
+		release(nil)
+		return t.hydrator.HydrateHistoryReplicationTask(ctx, task, versionHistories)
 	default:
 		return nil, errUnknownReplicationTask
 	}
