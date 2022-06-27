@@ -51,7 +51,7 @@ type (
 		adminClient      *admin.MockClient
 		executionManager *mocks.ExecutionManager
 		shardManager     *mocks.ShardManager
-		taskExecutor     *MockTaskExecutor
+		taskExecutor     *fakeTaskExecutor
 		taskExecutors    map[string]TaskExecutor
 		sourceCluster    string
 
@@ -94,7 +94,7 @@ func (s *dlqHandlerSuite) SetupTest() {
 	s.shardManager = s.mockShard.Resource.ShardMgr
 
 	s.taskExecutors = make(map[string]TaskExecutor)
-	s.taskExecutor = NewMockTaskExecutor(s.controller)
+	s.taskExecutor = &fakeTaskExecutor{}
 	s.sourceCluster = "test"
 	s.taskExecutors[s.sourceCluster] = s.taskExecutor
 
@@ -208,7 +208,6 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 		Return(&types.GetDLQReplicationMessagesResponse{
 			ReplicationTasks: []*types.ReplicationTask{replicationTask},
 		}, nil)
-	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
 	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ", mock.Anything,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    s.sourceCluster,
@@ -219,4 +218,13 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	token, err := s.messageHandler.MergeMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
+}
+
+type fakeTaskExecutor struct {
+	scope int
+	err   error
+}
+
+func (e fakeTaskExecutor) execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error) {
+	return e.scope, e.err
 }
