@@ -35,6 +35,7 @@ const (
 	// PluginName is the name of the plugin
 	PluginName            = "cassandra"
 	defaultSessionTimeout = 10 * time.Second
+	defaultConnectTimeout = 2 * time.Second
 )
 
 type plugin struct{}
@@ -97,5 +98,6 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 		Consistency:           gocql.LocalQuorum,
 		SerialConsistency:     gocql.LocalSerial,
 		Timeout:               defaultSessionTimeout,
+		ConnectTimeout:        defaultConnectTimeout,
 	}
 }

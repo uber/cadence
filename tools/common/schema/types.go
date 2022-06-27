@@ -78,6 +78,8 @@ const (
 	CLIOptPassword = "password"
 	// CLIOptTimeout is the cli option for timeout
 	CLIOptTimeout = "timeout"
+	// CLIOptConnectTimeout is the cli option for connection timeout
+	CLIOptConnectTimeout = "connect-timeout"
 	// CLIOptKeyspace is the cli option for keyspace
 	CLIOptKeyspace = "keyspace"
 	// CLIOptDatabase is the cli option for database
@@ -115,6 +117,8 @@ const (
 	CLIFlagUser = CLIOptUser + ", u"
 	// CLIFlagPassword is the cli flag for password
 	CLIFlagPassword = CLIOptPassword + ", pw"
+	// CLIFlagConnectTimeout is the cli flag for connection timeout
+	CLIFlagConnectTimeout = CLIOptConnectTimeout + ", ct"
 	// CLIFlagTimeout is the cli flag for timeout
 	CLIFlagTimeout = CLIOptTimeout + ", t"
 	// CLIFlagKeyspace is the cli flag for keyspace
