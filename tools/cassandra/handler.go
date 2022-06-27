@@ -95,6 +95,7 @@ func CheckCompatibleVersion(
 		Keyspace:              cfg.Keyspace,
 		AllowedAuthenticators: cfg.AllowedAuthenticators,
 		Timeout:               DefaultTimeout,
+		ConnectTimeout:        DefaultConnectTimeout,
 		TLS:                   cfg.TLS,
 		ProtoVersion:          cfg.ProtoVersion,
 	})
@@ -181,6 +182,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.User = cli.GlobalString(schema.CLIOptUser)
 	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
+	cqlConfig.ConnectTimeout = cli.GlobalInt(schema.CLIOptConnectTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
 	cqlConfig.NumReplicas = cli.Int(schema.CLIOptReplicationFactor)
 	cqlConfig.ProtoVersion = cli.Int(schema.CLIOptProtoVersion)
