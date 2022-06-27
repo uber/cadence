@@ -250,23 +250,11 @@ func (t *taskAckManagerImpl) toReplicationTask(
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
-		task, err := t.generateSyncActivityTask(ctx, task)
-		if task != nil {
-			task.SourceTaskID = taskInfo.GetTaskID()
-		}
-		return task, err
+		return t.generateSyncActivityTask(ctx, task)
 	case persistence.ReplicationTaskTypeHistory:
-		task, err := t.generateHistoryReplicationTask(ctx, task)
-		if task != nil {
-			task.SourceTaskID = taskInfo.GetTaskID()
-		}
-		return task, err
+		return t.generateHistoryReplicationTask(ctx, task)
 	case persistence.ReplicationTaskTypeFailoverMarker:
-		task := t.generateFailoverMarkerTask(task)
-		if task != nil {
-			task.SourceTaskID = taskInfo.GetTaskID()
-		}
-		return task, nil
+		return t.generateFailoverMarkerTask(task), nil
 	default:
 		return nil, errUnknownReplicationTask
 	}
@@ -444,7 +432,8 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			}
 
 			return &types.ReplicationTask{
-				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
+				TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
+				SourceTaskID: taskInfo.TaskID,
 				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
 					DomainID:           taskInfo.GetDomainID(),
 					WorkflowID:         taskInfo.GetWorkflowID(),
@@ -527,7 +516,8 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			}
 
 			replicationTask := &types.ReplicationTask{
-				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
+				TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
+				SourceTaskID: task.TaskID,
 				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 					DomainID:            task.DomainID,
 					WorkflowID:          task.WorkflowID,
