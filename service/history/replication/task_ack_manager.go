@@ -352,33 +352,27 @@ func (t *taskAckManagerImpl) readTasksWithBatchSize(
 	return tasks, len(response.NextPageToken) != 0, nil
 }
 
-func (t *taskAckManagerImpl) generateFailoverMarkerTask(
-	taskInfo *persistence.ReplicationTaskInfo,
-) *types.ReplicationTask {
+func (t *taskAckManagerImpl) generateFailoverMarkerTask(task *persistence.ReplicationTaskInfo) *types.ReplicationTask {
 
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
-		SourceTaskID: taskInfo.TaskID,
+		SourceTaskID: task.TaskID,
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
-			DomainID:        taskInfo.DomainID,
-			FailoverVersion: taskInfo.Version,
+			DomainID:        task.DomainID,
+			FailoverVersion: task.Version,
 		},
-		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
+		CreationTime: common.Int64Ptr(task.CreationTime),
 	}
 }
 
-func (t *taskAckManagerImpl) generateSyncActivityTask(
-	ctx context.Context,
-	taskInfo *persistence.ReplicationTaskInfo,
-	ms exec.MutableState,
-) (*types.ReplicationTask, error) {
+func (t *taskAckManagerImpl) generateSyncActivityTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms exec.MutableState) (*types.ReplicationTask, error) {
 
 	if !ms.IsWorkflowExecutionRunning() {
 		// workflow already finished, no need to process the replication task
 		return nil, nil
 	}
 
-	activityInfo, ok := ms.GetActivityInfo(taskInfo.ScheduledID)
+	activityInfo, ok := ms.GetActivityInfo(task.ScheduledID)
 	if !ok {
 		return nil, nil
 	}
@@ -410,11 +404,11 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
-		SourceTaskID: taskInfo.TaskID,
+		SourceTaskID: task.TaskID,
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
-			DomainID:           taskInfo.DomainID,
-			WorkflowID:         taskInfo.WorkflowID,
-			RunID:              taskInfo.RunID,
+			DomainID:           task.DomainID,
+			WorkflowID:         task.WorkflowID,
+			RunID:              task.RunID,
 			Version:            activityInfo.Version,
 			ScheduledID:        activityInfo.ScheduleID,
 			ScheduledTime:      scheduledTime,
@@ -428,15 +422,11 @@ func (t *taskAckManagerImpl) generateSyncActivityTask(
 			LastFailureDetails: activityInfo.LastFailureDetails,
 			VersionHistory:     versionHistory,
 		},
-		CreationTime: common.Int64Ptr(taskInfo.CreationTime),
+		CreationTime: common.Int64Ptr(task.CreationTime),
 	}, nil
 }
 
-func (t *taskAckManagerImpl) generateHistoryReplicationTask(
-	ctx context.Context,
-	task *persistence.ReplicationTaskInfo,
-	ms exec.MutableState,
-) (*types.ReplicationTask, error) {
+func (t *taskAckManagerImpl) generateHistoryReplicationTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms exec.MutableState) (*types.ReplicationTask, error) {
 
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
@@ -461,12 +451,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 		task.BranchToken = versionHistory.GetBranchToken()
 	}
 
-	eventsBlob, err := t.getEventsBlob(
-		ctx,
-		task.BranchToken,
-		task.FirstEventID,
-		task.NextEventID,
-	)
+	eventsBlob, err := t.getEventsBlob(ctx, task.BranchToken, task.FirstEventID, task.NextEventID)
 	if err != nil {
 		return nil, err
 	}
@@ -474,18 +459,13 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 	var newRunEventsBlob *types.DataBlob
 	if len(task.NewRunBranchToken) != 0 {
 		// only get the first batch
-		newRunEventsBlob, err = t.getEventsBlob(
-			ctx,
-			task.NewRunBranchToken,
-			common.FirstEventID,
-			common.FirstEventID+1,
-		)
+		newRunEventsBlob, err = t.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	replicationTask := &types.ReplicationTask{
+	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
 		SourceTaskID: task.TaskID,
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
@@ -497,8 +477,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			NewRunEvents:        newRunEventsBlob,
 		},
 		CreationTime: common.Int64Ptr(task.CreationTime),
-	}
-	return replicationTask, nil
+	}, nil
 }
 
 func (t *taskAckManagerImpl) getBatchSize() int {
