@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 )
 
+// TaskHydrator takes raw replication tasks and hydrates them with additional information.
 type TaskHydrator struct {
 	shardID int
 	history HistoryManager
@@ -43,22 +44,26 @@ type TaskHydrator struct {
 	readHistoryBatchSize dynamicconfig.IntPropertyFn
 }
 
+// NewTaskHydrator creates new TaskHydrator.
 func NewTaskHydrator(shardID int, history HistoryManager, logger log.Logger, readHistoryBatchSize dynamicconfig.IntPropertyFn) TaskHydrator {
 	return TaskHydrator{shardID, history, logger, readHistoryBatchSize}
 }
 
 // Dependencies
 type (
+	// MutableState is a subset of mutable state needed for hydration purposes
 	MutableState interface {
 		IsWorkflowExecutionRunning() bool
 		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
 		GetVersionHistories() *persistence.VersionHistories
 	}
+	// HistoryManager is a subset of history manager needed for hydration purposes
 	HistoryManager interface {
 		ReadRawHistoryBranch(ctx context.Context, request *persistence.ReadHistoryBranchRequest) (*persistence.ReadRawHistoryBranchResponse, error)
 	}
 )
 
+// HydrateFailoverMarkerTask hydrates failover marker replication task.
 func (t TaskHydrator) HydrateFailoverMarkerTask(task *persistence.ReplicationTaskInfo) *types.ReplicationTask {
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskTypeFailoverMarker.Ptr(),
@@ -71,6 +76,8 @@ func (t TaskHydrator) HydrateFailoverMarkerTask(task *persistence.ReplicationTas
 	}
 }
 
+// HydrateSyncActivityTask hydrates sync activity replication task.
+// It needs loaded mutable state to hydrate fields for this task.
 func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
 	if !ms.IsWorkflowExecutionRunning() {
 		// workflow already finished, no need to process the replication task
@@ -127,6 +134,9 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persist
 	}, nil
 }
 
+// HydrateHistoryReplicationTask hydrates history replication task.
+// It needs loaded mutable state to hydrate fields for this task.
+// It may also load history branch from database with events specified in replication task.
 func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task *persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
