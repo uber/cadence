@@ -84,13 +84,9 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persist
 	activityInfo = execution.CopyActivityInfo(activityInfo)
 
 	var startedTime *int64
-	var heartbeatTime *int64
-	scheduledTime := timeToUnixNano(activityInfo.ScheduledTime)
 	if activityInfo.StartedID != common.EmptyEventID {
 		startedTime = timeToUnixNano(activityInfo.StartedTime)
 	}
-	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
-	heartbeatTime = timeToUnixNano(activityInfo.LastHeartBeatUpdatedTime)
 
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
@@ -116,10 +112,10 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persist
 			RunID:              task.RunID,
 			Version:            activityInfo.Version,
 			ScheduledID:        activityInfo.ScheduleID,
-			ScheduledTime:      scheduledTime,
+			ScheduledTime:      timeToUnixNano(activityInfo.ScheduledTime),
 			StartedID:          activityInfo.StartedID,
 			StartedTime:        startedTime,
-			LastHeartbeatTime:  heartbeatTime,
+			LastHeartbeatTime:  timeToUnixNano(activityInfo.LastHeartBeatUpdatedTime),
 			Details:            activityInfo.Details,
 			Attempt:            activityInfo.Attempt,
 			LastFailureReason:  common.StringPtr(activityInfo.LastFailureReason),
