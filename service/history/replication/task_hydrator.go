@@ -24,6 +24,7 @@ package replication
 
 import (
 	"context"
+	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -84,12 +85,12 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persist
 
 	var startedTime *int64
 	var heartbeatTime *int64
-	scheduledTime := common.Int64Ptr(activityInfo.ScheduledTime.UnixNano())
+	scheduledTime := timeToUnixNano(activityInfo.ScheduledTime)
 	if activityInfo.StartedID != common.EmptyEventID {
-		startedTime = common.Int64Ptr(activityInfo.StartedTime.UnixNano())
+		startedTime = timeToUnixNano(activityInfo.StartedTime)
 	}
 	// LastHeartBeatUpdatedTime must be valid when getting the sync activity replication task
-	heartbeatTime = common.Int64Ptr(activityInfo.LastHeartBeatUpdatedTime.UnixNano())
+	heartbeatTime = timeToUnixNano(activityInfo.LastHeartBeatUpdatedTime)
 
 	versionHistories := ms.GetVersionHistories()
 	if versionHistories != nil {
@@ -217,4 +218,8 @@ func (t TaskHydrator) getEventsBlob(ctx context.Context, branchToken []byte, fir
 	}
 
 	return eventBatchBlobs[0].ToInternal(), nil
+}
+
+func timeToUnixNano(t time.Time) *int64 {
+	return common.Int64Ptr(t.UnixNano())
 }
