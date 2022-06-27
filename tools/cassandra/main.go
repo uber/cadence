@@ -98,6 +98,11 @@ func BuildCLIOptions() *cli.App {
 			Usage:  "request Timeout in seconds used for cql client",
 			EnvVar: "CASSANDRA_TIMEOUT",
 		},
+		cli.IntFlag{
+			Name:  schema.CLIOptConnectTimeout,
+			Value: DefaultConnectTimeout,
+			Usage: "Connection Timeout in seconds used for cql client",
+		},
 		cli.StringFlag{
 			Name:   schema.CLIFlagKeyspace,
 			Value:  "cadence",

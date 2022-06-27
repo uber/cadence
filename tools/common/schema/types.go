@@ -80,6 +80,8 @@ const (
 	CLIOptAllowedAuthenticators = "allowed-authenticators"
 	// CLIOptTimeout is the cli option for timeout
 	CLIOptTimeout = "timeout"
+	// CLIOptConnectTimeout is the cli option for connection timeout
+	CLIOptConnectTimeout = "connect-timeout"
 	// CLIOptKeyspace is the cli option for keyspace
 	CLIOptKeyspace = "keyspace"
 	// CLIOptDatabase is the cli option for database
@@ -119,6 +121,8 @@ const (
 	CLIFlagPassword = CLIOptPassword + ", pw"
 	// CLIFlagAllowedAuthenticators is the cli flag for whitelisting custom authenticators
 	CLIFlagAllowedAuthenticators = CLIOptAllowedAuthenticators + ", aa"
+	// CLIFlagConnectTimeout is the cli flag for connection timeout
+	CLIFlagConnectTimeout = CLIOptConnectTimeout + ", ct"
 	// CLIFlagTimeout is the cli flag for timeout
 	CLIFlagTimeout = CLIOptTimeout + ", t"
 	// CLIFlagKeyspace is the cli flag for keyspace
