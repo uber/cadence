@@ -60,7 +60,7 @@ type (
 
 func (t TaskHydrator) HydrateFailoverMarkerTask(task *persistence.ReplicationTaskInfo) *types.ReplicationTask {
 	return &types.ReplicationTask{
-		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeFailoverMarker),
+		TaskType:     types.ReplicationTaskTypeFailoverMarker.Ptr(),
 		SourceTaskID: task.TaskID,
 		FailoverMarkerAttributes: &types.FailoverMarkerAttributes{
 			DomainID:        task.DomainID,
@@ -107,7 +107,7 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task *persist
 	}
 
 	return &types.ReplicationTask{
-		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeSyncActivity),
+		TaskType:     types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SourceTaskID: task.TaskID,
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
 			DomainID:           task.DomainID,
@@ -169,7 +169,7 @@ func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task *p
 	}
 
 	return &types.ReplicationTask{
-		TaskType:     types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
+		TaskType:     types.ReplicationTaskTypeHistoryV2.Ptr(),
 		SourceTaskID: task.TaskID,
 		HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
 			DomainID:            task.DomainID,
