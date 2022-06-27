@@ -477,18 +477,15 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					tag.WorkflowRunID(task.GetRunID()))
 				return nil, nil
 			}
-			versionHistoryItems, branchToken, err := getVersionHistoryItems(
-				versionHistories,
-				task.FirstEventID,
-				task.Version,
-			)
+
+			_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(persistence.NewVersionHistoryItem(task.FirstEventID, task.Version))
 			if err != nil {
 				return nil, err
 			}
 
 			// BranchToken will not set in get dlq replication message request
 			if len(task.BranchToken) == 0 {
-				task.BranchToken = branchToken
+				task.BranchToken = versionHistory.GetBranchToken()
 			}
 
 			eventsBlob, err := t.getEventsBlob(
@@ -522,7 +519,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					DomainID:            task.DomainID,
 					WorkflowID:          task.WorkflowID,
 					RunID:               task.RunID,
-					VersionHistoryItems: versionHistoryItems,
+					VersionHistoryItems: versionHistory.ToInternalType().Items,
 					Events:              eventsBlob,
 					NewRunEvents:        newRunEventsBlob,
 				},
@@ -560,29 +557,4 @@ func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool 
 		}
 	}
 	return true
-}
-
-func getVersionHistoryItems(
-	versionHistories *persistence.VersionHistories,
-	eventID int64,
-	version int64,
-) ([]*types.VersionHistoryItem, []byte, error) {
-
-	if versionHistories == nil {
-		return nil, nil, &types.BadRequestError{
-			Message: "replicatorQueueProcessor encounter workflow without version histories",
-		}
-	}
-
-	_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(
-		persistence.NewVersionHistoryItem(
-			eventID,
-			version,
-		),
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return versionHistory.ToInternalType().Items, versionHistory.GetBranchToken(), nil
 }
