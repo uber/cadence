@@ -32,7 +32,6 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/execution"
 )
 
 // TaskHydrator takes raw replication tasks and hydrates them with additional information.
@@ -93,7 +92,6 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 	if !ok {
 		return nil, nil
 	}
-	activityInfo = execution.CopyActivityInfo(activityInfo)
 
 	var startedTime *int64
 	if activityInfo.StartedID != common.EmptyEventID {
@@ -101,9 +99,6 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 	}
 
 	versionHistories := ms.GetVersionHistories()
-	if versionHistories != nil {
-		versionHistories = versionHistories.Duplicate()
-	}
 
 	//Version history uses when replicate the sync activity task
 	var versionHistory *types.VersionHistory
