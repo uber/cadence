@@ -122,22 +122,20 @@ func NewTaskAckManager(
 	}
 }
 
-func (t *taskAckManagerImpl) GetTask(
-	ctx context.Context,
-	taskInfo *types.ReplicationTaskInfo,
-) (*types.ReplicationTask, error) {
-	task := &persistence.ReplicationTaskInfo{
-		DomainID:     taskInfo.GetDomainID(),
-		WorkflowID:   taskInfo.GetWorkflowID(),
-		RunID:        taskInfo.GetRunID(),
-		TaskID:       taskInfo.GetTaskID(),
-		TaskType:     int(taskInfo.GetTaskType()),
-		FirstEventID: taskInfo.GetFirstEventID(),
-		NextEventID:  taskInfo.GetNextEventID(),
-		Version:      taskInfo.GetVersion(),
-		ScheduledID:  taskInfo.GetScheduledID(),
+func (t *taskAckManagerImpl) GetTask(ctx context.Context, taskInfo *types.ReplicationTaskInfo) (*types.ReplicationTask, error) {
+	task := persistence.ReplicationTaskInfo{
+		DomainID:     taskInfo.DomainID,
+		WorkflowID:   taskInfo.WorkflowID,
+		RunID:        taskInfo.RunID,
+		TaskID:       taskInfo.TaskID,
+		TaskType:     int(taskInfo.TaskType),
+		FirstEventID: taskInfo.FirstEventID,
+		NextEventID:  taskInfo.NextEventID,
+		Version:      taskInfo.Version,
+		ScheduledID:  taskInfo.ScheduledID,
 	}
-	return t.toReplicationTask(ctx, task)
+
+	return Hydrate(ctx, task, t.mutableStateLoader, t.historyLoader)
 }
 
 func (t *taskAckManagerImpl) GetTasks(
@@ -182,7 +180,12 @@ TaskInfoLoop:
 		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
-			replicationTask, err = t.toReplicationTask(ctx, taskInfo)
+			task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
+			if !ok {
+				return errUnknownQueueTask
+			}
+
+			replicationTask, err = Hydrate(ctx, *task, t.mutableStateLoader, t.historyLoader)
 			return err
 		}
 		err = t.throttleRetry.Do(ctx, op)
@@ -237,19 +240,6 @@ TaskInfoLoop:
 		HasMore:                hasMore,
 		LastRetrievedMessageID: readLevel,
 	}, nil
-}
-
-func (t *taskAckManagerImpl) toReplicationTask(
-	ctx context.Context,
-	taskInfo task.Info,
-) (*types.ReplicationTask, error) {
-
-	task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
-	if !ok {
-		return nil, errUnknownQueueTask
-	}
-
-	return Hydrate(ctx, *task, t.mutableStateLoader, t.historyLoader)
 }
 
 func (t *taskAckManagerImpl) readTasksWithBatchSize(
