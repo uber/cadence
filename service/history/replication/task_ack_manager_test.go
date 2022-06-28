@@ -24,7 +24,6 @@ package replication
 
 import (
 	"context"
-	"errors"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -110,31 +109,6 @@ func (s *taskAckManagerSuite) SetupTest() {
 func (s *taskAckManagerSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
-}
-
-func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_OK() {
-	task := &persistence.ReplicationTaskInfo{
-		DomainID: uuid.New(),
-	}
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
-		Tasks:         []*persistence.ReplicationTaskInfo{task},
-		NextPageToken: []byte{1},
-	}, nil)
-
-	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(context.Background(), 0, 1)
-	s.NoError(err)
-	s.True(hasMore)
-	s.Len(taskInfo, 1)
-	s.Equal(task.GetDomainID(), taskInfo[0].GetDomainID())
-}
-
-func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_Error() {
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
-
-	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(context.Background(), 0, 1)
-	s.Error(err)
-	s.False(hasMore)
-	s.Len(taskInfo, 0)
 }
 
 func (s *taskAckManagerSuite) TestGetTasks() {

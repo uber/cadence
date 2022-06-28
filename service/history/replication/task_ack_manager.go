@@ -43,11 +43,9 @@ import (
 	"github.com/uber/cadence/common/types"
 	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/history/task"
 )
 
 var (
-	errUnknownQueueTask       = errors.New("unknown task type")
 	errUnknownReplicationTask = errors.New("unknown replication task")
 	minReadTaskSize           = 20
 )
@@ -155,16 +153,25 @@ func (t *taskAckManagerImpl) GetTasks(
 	)
 	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
 	batchSize := t.getBatchSize()
-	taskInfoList, hasMore, err := t.readTasksWithBatchSize(ctx, lastReadTaskID, batchSize)
+
+	response, err := t.executionManager.GetReplicationTasks(
+		ctx,
+		&persistence.GetReplicationTasksRequest{
+			ReadLevel:    lastReadTaskID,
+			MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
+			BatchSize:    batchSize,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
+	hasMore := len(response.NextPageToken) != 0
 
 	var lastTaskCreationTime time.Time
 	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
 TaskInfoLoop:
-	for _, taskInfo := range taskInfoList {
+	for _, taskInfo := range response.Tasks {
 		// filter task info by domain clusters.
 		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
 		if err != nil {
@@ -180,12 +187,7 @@ TaskInfoLoop:
 		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
-			task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
-			if !ok {
-				return errUnknownQueueTask
-			}
-
-			replicationTask, err = Hydrate(ctx, *task, t.mutableStateLoader, t.historyLoader)
+			replicationTask, err = Hydrate(ctx, *taskInfo, t.mutableStateLoader, t.historyLoader)
 			return err
 		}
 		err = t.throttleRetry.Do(ctx, op)
@@ -215,7 +217,7 @@ TaskInfoLoop:
 	)
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
-		time.Duration(len(taskInfoList)),
+		time.Duration(len(response.Tasks)),
 	)
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturned,
@@ -223,7 +225,7 @@ TaskInfoLoop:
 	)
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturnedDiff,
-		time.Duration(len(taskInfoList)-len(replicationTasks)),
+		time.Duration(len(response.Tasks)-len(replicationTasks)),
 	)
 
 	if err := t.shard.UpdateClusterReplicationLevel(
@@ -240,33 +242,6 @@ TaskInfoLoop:
 		HasMore:                hasMore,
 		LastRetrievedMessageID: readLevel,
 	}, nil
-}
-
-func (t *taskAckManagerImpl) readTasksWithBatchSize(
-	ctx context.Context,
-	readLevel int64,
-	batchSize int,
-) ([]task.Info, bool, error) {
-
-	response, err := t.executionManager.GetReplicationTasks(
-		ctx,
-		&persistence.GetReplicationTasksRequest{
-			ReadLevel:    readLevel,
-			MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
-			BatchSize:    batchSize,
-		},
-	)
-
-	if err != nil {
-		return nil, false, err
-	}
-
-	tasks := make([]task.Info, len(response.Tasks))
-	for i := range response.Tasks {
-		tasks[i] = response.Tasks[i]
-	}
-
-	return tasks, len(response.NextPageToken) != 0, nil
 }
 
 func (t *taskAckManagerImpl) getBatchSize() int {
