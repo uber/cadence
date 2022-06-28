@@ -32,27 +32,30 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 )
 
-// HistoryProvider allows retrieving history event blobs. Either from database or in-memory depending on implementation.
-type HistoryProvider interface {
-	GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
-	GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
-}
+type (
+	historyProvider interface {
+		GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
+		GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
+	}
 
-type MutableStateProvider interface {
-	GetMutableState(ctx context.Context, domainID, workflowID, runID string) (MutableState, execution.ReleaseFunc, error)
-}
+	mutableStateProvider interface {
+		GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error)
+	}
 
-// MutableState is a subset of mutable state needed for hydration purposes
-type MutableState interface {
-	IsWorkflowExecutionRunning() bool
-	GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
-	GetVersionHistories() *persistence.VersionHistories
-}
+	mutableState interface {
+		IsWorkflowExecutionRunning() bool
+		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
+		GetVersionHistories() *persistence.VersionHistories
+	}
+)
 
-func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvider MutableStateProvider, history HistoryProvider) (*types.ReplicationTask, error) {
+// Hydrate will enrich replication task with additional information from mutable state and history events.
+// Mutable state and history providers can be either in-memory or persistence based implementations;
+// depending whether we have available data already or need to load it.
+func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvider mutableStateProvider, history historyProvider) (*types.ReplicationTask, error) {
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeFailoverMarker:
-		return HydrateFailoverMarkerTask(task), nil
+		return hydrateFailoverMarkerTask(task), nil
 	}
 
 	ms, release, err := msProvider.GetMutableState(ctx, task.DomainID, task.WorkflowID, task.RunID)
@@ -66,7 +69,7 @@ func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvid
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
-		return HydrateSyncActivityTask(task, ms)
+		return hydrateSyncActivityTask(task, ms)
 	case persistence.ReplicationTaskTypeHistory:
 		versionHistories := ms.GetVersionHistories()
 		if versionHistories != nil {
@@ -74,14 +77,13 @@ func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvid
 			versionHistories = versionHistories.Duplicate()
 		}
 		release(nil)
-		return HydrateHistoryReplicationTask(ctx, task, versionHistories, history)
+		return hydrateHistoryReplicationTask(ctx, task, versionHistories, history)
 	default:
 		return nil, errUnknownReplicationTask
 	}
 }
 
-// HydrateFailoverMarkerTask hydrates failover marker replication task.
-func HydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.ReplicationTask {
+func hydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.ReplicationTask {
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskTypeFailoverMarker.Ptr(),
 		SourceTaskID: task.TaskID,
@@ -93,9 +95,7 @@ func HydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.Repl
 	}
 }
 
-// HydrateSyncActivityTask hydrates sync activity replication task.
-// It needs loaded mutable state to hydrate fields for this task.
-func HydrateSyncActivityTask(task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
+func hydrateSyncActivityTask(task persistence.ReplicationTaskInfo, ms mutableState) (*types.ReplicationTask, error) {
 	if !ms.IsWorkflowExecutionRunning() {
 		// workflow already finished, no need to process the replication task
 		return nil, nil
@@ -145,9 +145,7 @@ func HydrateSyncActivityTask(task persistence.ReplicationTaskInfo, ms MutableSta
 	}, nil
 }
 
-// HydrateHistoryReplicationTask hydrates history replication task.
-// It needs version histories to load history branch from database with events specified in replication task.
-func HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, versionHistories *persistence.VersionHistories, history HistoryProvider) (*types.ReplicationTask, error) {
+func hydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, versionHistories *persistence.VersionHistories, history historyProvider) (*types.ReplicationTask, error) {
 	if versionHistories == nil {
 		return nil, nil
 	}
@@ -187,22 +185,17 @@ func HydrateHistoryReplicationTask(ctx context.Context, task persistence.Replica
 	}, nil
 }
 
-// HistoryLoader loads history event blobs on demand from a database
-type HistoryLoader struct {
+// historyLoader loads history event blobs on demand from a database
+type historyLoader struct {
 	shardID int
 	history persistence.HistoryManager
 }
 
-// NewHistoryLoader creates new HistoryLoader.
-func NewHistoryLoader(shardID int, history persistence.HistoryManager) HistoryLoader {
-	return HistoryLoader{shardID, history}
-}
-
-func (h HistoryLoader) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+func (h historyLoader) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
 	return h.getEventsBlob(ctx, task.BranchToken, task.FirstEventID, task.NextEventID)
 }
 
-func (h HistoryLoader) GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+func (h historyLoader) GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
 	if len(task.NewRunBranchToken) == 0 {
 		return nil, nil
 	}
@@ -210,7 +203,7 @@ func (h HistoryLoader) GetNextRunEventBlob(ctx context.Context, task persistence
 	return h.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
 }
 
-func (h HistoryLoader) getEventsBlob(ctx context.Context, branchToken []byte, minEventID, maxEventID int64) (*types.DataBlob, error) {
+func (h historyLoader) getEventsBlob(ctx context.Context, branchToken []byte, minEventID, maxEventID int64) (*types.DataBlob, error) {
 	resp, err := h.history.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken: branchToken,
 		MinEventID:  minEventID,
@@ -229,16 +222,13 @@ func (h HistoryLoader) getEventsBlob(ctx context.Context, branchToken []byte, mi
 	return resp.HistoryEventBlobs[0].ToInternal(), nil
 }
 
+// mutableStateLoader uses workflow execution cache to load mutable state
 type mutableStateLoader struct {
 	cache *execution.Cache
 }
 
-func NewMutableStateLoader(cache *execution.Cache) mutableStateLoader {
-	return mutableStateLoader{cache}
-}
-
-func (l mutableStateLoader) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (MutableState, execution.ReleaseFunc, error) {
-	wfContext, release, err := l.cache.GetOrCreateWorkflowExecution(ctx, domainID, types.WorkflowExecution{workflowID, runID})
+func (l mutableStateLoader) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error) {
+	wfContext, release, err := l.cache.GetOrCreateWorkflowExecution(ctx, domainID, types.WorkflowExecution{WorkflowID: workflowID, RunID: runID})
 	if err != nil {
 		return nil, nil, err
 	}

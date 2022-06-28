@@ -83,7 +83,7 @@ type (
 		// This is the batch size used by pull based RPC replicator.
 		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
 
-		historyLoader      HistoryLoader
+		historyLoader      historyLoader
 		mutableStateLoader mutableStateLoader
 	}
 )
@@ -117,11 +117,8 @@ func NewTaskAckManager(
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
-		historyLoader: NewHistoryLoader(
-			shard.GetShardID(),
-			shard.GetHistoryManager(),
-		),
-		mutableStateLoader: NewMutableStateLoader(executionCache),
+		historyLoader:        historyLoader{shard.GetShardID(), shard.GetHistoryManager()},
+		mutableStateLoader:   mutableStateLoader{executionCache},
 	}
 }
 

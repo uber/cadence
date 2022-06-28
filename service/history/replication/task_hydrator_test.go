@@ -136,7 +136,7 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 	tests := []struct {
 		name       string
 		task       persistence.ReplicationTaskInfo
-		msProvider MutableStateProvider
+		msProvider mutableStateProvider
 		expectTask *types.ReplicationTask
 		expectErr  string
 	}{
@@ -144,7 +144,7 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 			name: "hydrates sync activity task",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{
 						isWorkflowExecutionRunning: true,
 						versionHistories:           versionHistories,
@@ -182,7 +182,7 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 			name: "workflow is not running - return nil, no error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{
 						isWorkflowExecutionRunning: false,
 					},
@@ -194,7 +194,7 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 			name: "no activity info - return nil, no error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{
 						isWorkflowExecutionRunning: true,
 						activityInfos:              map[int64]persistence.ActivityInfo{},
@@ -207,7 +207,7 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 			name: "workflow does not exist - return nil, no error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{},
+				workflows: map[definition.WorkflowIdentifier]mutableState{},
 			},
 			expectTask: nil,
 		},
@@ -264,7 +264,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 	tests := []struct {
 		name           string
 		task           persistence.ReplicationTaskInfo
-		msProvider     MutableStateProvider
+		msProvider     mutableStateProvider
 		prepareHistory func(hm *mocks.HistoryV2Manager)
 		expectTask     *types.ReplicationTask
 		expectErr      string
@@ -273,7 +273,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			name: "hydrates history with given branch token",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
 				},
 			},
@@ -299,7 +299,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			name: "hydrates history with branch token from version histories",
 			task: taskWithoutBranchToken,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
 				},
 			},
@@ -325,7 +325,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			name: "no version histories - return nil, no error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: nil},
 				},
 			},
@@ -335,7 +335,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			name: "bad version histories - return error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &persistence.VersionHistories{}},
 				},
 			},
@@ -345,7 +345,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			name: "workflow does not exist - return nil, no error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{},
+				workflows: map[definition.WorkflowIdentifier]mutableState{},
 			},
 			expectTask: nil,
 		},
@@ -359,7 +359,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			name: "failed reading history - return error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
-				workflows: map[definition.WorkflowIdentifier]MutableState{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
 				},
 			},
@@ -377,9 +377,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 				tt.prepareHistory(history)
 			}
 
-			historyLoader := NewHistoryLoader(testShardID, history)
-
-			actualTask, err := Hydrate(context.Background(), tt.task, tt.msProvider, historyLoader)
+			actualTask, err := Hydrate(context.Background(), tt.task, tt.msProvider, historyLoader{testShardID, history})
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
@@ -391,10 +389,10 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 }
 
 type fakeMutableStateProvider struct {
-	workflows map[definition.WorkflowIdentifier]MutableState
+	workflows map[definition.WorkflowIdentifier]mutableState
 }
 
-func (msp fakeMutableStateProvider) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (MutableState, execution.ReleaseFunc, error) {
+func (msp fakeMutableStateProvider) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error) {
 	if msp.workflows == nil {
 		return nil, execution.NoopReleaseFn, errors.New("error loading mutable state")
 	}
