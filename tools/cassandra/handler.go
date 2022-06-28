@@ -177,6 +177,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.Port = cli.GlobalInt(schema.CLIOptPort)
 	cqlConfig.User = cli.GlobalString(schema.CLIOptUser)
 	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
+	cqlConfig.AllowedAuthenticators = cli.GlobalStringSlice(schema.CLIOptAllowedAuthenticators)
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
 	cqlConfig.ConnectTimeout = cli.GlobalInt(schema.CLIOptConnectTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)

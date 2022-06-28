@@ -76,6 +76,8 @@ const (
 	CLIOptUser = "user"
 	// CLIOptPassword is the cli option for password
 	CLIOptPassword = "password"
+	// CLIOptAllowedAuthenticatorsis the cli option for cassandra allowed authenticators
+	CLIOptAllowedAuthenticators = "allowed-authenticators"
 	// CLIOptTimeout is the cli option for timeout
 	CLIOptTimeout = "timeout"
 	// CLIOptConnectTimeout is the cli option for connection timeout
@@ -117,6 +119,8 @@ const (
 	CLIFlagUser = CLIOptUser + ", u"
 	// CLIFlagPassword is the cli flag for password
 	CLIFlagPassword = CLIOptPassword + ", pw"
+	// CLIFlagAllowedAuthenticators is the cli flag for whitelisting custom authenticators
+	CLIFlagAllowedAuthenticators = CLIOptAllowedAuthenticators + ", aa"
 	// CLIFlagConnectTimeout is the cli flag for connection timeout
 	CLIFlagConnectTimeout = CLIOptConnectTimeout + ", ct"
 	// CLIFlagTimeout is the cli flag for timeout
