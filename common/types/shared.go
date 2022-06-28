@@ -5549,6 +5549,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
+	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5819,6 +5820,7 @@ type StartChildWorkflowExecutionInitiatedEventAttributes struct {
 	Memo                                *Memo                  `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
+	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5915,6 +5917,7 @@ type StartWorkflowExecutionRequest struct {
 	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
+	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5953,6 +5956,14 @@ func (v *StartWorkflowExecutionRequest) GetTaskStartToCloseTimeoutSeconds() (o i
 func (v *StartWorkflowExecutionRequest) GetDelayStartSeconds() (o int32) {
 	if v != nil && v.DelayStartSeconds != nil {
 		return *v.DelayStartSeconds
+	}
+	return
+}
+
+// GetJitterStartSeconds is an internal getter (TBD...)
+func (v *StartWorkflowExecutionRequest) GetJitterStartSeconds() (o int32) {
+	if v != nil && v.JitterStartSeconds != nil {
+		return *v.JitterStartSeconds
 	}
 	return
 }

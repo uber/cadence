@@ -128,6 +128,7 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &types.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
+	errInvalidJitterStartSeconds                  = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request."}
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
@@ -2082,6 +2083,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	if startRequest.GetDelayStartSeconds() < 0 {
 		return nil, wh.error(errInvalidDelayStartSeconds, scope, tags...)
+	}
+
+	if startRequest.GetJitterStartSeconds() < 0 {
+		return nil, wh.error(errInvalidJitterStartSeconds, scope, tags...)
 	}
 
 	if startRequest.GetRequestID() == "" {

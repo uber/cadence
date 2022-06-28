@@ -530,6 +530,12 @@ func CreateHistoryStartWorkflowRequest(
 		firstDecisionTaskBackoffSeconds += delayStartSeconds
 	}
 
+	// Add a random jitter to start time, if requested.
+	jitterStartSeconds := startRequest.GetJitterStartSeconds()
+	if jitterStartSeconds > 0 {
+		firstDecisionTaskBackoffSeconds += rand.Int31n(jitterStartSeconds + 1)
+	}
+
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)
 
 	if startRequest.RetryPolicy != nil && startRequest.RetryPolicy.GetExpirationIntervalInSeconds() > 0 {

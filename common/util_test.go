@@ -106,29 +106,49 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
 }
 
-func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
-	testDelayStart(t, 0)
+func TestCreateHistoryStartWorkflowRequest_ImmediateStart(t *testing.T) {
+	testStartTime(t, 0, 0, 0)
 }
 
-func TestCreateHistoryStartWorkflowRequest_DelayStartWithCron(t *testing.T) {
-	testDelayStart(t, 300)
+func TestCreateHistoryStartWorkflowRequest_Delay(t *testing.T) {
+	testStartTime(t, 100, 0, 0)
 }
 
-func testDelayStart(t *testing.T, cronSeconds int) {
+func TestCreateHistoryStartWorkflowRequest_DelayCron(t *testing.T) {
+	testStartTime(t, 100, 300, 0)
+}
+
+func TestCreateHistoryStartWorkflowRequest_Jitter(t *testing.T) {
+	testStartTime(t, 0, 0, 2000)
+}
+
+func TestCreateHistoryStartWorkflowRequest_JitterDelay(t *testing.T) {
+	testStartTime(t, 100, 0, 2000)
+}
+
+func TestCreateHistoryStartWorkflowRequest_JitterCron(t *testing.T) {
+	testStartTime(t, 0, 300, 2000)
+}
+
+func TestCreateHistoryStartWorkflowRequest_JitterDelayAndCron(t *testing.T) {
+	testStartTime(t, 100, 300, 2000)
+}
+
+func testStartTime(t *testing.T, delayStartSeconds int, cronSeconds int, jitterSeconds int) {
 	domainID := uuid.New()
-	delayStartSeconds := 100
 	request := &types.StartWorkflowExecutionRequest{
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    60,
 			ExpirationIntervalInSeconds: 60,
 		},
-		DelayStartSeconds: Int32Ptr(int32(delayStartSeconds)),
+		DelayStartSeconds:  Int32Ptr(int32(delayStartSeconds)),
+		JitterStartSeconds: Int32Ptr(int32(jitterSeconds)),
 	}
 	if cronSeconds > 0 {
 		request.CronSchedule = fmt.Sprintf("@every %ds", cronSeconds)
 	}
 	minDelay := delayStartSeconds + cronSeconds
-	maxDelay := delayStartSeconds + 2*cronSeconds
+	maxDelay := delayStartSeconds + 2*cronSeconds + jitterSeconds
 	now := time.Now()
 	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
 	require.NotNil(t, startRequest)
