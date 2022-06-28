@@ -592,7 +592,6 @@ func FromHistoryTaskV2Attributes(t *types.HistoryTaskV2Attributes) *adminv1.Hist
 		return nil
 	}
 	return &adminv1.HistoryTaskV2Attributes{
-		TaskId:              t.TaskID,
 		DomainId:            t.DomainID,
 		WorkflowExecution:   FromWorkflowRunPair(t.WorkflowID, t.RunID),
 		VersionHistoryItems: FromVersionHistoryItemArray(t.VersionHistoryItems),
@@ -606,7 +605,6 @@ func ToHistoryTaskV2Attributes(t *adminv1.HistoryTaskV2Attributes) *types.Histor
 		return nil
 	}
 	return &types.HistoryTaskV2Attributes{
-		TaskID:              t.TaskId,
 		DomainID:            t.DomainId,
 		WorkflowID:          ToWorkflowID(t.WorkflowExecution),
 		RunID:               ToRunID(t.WorkflowExecution),

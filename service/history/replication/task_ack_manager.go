@@ -529,7 +529,6 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 			replicationTask := &types.ReplicationTask{
 				TaskType: types.ReplicationTaskType.Ptr(types.ReplicationTaskTypeHistoryV2),
 				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-					TaskID:              task.FirstEventID,
 					DomainID:            task.DomainID,
 					WorkflowID:          task.WorkflowID,
 					RunID:               task.RunID,
