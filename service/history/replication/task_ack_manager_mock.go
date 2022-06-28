@@ -31,34 +31,33 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-
 	types "github.com/uber/cadence/common/types"
 )
 
-// MockTaskAckManager is a mock of TaskAckManager interface
+// MockTaskAckManager is a mock of TaskAckManager interface.
 type MockTaskAckManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskAckManagerMockRecorder
 }
 
-// MockTaskAckManagerMockRecorder is the mock recorder for MockTaskAckManager
+// MockTaskAckManagerMockRecorder is the mock recorder for MockTaskAckManager.
 type MockTaskAckManagerMockRecorder struct {
 	mock *MockTaskAckManager
 }
 
-// NewMockTaskAckManager creates a new mock instance
+// NewMockTaskAckManager creates a new mock instance.
 func NewMockTaskAckManager(ctrl *gomock.Controller) *MockTaskAckManager {
 	mock := &MockTaskAckManager{ctrl: ctrl}
 	mock.recorder = &MockTaskAckManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTaskAckManager) EXPECT() *MockTaskAckManagerMockRecorder {
 	return m.recorder
 }
 
-// GetTask mocks base method
+// GetTask mocks base method.
 func (m *MockTaskAckManager) GetTask(ctx context.Context, taskInfo *types.ReplicationTaskInfo) (*types.ReplicationTask, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTask", ctx, taskInfo)
@@ -67,13 +66,13 @@ func (m *MockTaskAckManager) GetTask(ctx context.Context, taskInfo *types.Replic
 	return ret0, ret1
 }
 
-// GetTask indicates an expected call of GetTask
+// GetTask indicates an expected call of GetTask.
 func (mr *MockTaskAckManagerMockRecorder) GetTask(ctx, taskInfo interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTask", reflect.TypeOf((*MockTaskAckManager)(nil).GetTask), ctx, taskInfo)
 }
 
-// GetTasks mocks base method
+// GetTasks mocks base method.
 func (m *MockTaskAckManager) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*types.ReplicationMessages, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTasks", ctx, pollingCluster, lastReadTaskID)
@@ -82,7 +81,7 @@ func (m *MockTaskAckManager) GetTasks(ctx context.Context, pollingCluster string
 	return ret0, ret1
 }
 
-// GetTasks indicates an expected call of GetTasks
+// GetTasks indicates an expected call of GetTasks.
 func (mr *MockTaskAckManagerMockRecorder) GetTasks(ctx, pollingCluster, lastReadTaskID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTasks", reflect.TypeOf((*MockTaskAckManager)(nil).GetTasks), ctx, pollingCluster, lastReadTaskID)
