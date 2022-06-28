@@ -70,7 +70,7 @@ var (
 	testHeartbeatTime             = time.Now()
 )
 
-func TestHydration_FailoverMarker(t *testing.T) {
+func TestHydrateFailoverMarkerTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
 		DomainID:     testDomainID,
@@ -89,12 +89,11 @@ func TestHydration_FailoverMarker(t *testing.T) {
 		CreationTime: common.Int64Ptr(testCreationTime),
 	}
 
-	hydrator := NewTaskHydrator(testShardID, nil, nil)
-	actual := hydrator.HydrateFailoverMarkerTask(task)
+	actual := HydrateFailoverMarkerTask(task)
 	assert.Equal(t, &expected, actual)
 }
 
-func TestHydration_SyncActivity(t *testing.T) {
+func TestHydrateSyncActivityTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeSyncActivity,
 		TaskID:       testTaskID,
@@ -197,9 +196,7 @@ func TestHydration_SyncActivity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hydrator := NewTaskHydrator(testShardID, nil, nil)
-
-			actualTask, err := hydrator.HydrateSyncActivityTask(context.Background(), tt.task, tt.mutableState)
+			actualTask, err := HydrateSyncActivityTask(tt.task, tt.mutableState)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
@@ -210,7 +207,7 @@ func TestHydration_SyncActivity(t *testing.T) {
 	}
 }
 
-func TestHydration_History(t *testing.T) {
+func TestHydrateHistoryReplicationTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:          persistence.ReplicationTaskTypeHistory,
 		TaskID:            testTaskID,
@@ -321,9 +318,9 @@ func TestHydration_History(t *testing.T) {
 				tt.prepareHistory(history)
 			}
 
-			hydrator := NewTaskHydrator(testShardID, history, dynamicconfig.GetIntPropertyFn(5))
+			historyLoader := NewHistoryLoader(testShardID, history, dynamicconfig.GetIntPropertyFn(5))
 
-			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, tt.versionHistories)
+			actualTask, err := HydrateHistoryReplicationTask(context.Background(), tt.task, tt.versionHistories, historyLoader)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {

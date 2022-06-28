@@ -84,7 +84,7 @@ type (
 		// This is the batch size used by pull based RPC replicator.
 		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
 
-		hydrator TaskHydrator
+		historyLoader HistoryLoader
 	}
 )
 
@@ -118,7 +118,7 @@ func NewTaskAckManager(
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
-		hydrator: NewTaskHydrator(
+		historyLoader: NewHistoryLoader(
 			shard.GetShardID(),
 			shard.GetHistoryManager(),
 			shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize,
@@ -256,7 +256,7 @@ func (t *taskAckManagerImpl) toReplicationTask(
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeFailoverMarker:
-		return t.hydrator.HydrateFailoverMarkerTask(task), nil
+		return HydrateFailoverMarkerTask(task), nil
 	}
 
 	execution := types.WorkflowExecution{
@@ -281,7 +281,7 @@ func (t *taskAckManagerImpl) toReplicationTask(
 
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeSyncActivity:
-		return t.hydrator.HydrateSyncActivityTask(ctx, task, ms)
+		return HydrateSyncActivityTask(task, ms)
 	case persistence.ReplicationTaskTypeHistory:
 		versionHistories := ms.GetVersionHistories()
 		if versionHistories != nil {
@@ -295,7 +295,7 @@ func (t *taskAckManagerImpl) toReplicationTask(
 				tag.WorkflowID(task.WorkflowID),
 				tag.WorkflowRunID(task.RunID))
 		}
-		return t.hydrator.HydrateHistoryReplicationTask(ctx, task, versionHistories)
+		return HydrateHistoryReplicationTask(ctx, task, versionHistories, t.historyLoader)
 	default:
 		return nil, errUnknownReplicationTask
 	}

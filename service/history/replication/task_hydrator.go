@@ -32,35 +32,21 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-// TaskHydrator takes raw replication tasks and hydrates them with additional information.
-type TaskHydrator struct {
-	shardID int
-	history HistoryManager
-
-	readHistoryBatchSize dynamicconfig.IntPropertyFn
+// HistoryProvider allows retrieving history event blobs. Either from database or in-memory depending on implementation.
+type HistoryProvider interface {
+	GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
+	GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
 }
 
-// NewTaskHydrator creates new TaskHydrator.
-func NewTaskHydrator(shardID int, history HistoryManager, readHistoryBatchSize dynamicconfig.IntPropertyFn) TaskHydrator {
-	return TaskHydrator{shardID, history, readHistoryBatchSize}
+// MutableState is a subset of mutable state needed for hydration purposes
+type MutableState interface {
+	IsWorkflowExecutionRunning() bool
+	GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
+	GetVersionHistories() *persistence.VersionHistories
 }
-
-// Dependencies
-type (
-	// MutableState is a subset of mutable state needed for hydration purposes
-	MutableState interface {
-		IsWorkflowExecutionRunning() bool
-		GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
-		GetVersionHistories() *persistence.VersionHistories
-	}
-	// HistoryManager is a subset of history manager needed for hydration purposes
-	HistoryManager interface {
-		ReadRawHistoryBranch(ctx context.Context, request *persistence.ReadHistoryBranchRequest) (*persistence.ReadRawHistoryBranchResponse, error)
-	}
-)
 
 // HydrateFailoverMarkerTask hydrates failover marker replication task.
-func (t TaskHydrator) HydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.ReplicationTask {
+func HydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.ReplicationTask {
 	return &types.ReplicationTask{
 		TaskType:     types.ReplicationTaskTypeFailoverMarker.Ptr(),
 		SourceTaskID: task.TaskID,
@@ -74,7 +60,7 @@ func (t TaskHydrator) HydrateFailoverMarkerTask(task persistence.ReplicationTask
 
 // HydrateSyncActivityTask hydrates sync activity replication task.
 // It needs loaded mutable state to hydrate fields for this task.
-func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
+func HydrateSyncActivityTask(task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
 	// Treat nil mutable state as if workflow does not exist (no longer exists)
 	if ms == nil {
 		return nil, nil
@@ -131,7 +117,7 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 
 // HydrateHistoryReplicationTask hydrates history replication task.
 // It needs version histories to load history branch from database with events specified in replication task.
-func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, versionHistories *persistence.VersionHistories) (*types.ReplicationTask, error) {
+func HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, versionHistories *persistence.VersionHistories, history HistoryProvider) (*types.ReplicationTask, error) {
 	if versionHistories == nil {
 		return nil, nil
 	}
@@ -146,18 +132,14 @@ func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task pe
 		task.BranchToken = versionHistory.GetBranchToken()
 	}
 
-	eventsBlob, err := t.getEventsBlob(ctx, task.BranchToken, task.FirstEventID, task.NextEventID)
+	eventsBlob, err := history.GetEventBlob(ctx, task)
 	if err != nil {
 		return nil, err
 	}
 
-	var newRunEventsBlob *types.DataBlob
-	if len(task.NewRunBranchToken) != 0 {
-		// only get the first batch
-		newRunEventsBlob, err = t.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
-		if err != nil {
-			return nil, err
-		}
+	newRunEventsBlob, err := history.GetNextRunEventBlob(ctx, task)
+	if err != nil {
+		return nil, err
 	}
 
 	return &types.ReplicationTask{
@@ -175,21 +157,45 @@ func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task pe
 	}, nil
 }
 
-func (t TaskHydrator) getEventsBlob(ctx context.Context, branchToken []byte, firstEventID int64, nextEventID int64) (*types.DataBlob, error) {
+// HistoryLoader loads history event blobs on demand from a database
+type HistoryLoader struct {
+	shardID int
+	history persistence.HistoryManager
 
+	batchSize dynamicconfig.IntPropertyFn
+}
+
+// NewHistoryLoader creates new HistoryLoader.
+func NewHistoryLoader(shardID int, history persistence.HistoryManager, batchSize dynamicconfig.IntPropertyFn) HistoryLoader {
+	return HistoryLoader{shardID, history, batchSize}
+}
+
+func (h HistoryLoader) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+	return h.getEventsBlob(ctx, task.BranchToken, task.FirstEventID, task.NextEventID)
+}
+
+func (h HistoryLoader) GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+	if len(task.NewRunBranchToken) == 0 {
+		return nil, nil
+	}
+	// only get the first batch
+	return h.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
+}
+
+func (h HistoryLoader) getEventsBlob(ctx context.Context, branchToken []byte, firstEventID int64, nextEventID int64) (*types.DataBlob, error) {
 	var eventBatchBlobs []*persistence.DataBlob
 	var pageToken []byte
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
 		MaxEventID:    nextEventID,
-		PageSize:      t.readHistoryBatchSize(),
+		PageSize:      h.batchSize(),
 		NextPageToken: pageToken,
-		ShardID:       &t.shardID,
+		ShardID:       &h.shardID,
 	}
 
 	for {
-		resp, err := t.history.ReadRawHistoryBranch(ctx, req)
+		resp, err := h.history.ReadRawHistoryBranch(ctx, req)
 		if err != nil {
 			return nil, err
 		}
