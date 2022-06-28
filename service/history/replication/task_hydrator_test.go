@@ -33,7 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -318,7 +317,7 @@ func TestHydrateHistoryReplicationTask(t *testing.T) {
 				tt.prepareHistory(history)
 			}
 
-			historyLoader := NewHistoryLoader(testShardID, history, dynamicconfig.GetIntPropertyFn(5))
+			historyLoader := NewHistoryLoader(testShardID, history)
 
 			actualTask, err := HydrateHistoryReplicationTask(context.Background(), tt.task, tt.versionHistories, historyLoader)
 			if tt.expectErr != "" {
@@ -359,7 +358,7 @@ func mockHistory(hm *mocks.HistoryV2Manager, minID, maxID int64, branchToken []b
 		BranchToken: branchToken,
 		MinEventID:  minID,
 		MaxEventID:  maxID,
-		PageSize:    5,
+		PageSize:    2,
 		ShardID:     common.IntPtr(testShardID),
 	}).Return(&historyResponse, nil)
 }

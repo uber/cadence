@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -161,13 +160,11 @@ func HydrateHistoryReplicationTask(ctx context.Context, task persistence.Replica
 type HistoryLoader struct {
 	shardID int
 	history persistence.HistoryManager
-
-	batchSize dynamicconfig.IntPropertyFn
 }
 
 // NewHistoryLoader creates new HistoryLoader.
-func NewHistoryLoader(shardID int, history persistence.HistoryManager, batchSize dynamicconfig.IntPropertyFn) HistoryLoader {
-	return HistoryLoader{shardID, history, batchSize}
+func NewHistoryLoader(shardID int, history persistence.HistoryManager) HistoryLoader {
+	return HistoryLoader{shardID, history}
 }
 
 func (h HistoryLoader) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
@@ -182,39 +179,23 @@ func (h HistoryLoader) GetNextRunEventBlob(ctx context.Context, task persistence
 	return h.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
 }
 
-func (h HistoryLoader) getEventsBlob(ctx context.Context, branchToken []byte, firstEventID int64, nextEventID int64) (*types.DataBlob, error) {
-	var eventBatchBlobs []*persistence.DataBlob
-	var pageToken []byte
-	req := &persistence.ReadHistoryBranchRequest{
-		BranchToken:   branchToken,
-		MinEventID:    firstEventID,
-		MaxEventID:    nextEventID,
-		PageSize:      h.batchSize(),
-		NextPageToken: pageToken,
-		ShardID:       &h.shardID,
+func (h HistoryLoader) getEventsBlob(ctx context.Context, branchToken []byte, minEventID, maxEventID int64) (*types.DataBlob, error) {
+	resp, err := h.history.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
+		BranchToken: branchToken,
+		MinEventID:  minEventID,
+		MaxEventID:  maxEventID,
+		PageSize:    2, // Load more than one to check for data inconsistency errors
+		ShardID:     &h.shardID,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	for {
-		resp, err := h.history.ReadRawHistoryBranch(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-
-		req.NextPageToken = resp.NextPageToken
-		eventBatchBlobs = append(eventBatchBlobs, resp.HistoryEventBlobs...)
-
-		if len(req.NextPageToken) == 0 {
-			break
-		}
+	if len(resp.HistoryEventBlobs) != 1 {
+		return nil, &types.InternalDataInconsistencyError{Message: "replication hydrator encountered more than 1 NDC raw event batch"}
 	}
 
-	if len(eventBatchBlobs) != 1 {
-		return nil, &types.InternalDataInconsistencyError{
-			Message: "replicatorQueueProcessor encounter more than 1 NDC raw event batch",
-		}
-	}
-
-	return eventBatchBlobs[0].ToInternal(), nil
+	return resp.HistoryEventBlobs[0].ToInternal(), nil
 }
 
 func timeToUnixNano(t time.Time) *int64 {

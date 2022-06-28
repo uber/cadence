@@ -1683,12 +1683,6 @@ const (
 	// Default value: 0.15
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorCleanupJitterCoefficient
-	// ReplicationTaskProcessorReadHistoryBatchSize is the batch size to read history events
-	// KeyName: history.ReplicationTaskProcessorReadHistoryBatchSize
-	// Value type: Int
-	// Default value: 5
-	// Allowed filters: N/A
-	ReplicationTaskProcessorReadHistoryBatchSize
 	// ReplicationTaskProcessorStartWait is the wait time before each task processing batch
 	// KeyName: history.ReplicationTaskProcessorStartWait
 	// Value type: Duration
@@ -2467,7 +2461,6 @@ var Keys = map[Key]string{
 	ReplicationTaskProcessorNoTaskInitialWait:          "history.ReplicationTaskProcessorNoTaskInitialWait",
 	ReplicationTaskProcessorCleanupInterval:            "history.ReplicationTaskProcessorCleanupInterval",
 	ReplicationTaskProcessorCleanupJitterCoefficient:   "history.ReplicationTaskProcessorCleanupJitterCoefficient",
-	ReplicationTaskProcessorReadHistoryBatchSize:       "history.ReplicationTaskProcessorReadHistoryBatchSize",
 	ReplicationTaskProcessorStartWait:                  "history.ReplicationTaskProcessorStartWait",
 	ReplicationTaskProcessorStartWaitJitterCoefficient: "history.ReplicationTaskProcessorStartWaitJitterCoefficient",
 	ReplicationTaskProcessorHostQPS:                    "history.ReplicationTaskProcessorHostQPS",

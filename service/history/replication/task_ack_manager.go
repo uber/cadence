@@ -121,7 +121,6 @@ func NewTaskAckManager(
 		historyLoader: NewHistoryLoader(
 			shard.GetShardID(),
 			shard.GetHistoryManager(),
-			shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize,
 		),
 	}
 }
