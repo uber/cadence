@@ -29,6 +29,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/execution"
 )
 
 // HistoryProvider allows retrieving history event blobs. Either from database or in-memory depending on implementation.
@@ -37,11 +38,46 @@ type HistoryProvider interface {
 	GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
 }
 
+type MutableStateProvider interface {
+	GetMutableState(ctx context.Context, domainID, workflowID, runID string) (MutableState, execution.ReleaseFunc, error)
+}
+
 // MutableState is a subset of mutable state needed for hydration purposes
 type MutableState interface {
 	IsWorkflowExecutionRunning() bool
 	GetActivityInfo(int64) (*persistence.ActivityInfo, bool)
 	GetVersionHistories() *persistence.VersionHistories
+}
+
+func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvider MutableStateProvider, history HistoryProvider) (*types.ReplicationTask, error) {
+	switch task.TaskType {
+	case persistence.ReplicationTaskTypeFailoverMarker:
+		return HydrateFailoverMarkerTask(task), nil
+	}
+
+	ms, release, err := msProvider.GetMutableState(ctx, task.DomainID, task.WorkflowID, task.RunID)
+	if common.IsEntityNotExistsError(err) {
+		return nil, nil
+	}
+	if err != nil {
+		release(err)
+		return nil, err
+	}
+
+	switch task.TaskType {
+	case persistence.ReplicationTaskTypeSyncActivity:
+		return HydrateSyncActivityTask(task, ms)
+	case persistence.ReplicationTaskTypeHistory:
+		versionHistories := ms.GetVersionHistories()
+		if versionHistories != nil {
+			// Create a copy to release workflow lock early, as hydration will make a DB call, which may take a while
+			versionHistories = versionHistories.Duplicate()
+		}
+		release(nil)
+		return HydrateHistoryReplicationTask(ctx, task, versionHistories, history)
+	default:
+		return nil, errUnknownReplicationTask
+	}
 }
 
 // HydrateFailoverMarkerTask hydrates failover marker replication task.
@@ -60,11 +96,6 @@ func HydrateFailoverMarkerTask(task persistence.ReplicationTaskInfo) *types.Repl
 // HydrateSyncActivityTask hydrates sync activity replication task.
 // It needs loaded mutable state to hydrate fields for this task.
 func HydrateSyncActivityTask(task persistence.ReplicationTaskInfo, ms MutableState) (*types.ReplicationTask, error) {
-	// Treat nil mutable state as if workflow does not exist (no longer exists)
-	if ms == nil {
-		return nil, nil
-	}
-
 	if !ms.IsWorkflowExecutionRunning() {
 		// workflow already finished, no need to process the replication task
 		return nil, nil
@@ -196,6 +227,29 @@ func (h HistoryLoader) getEventsBlob(ctx context.Context, branchToken []byte, mi
 	}
 
 	return resp.HistoryEventBlobs[0].ToInternal(), nil
+}
+
+type mutableStateLoader struct {
+	cache *execution.Cache
+}
+
+func NewMutableStateLoader(cache *execution.Cache) mutableStateLoader {
+	return mutableStateLoader{cache}
+}
+
+func (l mutableStateLoader) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (MutableState, execution.ReleaseFunc, error) {
+	wfContext, release, err := l.cache.GetOrCreateWorkflowExecution(ctx, domainID, types.WorkflowExecution{workflowID, runID})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mutableState, err := wfContext.LoadWorkflowExecution(ctx)
+	if err != nil {
+		release(err)
+		return nil, nil, err
+	}
+
+	return mutableState, release, nil
 }
 
 func timeToUnixNano(t time.Time) *int64 {

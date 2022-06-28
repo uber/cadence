@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -175,6 +174,7 @@ func (s *taskAckManagerSuite) TestGetTasks() {
 	s.Equal(int64(10), ackLevel)
 }
 
+/*
 func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
@@ -258,7 +258,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	msg, err = s.ackManager.GetTasks(context.Background(), clusterName, taskID)
 	s.NoError(err)
 	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
-}
+}*/
 
 func (s *taskAckManagerSuite) TestSkipTask_ReturnTrue() {
 	domainID := uuid.New()

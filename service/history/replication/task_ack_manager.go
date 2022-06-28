@@ -69,7 +69,6 @@ type (
 
 	taskAckManagerImpl struct {
 		shard            shard.Context
-		executionCache   *exec.Cache
 		executionManager persistence.ExecutionManager
 		rateLimiter      *quotas.DynamicRateLimiter
 		retryPolicy      backoff.RetryPolicy
@@ -84,7 +83,8 @@ type (
 		// This is the batch size used by pull based RPC replicator.
 		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
 
-		historyLoader HistoryLoader
+		historyLoader      HistoryLoader
+		mutableStateLoader mutableStateLoader
 	}
 )
 
@@ -105,7 +105,6 @@ func NewTaskAckManager(
 
 	return &taskAckManagerImpl{
 		shard:            shard,
-		executionCache:   executionCache,
 		executionManager: shard.GetExecutionManager(),
 		rateLimiter:      rateLimiter,
 		retryPolicy:      retryPolicy,
@@ -122,6 +121,7 @@ func NewTaskAckManager(
 			shard.GetShardID(),
 			shard.GetHistoryManager(),
 		),
+		mutableStateLoader: NewMutableStateLoader(executionCache),
 	}
 }
 
@@ -247,57 +247,12 @@ func (t *taskAckManagerImpl) toReplicationTask(
 	taskInfo task.Info,
 ) (*types.ReplicationTask, error) {
 
-	taskPtr, ok := taskInfo.(*persistence.ReplicationTaskInfo)
+	task, ok := taskInfo.(*persistence.ReplicationTaskInfo)
 	if !ok {
 		return nil, errUnknownQueueTask
 	}
-	task := *taskPtr
 
-	switch task.TaskType {
-	case persistence.ReplicationTaskTypeFailoverMarker:
-		return HydrateFailoverMarkerTask(task), nil
-	}
-
-	execution := types.WorkflowExecution{
-		WorkflowID: task.WorkflowID,
-		RunID:      task.RunID,
-	}
-
-	context, release, err := t.executionCache.GetOrCreateWorkflowExecution(ctx, task.DomainID, execution)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { release(nil) }()
-
-	ms, err := context.LoadWorkflowExecution(ctx)
-	if common.IsEntityNotExistsError(err) {
-		return nil, nil
-	}
-	if err != nil {
-		release(err)
-		return nil, err
-	}
-
-	switch task.TaskType {
-	case persistence.ReplicationTaskTypeSyncActivity:
-		return HydrateSyncActivityTask(task, ms)
-	case persistence.ReplicationTaskTypeHistory:
-		versionHistories := ms.GetVersionHistories()
-		if versionHistories != nil {
-			// Create a copy to release workflow lock early, as hydration will make a DB call, which may take a while
-			versionHistories = versionHistories.Duplicate()
-		}
-		release(nil)
-		if versionHistories == nil {
-			t.logger.Error("encounter workflow without version histories",
-				tag.WorkflowDomainID(task.DomainID),
-				tag.WorkflowID(task.WorkflowID),
-				tag.WorkflowRunID(task.RunID))
-		}
-		return HydrateHistoryReplicationTask(ctx, task, versionHistories, t.historyLoader)
-	default:
-		return nil, errUnknownReplicationTask
-	}
+	return Hydrate(ctx, *task, t.mutableStateLoader, t.historyLoader)
 }
 
 func (t *taskAckManagerImpl) readTasksWithBatchSize(
