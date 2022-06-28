@@ -554,7 +554,7 @@ func (s *IntegrationSuite) TestDelayStartWorkflow() {
 	)
 
 	targetBackoffDuration := time.Second * 10
-	backoffDurationTolerance := time.Millisecond * 3000
+	backoffDurationTolerance := time.Millisecond * 4000
 	backoffDuration := time.Since(startWorkflowTS)
 	s.True(
 		backoffDuration > targetBackoffDuration,

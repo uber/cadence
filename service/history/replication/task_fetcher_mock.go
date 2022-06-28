@@ -30,86 +30,33 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-
 	quotas "github.com/uber/cadence/common/quotas"
 )
 
-// MockTaskFetcher is a mock of TaskFetcher interface
+// MockTaskFetcher is a mock of TaskFetcher interface.
 type MockTaskFetcher struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskFetcherMockRecorder
 }
 
-// MockTaskFetcherMockRecorder is the mock recorder for MockTaskFetcher
+// MockTaskFetcherMockRecorder is the mock recorder for MockTaskFetcher.
 type MockTaskFetcherMockRecorder struct {
 	mock *MockTaskFetcher
 }
 
-// NewMockTaskFetcher creates a new mock instance
+// NewMockTaskFetcher creates a new mock instance.
 func NewMockTaskFetcher(ctrl *gomock.Controller) *MockTaskFetcher {
 	mock := &MockTaskFetcher{ctrl: ctrl}
 	mock.recorder = &MockTaskFetcherMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTaskFetcher) EXPECT() *MockTaskFetcherMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
-func (m *MockTaskFetcher) Start() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start")
-}
-
-// Start indicates an expected call of Start
-func (mr *MockTaskFetcherMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTaskFetcher)(nil).Start))
-}
-
-// Stop mocks base method
-func (m *MockTaskFetcher) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop
-func (mr *MockTaskFetcherMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTaskFetcher)(nil).Stop))
-}
-
-// GetSourceCluster mocks base method
-func (m *MockTaskFetcher) GetSourceCluster() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSourceCluster")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetSourceCluster indicates an expected call of GetSourceCluster
-func (mr *MockTaskFetcherMockRecorder) GetSourceCluster() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSourceCluster", reflect.TypeOf((*MockTaskFetcher)(nil).GetSourceCluster))
-}
-
-// GetRequestChan mocks base method
-func (m *MockTaskFetcher) GetRequestChan() chan<- *request {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRequestChan")
-	ret0, _ := ret[0].(chan<- *request)
-	return ret0
-}
-
-// GetRequestChan indicates an expected call of GetRequestChan
-func (mr *MockTaskFetcherMockRecorder) GetRequestChan() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRequestChan", reflect.TypeOf((*MockTaskFetcher)(nil).GetRequestChan))
-}
-
-// GetRateLimiter mocks base method
+// GetRateLimiter mocks base method.
 func (m *MockTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRateLimiter")
@@ -117,60 +64,88 @@ func (m *MockTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
 	return ret0
 }
 
-// GetRateLimiter indicates an expected call of GetRateLimiter
+// GetRateLimiter indicates an expected call of GetRateLimiter.
 func (mr *MockTaskFetcherMockRecorder) GetRateLimiter() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRateLimiter", reflect.TypeOf((*MockTaskFetcher)(nil).GetRateLimiter))
 }
 
-// MockTaskFetchers is a mock of TaskFetchers interface
+// GetRequestChan mocks base method.
+func (m *MockTaskFetcher) GetRequestChan() chan<- *request {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRequestChan")
+	ret0, _ := ret[0].(chan<- *request)
+	return ret0
+}
+
+// GetRequestChan indicates an expected call of GetRequestChan.
+func (mr *MockTaskFetcherMockRecorder) GetRequestChan() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRequestChan", reflect.TypeOf((*MockTaskFetcher)(nil).GetRequestChan))
+}
+
+// GetSourceCluster mocks base method.
+func (m *MockTaskFetcher) GetSourceCluster() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSourceCluster")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetSourceCluster indicates an expected call of GetSourceCluster.
+func (mr *MockTaskFetcherMockRecorder) GetSourceCluster() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSourceCluster", reflect.TypeOf((*MockTaskFetcher)(nil).GetSourceCluster))
+}
+
+// Start mocks base method.
+func (m *MockTaskFetcher) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockTaskFetcherMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTaskFetcher)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockTaskFetcher) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockTaskFetcherMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTaskFetcher)(nil).Stop))
+}
+
+// MockTaskFetchers is a mock of TaskFetchers interface.
 type MockTaskFetchers struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskFetchersMockRecorder
 }
 
-// MockTaskFetchersMockRecorder is the mock recorder for MockTaskFetchers
+// MockTaskFetchersMockRecorder is the mock recorder for MockTaskFetchers.
 type MockTaskFetchersMockRecorder struct {
 	mock *MockTaskFetchers
 }
 
-// NewMockTaskFetchers creates a new mock instance
+// NewMockTaskFetchers creates a new mock instance.
 func NewMockTaskFetchers(ctrl *gomock.Controller) *MockTaskFetchers {
 	mock := &MockTaskFetchers{ctrl: ctrl}
 	mock.recorder = &MockTaskFetchersMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTaskFetchers) EXPECT() *MockTaskFetchersMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
-func (m *MockTaskFetchers) Start() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start")
-}
-
-// Start indicates an expected call of Start
-func (mr *MockTaskFetchersMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTaskFetchers)(nil).Start))
-}
-
-// Stop mocks base method
-func (m *MockTaskFetchers) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop
-func (mr *MockTaskFetchersMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTaskFetchers)(nil).Stop))
-}
-
-// GetFetchers mocks base method
+// GetFetchers mocks base method.
 func (m *MockTaskFetchers) GetFetchers() []TaskFetcher {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFetchers")
@@ -178,8 +153,32 @@ func (m *MockTaskFetchers) GetFetchers() []TaskFetcher {
 	return ret0
 }
 
-// GetFetchers indicates an expected call of GetFetchers
+// GetFetchers indicates an expected call of GetFetchers.
 func (mr *MockTaskFetchersMockRecorder) GetFetchers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFetchers", reflect.TypeOf((*MockTaskFetchers)(nil).GetFetchers))
+}
+
+// Start mocks base method.
+func (m *MockTaskFetchers) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockTaskFetchersMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTaskFetchers)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockTaskFetchers) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockTaskFetchersMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTaskFetchers)(nil).Stop))
 }

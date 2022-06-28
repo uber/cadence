@@ -32,30 +32,44 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockScanOutputIterator is a mock of ScanOutputIterator interface
+// MockScanOutputIterator is a mock of ScanOutputIterator interface.
 type MockScanOutputIterator struct {
 	ctrl     *gomock.Controller
 	recorder *MockScanOutputIteratorMockRecorder
 }
 
-// MockScanOutputIteratorMockRecorder is the mock recorder for MockScanOutputIterator
+// MockScanOutputIteratorMockRecorder is the mock recorder for MockScanOutputIterator.
 type MockScanOutputIteratorMockRecorder struct {
 	mock *MockScanOutputIterator
 }
 
-// NewMockScanOutputIterator creates a new mock instance
+// NewMockScanOutputIterator creates a new mock instance.
 func NewMockScanOutputIterator(ctrl *gomock.Controller) *MockScanOutputIterator {
 	mock := &MockScanOutputIterator{ctrl: ctrl}
 	mock.recorder = &MockScanOutputIteratorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockScanOutputIterator) EXPECT() *MockScanOutputIteratorMockRecorder {
 	return m.recorder
 }
 
-// Next mocks base method
+// HasNext mocks base method.
+func (m *MockScanOutputIterator) HasNext() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasNext")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasNext indicates an expected call of HasNext.
+func (mr *MockScanOutputIteratorMockRecorder) HasNext() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasNext", reflect.TypeOf((*MockScanOutputIterator)(nil).HasNext))
+}
+
+// Next mocks base method.
 func (m *MockScanOutputIterator) Next() (*ScanOutputEntity, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Next")
@@ -64,50 +78,36 @@ func (m *MockScanOutputIterator) Next() (*ScanOutputEntity, error) {
 	return ret0, ret1
 }
 
-// Next indicates an expected call of Next
+// Next indicates an expected call of Next.
 func (mr *MockScanOutputIteratorMockRecorder) Next() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockScanOutputIterator)(nil).Next))
 }
 
-// HasNext mocks base method
-func (m *MockScanOutputIterator) HasNext() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasNext")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// HasNext indicates an expected call of HasNext
-func (mr *MockScanOutputIteratorMockRecorder) HasNext() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasNext", reflect.TypeOf((*MockScanOutputIterator)(nil).HasNext))
-}
-
-// MockExecutionWriter is a mock of ExecutionWriter interface
+// MockExecutionWriter is a mock of ExecutionWriter interface.
 type MockExecutionWriter struct {
 	ctrl     *gomock.Controller
 	recorder *MockExecutionWriterMockRecorder
 }
 
-// MockExecutionWriterMockRecorder is the mock recorder for MockExecutionWriter
+// MockExecutionWriterMockRecorder is the mock recorder for MockExecutionWriter.
 type MockExecutionWriterMockRecorder struct {
 	mock *MockExecutionWriter
 }
 
-// NewMockExecutionWriter creates a new mock instance
+// NewMockExecutionWriter creates a new mock instance.
 func NewMockExecutionWriter(ctrl *gomock.Controller) *MockExecutionWriter {
 	mock := &MockExecutionWriter{ctrl: ctrl}
 	mock.recorder = &MockExecutionWriterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockExecutionWriter) EXPECT() *MockExecutionWriterMockRecorder {
 	return m.recorder
 }
 
-// Add mocks base method
+// Add mocks base method.
 func (m *MockExecutionWriter) Add(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", arg0)
@@ -115,13 +115,13 @@ func (m *MockExecutionWriter) Add(arg0 interface{}) error {
 	return ret0
 }
 
-// Add indicates an expected call of Add
+// Add indicates an expected call of Add.
 func (mr *MockExecutionWriterMockRecorder) Add(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockExecutionWriter)(nil).Add), arg0)
 }
 
-// Flush mocks base method
+// Flush mocks base method.
 func (m *MockExecutionWriter) Flush() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Flush")
@@ -129,13 +129,13 @@ func (m *MockExecutionWriter) Flush() error {
 	return ret0
 }
 
-// Flush indicates an expected call of Flush
+// Flush indicates an expected call of Flush.
 func (mr *MockExecutionWriterMockRecorder) Flush() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockExecutionWriter)(nil).Flush))
 }
 
-// FlushedKeys mocks base method
+// FlushedKeys mocks base method.
 func (m *MockExecutionWriter) FlushedKeys() *Keys {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FlushedKeys")
@@ -143,7 +143,7 @@ func (m *MockExecutionWriter) FlushedKeys() *Keys {
 	return ret0
 }
 
-// FlushedKeys indicates an expected call of FlushedKeys
+// FlushedKeys indicates an expected call of FlushedKeys.
 func (mr *MockExecutionWriterMockRecorder) FlushedKeys() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushedKeys", reflect.TypeOf((*MockExecutionWriter)(nil).FlushedKeys))

@@ -31,35 +31,34 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	yarpc "go.uber.org/yarpc"
-
 	types "github.com/uber/cadence/common/types"
+	yarpc "go.uber.org/yarpc"
 )
 
-// MockClient is a mock of Client interface
+// MockClient is a mock of Client interface.
 type MockClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientMockRecorder
 }
 
-// MockClientMockRecorder is the mock recorder for MockClient
+// MockClientMockRecorder is the mock recorder for MockClient.
 type MockClientMockRecorder struct {
 	mock *MockClient
 }
 
-// NewMockClient creates a new mock instance
+// NewMockClient creates a new mock instance.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
 	mock := &MockClient{ctrl: ctrl}
 	mock.recorder = &MockClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
-// AddActivityTask mocks base method
+// AddActivityTask mocks base method.
 func (m *MockClient) AddActivityTask(arg0 context.Context, arg1 *types.AddActivityTaskRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -71,14 +70,14 @@ func (m *MockClient) AddActivityTask(arg0 context.Context, arg1 *types.AddActivi
 	return ret0
 }
 
-// AddActivityTask indicates an expected call of AddActivityTask
+// AddActivityTask indicates an expected call of AddActivityTask.
 func (mr *MockClientMockRecorder) AddActivityTask(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddActivityTask", reflect.TypeOf((*MockClient)(nil).AddActivityTask), varargs...)
 }
 
-// AddDecisionTask mocks base method
+// AddDecisionTask mocks base method.
 func (m *MockClient) AddDecisionTask(arg0 context.Context, arg1 *types.AddDecisionTaskRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -90,14 +89,14 @@ func (m *MockClient) AddDecisionTask(arg0 context.Context, arg1 *types.AddDecisi
 	return ret0
 }
 
-// AddDecisionTask indicates an expected call of AddDecisionTask
+// AddDecisionTask indicates an expected call of AddDecisionTask.
 func (mr *MockClientMockRecorder) AddDecisionTask(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDecisionTask", reflect.TypeOf((*MockClient)(nil).AddDecisionTask), varargs...)
 }
 
-// CancelOutstandingPoll mocks base method
+// CancelOutstandingPoll mocks base method.
 func (m *MockClient) CancelOutstandingPoll(arg0 context.Context, arg1 *types.CancelOutstandingPollRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -109,14 +108,14 @@ func (m *MockClient) CancelOutstandingPoll(arg0 context.Context, arg1 *types.Can
 	return ret0
 }
 
-// CancelOutstandingPoll indicates an expected call of CancelOutstandingPoll
+// CancelOutstandingPoll indicates an expected call of CancelOutstandingPoll.
 func (mr *MockClientMockRecorder) CancelOutstandingPoll(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelOutstandingPoll", reflect.TypeOf((*MockClient)(nil).CancelOutstandingPoll), varargs...)
 }
 
-// DescribeTaskList mocks base method
+// DescribeTaskList mocks base method.
 func (m *MockClient) DescribeTaskList(arg0 context.Context, arg1 *types.MatchingDescribeTaskListRequest, arg2 ...yarpc.CallOption) (*types.DescribeTaskListResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -129,34 +128,14 @@ func (m *MockClient) DescribeTaskList(arg0 context.Context, arg1 *types.Matching
 	return ret0, ret1
 }
 
-// DescribeTaskList indicates an expected call of DescribeTaskList
+// DescribeTaskList indicates an expected call of DescribeTaskList.
 func (mr *MockClientMockRecorder) DescribeTaskList(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTaskList", reflect.TypeOf((*MockClient)(nil).DescribeTaskList), varargs...)
 }
 
-// ListTaskListPartitions mocks base method
-func (m *MockClient) ListTaskListPartitions(arg0 context.Context, arg1 *types.MatchingListTaskListPartitionsRequest, arg2 ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListTaskListPartitions", varargs...)
-	ret0, _ := ret[0].(*types.ListTaskListPartitionsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListTaskListPartitions indicates an expected call of ListTaskListPartitions
-func (mr *MockClientMockRecorder) ListTaskListPartitions(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskListPartitions", reflect.TypeOf((*MockClient)(nil).ListTaskListPartitions), varargs...)
-}
-
-// GetTaskListsByDomain mocks base method
+// GetTaskListsByDomain mocks base method.
 func (m *MockClient) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetTaskListsByDomainRequest, arg2 ...yarpc.CallOption) (*types.GetTaskListsByDomainResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -169,14 +148,34 @@ func (m *MockClient) GetTaskListsByDomain(arg0 context.Context, arg1 *types.GetT
 	return ret0, ret1
 }
 
-// GetTaskListsByDomain indicates an expected call of GetTaskListsByDomain
+// GetTaskListsByDomain indicates an expected call of GetTaskListsByDomain.
 func (mr *MockClientMockRecorder) GetTaskListsByDomain(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskListsByDomain", reflect.TypeOf((*MockClient)(nil).GetTaskListsByDomain), varargs...)
 }
 
-// PollForActivityTask mocks base method
+// ListTaskListPartitions mocks base method.
+func (m *MockClient) ListTaskListPartitions(arg0 context.Context, arg1 *types.MatchingListTaskListPartitionsRequest, arg2 ...yarpc.CallOption) (*types.ListTaskListPartitionsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListTaskListPartitions", varargs...)
+	ret0, _ := ret[0].(*types.ListTaskListPartitionsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTaskListPartitions indicates an expected call of ListTaskListPartitions.
+func (mr *MockClientMockRecorder) ListTaskListPartitions(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTaskListPartitions", reflect.TypeOf((*MockClient)(nil).ListTaskListPartitions), varargs...)
+}
+
+// PollForActivityTask mocks base method.
 func (m *MockClient) PollForActivityTask(arg0 context.Context, arg1 *types.MatchingPollForActivityTaskRequest, arg2 ...yarpc.CallOption) (*types.PollForActivityTaskResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -189,14 +188,14 @@ func (m *MockClient) PollForActivityTask(arg0 context.Context, arg1 *types.Match
 	return ret0, ret1
 }
 
-// PollForActivityTask indicates an expected call of PollForActivityTask
+// PollForActivityTask indicates an expected call of PollForActivityTask.
 func (mr *MockClientMockRecorder) PollForActivityTask(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollForActivityTask", reflect.TypeOf((*MockClient)(nil).PollForActivityTask), varargs...)
 }
 
-// PollForDecisionTask mocks base method
+// PollForDecisionTask mocks base method.
 func (m *MockClient) PollForDecisionTask(arg0 context.Context, arg1 *types.MatchingPollForDecisionTaskRequest, arg2 ...yarpc.CallOption) (*types.MatchingPollForDecisionTaskResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -209,14 +208,14 @@ func (m *MockClient) PollForDecisionTask(arg0 context.Context, arg1 *types.Match
 	return ret0, ret1
 }
 
-// PollForDecisionTask indicates an expected call of PollForDecisionTask
+// PollForDecisionTask indicates an expected call of PollForDecisionTask.
 func (mr *MockClientMockRecorder) PollForDecisionTask(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PollForDecisionTask", reflect.TypeOf((*MockClient)(nil).PollForDecisionTask), varargs...)
 }
 
-// QueryWorkflow mocks base method
+// QueryWorkflow mocks base method.
 func (m *MockClient) QueryWorkflow(arg0 context.Context, arg1 *types.MatchingQueryWorkflowRequest, arg2 ...yarpc.CallOption) (*types.QueryWorkflowResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -229,14 +228,14 @@ func (m *MockClient) QueryWorkflow(arg0 context.Context, arg1 *types.MatchingQue
 	return ret0, ret1
 }
 
-// QueryWorkflow indicates an expected call of QueryWorkflow
+// QueryWorkflow indicates an expected call of QueryWorkflow.
 func (mr *MockClientMockRecorder) QueryWorkflow(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryWorkflow", reflect.TypeOf((*MockClient)(nil).QueryWorkflow), varargs...)
 }
 
-// RespondQueryTaskCompleted mocks base method
+// RespondQueryTaskCompleted mocks base method.
 func (m *MockClient) RespondQueryTaskCompleted(arg0 context.Context, arg1 *types.MatchingRespondQueryTaskCompletedRequest, arg2 ...yarpc.CallOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -248,7 +247,7 @@ func (m *MockClient) RespondQueryTaskCompleted(arg0 context.Context, arg1 *types
 	return ret0
 }
 
-// RespondQueryTaskCompleted indicates an expected call of RespondQueryTaskCompleted
+// RespondQueryTaskCompleted indicates an expected call of RespondQueryTaskCompleted.
 func (mr *MockClientMockRecorder) RespondQueryTaskCompleted(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
