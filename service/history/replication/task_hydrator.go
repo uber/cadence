@@ -28,8 +28,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -39,13 +37,12 @@ type TaskHydrator struct {
 	shardID int
 	history HistoryManager
 
-	logger               log.Logger
 	readHistoryBatchSize dynamicconfig.IntPropertyFn
 }
 
 // NewTaskHydrator creates new TaskHydrator.
-func NewTaskHydrator(shardID int, history HistoryManager, logger log.Logger, readHistoryBatchSize dynamicconfig.IntPropertyFn) TaskHydrator {
-	return TaskHydrator{shardID, history, logger, readHistoryBatchSize}
+func NewTaskHydrator(shardID int, history HistoryManager, readHistoryBatchSize dynamicconfig.IntPropertyFn) TaskHydrator {
+	return TaskHydrator{shardID, history, readHistoryBatchSize}
 }
 
 // Dependencies
@@ -136,10 +133,6 @@ func (t TaskHydrator) HydrateSyncActivityTask(ctx context.Context, task persiste
 // It needs version histories to load history branch from database with events specified in replication task.
 func (t TaskHydrator) HydrateHistoryReplicationTask(ctx context.Context, task persistence.ReplicationTaskInfo, versionHistories *persistence.VersionHistories) (*types.ReplicationTask, error) {
 	if versionHistories == nil {
-		t.logger.Error("encounter workflow without version histories",
-			tag.WorkflowDomainID(task.DomainID),
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowRunID(task.RunID))
 		return nil, nil
 	}
 

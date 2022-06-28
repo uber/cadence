@@ -103,8 +103,6 @@ func NewTaskAckManager(
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
 
-	logger := shard.GetLogger().WithTags(tag.ComponentReplicationAckManager)
-
 	return &taskAckManagerImpl{
 		shard:            shard,
 		executionCache:   executionCache,
@@ -118,12 +116,11 @@ func NewTaskAckManager(
 		lastTaskCreationTime: atomic.Value{},
 		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
 		metricsClient:        shard.GetMetricsClient(),
-		logger:               logger,
+		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
 		hydrator: NewTaskHydrator(
 			shard.GetShardID(),
 			shard.GetHistoryManager(),
-			logger,
 			shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize,
 		),
 	}
@@ -292,6 +289,12 @@ func (t *taskAckManagerImpl) toReplicationTask(
 			versionHistories = versionHistories.Duplicate()
 		}
 		release(nil)
+		if versionHistories == nil {
+			t.logger.Error("encounter workflow without version histories",
+				tag.WorkflowDomainID(task.DomainID),
+				tag.WorkflowID(task.WorkflowID),
+				tag.WorkflowRunID(task.RunID))
+		}
 		return t.hydrator.HydrateHistoryReplicationTask(ctx, task, versionHistories)
 	default:
 		return nil, errUnknownReplicationTask

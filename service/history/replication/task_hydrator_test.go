@@ -34,7 +34,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -90,7 +89,7 @@ func TestHydration_FailoverMarker(t *testing.T) {
 		CreationTime: common.Int64Ptr(testCreationTime),
 	}
 
-	hydrator := NewTaskHydrator(testShardID, nil, log.NewNoop(), nil)
+	hydrator := NewTaskHydrator(testShardID, nil, nil)
 	actual := hydrator.HydrateFailoverMarkerTask(task)
 	assert.Equal(t, &expected, actual)
 }
@@ -198,7 +197,7 @@ func TestHydration_SyncActivity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hydrator := NewTaskHydrator(testShardID, nil, log.NewNoop(), nil)
+			hydrator := NewTaskHydrator(testShardID, nil, nil)
 
 			actualTask, err := hydrator.HydrateSyncActivityTask(context.Background(), tt.task, tt.mutableState)
 			if tt.expectErr != "" {
@@ -322,7 +321,7 @@ func TestHydration_History(t *testing.T) {
 				tt.prepareHistory(history)
 			}
 
-			hydrator := NewTaskHydrator(testShardID, history, log.NewNoop(), dynamicconfig.GetIntPropertyFn(5))
+			hydrator := NewTaskHydrator(testShardID, history, dynamicconfig.GetIntPropertyFn(5))
 
 			actualTask, err := hydrator.HydrateHistoryReplicationTask(context.Background(), tt.task, tt.versionHistories)
 			if tt.expectErr != "" {
