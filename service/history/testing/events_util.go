@@ -24,7 +24,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
 	"github.com/uber/cadence/service/history/execution"
 )
@@ -124,7 +123,7 @@ func AddDecisionTaskCompletedEvent(
 	event, _ := builder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         identity,
-	}, config.DefaultHistoryMaxAutoResetPoints)
+	}, common.DefaultHistoryMaxAutoResetPoints)
 
 	builder.FlushBufferedEvents() //nolint:errcheck
 
