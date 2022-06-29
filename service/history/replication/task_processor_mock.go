@@ -32,48 +32,48 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockTaskProcessor is a mock of TaskProcessor interface
+// MockTaskProcessor is a mock of TaskProcessor interface.
 type MockTaskProcessor struct {
 	ctrl     *gomock.Controller
 	recorder *MockTaskProcessorMockRecorder
 }
 
-// MockTaskProcessorMockRecorder is the mock recorder for MockTaskProcessor
+// MockTaskProcessorMockRecorder is the mock recorder for MockTaskProcessor.
 type MockTaskProcessorMockRecorder struct {
 	mock *MockTaskProcessor
 }
 
-// NewMockTaskProcessor creates a new mock instance
+// NewMockTaskProcessor creates a new mock instance.
 func NewMockTaskProcessor(ctrl *gomock.Controller) *MockTaskProcessor {
 	mock := &MockTaskProcessor{ctrl: ctrl}
 	mock.recorder = &MockTaskProcessorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTaskProcessor) EXPECT() *MockTaskProcessorMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockTaskProcessor) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockTaskProcessorMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTaskProcessor)(nil).Start))
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockTaskProcessor) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockTaskProcessorMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockTaskProcessor)(nil).Stop))
