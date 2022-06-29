@@ -23,18 +23,17 @@
 package replication
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -58,12 +57,12 @@ const (
 )
 
 var (
-	testBlobTask                  = []byte{1, 2, 3}
-	testBlobTaskNewRun            = []byte{4, 5, 6}
-	testBlobTokenVersionHistory   = []byte{4, 5, 6}
-	testBranchTokenTask           = []byte{91, 92, 93}
-	testBranchTokenTaskNewRun     = []byte{94, 95, 96}
+	testBranchToken               = []byte{91, 92, 93}
+	testBranchTokenNewRun         = []byte{94, 95, 96}
 	testBranchTokenVersionHistory = []byte{97, 98, 99}
+	testDataBlob                  = &types.DataBlob{Data: []byte{1, 2, 3}}
+	testDataBlobNewRun            = &types.DataBlob{Data: []byte{4, 5, 6}}
+	testDataBlobVersionHistory    = &types.DataBlob{Data: []byte{7, 8, 9}}
 	testDetails                   = []byte{100, 101, 102}
 	testLastFailureDetails        = []byte{103, 104, 105}
 	testScheduleTime              = time.Now()
@@ -241,8 +240,8 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 		RunID:             testRunID,
 		FirstEventID:      testFirstEventID,
 		NextEventID:       testNextEventID,
-		BranchToken:       testBranchTokenTask,
-		NewRunBranchToken: testBranchTokenTaskNewRun,
+		BranchToken:       testBranchToken,
+		NewRunBranchToken: testBranchTokenNewRun,
 		Version:           testVersion,
 		CreationTime:      testCreationTime,
 	}
@@ -262,12 +261,12 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		task           persistence.ReplicationTaskInfo
-		msProvider     mutableStateProvider
-		prepareHistory func(hm *mocks.HistoryV2Manager)
-		expectTask     *types.ReplicationTask
-		expectErr      string
+		name       string
+		task       persistence.ReplicationTaskInfo
+		msProvider mutableStateProvider
+		history    historyProvider
+		expectTask *types.ReplicationTask
+		expectErr  string
 	}{
 		{
 			name: "hydrates history with given branch token",
@@ -277,9 +276,11 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
 				},
 			},
-			prepareHistory: func(hm *mocks.HistoryV2Manager) {
-				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenTask, testBlobTask)
-				mockHistory(hm, 1, 2, testBranchTokenTaskNewRun, testBlobTaskNewRun)
+			history: &fakeHistoryProvider{
+				blobs: []historyBlob{
+					{branch: testBranchToken, blob: testDataBlob},
+					{branch: testBranchTokenNewRun, blob: testDataBlobNewRun},
+				},
 			},
 			expectTask: &types.ReplicationTask{
 				TaskType:     types.ReplicationTaskTypeHistoryV2.Ptr(),
@@ -290,8 +291,8 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 					WorkflowID:          testWorkflowID,
 					RunID:               testRunID,
 					VersionHistoryItems: []*types.VersionHistoryItem{{EventID: testFirstEventID, Version: testVersion}},
-					Events:              &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: testBlobTask},
-					NewRunEvents:        &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: testBlobTaskNewRun},
+					Events:              testDataBlob,
+					NewRunEvents:        testDataBlobNewRun,
 				},
 			},
 		},
@@ -303,9 +304,11 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
 				},
 			},
-			prepareHistory: func(hm *mocks.HistoryV2Manager) {
-				mockHistory(hm, testFirstEventID, testNextEventID, testBranchTokenVersionHistory, testBlobTokenVersionHistory)
-				mockHistory(hm, 1, 2, testBranchTokenTaskNewRun, testBlobTaskNewRun)
+			history: &fakeHistoryProvider{
+				blobs: []historyBlob{
+					{branch: testBranchTokenVersionHistory, blob: testDataBlobVersionHistory},
+					{branch: testBranchTokenNewRun, blob: testDataBlobNewRun},
+				},
 			},
 			expectTask: &types.ReplicationTask{
 				TaskType:     types.ReplicationTaskTypeHistoryV2.Ptr(),
@@ -316,8 +319,8 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 					WorkflowID:          testWorkflowID,
 					RunID:               testRunID,
 					VersionHistoryItems: []*types.VersionHistoryItem{{EventID: testFirstEventID, Version: testVersion}},
-					Events:              &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: testBlobTokenVersionHistory},
-					NewRunEvents:        &types.DataBlob{EncodingType: types.EncodingTypeJSON.Ptr(), Data: testBlobTaskNewRun},
+					Events:              testDataBlobVersionHistory,
+					NewRunEvents:        testDataBlobNewRun,
 				},
 			},
 		},
@@ -356,15 +359,32 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			expectErr:  "error loading mutable state",
 		},
 		{
-			name: "failed reading history - return error",
+			name: "failed reading event blob - return error",
 			task: task,
 			msProvider: &fakeMutableStateProvider{
 				workflows: map[definition.WorkflowIdentifier]mutableState{
 					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
 				},
 			},
-			prepareHistory: func(hm *mocks.HistoryV2Manager) {
-				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("failed reading history"))
+			history: &fakeHistoryProvider{
+				blobs: []historyBlob{
+					{branch: testBranchTokenNewRun, blob: testDataBlobNewRun},
+				},
+			},
+			expectErr: "failed reading history",
+		},
+		{
+			name: "failed reading event blob for new run - return error",
+			task: task,
+			msProvider: &fakeMutableStateProvider{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
+					testWorkflowIdentifier: &fakeMutableState{versionHistories: &versionHistories},
+				},
+			},
+			history: &fakeHistoryProvider{
+				blobs: []historyBlob{
+					{branch: testBranchToken, blob: testDataBlob},
+				},
 			},
 			expectErr: "failed reading history",
 		},
@@ -372,12 +392,7 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			history := &mocks.HistoryV2Manager{}
-			if tt.prepareHistory != nil {
-				tt.prepareHistory(history)
-			}
-
-			actualTask, err := Hydrate(context.Background(), tt.task, tt.msProvider, historyLoader{testShardID, history})
+			actualTask, err := Hydrate(context.Background(), tt.task, tt.msProvider, tt.history)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
@@ -421,18 +436,26 @@ func (ms fakeMutableState) GetVersionHistories() *persistence.VersionHistories {
 	return ms.versionHistories
 }
 
-func mockHistory(hm *mocks.HistoryV2Manager, minID, maxID int64, branchToken []byte, returnedBlob []byte) {
-	historyResponse := persistence.ReadRawHistoryBranchResponse{
-		HistoryEventBlobs: []*persistence.DataBlob{
-			{Encoding: common.EncodingTypeJSON, Data: returnedBlob},
-		},
-		Size: 1,
+type historyBlob struct {
+	branch []byte
+	blob   *types.DataBlob
+}
+
+type fakeHistoryProvider struct {
+	blobs []historyBlob
+}
+
+func (h fakeHistoryProvider) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+	return h.getBlob(task.BranchToken)
+}
+func (h fakeHistoryProvider) GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+	return h.getBlob(task.NewRunBranchToken)
+}
+func (h fakeHistoryProvider) getBlob(branch []byte) (*types.DataBlob, error) {
+	for _, b := range h.blobs {
+		if bytes.Equal(b.branch, branch) {
+			return b.blob, nil
+		}
 	}
-	hm.On("ReadRawHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
-		BranchToken: branchToken,
-		MinEventID:  minID,
-		MaxEventID:  maxID,
-		PageSize:    2,
-		ShardID:     common.IntPtr(testShardID),
-	}).Return(&historyResponse, nil)
+	return nil, errors.New("failed reading history")
 }
