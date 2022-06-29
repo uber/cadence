@@ -221,8 +221,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	searchAttr := request.GetSearchAttribute()
-	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
-		dc.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
+	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(dc.ValidSearchAttributes, nil)
 	if err != nil {
 		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
@@ -1460,12 +1459,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// this is a special case, target branch remains the same
 	} else {
 		endItem := persistence.NewVersionHistoryItem(request.GetEndEventID(), request.GetEndEventVersion())
-		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
-		if err != nil {
-			return nil, err
-		}
-
-		targetBranch, err = versionHistories.GetVersionHistory(idx)
+		_, targetBranch, err = versionHistories.FindFirstVersionHistoryByItem(endItem)
 		if err != nil {
 			return nil, err
 		}
@@ -1479,11 +1473,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// this is a special case, start event is on the same branch as target branch
 	} else {
 		if !targetBranch.ContainsItem(startItem) {
-			idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
-			if err != nil {
-				return nil, err
-			}
-			startBranch, err := versionHistories.GetVersionHistory(idx)
+			_, startBranch, err := versionHistories.FindFirstVersionHistoryByItem(startItem)
 			if err != nil {
 				return nil, err
 			}
@@ -1608,14 +1598,14 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 
 	var value interface{}
 	if request.Filters == nil {
-		value, err = adh.params.DynamicConfig.GetValue(keyVal, nil)
+		value, err = adh.params.DynamicConfig.GetValue(keyVal)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -1624,7 +1614,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
-		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -1648,11 +1638,11 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminUpdateDynamicConfigScope)
 	defer sw.Stop()
 
-	if request == nil {
+	if request == nil || request.ConfigName == "" {
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -1669,7 +1659,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -1696,9 +1686,9 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
-	if err != nil {
-		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
+	if err != nil || request.ConfigName == "" {
+		entries, err2 := adh.params.DynamicConfig.ListValue(nil)
 		if err2 != nil {
 			return nil, adh.error(err2, scope)
 		}
@@ -1716,15 +1706,6 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil
-}
-
-func checkValidKey(keyName string) (dc.Key, error) {
-	keyVal, ok := dc.KeyNames[keyName]
-	if !ok || keyVal == dc.UnknownKey {
-		return dc.UnknownKey, errors.New(fmt.Sprintf(
-			"invalid dynamic config parameter name: %s", keyName))
-	}
-	return keyVal, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

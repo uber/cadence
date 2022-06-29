@@ -1007,7 +1007,7 @@ func (s *historyBuilderSuite) addDecisionTaskCompletedEvent(
 	event, err := s.msBuilder.AddDecisionTaskCompletedEvent(scheduleID, startedID, &types.RespondDecisionTaskCompletedRequest{
 		ExecutionContext: context,
 		Identity:         identity,
-	}, config.DefaultHistoryMaxAutoResetPoints)
+	}, common.DefaultHistoryMaxAutoResetPoints)
 	s.Nil(err)
 
 	return event

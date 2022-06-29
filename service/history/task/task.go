@@ -177,7 +177,7 @@ func newTask(
 		Info:               taskInfo,
 		shard:              shard,
 		state:              ctask.TaskStatePending,
-		priority:           ctask.NoPriority,
+		priority:           common.NoPriority,
 		queueType:          queueType,
 		scopeIdx:           scopeIdx,
 		scope:              nil,

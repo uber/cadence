@@ -23,20 +23,20 @@ package task
 import (
 	"sync"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/quotas"
-	"github.com/uber/cadence/common/task"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 )
 
 var (
-	highTaskPriority    = task.GetTaskPriority(task.HighPriorityClass, task.DefaultPrioritySubclass)
-	defaultTaskPriority = task.GetTaskPriority(task.DefaultPriorityClass, task.DefaultPrioritySubclass)
-	lowTaskPriority     = task.GetTaskPriority(task.LowPriorityClass, task.DefaultPrioritySubclass)
+	highTaskPriority    = common.GetTaskPriority(common.HighPriorityClass, common.DefaultPrioritySubclass)
+	defaultTaskPriority = common.GetTaskPriority(common.DefaultPriorityClass, common.DefaultPrioritySubclass)
+	lowTaskPriority     = common.GetTaskPriority(common.LowPriorityClass, common.DefaultPrioritySubclass)
 )
 
 type (
@@ -77,7 +77,7 @@ func NewPriorityAssigner(
 func (a *priorityAssignerImpl) Assign(
 	queueTask Task,
 ) error {
-	if priority := queueTask.Priority(); priority != task.NoPriority {
+	if priority := queueTask.Priority(); priority != common.NoPriority {
 		if priority != lowTaskPriority && queueTask.GetAttempt() > a.config.TaskCriticalRetryCount() {
 			// automatically lower the priority if task attempt exceeds certain threshold
 			queueTask.SetPriority(lowTaskPriority)
