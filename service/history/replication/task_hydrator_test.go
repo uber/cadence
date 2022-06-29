@@ -29,16 +29,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
+	"github.com/uber/cadence/service/history/shard"
 )
 
 const (
@@ -455,7 +459,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hm := &mocks.HistoryV2Manager{}
 			tt.mockHistory(hm)
-			loader := &historyLoader{shardID: testShardID, history: hm}
+			loader := historyLoader{shardID: testShardID, history: hm}
 			dataBlob, err := loader.GetEventBlob(context.Background(), tt.task)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
@@ -469,7 +473,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 
 func TestHistoryLoader_GetNextRunEventBlob(t *testing.T) {
 	hm := &mocks.HistoryV2Manager{}
-	loader := &historyLoader{shardID: testShardID, history: hm}
+	loader := historyLoader{shardID: testShardID, history: hm}
 
 	dataBlob, err := loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{NewRunBranchToken: nil})
 	assert.NoError(t, err)
@@ -487,6 +491,49 @@ func TestHistoryLoader_GetNextRunEventBlob(t *testing.T) {
 	dataBlob, err = loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{NewRunBranchToken: testBranchTokenNewRun})
 	assert.NoError(t, err)
 	assert.Equal(t, testDataBlob, dataBlob)
+}
+
+func TestMutableStateLoader_GetMutableState(t *testing.T) {
+	ctx := context.Background()
+	controller := gomock.NewController(t)
+	testShardContext := shard.NewTestContext(
+		controller,
+		&persistence.ShardInfo{
+			ShardID:                 testShardID,
+			RangeID:                 1,
+			TransferAckLevel:        0,
+			ClusterReplicationLevel: make(map[string]int64),
+		},
+		config.NewForTest(),
+	)
+	domainCache := testShardContext.Resource.DomainCache
+	executionCache := execution.NewCache(testShardContext)
+	expectedMS := execution.NewMockMutableState(controller)
+	msLoader := mutableStateLoader{executionCache}
+
+	exec, release, err := executionCache.GetOrCreateWorkflowExecution(ctx, testDomainID, types.WorkflowExecution{WorkflowID: testWorkflowID, RunID: testRunID})
+	require.NoError(t, err)
+
+	// Try getting mutable state while it is still locked, will result in an error
+	contextWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond)
+	defer cancel()
+	_, _, err = msLoader.GetMutableState(contextWithTimeout, testDomainID, testWorkflowID, testRunID)
+	assert.EqualError(t, err, "context deadline exceeded")
+	release(nil)
+
+	// Error while trying to load mutable state will be returned
+	domainCache.EXPECT().GetDomainByID("non-existing-domain").Return(nil, errors.New("does not exist"))
+	_, _, err = msLoader.GetMutableState(ctx, "non-existing-domain", testWorkflowID, testRunID)
+	assert.EqualError(t, err, "does not exist")
+
+	// Happy path
+	domainCache.EXPECT().GetDomainByID(testDomainID).Return(&cache.DomainCacheEntry{}, nil)
+	expectedMS.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil)
+	exec.SetWorkflowExecution(expectedMS)
+	ms, release, err := msLoader.GetMutableState(ctx, testDomainID, testWorkflowID, testRunID)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMS, ms)
+	assert.NotNil(t, release)
 }
 
 type fakeMutableStateProvider struct {
