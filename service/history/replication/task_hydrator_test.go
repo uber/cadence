@@ -30,10 +30,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -60,9 +62,9 @@ var (
 	testBranchToken               = []byte{91, 92, 93}
 	testBranchTokenNewRun         = []byte{94, 95, 96}
 	testBranchTokenVersionHistory = []byte{97, 98, 99}
-	testDataBlob                  = &types.DataBlob{Data: []byte{1, 2, 3}}
-	testDataBlobNewRun            = &types.DataBlob{Data: []byte{4, 5, 6}}
-	testDataBlobVersionHistory    = &types.DataBlob{Data: []byte{7, 8, 9}}
+	testDataBlob                  = &types.DataBlob{Data: []byte{1, 2, 3}, EncodingType: types.EncodingTypeJSON.Ptr()}
+	testDataBlobNewRun            = &types.DataBlob{Data: []byte{4, 5, 6}, EncodingType: types.EncodingTypeJSON.Ptr()}
+	testDataBlobVersionHistory    = &types.DataBlob{Data: []byte{7, 8, 9}, EncodingType: types.EncodingTypeJSON.Ptr()}
 	testDetails                   = []byte{100, 101, 102}
 	testLastFailureDetails        = []byte{103, 104, 105}
 	testScheduleTime              = time.Now()
@@ -401,6 +403,90 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHistoryLoader_GetEventBlob(t *testing.T) {
+	tests := []struct {
+		name           string
+		task           persistence.ReplicationTaskInfo
+		mockHistory    func(hm *mocks.HistoryV2Manager)
+		expectDataBlob *types.DataBlob
+		expectErr      string
+	}{
+		{
+			name: "loads data blob",
+			task: persistence.ReplicationTaskInfo{
+				BranchToken:  testBranchToken,
+				FirstEventID: 10,
+				NextEventID:  11,
+			},
+			mockHistory: func(hm *mocks.HistoryV2Manager) {
+				hm.On("ReadRawHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
+					BranchToken: testBranchToken,
+					MinEventID:  10,
+					MaxEventID:  11,
+					PageSize:    2,
+					ShardID:     common.IntPtr(testShardID),
+				}).Return(&persistence.ReadRawHistoryBranchResponse{
+					HistoryEventBlobs: []*persistence.DataBlob{{Encoding: common.EncodingTypeJSON, Data: testDataBlob.Data}},
+				}, nil)
+			},
+			expectDataBlob: testDataBlob,
+		},
+		{
+			name: "load failure",
+			mockHistory: func(hm *mocks.HistoryV2Manager) {
+				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("load failure"))
+			},
+			expectErr: "load failure",
+		},
+		{
+			name: "response must contain exactly one blob",
+			mockHistory: func(hm *mocks.HistoryV2Manager) {
+				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
+					HistoryEventBlobs: []*persistence.DataBlob{{}, {}}, //two blobs
+				}, nil)
+			},
+			expectErr: "replication hydrator encountered more than 1 NDC raw event batch",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			hm := &mocks.HistoryV2Manager{}
+			tt.mockHistory(hm)
+			loader := &historyLoader{shardID: testShardID, history: hm}
+			dataBlob, err := loader.GetEventBlob(context.Background(), tt.task)
+			if tt.expectErr != "" {
+				assert.EqualError(t, err, tt.expectErr)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectDataBlob, dataBlob)
+			}
+		})
+	}
+}
+
+func TestHistoryLoader_GetNextRunEventBlob(t *testing.T) {
+	hm := &mocks.HistoryV2Manager{}
+	loader := &historyLoader{shardID: testShardID, history: hm}
+
+	dataBlob, err := loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{NewRunBranchToken: nil})
+	assert.NoError(t, err)
+	assert.Nil(t, dataBlob)
+
+	hm.On("ReadRawHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
+		BranchToken: testBranchTokenNewRun,
+		MinEventID:  1,
+		MaxEventID:  2,
+		PageSize:    2,
+		ShardID:     common.IntPtr(testShardID),
+	}).Return(&persistence.ReadRawHistoryBranchResponse{
+		HistoryEventBlobs: []*persistence.DataBlob{{Encoding: common.EncodingTypeJSON, Data: testDataBlob.Data}},
+	}, nil)
+	dataBlob, err = loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{NewRunBranchToken: testBranchTokenNewRun})
+	assert.NoError(t, err)
+	assert.Equal(t, testDataBlob, dataBlob)
 }
 
 type fakeMutableStateProvider struct {
