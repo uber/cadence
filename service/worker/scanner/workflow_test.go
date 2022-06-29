@@ -68,7 +68,7 @@ func (s *scannerWorkflowTestSuite) TestScavengerActivity() {
 		resource: mockResource,
 		cfg: Config{
 			TaskListScannerOptions: tasklist.Options{
-				GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(tasklist.DefaultScannerGetOrphanTasksPageSize),
+				GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(dynamicconfig.ScannerGetOrphanTasksPageSize.DefaultInt()),
 				EnableCleaning:           dynamicconfig.GetBoolPropertyFn(true),
 				ExecutorPollInterval:     time.Millisecond * 50,
 			},

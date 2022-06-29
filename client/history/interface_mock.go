@@ -31,9 +31,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	yarpc "go.uber.org/yarpc"
-
 	types "github.com/uber/cadence/common/types"
+	yarpc "go.uber.org/yarpc"
 )
 
 // MockClient is a mock of Client interface.
@@ -76,6 +75,26 @@ func (mr *MockClientMockRecorder) CloseShard(arg0, arg1 interface{}, arg2 ...int
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseShard", reflect.TypeOf((*MockClient)(nil).CloseShard), varargs...)
+}
+
+// CountDLQMessages mocks base method.
+func (m *MockClient) CountDLQMessages(arg0 context.Context, arg1 *types.CountDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.HistoryCountDLQMessagesResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CountDLQMessages", varargs...)
+	ret0, _ := ret[0].(*types.HistoryCountDLQMessagesResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountDLQMessages indicates an expected call of CountDLQMessages.
+func (mr *MockClientMockRecorder) CountDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDLQMessages", reflect.TypeOf((*MockClient)(nil).CountDLQMessages), varargs...)
 }
 
 // DescribeHistoryHost mocks base method.
@@ -176,26 +195,6 @@ func (mr *MockClientMockRecorder) GetCrossClusterTasks(arg0, arg1 interface{}, a
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCrossClusterTasks", reflect.TypeOf((*MockClient)(nil).GetCrossClusterTasks), varargs...)
-}
-
-// CountDLQMessages mocks base method.
-func (m *MockClient) CountDLQMessages(arg0 context.Context, arg1 *types.CountDLQMessagesRequest, arg2 ...yarpc.CallOption) (*types.HistoryCountDLQMessagesResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "CountDLQMessages", varargs...)
-	ret0, _ := ret[0].(*types.HistoryCountDLQMessagesResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CountDLQMessages indicates an expected call of CountDLQMessages.
-func (mr *MockClientMockRecorder) CountDLQMessages(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDLQMessages", reflect.TypeOf((*MockClient)(nil).CountDLQMessages), varargs...)
 }
 
 // GetDLQReplicationMessages mocks base method.

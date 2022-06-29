@@ -36,9 +36,6 @@ import (
 )
 
 const (
-	DefaultScannerGetOrphanTasksPageSize          = 1000
-	DefaultScannerMaxTasksProcessedPerTasklistJob = 256
-
 	executorMaxDeferredTasks = 10000
 	taskListBatchSize        = 32 // maximum number of task list we process concurrently
 	taskBatchSize            = 16
@@ -137,7 +134,7 @@ func NewScavenger(
 	getOrphanTasksPageSize := opts.GetOrphanTasksPageSizeFn
 	if getOrphanTasksPageSize == nil {
 		getOrphanTasksPageSize = func(opts ...dynamicconfig.FilterOption) int {
-			return DefaultScannerGetOrphanTasksPageSize
+			return dynamicconfig.ScannerGetOrphanTasksPageSize.DefaultInt()
 		}
 	}
 
@@ -151,7 +148,7 @@ func NewScavenger(
 	maxTasksPerJobFn := opts.MaxTasksPerJobFn
 	if maxTasksPerJobFn == nil {
 		maxTasksPerJobFn = func(opts ...dynamicconfig.FilterOption) int {
-			return DefaultScannerMaxTasksProcessedPerTasklistJob
+			return dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob.DefaultInt()
 		}
 	}
 

@@ -32,30 +32,44 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockWorkflow is a mock of Workflow interface
+// MockWorkflow is a mock of Workflow interface.
 type MockWorkflow struct {
 	ctrl     *gomock.Controller
 	recorder *MockWorkflowMockRecorder
 }
 
-// MockWorkflowMockRecorder is the mock recorder for MockWorkflow
+// MockWorkflowMockRecorder is the mock recorder for MockWorkflow.
 type MockWorkflowMockRecorder struct {
 	mock *MockWorkflow
 }
 
-// NewMockWorkflow creates a new mock instance
+// NewMockWorkflow creates a new mock instance.
 func NewMockWorkflow(ctrl *gomock.Controller) *MockWorkflow {
 	mock := &MockWorkflow{ctrl: ctrl}
 	mock.recorder = &MockWorkflowMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWorkflow) EXPECT() *MockWorkflowMockRecorder {
 	return m.recorder
 }
 
-// GetContext mocks base method
+// FlushBufferedEvents mocks base method.
+func (m *MockWorkflow) FlushBufferedEvents() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FlushBufferedEvents")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FlushBufferedEvents indicates an expected call of FlushBufferedEvents.
+func (mr *MockWorkflowMockRecorder) FlushBufferedEvents() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushBufferedEvents", reflect.TypeOf((*MockWorkflow)(nil).FlushBufferedEvents))
+}
+
+// GetContext mocks base method.
 func (m *MockWorkflow) GetContext() Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetContext")
@@ -63,13 +77,13 @@ func (m *MockWorkflow) GetContext() Context {
 	return ret0
 }
 
-// GetContext indicates an expected call of GetContext
+// GetContext indicates an expected call of GetContext.
 func (mr *MockWorkflowMockRecorder) GetContext() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContext", reflect.TypeOf((*MockWorkflow)(nil).GetContext))
 }
 
-// GetMutableState mocks base method
+// GetMutableState mocks base method.
 func (m *MockWorkflow) GetMutableState() MutableState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMutableState")
@@ -77,13 +91,13 @@ func (m *MockWorkflow) GetMutableState() MutableState {
 	return ret0
 }
 
-// GetMutableState indicates an expected call of GetMutableState
+// GetMutableState indicates an expected call of GetMutableState.
 func (mr *MockWorkflowMockRecorder) GetMutableState() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMutableState", reflect.TypeOf((*MockWorkflow)(nil).GetMutableState))
 }
 
-// GetReleaseFn mocks base method
+// GetReleaseFn mocks base method.
 func (m *MockWorkflow) GetReleaseFn() ReleaseFunc {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReleaseFn")
@@ -91,13 +105,13 @@ func (m *MockWorkflow) GetReleaseFn() ReleaseFunc {
 	return ret0
 }
 
-// GetReleaseFn indicates an expected call of GetReleaseFn
+// GetReleaseFn indicates an expected call of GetReleaseFn.
 func (mr *MockWorkflowMockRecorder) GetReleaseFn() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReleaseFn", reflect.TypeOf((*MockWorkflow)(nil).GetReleaseFn))
 }
 
-// GetVectorClock mocks base method
+// GetVectorClock mocks base method.
 func (m *MockWorkflow) GetVectorClock() (int64, int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVectorClock")
@@ -107,13 +121,13 @@ func (m *MockWorkflow) GetVectorClock() (int64, int64, error) {
 	return ret0, ret1, ret2
 }
 
-// GetVectorClock indicates an expected call of GetVectorClock
+// GetVectorClock indicates an expected call of GetVectorClock.
 func (mr *MockWorkflowMockRecorder) GetVectorClock() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVectorClock", reflect.TypeOf((*MockWorkflow)(nil).GetVectorClock))
 }
 
-// HappensAfter mocks base method
+// HappensAfter mocks base method.
 func (m *MockWorkflow) HappensAfter(that Workflow) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HappensAfter", that)
@@ -122,13 +136,13 @@ func (m *MockWorkflow) HappensAfter(that Workflow) (bool, error) {
 	return ret0, ret1
 }
 
-// HappensAfter indicates an expected call of HappensAfter
+// HappensAfter indicates an expected call of HappensAfter.
 func (mr *MockWorkflowMockRecorder) HappensAfter(that interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HappensAfter", reflect.TypeOf((*MockWorkflow)(nil).HappensAfter), that)
 }
 
-// Revive mocks base method
+// Revive mocks base method.
 func (m *MockWorkflow) Revive() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Revive")
@@ -136,13 +150,13 @@ func (m *MockWorkflow) Revive() error {
 	return ret0
 }
 
-// Revive indicates an expected call of Revive
+// Revive indicates an expected call of Revive.
 func (mr *MockWorkflowMockRecorder) Revive() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Revive", reflect.TypeOf((*MockWorkflow)(nil).Revive))
 }
 
-// SuppressBy mocks base method
+// SuppressBy mocks base method.
 func (m *MockWorkflow) SuppressBy(incomingWorkflow Workflow) (TransactionPolicy, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SuppressBy", incomingWorkflow)
@@ -151,22 +165,8 @@ func (m *MockWorkflow) SuppressBy(incomingWorkflow Workflow) (TransactionPolicy,
 	return ret0, ret1
 }
 
-// SuppressBy indicates an expected call of SuppressBy
+// SuppressBy indicates an expected call of SuppressBy.
 func (mr *MockWorkflowMockRecorder) SuppressBy(incomingWorkflow interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SuppressBy", reflect.TypeOf((*MockWorkflow)(nil).SuppressBy), incomingWorkflow)
-}
-
-// FlushBufferedEvents mocks base method
-func (m *MockWorkflow) FlushBufferedEvents() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FlushBufferedEvents")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FlushBufferedEvents indicates an expected call of FlushBufferedEvents
-func (mr *MockWorkflowMockRecorder) FlushBufferedEvents() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushBufferedEvents", reflect.TypeOf((*MockWorkflow)(nil).FlushBufferedEvents))
 }

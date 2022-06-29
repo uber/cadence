@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	esmock "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/membership"
@@ -563,7 +562,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 	mockValidAttr := map[string]interface{}{
 		"testkey": types.IndexedValueTypeKeyword,
 	}
-	dynamicConfig.EXPECT().GetMapValue(dynamicconfig.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys()).
+	dynamicConfig.EXPECT().GetMapValue(dynamicconfig.ValidSearchAttributes, nil).
 		Return(mockValidAttr, nil).AnyTimes()
 
 	testCases2 := []test{
@@ -640,7 +639,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 	handler := s.handler
 	handler.config = &Config{
 		EnableAdminProtection: dynamicconfig.GetBoolPropertyFn(true),
-		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(common.DefaultAdminOperationToken),
+		AdminOperationToken:   dynamicconfig.GetStringPropertyFn(dynamicconfig.AdminOperationToken.DefaultString()),
 	}
 
 	type test struct {
@@ -659,7 +658,7 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Permission() {
 		{
 			Name: "correct token",
 			Request: &types.AddSearchAttributeRequest{
-				SecurityToken: common.DefaultAdminOperationToken,
+				SecurityToken: dynamicconfig.AdminOperationToken.DefaultString(),
 			},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
@@ -688,19 +687,19 @@ func (s *adminHandlerSuite) Test_ConfigStore_InvalidKey() {
 	handler := s.handler
 
 	_, err := handler.GetDynamicConfig(ctx, &types.GetDynamicConfigRequest{
-		ConfigName: dynamicconfig.UnknownKey.String(),
+		ConfigName: "invalid key",
 		Filters:    nil,
 	})
 	s.Error(err)
 
 	err = handler.UpdateDynamicConfig(ctx, &types.UpdateDynamicConfigRequest{
-		ConfigName:   dynamicconfig.UnknownKey.String(),
+		ConfigName:   "invalid key",
 		ConfigValues: nil,
 	})
 	s.Error(err)
 
 	err = handler.RestoreDynamicConfig(ctx, &types.RestoreDynamicConfigRequest{
-		ConfigName: dynamicconfig.UnknownKey.String(),
+		ConfigName: "invalid key",
 		Filters:    nil,
 	})
 	s.Error(err)
@@ -713,7 +712,7 @@ func (s *adminHandlerSuite) Test_GetDynamicConfig_NoFilter() {
 	handler.params.DynamicConfig = dynamicConfig
 
 	dynamicConfig.EXPECT().
-		GetValue(dynamicconfig.TestGetBoolPropertyKey, nil).
+		GetValue(dynamicconfig.TestGetBoolPropertyKey).
 		Return(true, nil).AnyTimes()
 
 	resp, err := handler.GetDynamicConfig(ctx, &types.GetDynamicConfigRequest{
@@ -736,7 +735,7 @@ func (s *adminHandlerSuite) Test_GetDynamicConfig_FilterMatch() {
 	dynamicConfig.EXPECT().
 		GetValueWithFilters(dynamicconfig.TestGetBoolPropertyKey, map[dynamicconfig.Filter]interface{}{
 			dynamicconfig.DomainName: "samples_domain",
-		}, nil).
+		}).
 		Return(true, nil).AnyTimes()
 
 	encDomainName, err := json.Marshal("samples_domain")
