@@ -182,7 +182,7 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 	baseVersionHistories := mutableState.GetVersionHistories()
 	if baseVersionHistories != nil {
 
-		index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
+		_, baseVersionHistory, err := baseVersionHistories.FindFirstVersionHistoryByItem(
 			persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
 		)
 		if err != nil {
@@ -201,10 +201,6 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 			)
 		}
 
-		baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
-		if err != nil {
-			return nil, err
-		}
 		branchToken = baseVersionHistory.GetBranchToken()
 	}
 	return branchToken, nil

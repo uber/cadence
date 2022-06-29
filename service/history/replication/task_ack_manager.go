@@ -584,7 +584,7 @@ func getVersionHistoryItems(
 		}
 	}
 
-	versionHistoryIndex, err := versionHistories.FindFirstVersionHistoryIndexByItem(
+	_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(
 		persistence.NewVersionHistoryItem(
 			eventID,
 			version,
@@ -594,9 +594,5 @@ func getVersionHistoryItems(
 		return nil, nil, err
 	}
 
-	versionHistory, err := versionHistories.GetVersionHistory(versionHistoryIndex)
-	if err != nil {
-		return nil, nil, err
-	}
 	return versionHistory.ToInternalType().Items, versionHistory.GetBranchToken(), nil
 }
