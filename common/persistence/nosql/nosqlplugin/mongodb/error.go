@@ -35,3 +35,7 @@ func (db *mdb) IsTimeoutError(err error) bool {
 func (db *mdb) IsThrottlingError(err error) bool {
 	return false
 }
+
+func (db *mdb) IsCassandraLWTError(err error) bool {
+	return false
+}

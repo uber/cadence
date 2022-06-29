@@ -49,6 +49,12 @@ func convertCommonErrors(
 		}
 	}
 
+	if errChecker.IsCassandraLWTError(err) {
+		return &p.CassandraLWTError{
+			Msg: fmt.Sprintf("#{operation} operation failed. Error: #{err}"),
+		}
+	}
+
 	return &types.InternalServiceError{
 		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 	}

@@ -266,6 +266,12 @@ type (
 		Msg string
 	}
 
+	// CassandraLWTError is returned when we get UNAVAILABLE error code from Cassandra with message containing
+	// "Cannot perform LWT operation"
+	CassandraLWTError struct {
+		Msg string
+	}
+
 	// TransactionSizeLimitError is returned when the transaction size is too large
 	TransactionSizeLimitError struct {
 		Msg string
@@ -1859,6 +1865,10 @@ func (e *WorkflowExecutionAlreadyStartedError) Error() string {
 }
 
 func (e *TimeoutError) Error() string {
+	return e.Msg
+}
+
+func (e *CassandraLWTError) Error() string {
 	return e.Msg
 }
 

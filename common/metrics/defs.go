@@ -1810,6 +1810,7 @@ const (
 	PersistenceErrExecutionAlreadyStartedCounter
 	PersistenceErrDomainAlreadyExistsCounter
 	PersistenceErrBadRequestCounter
+	PersistenceErrCassandraLWTCounter
 	PersistenceSampledCounter
 	PersistenceEmptyResponseCounter
 
@@ -2343,6 +2344,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceErrExecutionAlreadyStartedCounter:        {metricName: "persistence_errors_execution_already_started", metricType: Counter},
 		PersistenceErrDomainAlreadyExistsCounter:            {metricName: "persistence_errors_domain_already_exists", metricType: Counter},
 		PersistenceErrBadRequestCounter:                     {metricName: "persistence_errors_bad_request", metricType: Counter},
+		PersistenceErrCassandraLWTCounter:                   {metricName: "persistence_errors_cassandra_lwt", metricType: Counter},
 		PersistenceSampledCounter:                           {metricName: "persistence_sampled", metricType: Counter},
 		PersistenceEmptyResponseCounter:                     {metricName: "persistence_empty_response", metricType: Counter},
 		CadenceClientRequests:                               {metricName: "cadence_client_requests", metricType: Counter},
