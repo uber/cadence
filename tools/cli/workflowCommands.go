@@ -62,9 +62,9 @@ func RestartWorkflow(c *cli.Context) {
 		ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
 	}
 	w := history.Events[0].WorkflowExecutionStartedEventAttributes
-	err = wfClient.TerminateWorkflowExecution(
-		ctx,
-		&types.TerminateWorkflowExecutionRequest{
+	startWorkflowRequest := constructRestartWorkflowRequest(w, domain, wid)
+	resp, err := wfClient.RestartWorkflowExecution(ctx, &types.RestartWorkflowExecutionRequest{
+		TerminateWorkflowExecutionRequest: &types.TerminateWorkflowExecutionRequest{
 			Domain: domain,
 			Reason: "Workflow restart requested",
 			WorkflowExecution: &types.WorkflowExecution{
@@ -72,22 +72,13 @@ func RestartWorkflow(c *cli.Context) {
 				RunID:      rid,
 			}, Identity: getCliIdentity(),
 		},
-	)
-
-	if err != nil {
-		ErrorAndExit("Terminate workflow failed.", err)
-	} else {
-		fmt.Println("Terminate workflow succeeded.")
-	}
-	startWorkflowRequest := constructRestartWorkflowRequest(w, domain, wid)
-	tcCtx, cancel := newContext(c)
-	defer cancel()
-	resp, err := wfClient.StartWorkflowExecution(tcCtx, startWorkflowRequest)
+		StartWorkflowExecutionRequest: startWorkflowRequest,
+	})
 
 	if err != nil {
 		ErrorAndExit("Failed to create workflow.", err)
 	} else {
-		fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
+		fmt.Printf("Restarted Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
 	}
 }
 func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, wid string) *types.StartWorkflowExecutionRequest {

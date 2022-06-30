@@ -1974,6 +1974,168 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	}
 	return nil
 }
+func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context,
+	request *types.RestartWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, request.StartWorkflowExecutionRequest)
+	defer sw.Stop()
+
+	if wh.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request.StartWorkflowExecutionRequest == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	domainName := request.StartWorkflowExecutionRequest.GetDomain()
+	wfExecution := &types.WorkflowExecution{
+		WorkflowID: request.StartWorkflowExecutionRequest.GetWorkflowID(),
+	}
+	tags := getDomainWfIDRunIDTags(domainName, wfExecution)
+
+	if domainName == "" {
+		return nil, wh.error(errDomainNotSet, scope, tags...)
+	}
+
+	if ok := wh.allow(true, request.StartWorkflowExecutionRequest); !ok {
+		return nil, wh.error(createServiceBusyError(), scope, tags...)
+	}
+
+	idLengthWarnLimit := wh.config.MaxIDLengthWarnLimit()
+	if !common.ValidIDLength(
+		domainName,
+		scope,
+		idLengthWarnLimit,
+		wh.config.DomainNameMaxLength(domainName),
+		metrics.CadenceErrDomainNameExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeDomainName) {
+		return nil, wh.error(errDomainTooLong, scope, tags...)
+	}
+
+	if request.StartWorkflowExecutionRequest.GetWorkflowID() == "" {
+		return nil, wh.error(errWorkflowIDNotSet, scope, tags...)
+	}
+
+	if !common.ValidIDLength(
+		request.StartWorkflowExecutionRequest.GetWorkflowID(),
+		scope,
+		idLengthWarnLimit,
+		wh.config.WorkflowIDMaxLength(domainName),
+		metrics.CadenceErrWorkflowIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeWorkflowID) {
+		return nil, wh.error(errWorkflowIDTooLong, scope, tags...)
+	}
+
+	if err := common.ValidateRetryPolicy(request.StartWorkflowExecutionRequest.RetryPolicy); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	if err := backoff.ValidateSchedule(request.StartWorkflowExecutionRequest.GetCronSchedule()); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	wh.GetLogger().Debug(
+		"Received StartWorkflowExecution. WorkflowID",
+		tag.WorkflowID(request.StartWorkflowExecutionRequest.GetWorkflowID()))
+
+	if request.StartWorkflowExecutionRequest.WorkflowType == nil || request.StartWorkflowExecutionRequest.WorkflowType.GetName() == "" {
+		return nil, wh.error(errWorkflowTypeNotSet, scope, tags...)
+	}
+
+	if !common.ValidIDLength(
+		request.StartWorkflowExecutionRequest.WorkflowType.GetName(),
+		scope,
+		idLengthWarnLimit,
+		wh.config.WorkflowTypeMaxLength(domainName),
+		metrics.CadenceErrWorkflowTypeExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeWorkflowType) {
+		return nil, wh.error(errWorkflowTypeTooLong, scope, tags...)
+	}
+
+	if err := wh.validateTaskList(request.StartWorkflowExecutionRequest.TaskList, scope, domainName); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	if request.StartWorkflowExecutionRequest.GetExecutionStartToCloseTimeoutSeconds() <= 0 {
+		return nil, wh.error(errInvalidExecutionStartToCloseTimeoutSeconds, scope, tags...)
+	}
+
+	if request.StartWorkflowExecutionRequest.GetTaskStartToCloseTimeoutSeconds() <= 0 {
+		return nil, wh.error(errInvalidTaskStartToCloseTimeoutSeconds, scope, tags...)
+	}
+
+	if request.StartWorkflowExecutionRequest.GetDelayStartSeconds() < 0 {
+		return nil, wh.error(errInvalidDelayStartSeconds, scope, tags...)
+	}
+
+	if request.StartWorkflowExecutionRequest.GetRequestID() == "" {
+		return nil, wh.error(errRequestIDNotSet, scope, tags...)
+	}
+
+	if !common.ValidIDLength(
+		request.StartWorkflowExecutionRequest.GetRequestID(),
+		scope,
+		idLengthWarnLimit,
+		wh.config.RequestIDMaxLength(domainName),
+		metrics.CadenceErrRequestIDExceededWarnLimit,
+		domainName,
+		wh.GetLogger(),
+		tag.IDTypeRequestID) {
+		return nil, wh.error(errRequestIDTooLong, scope, tags...)
+	}
+
+	if err := wh.searchAttributesValidator.ValidateSearchAttributes(request.StartWorkflowExecutionRequest.SearchAttributes, domainName); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	wh.GetLogger().Debug("Start workflow execution request domain", tag.WorkflowDomainName(domainName))
+	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
+	if err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
+	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
+	actualSize := len(request.StartWorkflowExecutionRequest.Input)
+	if request.StartWorkflowExecutionRequest.Memo != nil {
+		actualSize += common.GetSizeOfMapStringToByteArray(request.StartWorkflowExecutionRequest.Memo.GetFields())
+	}
+	if err := common.CheckEventBlobSizeLimit(
+		actualSize,
+		sizeLimitWarn,
+		sizeLimitError,
+		domainID,
+		request.StartWorkflowExecutionRequest.GetWorkflowID(),
+		"",
+		scope,
+		wh.GetThrottledLogger(),
+		tag.BlobSizeViolationOperation("StartWorkflowExecution"),
+	); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
+	historyRequest := common.CreateHistoryStartWorkflowRequest(
+		domainID, request.StartWorkflowExecutionRequest, time.Now())
+
+	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
+	if err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+	return resp, nil
+}
 
 // StartWorkflowExecution - Creates a new workflow execution
 func (wh *WorkflowHandler) StartWorkflowExecution(

@@ -5240,6 +5240,15 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		DelayStartSeconds:                   t.DelayStartSeconds,
 	}
 }
+func ToRestartWorkflowExecutionRequest(t *shared.RestartWorkflowExecutionRequest) *types.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionRequest{
+		TerminateWorkflowExecutionRequest: ToTerminateWorkflowExecutionRequest(t.TerminateWorkflowExecutionRequest),
+		StartWorkflowExecutionRequest:     ToStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
 
 // ToStartWorkflowExecutionRequest converts thrift StartWorkflowExecutionRequest type to internal
 func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *types.StartWorkflowExecutionRequest {

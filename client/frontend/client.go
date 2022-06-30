@@ -44,11 +44,6 @@ type clientImpl struct {
 	client          Client
 }
 
-func (c *clientImpl) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewClient creates a new frontend service TChannel client
 func NewClient(
 	timeout time.Duration,
@@ -412,7 +407,11 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	defer cancel()
 	return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 }
-
+func (c *clientImpl) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.RestartWorkflowExecution(ctx, request, opts...)
+}
 func (c *clientImpl) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,

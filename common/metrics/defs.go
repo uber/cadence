@@ -463,6 +463,8 @@ const (
 	FrontendClientRespondDecisionTaskFailedScope
 	// FrontendClientRespondQueryTaskCompletedScope tracks RPC calls to frontend service
 	FrontendClientRespondQueryTaskCompletedScope
+	// FrontendClientRestartWorkflowExecutionScope tracks RPC calls to frontend service
+	FrontendClientRestartWorkflowExecutionScope
 	// FrontendClientSignalWithStartWorkflowExecutionScope tracks RPC calls to frontend service
 	FrontendClientSignalWithStartWorkflowExecutionScope
 	// FrontendClientSignalWorkflowExecutionScope tracks RPC calls to frontend service
@@ -793,6 +795,8 @@ const (
 const (
 	// FrontendStartWorkflowExecutionScope is the metric scope for frontend.StartWorkflowExecution
 	FrontendStartWorkflowExecutionScope = iota + NumAdminScopes
+	// FrontendRestartWorkflowExecutionScope is the metric scope for frontend.RestartWorkflowExecution
+	FrontendRestartWorkflowExecutionScope
 	// PollForDecisionTaskScope is the metric scope for frontend.PollForDecisionTask
 	FrontendPollForDecisionTaskScope
 	// FrontendPollForActivityTaskScope is the metric scope for frontend.PollForActivityTask
@@ -1394,6 +1398,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FrontendClientRespondDecisionTaskCompletedScope:       {operation: "FrontendClientRespondDecisionTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRespondDecisionTaskFailedScope:          {operation: "FrontendClientRespondDecisionTaskFailed", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientRespondQueryTaskCompletedScope:          {operation: "FrontendClientRespondQueryTaskCompleted", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
+		FrontendClientRestartWorkflowExecutionScope:           {operation: "FrontendClientRestartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientSignalWithStartWorkflowExecutionScope:   {operation: "FrontendClientSignalWithStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientSignalWorkflowExecutionScope:            {operation: "FrontendClientSignalWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
 		FrontendClientStartWorkflowExecutionScope:             {operation: "FrontendClientStartWorkflowExecution", tags: map[string]string{CadenceRoleTagName: FrontendClientRoleTagValue}},
@@ -1550,6 +1555,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
 
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
+		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
 		FrontendPollForActivityTaskScope:                {operation: "PollForActivityTask"},
 		FrontendRecordActivityTaskHeartbeatScope:        {operation: "RecordActivityTaskHeartbeat"},

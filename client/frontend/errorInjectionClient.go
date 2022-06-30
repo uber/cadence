@@ -43,11 +43,6 @@ type errorInjectionClient struct {
 	logger    log.Logger
 }
 
-func (c *errorInjectionClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewErrorInjectionClient creates a new instance of Client that injects fake error
 func NewErrorInjectionClient(
 	client Client,
@@ -878,6 +873,28 @@ func (c *errorInjectionClient) RespondQueryTaskCompleted(
 		return fakeErr
 	}
 	return clientErr
+}
+
+func (c *errorInjectionClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.StartWorkflowExecutionResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.RestartWorkflowExecution(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationStartWorkflowExecution,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) SignalWithStartWorkflowExecution(

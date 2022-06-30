@@ -277,6 +277,12 @@ func (t ThriftHandler) SignalWorkflowExecution(ctx context.Context, request *sha
 	return thrift.FromError(err)
 }
 
+// RestartWorkflowExecution forwards request to the underlying handler
+func (t ThriftHandler) RestartWorkflowExecution(ctx context.Context, request *shared.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+	response, err := t.h.RestartWorkflowExecution(ctx, thrift.ToRestartWorkflowExecutionRequest(request))
+	return thrift.FromStartWorkflowExecutionResponse(response), thrift.FromError(err)
+}
+
 // StartWorkflowExecution forwards request to the underlying handler
 func (t ThriftHandler) StartWorkflowExecution(ctx context.Context, request *shared.StartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
 	response, err := t.h.StartWorkflowExecution(ctx, thrift.ToStartWorkflowExecutionRequest(request))

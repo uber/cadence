@@ -36,9 +36,17 @@ type metricClient struct {
 	metricsClient metrics.Client
 }
 
-func (c *metricClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
-	//TODO implement me
-	panic("implement me")
+func (c *metricClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientRestartWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRestartWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RestartWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRestartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
 
 // NewMetricClient creates a new instance of Client that emits metrics

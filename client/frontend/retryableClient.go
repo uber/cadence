@@ -36,11 +36,6 @@ type retryableClient struct {
 	throttleRetry *backoff.ThrottleRetry
 }
 
-func (c *retryableClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewRetryableClient creates a new instance of Client with retry policy
 func NewRetryableClient(
 	client Client,
@@ -520,6 +515,17 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 		return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 	}
 	return c.throttleRetry.Do(ctx, op)
+}
+
+func (c *retryableClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	var resp *types.StartWorkflowExecutionResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RestartWorkflowExecution(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
 }
 
 func (c *retryableClient) SignalWithStartWorkflowExecution(
