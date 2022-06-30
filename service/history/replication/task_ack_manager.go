@@ -41,7 +41,6 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	exec "github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
 
@@ -81,8 +80,7 @@ type (
 		// This is the batch size used by pull based RPC replicator.
 		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
 
-		historyLoader      historyLoader
-		mutableStateLoader mutableStateLoader
+		taskHydrator TaskHydrator
 	}
 )
 
@@ -91,7 +89,7 @@ var _ TaskAckManager = (*taskAckManagerImpl)(nil)
 // NewTaskAckManager initializes a new replication task ack manager
 func NewTaskAckManager(
 	shard shard.Context,
-	executionCache *exec.Cache,
+	taskHydrator TaskHydrator,
 ) TaskAckManager {
 
 	config := shard.GetConfig()
@@ -115,8 +113,7 @@ func NewTaskAckManager(
 		metricsClient:        shard.GetMetricsClient(),
 		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
 		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
-		historyLoader:        historyLoader{shard.GetShardID(), shard.GetHistoryManager()},
-		mutableStateLoader:   mutableStateLoader{executionCache},
+		taskHydrator:         taskHydrator,
 	}
 }
 
@@ -133,7 +130,7 @@ func (t *taskAckManagerImpl) GetTask(ctx context.Context, taskInfo *types.Replic
 		ScheduledID:  taskInfo.ScheduledID,
 	}
 
-	return Hydrate(ctx, task, t.mutableStateLoader, t.historyLoader)
+	return t.taskHydrator.Hydrate(ctx, task)
 }
 
 func (t *taskAckManagerImpl) GetTasks(
@@ -187,7 +184,7 @@ TaskInfoLoop:
 		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
-			replicationTask, err = Hydrate(ctx, *taskInfo, t.mutableStateLoader, t.historyLoader)
+			replicationTask, err = t.taskHydrator.Hydrate(ctx, *taskInfo)
 			return err
 		}
 		err = t.throttleRetry.Do(ctx, op)

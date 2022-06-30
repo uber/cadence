@@ -102,7 +102,7 @@ func (s *taskAckManagerSuite) SetupTest() {
 
 	s.ackManager = NewTaskAckManager(
 		s.mockShard,
-		executionCache,
+		NewDeferredTaskHydrator(s.mockShard.GetShardID(), s.mockHistoryMgr, executionCache),
 	).(*taskAckManagerImpl)
 }
 

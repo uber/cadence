@@ -32,6 +32,14 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 )
 
+// TaskHydrator will enrich replication task with additional information from mutable state and history events.
+// Mutable state and history providers can be either in-memory or persistence based implementations;
+// depending whether we have available data already or need to load it.
+type TaskHydrator struct {
+	msProvider mutableStateProvider
+	history    historyProvider
+}
+
 type (
 	historyProvider interface {
 		GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error)
@@ -49,16 +57,23 @@ type (
 	}
 )
 
+// NewDeferredTaskHydrator will enrich replication tasks with additional information that is not available on hand,
+// but is rather loaded in a deferred way later from a database and cache.
+func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryManager, executionCache *execution.Cache) TaskHydrator {
+	return TaskHydrator{
+		history:    historyLoader{shardID, historyManager},
+		msProvider: mutableStateLoader{executionCache},
+	}
+}
+
 // Hydrate will enrich replication task with additional information from mutable state and history events.
-// Mutable state and history providers can be either in-memory or persistence based implementations;
-// depending whether we have available data already or need to load it.
-func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvider mutableStateProvider, history historyProvider) (*types.ReplicationTask, error) {
+func (h TaskHydrator) Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.ReplicationTask, error) {
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeFailoverMarker:
 		return hydrateFailoverMarkerTask(task), nil
 	}
 
-	ms, release, err := msProvider.GetMutableState(ctx, task.DomainID, task.WorkflowID, task.RunID)
+	ms, release, err := h.msProvider.GetMutableState(ctx, task.DomainID, task.WorkflowID, task.RunID)
 	if common.IsEntityNotExistsError(err) {
 		return nil, nil
 	}
@@ -77,7 +92,7 @@ func Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo, msProvid
 			versionHistories = versionHistories.Duplicate()
 		}
 		release(nil)
-		return hydrateHistoryReplicationTask(ctx, task, versionHistories, history)
+		return hydrateHistoryReplicationTask(ctx, task, versionHistories, h.history)
 	default:
 		return nil, errUnknownReplicationTask
 	}

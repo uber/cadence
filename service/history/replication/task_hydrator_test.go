@@ -77,7 +77,7 @@ var (
 	testWorkflowIdentifier        = definition.NewWorkflowIdentifier(testDomainID, testWorkflowID, testRunID)
 )
 
-func TestHydrate_FailoverMarkerTask(t *testing.T) {
+func TestTaskHydrator_HydrateFailoverMarkerTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
 		DomainID:     testDomainID,
@@ -96,12 +96,13 @@ func TestHydrate_FailoverMarkerTask(t *testing.T) {
 		CreationTime: common.Int64Ptr(testCreationTime),
 	}
 
-	actual, err := Hydrate(context.Background(), task, nil, nil)
+	th := TaskHydrator{}
+	actual, err := th.Hydrate(context.Background(), task)
 	assert.NoError(t, err)
 	assert.Equal(t, &expected, actual)
 }
 
-func TestHydrate_SyncActivityTask(t *testing.T) {
+func TestTaskHydrator_HydrateSyncActivityTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeSyncActivity,
 		TaskID:       testTaskID,
@@ -226,7 +227,8 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualTask, err := Hydrate(context.Background(), tt.task, tt.msProvider, nil)
+			th := TaskHydrator{msProvider: tt.msProvider}
+			actualTask, err := th.Hydrate(context.Background(), tt.task)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {
@@ -237,7 +239,7 @@ func TestHydrate_SyncActivityTask(t *testing.T) {
 	}
 }
 
-func TestHydrate_HistoryReplicationTask(t *testing.T) {
+func TestTaskHydrator_HydrateHistoryReplicationTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:          persistence.ReplicationTaskTypeHistory,
 		TaskID:            testTaskID,
@@ -398,7 +400,8 @@ func TestHydrate_HistoryReplicationTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualTask, err := Hydrate(context.Background(), tt.task, tt.msProvider, tt.history)
+			th := TaskHydrator{msProvider: tt.msProvider, history: tt.history}
+			actualTask, err := th.Hydrate(context.Background(), tt.task)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
 			} else {

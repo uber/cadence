@@ -205,7 +205,7 @@ func NewEngineWithShardContext(
 		failoverMarkerNotifier: failoverMarkerNotifier,
 		replicationAckManager: replication.NewTaskAckManager(
 			shard,
-			executionCache,
+			replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache),
 		),
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
