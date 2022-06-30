@@ -44,6 +44,11 @@ type clientImpl struct {
 	client          Client
 }
 
+func (c *clientImpl) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewClient creates a new frontend service TChannel client
 func NewClient(
 	timeout time.Duration,

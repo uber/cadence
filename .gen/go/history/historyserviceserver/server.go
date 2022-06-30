@@ -216,6 +216,11 @@ type Interface interface {
 		FailedRequest *history.RespondDecisionTaskFailedRequest,
 	) error
 
+	RestartWorkflowExecution(
+		ctx context.Context,
+		RestartRequest *history.RestartWorkflowExecutionRequest,
+	) (*shared.StartWorkflowExecutionResponse, error)
+
 	ScheduleDecisionTask(
 		ctx context.Context,
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
@@ -684,6 +689,18 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 			},
 
 			thrift.Method{
+				Name: "RestartWorkflowExecution",
+				HandlerSpec: thrift.HandlerSpec{
+
+					Type:   transport.Unary,
+					Unary:  thrift.UnaryHandler(h.RestartWorkflowExecution),
+					NoWire: restartworkflowexecution_NoWireHandler{impl},
+				},
+				Signature:    "RestartWorkflowExecution(RestartRequest *history.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
+				ThriftModule: history.ThriftModule,
+			},
+
+			thrift.Method{
 				Name: "ScheduleDecisionTask",
 				HandlerSpec: thrift.HandlerSpec{
 
@@ -769,7 +786,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 		},
 	}
 
-	procedures := make([]transport.Procedure, 0, 42)
+	procedures := make([]transport.Procedure, 0, 43)
 	procedures = append(procedures, thrift.BuildProcedures(service, opts...)...)
 	return procedures
 }
@@ -1811,6 +1828,36 @@ func (h handler) RespondDecisionTaskFailed(ctx context.Context, body wire.Value)
 
 	hadError := appErr != nil
 	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(appErr)
+
+	var response thrift.Response
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+
+	return response, err
+}
+
+func (h handler) RestartWorkflowExecution(ctx context.Context, body wire.Value) (thrift.Response, error) {
+	var args history.HistoryService_RestartWorkflowExecution_Args
+	if err := args.FromWire(body); err != nil {
+		return thrift.Response{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode Thrift request for service 'HistoryService' procedure 'RestartWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.RestartWorkflowExecution(ctx, args.RestartRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RestartWorkflowExecution_Helper.WrapResponse(success, appErr)
 
 	var response thrift.Response
 	if err == nil {
@@ -3317,6 +3364,43 @@ func (h responddecisiontaskfailed_NoWireHandler) HandleNoWire(ctx context.Contex
 
 	hadError := appErr != nil
 	result, err := history.HistoryService_RespondDecisionTaskFailed_Helper.WrapResponse(appErr)
+	response := thrift.NoWireResponse{ResponseWriter: rw}
+	if err == nil {
+		response.IsApplicationError = hadError
+		response.Body = result
+		if namer, ok := appErr.(yarpcErrorNamer); ok {
+			response.ApplicationErrorName = namer.YARPCErrorName()
+		}
+		if extractor, ok := appErr.(yarpcErrorCoder); ok {
+			response.ApplicationErrorCode = extractor.YARPCErrorCode()
+		}
+		if appErr != nil {
+			response.ApplicationErrorDetails = appErr.Error()
+		}
+	}
+	return response, err
+
+}
+
+type restartworkflowexecution_NoWireHandler struct{ impl Interface }
+
+func (h restartworkflowexecution_NoWireHandler) HandleNoWire(ctx context.Context, nwc *thrift.NoWireCall) (thrift.NoWireResponse, error) {
+	var (
+		args history.HistoryService_RestartWorkflowExecution_Args
+		rw   stream.ResponseWriter
+		err  error
+	)
+
+	rw, err = nwc.RequestReader.ReadRequest(ctx, nwc.EnvelopeType, nwc.Reader, &args)
+	if err != nil {
+		return thrift.NoWireResponse{}, yarpcerrors.InvalidArgumentErrorf(
+			"could not decode (via no wire) Thrift request for service 'HistoryService' procedure 'RestartWorkflowExecution': %w", err)
+	}
+
+	success, appErr := h.impl.RestartWorkflowExecution(ctx, args.RestartRequest)
+
+	hadError := appErr != nil
+	result, err := history.HistoryService_RestartWorkflowExecution_Helper.WrapResponse(success, appErr)
 	response := thrift.NoWireResponse{ResponseWriter: rw}
 	if err == nil {
 		response.IsApplicationError = hadError

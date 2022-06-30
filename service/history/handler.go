@@ -109,6 +109,7 @@ type (
 		SyncShardStatus(context.Context, *types.SyncShardStatusRequest) error
 		TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest) error
 		GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error)
+		RestartWorkflowExecution(ctx context.Context, startWrappedRequest *types.HistoryStartWorkflowExecutionRequest, terminateWrappedRequest *types.HistoryTerminateWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error)
 	}
 
 	// handlerImpl is an implementation for history service independent of wire protocol
@@ -702,6 +703,50 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 	}
 
 	return nil
+}
+
+// RestartWorkflowExecution terminates the existing wf then restarts it with the same params
+func (h *handlerImpl) RestartWorkflowExecution(
+	ctx context.Context,
+	startWrappedRequest *types.HistoryStartWorkflowExecutionRequest,
+	terminateWrappedRequest *types.HistoryTerminateWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryTerminateWorkflowExecutionScope)
+	defer sw.Stop()
+
+	if h.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	domainID := startWrappedRequest.GetDomainUUID()
+	if domainID == "" {
+		return nil, h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok := h.rateLimiter.Allow(); !ok {
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+
+	workflowExecution := terminateWrappedRequest.TerminateRequest.WorkflowExecution
+	workflowID := workflowExecution.GetWorkflowID()
+	engine, err1 := h.controller.GetEngine(workflowID)
+	if err1 != nil {
+		return nil, h.error(err1, scope, domainID, workflowID)
+	}
+
+	err2 := engine.TerminateWorkflowExecution(ctx, terminateWrappedRequest)
+	if err2 != nil {
+		return nil, h.error(err2, scope, domainID, workflowID)
+	}
+	startRequest := startWrappedRequest.StartRequest
+
+	response, err3 := engine.StartWorkflowExecution(ctx, startWrappedRequest)
+	if err3 != nil {
+		return nil, h.error(err3, scope, domainID, startRequest.GetWorkflowID())
+	}
+	return response, nil
 }
 
 // StartWorkflowExecution - creates a new workflow execution

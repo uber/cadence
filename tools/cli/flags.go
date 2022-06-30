@@ -315,6 +315,18 @@ var flagsOfExecutionForShow = []cli.Flag{
 	},
 }
 
+func getFlagsForRestart() []cli.Flag {
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:  FlagWorkflowIDWithAlias,
+			Usage: "WorkflowID",
+		},
+		cli.StringFlag{
+			Name:  FlagRunIDWithAlias,
+			Usage: "RunID",
+		},
+	}
+}
 func getFlagsForShow() []cli.Flag {
 	return append(flagsOfExecutionForShow, getFlagsForShowID()...)
 }

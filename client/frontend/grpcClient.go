@@ -37,6 +37,11 @@ type grpcClient struct {
 	visibility apiv1.VisibilityAPIYARPCClient
 }
 
+func (g grpcClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	//g.workflow
+	panic("implement me")
+}
+
 func NewGRPCClient(
 	domain apiv1.DomainAPIYARPCClient,
 	workflow apiv1.WorkflowAPIYARPCClient,

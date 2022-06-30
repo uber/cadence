@@ -32,6 +32,15 @@ import (
 func newWorkflowCommands() []cli.Command {
 	return []cli.Command{
 		{
+			Name:    "restart",
+			Aliases: []string{"rs"},
+			Usage:   "restarts a workflow",
+			Flags:   getFlagsForRestart(),
+			Action: func(c *cli.Context) {
+				RestartWorkflow(c)
+			},
+		},
+		{
 			Name:        "activity",
 			Aliases:     []string{"act"},
 			Usage:       "operate activities of workflow",

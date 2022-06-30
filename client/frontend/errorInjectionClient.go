@@ -43,6 +43,11 @@ type errorInjectionClient struct {
 	logger    log.Logger
 }
 
+func (c *errorInjectionClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewErrorInjectionClient creates a new instance of Client that injects fake error
 func NewErrorInjectionClient(
 	client Client,

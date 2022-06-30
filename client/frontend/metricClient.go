@@ -36,6 +36,11 @@ type metricClient struct {
 	metricsClient metrics.Client
 }
 
+func (c *metricClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewMetricClient creates a new instance of Client that emits metrics
 func NewMetricClient(
 	client Client,

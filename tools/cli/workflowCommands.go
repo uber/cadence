@@ -49,6 +49,81 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 )
 
+// RestartWorkflow terminates a given workflow then restarts it
+func RestartWorkflow(c *cli.Context) {
+	wfClient := getWorkflowClient(c)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := c.String(FlagRunID)
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	ctx, cancel := newContext(c)
+	defer cancel()
+	history, err := GetHistory(ctx, wfClient, domain, wid, rid)
+	if err != nil {
+		ErrorAndExit(fmt.Sprintf("Failed to get history on workflow id: %s, run id: %s.", wid, rid), err)
+	}
+	w := history.Events[0].WorkflowExecutionStartedEventAttributes
+	err = wfClient.TerminateWorkflowExecution(
+		ctx,
+		&types.TerminateWorkflowExecutionRequest{
+			Domain: domain,
+			Reason: "Workflow restart requested",
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			}, Identity: getCliIdentity(),
+		},
+	)
+
+	if err != nil {
+		ErrorAndExit("Terminate workflow failed.", err)
+	} else {
+		fmt.Println("Terminate workflow succeeded.")
+	}
+	startWorkflowRequest := constructRestartWorkflowRequest(w, domain, wid)
+	tcCtx, cancel := newContext(c)
+	defer cancel()
+	resp, err := wfClient.StartWorkflowExecution(tcCtx, startWorkflowRequest)
+
+	if err != nil {
+		ErrorAndExit("Failed to create workflow.", err)
+	} else {
+		fmt.Printf("Started Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
+	}
+}
+func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, wid string) *types.StartWorkflowExecutionRequest {
+	var newWid string
+	if strings.Index(wid, "rerun") >= 0 {
+		newWid = wid[0:strings.Index(wid, "rerun")] + "rerun-" + uuid.New()[0:8]
+	} else {
+		newWid = wid + "-rerun-" + uuid.New()[0:8]
+	}
+
+	startRequest := &types.StartWorkflowExecutionRequest{
+		RequestID:  uuid.New(),
+		Domain:     domain,
+		WorkflowID: newWid,
+		WorkflowType: &types.WorkflowType{
+			Name: w.WorkflowType.Name,
+		},
+		TaskList: &types.TaskList{
+			Name: w.TaskList.Name,
+		},
+		Input:                               w.Input,
+		ExecutionStartToCloseTimeoutSeconds: w.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      w.TaskStartToCloseTimeoutSeconds,
+		Identity:                            getCliIdentity(),
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyRejectDuplicate.Ptr(),
+	}
+	startRequest.CronSchedule = w.CronSchedule
+	startRequest.RetryPolicy = w.RetryPolicy
+	startRequest.DelayStartSeconds = w.FirstDecisionTaskBackoffSeconds
+	startRequest.Header = w.Header
+	startRequest.Memo = w.Memo
+	startRequest.SearchAttributes = w.SearchAttributes
+
+	return startRequest
+}
+
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
@@ -245,7 +320,6 @@ func startWorkflowHelper(c *cli.Context, shouldPrintProgress bool) {
 		startFn()
 	}
 }
-
 func constructStartWorkflowRequest(c *cli.Context) *types.StartWorkflowExecutionRequest {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	taskList := getRequiredOption(c, FlagTaskList)

@@ -251,6 +251,12 @@ type Interface interface {
 		opts ...yarpc.CallOption,
 	) error
 
+	RestartWorkflowExecution(
+		ctx context.Context,
+		RestartRequest *history.RestartWorkflowExecutionRequest,
+		opts ...yarpc.CallOption,
+	) (*shared.StartWorkflowExecutionResponse, error)
+
 	ScheduleDecisionTask(
 		ctx context.Context,
 		ScheduleRequest *history.ScheduleDecisionTaskRequest,
@@ -1300,6 +1306,34 @@ func (c client) RespondDecisionTaskFailed(
 	}
 
 	err = history.HistoryService_RespondDecisionTaskFailed_Helper.UnwrapResponse(&result)
+	return
+}
+
+func (c client) RestartWorkflowExecution(
+	ctx context.Context,
+	_RestartRequest *history.RestartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartWorkflowExecutionResponse, err error) {
+
+	var result history.HistoryService_RestartWorkflowExecution_Result
+	args := history.HistoryService_RestartWorkflowExecution_Helper.Args(_RestartRequest)
+
+	if c.nwc != nil && c.nwc.Enabled() {
+		if err = c.nwc.Call(ctx, args, &result, opts...); err != nil {
+			return
+		}
+	} else {
+		var body wire.Value
+		if body, err = c.c.Call(ctx, args, opts...); err != nil {
+			return
+		}
+
+		if err = result.FromWire(body); err != nil {
+			return
+		}
+	}
+
+	success, err = history.HistoryService_RestartWorkflowExecution_Helper.UnwrapResponse(&result)
 	return
 }
 

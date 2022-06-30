@@ -1193,6 +1193,39 @@ func (mr *_MockClientRecorder) RespondDecisionTaskFailed(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RespondDecisionTaskFailed", args...)
 }
 
+// RestartWorkflowExecution responds to a RestartWorkflowExecution call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().RestartWorkflowExecution(gomock.Any(), ...).Return(...)
+// 	... := client.RestartWorkflowExecution(...)
+func (m *MockClient) RestartWorkflowExecution(
+	ctx context.Context,
+	_RestartRequest *history.RestartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (success *shared.StartWorkflowExecutionResponse, err error) {
+
+	args := []interface{}{ctx, _RestartRequest}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "RestartWorkflowExecution", args...)
+	success, _ = ret[i].(*shared.StartWorkflowExecutionResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) RestartWorkflowExecution(
+	ctx interface{},
+	_RestartRequest interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _RestartRequest}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "RestartWorkflowExecution", args...)
+}
+
 // ScheduleDecisionTask responds to a ScheduleDecisionTask call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.

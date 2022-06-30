@@ -34,6 +34,11 @@ type thriftClient struct {
 	c workflowserviceclient.Interface
 }
 
+func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewThriftClient creates a new instance of Client with thrift protocol
 func NewThriftClient(c workflowserviceclient.Interface) Client {
 	return thriftClient{c}

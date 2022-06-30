@@ -247,6 +247,11 @@ message StartWorkflowExecutionResponse {
   string run_id = 1;
 }
 
+message RestartWorkflowExecutionRequest {
+  TerminateWorkflowExecutionRequest terminateWorkflowExecutionRequest = 1;
+  StartWorkflowExecutionRequest startWorkflowExecutionRequest = 2;
+}
+
 message SignalWorkflowExecutionRequest {
   api.v1.SignalWorkflowExecutionRequest request = 1;
   string domain_id = 2;

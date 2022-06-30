@@ -6436,6 +6436,10 @@ type UpdateDomainRequest struct {
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
+type RestartWorkflowExecutionRequest struct {
+	TerminateWorkflowExecutionRequest *TerminateWorkflowExecutionRequest `json:"terminateWorkflowExecutionRequest,omitempty"`
+	StartWorkflowExecutionRequest     *StartWorkflowExecutionRequest     `json:"startWorkflowExecutionRequest,omitempty"`
+}
 
 // GetName is an internal getter (TBD...)
 func (v *UpdateDomainRequest) GetName() (o string) {
