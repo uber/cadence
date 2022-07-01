@@ -46,7 +46,6 @@ import (
 
 var (
 	errUnknownReplicationTask = errors.New("unknown replication task")
-	minReadTaskSize           = 20
 )
 
 type (
