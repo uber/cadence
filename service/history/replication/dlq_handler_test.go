@@ -218,13 +218,17 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	token, err := s.messageHandler.MergeMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
+	s.Equal(1, len(s.taskExecutor.executedTasks))
 }
 
 type fakeTaskExecutor struct {
 	scope int
 	err   error
+
+	executedTasks []*types.ReplicationTask
 }
 
-func (e fakeTaskExecutor) execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error) {
+func (e *fakeTaskExecutor) execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error) {
+	e.executedTasks = append(e.executedTasks, replicationTask)
 	return e.scope, e.err
 }
