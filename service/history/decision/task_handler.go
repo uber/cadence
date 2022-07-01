@@ -525,6 +525,18 @@ func (handler *taskHandlerImpl) handleDecisionFailWorkflow(
 		return nil
 	}
 
+	if is, _ := handler.mutableState.IsCancelRequested(); is {
+		// cancellation must be sticky, as it's telling things to stop.
+		// this is particularly important for child workflows, as if they restart themselves after the parent
+		// cancels its context, there is no way for the parent to cancel the new run.
+		//
+		// this appears to work well for "returned an error" ignoring cron, but does not catch continue-as-new.
+		if _, err := handler.mutableState.AddFailWorkflowEvent(handler.decisionTaskCompletedID, attr); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	// below will check whether to do continue as new based on backoff & backoff or cron
 	backoffInterval := handler.mutableState.GetRetryBackoffDuration(attr.GetReason())
 	continueAsNewInitiator := types.ContinueAsNewInitiatorRetryPolicy
@@ -786,6 +798,23 @@ func (handler *taskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 			tag.WorkflowDecisionType(int64(types.DecisionTypeContinueAsNewWorkflowExecution)),
 			tag.ErrorTypeMultipleCompletionDecisions,
 		)
+		return nil
+	}
+
+	if is, _ := handler.mutableState.IsCancelRequested(); is {
+		// cancellation must be sticky, as it's telling things to stop.
+		// this is particularly important for child workflows, as if they restart themselves after the parent
+		// cancels its context, there is no way for the parent to cancel the new run.
+		//
+		// this appears to work well for continued-as-new, though data could be improved.
+		reason := "ignoring continue-as-new due to the workflow being canceled"
+		failattrs := types.FailWorkflowExecutionDecisionAttributes{
+			Reason:  &reason,
+			Details: nil, // maybe something would be relevant?  e.g. serialize the to-be-started workflow's info
+		}
+		if _, err := handler.mutableState.AddFailWorkflowEvent(handler.decisionTaskCompletedID, &failattrs); err != nil {
+			return err
+		}
 		return nil
 	}
 
