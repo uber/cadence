@@ -529,18 +529,18 @@ func (h *VersionHistories) FindLCAVersionHistoryIndexAndItem(
 	return versionHistoryIndex, versionHistoryItem, nil
 }
 
-// FindFirstVersionHistoryIndexByItem find the first version history index which
+// FindFirstVersionHistoryByItem find the first version history index and history which
 // contains the given version history item
-func (h *VersionHistories) FindFirstVersionHistoryIndexByItem(
+func (h *VersionHistories) FindFirstVersionHistoryByItem(
 	item *VersionHistoryItem,
-) (int, error) {
+) (index int, history *VersionHistory, err error) {
 
 	for index, localHistory := range h.Histories {
 		if localHistory.ContainsItem(item) {
-			return index, nil
+			return index, localHistory, nil
 		}
 	}
-	return 0, &types.BadRequestError{Message: "version histories does not contains given item."}
+	return 0, nil, &types.BadRequestError{Message: "version histories does not contains given item."}
 }
 
 // IsRebuilt returns true if the current branch index's last write version is not the largest

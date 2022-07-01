@@ -485,7 +485,8 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey() {
 	dynamicClient := dc.NewInMemoryClient()
-	dynamicClient.UpdateValue(dc.RequiredDomainDataKeys, map[string]interface{}{"Tier": true})
+	err := dynamicClient.UpdateValue(dc.RequiredDomainDataKeys, map[string]interface{}{"Tier": true})
+	s.NoError(err)
 	cfg := s.newConfig(dynamicClient)
 	wh := s.getWorkflowHandler(cfg)
 
@@ -495,7 +496,7 @@ func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey()
 		types.ArchivalStatusEnabled.Ptr(),
 		testVisibilityArchivalURI,
 	)
-	err := wh.RegisterDomain(context.Background(), req)
+	err = wh.RegisterDomain(context.Background(), req)
 	s.Error(err)
 	s.Contains(err.Error(), "domain data error, missing required key")
 }
@@ -898,7 +899,8 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
 func (s *workflowHandlerSuite) TestUpdateDomain_Failure_FailoverLockdown() {
 
 	dynamicClient := dc.NewInMemoryClient()
-	dynamicClient.UpdateValue(dc.Lockdown, map[string]interface{}{"Lockdown": true})
+	err := dynamicClient.UpdateValue(dc.Lockdown, true)
+	s.NoError(err)
 	wh := s.getWorkflowHandler(s.newConfig(dynamicClient))
 
 	updateReq := updateFailoverRequest(

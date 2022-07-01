@@ -33,7 +33,7 @@ func BenchmarkGetIntProperty(b *testing.B) {
 	cln := NewCollection(client, log.NewNoop())
 	key := MatchingMaxTaskBatchSize
 	for i := 0; i < b.N; i++ {
-		size := cln.GetIntProperty(key, 10)
-		assert.Equal(b, 10, size())
+		size := cln.GetIntProperty(key)
+		assert.Equal(b, 100, size())
 	}
 }

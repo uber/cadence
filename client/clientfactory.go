@@ -117,7 +117,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
 
 	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
-	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, 4*1024*1024)
+	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte)
 	if maxSizeConfig() > supportedMessageSize {
 		return nil, fmt.Errorf(
 			"GRPCMaxSizeInByte dynamic config value %v is larger than supported value %v",
@@ -133,7 +133,7 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 		peerResolver,
 		cf.logger,
 	)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate)(); errorRate != 0 {
 		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
@@ -166,7 +166,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		peerResolver,
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
 		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
@@ -189,7 +189,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	}
 
 	client = admin.NewClient(timeout, largeTimeout, client)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
 		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
@@ -216,7 +216,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 	}
 
 	client = frontend.NewClient(timeout, longPollTimeout, client)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
 		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
