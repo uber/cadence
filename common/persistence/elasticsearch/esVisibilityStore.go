@@ -771,6 +771,8 @@ func createVisibilityMessage(
 		visibilityOperationThrift = indexer.VisibilityOperationRecordClosed
 	case common.UpsertSearchAttributes:
 		visibilityOperationThrift = indexer.VisibilityOperationUpsertSearchAttributes
+	default:
+		panic("VisibilityOperation not set")
 	}
 
 	msg := &indexer.Message{
@@ -782,9 +784,6 @@ func createVisibilityMessage(
 		Fields:      fields,
 	}
 
-	if visibilityOperationThrift != -1 {
-		msg.VisibilityOperation = &visibilityOperationThrift
-	}
 	return msg
 }
 
