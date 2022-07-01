@@ -204,14 +204,14 @@ clusterGroupMetadata:
     clusterRedirectionPolicy:
         policy: {{ default .Env.CLUSTER_REDIRECT_POLICY "all-domain-apis-forwarding" }}
     failoverVersionIncrement: 10
-    primaryClusterName: "primary"
+    primaryClusterName: "cluster0"
     {{- if .Env.IS_NOT_PRIMARY }}
-    currentClusterName: "secondary"
+    currentClusterName: "cluster1"
     {{- else }}
-    currentClusterName: "primary"
+    currentClusterName: "cluster0"
     {{- end }}
     clusterGroup:
-        primary:
+        cluster0:
             enabled: true
             initialFailoverVersion: 0
             rpcName: "cadence-frontend"
@@ -222,7 +222,7 @@ clusterGroupMetadata:
                 type: "OAuthAuthorization"
                 privateKey: {{ default .Env.OAUTH_PRIVATE_KEY "" }}
         {{- if .Env.ENABLE_GLOBAL_DOMAIN }}
-        secondary:
+        cluster1:
             enabled: true
             initialFailoverVersion: 2
             rpcName: "cadence-frontend"
