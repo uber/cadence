@@ -78,7 +78,7 @@ func RestartWorkflow(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to create workflow.", err)
 	} else {
-		fmt.Printf("Restarted Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
+		fmt.Printf("Restarted Workflow Id: %s, new Workflow Id: %s, run Id: %s\n", wid, startWorkflowRequest.WorkflowID, resp.GetRunID())
 	}
 }
 func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, wid string) *types.StartWorkflowExecutionRequest {

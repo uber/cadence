@@ -34,11 +34,6 @@ type thriftClient struct {
 	c workflowserviceclient.Interface
 }
 
-func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
 // NewThriftClient creates a new instance of Client with thrift protocol
 func NewThriftClient(c workflowserviceclient.Interface) Client {
 	return thriftClient{c}
@@ -212,6 +207,11 @@ func (t thriftClient) RespondDecisionTaskFailed(ctx context.Context, request *ty
 func (t thriftClient) RespondQueryTaskCompleted(ctx context.Context, request *types.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
 	err := t.c.RespondQueryTaskCompleted(ctx, thrift.FromRespondQueryTaskCompletedRequest(request), opts...)
 	return thrift.ToError(err)
+}
+
+func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := t.c.RestartWorkflowExecution(ctx, thrift.FromRestartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
 func (t thriftClient) ScanWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {

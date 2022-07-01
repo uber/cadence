@@ -5897,6 +5897,12 @@ func (v *StartTimerDecisionAttributes) GetStartToFireTimeoutSeconds() (o int64) 
 	return
 }
 
+// RestartWorkflowExecutionRequest is an internal type (TBD...)
+type RestartWorkflowExecutionRequest struct {
+	TerminateWorkflowExecutionRequest *TerminateWorkflowExecutionRequest `json:"terminateWorkflowExecutionRequest,omitempty"`
+	StartWorkflowExecutionRequest     *StartWorkflowExecutionRequest     `json:"startWorkflowExecutionRequest,omitempty"`
+}
+
 // StartWorkflowExecutionRequest is an internal type (TBD...)
 type StartWorkflowExecutionRequest struct {
 	Domain                              string                 `json:"domain,omitempty"`
@@ -6435,10 +6441,6 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
-}
-type RestartWorkflowExecutionRequest struct {
-	TerminateWorkflowExecutionRequest *TerminateWorkflowExecutionRequest `json:"terminateWorkflowExecutionRequest,omitempty"`
-	StartWorkflowExecutionRequest     *StartWorkflowExecutionRequest     `json:"startWorkflowExecutionRequest,omitempty"`
 }
 
 // GetName is an internal getter (TBD...)

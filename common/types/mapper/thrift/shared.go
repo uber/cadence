@@ -5216,6 +5216,17 @@ func ToStartTimerDecisionAttributes(t *shared.StartTimerDecisionAttributes) *typ
 	}
 }
 
+// FromRestartWorkflowExecutionRequest converts internal FromRestartWorkflowExecutionRequest type to thrift
+func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionRequest{
+		TerminateWorkflowExecutionRequest: FromTerminateWorkflowExecutionRequest(t.TerminateWorkflowExecutionRequest),
+		StartWorkflowExecutionRequest:     FromStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
+
 // FromStartWorkflowExecutionRequest converts internal StartWorkflowExecutionRequest type to thrift
 func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *shared.StartWorkflowExecutionRequest {
 	if t == nil {

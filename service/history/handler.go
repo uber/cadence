@@ -30,6 +30,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/service/history/workflow"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/membership"
@@ -737,7 +739,7 @@ func (h *handlerImpl) RestartWorkflowExecution(
 	}
 
 	err2 := engine.TerminateWorkflowExecution(ctx, terminateWrappedRequest)
-	if err2 != nil {
+	if err2 != nil && err2 != workflow.ErrAlreadyCompleted {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
 	startRequest := startWrappedRequest.StartRequest
