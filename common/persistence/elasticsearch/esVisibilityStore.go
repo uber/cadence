@@ -776,12 +776,13 @@ func createVisibilityMessage(
 	}
 
 	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(wid),
-		RunID:       common.StringPtr(rid),
-		Version:     common.Int64Ptr(taskID),
-		Fields:      fields,
+		MessageType:         &msgType,
+		DomainID:            common.StringPtr(domainID),
+		WorkflowID:          common.StringPtr(wid),
+		RunID:               common.StringPtr(rid),
+		Version:             common.Int64Ptr(taskID),
+		Fields:              fields,
+		VisibilityOperation: &visibilityOperationThrift,
 	}
 
 	return msg
