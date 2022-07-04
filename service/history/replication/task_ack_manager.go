@@ -67,8 +67,8 @@ type (
 		retryPolicy   backoff.RetryPolicy
 		throttleRetry *backoff.ThrottleRetry
 
-		metricsClient metrics.Client
-		logger        log.Logger
+		scope  metrics.Scope
+		logger log.Logger
 
 		taskReader   *DynamicTaskReader
 		taskHydrator TaskHydrator
@@ -99,10 +99,13 @@ func NewTaskAckManager(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
-		metricsClient: shard.GetMetricsClient(),
-		logger:        shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
-		taskReader:    taskReader,
-		taskHydrator:  taskHydrator,
+		scope: shard.GetMetricsClient().Scope(
+			metrics.ReplicatorQueueProcessorScope,
+			metrics.InstanceTag(strconv.Itoa(shard.GetShardID())),
+		),
+		logger:       shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
+		taskReader:   taskReader,
+		taskHydrator: taskHydrator,
 	}
 }
 
@@ -132,12 +135,7 @@ func (t *taskAckManagerImpl) GetTasks(
 		lastReadTaskID = t.shard.GetClusterReplicationLevel(pollingCluster)
 	}
 
-	shardID := t.shard.GetShardID()
-	replicationScope := t.metricsClient.Scope(
-		metrics.ReplicatorQueueProcessorScope,
-		metrics.InstanceTag(strconv.Itoa(shardID)),
-	)
-	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
+	taskGeneratedTimer := t.scope.StartTimer(metrics.TaskLatency)
 
 	tasks, hasMore, err := t.taskReader.Read(ctx, lastReadTaskID, t.shard.GetTransferMaxReadLevel())
 	if err != nil {
@@ -184,19 +182,19 @@ TaskInfoLoop:
 	}
 	taskGeneratedTimer.Stop()
 
-	replicationScope.RecordTimer(
+	t.scope.RecordTimer(
 		metrics.ReplicationTasksLag,
 		time.Duration(t.shard.GetTransferMaxReadLevel()-readLevel),
 	)
-	replicationScope.RecordTimer(
+	t.scope.RecordTimer(
 		metrics.ReplicationTasksFetched,
 		time.Duration(len(tasks)),
 	)
-	replicationScope.RecordTimer(
+	t.scope.RecordTimer(
 		metrics.ReplicationTasksReturned,
 		time.Duration(len(replicationTasks)),
 	)
-	replicationScope.RecordTimer(
+	t.scope.RecordTimer(
 		metrics.ReplicationTasksReturnedDiff,
 		time.Duration(len(tasks)-len(replicationTasks)),
 	)
