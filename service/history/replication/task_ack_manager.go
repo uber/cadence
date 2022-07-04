@@ -147,14 +147,14 @@ func (t *taskAckManagerImpl) GetTasks(
 	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
 TaskInfoLoop:
-	for _, taskInfo := range tasks {
+	for _, task := range tasks {
 		// filter task info by domain clusters.
-		domainEntity, err := t.domains.GetDomainByID(taskInfo.GetDomainID())
+		domainEntity, err := t.domains.GetDomainByID(task.DomainID)
 		if err != nil {
 			return nil, err
 		}
 		if skipTask(pollingCluster, domainEntity) {
-			readLevel = taskInfo.GetTaskID()
+			readLevel = task.TaskID
 			continue
 		}
 
@@ -163,7 +163,7 @@ TaskInfoLoop:
 		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
-			replicationTask, err = t.taskHydrator.Hydrate(ctx, *taskInfo)
+			replicationTask, err = t.taskHydrator.Hydrate(ctx, *task)
 			return err
 		}
 		err = t.throttleRetry.Do(ctx, op)
@@ -177,7 +177,7 @@ TaskInfoLoop:
 			hasMore = true
 			break TaskInfoLoop
 		}
-		readLevel = taskInfo.GetTaskID()
+		readLevel = task.TaskID
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
