@@ -24,9 +24,7 @@ package replication
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
@@ -102,6 +100,7 @@ func (s *taskAckManagerSuite) SetupTest() {
 
 	s.ackManager = NewTaskAckManager(
 		s.mockShard,
+		NewDynamicTaskReader(s.mockShard.GetShardID(), s.mockExecutionMgr, s.mockShard.GetTimeSource(), s.mockShard.GetConfig()),
 		NewDeferredTaskHydrator(s.mockShard.GetShardID(), s.mockHistoryMgr, executionCache),
 	).(*taskAckManagerImpl)
 }
@@ -266,25 +265,4 @@ func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
 		1,
 	)
 	s.False(skipTask(cluster.TestAlternativeClusterName, domainEntity))
-}
-
-func (s *taskAckManagerSuite) TestGetBatchSize_UpperLimit() {
-	s.ackManager.lastTaskCreationTime = atomic.Value{}
-	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Duration(-s.ackManager.maxAllowedLatencyFn()) * time.Second))
-	size := s.ackManager.getBatchSize()
-	s.Equal(s.ackManager.fetchTasksBatchSize(0), size)
-}
-
-func (s *taskAckManagerSuite) TestGetBatchSize_ValidRange() {
-	s.ackManager.lastTaskCreationTime = atomic.Value{}
-	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(-8 * time.Second))
-	size := s.ackManager.getBatchSize()
-	s.True(minReadTaskSize+5 <= size)
-}
-
-func (s *taskAckManagerSuite) TestGetBatchSize_InvalidRange() {
-	s.ackManager.lastTaskCreationTime = atomic.Value{}
-	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Minute))
-	size := s.ackManager.getBatchSize()
-	s.Equal(minReadTaskSize, size)
 }

@@ -28,13 +28,11 @@ import (
 	"context"
 	"errors"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -64,21 +62,15 @@ type (
 	}
 
 	taskAckManagerImpl struct {
-		shard            shard.Context
-		executionManager persistence.ExecutionManager
-		rateLimiter      *quotas.DynamicRateLimiter
-		retryPolicy      backoff.RetryPolicy
-		throttleRetry    *backoff.ThrottleRetry
-
-		lastTaskCreationTime atomic.Value
-		maxAllowedLatencyFn  dynamicconfig.DurationPropertyFn
+		shard         shard.Context
+		rateLimiter   *quotas.DynamicRateLimiter
+		retryPolicy   backoff.RetryPolicy
+		throttleRetry *backoff.ThrottleRetry
 
 		metricsClient metrics.Client
 		logger        log.Logger
 
-		// This is the batch size used by pull based RPC replicator.
-		fetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
-
+		taskReader   *DynamicTaskReader
 		taskHydrator TaskHydrator
 	}
 )
@@ -88,6 +80,7 @@ var _ TaskAckManager = (*taskAckManagerImpl)(nil)
 // NewTaskAckManager initializes a new replication task ack manager
 func NewTaskAckManager(
 	shard shard.Context,
+	taskReader *DynamicTaskReader,
 	taskHydrator TaskHydrator,
 ) TaskAckManager {
 
@@ -99,20 +92,17 @@ func NewTaskAckManager(
 	retryPolicy.SetBackoffCoefficient(1)
 
 	return &taskAckManagerImpl{
-		shard:            shard,
-		executionManager: shard.GetExecutionManager(),
-		rateLimiter:      rateLimiter,
-		retryPolicy:      retryPolicy,
+		shard:       shard,
+		rateLimiter: rateLimiter,
+		retryPolicy: retryPolicy,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
-		lastTaskCreationTime: atomic.Value{},
-		maxAllowedLatencyFn:  config.ReplicatorUpperLatency,
-		metricsClient:        shard.GetMetricsClient(),
-		logger:               shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
-		fetchTasksBatchSize:  config.ReplicatorProcessorFetchTasksBatchSize,
-		taskHydrator:         taskHydrator,
+		metricsClient: shard.GetMetricsClient(),
+		logger:        shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
+		taskReader:    taskReader,
+		taskHydrator:  taskHydrator,
 	}
 }
 
@@ -148,26 +138,16 @@ func (t *taskAckManagerImpl) GetTasks(
 		metrics.InstanceTag(strconv.Itoa(shardID)),
 	)
 	taskGeneratedTimer := replicationScope.StartTimer(metrics.TaskLatency)
-	batchSize := t.getBatchSize()
 
-	response, err := t.executionManager.GetReplicationTasks(
-		ctx,
-		&persistence.GetReplicationTasksRequest{
-			ReadLevel:    lastReadTaskID,
-			MaxReadLevel: t.shard.GetTransferMaxReadLevel(),
-			BatchSize:    batchSize,
-		},
-	)
+	tasks, hasMore, err := t.taskReader.Read(ctx, lastReadTaskID, t.shard.GetTransferMaxReadLevel())
 	if err != nil {
 		return nil, err
 	}
-	hasMore := len(response.NextPageToken) != 0
 
-	var lastTaskCreationTime time.Time
 	var replicationTasks []*types.ReplicationTask
 	readLevel := lastReadTaskID
 TaskInfoLoop:
-	for _, taskInfo := range response.Tasks {
+	for _, taskInfo := range tasks {
 		// filter task info by domain clusters.
 		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
 		if err != nil {
@@ -201,9 +181,6 @@ TaskInfoLoop:
 		if replicationTask != nil {
 			replicationTasks = append(replicationTasks, replicationTask)
 		}
-		if taskInfo.GetVisibilityTimestamp().After(lastTaskCreationTime) {
-			lastTaskCreationTime = taskInfo.GetVisibilityTimestamp()
-		}
 	}
 	taskGeneratedTimer.Stop()
 
@@ -213,7 +190,7 @@ TaskInfoLoop:
 	)
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksFetched,
-		time.Duration(len(response.Tasks)),
+		time.Duration(len(tasks)),
 	)
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturned,
@@ -221,7 +198,7 @@ TaskInfoLoop:
 	)
 	replicationScope.RecordTimer(
 		metrics.ReplicationTasksReturnedDiff,
-		time.Duration(len(response.Tasks)-len(replicationTasks)),
+		time.Duration(len(tasks)-len(replicationTasks)),
 	)
 
 	if err := t.shard.UpdateClusterReplicationLevel(
@@ -230,7 +207,6 @@ TaskInfoLoop:
 	); err != nil {
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
-	t.lastTaskCreationTime.Store(lastTaskCreationTime)
 
 	t.logger.Debug("Get replication tasks", tag.SourceCluster(pollingCluster), tag.ShardReplicationAck(lastReadTaskID), tag.ReadLevel(readLevel))
 	return &types.ReplicationMessages{
@@ -238,26 +214,6 @@ TaskInfoLoop:
 		HasMore:                hasMore,
 		LastRetrievedMessageID: readLevel,
 	}, nil
-}
-
-func (t *taskAckManagerImpl) getBatchSize() int {
-
-	shardID := t.shard.GetShardID()
-	defaultBatchSize := t.fetchTasksBatchSize(shardID)
-	maxReplicationLatency := t.maxAllowedLatencyFn()
-	now := t.shard.GetTimeSource().Now()
-
-	if t.lastTaskCreationTime.Load() == nil {
-		return defaultBatchSize
-	}
-	taskLatency := now.Sub(t.lastTaskCreationTime.Load().(time.Time))
-	if taskLatency < 0 {
-		taskLatency = 0
-	}
-	if taskLatency >= maxReplicationLatency {
-		return defaultBatchSize
-	}
-	return minReadTaskSize + int(float64(taskLatency)/float64(maxReplicationLatency)*float64(defaultBatchSize))
 }
 
 func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {

@@ -205,6 +205,7 @@ func NewEngineWithShardContext(
 		failoverMarkerNotifier: failoverMarkerNotifier,
 		replicationAckManager: replication.NewTaskAckManager(
 			shard,
+			replication.NewDynamicTaskReader(shard.GetShardID(), executionManager, shard.GetTimeSource(), config),
 			replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache),
 		),
 	}
