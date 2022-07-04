@@ -63,6 +63,7 @@ type (
 
 	taskAckManagerImpl struct {
 		shard         shard.Context
+		ackLevels     ackLevelStore
 		domains       cache.DomainCache
 		rateLimiter   *quotas.DynamicRateLimiter
 		retryPolicy   backoff.RetryPolicy
@@ -73,6 +74,13 @@ type (
 
 		taskReader   *DynamicTaskReader
 		taskHydrator TaskHydrator
+	}
+
+	ackLevelStore interface {
+		GetTransferMaxReadLevel() int64
+
+		GetClusterReplicationLevel(cluster string) int64
+		UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error
 	}
 )
 
@@ -94,6 +102,7 @@ func NewTaskAckManager(
 
 	return &taskAckManagerImpl{
 		shard:       shard,
+		ackLevels:   shard,
 		domains:     shard.GetDomainCache(),
 		rateLimiter: rateLimiter,
 		retryPolicy: retryPolicy,
