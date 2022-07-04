@@ -39,7 +39,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/shard"
+	"github.com/uber/cadence/service/history/config"
 )
 
 var (
@@ -62,9 +62,8 @@ type (
 	}
 
 	taskAckManagerImpl struct {
-		shard         shard.Context
 		ackLevels     ackLevelStore
-		domains       cache.DomainCache
+		domains       domainCache
 		rateLimiter   *quotas.DynamicRateLimiter
 		retryPolicy   backoff.RetryPolicy
 		throttleRetry *backoff.ThrottleRetry
@@ -72,8 +71,8 @@ type (
 		scope  metrics.Scope
 		logger log.Logger
 
-		taskReader   *DynamicTaskReader
-		taskHydrator TaskHydrator
+		reader   taskReader
+		hydrator taskHydrator
 	}
 
 	ackLevelStore interface {
@@ -82,18 +81,31 @@ type (
 		GetClusterReplicationLevel(cluster string) int64
 		UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error
 	}
+	domainCache interface {
+		GetDomainByID(id string) (*cache.DomainCacheEntry, error)
+	}
+	taskReader interface {
+		Read(ctx context.Context, readLevel int64, maxReadLevel int64) ([]*persistence.ReplicationTaskInfo, bool, error)
+	}
+	taskHydrator interface {
+		Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.ReplicationTask, error)
+	}
 )
 
 var _ TaskAckManager = (*taskAckManagerImpl)(nil)
 
 // NewTaskAckManager initializes a new replication task ack manager
 func NewTaskAckManager(
-	shard shard.Context,
-	taskReader *DynamicTaskReader,
-	taskHydrator TaskHydrator,
+	shardID int,
+	ackLevels ackLevelStore,
+	domains domainCache,
+	metricsClient metrics.Client,
+	logger log.Logger,
+	config *config.Config,
+	reader taskReader,
+	hydrator taskHydrator,
 ) TaskAckManager {
 
-	config := shard.GetConfig()
 	rateLimiter := quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64())
 
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
@@ -101,22 +113,21 @@ func NewTaskAckManager(
 	retryPolicy.SetBackoffCoefficient(1)
 
 	return &taskAckManagerImpl{
-		shard:       shard,
-		ackLevels:   shard,
-		domains:     shard.GetDomainCache(),
+		ackLevels:   ackLevels,
+		domains:     domains,
 		rateLimiter: rateLimiter,
 		retryPolicy: retryPolicy,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
-		scope: shard.GetMetricsClient().Scope(
+		scope: metricsClient.Scope(
 			metrics.ReplicatorQueueProcessorScope,
-			metrics.InstanceTag(strconv.Itoa(shard.GetShardID())),
+			metrics.InstanceTag(strconv.Itoa(shardID)),
 		),
-		logger:       shard.GetLogger().WithTags(tag.ComponentReplicationAckManager),
-		taskReader:   taskReader,
-		taskHydrator: taskHydrator,
+		logger:   logger.WithTags(tag.ComponentReplicationAckManager),
+		reader:   reader,
+		hydrator: hydrator,
 	}
 }
 
@@ -133,7 +144,7 @@ func (t *taskAckManagerImpl) GetTask(ctx context.Context, taskInfo *types.Replic
 		ScheduledID:  taskInfo.ScheduledID,
 	}
 
-	return t.taskHydrator.Hydrate(ctx, task)
+	return t.hydrator.Hydrate(ctx, task)
 }
 
 func (t *taskAckManagerImpl) GetTasks(
@@ -143,12 +154,12 @@ func (t *taskAckManagerImpl) GetTasks(
 ) (*types.ReplicationMessages, error) {
 
 	if lastReadTaskID == common.EmptyMessageID {
-		lastReadTaskID = t.shard.GetClusterReplicationLevel(pollingCluster)
+		lastReadTaskID = t.ackLevels.GetClusterReplicationLevel(pollingCluster)
 	}
 
 	taskGeneratedTimer := t.scope.StartTimer(metrics.TaskLatency)
 
-	tasks, hasMore, err := t.taskReader.Read(ctx, lastReadTaskID, t.shard.GetTransferMaxReadLevel())
+	tasks, hasMore, err := t.reader.Read(ctx, lastReadTaskID, t.ackLevels.GetTransferMaxReadLevel())
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +183,7 @@ TaskInfoLoop:
 		var replicationTask *types.ReplicationTask
 		op := func() error {
 			var err error
-			replicationTask, err = t.taskHydrator.Hydrate(ctx, *task)
+			replicationTask, err = t.hydrator.Hydrate(ctx, *task)
 			return err
 		}
 		err = t.throttleRetry.Do(ctx, op)
@@ -195,7 +206,7 @@ TaskInfoLoop:
 
 	t.scope.RecordTimer(
 		metrics.ReplicationTasksLag,
-		time.Duration(t.shard.GetTransferMaxReadLevel()-readLevel),
+		time.Duration(t.ackLevels.GetTransferMaxReadLevel()-readLevel),
 	)
 	t.scope.RecordTimer(
 		metrics.ReplicationTasksFetched,
@@ -210,7 +221,7 @@ TaskInfoLoop:
 		time.Duration(len(tasks)-len(replicationTasks)),
 	)
 
-	if err := t.shard.UpdateClusterReplicationLevel(
+	if err := t.ackLevels.UpdateClusterReplicationLevel(
 		pollingCluster,
 		lastReadTaskID,
 	); err != nil {

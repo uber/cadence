@@ -34,13 +34,52 @@ import (
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
+
+func TestTaskAckManager_GetTasks(t *testing.T) {
+	tests := []struct {
+		name      string
+		ackLevels ackLevelStore
+		domains   domainCache
+		reader    taskReader
+		hydrator  taskHydrator
+	}{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			config := config.Config{
+				ReplicationTaskGenerationQPS:    dynamicconfig.GetFloatPropertyFn(0),
+				ReplicatorReadTaskMaxRetryCount: dynamicconfig.GetIntPropertyFn(1),
+			}
+
+			ackManager := NewTaskAckManager(testShardID, tt.ackLevels, tt.domains, metrics.NewNoopMetricsClient(), log.NewNoop(), &config, tt.reader, tt.hydrator)
+		})
+	}
+}
+
+type fakeAckLevelStore struct{}
+type fakeTaskReader struct{}
+type fakeTaskHydrator struct{}
+
+type fakeDomainCache map[string]*cache.DomainCacheEntry
+
+func (cache fakeDomainCache) GetDomainByID(id string) (*cache.DomainCacheEntry, error) {
+	entry, ok := cache[id]
+	if !ok {
+		return nil, types.EntityNotExistsError{Message: "domain does not exist"}
+	}
+	return entry, nil
+}
 
 type (
 	taskAckManagerSuite struct {
@@ -99,7 +138,12 @@ func (s *taskAckManagerSuite) SetupTest() {
 	executionCache := execution.NewCache(s.mockShard)
 
 	s.ackManager = NewTaskAckManager(
+		s.mockShard.GetShardID(),
 		s.mockShard,
+		s.mockDomainCache,
+		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetLogger(),
+		s.mockShard.GetConfig(),
 		NewDynamicTaskReader(s.mockShard.GetShardID(), s.mockExecutionMgr, s.mockShard.GetTimeSource(), s.mockShard.GetConfig()),
 		NewDeferredTaskHydrator(s.mockShard.GetShardID(), s.mockHistoryMgr, executionCache),
 	).(*taskAckManagerImpl)
