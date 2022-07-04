@@ -63,6 +63,7 @@ type (
 
 	taskAckManagerImpl struct {
 		shard         shard.Context
+		domains       cache.DomainCache
 		rateLimiter   *quotas.DynamicRateLimiter
 		retryPolicy   backoff.RetryPolicy
 		throttleRetry *backoff.ThrottleRetry
@@ -93,6 +94,7 @@ func NewTaskAckManager(
 
 	return &taskAckManagerImpl{
 		shard:       shard,
+		domains:     shard.GetDomainCache(),
 		rateLimiter: rateLimiter,
 		retryPolicy: retryPolicy,
 		throttleRetry: backoff.NewThrottleRetry(
@@ -147,7 +149,7 @@ func (t *taskAckManagerImpl) GetTasks(
 TaskInfoLoop:
 	for _, taskInfo := range tasks {
 		// filter task info by domain clusters.
-		domainEntity, err := t.shard.GetDomainCache().GetDomainByID(taskInfo.GetDomainID())
+		domainEntity, err := t.domains.GetDomainByID(taskInfo.GetDomainID())
 		if err != nil {
 			return nil, err
 		}
