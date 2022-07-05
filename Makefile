@@ -110,8 +110,8 @@ LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 # downloads and builds a go-gettable tool, versioned by go.mod, and installs
 # it into the build folder, named the same as the last portion of the URL.
 define go_build_tool
-@echo "building $(notdir $(1)) from $(1)..."
-@go build -mod=readonly -o $(BIN)/$(notdir $(1)) $(1)
+@echo "building $(or $(2), $(notdir $(1))) from $(1)..."
+@go build -mod=readonly -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
 endef
 
 # utility target.
@@ -127,6 +127,9 @@ $(BIN)/thriftrw-plugin-yarpc: go.mod
 
 $(BIN)/mockgen: go.mod
 	$(call go_build_tool,github.com/golang/mock/mockgen)
+
+$(BIN)/mockery: go.mod
+	$(call go_build_tool,github.com/vektra/mockery/v2,mockery)
 
 $(BIN)/enumer: go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
@@ -397,7 +400,7 @@ cadence-bench: $(BUILD)/lint
 bins: $(BINS)
 tools: $(TOOLS)
 
-go-generate: $(BIN)/mockgen $(BIN)/enumer
+go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery
 	@echo "running go generate ./..., this takes almost 5 minutes..."
 	@# add our bins to PATH so `go generate` can find them
 	@$(BIN_PATH) go generate ./...
