@@ -92,7 +92,7 @@ func TestTaskAckManager_GetTasks(t *testing.T) {
 			hydrator: fakeTaskHydrator{
 				testTask11.TaskID: testHydratedTask11,
 				testTask12.TaskID: testHydratedTask12,
-				testTask13.TaskID: testHydratedTaskErrorRecoverable,
+				testTask13.TaskID: testHydratedTaskErrorRecoverable, // Will continue hydrating beyond this point
 				testTask14.TaskID: testHydratedTask14,
 			},
 			pollingCluster: testClusterA,

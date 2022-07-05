@@ -106,8 +106,6 @@ func NewTaskAckManager(
 	hydrator taskHydrator,
 ) TaskAckManager {
 
-	rateLimiter := quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64())
-
 	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
@@ -115,7 +113,7 @@ func NewTaskAckManager(
 	return &taskAckManagerImpl{
 		ackLevels:   ackLevels,
 		domains:     domains,
-		rateLimiter: rateLimiter,
+		rateLimiter: quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64()),
 		retryPolicy: retryPolicy,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(retryPolicy),
@@ -147,12 +145,7 @@ func (t *taskAckManagerImpl) GetTask(ctx context.Context, taskInfo *types.Replic
 	return t.hydrator.Hydrate(ctx, task)
 }
 
-func (t *taskAckManagerImpl) GetTasks(
-	ctx context.Context,
-	pollingCluster string,
-	lastReadTaskID int64,
-) (*types.ReplicationMessages, error) {
-
+func (t *taskAckManagerImpl) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*types.ReplicationMessages, error) {
 	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = t.ackLevels.GetClusterReplicationLevel(pollingCluster)
 	}
@@ -204,27 +197,12 @@ TaskInfoLoop:
 	}
 	taskGeneratedTimer.Stop()
 
-	t.scope.RecordTimer(
-		metrics.ReplicationTasksLag,
-		time.Duration(t.ackLevels.GetTransferMaxReadLevel()-readLevel),
-	)
-	t.scope.RecordTimer(
-		metrics.ReplicationTasksFetched,
-		time.Duration(len(tasks)),
-	)
-	t.scope.RecordTimer(
-		metrics.ReplicationTasksReturned,
-		time.Duration(len(replicationTasks)),
-	)
-	t.scope.RecordTimer(
-		metrics.ReplicationTasksReturnedDiff,
-		time.Duration(len(tasks)-len(replicationTasks)),
-	)
+	t.scope.RecordTimer(metrics.ReplicationTasksLag, time.Duration(t.ackLevels.GetTransferMaxReadLevel()-readLevel))
+	t.scope.RecordTimer(metrics.ReplicationTasksFetched, time.Duration(len(tasks)))
+	t.scope.RecordTimer(metrics.ReplicationTasksReturned, time.Duration(len(replicationTasks)))
+	t.scope.RecordTimer(metrics.ReplicationTasksReturnedDiff, time.Duration(len(tasks)-len(replicationTasks)))
 
-	if err := t.ackLevels.UpdateClusterReplicationLevel(
-		pollingCluster,
-		lastReadTaskID,
-	); err != nil {
+	if err := t.ackLevels.UpdateClusterReplicationLevel(pollingCluster, lastReadTaskID); err != nil {
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
 
