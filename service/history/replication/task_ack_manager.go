@@ -45,7 +45,6 @@ type (
 		ackLevels     ackLevelStore
 		domains       domainCache
 		rateLimiter   *quotas.DynamicRateLimiter
-		retryPolicy   backoff.RetryPolicy
 		throttleRetry *backoff.ThrottleRetry
 
 		scope  metrics.Scope
@@ -92,7 +91,6 @@ func NewTaskAckManager(
 		ackLevels:   ackLevels,
 		domains:     domains,
 		rateLimiter: quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64()),
-		retryPolicy: retryPolicy,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
