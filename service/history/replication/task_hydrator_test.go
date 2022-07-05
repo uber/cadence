@@ -77,6 +77,13 @@ var (
 	testWorkflowIdentifier        = definition.NewWorkflowIdentifier(testDomainID, testWorkflowID, testRunID)
 )
 
+func TestNewDeferredTaskHydrator(t *testing.T) {
+	h := NewDeferredTaskHydrator(0, nil, nil)
+	require.NotNil(t, h)
+	assert.IsType(t, historyLoader{}, h.history)
+	assert.IsType(t, mutableStateLoader{}, h.msProvider)
+}
+
 func TestTaskHydrator_UnknownTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:   99,
@@ -225,6 +232,20 @@ func TestTaskHydrator_HydrateSyncActivityTask(t *testing.T) {
 				},
 			},
 			expectTask: nil,
+		},
+		{
+			name: "bad version histories - return error",
+			task: task,
+			msProvider: &fakeMutableStateProvider{
+				workflows: map[definition.WorkflowIdentifier]mutableState{
+					testWorkflowIdentifier: &fakeMutableState{
+						isWorkflowExecutionRunning: true,
+						versionHistories:           &persistence.VersionHistories{},
+						activityInfos:              map[int64]persistence.ActivityInfo{testScheduleID: activityInfo},
+					},
+				},
+			},
+			expectErr: "getting branch index: 0, available branch count: 0",
 		},
 		{
 			name: "workflow does not exist - return nil, no error",
