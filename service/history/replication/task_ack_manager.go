@@ -24,7 +24,6 @@ package replication
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"time"
 
@@ -38,10 +37,6 @@ import (
 	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
-)
-
-var (
-	errUnknownReplicationTask = errors.New("unknown replication task")
 )
 
 type (

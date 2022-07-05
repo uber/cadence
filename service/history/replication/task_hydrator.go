@@ -24,6 +24,7 @@ package replication
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -31,6 +32,8 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 )
+
+var errUnknownReplicationTask = errors.New("unknown replication task")
 
 // TaskHydrator will enrich replication task with additional information from mutable state and history events.
 // Mutable state and history providers can be either in-memory or persistence based implementations;
