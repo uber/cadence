@@ -105,22 +105,6 @@ func NewTaskAckManager(
 	}
 }
 
-func (t *TaskAckManager) GetTask(ctx context.Context, taskInfo *types.ReplicationTaskInfo) (*types.ReplicationTask, error) {
-	task := persistence.ReplicationTaskInfo{
-		DomainID:     taskInfo.DomainID,
-		WorkflowID:   taskInfo.WorkflowID,
-		RunID:        taskInfo.RunID,
-		TaskID:       taskInfo.TaskID,
-		TaskType:     int(taskInfo.TaskType),
-		FirstEventID: taskInfo.FirstEventID,
-		NextEventID:  taskInfo.NextEventID,
-		Version:      taskInfo.Version,
-		ScheduledID:  taskInfo.ScheduledID,
-	}
-
-	return t.hydrator.Hydrate(ctx, task)
-}
-
 func (t *TaskAckManager) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*types.ReplicationMessages, error) {
 	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = t.ackLevels.GetClusterReplicationLevel(pollingCluster)
