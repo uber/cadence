@@ -198,11 +198,16 @@ func BuildCLIOptions() *cli.App {
 		{
 			Name:    "create-Keyspace",
 			Aliases: []string{"create"},
-			Usage:   "creates a Keyspace with simple strategy",
+			Usage:   "creates a Keyspace with simple strategy. If datacenter is provided, will use network topology strategy",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  schema.CLIFlagKeyspace,
 					Usage: "name of the Keyspace",
+				},
+				cli.StringFlag{
+					Name:  schema.CLIFlagDatacenter,
+					Value: "",
+					Usage: "name of the cassandra datacenter, used when creating the keyspace with network topology strategy",
 				},
 				cli.IntFlag{
 					Name:  schema.CLIFlagReplicationFactor,
