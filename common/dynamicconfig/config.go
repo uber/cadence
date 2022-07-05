@@ -171,53 +171,54 @@ type IntPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType st
 type DurationPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType string) time.Duration
 
 // GetProperty gets a interface property and returns defaultValue if property is not found
-func (c *Collection) GetProperty(key Key, defaultValue interface{}) PropertyFn {
+func (c *Collection) GetProperty(key Key) PropertyFn {
 	return func() interface{} {
-		val, err := c.client.GetValue(key, defaultValue)
+		val, err := c.client.GetValue(key)
 		if err != nil {
 			c.logError(key, nil, err)
+			return key.DefaultValue()
 		}
-		c.logValue(key, nil, val, defaultValue, reflect.DeepEqual)
+		c.logValue(key, nil, val, key.DefaultValue(), reflect.DeepEqual)
 		return val
 	}
 }
 
 // GetIntProperty gets property and asserts that it's an integer
-func (c *Collection) GetIntProperty(key Key, defaultValue int) IntPropertyFn {
+func (c *Collection) GetIntProperty(key IntKey) IntPropertyFn {
 	return func(opts ...FilterOption) int {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetIntValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
 
 // GetIntPropertyFilteredByDomain gets property with domain filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByDomain(key Key, defaultValue int) IntPropertyFnWithDomainFilter {
+func (c *Collection) GetIntPropertyFilteredByDomain(key IntKey) IntPropertyFnWithDomainFilter {
 	return func(domain string) int {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetIntValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
 
 // GetIntPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue int) IntPropertyFnWithWorkflowTypeFilter {
+func (c *Collection) GetIntPropertyFilteredByWorkflowType(key IntKey) IntPropertyFnWithWorkflowTypeFilter {
 	return func(domainName string, workflowType string) int {
 		filters := c.toFilterMap(
 			DomainFilter(domainName),
@@ -226,18 +227,18 @@ func (c *Collection) GetIntPropertyFilteredByWorkflowType(key Key, defaultValue 
 		val, err := c.client.GetIntValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
 
 // GetDurationPropertyFilteredByWorkflowType gets property with workflow type filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key Key, defaultValue time.Duration) DurationPropertyFnWithWorkflowTypeFilter {
+func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key DurationKey) DurationPropertyFnWithWorkflowTypeFilter {
 	return func(domainName string, workflowType string) time.Duration {
 		filters := c.toFilterMap(
 			DomainFilter(domainName),
@@ -246,18 +247,18 @@ func (c *Collection) GetDurationPropertyFilteredByWorkflowType(key Key, defaultV
 		val, err := c.client.GetDurationValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
 
 // GetIntPropertyFilteredByTaskListInfo gets property with taskListInfo as filters and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue int) IntPropertyFnWithTaskListInfoFilters {
+func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key IntKey) IntPropertyFnWithTaskListInfoFilters {
 	return func(domain string, taskList string, taskType int) int {
 		filters := c.toFilterMap(
 			DomainFilter(domain),
@@ -267,120 +268,120 @@ func (c *Collection) GetIntPropertyFilteredByTaskListInfo(key Key, defaultValue 
 		val, err := c.client.GetIntValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
 
 // GetIntPropertyFilteredByShardID gets property with shardID as filter and asserts that it's an integer
-func (c *Collection) GetIntPropertyFilteredByShardID(key Key, defaultValue int) IntPropertyFnWithShardIDFilter {
+func (c *Collection) GetIntPropertyFilteredByShardID(key IntKey) IntPropertyFnWithShardIDFilter {
 	return func(shardID int) int {
 		filters := c.toFilterMap(ShardIDFilter(shardID))
 		val, err := c.client.GetIntValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultInt()
 		}
-		c.logValue(key, filters, val, defaultValue, intCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), intCompareEquals)
 		return val
 	}
 }
 
 // GetFloat64Property gets property and asserts that it's a float64
-func (c *Collection) GetFloat64Property(key Key, defaultValue float64) FloatPropertyFn {
+func (c *Collection) GetFloat64Property(key FloatKey) FloatPropertyFn {
 	return func(opts ...FilterOption) float64 {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetFloatValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultFloat()
 		}
-		c.logValue(key, filters, val, defaultValue, float64CompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), float64CompareEquals)
 		return val
 	}
 }
 
 // GetFloat64PropertyFilteredByShardID gets property with shardID filter and asserts that it's a float64
-func (c *Collection) GetFloat64PropertyFilteredByShardID(key Key, defaultValue float64) FloatPropertyFnWithShardIDFilter {
+func (c *Collection) GetFloat64PropertyFilteredByShardID(key FloatKey) FloatPropertyFnWithShardIDFilter {
 	return func(shardID int) float64 {
 		filters := c.toFilterMap(ShardIDFilter(shardID))
 		val, err := c.client.GetFloatValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultFloat()
 		}
-		c.logValue(key, filters, val, defaultValue, float64CompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), float64CompareEquals)
 		return val
 	}
 }
 
 // GetDurationProperty gets property and asserts that it's a duration
-func (c *Collection) GetDurationProperty(key Key, defaultValue time.Duration) DurationPropertyFn {
+func (c *Collection) GetDurationProperty(key DurationKey) DurationPropertyFn {
 	return func(opts ...FilterOption) time.Duration {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetDurationValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
 
 // GetDurationPropertyFilteredByDomain gets property with domain filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByDomain(key Key, defaultValue time.Duration) DurationPropertyFnWithDomainFilter {
+func (c *Collection) GetDurationPropertyFilteredByDomain(key DurationKey) DurationPropertyFnWithDomainFilter {
 	return func(domain string) time.Duration {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetDurationValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
 
 // GetDurationPropertyFilteredByDomainID gets property with domainID filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByDomainID(key Key, defaultValue time.Duration) DurationPropertyFnWithDomainIDFilter {
+func (c *Collection) GetDurationPropertyFilteredByDomainID(key DurationKey) DurationPropertyFnWithDomainIDFilter {
 	return func(domainID string) time.Duration {
 		filters := c.toFilterMap(DomainIDFilter(domainID))
 		val, err := c.client.GetDurationValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
 
 // GetDurationPropertyFilteredByTaskListInfo gets property with taskListInfo as filters and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key Key, defaultValue time.Duration) DurationPropertyFnWithTaskListInfoFilters {
+func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key DurationKey) DurationPropertyFnWithTaskListInfoFilters {
 	return func(domain string, taskList string, taskType int) time.Duration {
 		filters := c.toFilterMap(
 			DomainFilter(domain),
@@ -390,154 +391,154 @@ func (c *Collection) GetDurationPropertyFilteredByTaskListInfo(key Key, defaultV
 		val, err := c.client.GetDurationValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
 
 // GetDurationPropertyFilteredByShardID gets property with shardID id as filter and asserts that it's a duration
-func (c *Collection) GetDurationPropertyFilteredByShardID(key Key, defaultValue time.Duration) DurationPropertyFnWithShardIDFilter {
+func (c *Collection) GetDurationPropertyFilteredByShardID(key DurationKey) DurationPropertyFnWithShardIDFilter {
 	return func(shardID int) time.Duration {
 		filters := c.toFilterMap(ShardIDFilter(shardID))
 		val, err := c.client.GetDurationValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultDuration()
 		}
-		c.logValue(key, filters, val, defaultValue, durationCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), durationCompareEquals)
 		return val
 	}
 }
 
 // GetBoolProperty gets property and asserts that it's an bool
-func (c *Collection) GetBoolProperty(key Key, defaultValue bool) BoolPropertyFn {
+func (c *Collection) GetBoolProperty(key BoolKey) BoolPropertyFn {
 	return func(opts ...FilterOption) bool {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
 
 // GetStringProperty gets property and asserts that it's an string
-func (c *Collection) GetStringProperty(key Key, defaultValue string) StringPropertyFn {
+func (c *Collection) GetStringProperty(key StringKey) StringPropertyFn {
 	return func(opts ...FilterOption) string {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetStringValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultString()
 		}
-		c.logValue(key, filters, val, defaultValue, stringCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), stringCompareEquals)
 		return val
 	}
 }
 
 // GetMapProperty gets property and asserts that it's a map
-func (c *Collection) GetMapProperty(key Key, defaultValue map[string]interface{}) MapPropertyFn {
+func (c *Collection) GetMapProperty(key MapKey) MapPropertyFn {
 	return func(opts ...FilterOption) map[string]interface{} {
 		filters := c.toFilterMap(opts...)
 		val, err := c.client.GetMapValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultMap()
 		}
-		c.logValue(key, filters, val, defaultValue, reflect.DeepEqual)
+		c.logValue(key, filters, val, key.DefaultValue(), reflect.DeepEqual)
 		return val
 	}
 }
 
 // GetStringPropertyFilteredByDomain gets property with domain filter and asserts that it's a string
-func (c *Collection) GetStringPropertyFilteredByDomain(key Key, defaultValue string) StringPropertyFnWithDomainFilter {
+func (c *Collection) GetStringPropertyFilteredByDomain(key StringKey) StringPropertyFnWithDomainFilter {
 	return func(domain string) string {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetStringValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultString()
 		}
-		c.logValue(key, filters, val, defaultValue, stringCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), stringCompareEquals)
 		return val
 	}
 }
 
 // GetBoolPropertyFilteredByDomain gets property with domain filter and asserts that it's a bool
-func (c *Collection) GetBoolPropertyFilteredByDomain(key Key, defaultValue bool) BoolPropertyFnWithDomainFilter {
+func (c *Collection) GetBoolPropertyFilteredByDomain(key BoolKey) BoolPropertyFnWithDomainFilter {
 	return func(domain string) bool {
 		filters := c.toFilterMap(DomainFilter(domain))
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
 
 // GetBoolPropertyFilteredByDomainID gets property with domainID filter and asserts that it's a bool
-func (c *Collection) GetBoolPropertyFilteredByDomainID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDFilter {
+func (c *Collection) GetBoolPropertyFilteredByDomainID(key BoolKey) BoolPropertyFnWithDomainIDFilter {
 	return func(domainID string) bool {
 		filters := c.toFilterMap(DomainIDFilter(domainID))
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
 
 // GetBoolPropertyFilteredByDomainIDAndWorkflowID gets property with domainID and workflowID filters and asserts that it's a bool
-func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key Key, defaultValue bool) BoolPropertyFnWithDomainIDAndWorkflowIDFilter {
+func (c *Collection) GetBoolPropertyFilteredByDomainIDAndWorkflowID(key BoolKey) BoolPropertyFnWithDomainIDAndWorkflowIDFilter {
 	return func(domainID string, workflowID string) bool {
 		filters := c.toFilterMap(DomainIDFilter(domainID), WorkflowIDFilter(workflowID))
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }
 
 // GetBoolPropertyFilteredByTaskListInfo gets property with taskListInfo as filters and asserts that it's an bool
-func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key Key, defaultValue bool) BoolPropertyFnWithTaskListInfoFilters {
+func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key BoolKey) BoolPropertyFnWithTaskListInfoFilters {
 	return func(domain string, taskList string, taskType int) bool {
 		filters := c.toFilterMap(
 			DomainFilter(domain),
@@ -547,12 +548,12 @@ func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key Key, defaultValue
 		val, err := c.client.GetBoolValue(
 			key,
 			filters,
-			defaultValue,
 		)
 		if err != nil {
 			c.logError(key, filters, err)
+			return key.DefaultBool()
 		}
-		c.logValue(key, filters, val, defaultValue, boolCompareEquals)
+		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
 		return val
 	}
 }

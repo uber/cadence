@@ -35,30 +35,30 @@ import (
 	persistence "github.com/uber/cadence/common/persistence"
 )
 
-// MockbranchManager is a mock of branchManager interface
+// MockbranchManager is a mock of branchManager interface.
 type MockbranchManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockbranchManagerMockRecorder
 }
 
-// MockbranchManagerMockRecorder is the mock recorder for MockbranchManager
+// MockbranchManagerMockRecorder is the mock recorder for MockbranchManager.
 type MockbranchManagerMockRecorder struct {
 	mock *MockbranchManager
 }
 
-// NewMockbranchManager creates a new mock instance
+// NewMockbranchManager creates a new mock instance.
 func NewMockbranchManager(ctrl *gomock.Controller) *MockbranchManager {
 	mock := &MockbranchManager{ctrl: ctrl}
 	mock.recorder = &MockbranchManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockbranchManager) EXPECT() *MockbranchManagerMockRecorder {
 	return m.recorder
 }
 
-// prepareVersionHistory mocks base method
+// prepareVersionHistory mocks base method.
 func (m *MockbranchManager) prepareVersionHistory(ctx context.Context, incomingVersionHistory *persistence.VersionHistory, incomingFirstEventID, incomingFirstEventVersion int64) (bool, int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "prepareVersionHistory", ctx, incomingVersionHistory, incomingFirstEventID, incomingFirstEventVersion)
@@ -68,7 +68,7 @@ func (m *MockbranchManager) prepareVersionHistory(ctx context.Context, incomingV
 	return ret0, ret1, ret2
 }
 
-// prepareVersionHistory indicates an expected call of prepareVersionHistory
+// prepareVersionHistory indicates an expected call of prepareVersionHistory.
 func (mr *MockbranchManagerMockRecorder) prepareVersionHistory(ctx, incomingVersionHistory, incomingFirstEventID, incomingFirstEventVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "prepareVersionHistory", reflect.TypeOf((*MockbranchManager)(nil).prepareVersionHistory), ctx, incomingVersionHistory, incomingFirstEventID, incomingFirstEventVersion)

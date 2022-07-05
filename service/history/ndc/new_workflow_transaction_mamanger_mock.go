@@ -36,30 +36,30 @@ import (
 	execution "github.com/uber/cadence/service/history/execution"
 )
 
-// MocktransactionManagerForNewWorkflow is a mock of transactionManagerForNewWorkflow interface
+// MocktransactionManagerForNewWorkflow is a mock of transactionManagerForNewWorkflow interface.
 type MocktransactionManagerForNewWorkflow struct {
 	ctrl     *gomock.Controller
 	recorder *MocktransactionManagerForNewWorkflowMockRecorder
 }
 
-// MocktransactionManagerForNewWorkflowMockRecorder is the mock recorder for MocktransactionManagerForNewWorkflow
+// MocktransactionManagerForNewWorkflowMockRecorder is the mock recorder for MocktransactionManagerForNewWorkflow.
 type MocktransactionManagerForNewWorkflowMockRecorder struct {
 	mock *MocktransactionManagerForNewWorkflow
 }
 
-// NewMocktransactionManagerForNewWorkflow creates a new mock instance
+// NewMocktransactionManagerForNewWorkflow creates a new mock instance.
 func NewMocktransactionManagerForNewWorkflow(ctrl *gomock.Controller) *MocktransactionManagerForNewWorkflow {
 	mock := &MocktransactionManagerForNewWorkflow{ctrl: ctrl}
 	mock.recorder = &MocktransactionManagerForNewWorkflowMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MocktransactionManagerForNewWorkflow) EXPECT() *MocktransactionManagerForNewWorkflowMockRecorder {
 	return m.recorder
 }
 
-// dispatchForNewWorkflow mocks base method
+// dispatchForNewWorkflow mocks base method.
 func (m *MocktransactionManagerForNewWorkflow) dispatchForNewWorkflow(ctx context.Context, now time.Time, targetWorkflow execution.Workflow) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "dispatchForNewWorkflow", ctx, now, targetWorkflow)
@@ -67,7 +67,7 @@ func (m *MocktransactionManagerForNewWorkflow) dispatchForNewWorkflow(ctx contex
 	return ret0
 }
 
-// dispatchForNewWorkflow indicates an expected call of dispatchForNewWorkflow
+// dispatchForNewWorkflow indicates an expected call of dispatchForNewWorkflow.
 func (mr *MocktransactionManagerForNewWorkflowMockRecorder) dispatchForNewWorkflow(ctx, now, targetWorkflow interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "dispatchForNewWorkflow", reflect.TypeOf((*MocktransactionManagerForNewWorkflow)(nil).dispatchForNewWorkflow), ctx, now, targetWorkflow)

@@ -36,30 +36,30 @@ import (
 	execution "github.com/uber/cadence/service/history/execution"
 )
 
-// MockWorkflowResetter is a mock of WorkflowResetter interface
+// MockWorkflowResetter is a mock of WorkflowResetter interface.
 type MockWorkflowResetter struct {
 	ctrl     *gomock.Controller
 	recorder *MockWorkflowResetterMockRecorder
 }
 
-// MockWorkflowResetterMockRecorder is the mock recorder for MockWorkflowResetter
+// MockWorkflowResetterMockRecorder is the mock recorder for MockWorkflowResetter.
 type MockWorkflowResetterMockRecorder struct {
 	mock *MockWorkflowResetter
 }
 
-// NewMockWorkflowResetter creates a new mock instance
+// NewMockWorkflowResetter creates a new mock instance.
 func NewMockWorkflowResetter(ctrl *gomock.Controller) *MockWorkflowResetter {
 	mock := &MockWorkflowResetter{ctrl: ctrl}
 	mock.recorder = &MockWorkflowResetterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWorkflowResetter) EXPECT() *MockWorkflowResetterMockRecorder {
 	return m.recorder
 }
 
-// ResetWorkflow mocks base method
+// ResetWorkflow mocks base method.
 func (m *MockWorkflowResetter) ResetWorkflow(ctx context.Context, now time.Time, baseLastEventID, baseLastEventVersion, incomingFirstEventID, incomingFirstEventVersion int64) (execution.MutableState, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetWorkflow", ctx, now, baseLastEventID, baseLastEventVersion, incomingFirstEventID, incomingFirstEventVersion)
@@ -68,7 +68,7 @@ func (m *MockWorkflowResetter) ResetWorkflow(ctx context.Context, now time.Time,
 	return ret0, ret1
 }
 
-// ResetWorkflow indicates an expected call of ResetWorkflow
+// ResetWorkflow indicates an expected call of ResetWorkflow.
 func (mr *MockWorkflowResetterMockRecorder) ResetWorkflow(ctx, now, baseLastEventID, baseLastEventVersion, incomingFirstEventID, incomingFirstEventVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetWorkflow", reflect.TypeOf((*MockWorkflowResetter)(nil).ResetWorkflow), ctx, now, baseLastEventID, baseLastEventVersion, incomingFirstEventID, incomingFirstEventVersion)

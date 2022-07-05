@@ -37,58 +37,30 @@ import (
 	execution "github.com/uber/cadence/service/history/execution"
 )
 
-// MocktransactionManager is a mock of transactionManager interface
+// MocktransactionManager is a mock of transactionManager interface.
 type MocktransactionManager struct {
 	ctrl     *gomock.Controller
 	recorder *MocktransactionManagerMockRecorder
 }
 
-// MocktransactionManagerMockRecorder is the mock recorder for MocktransactionManager
+// MocktransactionManagerMockRecorder is the mock recorder for MocktransactionManager.
 type MocktransactionManagerMockRecorder struct {
 	mock *MocktransactionManager
 }
 
-// NewMocktransactionManager creates a new mock instance
+// NewMocktransactionManager creates a new mock instance.
 func NewMocktransactionManager(ctrl *gomock.Controller) *MocktransactionManager {
 	mock := &MocktransactionManager{ctrl: ctrl}
 	mock.recorder = &MocktransactionManagerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MocktransactionManager) EXPECT() *MocktransactionManagerMockRecorder {
 	return m.recorder
 }
 
-// createWorkflow mocks base method
-func (m *MocktransactionManager) createWorkflow(ctx context.Context, now time.Time, targetWorkflow execution.Workflow) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "createWorkflow", ctx, now, targetWorkflow)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// createWorkflow indicates an expected call of createWorkflow
-func (mr *MocktransactionManagerMockRecorder) createWorkflow(ctx, now, targetWorkflow interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "createWorkflow", reflect.TypeOf((*MocktransactionManager)(nil).createWorkflow), ctx, now, targetWorkflow)
-}
-
-// updateWorkflow mocks base method
-func (m *MocktransactionManager) updateWorkflow(ctx context.Context, now time.Time, isWorkflowRebuilt bool, targetWorkflow, newWorkflow execution.Workflow) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "updateWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// updateWorkflow indicates an expected call of updateWorkflow
-func (mr *MocktransactionManagerMockRecorder) updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "updateWorkflow", reflect.TypeOf((*MocktransactionManager)(nil).updateWorkflow), ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
-}
-
-// backfillWorkflow mocks base method
+// backfillWorkflow mocks base method.
 func (m *MocktransactionManager) backfillWorkflow(ctx context.Context, now time.Time, targetWorkflow execution.Workflow, targetWorkflowEvents *persistence.WorkflowEvents) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "backfillWorkflow", ctx, now, targetWorkflow, targetWorkflowEvents)
@@ -96,13 +68,13 @@ func (m *MocktransactionManager) backfillWorkflow(ctx context.Context, now time.
 	return ret0
 }
 
-// backfillWorkflow indicates an expected call of backfillWorkflow
+// backfillWorkflow indicates an expected call of backfillWorkflow.
 func (mr *MocktransactionManagerMockRecorder) backfillWorkflow(ctx, now, targetWorkflow, targetWorkflowEvents interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "backfillWorkflow", reflect.TypeOf((*MocktransactionManager)(nil).backfillWorkflow), ctx, now, targetWorkflow, targetWorkflowEvents)
 }
 
-// checkWorkflowExists mocks base method
+// checkWorkflowExists mocks base method.
 func (m *MocktransactionManager) checkWorkflowExists(ctx context.Context, domainID, workflowID, runID string) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "checkWorkflowExists", ctx, domainID, workflowID, runID)
@@ -111,13 +83,27 @@ func (m *MocktransactionManager) checkWorkflowExists(ctx context.Context, domain
 	return ret0, ret1
 }
 
-// checkWorkflowExists indicates an expected call of checkWorkflowExists
+// checkWorkflowExists indicates an expected call of checkWorkflowExists.
 func (mr *MocktransactionManagerMockRecorder) checkWorkflowExists(ctx, domainID, workflowID, runID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "checkWorkflowExists", reflect.TypeOf((*MocktransactionManager)(nil).checkWorkflowExists), ctx, domainID, workflowID, runID)
 }
 
-// getCurrentWorkflowRunID mocks base method
+// createWorkflow mocks base method.
+func (m *MocktransactionManager) createWorkflow(ctx context.Context, now time.Time, targetWorkflow execution.Workflow) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "createWorkflow", ctx, now, targetWorkflow)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// createWorkflow indicates an expected call of createWorkflow.
+func (mr *MocktransactionManagerMockRecorder) createWorkflow(ctx, now, targetWorkflow interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "createWorkflow", reflect.TypeOf((*MocktransactionManager)(nil).createWorkflow), ctx, now, targetWorkflow)
+}
+
+// getCurrentWorkflowRunID mocks base method.
 func (m *MocktransactionManager) getCurrentWorkflowRunID(ctx context.Context, domainID, workflowID string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "getCurrentWorkflowRunID", ctx, domainID, workflowID)
@@ -126,13 +112,13 @@ func (m *MocktransactionManager) getCurrentWorkflowRunID(ctx context.Context, do
 	return ret0, ret1
 }
 
-// getCurrentWorkflowRunID indicates an expected call of getCurrentWorkflowRunID
+// getCurrentWorkflowRunID indicates an expected call of getCurrentWorkflowRunID.
 func (mr *MocktransactionManagerMockRecorder) getCurrentWorkflowRunID(ctx, domainID, workflowID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "getCurrentWorkflowRunID", reflect.TypeOf((*MocktransactionManager)(nil).getCurrentWorkflowRunID), ctx, domainID, workflowID)
 }
 
-// loadNDCWorkflow mocks base method
+// loadNDCWorkflow mocks base method.
 func (m *MocktransactionManager) loadNDCWorkflow(ctx context.Context, domainID, workflowID, runID string) (execution.Workflow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "loadNDCWorkflow", ctx, domainID, workflowID, runID)
@@ -141,8 +127,22 @@ func (m *MocktransactionManager) loadNDCWorkflow(ctx context.Context, domainID, 
 	return ret0, ret1
 }
 
-// loadNDCWorkflow indicates an expected call of loadNDCWorkflow
+// loadNDCWorkflow indicates an expected call of loadNDCWorkflow.
 func (mr *MocktransactionManagerMockRecorder) loadNDCWorkflow(ctx, domainID, workflowID, runID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "loadNDCWorkflow", reflect.TypeOf((*MocktransactionManager)(nil).loadNDCWorkflow), ctx, domainID, workflowID, runID)
+}
+
+// updateWorkflow mocks base method.
+func (m *MocktransactionManager) updateWorkflow(ctx context.Context, now time.Time, isWorkflowRebuilt bool, targetWorkflow, newWorkflow execution.Workflow) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "updateWorkflow", ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// updateWorkflow indicates an expected call of updateWorkflow.
+func (mr *MocktransactionManagerMockRecorder) updateWorkflow(ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "updateWorkflow", reflect.TypeOf((*MocktransactionManager)(nil).updateWorkflow), ctx, now, isWorkflowRebuilt, targetWorkflow, newWorkflow)
 }
