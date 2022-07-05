@@ -100,7 +100,7 @@ func TestTaskAckManager_GetTasks(t *testing.T) {
 			expectResult: &types.ReplicationMessages{
 				ReplicationTasks:       []*types.ReplicationTask{&testHydratedTask11, &testHydratedTask12, &testHydratedTask14},
 				LastRetrievedMessageID: 14,
-				HasMore:                true,
+				HasMore:                false,
 			},
 			expectAckLevel: 5,
 		},
