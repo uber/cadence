@@ -82,7 +82,25 @@ func NewClient(
 		logger:            logger,
 	}
 }
-
+func (c *clientImpl) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	peer, err := c.peerResolver.FromWorkflowID(request.StartWorkflowExecutionRequest.StartRequest.WorkflowID)
+	if err != nil {
+		return nil, err
+	}
+	var response *types.RestartWorkflowExecutionResponse
+	op := func(ctx context.Context, peer string) error {
+		var err error
+		ctx, cancel := c.createContext(ctx)
+		defer cancel()
+		response, err = c.client.RestartWorkflowExecution(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
+		return err
+	}
+	err = c.executeWithRedirect(ctx, peer, op)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
 func (c *clientImpl) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryStartWorkflowExecutionRequest,

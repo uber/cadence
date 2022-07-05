@@ -255,7 +255,7 @@ type Interface interface {
 		ctx context.Context,
 		RestartRequest *history.RestartWorkflowExecutionRequest,
 		opts ...yarpc.CallOption,
-	) (*shared.StartWorkflowExecutionResponse, error)
+	) (*shared.RestartWorkflowExecutionResponse, error)
 
 	ScheduleDecisionTask(
 		ctx context.Context,
@@ -1313,7 +1313,7 @@ func (c client) RestartWorkflowExecution(
 	ctx context.Context,
 	_RestartRequest *history.RestartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.StartWorkflowExecutionResponse, err error) {
+) (success *shared.RestartWorkflowExecutionResponse, err error) {
 
 	var result history.HistoryService_RestartWorkflowExecution_Result
 	args := history.HistoryService_RestartWorkflowExecution_Helper.Args(_RestartRequest)

@@ -599,7 +599,7 @@ func (a *AccessControlledWorkflowHandler) RespondQueryTaskCompleted(
 	return a.frontendHandler.RespondQueryTaskCompleted(ctx, request)
 }
 
-func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error) {
+func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error) {
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendRestartWorkflowExecutionScope, request.StartWorkflowExecutionRequest)
 
 	attr := &authorization.Attributes{

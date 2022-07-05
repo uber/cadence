@@ -1042,6 +1042,17 @@ func ToHistorySignalWorkflowExecutionRequest(t *history.SignalWorkflowExecutionR
 	}
 }
 
+// FromHistoryRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
+func FromHistoryRestartWorkflowExecutionRequest(t *types.HistoryRestartWorkflowExecutionRequest) *history.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &history.RestartWorkflowExecutionRequest{
+		TerminateWorkflowExecutionRequest: FromHistoryTerminateWorkflowExecutionRequest(t.HistoryTerminateWorkflowExecutionRequest),
+		StartWorkflowExecutionRequest:     FromHistoryStartWorkflowExecutionRequest(t.StartWorkflowExecutionRequest),
+	}
+}
+
 // FromHistoryStartWorkflowExecutionRequest converts internal StartWorkflowExecutionRequest type to thrift
 func FromHistoryStartWorkflowExecutionRequest(t *types.HistoryStartWorkflowExecutionRequest) *history.StartWorkflowExecutionRequest {
 	if t == nil {

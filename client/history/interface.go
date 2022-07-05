@@ -67,6 +67,7 @@ type Client interface {
 	RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest, ...yarpc.CallOption) (*types.RespondCrossClusterTasksCompletedResponse, error)
 	RespondDecisionTaskCompleted(context.Context, *types.HistoryRespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
 	RespondDecisionTaskFailed(context.Context, *types.HistoryRespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
+	RestartWorkflowExecution(context.Context, *types.HistoryRestartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error)
 	ScheduleDecisionTask(context.Context, *types.ScheduleDecisionTaskRequest, ...yarpc.CallOption) error
 	SignalWithStartWorkflowExecution(context.Context, *types.HistorySignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
 	SignalWorkflowExecution(context.Context, *types.HistorySignalWorkflowExecutionRequest, ...yarpc.CallOption) error

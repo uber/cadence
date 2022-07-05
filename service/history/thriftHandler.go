@@ -260,9 +260,9 @@ func (t ThriftHandler) RespondDecisionTaskFailed(ctx context.Context, request *h
 }
 
 // RestartWorkflowExecution terminates a workflow then restarts it
-func (t ThriftHandler) RestartWorkflowExecution(ctx context.Context, restartRequest *h.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+func (t ThriftHandler) RestartWorkflowExecution(ctx context.Context, restartRequest *h.RestartWorkflowExecutionRequest) (*shared.RestartWorkflowExecutionResponse, error) {
 	response, err := t.h.RestartWorkflowExecution(ctx, thrift.ToHistoryStartWorkflowExecutionRequest(restartRequest.StartWorkflowExecutionRequest), thrift.ToHistoryTerminateWorkflowExecutionRequest(restartRequest.TerminateWorkflowExecutionRequest))
-	return thrift.FromStartWorkflowExecutionResponse(response), thrift.FromError(err)
+	return thrift.FromRestartWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
 // ScheduleDecisionTask forwards request to the underlying handler

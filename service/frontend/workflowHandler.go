@@ -1975,10 +1975,10 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	return nil
 }
 func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context,
-	request *types.RestartWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+	request *types.RestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
-	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, request.StartWorkflowExecutionRequest)
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRestartWorkflowExecutionScope, request.StartWorkflowExecutionRequest)
 	defer sw.Stop()
 
 	if wh.isShuttingDown() {
@@ -2045,7 +2045,7 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context,
 	}
 
 	wh.GetLogger().Debug(
-		"Received StartWorkflowExecution. WorkflowID",
+		"Received RestartWorkflowExecution. WorkflowID",
 		tag.WorkflowID(request.StartWorkflowExecutionRequest.GetWorkflowID()))
 
 	if request.StartWorkflowExecutionRequest.WorkflowType == nil || request.StartWorkflowExecutionRequest.WorkflowType.GetName() == "" {
@@ -2100,7 +2100,7 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context,
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	wh.GetLogger().Debug("Start workflow execution request domain", tag.WorkflowDomainName(domainName))
+	wh.GetLogger().Debug("Restart workflow execution request domain", tag.WorkflowDomainName(domainName))
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
 		return nil, wh.error(err, scope, tags...)
@@ -2127,10 +2127,15 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context,
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	historyRequest := common.CreateHistoryStartWorkflowRequest(
-		domainID, request.StartWorkflowExecutionRequest, time.Now())
+	historyRequest := &types.HistoryRestartWorkflowExecutionRequest{
+		StartWorkflowExecutionRequest: common.CreateHistoryStartWorkflowRequest(domainID, request.StartWorkflowExecutionRequest, time.Now()),
+		HistoryTerminateWorkflowExecutionRequest: &types.HistoryTerminateWorkflowExecutionRequest{
+			DomainUUID:       domainID,
+			TerminateRequest: request.TerminateWorkflowExecutionRequest,
+		},
+	}
 
-	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
+	resp, err = wh.GetHistoryClient().RestartWorkflowExecution(ctx, historyRequest)
 	if err != nil {
 		return nil, wh.error(err, scope, tags...)
 	}

@@ -211,7 +211,7 @@ type Interface interface {
 	RestartWorkflowExecution(
 		ctx context.Context,
 		RestartRequest *shared.RestartWorkflowExecutionRequest,
-	) (*shared.StartWorkflowExecutionResponse, error)
+	) (*shared.RestartWorkflowExecutionResponse, error)
 
 	ScanWorkflowExecutions(
 		ctx context.Context,
@@ -671,7 +671,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RestartWorkflowExecution),
 					NoWire: restartworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "RestartWorkflowExecution(RestartRequest *shared.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
+				Signature:    "RestartWorkflowExecution(RestartRequest *shared.RestartWorkflowExecutionRequest) (*shared.RestartWorkflowExecutionResponse)",
 				ThriftModule: cadence.ThriftModule,
 			},
 

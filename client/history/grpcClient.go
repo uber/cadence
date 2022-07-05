@@ -213,6 +213,11 @@ func (g grpcClient) RespondDecisionTaskFailed(ctx context.Context, request *type
 	return proto.ToError(err)
 }
 
+func (g grpcClient) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (g grpcClient) ScheduleDecisionTask(ctx context.Context, request *types.ScheduleDecisionTaskRequest, opts ...yarpc.CallOption) error {
 	_, err := g.c.ScheduleDecisionTask(ctx, proto.FromHistoryScheduleDecisionTaskRequest(request), opts...)
 	return proto.ToError(err)

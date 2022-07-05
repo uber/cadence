@@ -37,11 +37,6 @@ type grpcClient struct {
 	visibility apiv1.VisibilityAPIYARPCClient
 }
 
-func (g grpcClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
-	//g.workflow
-	panic("implement me")
-}
-
 func NewGRPCClient(
 	domain apiv1.DomainAPIYARPCClient,
 	workflow apiv1.WorkflowAPIYARPCClient,
@@ -219,6 +214,11 @@ func (g grpcClient) RespondDecisionTaskFailed(ctx context.Context, request *type
 func (g grpcClient) RespondQueryTaskCompleted(ctx context.Context, request *types.RespondQueryTaskCompletedRequest, opts ...yarpc.CallOption) error {
 	_, err := g.worker.RespondQueryTaskCompleted(ctx, proto.FromRespondQueryTaskCompletedRequest(request), opts...)
 	return proto.ToError(err)
+}
+
+func (g grpcClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, option ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	//g.workflow
+	panic("implement me")
 }
 
 func (g grpcClient) ScanWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {

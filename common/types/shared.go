@@ -5987,6 +5987,11 @@ func (v *StartWorkflowExecutionRequest) GetCronSchedule() (o string) {
 	return
 }
 
+// RestartWorkflowExecutionResponse is an internal type (TBD...)
+type RestartWorkflowExecutionResponse struct {
+	RunID string `json:"runId,omitempty"`
+}
+
 // StartWorkflowExecutionResponse is an internal type (TBD...)
 type StartWorkflowExecutionResponse struct {
 	RunID string `json:"runId,omitempty"`

@@ -1362,7 +1362,14 @@ func ToHistoryStartWorkflowExecutionRequest(t *historyv1.StartWorkflowExecutionR
 		FirstDecisionTaskBackoffSeconds: durationToSeconds(t.FirstDecisionTaskBackoff),
 	}
 }
-
+func FromHistoryRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *historyv1.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &historyv1.RestartWorkflowExecutionResponse{
+		RunId: t.RunID,
+	}
+}
 func FromHistoryStartWorkflowExecutionResponse(t *types.StartWorkflowExecutionResponse) *historyv1.StartWorkflowExecutionResponse {
 	if t == nil {
 		return nil

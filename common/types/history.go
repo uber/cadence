@@ -889,6 +889,12 @@ func (v *HistorySignalWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) 
 	return
 }
 
+// HistoryRestartWorkflowExecutionRequest is an internal type (TBD...)
+type HistoryRestartWorkflowExecutionRequest struct {
+	StartWorkflowExecutionRequest            *HistoryStartWorkflowExecutionRequest     `json:"startWorkflowExecutionRequest,omitempty"`
+	HistoryTerminateWorkflowExecutionRequest *HistoryTerminateWorkflowExecutionRequest `json:"historyTerminateWorkflowExecutionRequest,omitempty"`
+}
+
 // HistoryStartWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryStartWorkflowExecutionRequest struct {
 	DomainUUID                      string                         `json:"domainUUID,omitempty"`

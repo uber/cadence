@@ -209,9 +209,9 @@ func (t thriftClient) RespondQueryTaskCompleted(ctx context.Context, request *ty
 	return thrift.ToError(err)
 }
 
-func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
 	response, err := t.c.RestartWorkflowExecution(ctx, thrift.FromRestartWorkflowExecutionRequest(request), opts...)
-	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
+	return thrift.ToRestartWorkflowExecutionResponse(response), thrift.ToError(err)
 }
 
 func (t thriftClient) ScanWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {

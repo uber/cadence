@@ -228,9 +228,10 @@ func (g grpcHandler) RespondDecisionTaskFailed(ctx context.Context, request *his
 	return &historyv1.RespondDecisionTaskFailedResponse{}, proto.FromError(err)
 }
 
-func (g grpcHandler) RestartWorkflowExecution(ctx context.Context, request *historyv1.RestartWorkflowExecutionRequest) (*historyv1.StartWorkflowExecutionResponse, error) {
-	response, err := g.h.RestartWorkflowExecution(ctx, proto.ToHistoryStartWorkflowExecutionRequest(request.StartWorkflowExecutionRequest), proto.ToHistoryTerminateWorkflowExecutionRequest(request.TerminateWorkflowExecutionRequest))
-	return proto.FromHistoryStartWorkflowExecutionResponse(response), proto.FromError(err)
+func (g grpcHandler) RestartWorkflowExecution(ctx context.Context, request *historyv1.RestartWorkflowExecutionRequest) (*historyv1.RestartWorkflowExecutionResponse, error) {
+	response, err := g.h.RestartWorkflowExecution(ctx, proto.ToHistoryStartWorkflowExecutionRequest(request.GetStartWorkflowExecutionRequest()),
+		proto.ToHistoryTerminateWorkflowExecutionRequest(request.GetTerminateWorkflowExecutionRequest()))
+	return proto.FromHistoryRestartWorkflowExecutionResponse(response), proto.FromError(err)
 }
 
 func (g grpcHandler) ScheduleDecisionTask(ctx context.Context, request *historyv1.ScheduleDecisionTaskRequest) (*historyv1.ScheduleDecisionTaskResponse, error) {

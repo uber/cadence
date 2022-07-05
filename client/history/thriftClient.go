@@ -213,6 +213,11 @@ func (t thriftClient) RespondDecisionTaskFailed(ctx context.Context, request *ty
 	return thrift.ToError(err)
 }
 
+func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	response, err := t.c.RestartWorkflowExecution(ctx, thrift.FromHistoryRestartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToRestartWorkflowExecutionResponse(response), thrift.ToError(err)
+}
+
 func (t thriftClient) ScheduleDecisionTask(ctx context.Context, request *types.ScheduleDecisionTaskRequest, opts ...yarpc.CallOption) error {
 	err := t.c.ScheduleDecisionTask(ctx, thrift.FromScheduleDecisionTaskRequest(request), opts...)
 	return thrift.ToError(err)

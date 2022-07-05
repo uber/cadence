@@ -1203,7 +1203,7 @@ func (m *MockClient) RestartWorkflowExecution(
 	ctx context.Context,
 	_RestartRequest *history.RestartWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (success *shared.StartWorkflowExecutionResponse, err error) {
+) (success *shared.RestartWorkflowExecutionResponse, err error) {
 
 	args := []interface{}{ctx, _RestartRequest}
 	for _, o := range opts {
@@ -1211,7 +1211,7 @@ func (m *MockClient) RestartWorkflowExecution(
 	}
 	i := 0
 	ret := m.ctrl.Call(m, "RestartWorkflowExecution", args...)
-	success, _ = ret[i].(*shared.StartWorkflowExecutionResponse)
+	success, _ = ret[i].(*shared.RestartWorkflowExecutionResponse)
 	i++
 	err, _ = ret[i].(error)
 	return

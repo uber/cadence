@@ -50,7 +50,17 @@ func NewRetryableClient(
 		),
 	}
 }
+func (c *retryableClient) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	var resp *types.RestartWorkflowExecutionResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RestartWorkflowExecution(ctx, request, opts...)
+		return err
+	}
 
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
 func (c *retryableClient) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryStartWorkflowExecutionRequest,

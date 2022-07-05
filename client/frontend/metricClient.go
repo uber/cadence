@@ -36,7 +36,7 @@ type metricClient struct {
 	metricsClient metrics.Client
 }
 
-func (c *metricClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+func (c *metricClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
 	c.metricsClient.IncCounter(metrics.FrontendClientRestartWorkflowExecutionScope, metrics.CadenceClientRequests)
 
 	sw := c.metricsClient.StartTimer(metrics.FrontendClientRestartWorkflowExecutionScope, metrics.CadenceClientLatency)

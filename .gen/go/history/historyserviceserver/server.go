@@ -219,7 +219,7 @@ type Interface interface {
 	RestartWorkflowExecution(
 		ctx context.Context,
 		RestartRequest *history.RestartWorkflowExecutionRequest,
-	) (*shared.StartWorkflowExecutionResponse, error)
+	) (*shared.RestartWorkflowExecutionResponse, error)
 
 	ScheduleDecisionTask(
 		ctx context.Context,
@@ -696,7 +696,7 @@ func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 					Unary:  thrift.UnaryHandler(h.RestartWorkflowExecution),
 					NoWire: restartworkflowexecution_NoWireHandler{impl},
 				},
-				Signature:    "RestartWorkflowExecution(RestartRequest *history.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse)",
+				Signature:    "RestartWorkflowExecution(RestartRequest *history.RestartWorkflowExecutionRequest) (*shared.RestartWorkflowExecutionResponse)",
 				ThriftModule: history.ThriftModule,
 			},
 

@@ -30,8 +30,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/service/history/workflow"
-
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/membership"
@@ -111,7 +109,7 @@ type (
 		SyncShardStatus(context.Context, *types.SyncShardStatusRequest) error
 		TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest) error
 		GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error)
-		RestartWorkflowExecution(ctx context.Context, startWrappedRequest *types.HistoryStartWorkflowExecutionRequest, terminateWrappedRequest *types.HistoryTerminateWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error)
+		RestartWorkflowExecution(ctx context.Context, startWrappedRequest *types.HistoryStartWorkflowExecutionRequest, terminateWrappedRequest *types.HistoryTerminateWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error)
 	}
 
 	// handlerImpl is an implementation for history service independent of wire protocol
@@ -711,13 +709,12 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 func (h *handlerImpl) RestartWorkflowExecution(
 	ctx context.Context,
 	startWrappedRequest *types.HistoryStartWorkflowExecutionRequest,
-	terminateWrappedRequest *types.HistoryTerminateWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+	terminateWrappedRequest *types.HistoryTerminateWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
-
-	scope, sw := h.startRequestProfile(ctx, metrics.HistoryTerminateWorkflowExecutionScope)
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRestartWorkflowExecutionScope)
 	defer sw.Stop()
-
+	h.GetLogger().Info("TEST1234")
 	if h.isShuttingDown() {
 		return nil, errShuttingDown
 	}
@@ -730,16 +727,14 @@ func (h *handlerImpl) RestartWorkflowExecution(
 	if ok := h.rateLimiter.Allow(); !ok {
 		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
 	}
-
 	workflowExecution := terminateWrappedRequest.TerminateRequest.WorkflowExecution
 	workflowID := workflowExecution.GetWorkflowID()
 	engine, err1 := h.controller.GetEngine(workflowID)
 	if err1 != nil {
 		return nil, h.error(err1, scope, domainID, workflowID)
 	}
-
 	err2 := engine.TerminateWorkflowExecution(ctx, terminateWrappedRequest)
-	if err2 != nil && err2 != workflow.ErrAlreadyCompleted {
+	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
 	startRequest := startWrappedRequest.StartRequest
@@ -748,7 +743,9 @@ func (h *handlerImpl) RestartWorkflowExecution(
 	if err3 != nil {
 		return nil, h.error(err3, scope, domainID, startRequest.GetWorkflowID())
 	}
-	return response, nil
+	return &types.RestartWorkflowExecutionResponse{
+		RunID: response.GetRunID(),
+	}, nil
 }
 
 // StartWorkflowExecution - creates a new workflow execution
@@ -1248,7 +1245,6 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 
 	defer log.CapturePanic(h.GetLogger(), &retError)
 	h.startWG.Wait()
-
 	scope, sw := h.startRequestProfile(ctx, metrics.HistoryTerminateWorkflowExecutionScope)
 	defer sw.Stop()
 

@@ -55,7 +55,27 @@ func NewErrorInjectionClient(
 		logger:    logger,
 	}
 }
+func (c *errorInjectionClient) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
 
+	var resp *types.RestartWorkflowExecutionResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.RestartWorkflowExecution(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.HistoryClientOperationStartWorkflowExecution,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
 func (c *errorInjectionClient) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.HistoryStartWorkflowExecutionRequest,

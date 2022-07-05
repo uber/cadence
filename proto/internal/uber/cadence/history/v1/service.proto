@@ -68,6 +68,9 @@ service HistoryAPI {
   // After reset, the history will grow from nextFirstEventID.
   rpc ResetWorkflowExecution(ResetWorkflowExecutionRequest) returns (ResetWorkflowExecutionResponse);
 
+  // RestartWorkflowExecution terminates then restarts an existing workflow
+  rpc RestartWorkflowExecution(RestartWorkflowExecutionRequest) returns (RestartWorkflowExecutionResponse);
+
   // TerminateWorkflowExecution terminates an existing workflow execution by recording WorkflowExecutionTerminated event
   // in the history and immediately terminating the execution instance.
   rpc TerminateWorkflowExecution(TerminateWorkflowExecutionRequest) returns (TerminateWorkflowExecutionResponse);
@@ -246,7 +249,9 @@ message StartWorkflowExecutionRequest {
 message StartWorkflowExecutionResponse {
   string run_id = 1;
 }
-
+message RestartWorkflowExecutionResponse {
+  string run_id = 1;
+}
 message RestartWorkflowExecutionRequest {
   TerminateWorkflowExecutionRequest terminateWorkflowExecutionRequest = 1;
   StartWorkflowExecutionRequest startWorkflowExecutionRequest = 2;

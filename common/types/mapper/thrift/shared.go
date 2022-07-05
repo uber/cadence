@@ -5287,12 +5287,32 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 }
 
 // FromStartWorkflowExecutionResponse converts internal StartWorkflowExecutionResponse type to thrift
+func FromRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *shared.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionResponse{
+		RunId: &t.RunID,
+	}
+}
+
+// FromStartWorkflowExecutionResponse converts internal StartWorkflowExecutionResponse type to thrift
 func FromStartWorkflowExecutionResponse(t *types.StartWorkflowExecutionResponse) *shared.StartWorkflowExecutionResponse {
 	if t == nil {
 		return nil
 	}
 	return &shared.StartWorkflowExecutionResponse{
 		RunId: &t.RunID,
+	}
+}
+
+// ToRestartWorkflowExecutionResponse converts thrift StartWorkflowExecutionResponse type to internal
+func ToRestartWorkflowExecutionResponse(t *shared.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionResponse{
+		RunID: t.GetRunId(),
 	}
 }
 

@@ -43,7 +43,19 @@ func NewMetricClient(client Client, metricsClient metrics.Client) Client {
 		metricsClient: metricsClient,
 	}
 }
+func (c *metricClient) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	c.metricsClient.IncCounter(metrics.HistoryRestartWorkflowExecutionScope, metrics.CadenceClientRequests)
 
+	sw := c.metricsClient.StartTimer(metrics.HistoryRestartWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RestartWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.HistoryRestartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+
+	return resp, err
+}
 func (c *metricClient) StartWorkflowExecution(
 	context context.Context,
 	request *types.HistoryStartWorkflowExecutionRequest,
