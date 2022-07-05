@@ -34,7 +34,6 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -70,7 +69,7 @@ func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manag
 	controller := gomock.NewController(s.T())
 	workflowClient := history.NewMockClient(controller)
 
-	maxWorkflowRetentionInDays := dynamicconfig.GetIntPropertyFn(domain.DefaultMaxWorkflowRetentionInDays)
+	maxWorkflowRetentionInDays := dynamicconfig.GetIntPropertyFn(dynamicconfig.MaxRetentionDays.DefaultInt())
 	scvgr := NewScavenger(db, rps, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays)
 	scvgr.isInTest = true
 	return db, workflowClient, scvgr, controller
@@ -139,13 +138,13 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 			{
 				TreeID:   "treeID1",
 				BranchID: "branchID1",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     "error-info",
 			},
 			{
 				TreeID:   "treeID2",
 				BranchID: "branchID2",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     "error-info",
 			},
 		},
@@ -159,13 +158,13 @@ func (s *ScavengerTestSuite) TestAllErrorSplittingTasksTwoPages() {
 			{
 				TreeID:   "treeID3",
 				BranchID: "branchID3",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     "error-info",
 			},
 			{
 				TreeID:   "treeID4",
 				BranchID: "branchID4",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     "error-info",
 			},
 		},
@@ -191,13 +190,13 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 			{
 				TreeID:   "treeID1",
 				BranchID: "branchID1",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID1", "workflowID1", "runID1"),
 			},
 			{
 				TreeID:   "treeID2",
 				BranchID: "branchID2",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID2", "workflowID2", "runID2"),
 			},
 		},
@@ -211,13 +210,13 @@ func (s *ScavengerTestSuite) TestNoGarbageTwoPages() {
 			{
 				TreeID:   "treeID3",
 				BranchID: "branchID3",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID3", "workflowID3", "runID3"),
 			},
 			{
 				TreeID:   "treeID4",
 				BranchID: "branchID4",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID4", "workflowID4", "runID4"),
 			},
 		},
@@ -272,13 +271,13 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 			{
 				TreeID:   "treeID1",
 				BranchID: "branchID1",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID1", "workflowID1", "runID1"),
 			},
 			{
 				TreeID:   "treeID2",
 				BranchID: "branchID2",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID2", "workflowID2", "runID2"),
 			},
 		},
@@ -291,13 +290,13 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 			{
 				TreeID:   "treeID3",
 				BranchID: "branchID3",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID3", "workflowID3", "runID3"),
 			},
 			{
 				TreeID:   "treeID4",
 				BranchID: "branchID4",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID4", "workflowID4", "runID4"),
 			},
 		},
@@ -385,7 +384,7 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 				// split error
 				TreeID:   "treeID2",
 				BranchID: "branchID2",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     "error-info",
 			},
 		},
@@ -399,21 +398,21 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 				// delete succ
 				TreeID:   "treeID3",
 				BranchID: "branchID3",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID3", "workflowID3", "runID3"),
 			},
 			{
 				// delete fail
 				TreeID:   "treeID4",
 				BranchID: "branchID4",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID4", "workflowID4", "runID4"),
 			},
 			{
 				// not delete
 				TreeID:   "treeID5",
 				BranchID: "branchID5",
-				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(domain.DefaultMaxWorkflowRetentionInDays) * 2),
+				ForkTime: time.Now().Add(-getHistoryCleanupThreshold(dynamicconfig.MaxRetentionDays.DefaultInt()) * 2),
 				Info:     p.BuildHistoryGarbageCleanupInfo("domainID5", "workflowID5", "runID5"),
 			},
 		},

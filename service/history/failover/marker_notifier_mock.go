@@ -32,48 +32,48 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockMarkerNotifier is a mock of MarkerNotifier interface
+// MockMarkerNotifier is a mock of MarkerNotifier interface.
 type MockMarkerNotifier struct {
 	ctrl     *gomock.Controller
 	recorder *MockMarkerNotifierMockRecorder
 }
 
-// MockMarkerNotifierMockRecorder is the mock recorder for MockMarkerNotifier
+// MockMarkerNotifierMockRecorder is the mock recorder for MockMarkerNotifier.
 type MockMarkerNotifierMockRecorder struct {
 	mock *MockMarkerNotifier
 }
 
-// NewMockMarkerNotifier creates a new mock instance
+// NewMockMarkerNotifier creates a new mock instance.
 func NewMockMarkerNotifier(ctrl *gomock.Controller) *MockMarkerNotifier {
 	mock := &MockMarkerNotifier{ctrl: ctrl}
 	mock.recorder = &MockMarkerNotifierMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMarkerNotifier) EXPECT() *MockMarkerNotifierMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
+// Start mocks base method.
 func (m *MockMarkerNotifier) Start() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start")
 }
 
-// Start indicates an expected call of Start
+// Start indicates an expected call of Start.
 func (mr *MockMarkerNotifierMockRecorder) Start() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockMarkerNotifier)(nil).Start))
 }
 
-// Stop mocks base method
+// Stop mocks base method.
 func (m *MockMarkerNotifier) Stop() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Stop")
 }
 
-// Stop indicates an expected call of Stop
+// Stop indicates an expected call of Stop.
 func (mr *MockMarkerNotifierMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockMarkerNotifier)(nil).Stop))

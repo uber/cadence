@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination task_ack_manager_mock.go
-
 package replication
 
 import (
@@ -584,7 +582,7 @@ func getVersionHistoryItems(
 		}
 	}
 
-	versionHistoryIndex, err := versionHistories.FindFirstVersionHistoryIndexByItem(
+	_, versionHistory, err := versionHistories.FindFirstVersionHistoryByItem(
 		persistence.NewVersionHistoryItem(
 			eventID,
 			version,
@@ -594,9 +592,5 @@ func getVersionHistoryItems(
 		return nil, nil, err
 	}
 
-	versionHistory, err := versionHistories.GetVersionHistory(versionHistoryIndex)
-	if err != nil {
-		return nil, nil, err
-	}
 	return versionHistory.ToInternalType().Items, versionHistory.GetBranchToken(), nil
 }
