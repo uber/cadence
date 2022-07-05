@@ -77,6 +77,23 @@ var (
 	testWorkflowIdentifier        = definition.NewWorkflowIdentifier(testDomainID, testWorkflowID, testRunID)
 )
 
+func TestTaskHydrator_UnknownTask(t *testing.T) {
+	task := persistence.ReplicationTaskInfo{
+		TaskType:   99,
+		DomainID:   testDomainID,
+		WorkflowID: testWorkflowID,
+		RunID:      testRunID,
+	}
+	th := TaskHydrator{msProvider: &fakeMutableStateProvider{
+		workflows: map[definition.WorkflowIdentifier]mutableState{
+			testWorkflowIdentifier: &fakeMutableState{},
+		},
+	}}
+	result, err := th.Hydrate(context.Background(), task)
+	assert.Equal(t, errUnknownReplicationTask, err)
+	assert.Nil(t, result)
+}
+
 func TestTaskHydrator_HydrateFailoverMarkerTask(t *testing.T) {
 	task := persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
