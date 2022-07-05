@@ -55,7 +55,9 @@ else
 test_v =
 endif
 
-# a literal space value, for makefile purposes
+# a literal space value, for makefile purposes.
+# the full "trailing # one space after $(null)" is necessary for correct behavior,
+# and this strategy works in both new and old versions of make, `SPACE +=` does not.
 null  :=
 SPACE := $(null) #
 COMMA := ,
