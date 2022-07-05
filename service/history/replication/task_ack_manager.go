@@ -46,20 +46,7 @@ var (
 
 type (
 	// TaskAckManager is the ack manager for replication tasks
-	TaskAckManager interface {
-		GetTask(
-			ctx context.Context,
-			taskInfo *types.ReplicationTaskInfo,
-		) (*types.ReplicationTask, error)
-
-		GetTasks(
-			ctx context.Context,
-			pollingCluster string,
-			lastReadTaskID int64,
-		) (*types.ReplicationMessages, error)
-	}
-
-	taskAckManagerImpl struct {
+	TaskAckManager struct {
 		ackLevels     ackLevelStore
 		domains       domainCache
 		rateLimiter   *quotas.DynamicRateLimiter
@@ -90,8 +77,6 @@ type (
 	}
 )
 
-var _ TaskAckManager = (*taskAckManagerImpl)(nil)
-
 // NewTaskAckManager initializes a new replication task ack manager
 func NewTaskAckManager(
 	shardID int,
@@ -108,7 +93,7 @@ func NewTaskAckManager(
 	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
 	retryPolicy.SetBackoffCoefficient(1)
 
-	return &taskAckManagerImpl{
+	return TaskAckManager{
 		ackLevels:   ackLevels,
 		domains:     domains,
 		rateLimiter: quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64()),
@@ -127,7 +112,7 @@ func NewTaskAckManager(
 	}
 }
 
-func (t *taskAckManagerImpl) GetTask(ctx context.Context, taskInfo *types.ReplicationTaskInfo) (*types.ReplicationTask, error) {
+func (t *TaskAckManager) GetTask(ctx context.Context, taskInfo *types.ReplicationTaskInfo) (*types.ReplicationTask, error) {
 	task := persistence.ReplicationTaskInfo{
 		DomainID:     taskInfo.DomainID,
 		WorkflowID:   taskInfo.WorkflowID,
@@ -143,7 +128,7 @@ func (t *taskAckManagerImpl) GetTask(ctx context.Context, taskInfo *types.Replic
 	return t.hydrator.Hydrate(ctx, task)
 }
 
-func (t *taskAckManagerImpl) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*types.ReplicationMessages, error) {
+func (t *TaskAckManager) GetTasks(ctx context.Context, pollingCluster string, lastReadTaskID int64) (*types.ReplicationMessages, error) {
 	if lastReadTaskID == common.EmptyMessageID {
 		lastReadTaskID = t.ackLevels.GetClusterReplicationLevel(pollingCluster)
 	}
