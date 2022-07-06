@@ -138,7 +138,7 @@ endef
 # checks of other packages are handled in $(BUILD)/go_mod_check
 define go_mod_build_tool
 $Q echo "building $(or $(2), $(notdir $(1))) from go.mod..."
-$Q ./scripts/check-gomod-version.sh $(1) $(if $(test_v),-v)
+$Q ./scripts/check-gomod-version.sh $(1) $(if $(verbose),-v)
 $Q go build -mod=readonly -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
 endef
 
@@ -165,7 +165,7 @@ $(BIN)/enumer: internal/tools/go.mod
 $(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
-$(BIN)/revive:internal/tools/ go.mod
+$(BIN)/revive: internal/tools/go.mod
 	$(call go_build_tool,github.com/mgechev/revive)
 
 $(BIN)/protoc-gen-gogofast: go.mod | $(BIN)
@@ -178,11 +178,11 @@ $(BIN)/goveralls: internal/tools/go.mod
 	$(call go_build_tool,github.com/mattn/goveralls)
 
 $(BUILD)/go_mod_check: go.mod internal/tools/go.mod
-	@# ensure both have the same apache/thrift replacement
-	@./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(test_v),-v)
-	@# generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
-	@./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(test_v),-v)
-	@touch $@
+	$Q # ensure both have the same apache/thrift replacement
+	$Q ./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(verbose),-v)
+	$Q # generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
+	$Q ./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(verbose),-v)
+	$Q touch $@
 
 # copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
 $(BIN)/copyright: cmd/tools/copyright/licensegen.go
