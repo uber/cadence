@@ -51,6 +51,22 @@ func NewRetryableClient(
 	}
 }
 
+func (c *retryableClient) CountWorkflowExecutions(
+	ctx context.Context,
+	request *types.CountWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.CountWorkflowExecutionsResponse, error) {
+
+	var resp *types.CountWorkflowExecutionsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.CountWorkflowExecutions(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) DeprecateDomain(
 	ctx context.Context,
 	request *types.DeprecateDomainRequest,
@@ -105,6 +121,50 @@ func (c *retryableClient) DescribeWorkflowExecution(
 	op := func() error {
 		var err error
 		resp, err = c.client.DescribeWorkflowExecution(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) GetClusterInfo(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*types.ClusterInfo, error) {
+	var resp *types.ClusterInfo
+	op := func() error {
+		var err error
+		resp, err = c.client.GetClusterInfo(ctx, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) GetSearchAttributes(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*types.GetSearchAttributesResponse, error) {
+
+	var resp *types.GetSearchAttributesResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetSearchAttributes(ctx, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+	var resp *types.GetTaskListsByDomainResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetTaskListsByDomain(ctx, request, opts...)
 		return err
 	}
 	err := c.throttleRetry.Do(ctx, op)
@@ -191,6 +251,21 @@ func (c *retryableClient) ListOpenWorkflowExecutions(
 	return resp, err
 }
 
+func (c *retryableClient) ListTaskListPartitions(
+	ctx context.Context,
+	request *types.ListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListTaskListPartitionsResponse, error) {
+	var resp *types.ListTaskListPartitionsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.ListTaskListPartitions(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListWorkflowExecutionsRequest,
@@ -201,53 +276,6 @@ func (c *retryableClient) ListWorkflowExecutions(
 	op := func() error {
 		var err error
 		resp, err = c.client.ListWorkflowExecutions(ctx, request, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return resp, err
-}
-
-func (c *retryableClient) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *types.ListWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListWorkflowExecutionsResponse, error) {
-
-	var resp *types.ListWorkflowExecutionsResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.ScanWorkflowExecutions(ctx, request, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return resp, err
-}
-
-func (c *retryableClient) CountWorkflowExecutions(
-	ctx context.Context,
-	request *types.CountWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.CountWorkflowExecutionsResponse, error) {
-
-	var resp *types.CountWorkflowExecutionsResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.CountWorkflowExecutions(ctx, request, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return resp, err
-}
-
-func (c *retryableClient) GetSearchAttributes(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (*types.GetSearchAttributesResponse, error) {
-
-	var resp *types.GetSearchAttributesResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.GetSearchAttributes(ctx, opts...)
 		return err
 	}
 	err := c.throttleRetry.Do(ctx, op)
@@ -334,6 +362,21 @@ func (c *retryableClient) RecordActivityTaskHeartbeatByID(
 	return resp, err
 }
 
+func (c *retryableClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	op := func() error {
+		var err error
+		err = c.client.RefreshWorkflowTasks(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return err
+}
+
 func (c *retryableClient) RegisterDomain(
 	ctx context.Context,
 	request *types.RegisterDomainRequest,
@@ -388,21 +431,6 @@ func (c *retryableClient) ResetWorkflowExecution(
 	}
 	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
-}
-
-func (c *retryableClient) RefreshWorkflowTasks(
-	ctx context.Context,
-	request *types.RefreshWorkflowTasksRequest,
-	opts ...yarpc.CallOption,
-) error {
-
-	op := func() error {
-		var err error
-		err = c.client.RefreshWorkflowTasks(ctx, request, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return err
 }
 
 func (c *retryableClient) RespondActivityTaskCanceled(
@@ -517,6 +545,22 @@ func (c *retryableClient) RespondQueryTaskCompleted(
 	return c.throttleRetry.Do(ctx, op)
 }
 
+func (c *retryableClient) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *types.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListWorkflowExecutionsResponse, error) {
+
+	var resp *types.ListWorkflowExecutionsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.ScanWorkflowExecutions(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,
@@ -583,50 +627,6 @@ func (c *retryableClient) UpdateDomain(
 	op := func() error {
 		var err error
 		resp, err = c.client.UpdateDomain(ctx, request, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return resp, err
-}
-
-func (c *retryableClient) GetClusterInfo(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (*types.ClusterInfo, error) {
-	var resp *types.ClusterInfo
-	op := func() error {
-		var err error
-		resp, err = c.client.GetClusterInfo(ctx, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return resp, err
-}
-
-func (c *retryableClient) ListTaskListPartitions(
-	ctx context.Context,
-	request *types.ListTaskListPartitionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListTaskListPartitionsResponse, error) {
-	var resp *types.ListTaskListPartitionsResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.ListTaskListPartitions(ctx, request, opts...)
-		return err
-	}
-	err := c.throttleRetry.Do(ctx, op)
-	return resp, err
-}
-
-func (c *retryableClient) GetTaskListsByDomain(
-	ctx context.Context,
-	request *types.GetTaskListsByDomainRequest,
-	opts ...yarpc.CallOption,
-) (*types.GetTaskListsByDomainResponse, error) {
-	var resp *types.GetTaskListsByDomainResponse
-	op := func() error {
-		var err error
-		resp, err = c.client.GetTaskListsByDomain(ctx, request, opts...)
 		return err
 	}
 	err := c.throttleRetry.Do(ctx, op)
