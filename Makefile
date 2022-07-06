@@ -46,21 +46,36 @@ $(BUILD)/protoc:
 # helper vars
 # ====================================
 
-# set a VERBOSE=1 env var for verbose output. VERBOSE=0 (or unset) disables.
-# this is used to make verbose flags, suitable for `$(if $(test_v),...)`.
-VERBOSE ?= 0
-ifneq (0,$(VERBOSE))
-test_v = 1
-else
-test_v =
-endif
-
 # a literal space value, for makefile purposes.
 # the full "trailing # one space after $(null)" is necessary for correct behavior,
 # and this strategy works in both new and old versions of make, `SPACE +=` does not.
 null  :=
 SPACE := $(null) #
 COMMA := ,
+
+# set a V=1 env var for verbose output. V=0 (or unset) disables.
+# this is used to make two verbose flags:
+# - $Q, to replace ALL @ use, so CI can be reliably verbose
+# - $(verbose), to forward verbosity flags to commands via `$(if $(verbose),-v)` or similar
+#
+# SHELL='bash -x' is useful too, but can be more confusing to understand.
+V ?= 0
+ifneq (0,$(V))
+verbose := 1
+Q :=
+else
+verbose :=
+Q := @
+endif
+
+# and enforce ^ that rule: grep the makefile for line-starting @ use, error if any exist.
+# limit to one match because multiple look too weird.
+_BAD_AT_USE=$(shell grep -n -m1 '^\s*@' $(MAKEFILE_LIST))
+ifneq (,$(_BAD_AT_USE))
+$(warning Makefile cannot use @ to silence commands, use $$Q instead:)
+$(warning found on line $(_BAD_AT_USE))
+$(error fix that line and try again)
+endif
 
 # M1 macs may need to switch back to x86, until arm releases are available
 EMULATE_X86 =
@@ -110,14 +125,14 @@ LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 # downloads and builds a go-gettable tool, versioned by go.mod, and installs
 # it into the build folder, named the same as the last portion of the URL.
 define go_build_tool
-@echo "building $(or $(2), $(notdir $(1))) from $(1)..."
-@go build -mod=readonly -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
+$Q echo "building $(or $(2), $(notdir $(1))) from $(1)..."
+$Q go build -mod=readonly -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
 endef
 
 # utility target.
 # use as an order-only prerequisite for targets that do not implicitly create these folders.
 $(BIN) $(BUILD):
-	@mkdir -p $@
+	$Q mkdir -p $@
 
 $(BIN)/thriftrw: go.mod
 	$(call go_build_tool,go.uber.org/thriftrw)
@@ -151,7 +166,7 @@ $(BIN)/goveralls: go.mod
 
 # copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
 $(BIN)/copyright: cmd/tools/copyright/licensegen.go
-	@go build -o $@ ./cmd/tools/copyright/licensegen.go
+	$Q go build -o $@ ./cmd/tools/copyright/licensegen.go
 
 # https://docs.buf.build/
 # changing BUF_VERSION will automatically download and use the specified version.
@@ -163,9 +178,9 @@ BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 BUF_VERSION_BIN = buf-$(BUF_VERSION)
 $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
-	@echo "downloading buf $(BUF_VERSION)"
-	@curl -sSL $(BUF_URL) -o $@
-	@chmod +x $@
+	$Q echo "downloading buf $(BUF_VERSION)"
+	$Q curl -sSL $(BUF_URL) -o $@
+	$Q chmod +x $@
 
 # https://www.grpc.io/docs/languages/go/quickstart/
 # protoc-gen-gogofast (yarpc) are versioned via tools.go + go.mod (built above) and will be rebuilt as needed.
@@ -178,13 +193,13 @@ PROTOC_UNZIP_DIR = $(BIN)/protoc-$(PROTOC_VERSION)-zip
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 PROTOC_VERSION_BIN = protoc-$(PROTOC_VERSION)
 $(BIN)/$(PROTOC_VERSION_BIN): | $(BIN)
-	@echo "downloading protoc $(PROTOC_VERSION): $(PROTOC_URL)"
-	@# recover from partial success
-	@rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
-	@# download, unzip, copy to a normal location
-	@curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
-	@unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
-	@cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
+	$Q echo "downloading protoc $(PROTOC_VERSION): $(PROTOC_URL)"
+	$Q # recover from partial success
+	$Q rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
+	$Q # download, unzip, copy to a normal location
+	$Q curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
+	$Q unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
+	$Q cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
 
 # ====================================
 # Codegen targets
@@ -201,7 +216,7 @@ endef
 
 # codegen is done when thrift and protoc are done
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc | $(BUILD)
-	@touch $@
+	$Q touch $@
 
 THRIFT_FILES := $(shell find idls -name '*.thrift')
 # book-keeping targets to build.  one per thrift file.
@@ -212,21 +227,21 @@ THRIFT_GEN := $(subst idls/thrift/,.build/,$(THRIFT_FILES))
 # thrift is done when all sub-thrifts are done
 $(BUILD)/thrift: $(THRIFT_GEN) | $(BUILD)
 	$(call ensure_idl_submodule)
-	@touch $@
+	$Q touch $@
 
 # how to generate each thrift book-keeping file.
 #
 # note that each generated file depends on ALL thrift files - this is necessary because they can import each other.
 # as --no-recurse is specified, these can be done in parallel, since output files will not overwrite each other.
 $(THRIFT_GEN): $(THRIFT_FILES) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(BUILD)
-	@echo 'thriftrw for $(subst .build/,idls/thrift/,$@)...'
-	@$(BIN_PATH) $(BIN)/thriftrw \
+	$Q echo 'thriftrw for $(subst .build/,idls/thrift/,$@)...'
+	$Q $(BIN_PATH) $(BIN)/thriftrw \
 		--plugin=yarpc \
 		--pkg-prefix=$(PROJECT_ROOT)/.gen/go \
 		--out=.gen/go \
 		--no-recurse \
 		$(subst .build/,idls/thrift/,$@)
-	@touch $@
+	$Q touch $@
 
 PROTO_ROOT := proto
 # output location is defined by `option go_package` in the proto files, all must stay in sync with this
@@ -240,9 +255,9 @@ PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
 $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
 	$(call ensure_idl_submodule)
-	@mkdir -p $(PROTO_OUT)
-	@echo "protoc..."
-	@$(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(BIN)/$(PROTOC_VERSION_BIN) \
+	$Q mkdir -p $(PROTO_OUT)
+	$Q echo "protoc..."
+	$Q $(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
 		-I=$(PROTO_ROOT)/public \
@@ -252,9 +267,9 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 		--yarpc-go_out=$(PROTO_OUT) \
 		$$(find $(PROTO_DIR) -name '*.proto');\
 	)
-	@cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/
-	@rm -r $(PROTO_OUT)/uber
-	@touch $@
+	$Q cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/
+	$Q rm -r $(PROTO_OUT)/uber
+	$Q touch $@
 
 # ====================================
 # Rule-breaking targets intended ONLY for special cases with no good alternatives.
@@ -267,7 +282,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # must be manually run before (nearly) any other targets.
 .fake-codegen: .fake-protoc .fake-thrift
 	$(warning build-tool binaries have been faked, you will need to delete the $(BIN) folder if you wish to build real ones)
-	@# touch a marker-file for a `make clean` warning.  this does not impact behavior.
+	$Q # touch a marker-file for a `make clean` warning.  this does not impact behavior.
 	touch $(BIN)/fake-codegen
 
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
@@ -278,8 +293,8 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 
 .fake-thrift: | $(BIN) $(BUILD)
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
-	@# if the submodule exists, touch thrift_gen markers to fake their generation.
-	@# if it does not, do nothing - there are none.
+	$Q # if the submodule exists, touch thrift_gen markers to fake their generation.
+	$Q # if it does not, do nothing - there are none.
 	$(if $(THRIFT_GEN),touch $(THRIFT_GEN),)
 	touch $(BUILD)/thrift
 
@@ -288,15 +303,15 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # ====================================
 
 $(BUILD)/proto-lint: $(PROTO_FILES) $(BIN)/$(BUF_VERSION_BIN) | $(BUILD)
-	@cd $(PROTO_ROOT) && ../$(BIN)/$(BUF_VERSION_BIN) lint
-	@touch $@
+	$Q cd $(PROTO_ROOT) && ../$(BIN)/$(BUF_VERSION_BIN) lint
+	$Q touch $@
 
 # note that LINT_SRC is fairly fake as a prerequisite.
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
-	@echo "lint..."
-	@$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
-	@touch $@
+	$Q echo "lint..."
+	$Q $(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
+	$Q touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
 # - copyright -> makes changes
@@ -312,16 +327,16 @@ $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 MAYBE_TOUCH_COPYRIGHT=
 
 $(BUILD)/fmt: $(ALL_SRC) $(BIN)/goimports | $(BUILD)
-	@echo "goimports..."
-	@# use FRESH_ALL_SRC so it won't miss any generated files produced earlier
-	@$(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
-	@touch $@
-	@$(MAYBE_TOUCH_COPYRIGHT)
+	$Q echo "goimports..."
+	$Q # use FRESH_ALL_SRC so it won't miss any generated files produced earlier
+	$Q $(BIN)/goimports -local "github.com/uber/cadence" -w $(FRESH_ALL_SRC)
+	$Q touch $@
+	$Q $(MAYBE_TOUCH_COPYRIGHT)
 
 $(BUILD)/copyright: $(ALL_SRC) $(BIN)/copyright | $(BUILD)
 	$(BIN)/copyright --verifyOnly
-	@$(eval MAYBE_TOUCH_COPYRIGHT=touch $@)
-	@touch $@
+	$Q $(eval MAYBE_TOUCH_COPYRIGHT=touch $@)
+	$Q touch $@
 
 # ====================================
 # developer-oriented targets
@@ -334,8 +349,8 @@ $(BUILD)/copyright: $(ALL_SRC) $(BIN)/copyright | $(BUILD)
 # "re-make" a target by deleting and re-building book-keeping target(s).
 # the + is necessary for parallelism flags to be propagated
 define remake
-@rm -f $(addprefix $(BUILD)/,$(1))
-@+$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
+$Q rm -f $(addprefix $(BUILD)/,$(1))
+$Q +$(MAKE) --no-print-directory $(addprefix $(BUILD)/,$(1))
 endef
 
 .PHONY: lint fmt copyright
@@ -351,7 +366,7 @@ fmt: $(BUILD)/fmt ## run goimports
 # not identical to the intermediate target, but does provide the same codegen (or more).
 copyright: $(BIN)/copyright ## update copyright headers
 	$(BIN)/copyright
-	@touch $(BUILD)/copyright
+	$Q touch $(BUILD)/copyright
 
 # ====================================
 # binaries to build
@@ -365,35 +380,35 @@ TOOLS =
 BINS  += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
 cadence-cassandra-tool: $(BUILD)/lint
-	@echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -o $@ cmd/tools/cassandra/main.go
+	$Q echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
+	$Q go build -o $@ cmd/tools/cassandra/main.go
 
 BINS  += cadence-sql-tool
 TOOLS += cadence-sql-tool
 cadence-sql-tool: $(BUILD)/lint
-	@echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -o $@ cmd/tools/sql/main.go
+	$Q echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
+	$Q go build -o $@ cmd/tools/sql/main.go
 
 BINS  += cadence
 TOOLS += cadence
 cadence: $(BUILD)/lint
-	@echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
+	$Q echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
+	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
 cadence-server: $(BUILD)/lint
-	@echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
+	$Q echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
+	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
 
 BINS += cadence-canary
 cadence-canary: $(BUILD)/lint
-	@echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -o $@ cmd/canary/main.go
+	$Q echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
+	$Q go build -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
 cadence-bench: $(BUILD)/lint
-	@echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
-	@go build -o $@ cmd/bench/main.go
+	$Q echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
+	$Q go build -o $@ cmd/bench/main.go
 
 .PHONY: go-generate bins tools release clean
 
@@ -401,17 +416,17 @@ bins: $(BINS)
 tools: $(TOOLS)
 
 go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery
-	@echo "running go generate ./..., this takes almost 5 minutes..."
-	@# add our bins to PATH so `go generate` can find them
-	@$(BIN_PATH) go generate ./...
-	@echo "updating copyright headers"
-	@$(MAKE) --no-print-directory copyright
+	$Q echo "running go generate ./..., this takes almost 5 minutes..."
+	$Q # add our bins to PATH so `go generate` can find them
+	$Q $(BIN_PATH) go generate ./...
+	$Q echo "updating copyright headers"
+	$Q $(MAKE) --no-print-directory copyright
 
 release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
 	$(MAKE) --no-print-directory test
 
-clean: ## Clean binaries and build folder
+clean: ## Clean build products
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
 	$(if \
@@ -432,7 +447,7 @@ INTEG_TEST_NDC_DIR=hostndc
 OPT_OUT_TEST=./bench/% ./canary/%
 
 TEST_TIMEOUT ?= 20m
-TEST_ARG ?= -race $(if $(test_v),-v) -timeout $(TEST_TIMEOUT)
+TEST_ARG ?= -race $(if $(verbose),-v) -timeout $(TEST_TIMEOUT)
 
 # TODO to be consistent, use nosql as PERSISTENCE_TYPE and cassandra PERSISTENCE_PLUGIN
 # file names like integ_cassandra__cover should become integ_nosql_cassandra_cover
@@ -473,65 +488,65 @@ COVER_PKGS = client common host service tools
 GOCOVERPKG_ARG := -coverpkg="$(subst $(SPACE),$(COMMA),$(addprefix $(PROJECT_ROOT)/,$(addsuffix /...,$(COVER_PKGS))))"
 
 test: bins ## Build and run all tests. This target is for local development. The pipeline is using cover_profile target
-	@rm -f test
-	@rm -f test.log
-	@echo Running special test cases without race detector:
-	@go test -v ./cmd/server/cadence/
-	@for dir in $(PKG_TEST_DIRS); do \
+	$Q rm -f test
+	$Q rm -f test.log
+	$Q echo Running special test cases without race detector:
+	$Q go test -v ./cmd/server/cadence/
+	$Q for dir in $(PKG_TEST_DIRS); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 test_e2e: bins
-	@rm -f test
-	@rm -f test.log
-	@for dir in $(INTEG_TEST_ROOT); do \
+	$Q rm -f test
+	$Q rm -f test.log
+	$Q for dir in $(INTEG_TEST_ROOT); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
 test_e2e_xdc: bins
-	@rm -f test
-	@rm -f test.log
-	@for dir in $(INTEG_TEST_XDC_ROOT); do \
+	$Q rm -f test
+	$Q rm -f test.log
+	$Q for dir in $(INTEG_TEST_XDC_ROOT); do \
 		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 cover_profile: bins
-	@mkdir -p $(BUILD)
-	@mkdir -p $(COVER_ROOT)
-	@echo "mode: atomic" > $(UNIT_COVER_FILE)
+	$Q mkdir -p $(BUILD)
+	$Q mkdir -p $(COVER_ROOT)
+	$Q echo "mode: atomic" > $(UNIT_COVER_FILE)
 
-	@echo Running special test cases without race detector:
-	@go test -v ./cmd/server/cadence/
-	@echo Running package tests:
-	@for dir in $(PKG_TEST_DIRS); do \
+	$Q echo Running special test cases without race detector:
+	$Q go test -v ./cmd/server/cadence/
+	$Q echo Running package tests:
+	$Q for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
 		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
 		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
 	done;
 
 cover_integration_profile: bins
-	@mkdir -p $(BUILD)
-	@mkdir -p $(COVER_ROOT)
-	@echo "mode: atomic" > $(INTEG_COVER_FILE)
+	$Q mkdir -p $(BUILD)
+	$Q mkdir -p $(COVER_ROOT)
+	$Q echo "mode: atomic" > $(INTEG_COVER_FILE)
 
-	@echo Running integration test with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
-	@mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
-	cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
+	$Q echo Running integration test with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
+	$Q mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
+	$Q time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	$Q cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
 cover_ndc_profile: bins
-	@mkdir -p $(BUILD)
-	@mkdir -p $(COVER_ROOT)
-	@echo "mode: atomic" > $(INTEG_NDC_COVER_FILE)
+	$Q mkdir -p $(BUILD)
+	$Q mkdir -p $(COVER_ROOT)
+	$Q echo "mode: atomic" > $(INTEG_NDC_COVER_FILE)
 
-	@echo Running integration test for 3+ dc with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
-	@mkdir -p $(BUILD)/$(INTEG_TEST_NDC_DIR)
-	time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
-	cat $(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_NDC_COVER_FILE)
+	$Q echo Running integration test for 3+ dc with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
+	$Q mkdir -p $(BUILD)/$(INTEG_TEST_NDC_DIR)
+	$Q time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
+	$Q cat $(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_NDC_COVER_FILE)
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COVER_FILE_MYSQL) $(INTEG_COVER_FILE_POSTGRES) $(INTEG_NDC_COVER_FILE_CASS) $(INTEG_NDC_COVER_FILE_MYSQL) $(INTEG_NDC_COVER_FILE_POSTGRES)
-	@echo "mode: atomic" > $(COVER_ROOT)/cover.out
+	$Q echo "mode: atomic" > $(COVER_ROOT)/cover.out
 	cat $(UNIT_COVER_FILE) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
 	cat $(INTEG_COVER_FILE_CASS) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
 	cat $(INTEG_COVER_FILE_MYSQL) | grep -v "^mode: \w\+" | grep -vP ".gen|[Mm]ock[s]?" >> $(COVER_ROOT)/cover.out
@@ -603,7 +618,7 @@ start: bins
 	./cadence-server start
 
 install-schema-xdc: cadence-cassandra-tool
-	@echo Setting up cadence_cluster0 key space
+	$Q echo Setting up cadence_cluster0 key space
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster0 --rf 1
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster0 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster0 update-schema -d ./schema/cassandra/cadence/versioned
@@ -611,7 +626,7 @@ install-schema-xdc: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster0 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster0 update-schema -d ./schema/cassandra/visibility/versioned
 
-	@echo Setting up cadence_cluster1 key space
+	$Q echo Setting up cadence_cluster1 key space
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster1 --rf 1
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster1 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster1 update-schema -d ./schema/cassandra/cadence/versioned
@@ -619,7 +634,7 @@ install-schema-xdc: cadence-cassandra-tool
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster1 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_visibility_cluster1 update-schema -d ./schema/cassandra/visibility/versioned
 
-	@echo Setting up cadence_cluster2 key space
+	$Q echo Setting up cadence_cluster2 key space
 	./cadence-cassandra-tool --ep 127.0.0.1 create -k cadence_cluster2 --rf 1
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster2 setup-schema -v 0.0
 	./cadence-cassandra-tool --ep 127.0.0.1 -k cadence_cluster2 update-schema -d ./schema/cassandra/cadence/versioned
@@ -670,15 +685,15 @@ JQ_DEPS_AGE += --raw-output
 JQ_DEPS_ONLY_DIRECT = | select(has("Indirect") | not)
 
 deps: ## Check for dependency updates, for things that are directly imported
-	@make --no-print-directory DEPS_FILTER='$(JQ_DEPS_ONLY_DIRECT)' deps-all
+	$Q make --no-print-directory DEPS_FILTER='$(JQ_DEPS_ONLY_DIRECT)' deps-all
 
 deps-all: ## Check for all dependency updates
-	@go list -u -m -json all \
+	$Q go list -u -m -json all \
 		| $(JQ_DEPS_AGE) \
 		| sort -n
 
 help:
-	@# print help first, so it's visible
-	@printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
-	@# then everything matching "target: ## magic comments"
-	@cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort
+	$Q # print help first, so it's visible
+	$Q printf "\033[36m%-20s\033[0m %s\n" 'help' 'Prints a help message showing any specially-commented targets'
+	$Q # then everything matching "target: ## magic comments"
+	$Q cat $(MAKEFILE_LIST) | grep -e "^[a-zA-Z_\-]*:.* ## .*" | awk 'BEGIN {FS = ":.*? ## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort
