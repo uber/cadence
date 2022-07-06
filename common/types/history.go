@@ -1107,11 +1107,11 @@ func (v *SyncShardStatusRequest) GetTimestamp() (o int64) {
 
 // HistoryTerminateWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryTerminateWorkflowExecutionRequest struct {
-	DomainUUID                string                             `json:"domainUUID,omitempty"`
-	TerminateRequest          *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
-	ExternalWorkflowExecution *WorkflowExecution                 `json:"externalWorkflowExecution,omitempty"`
-	ChildWorkflowOnly         bool                               `json:"childWorkflowOnly,omitempty"`
-	StartRequest              *StartWorkflowExecutionRequest     `json:"startRequest,omitempty"`
+	DomainUUID                string                                `json:"domainUUID,omitempty"`
+	TerminateRequest          *TerminateWorkflowExecutionRequest    `json:"terminateRequest,omitempty"`
+	ExternalWorkflowExecution *WorkflowExecution                    `json:"externalWorkflowExecution,omitempty"`
+	ChildWorkflowOnly         bool                                  `json:"childWorkflowOnly,omitempty"`
+	StartRequest              *HistoryStartWorkflowExecutionRequest `json:"startRequest,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)

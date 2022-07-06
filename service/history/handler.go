@@ -1224,7 +1224,8 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 	if err1 != nil {
 		return h.error(err1, scope, domainID, workflowID)
 	}
-
+	h.GetEventCache()
+	h.GetDomainCache()
 	err2 := engine.TerminateWorkflowExecution(ctx, wrappedRequest)
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)

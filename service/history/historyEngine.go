@@ -791,7 +791,7 @@ func shouldTerminateAndStart(
 		(state == persistence.WorkflowStateRunning || state == persistence.WorkflowStateCreated)
 }
 
-// terminate running workflow then start a new run in one transaction
+// TerminateAndStartWorkflow terminate running workflow then start a new run in one transaction
 func (e *historyEngineImpl) terminateAndStartWorkflow(
 	ctx context.Context,
 	runningWFCtx workflow.Context,
@@ -2562,7 +2562,16 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		WorkflowID: request.WorkflowExecution.WorkflowID,
 		RunID:      request.WorkflowExecution.RunID,
 	}
-
+	if terminateRequest.StartRequest != nil {
+		runningWFCtx, err := workflow.LoadOnce(ctx, e.executionCache, domainID, request.WorkflowExecution.WorkflowID, request.WorkflowExecution.RunID)
+		if err != nil {
+			return err
+		}
+		_, err = e.terminateAndStartWorkflow(ctx, runningWFCtx, workflowExecution, domainEntry, domainID, terminateRequest.StartRequest, nil)
+		if err != nil {
+			return err
+		}
+	}
 	return workflow.UpdateCurrentWithActionFunc(
 		ctx,
 		e.executionCache,
