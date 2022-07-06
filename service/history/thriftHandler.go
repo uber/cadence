@@ -297,7 +297,7 @@ func (t ThriftHandler) SyncShardStatus(ctx context.Context, request *h.SyncShard
 
 // TerminateWorkflowExecution forwards request to the underlying handler
 func (t ThriftHandler) TerminateWorkflowExecution(ctx context.Context, request *h.TerminateWorkflowExecutionRequest) error {
-	err := t.h.TerminateWorkflowExecution(ctx, thrift.ToHistoryTerminateWorkflowExecutionRequest(request))
+	err := t.h.TerminateWorkflowExecution(ctx, thrift.ToHistoryTerminateWorkflowExecutionRequest(request), thrift.ToHistoryStartWorkflowExecutionRequest(request.StartRequest))
 	return thrift.FromError(err)
 }
 

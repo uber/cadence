@@ -286,9 +286,12 @@ message TerminateWorkflowExecutionRequest {
   // making the request
   api.v1.WorkflowExecution external_workflow_execution = 3;
   bool child_workflow_only = 4;
+  StartWorkflowExecutionRequest startRequest = 5;
 }
 
 message TerminateWorkflowExecutionResponse {
+  string run_id = 1;
+
 }
 
 message DescribeWorkflowExecutionRequest {

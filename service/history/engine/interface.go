@@ -54,7 +54,7 @@ type (
 		SignalWorkflowExecution(ctx context.Context, request *types.HistorySignalWorkflowExecutionRequest) error
 		SignalWithStartWorkflowExecution(ctx context.Context, request *types.HistorySignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
 		RemoveSignalMutableState(ctx context.Context, request *types.RemoveSignalMutableStateRequest) error
-		TerminateWorkflowExecution(ctx context.Context, request *types.HistoryTerminateWorkflowExecutionRequest) error
+		TerminateWorkflowExecution(ctx context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, startRequest *types.HistoryStartWorkflowExecutionRequest) error
 		ResetWorkflowExecution(ctx context.Context, request *types.HistoryResetWorkflowExecutionRequest) (*types.ResetWorkflowExecutionResponse, error)
 		ScheduleDecisionTask(ctx context.Context, request *types.ScheduleDecisionTaskRequest) error
 		RecordChildExecutionCompleted(ctx context.Context, request *types.RecordChildExecutionCompletedRequest) error

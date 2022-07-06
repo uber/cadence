@@ -2547,6 +2547,7 @@ func (e *historyEngineImpl) RemoveSignalMutableState(
 func (e *historyEngineImpl) TerminateWorkflowExecution(
 	ctx context.Context,
 	terminateRequest *types.HistoryTerminateWorkflowExecutionRequest,
+	startRequest *types.HistoryStartWorkflowExecutionRequest,
 ) error {
 
 	domainEntry, err := e.getActiveDomainByID(terminateRequest.DomainUUID)
@@ -2562,12 +2563,12 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		WorkflowID: request.WorkflowExecution.WorkflowID,
 		RunID:      request.WorkflowExecution.RunID,
 	}
-	if terminateRequest.StartRequest != nil {
+	if startRequest != nil {
 		runningWFCtx, err := workflow.LoadOnce(ctx, e.executionCache, domainID, request.WorkflowExecution.WorkflowID, request.WorkflowExecution.RunID)
 		if err != nil {
 			return err
 		}
-		_, err = e.terminateAndStartWorkflow(ctx, runningWFCtx, workflowExecution, domainEntry, domainID, terminateRequest.StartRequest, nil)
+		_, err = e.terminateAndStartWorkflow(ctx, runningWFCtx, workflowExecution, domainEntry, domainID, startRequest, nil)
 		if err != nil {
 			return err
 		}
