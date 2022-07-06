@@ -165,6 +165,9 @@ $(BIN)/enumer: internal/tools/go.mod
 $(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
+$(BIN)/gowrap: go.mod
+	$(call go_build_tool,github.com/hexdigest/gowrap/cmd/gowrap)
+
 $(BIN)/revive: internal/tools/go.mod
 	$(call go_build_tool,github.com/mgechev/revive)
 
@@ -435,7 +438,7 @@ cadence-bench: $(BUILD)/lint
 bins: $(BINS)
 tools: $(TOOLS)
 
-go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery
+go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap
 	$Q echo "running go generate ./..., this takes almost 5 minutes..."
 	$Q # add our bins to PATH so `go generate` can find them
 	$Q $(BIN_PATH) go generate ./...
