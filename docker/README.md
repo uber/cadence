@@ -109,6 +109,17 @@ docker-compose down
 docker-compose up
 ```
 
+DIY: Running a custom cadence server locally alongside cadence requirements
+---------------------------------------------------------------------------
+If you want to test out a custom-built cadence server, while running all the normal cadence dependencies, there's a simple workflow to do that:
+
+Make your cadence server changes and build using "make bins". Then start everything, stop cadence server, and run your own cadence-server:
+```
+docker-compose up
+docker stop docker-cadence-1
+./cadence-server start
+```
+
 Using docker image for production
 =========================
 In a typical production setting, dependencies (cassandra / statsd server) are
