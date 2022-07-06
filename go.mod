@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/Shopify/sarama v1.23.0
 	github.com/VividCortex/mysqlerr v1.0.0
-	github.com/apache/thrift v0.13.0
 	github.com/aws/aws-sdk-go v1.34.13
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
@@ -70,6 +69,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
+	github.com/apache/thrift v0.13.0 // indirect
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect

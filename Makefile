@@ -162,6 +162,14 @@ $(BIN)/protoc-gen-yarpc-go: go.mod | $(BIN)
 $(BIN)/goveralls: internal/tools/go.mod
 	$(call go_build_tool,github.com/mattn/goveralls)
 
+$(BUILD)/go_mod_check: go.mod internal/tools/go.mod
+	@# ensure both have the same apache/thrift replacement
+	@./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(test_v),-v)
+	@# generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
+	@./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(test_v),-v)
+	@./scripts/check-gomod-version.sh github.com/stretchr/testify/mock $(if $(test_v),-v)
+	@touch $@
+
 # copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
 $(BIN)/copyright: cmd/tools/copyright/licensegen.go
 	@go build -o $@ ./cmd/tools/copyright/licensegen.go
@@ -309,11 +317,6 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	@echo "lint..."
 	@$(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
-	@touch $@
-
-$(BUILD)/go_mod_check: go.mod internal/tools/go.mod
-	@# ensure both have the same apache/thrift replacement
-	@./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(test_v),-v)
 	@touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
