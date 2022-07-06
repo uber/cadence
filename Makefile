@@ -275,7 +275,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # Rule-breaking targets intended ONLY for special cases with no good alternatives.
 # ====================================
 
-.PHONY: .fake-codegen .fake-protoc .fake-thriftrw .instant-tests
+.PHONY: .fake-codegen .fake-protoc .fake-thriftrw
 
 # buildkite / release-only target to avoid building / running codegen tools (protoc is unable to be run on alpine).
 # this will ensure that committed code will be used rather than re-generating.
