@@ -6,14 +6,12 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/Shopify/sarama v1.23.0
 	github.com/VividCortex/mysqlerr v1.0.0
-	github.com/apache/thrift v0.13.0
 	github.com/aws/aws-sdk-go v1.34.13
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/cristalhq/jwt/v3 v3.1.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
-	github.com/dmarkham/enumer v1.5.1
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
 	github.com/fatih/color v1.13.0
 	github.com/go-sql-driver/mysql v1.5.0
@@ -27,8 +25,6 @@ require (
 	github.com/jonboulle/clockwork v0.1.0
 	github.com/lib/pq v1.2.0
 	github.com/m3db/prometheus_client_golang v0.8.1
-	github.com/mattn/goveralls v0.0.7
-	github.com/mgechev/revive v1.0.3
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/olivere/elastic v6.2.21+incompatible
 	github.com/olivere/elastic/v7 v7.0.21
@@ -42,10 +38,8 @@ require (
 	github.com/uber/cadence-idl v0.0.0-20220223020740-f2f5b7fc2bbd
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.0
-	github.com/uber/tcheck v1.1.0
 	github.com/urfave/cli v1.22.4
 	github.com/valyala/fastjson v1.4.1
-	github.com/vektra/mockery/v2 v2.0.3
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver v1.7.3
@@ -61,7 +55,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.1.11
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.26.0
 	google.golang.org/grpc v1.29.1
@@ -76,6 +69,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
+	github.com/apache/thrift v0.13.0 // indirect
 	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
@@ -85,7 +79,6 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
-	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gogo/googleapis v1.3.2 // indirect
 	github.com/gogo/status v1.1.0 // indirect
@@ -96,8 +89,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/go-uuid v1.0.1 // indirect
-	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/jessevdk/go-flags v1.4.0 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
@@ -109,18 +100,12 @@ require (
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect
 	github.com/m3db/prometheus_procfs v0.8.1 // indirect
-	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.7 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/mgechev/dots v0.0.0-20190921121421-c36f7dcfbb81 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.1.2 // indirect
-	github.com/pascaldekloe/name v1.0.0 // indirect
-	github.com/pelletier/go-toml v1.7.0 // indirect
 	github.com/pierrec/lz4 v0.0.0-20190701081048-057d66e894a4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -129,17 +114,9 @@ require (
 	github.com/prometheus/common v0.9.1 // indirect
 	github.com/prometheus/procfs v0.0.9 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a // indirect
-	github.com/rs/zerolog v1.18.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/spf13/afero v1.1.2 // indirect
-	github.com/spf13/cast v1.3.0 // indirect
-	github.com/spf13/cobra v1.0.0 // indirect
-	github.com/spf13/jwalterweatherman v1.0.0 // indirect
-	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/spf13/viper v1.7.0 // indirect
 	github.com/stretchr/objx v0.2.0 // indirect
-	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
@@ -155,13 +132,12 @@ require (
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
-	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/tools v0.1.11 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/ini.v1 v1.51.0 // indirect
 	gopkg.in/jcmturner/aescts.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/dnsutils.v1 v1.0.1 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
