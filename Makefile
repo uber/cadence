@@ -167,7 +167,6 @@ $(BUILD)/go_mod_check: go.mod internal/tools/go.mod
 	@./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(test_v),-v)
 	@# generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
 	@./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(test_v),-v)
-	@./scripts/check-gomod-version.sh github.com/stretchr/testify/mock $(if $(test_v),-v)
 	@touch $@
 
 # copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
