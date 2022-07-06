@@ -81,6 +81,30 @@ type (
 	}
 )
 
+// ListAllProductionKeys returns all key used in production
+func ListAllProductionKeys() []Key {
+	result := make([]Key, 0, len(IntKeys)+len(BoolKeys)+len(FloatKeys)+len(StringKeys)+len(DurationKeys)+len(MapKeys))
+	for i := TestGetIntPropertyFilteredByTaskListInfoKey + 1; i < LastIntKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetBoolPropertyFilteredByTaskListInfoKey + 1; i < LastBoolKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetFloat64PropertyKey + 1; i < LastFloatKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetStringPropertyKey + 1; i < LastStringKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetDurationPropertyFilteredByTaskListInfoKey + 1; i < LastDurationKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetMapPropertyKey + 1; i < LastMapKey; i++ {
+		result = append(result, i)
+	}
+	return result
+}
+
 func GetKeyFromKeyName(keyName string) (Key, error) {
 	keyVal, ok := _keyNames[keyName]
 	if !ok {

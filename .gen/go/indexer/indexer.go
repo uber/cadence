@@ -783,12 +783,13 @@ func (v *FieldType) UnmarshalJSON(text []byte) error {
 }
 
 type Message struct {
-	MessageType *MessageType      `json:"messageType,omitempty"`
-	DomainID    *string           `json:"domainID,omitempty"`
-	WorkflowID  *string           `json:"workflowID,omitempty"`
-	RunID       *string           `json:"runID,omitempty"`
-	Version     *int64            `json:"version,omitempty"`
-	Fields      map[string]*Field `json:"fields,omitempty"`
+	MessageType         *MessageType         `json:"messageType,omitempty"`
+	DomainID            *string              `json:"domainID,omitempty"`
+	WorkflowID          *string              `json:"workflowID,omitempty"`
+	RunID               *string              `json:"runID,omitempty"`
+	Version             *int64               `json:"version,omitempty"`
+	Fields              map[string]*Field    `json:"fields,omitempty"`
+	VisibilityOperation *VisibilityOperation `json:"visibilityOperation,omitempty"`
 }
 
 type _Map_String_Field_MapItemList map[string]*Field
@@ -846,7 +847,7 @@ func (_Map_String_Field_MapItemList) Close() {}
 //   }
 func (v *Message) ToWire() (wire.Value, error) {
 	var (
-		fields [6]wire.Field
+		fields [7]wire.Field
 		i      int = 0
 		w      wire.Value
 		err    error
@@ -900,6 +901,14 @@ func (v *Message) ToWire() (wire.Value, error) {
 		fields[i] = wire.Field{ID: 60, Value: w}
 		i++
 	}
+	if v.VisibilityOperation != nil {
+		w, err = v.VisibilityOperation.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 70, Value: w}
+		i++
+	}
 
 	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
 }
@@ -942,6 +951,12 @@ func _Map_String_Field_Read(m wire.MapItemList) (map[string]*Field, error) {
 	})
 	m.Close()
 	return o, err
+}
+
+func _VisibilityOperation_Read(w wire.Value) (VisibilityOperation, error) {
+	var v VisibilityOperation
+	err := v.FromWire(w)
+	return v, err
 }
 
 // FromWire deserializes a Message struct from its Thrift-level
@@ -1019,6 +1034,16 @@ func (v *Message) FromWire(w wire.Value) error {
 		case 60:
 			if field.Value.Type() == wire.TMap {
 				v.Fields, err = _Map_String_Field_Read(field.Value.GetMap())
+				if err != nil {
+					return err
+				}
+
+			}
+		case 70:
+			if field.Value.Type() == wire.TI32 {
+				var x VisibilityOperation
+				x, err = _VisibilityOperation_Read(field.Value)
+				v.VisibilityOperation = &x
 				if err != nil {
 					return err
 				}
@@ -1137,6 +1162,18 @@ func (v *Message) Encode(sw stream.Writer) error {
 		}
 	}
 
+	if v.VisibilityOperation != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 70, Type: wire.TI32}); err != nil {
+			return err
+		}
+		if err := v.VisibilityOperation.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
 	return sw.WriteStructEnd()
 }
 
@@ -1190,6 +1227,12 @@ func _Map_String_Field_Decode(sr stream.Reader) (map[string]*Field, error) {
 		return nil, err
 	}
 	return o, err
+}
+
+func _VisibilityOperation_Decode(sr stream.Reader) (VisibilityOperation, error) {
+	var v VisibilityOperation
+	err := v.Decode(sr)
+	return v, err
 }
 
 // Decode deserializes a Message struct directly from its Thrift-level
@@ -1256,6 +1299,14 @@ func (v *Message) Decode(sr stream.Reader) error {
 				return err
 			}
 
+		case fh.ID == 70 && fh.Type == wire.TI32:
+			var x VisibilityOperation
+			x, err = _VisibilityOperation_Decode(sr)
+			v.VisibilityOperation = &x
+			if err != nil {
+				return err
+			}
+
 		default:
 			if err := sr.Skip(fh.Type); err != nil {
 				return err
@@ -1285,7 +1336,7 @@ func (v *Message) String() string {
 		return "<nil>"
 	}
 
-	var fields [6]string
+	var fields [7]string
 	i := 0
 	if v.MessageType != nil {
 		fields[i] = fmt.Sprintf("MessageType: %v", *(v.MessageType))
@@ -1309,6 +1360,10 @@ func (v *Message) String() string {
 	}
 	if v.Fields != nil {
 		fields[i] = fmt.Sprintf("Fields: %v", v.Fields)
+		i++
+	}
+	if v.VisibilityOperation != nil {
+		fields[i] = fmt.Sprintf("VisibilityOperation: %v", *(v.VisibilityOperation))
 		i++
 	}
 
@@ -1342,6 +1397,16 @@ func _Map_String_Field_Equals(lhs, rhs map[string]*Field) bool {
 	return true
 }
 
+func _VisibilityOperation_EqualsPtr(lhs, rhs *VisibilityOperation) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
 // Equals returns true if all the fields of this Message match the
 // provided Message.
 //
@@ -1368,6 +1433,9 @@ func (v *Message) Equals(rhs *Message) bool {
 		return false
 	}
 	if !((v.Fields == nil && rhs.Fields == nil) || (v.Fields != nil && rhs.Fields != nil && _Map_String_Field_Equals(v.Fields, rhs.Fields))) {
+		return false
+	}
+	if !_VisibilityOperation_EqualsPtr(v.VisibilityOperation, rhs.VisibilityOperation) {
 		return false
 	}
 
@@ -1408,6 +1476,9 @@ func (v *Message) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
 	}
 	if v.Fields != nil {
 		err = multierr.Append(err, enc.AddObject("fields", (_Map_String_Field_Zapper)(v.Fields)))
+	}
+	if v.VisibilityOperation != nil {
+		err = multierr.Append(err, enc.AddObject("visibilityOperation", *v.VisibilityOperation))
 	}
 	return err
 }
@@ -1502,11 +1573,27 @@ func (v *Message) IsSetFields() bool {
 	return v != nil && v.Fields != nil
 }
 
+// GetVisibilityOperation returns the value of VisibilityOperation if it is set or its
+// zero value if it is unset.
+func (v *Message) GetVisibilityOperation() (o VisibilityOperation) {
+	if v != nil && v.VisibilityOperation != nil {
+		return *v.VisibilityOperation
+	}
+
+	return
+}
+
+// IsSetVisibilityOperation returns true if VisibilityOperation is not nil.
+func (v *Message) IsSetVisibilityOperation() bool {
+	return v != nil && v.VisibilityOperation != nil
+}
+
 type MessageType int32
 
 const (
 	MessageTypeIndex  MessageType = 0
 	MessageTypeDelete MessageType = 1
+	MessageTypeCreate MessageType = 2
 )
 
 // MessageType_Values returns all recognized values of MessageType.
@@ -1514,6 +1601,7 @@ func MessageType_Values() []MessageType {
 	return []MessageType{
 		MessageTypeIndex,
 		MessageTypeDelete,
+		MessageTypeCreate,
 	}
 }
 
@@ -1529,6 +1617,9 @@ func (v *MessageType) UnmarshalText(value []byte) error {
 		return nil
 	case "Delete":
 		*v = MessageTypeDelete
+		return nil
+	case "Create":
+		*v = MessageTypeCreate
 		return nil
 	default:
 		val, err := strconv.ParseInt(s, 10, 32)
@@ -1552,6 +1643,8 @@ func (v MessageType) MarshalText() ([]byte, error) {
 		return []byte("Index"), nil
 	case 1:
 		return []byte("Delete"), nil
+	case 2:
+		return []byte("Create"), nil
 	}
 	return []byte(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -1567,6 +1660,8 @@ func (v MessageType) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 		enc.AddString("name", "Index")
 	case 1:
 		enc.AddString("name", "Delete")
+	case 2:
+		enc.AddString("name", "Create")
 	}
 	return nil
 }
@@ -1639,6 +1734,8 @@ func (v MessageType) String() string {
 		return "Index"
 	case 1:
 		return "Delete"
+	case 2:
+		return "Create"
 	}
 	return fmt.Sprintf("MessageType(%d)", w)
 }
@@ -1661,6 +1758,8 @@ func (v MessageType) MarshalJSON() ([]byte, error) {
 		return ([]byte)("\"Index\""), nil
 	case 1:
 		return ([]byte)("\"Delete\""), nil
+	case 2:
+		return ([]byte)("\"Create\""), nil
 	}
 	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
 }
@@ -1701,16 +1800,228 @@ func (v *MessageType) UnmarshalJSON(text []byte) error {
 	}
 }
 
+type VisibilityOperation int32
+
+const (
+	VisibilityOperationRecordStarted          VisibilityOperation = 0
+	VisibilityOperationRecordClosed           VisibilityOperation = 1
+	VisibilityOperationUpsertSearchAttributes VisibilityOperation = 2
+)
+
+// VisibilityOperation_Values returns all recognized values of VisibilityOperation.
+func VisibilityOperation_Values() []VisibilityOperation {
+	return []VisibilityOperation{
+		VisibilityOperationRecordStarted,
+		VisibilityOperationRecordClosed,
+		VisibilityOperationUpsertSearchAttributes,
+	}
+}
+
+// UnmarshalText tries to decode VisibilityOperation from a byte slice
+// containing its name.
+//
+//   var v VisibilityOperation
+//   err := v.UnmarshalText([]byte("RecordStarted"))
+func (v *VisibilityOperation) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "RecordStarted":
+		*v = VisibilityOperationRecordStarted
+		return nil
+	case "RecordClosed":
+		*v = VisibilityOperationRecordClosed
+		return nil
+	case "UpsertSearchAttributes":
+		*v = VisibilityOperationUpsertSearchAttributes
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "VisibilityOperation", err)
+		}
+		*v = VisibilityOperation(val)
+		return nil
+	}
+}
+
+// MarshalText encodes VisibilityOperation to text.
+//
+// If the enum value is recognized, its name is returned.
+// Otherwise, its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v VisibilityOperation) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("RecordStarted"), nil
+	case 1:
+		return []byte("RecordClosed"), nil
+	case 2:
+		return []byte("UpsertSearchAttributes"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of VisibilityOperation.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v VisibilityOperation) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "RecordStarted")
+	case 1:
+		enc.AddString("name", "RecordClosed")
+	case 2:
+		enc.AddString("name", "UpsertSearchAttributes")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v VisibilityOperation) Ptr() *VisibilityOperation {
+	return &v
+}
+
+// Encode encodes VisibilityOperation directly to bytes.
+//
+//   sWriter := BinaryStreamer.Writer(writer)
+//
+//   var v VisibilityOperation
+//   return v.Encode(sWriter)
+func (v VisibilityOperation) Encode(sw stream.Writer) error {
+	return sw.WriteInt32(int32(v))
+}
+
+// ToWire translates VisibilityOperation into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v VisibilityOperation) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes VisibilityOperation from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return VisibilityOperation(0), err
+//   }
+//
+//   var v VisibilityOperation
+//   if err := v.FromWire(x); err != nil {
+//     return VisibilityOperation(0), err
+//   }
+//   return v, nil
+func (v *VisibilityOperation) FromWire(w wire.Value) error {
+	*v = (VisibilityOperation)(w.GetI32())
+	return nil
+}
+
+// Decode reads off the encoded VisibilityOperation directly off of the wire.
+//
+//   sReader := BinaryStreamer.Reader(reader)
+//
+//   var v VisibilityOperation
+//   if err := v.Decode(sReader); err != nil {
+//     return VisibilityOperation(0), err
+//   }
+//   return v, nil
+func (v *VisibilityOperation) Decode(sr stream.Reader) error {
+	i, err := sr.ReadInt32()
+	if err != nil {
+		return err
+	}
+	*v = (VisibilityOperation)(i)
+	return nil
+}
+
+// String returns a readable string representation of VisibilityOperation.
+func (v VisibilityOperation) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "RecordStarted"
+	case 1:
+		return "RecordClosed"
+	case 2:
+		return "UpsertSearchAttributes"
+	}
+	return fmt.Sprintf("VisibilityOperation(%d)", w)
+}
+
+// Equals returns true if this VisibilityOperation value matches the provided
+// value.
+func (v VisibilityOperation) Equals(rhs VisibilityOperation) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes VisibilityOperation into JSON.
+//
+// If the enum value is recognized, its name is returned.
+// Otherwise, its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v VisibilityOperation) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"RecordStarted\""), nil
+	case 1:
+		return ([]byte)("\"RecordClosed\""), nil
+	case 2:
+		return ([]byte)("\"UpsertSearchAttributes\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode VisibilityOperation from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *VisibilityOperation) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "VisibilityOperation")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "VisibilityOperation")
+		}
+		*v = (VisibilityOperation)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "VisibilityOperation")
+	}
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "indexer",
 	Package:  "github.com/uber/cadence/.gen/go/indexer",
 	FilePath: "indexer.thrift",
-	SHA1:     "464fff1b44654c3f41da6b7a95de46593a9776d6",
+	SHA1:     "54ad84aebe02a02c26c32674d4a0c2e88765fbea",
 	Includes: []*thriftreflect.ThriftModule{
 		shared.ThriftModule,
 	},
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.indexer\n\ninclude \"shared.thrift\"\n\nenum MessageType {\n  Index\n  Delete\n}\n\nenum FieldType {\n  String\n  Int\n  Bool\n  Binary\n}\n\nstruct Field {\n  10: optional FieldType type\n  20: optional string stringData\n  30: optional i64 (js.type = \"Long\") intData\n  40: optional bool boolData\n  50: optional binary binaryData\n}\n\nstruct Message {\n  10: optional MessageType messageType\n  20: optional string domainID\n  30: optional string workflowID\n  40: optional string runID\n  50: optional i64 (js.type = \"Long\") version\n  60: optional map<string,Field> fields\n}"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.indexer\n\ninclude \"shared.thrift\"\n\nenum MessageType {\n  Index\n  Delete\n  Create\n}\n\nenum VisibilityOperation {\n  RecordStarted\n  RecordClosed\n  UpsertSearchAttributes\n}\n\nenum FieldType {\n  String\n  Int\n  Bool\n  Binary\n}\n\nstruct Field {\n  10: optional FieldType type\n  20: optional string stringData\n  30: optional i64 (js.type = \"Long\") intData\n  40: optional bool boolData\n  50: optional binary binaryData\n}\n\nstruct Message {\n  10: optional MessageType messageType\n  20: optional string domainID\n  30: optional string workflowID\n  40: optional string runID\n  50: optional i64 (js.type = \"Long\") version\n  60: optional map<string,Field> fields\n  70: optional VisibilityOperation visibilityOperation\n}"

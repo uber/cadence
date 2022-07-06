@@ -84,6 +84,8 @@ const (
 	CLIOptConnectTimeout = "connect-timeout"
 	// CLIOptKeyspace is the cli option for keyspace
 	CLIOptKeyspace = "keyspace"
+	// CLIOptDatabase is the cli option for datacenter
+	CLIOptDatacenter = "datacenter"
 	// CLIOptDatabase is the cli option for database
 	CLIOptDatabase = "database"
 	// CLIOptPluginName is the cli option for plugin name
@@ -127,6 +129,8 @@ const (
 	CLIFlagTimeout = CLIOptTimeout + ", t"
 	// CLIFlagKeyspace is the cli flag for keyspace
 	CLIFlagKeyspace = CLIOptKeyspace + ", k"
+	// CLIFlagDatacenter is the cli flag for datacenter
+	CLIFlagDatacenter = CLIOptDatacenter + ", dc"
 	// CLIFlagDatabase is the cli flag for database
 	CLIFlagDatabase = CLIOptDatabase + ", db"
 	// CLIFlagPluginName is the cli flag for plugin name

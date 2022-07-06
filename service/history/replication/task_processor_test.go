@@ -62,14 +62,12 @@ type (
 		mockShard          *shard.TestContext
 		mockEngine         *engine.MockEngine
 		config             *config.Config
-		taskFetcher        *MockTaskFetcher
 		mockDomainCache    *cache.MockDomainCache
 		mockClientBean     *client.MockBean
 		mockFrontendClient *frontend.MockClient
 		adminClient        *admin.MockClient
 		executionManager   *mocks.ExecutionManager
 		requestChan        chan *request
-		taskExecutor       *MockTaskExecutor
 
 		taskProcessor *taskProcessorImpl
 	}
@@ -107,7 +105,6 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.mockFrontendClient = s.mockShard.Resource.RemoteFrontendClient
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
-	s.taskExecutor = NewMockTaskExecutor(s.controller)
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.config = config.NewForTest()
@@ -115,21 +112,19 @@ func (s *taskProcessorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.requestChan = make(chan *request, 10)
 
-	s.taskFetcher = NewMockTaskFetcher(s.controller)
-	rateLimiter := quotas.NewDynamicRateLimiter(func() float64 {
-		return 100
-	})
-	s.taskFetcher.EXPECT().GetSourceCluster().Return("standby").AnyTimes()
-	s.taskFetcher.EXPECT().GetRequestChan().Return(s.requestChan).AnyTimes()
-	s.taskFetcher.EXPECT().GetRateLimiter().Return(rateLimiter).AnyTimes()
+	taskFetcher := &fakeTaskFetcher{
+		sourceCluster: "standby",
+		requestChan:   s.requestChan,
+		rateLimiter:   quotas.NewDynamicRateLimiter(func() float64 { return 100 }),
+	}
 
 	s.taskProcessor = NewTaskProcessor(
 		s.mockShard,
 		s.mockEngine,
 		s.config,
 		metricsClient,
-		s.taskFetcher,
-		s.taskExecutor,
+		taskFetcher,
+		nil,
 	).(*taskProcessorImpl)
 }
 
@@ -299,4 +294,22 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 
 	err = s.taskProcessor.triggerDataInconsistencyScan(task)
 	s.NoError(err)
+}
+
+type fakeTaskFetcher struct {
+	sourceCluster string
+	requestChan   chan<- *request
+	rateLimiter   *quotas.DynamicRateLimiter
+}
+
+func (f fakeTaskFetcher) Start() {}
+func (f fakeTaskFetcher) Stop()  {}
+func (f fakeTaskFetcher) GetSourceCluster() string {
+	return f.sourceCluster
+}
+func (f fakeTaskFetcher) GetRequestChan() chan<- *request {
+	return f.requestChan
+}
+func (f fakeTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
+	return f.rateLimiter
 }
