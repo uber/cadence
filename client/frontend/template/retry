@@ -1,0 +1,59 @@
+import (
+	"context"
+
+	"go.uber.org/yarpc"
+
+	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/types"
+)
+
+{{ $decorator := (printf "retryable%s" .Interface.Name) }}
+{{ $Decorator := (printf "Retryable%s" .Interface.Name) }}
+
+var _ {{.Interface.Name}} = (*{{$decorator}})(nil)
+
+// {{$decorator}} implements {{.Interface.Type}} interface instrumented with retries
+type {{$decorator}} struct {
+    client        {{.Interface.Type}}
+    throttleRetry *backoff.ThrottleRetry
+}
+
+// New{{$Decorator}} creates a new instance of {{$decorator}} with retry policy
+func New{{$Decorator}}(
+    client {{.Interface.Name}},
+    policy backoff.RetryPolicy,
+    isRetryable backoff.IsRetryable,
+) {{.Interface.Name}} {
+    return &{{$decorator}}{
+        client: client,
+        throttleRetry: backoff.NewThrottleRetry(
+            backoff.WithRetryPolicy(policy),
+            backoff.WithRetryableError(isRetryable),
+        ),
+    }
+}
+
+{{range $method := .Interface.Methods}}
+    {{$resultsLength := len ($method.Results)}}
+    {{if eq $resultsLength 1}}
+        func (c *{{$decorator}}) {{$method.Declaration}} {
+
+            op := func() error {
+                return c.client.{{$method.Call}}
+            }
+            return c.throttleRetry.Do(ctx, op)
+        }
+    {{else}}
+        func (c *{{$decorator}}) {{$method.Declaration}} {
+
+            var resp {{ (index $method.Results 0).Type }}
+            op := func() error {
+                var err error
+                resp, err = c.client.{{$method.Call}}
+                return err
+            }
+            err = c.throttleRetry.Do(ctx, op)
+            return resp, err
+        }
+    {{end}}
+{{end}}
