@@ -37,6 +37,8 @@ import (
 	_ "golang.org/x/tools/cmd/goimports"
 	// mockgen for generating mocks
 	_ "github.com/golang/mock/mockgen"
+	// gowrap for generating decorators for interface
+	_ "github.com/hexdigest/gowrap"
 	// mockery for generating mocks
 	_ "github.com/vektra/mockery/v2"
 	// enumer for generating utility methods for const enums
