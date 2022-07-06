@@ -39,8 +39,9 @@ $(BUILD)/proto-lint:
 $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go-file-modifications are done
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
-$(BUILD)/thrift:
-$(BUILD)/protoc:
+$(BUILD)/thrift: $(BUILD)/go_mod_check
+$(BUILD)/protoc: $(BUILD)/go_mod_check
+$(BUILD)/go_mod_check:
 
 # ====================================
 # helper vars
@@ -125,7 +126,19 @@ LINT_SRC := $(filter-out %_test.go ./.gen/%, $(ALL_SRC))
 # downloads and builds a go-gettable tool, versioned by go.mod, and installs
 # it into the build folder, named the same as the last portion of the URL.
 define go_build_tool
-$Q echo "building $(or $(2), $(notdir $(1))) from $(1)..."
+$Q echo "building $(or $(2), $(notdir $(1))) from internal/tools/go.mod..."
+$Q go build -mod=readonly -modfile=internal/tools/go.mod -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
+endef
+
+# same as go_build_tool, but uses our main module file, not the tools one.
+# this is necessary / useful for tools that we are already importing in the repo, e.g. yarpc.
+# versions here are checked to make sure the tools version matches the service version.
+#
+# this is an imperfect check as it only checks the top-level version.
+# checks of other packages are handled in $(BUILD)/go_mod_check
+define go_mod_build_tool
+$Q echo "building $(or $(2), $(notdir $(1))) from go.mod..."
+$Q ./scripts/check-gomod-version.sh $(1) $(if $(verbose),-v)
 $Q go build -mod=readonly -o $(BIN)/$(or $(2), $(notdir $(1))) $(1)
 endef
 
@@ -135,34 +148,41 @@ $(BIN) $(BUILD):
 	$Q mkdir -p $@
 
 $(BIN)/thriftrw: go.mod
-	$(call go_build_tool,go.uber.org/thriftrw)
+	$(call go_mod_build_tool,go.uber.org/thriftrw)
 
 $(BIN)/thriftrw-plugin-yarpc: go.mod
-	$(call go_build_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
+	$(call go_mod_build_tool,go.uber.org/yarpc/encoding/thrift/thriftrw-plugin-yarpc)
 
-$(BIN)/mockgen: go.mod
+$(BIN)/mockgen: internal/tools/go.mod
 	$(call go_build_tool,github.com/golang/mock/mockgen)
 
-$(BIN)/mockery: go.mod
+$(BIN)/mockery: internal/tools/go.mod
 	$(call go_build_tool,github.com/vektra/mockery/v2,mockery)
 
-$(BIN)/enumer: go.mod
+$(BIN)/enumer: internal/tools/go.mod
 	$(call go_build_tool,github.com/dmarkham/enumer)
 
-$(BIN)/goimports: go.mod
+$(BIN)/goimports: internal/tools/go.mod
 	$(call go_build_tool,golang.org/x/tools/cmd/goimports)
 
-$(BIN)/revive: go.mod
+$(BIN)/revive: internal/tools/go.mod
 	$(call go_build_tool,github.com/mgechev/revive)
 
 $(BIN)/protoc-gen-gogofast: go.mod | $(BIN)
-	$(call go_build_tool,github.com/gogo/protobuf/protoc-gen-gogofast)
+	$(call go_mod_build_tool,github.com/gogo/protobuf/protoc-gen-gogofast)
 
 $(BIN)/protoc-gen-yarpc-go: go.mod | $(BIN)
-	$(call go_build_tool,go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go)
+	$(call go_mod_build_tool,go.uber.org/yarpc/encoding/protobuf/protoc-gen-yarpc-go)
 
-$(BIN)/goveralls: go.mod
+$(BIN)/goveralls: internal/tools/go.mod
 	$(call go_build_tool,github.com/mattn/goveralls)
+
+$(BUILD)/go_mod_check: go.mod internal/tools/go.mod
+	$Q # ensure both have the same apache/thrift replacement
+	$Q ./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(verbose),-v)
+	$Q # generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
+	$Q ./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(verbose),-v)
+	$Q touch $@
 
 # copyright header checker/writer.  only requires stdlib, so no other dependencies are needed.
 $(BIN)/copyright: cmd/tools/copyright/licensegen.go
