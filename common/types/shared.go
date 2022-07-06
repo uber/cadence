@@ -6243,6 +6243,7 @@ type TerminateWorkflowExecutionRequest struct {
 	Reason            string             `json:"reason,omitempty"`
 	Details           []byte             `json:"details,omitempty"`
 	Identity          string             `json:"identity,omitempty"`
+	Restart           bool               `json:"identity,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)

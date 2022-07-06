@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -2751,10 +2752,25 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 	if err != nil {
 		return wh.error(err, scope, tags...)
 	}
-
+	var startRequest *types.StartWorkflowExecutionRequest
+	if terminateRequest.Restart {
+		history, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+			Domain: domainName,
+			Execution: &types.WorkflowExecution{
+				WorkflowID: terminateRequest.WorkflowExecution.WorkflowID,
+				RunID:      terminateRequest.WorkflowExecution.RunID,
+			},
+		})
+		if err != nil {
+			return wh.error(errHistoryNotFound, scope, tags...)
+		}
+		startRequest = constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
+			domainName, terminateRequest.WorkflowExecution.WorkflowID, terminateRequest.Identity)
+	}
 	err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
 		DomainUUID:       domainID,
 		TerminateRequest: terminateRequest,
+		StartRequest:     startRequest,
 	})
 	if err != nil {
 		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
@@ -4485,4 +4501,37 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 	default:
 		return err
 	}
+}
+func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, wid string, identity string) *types.StartWorkflowExecutionRequest {
+	var newWid string
+	if strings.Index(wid, "rerun") >= 0 {
+		newWid = wid[0:strings.Index(wid, "rerun")] + "rerun-" + uuid.New()[0:8]
+	} else {
+		newWid = wid + "-rerun-" + uuid.New()[0:8]
+	}
+
+	startRequest := &types.StartWorkflowExecutionRequest{
+		RequestID:  uuid.New(),
+		Domain:     domain,
+		WorkflowID: newWid,
+		WorkflowType: &types.WorkflowType{
+			Name: w.WorkflowType.Name,
+		},
+		TaskList: &types.TaskList{
+			Name: w.TaskList.Name,
+		},
+		Input:                               w.Input,
+		ExecutionStartToCloseTimeoutSeconds: w.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      w.TaskStartToCloseTimeoutSeconds,
+		Identity:                            identity,
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyRejectDuplicate.Ptr(),
+	}
+	startRequest.CronSchedule = w.CronSchedule
+	startRequest.RetryPolicy = w.RetryPolicy
+	startRequest.DelayStartSeconds = w.FirstDecisionTaskBackoffSeconds
+	startRequest.Header = w.Header
+	startRequest.Memo = w.Memo
+	startRequest.SearchAttributes = w.SearchAttributes
+
+	return startRequest
 }

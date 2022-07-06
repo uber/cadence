@@ -110,6 +110,7 @@ const (
 	FlagIdentity                          = "identity"
 	FlagDetail                            = "detail"
 	FlagReason                            = "reason"
+	FlagRestart                           = "restart"
 	FlagReasonWithAlias                   = FlagReason + ", re"
 	FlagOpen                              = "open"
 	FlagOpenWithAlias                     = FlagOpen + ", op"
@@ -533,6 +534,9 @@ func getFlagsForTerminate() []cli.Flag {
 	return append(flagsForExecution, cli.StringFlag{
 		Name:  FlagReasonWithAlias,
 		Usage: "The reason you want to terminate the workflow",
+	}, cli.StringFlag{
+		Name:  FlagReason,
+		Usage: "Restart the workflow after terminating [true, false]",
 	})
 }
 

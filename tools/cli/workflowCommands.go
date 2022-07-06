@@ -450,6 +450,7 @@ func TerminateWorkflow(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
 	reason := c.String(FlagReason)
+	restart := c.Bool(FlagRestart)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -462,6 +463,7 @@ func TerminateWorkflow(c *cli.Context) {
 				WorkflowID: wid,
 				RunID:      rid,
 			}, Identity: getCliIdentity(),
+			Restart: restart,
 		},
 	)
 
