@@ -444,14 +444,17 @@ func (handler *taskHandlerImpl) handleDecisionCompleteWorkflow(
 		return nil
 	}
 
+	// event ID is not relevant
+	isCanceled, _ := handler.mutableState.IsCancelRequested()
+
 	// check if this is a cron workflow
 	cronBackoff, err := handler.mutableState.GetCronBackoffDuration(ctx)
 	if err != nil {
 		handler.stopProcessing = true
 		return err
 	}
-	if cronBackoff == backoff.NoBackoff {
-		// not cron, so complete this workflow execution
+	if isCanceled || cronBackoff == backoff.NoBackoff {
+		// canceled or not cron, so complete this workflow execution
 		if _, err := handler.mutableState.AddCompletedWorkflowEvent(handler.decisionTaskCompletedID, attr); err != nil {
 			return &types.InternalServiceError{Message: "Unable to add complete workflow event."}
 		}
@@ -529,9 +532,11 @@ func (handler *taskHandlerImpl) handleDecisionFailWorkflow(
 		// cancellation must be sticky, as it's telling things to stop.
 		// this is particularly important for child workflows, as if they restart themselves after the parent
 		// cancels its context, there is no way for the parent to cancel the new run.
-		//
-		// this appears to work well for "returned an error" ignoring cron, but does not catch continue-as-new.
-		if _, err := handler.mutableState.AddFailWorkflowEvent(handler.decisionTaskCompletedID, attr); err != nil {
+		cancelAttrs := types.CancelWorkflowExecutionDecisionAttributes{
+			// TODO: serialize reason somehow, may deserve a new field / wrapped errors
+			Details: attr.Details,
+		}
+		if _, err := handler.mutableState.AddCancelWorkflowEvent(handler.decisionTaskCompletedID, &cancelAttrs); err != nil {
 			return err
 		}
 		return nil
@@ -805,14 +810,10 @@ func (handler *taskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 		// cancellation must be sticky, as it's telling things to stop.
 		// this is particularly important for child workflows, as if they restart themselves after the parent
 		// cancels its context, there is no way for the parent to cancel the new run.
-		//
-		// this appears to work well for continued-as-new, though data could be improved.
-		reason := "ignoring continue-as-new due to the workflow being canceled"
-		failattrs := types.FailWorkflowExecutionDecisionAttributes{
-			Reason:  &reason,
-			Details: nil, // maybe something would be relevant?  e.g. serialize the to-be-started workflow's info
+		cancelAttrs := types.CancelWorkflowExecutionDecisionAttributes{
+			Details: nil, // TODO: serialize continue-as-new data somehow, may deserve a new field
 		}
-		if _, err := handler.mutableState.AddFailWorkflowEvent(handler.decisionTaskCompletedID, &failattrs); err != nil {
+		if _, err := handler.mutableState.AddCancelWorkflowEvent(handler.decisionTaskCompletedID, &cancelAttrs); err != nil {
 			return err
 		}
 		return nil

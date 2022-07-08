@@ -314,6 +314,18 @@ func (b *HistoryBuilder) AddFailWorkflowEvent(decisionCompletedEventID int64,
 	return b.addEventToHistory(event)
 }
 
+// AddCancelWorkflowEvent adds WorkflowExecutionCanceled event to history
+func (b *HistoryBuilder) AddCancelWorkflowEvent(decisionCompletedEventID int64,
+	attributes *types.CancelWorkflowExecutionDecisionAttributes) *types.HistoryEvent {
+	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionCanceled)
+	event.WorkflowExecutionCanceledEventAttributes = &types.WorkflowExecutionCanceledEventAttributes{
+		DecisionTaskCompletedEventID: decisionCompletedEventID,
+		Details:                      attributes.Details,
+	}
+
+	return b.addEventToHistory(event)
+}
+
 // AddTimeoutWorkflowEvent adds WorkflowExecutionTimedout event to history
 func (b *HistoryBuilder) AddTimeoutWorkflowEvent() *types.HistoryEvent {
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionTimedOut)

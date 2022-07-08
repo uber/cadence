@@ -85,6 +85,7 @@ type (
 		AddExternalWorkflowExecutionCancelRequested(int64, string, string, string) (*types.HistoryEvent, error)
 		AddExternalWorkflowExecutionSignaled(int64, string, string, string, []uint8) (*types.HistoryEvent, error)
 		AddFailWorkflowEvent(int64, *types.FailWorkflowExecutionDecisionAttributes) (*types.HistoryEvent, error)
+		AddCancelWorkflowEvent(int64, *types.CancelWorkflowExecutionDecisionAttributes) (*types.HistoryEvent, error)
 		AddRecordMarkerEvent(int64, *types.RecordMarkerDecisionAttributes) (*types.HistoryEvent, error)
 		AddRequestCancelActivityTaskFailedEvent(int64, string, string) (*types.HistoryEvent, error)
 		AddRequestCancelExternalWorkflowExecutionFailedEvent(int64, int64, string, string, string, types.CancelExternalWorkflowExecutionFailedCause) (*types.HistoryEvent, error)
