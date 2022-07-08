@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -2752,7 +2751,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 	if err != nil {
 		return wh.error(err, scope, tags...)
 	}
-	var startRequest *types.StartWorkflowExecutionRequest
+
 	if terminateRequest.Restart {
 		history, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 			Domain: domainName,
@@ -2764,18 +2763,28 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		if err != nil {
 			return wh.error(errHistoryNotFound, scope, tags...)
 		}
-		startRequest = constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
-			domainName, terminateRequest.WorkflowExecution.WorkflowID, terminateRequest.Identity)
+		startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
+			domainName, terminateRequest.Identity)
+		historyRequest := common.CreateHistoryStartWorkflowRequest(
+			domainID, startRequest, time.Now())
+		historyRequestJson, err := json.Marshal(historyRequest)
+		err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
+			DomainUUID:       domainID,
+			TerminateRequest: terminateRequest,
+			StartRequestJson: string(historyRequestJson),
+		})
+		if err != nil {
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
+		}
+	} else {
+		err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
+			DomainUUID:       domainID,
+			TerminateRequest: terminateRequest,
+		})
+		if err != nil {
+			return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
+		}
 	}
-	err = wh.GetHistoryClient().TerminateWorkflowExecution(ctx, &types.HistoryTerminateWorkflowExecutionRequest{
-		DomainUUID:       domainID,
-		TerminateRequest: terminateRequest,
-		StartRequest:     startRequest,
-	})
-	if err != nil {
-		return wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
-	}
-
 	return nil
 }
 
@@ -4502,18 +4511,12 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 		return err
 	}
 }
-func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, wid string, identity string) *types.StartWorkflowExecutionRequest {
-	var newWid string
-	if strings.Index(wid, "rerun") >= 0 {
-		newWid = wid[0:strings.Index(wid, "rerun")] + "rerun-" + uuid.New()[0:8]
-	} else {
-		newWid = wid + "-rerun-" + uuid.New()[0:8]
-	}
+func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, identity string) *types.StartWorkflowExecutionRequest {
 
 	startRequest := &types.StartWorkflowExecutionRequest{
 		RequestID:  uuid.New(),
 		Domain:     domain,
-		WorkflowID: newWid,
+		WorkflowID: uuid.New(),
 		WorkflowType: &types.WorkflowType{
 			Name: w.WorkflowType.Name,
 		},

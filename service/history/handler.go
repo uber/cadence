@@ -24,6 +24,7 @@ package history
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"sync"
@@ -107,7 +108,7 @@ type (
 		StartWorkflowExecution(context.Context, *types.HistoryStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
 		SyncActivity(context.Context, *types.SyncActivityRequest) error
 		SyncShardStatus(context.Context, *types.SyncShardStatusRequest) error
-		TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest, *types.HistoryStartWorkflowExecutionRequest) error
+		TerminateWorkflowExecution(context.Context, *types.HistoryTerminateWorkflowExecutionRequest, string) error
 		GetFailoverInfo(context.Context, *types.GetFailoverInfoRequest) (*types.GetFailoverInfoResponse, error)
 	}
 
@@ -1197,7 +1198,7 @@ func (h *handlerImpl) RemoveSignalMutableState(
 func (h *handlerImpl) TerminateWorkflowExecution(
 	ctx context.Context,
 	wrappedRequest *types.HistoryTerminateWorkflowExecutionRequest,
-	startRequest *types.HistoryStartWorkflowExecutionRequest,
+	startRequestJson string,
 ) (retError error) {
 
 	defer log.CapturePanic(h.GetLogger(), &retError)
@@ -1227,7 +1228,9 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 	}
 	h.GetEventCache()
 	h.GetDomainCache()
-	err2 := engine.TerminateWorkflowExecution(ctx, wrappedRequest, startRequest)
+	startRequest := types.HistoryStartWorkflowExecutionRequest{}
+	_ = json.Unmarshal([]byte(startRequestJson), &startRequest)
+	err2 := engine.TerminateWorkflowExecution(ctx, wrappedRequest, &startRequest)
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}

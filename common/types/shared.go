@@ -6238,12 +6238,13 @@ const (
 
 // TerminateWorkflowExecutionRequest is an internal type (TBD...)
 type TerminateWorkflowExecutionRequest struct {
-	Domain            string             `json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Reason            string             `json:"reason,omitempty"`
-	Details           []byte             `json:"details,omitempty"`
-	Identity          string             `json:"identity,omitempty"`
-	Restart           bool               `json:"identity,omitempty"`
+	Domain            string                         `json:"domain,omitempty"`
+	WorkflowExecution *WorkflowExecution             `json:"workflowExecution,omitempty"`
+	Reason            string                         `json:"reason,omitempty"`
+	Details           []byte                         `json:"details,omitempty"`
+	Identity          string                         `json:"identity,omitempty"`
+	Restart           bool                           `json:"restart,omitempty"`
+	StartRequest      *StartWorkflowExecutionRequest `json:"startRequest,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)

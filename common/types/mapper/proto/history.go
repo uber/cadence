@@ -1456,6 +1456,7 @@ func FromHistoryTerminateWorkflowExecutionRequest(t *types.HistoryTerminateWorkf
 		DomainId:                  t.DomainUUID,
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		ChildWorkflowOnly:         t.ChildWorkflowOnly,
+		StartRequestJson:          t.StartRequestJson,
 	}
 }
 

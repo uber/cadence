@@ -2568,10 +2568,12 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		if err != nil {
 			return err
 		}
+		workflowExecution.RunID = uuid.New()
 		_, err = e.terminateAndStartWorkflow(ctx, runningWFCtx, workflowExecution, domainEntry, domainID, startRequest, nil)
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 	return workflow.UpdateCurrentWithActionFunc(
 		ctx,

@@ -5519,6 +5519,7 @@ func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRe
 		Reason:            &t.Reason,
 		Details:           t.Details,
 		Identity:          &t.Identity,
+		Restart:           &t.Restart,
 	}
 }
 
@@ -5533,6 +5534,7 @@ func ToTerminateWorkflowExecutionRequest(t *shared.TerminateWorkflowExecutionReq
 		Reason:            t.GetReason(),
 		Details:           t.Details,
 		Identity:          t.GetIdentity(),
+		Restart:           t.GetRestart(),
 	}
 }
 

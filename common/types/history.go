@@ -1111,7 +1111,7 @@ type HistoryTerminateWorkflowExecutionRequest struct {
 	TerminateRequest          *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
 	ExternalWorkflowExecution *WorkflowExecution                 `json:"externalWorkflowExecution,omitempty"`
 	ChildWorkflowOnly         bool                               `json:"childWorkflowOnly,omitempty"`
-	StartRequest              *StartWorkflowExecutionRequest     `json:"startRequest,omitempty"`
+	StartRequestJson          string                             `json:"startRequestJson,omitempty"`
 }
 
 // GetDomainUUID is an internal getter (TBD...)

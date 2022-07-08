@@ -259,6 +259,6 @@ func (g grpcHandler) SyncShardStatus(ctx context.Context, request *historyv1.Syn
 }
 
 func (g grpcHandler) TerminateWorkflowExecution(ctx context.Context, request *historyv1.TerminateWorkflowExecutionRequest) (*historyv1.TerminateWorkflowExecutionResponse, error) {
-	err := g.h.TerminateWorkflowExecution(ctx, proto.ToHistoryTerminateWorkflowExecutionRequest(request), proto.ToHistoryStartWorkflowExecutionRequest(request.StartRequest))
+	err := g.h.TerminateWorkflowExecution(ctx, proto.ToHistoryTerminateWorkflowExecutionRequest(request), request.StartRequestJson)
 	return &historyv1.TerminateWorkflowExecutionResponse{}, proto.FromError(err)
 }

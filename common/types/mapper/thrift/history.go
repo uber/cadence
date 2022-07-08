@@ -1162,6 +1162,7 @@ func FromHistoryTerminateWorkflowExecutionRequest(t *types.HistoryTerminateWorkf
 		TerminateRequest:          FromTerminateWorkflowExecutionRequest(t.TerminateRequest),
 		ExternalWorkflowExecution: FromWorkflowExecution(t.ExternalWorkflowExecution),
 		ChildWorkflowOnly:         &t.ChildWorkflowOnly,
+		StartRequestJson:          &t.StartRequestJson,
 	}
 }
 

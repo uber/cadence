@@ -462,15 +462,16 @@ func TerminateWorkflow(c *cli.Context) {
 			WorkflowExecution: &types.WorkflowExecution{
 				WorkflowID: wid,
 				RunID:      rid,
-			}, Identity: getCliIdentity(),
-			Restart: restart,
+			},
+			Identity: getCliIdentity(),
+			Restart:  restart,
 		},
 	)
 
 	if err != nil {
-		ErrorAndExit("Terminate workflow failed.", err)
+		ErrorAndExit("Terminate workflow failed. ", err)
 	} else {
-		fmt.Println("Terminate workflow succeeded.")
+		fmt.Println("Terminate workflow succeeded. ")
 	}
 }
 

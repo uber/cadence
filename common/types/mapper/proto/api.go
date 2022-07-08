@@ -3872,6 +3872,8 @@ func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRe
 		Reason:            t.Reason,
 		Details:           FromPayload(t.Details),
 		Identity:          t.Identity,
+		StartRequest:      FromStartWorkflowExecutionRequest(t.StartRequest),
+		Restart:           t.Restart,
 	}
 }
 
@@ -3885,6 +3887,7 @@ func ToTerminateWorkflowExecutionRequest(t *apiv1.TerminateWorkflowExecutionRequ
 		Reason:            t.Reason,
 		Details:           ToPayload(t.Details),
 		Identity:          t.Identity,
+		Restart:           t.Restart,
 	}
 }
 

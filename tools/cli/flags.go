@@ -535,7 +535,7 @@ func getFlagsForTerminate() []cli.Flag {
 		Name:  FlagReasonWithAlias,
 		Usage: "The reason you want to terminate the workflow",
 	}, cli.StringFlag{
-		Name:  FlagReason,
+		Name:  FlagRestart,
 		Usage: "Restart the workflow after terminating [true, false]",
 	})
 }
