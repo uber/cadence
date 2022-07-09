@@ -556,7 +556,6 @@ func (e *historyEngineImpl) RestartWorkflowExecution(ctx context.Context,
 	}
 	runningMutableState := runningWFCtx.GetMutableState()
 	if !runningMutableState.IsWorkflowExecutionRunning() {
-		// just startworkflow
 		startResp, err := e.startWorkflowHelper(
 			ctx,
 			startRequest,
