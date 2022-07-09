@@ -529,20 +529,31 @@ func (v *v6BulkProcessor) Close() error {
 
 func (v *v6BulkProcessor) Add(request *GenericBulkableAddRequest) {
 	var req elastic.BulkableRequest
-	if request.IsDelete {
+	switch request.RequestType {
+	case BulkableDeleteRequest:
 		req = elastic.NewBulkDeleteRequest().
 			Index(request.Index).
 			Type(request.Type).
 			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version)
-	} else {
+	case BulkableIndexRequest:
 		req = elastic.NewBulkIndexRequest().
 			Index(request.Index).
 			Type(request.Type).
 			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version).
+			Doc(request.Doc)
+	case BulkableCreateRequest:
+		//for bulk create request still calls the bulk index method
+		//with providing operation type
+		req = elastic.NewBulkIndexRequest().
+			OpType("create").
+			Index(request.Index).
+			Type(request.Type).
+			Id(request.ID).
+			VersionType("internal").
 			Doc(request.Doc)
 	}
 	v.processor.Add(req)

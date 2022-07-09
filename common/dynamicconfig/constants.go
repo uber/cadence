@@ -1513,6 +1513,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainID, WorkflowID
 	EnableReplicationTaskGeneration
+	// EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch
+	// KeyName: history.EnableRecordWorkflowExecutionUninitialized
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	EnableRecordWorkflowExecutionUninitialized
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -3330,6 +3336,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.emitShardDiffLog",
 		Description:  "EmitShardDiffLog is whether emit the shard diff log",
 		DefaultValue: false,
+	},
+	EnableRecordWorkflowExecutionUninitialized: DynamicBool{
+		KeyName:      "history.enableRecordWorkflowExecutionUninitialized",
+		Description:  "EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch",
+		DefaultValue: true,
 	},
 	DisableListVisibilityByFilter: DynamicBool{
 		KeyName:      "frontend.disableListVisibilityByFilter",

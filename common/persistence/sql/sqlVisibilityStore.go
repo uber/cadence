@@ -122,6 +122,14 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 	return nil
 }
 
+func (s *sqlVisibilityStore) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *p.InternalRecordWorkflowExecutionUninitializedRequest,
+) error {
+	// temporary: not implemented, only implemented for ES
+	return nil
+}
+
 func (s *sqlVisibilityStore) UpsertWorkflowExecution(
 	_ context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
