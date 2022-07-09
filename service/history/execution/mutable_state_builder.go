@@ -1086,7 +1086,8 @@ func (e *mutableStateBuilder) GetCronBackoffDuration(
 	firstDecisionTaskBackoff :=
 		time.Duration(workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 	executionTime = executionTime.Add(firstDecisionTaskBackoff)
-	return backoff.GetBackoffForNextSchedule(info.CronSchedule, executionTime, e.timeSource.Now()), nil
+	jitterStartSeconds := workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetJitterStartSeconds()
+	return backoff.GetBackoffForNextSchedule(info.CronSchedule, executionTime, e.timeSource.Now(), jitterStartSeconds), nil
 }
 
 // GetSignalInfo get details about a signal request that is currently in progress.
@@ -1646,6 +1647,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		CronSchedule:                        attributes.CronSchedule,
 		Memo:                                attributes.Memo,
 		SearchAttributes:                    attributes.SearchAttributes,
+		JitterStartSeconds:                  attributes.JitterStartSeconds,
 	}
 
 	req := &types.HistoryStartWorkflowExecutionRequest{

@@ -22,6 +22,7 @@ package backoff
 
 import (
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/robfig/cron"
@@ -45,7 +46,12 @@ func ValidateSchedule(cronSchedule string) error {
 
 // GetBackoffForNextSchedule calculates the backoff time for the next run given
 // a cronSchedule, workflow start time and workflow close time
-func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, closeTime time.Time) time.Duration {
+func GetBackoffForNextSchedule(
+	cronSchedule string,
+	startTime time.Time,
+	closeTime time.Time,
+	jitterStartSeconds int32,
+) time.Duration {
 	if len(cronSchedule) == 0 {
 		return NoBackoff
 	}
@@ -63,13 +69,24 @@ func GetBackoffForNextSchedule(cronSchedule string, startTime time.Time, closeTi
 	}
 	backoffInterval := nextScheduleTime.Sub(closeUTCTime)
 	roundedInterval := time.Second * time.Duration(math.Ceil(backoffInterval.Seconds()))
-	return roundedInterval
+
+	var jitter time.Duration
+	if jitterStartSeconds > 0 {
+		jitter = time.Duration(rand.Int31n(jitterStartSeconds+1)) * time.Second
+	}
+
+	return roundedInterval + jitter
 }
 
 // GetBackoffForNextScheduleInSeconds calculates the backoff time in seconds for the
 // next run given a cronSchedule and current time
-func GetBackoffForNextScheduleInSeconds(cronSchedule string, startTime time.Time, closeTime time.Time) int32 {
-	backoffDuration := GetBackoffForNextSchedule(cronSchedule, startTime, closeTime)
+func GetBackoffForNextScheduleInSeconds(
+	cronSchedule string,
+	startTime time.Time,
+	closeTime time.Time,
+	jitterStartSeconds int32,
+) int32 {
+	backoffDuration := GetBackoffForNextSchedule(cronSchedule, startTime, closeTime, jitterStartSeconds)
 	if backoffDuration == NoBackoff {
 		return 0
 	}

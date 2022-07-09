@@ -730,6 +730,7 @@ type ContinueAsNewWorkflowExecutionDecisionAttributes struct {
 	Header                              *Header                 `json:"header,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes       `json:"searchAttributes,omitempty"`
+	JitterStartSeconds                  *int32                  `json:"jitterStartSeconds,omitempty"`
 }
 
 // GetExecutionStartToCloseTimeoutSeconds is an internal getter (TBD...)
@@ -752,6 +753,14 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetTaskStartToCloseTi
 func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetBackoffStartIntervalInSeconds() (o int32) {
 	if v != nil && v.BackoffStartIntervalInSeconds != nil {
 		return *v.BackoffStartIntervalInSeconds
+	}
+	return
+}
+
+// GetJitterStartSeconds is an internal getter (TBD...)
+func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetJitterStartSeconds() (o int32) {
+	if v != nil && v.JitterStartSeconds != nil {
+		return *v.JitterStartSeconds
 	}
 	return
 }
@@ -6764,6 +6773,7 @@ type WorkflowExecutionContinuedAsNewEventAttributes struct {
 	Header                              *Header                 `json:"header,omitempty"`
 	Memo                                *Memo                   `json:"memo,omitempty"`
 	SearchAttributes                    *SearchAttributes       `json:"searchAttributes,omitempty"`
+	JitterStartSeconds                  *int32                  `json:"jitterStartSeconds,omitempty"`
 }
 
 // GetNewExecutionRunID is an internal getter (TBD...)
@@ -6962,6 +6972,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	SearchAttributes                    *SearchAttributes       `json:"searchAttributes,omitempty"`
 	PrevAutoResetPoints                 *ResetPoints            `json:"prevAutoResetPoints,omitempty"`
 	Header                              *Header                 `json:"header,omitempty"`
+	JitterStartSeconds                  *int32                  `json:"jitterStartSeconds,omitempty"`
 }
 
 // GetParentWorkflowDomain is an internal getter (TBD...)
@@ -7048,6 +7059,13 @@ func (v *WorkflowExecutionStartedEventAttributes) GetCronSchedule() (o string) {
 func (v *WorkflowExecutionStartedEventAttributes) GetFirstDecisionTaskBackoffSeconds() (o int32) {
 	if v != nil && v.FirstDecisionTaskBackoffSeconds != nil {
 		return *v.FirstDecisionTaskBackoffSeconds
+	}
+	return
+}
+
+func (v *WorkflowExecutionStartedEventAttributes) GetJitterStartSeconds() (o int32) {
+	if v != nil && v.JitterStartSeconds != nil {
+		return *v.JitterStartSeconds
 	}
 	return
 }

@@ -519,21 +519,16 @@ func CreateHistoryStartWorkflowRequest(
 	}
 
 	delayStartSeconds := startRequest.GetDelayStartSeconds()
+	jitterStartSeconds := startRequest.GetJitterStartSeconds()
 	firstDecisionTaskBackoffSeconds := delayStartSeconds
 	if len(startRequest.GetCronSchedule()) > 0 {
 		delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
 		firstDecisionTaskBackoffSeconds = backoff.GetBackoffForNextScheduleInSeconds(
-			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime)
+			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime, jitterStartSeconds)
 
 		// backoff seconds was calculated based on delayed start time, so we need to
 		// add the delayStartSeconds to that backoff.
 		firstDecisionTaskBackoffSeconds += delayStartSeconds
-	}
-
-	// Add a random jitter to start time, if requested.
-	jitterStartSeconds := startRequest.GetJitterStartSeconds()
-	if jitterStartSeconds > 0 {
-		firstDecisionTaskBackoffSeconds += rand.Int31n(jitterStartSeconds + 1)
 	}
 
 	histRequest.FirstDecisionTaskBackoffSeconds = Int32Ptr(firstDecisionTaskBackoffSeconds)

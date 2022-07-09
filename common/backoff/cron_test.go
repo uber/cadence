@@ -61,8 +61,39 @@ func TestCron(t *testing.T) {
 			if tt.result != NoBackoff {
 				assert.NoError(t, err)
 			}
-			backoff := GetBackoffForNextSchedule(tt.cron, start, end)
+			backoff := GetBackoffForNextSchedule(tt.cron, start, end, 0)
 			assert.Equal(t, tt.result, backoff, "The cron spec is %s and the expected result is %s", tt.cron, tt.result)
+		})
+	}
+}
+
+var cronWithJitterStartTests = []struct {
+	cron               string
+	startTime          string
+	jitterStartSeconds int32
+	result             time.Duration
+}{
+	{"* * * * *", "2018-12-17T08:00:00+00:00", 10, time.Second * 60},
+	{"* * * * *", "2018-12-17T08:00:10+00:00", 30, time.Second * 50},
+	{"* * * * *", "2018-12-17T08:00:25+00:00", 5, time.Second * 35},
+	{"* * * * *", "2018-12-17T08:00:59+00:00", 45, time.Second * 1},
+}
+
+func TestCronWithJitterStart(t *testing.T) {
+	for idx, tt := range cronWithJitterStartTests {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			start, _ := time.Parse(time.RFC3339, tt.startTime)
+			end := start
+			err := ValidateSchedule(tt.cron)
+			if tt.result != NoBackoff {
+				assert.NoError(t, err)
+			}
+			backoff := GetBackoffForNextSchedule(tt.cron, start, end, tt.jitterStartSeconds)
+			delta := time.Duration(tt.jitterStartSeconds) * time.Second
+			resultTime := start.Add(tt.result)
+			backoffTime := start.Add(backoff)
+			assert.WithinDuration(t, resultTime, backoffTime, delta, "The cron spec is %s and the expected result is between %s and %s",
+				tt.cron, tt.result, tt.result+delta)
 		})
 	}
 }
