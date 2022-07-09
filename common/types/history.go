@@ -889,6 +889,23 @@ func (v *HistorySignalWorkflowExecutionRequest) GetChildWorkflowOnly() (o bool) 
 	return
 }
 
+// HistoryRestartWorkflowExecutionRequest is an internal type (TBD...)
+type HistoryRestartWorkflowExecutionRequest struct {
+	DomainUUID                      string                             `json:"domainUUID,omitempty"`
+	StartRequest                    *StartWorkflowExecutionRequest     `json:"startRequest,omitempty"`
+	ParentExecutionInfo             *ParentExecutionInfo               `json:"parentExecutionInfo,omitempty"`
+	Attempt                         int32                              `json:"attempt,omitempty"`
+	ExpirationTimestamp             *int64                             `json:"expirationTimestamp,omitempty"`
+	ContinueAsNewInitiator          *ContinueAsNewInitiator            `json:"continueAsNewInitiator,omitempty"`
+	ContinuedFailureReason          *string                            `json:"continuedFailureReason,omitempty"`
+	ContinuedFailureDetails         []byte                             `json:"continuedFailureDetails,omitempty"`
+	LastCompletionResult            []byte                             `json:"lastCompletionResult,omitempty"`
+	FirstDecisionTaskBackoffSeconds *int32                             `json:"firstDecisionTaskBackoffSeconds,omitempty"`
+	TerminateRequest                *TerminateWorkflowExecutionRequest `json:"terminateRequest,omitempty"`
+	ExternalWorkflowExecution       *WorkflowExecution                 `json:"externalWorkflowExecution,omitempty"`
+	ChildWorkflowOnly               bool                               `json:"childWorkflowOnly,omitempty"`
+}
+
 // HistoryStartWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryStartWorkflowExecutionRequest struct {
 	DomainUUID                      string                         `json:"domainUUID,omitempty"`
@@ -901,6 +918,14 @@ type HistoryStartWorkflowExecutionRequest struct {
 	ContinuedFailureDetails         []byte                         `json:"continuedFailureDetails,omitempty"`
 	LastCompletionResult            []byte                         `json:"lastCompletionResult,omitempty"`
 	FirstDecisionTaskBackoffSeconds *int32                         `json:"firstDecisionTaskBackoffSeconds,omitempty"`
+}
+
+// GetDomainUUID is an internal getter (TBD...)
+func (v *HistoryRestartWorkflowExecutionRequest) GetDomainUUID() (o string) {
+	if v != nil {
+		return v.DomainUUID
+	}
+	return
 }
 
 // GetDomainUUID is an internal getter (TBD...)

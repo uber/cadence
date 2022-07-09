@@ -56,6 +56,14 @@ func TestScopeDefsMapped(t *testing.T) {
 			assert.True(t, IsMetric(tag), "metric tags should conform to regex")
 		}
 	}
+	for i := HistoryRestartWorkflowExecutionScope; i < NumHistoryScopes; i++ {
+		key, ok := ScopeDefs[History][i]
+		require.True(t, ok)
+		require.NotEmpty(t, key)
+		for tag := range key.tags {
+			assert.True(t, IsMetric(tag), "metric tags should conform to regex")
+		}
+	}
 	for i := HistoryStartWorkflowExecutionScope; i < NumHistoryScopes; i++ {
 		key, ok := ScopeDefs[History][i]
 		require.True(t, ok)

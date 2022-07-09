@@ -541,6 +541,49 @@ func (e *historyEngineImpl) generateFirstDecisionTask(
 	return nil
 }
 
+// RestartWorkflowExecution restarts a previous execution. If the current is running it will terminate it first
+func (e *historyEngineImpl) RestartWorkflowExecution(ctx context.Context,
+	startRequest *types.HistoryStartWorkflowExecutionRequest, terminateRequest *types.HistoryTerminateWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error) {
+
+	domainEntry, err := e.getActiveDomainByID(startRequest.DomainUUID)
+	if err != nil {
+		return nil, err
+	}
+	runningWFCtx, err := workflow.LoadOnce(ctx, e.executionCache, startRequest.DomainUUID,
+		terminateRequest.TerminateRequest.WorkflowExecution.GetWorkflowID(), terminateRequest.TerminateRequest.WorkflowExecution.GetRunID())
+	if err != nil {
+		return nil, err
+	}
+	runningMutableState := runningWFCtx.GetMutableState()
+	if !runningMutableState.IsWorkflowExecutionRunning() {
+		// just startworkflow
+		startResp, err := e.startWorkflowHelper(
+			ctx,
+			startRequest,
+			domainEntry,
+			metrics.HistoryRestartWorkflowExecutionScope,
+			nil)
+		if err != nil {
+			return nil, err
+		}
+		return &types.RestartWorkflowExecutionResponse{
+			RunID: startResp.RunID,
+		}, nil
+	} else {
+		workflowExecution := types.WorkflowExecution{
+			WorkflowID: startRequest.StartRequest.GetWorkflowID(),
+			RunID:      uuid.New(),
+		}
+		startResp, err := e.terminateAndStartWorkflow(ctx, runningWFCtx, workflowExecution, domainEntry, startRequest.DomainUUID, startRequest, nil)
+		if err != nil {
+			return nil, err
+		}
+		return &types.RestartWorkflowExecutionResponse{
+			RunID: startResp.RunID,
+		}, nil
+	}
+}
+
 // StartWorkflowExecution starts a workflow execution
 func (e *historyEngineImpl) StartWorkflowExecution(
 	ctx context.Context,

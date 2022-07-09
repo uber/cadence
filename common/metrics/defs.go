@@ -879,8 +879,10 @@ const (
 
 // -- Operation scopes for History service --
 const (
+	// HistoryRestartWorkflowExecutionScope tracks StartWorkflowExecution API calls received by service
+	HistoryRestartWorkflowExecutionScope = iota + NumCommonScopes
 	// HistoryStartWorkflowExecutionScope tracks StartWorkflowExecution API calls received by service
-	HistoryStartWorkflowExecutionScope = iota + NumCommonScopes
+	HistoryStartWorkflowExecutionScope
 	// HistoryRecordActivityTaskHeartbeatScope tracks RecordActivityTaskHeartbeat API calls received by service
 	HistoryRecordActivityTaskHeartbeatScope
 	// HistoryRespondDecisionTaskCompletedScope tracks RespondDecisionTaskCompleted API calls received by service
@@ -1592,6 +1594,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 	// History Scope Names
 	History: {
 		HistoryStartWorkflowExecutionScope:                              {operation: "StartWorkflowExecution"},
+		HistoryRestartWorkflowExecutionScope:                            {operation: "RestartWorkflowExecution"},
 		HistoryRecordActivityTaskHeartbeatScope:                         {operation: "RecordActivityTaskHeartbeat"},
 		HistoryRespondDecisionTaskCompletedScope:                        {operation: "RespondDecisionTaskCompleted"},
 		HistoryRespondDecisionTaskFailedScope:                           {operation: "RespondDecisionTaskFailed"},

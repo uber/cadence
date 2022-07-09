@@ -101,6 +101,7 @@ type (
 		RespondCrossClusterTasksCompleted(context.Context, *types.RespondCrossClusterTasksCompletedRequest) (*types.RespondCrossClusterTasksCompletedResponse, error)
 		RespondDecisionTaskCompleted(context.Context, *types.HistoryRespondDecisionTaskCompletedRequest) (*types.HistoryRespondDecisionTaskCompletedResponse, error)
 		RespondDecisionTaskFailed(context.Context, *types.HistoryRespondDecisionTaskFailedRequest) error
+		RestartWorkflowExecution(context.Context, *types.HistoryRestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error)
 		ScheduleDecisionTask(context.Context, *types.ScheduleDecisionTaskRequest) error
 		SignalWithStartWorkflowExecution(context.Context, *types.HistorySignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
 		SignalWorkflowExecution(context.Context, *types.HistorySignalWorkflowExecutionRequest) error
@@ -702,6 +703,33 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 	}
 
 	return nil
+}
+
+// RestartWorkflowExecution - restarts a workflow
+func (h *handlerImpl) RestartWorkflowExecution(ctx context.Context, request *types.HistoryRestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
+	defer log.CapturePanic(h.GetLogger(), &retError)
+	h.startWG.Wait()
+	scope, sw := h.startRequestProfile(ctx, metrics.HistoryRestartWorkflowExecutionScope)
+	defer sw.Stop()
+	domainID := request.GetDomainUUID()
+	if domainID == "" {
+		return nil, h.error(errDomainNotSet, scope, domainID, "")
+	}
+
+	if ok := h.rateLimiter.Allow(); !ok {
+		return nil, h.error(errHistoryHostThrottle, scope, domainID, "")
+	}
+	workflowID := request.StartRequest.GetWorkflowID()
+	engine, err1 := h.controller.GetEngine(request.TerminateRequest.WorkflowExecution.WorkflowID)
+	if err1 != nil {
+		return nil, h.error(err1, scope, domainID, workflowID)
+	}
+	response, err2 := engine.RestartWorkflowExecution(ctx, h.toStartRequestFromRestartRequest(request), h.toTerminateRequestFromRestartRequest(request))
+	if err2 != nil {
+		return nil, h.error(err2, scope, domainID, workflowID)
+	}
+
+	return response, nil
 }
 
 // StartWorkflowExecution - creates a new workflow execution
@@ -2180,4 +2208,27 @@ func validateTaskToken(token *common.TaskToken) error {
 		return errRunIDNotValid
 	}
 	return nil
+}
+
+func (h *handlerImpl) toStartRequestFromRestartRequest(restartRequest *types.HistoryRestartWorkflowExecutionRequest) *types.HistoryStartWorkflowExecutionRequest {
+	return &types.HistoryStartWorkflowExecutionRequest{
+		DomainUUID:                      restartRequest.DomainUUID,
+		StartRequest:                    restartRequest.StartRequest,
+		ParentExecutionInfo:             restartRequest.ParentExecutionInfo,
+		Attempt:                         restartRequest.Attempt,
+		ExpirationTimestamp:             restartRequest.ExpirationTimestamp,
+		ContinueAsNewInitiator:          restartRequest.ContinueAsNewInitiator,
+		ContinuedFailureReason:          restartRequest.ContinuedFailureReason,
+		ContinuedFailureDetails:         restartRequest.ContinuedFailureDetails,
+		LastCompletionResult:            restartRequest.LastCompletionResult,
+		FirstDecisionTaskBackoffSeconds: restartRequest.FirstDecisionTaskBackoffSeconds,
+	}
+}
+func (h *handlerImpl) toTerminateRequestFromRestartRequest(restartRequest *types.HistoryRestartWorkflowExecutionRequest) *types.HistoryTerminateWorkflowExecutionRequest {
+	return &types.HistoryTerminateWorkflowExecutionRequest{
+		DomainUUID:                restartRequest.DomainUUID,
+		TerminateRequest:          restartRequest.TerminateRequest,
+		ExternalWorkflowExecution: restartRequest.ExternalWorkflowExecution,
+		ChildWorkflowOnly:         restartRequest.ChildWorkflowOnly,
+	}
 }

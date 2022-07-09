@@ -35,7 +35,7 @@ type (
 	// Engine represents an interface for managing workflow execution history.
 	Engine interface {
 		common.Daemon
-
+		RestartWorkflowExecution(ctx context.Context, startRequest *types.HistoryStartWorkflowExecutionRequest, terminateRequest *types.HistoryTerminateWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error)
 		StartWorkflowExecution(ctx context.Context, request *types.HistoryStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
 		GetMutableState(ctx context.Context, request *types.GetMutableStateRequest) (*types.GetMutableStateResponse, error)
 		PollMutableState(ctx context.Context, request *types.PollMutableStateRequest) (*types.PollMutableStateResponse, error)
