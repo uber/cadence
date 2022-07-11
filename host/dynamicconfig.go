@@ -56,29 +56,27 @@ type dynamicClient struct {
 	client    dynamicconfig.Client
 }
 
-func (d *dynamicClient) GetValue(name dynamicconfig.Key, defaultValue interface{}) (interface{}, error) {
+func (d *dynamicClient) GetValue(name dynamicconfig.Key) (interface{}, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		d.RUnlock()
 		return val, nil
 	}
 	d.RUnlock()
-	return d.client.GetValue(name, defaultValue)
+	return d.client.GetValue(name)
 }
 
-func (d *dynamicClient) GetValueWithFilters(
-	name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue interface{},
-) (interface{}, error) {
+func (d *dynamicClient) GetValueWithFilters(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}) (interface{}, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		d.RUnlock()
 		return val, nil
 	}
 	d.RUnlock()
-	return d.client.GetValueWithFilters(name, filters, defaultValue)
+	return d.client.GetValueWithFilters(name, filters)
 }
 
-func (d *dynamicClient) GetIntValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue int) (int, error) {
+func (d *dynamicClient) GetIntValue(name dynamicconfig.IntKey, filters map[dynamicconfig.Filter]interface{}) (int, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		if intVal, ok := val.(int); ok {
@@ -87,10 +85,10 @@ func (d *dynamicClient) GetIntValue(name dynamicconfig.Key, filters map[dynamicc
 		}
 	}
 	d.RUnlock()
-	return d.client.GetIntValue(name, filters, defaultValue)
+	return d.client.GetIntValue(name, filters)
 }
 
-func (d *dynamicClient) GetFloatValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue float64) (float64, error) {
+func (d *dynamicClient) GetFloatValue(name dynamicconfig.FloatKey, filters map[dynamicconfig.Filter]interface{}) (float64, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		if floatVal, ok := val.(float64); ok {
@@ -99,10 +97,10 @@ func (d *dynamicClient) GetFloatValue(name dynamicconfig.Key, filters map[dynami
 		}
 	}
 	d.RUnlock()
-	return d.client.GetFloatValue(name, filters, defaultValue)
+	return d.client.GetFloatValue(name, filters)
 }
 
-func (d *dynamicClient) GetBoolValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue bool) (bool, error) {
+func (d *dynamicClient) GetBoolValue(name dynamicconfig.BoolKey, filters map[dynamicconfig.Filter]interface{}) (bool, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		if boolVal, ok := val.(bool); ok {
@@ -111,10 +109,10 @@ func (d *dynamicClient) GetBoolValue(name dynamicconfig.Key, filters map[dynamic
 		}
 	}
 	d.RUnlock()
-	return d.client.GetBoolValue(name, filters, defaultValue)
+	return d.client.GetBoolValue(name, filters)
 }
 
-func (d *dynamicClient) GetStringValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue string) (string, error) {
+func (d *dynamicClient) GetStringValue(name dynamicconfig.StringKey, filters map[dynamicconfig.Filter]interface{}) (string, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		if stringVal, ok := val.(string); ok {
@@ -123,12 +121,10 @@ func (d *dynamicClient) GetStringValue(name dynamicconfig.Key, filters map[dynam
 		}
 	}
 	d.RUnlock()
-	return d.client.GetStringValue(name, filters, defaultValue)
+	return d.client.GetStringValue(name, filters)
 }
 
-func (d *dynamicClient) GetMapValue(
-	name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue map[string]interface{},
-) (map[string]interface{}, error) {
+func (d *dynamicClient) GetMapValue(name dynamicconfig.MapKey, filters map[dynamicconfig.Filter]interface{}) (map[string]interface{}, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		if mapVal, ok := val.(map[string]interface{}); ok {
@@ -137,12 +133,10 @@ func (d *dynamicClient) GetMapValue(
 		}
 	}
 	d.RUnlock()
-	return d.client.GetMapValue(name, filters, defaultValue)
+	return d.client.GetMapValue(name, filters)
 }
 
-func (d *dynamicClient) GetDurationValue(
-	name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}, defaultValue time.Duration,
-) (time.Duration, error) {
+func (d *dynamicClient) GetDurationValue(name dynamicconfig.DurationKey, filters map[dynamicconfig.Filter]interface{}) (time.Duration, error) {
 	d.RLock()
 	if val, ok := d.overrides[name]; ok {
 		if durationVal, ok := val.(time.Duration); ok {
@@ -151,7 +145,7 @@ func (d *dynamicClient) GetDurationValue(
 		}
 	}
 	d.RUnlock()
-	return d.client.GetDurationValue(name, filters, defaultValue)
+	return d.client.GetDurationValue(name, filters)
 }
 
 func (d *dynamicClient) UpdateValue(name dynamicconfig.Key, value interface{}) error {

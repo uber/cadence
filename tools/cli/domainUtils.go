@@ -276,9 +276,9 @@ func initializeDomainHandler(
 ) domain.Handler {
 
 	domainConfig := domain.Config{
-		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(domain.DefaultMinWorkflowRetentionInDays),
-		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
-		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(domain.FailoverCoolDown),
+		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(dynamicconfig.MinRetentionDays.DefaultInt()),
+		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries.DefaultInt()),
+		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown.DefaultDuration()),
 	}
 	return domain.NewHandler(
 		domainConfig,

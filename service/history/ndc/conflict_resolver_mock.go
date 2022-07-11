@@ -35,30 +35,30 @@ import (
 	execution "github.com/uber/cadence/service/history/execution"
 )
 
-// MockconflictResolver is a mock of conflictResolver interface
+// MockconflictResolver is a mock of conflictResolver interface.
 type MockconflictResolver struct {
 	ctrl     *gomock.Controller
 	recorder *MockconflictResolverMockRecorder
 }
 
-// MockconflictResolverMockRecorder is the mock recorder for MockconflictResolver
+// MockconflictResolverMockRecorder is the mock recorder for MockconflictResolver.
 type MockconflictResolverMockRecorder struct {
 	mock *MockconflictResolver
 }
 
-// NewMockconflictResolver creates a new mock instance
+// NewMockconflictResolver creates a new mock instance.
 func NewMockconflictResolver(ctrl *gomock.Controller) *MockconflictResolver {
 	mock := &MockconflictResolver{ctrl: ctrl}
 	mock.recorder = &MockconflictResolverMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockconflictResolver) EXPECT() *MockconflictResolverMockRecorder {
 	return m.recorder
 }
 
-// prepareMutableState mocks base method
+// prepareMutableState mocks base method.
 func (m *MockconflictResolver) prepareMutableState(ctx context.Context, branchIndex int, incomingVersion int64) (execution.MutableState, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "prepareMutableState", ctx, branchIndex, incomingVersion)
@@ -68,7 +68,7 @@ func (m *MockconflictResolver) prepareMutableState(ctx context.Context, branchIn
 	return ret0, ret1, ret2
 }
 
-// prepareMutableState indicates an expected call of prepareMutableState
+// prepareMutableState indicates an expected call of prepareMutableState.
 func (mr *MockconflictResolverMockRecorder) prepareMutableState(ctx, branchIndex, incomingVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "prepareMutableState", reflect.TypeOf((*MockconflictResolver)(nil).prepareMutableState), ctx, branchIndex, incomingVersion)

@@ -172,7 +172,7 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 		SchemaVersion: 1,
 		Entries: []*types.DynamicConfigEntry{
 			{
-				Name: dynamicconfig.Keys[dynamicconfig.TestGetBoolPropertyKey],
+				Name: dynamicconfig.TestGetBoolPropertyKey.String(),
 				Values: []*types.DynamicConfigValue{
 					{
 						Value: &types.DataBlob{

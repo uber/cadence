@@ -1,5 +1,7 @@
-// Copyright (c) 2019 Uber Technologies, Inc.
-//
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,31 +9,17 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
-package domain
+package mocks
 
-import "time"
-
-const (
-	// DefaultMinWorkflowRetentionInDays is the minimal retention days for any domain
-	DefaultMinWorkflowRetentionInDays = 1
-
-	// DefaultMaxWorkflowRetentionInDays is a shared config in both Frontend and Worker, they need the same default value
-	DefaultMaxWorkflowRetentionInDays = 30
-
-	// MaxBadBinaries is the maximal number of bad client binaries stored in a domain
-	MaxBadBinaries = 10
-
-	// FailoverCoolDown is the duration between two failovers
-	FailoverCoolDown = 1 * time.Minute
-)
+//go:generate mockery --srcpkg github.com/aws/aws-sdk-go/service/s3/s3iface --quiet --name S3API --output .

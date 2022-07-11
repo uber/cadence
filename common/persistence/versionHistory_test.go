@@ -633,7 +633,7 @@ func (s *versionHistoriesSuite) TestFindLCAVersionHistoryIndexAndItem_SameEventI
 	s.Equal(NewVersionHistoryItem(7, 6), item)
 }
 
-func (s *versionHistoriesSuite) TestFindFirstVersionHistoryIndexByItem() {
+func (s *versionHistoriesSuite) TestFindFirstVersionHistoryByItem() {
 	versionHistory1 := NewVersionHistory([]byte("branch token 1"), []*VersionHistoryItem{
 		{EventID: 3, Version: 0},
 		{EventID: 5, Version: 4},
@@ -650,15 +650,17 @@ func (s *versionHistoriesSuite) TestFindFirstVersionHistoryIndexByItem() {
 	_, _, err := histories.AddVersionHistory(versionHistory2)
 	s.Nil(err)
 
-	index, err := histories.FindFirstVersionHistoryIndexByItem(NewVersionHistoryItem(8, 10))
+	index, history, err := histories.FindFirstVersionHistoryByItem(NewVersionHistoryItem(8, 10))
 	s.NoError(err)
 	s.Equal(1, index)
+	s.Equal(versionHistory2, history)
 
-	index, err = histories.FindFirstVersionHistoryIndexByItem(NewVersionHistoryItem(4, 4))
+	index, history, err = histories.FindFirstVersionHistoryByItem(NewVersionHistoryItem(4, 4))
 	s.NoError(err)
 	s.Equal(0, index)
+	s.Equal(versionHistory1, history)
 
-	_, err = histories.FindFirstVersionHistoryIndexByItem(NewVersionHistoryItem(41, 4))
+	_, _, err = histories.FindFirstVersionHistoryByItem(NewVersionHistoryItem(41, 4))
 	s.Error(err)
 }
 

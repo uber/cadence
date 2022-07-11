@@ -34,42 +34,56 @@ import (
 	persistence "github.com/uber/cadence/common/persistence"
 )
 
-// MockBean is a mock of Bean interface
+// MockBean is a mock of Bean interface.
 type MockBean struct {
 	ctrl     *gomock.Controller
 	recorder *MockBeanMockRecorder
 }
 
-// MockBeanMockRecorder is the mock recorder for MockBean
+// MockBeanMockRecorder is the mock recorder for MockBean.
 type MockBeanMockRecorder struct {
 	mock *MockBean
 }
 
-// NewMockBean creates a new mock instance
+// NewMockBean creates a new mock instance.
 func NewMockBean(ctrl *gomock.Controller) *MockBean {
 	mock := &MockBean{ctrl: ctrl}
 	mock.recorder = &MockBeanMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBean) EXPECT() *MockBeanMockRecorder {
 	return m.recorder
 }
 
-// Close mocks base method
+// Close mocks base method.
 func (m *MockBean) Close() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Close")
 }
 
-// Close indicates an expected call of Close
+// Close indicates an expected call of Close.
 func (mr *MockBeanMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockBean)(nil).Close))
 }
 
-// GetDomainManager mocks base method
+// GetConfigStoreManager mocks base method.
+func (m *MockBean) GetConfigStoreManager() persistence.ConfigStoreManager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConfigStoreManager")
+	ret0, _ := ret[0].(persistence.ConfigStoreManager)
+	return ret0
+}
+
+// GetConfigStoreManager indicates an expected call of GetConfigStoreManager.
+func (mr *MockBeanMockRecorder) GetConfigStoreManager() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigStoreManager", reflect.TypeOf((*MockBean)(nil).GetConfigStoreManager))
+}
+
+// GetDomainManager mocks base method.
 func (m *MockBean) GetDomainManager() persistence.DomainManager {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDomainManager")
@@ -77,77 +91,13 @@ func (m *MockBean) GetDomainManager() persistence.DomainManager {
 	return ret0
 }
 
-// GetDomainManager indicates an expected call of GetDomainManager
+// GetDomainManager indicates an expected call of GetDomainManager.
 func (mr *MockBeanMockRecorder) GetDomainManager() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainManager", reflect.TypeOf((*MockBean)(nil).GetDomainManager))
 }
 
-// SetDomainManager mocks base method
-func (m *MockBean) SetDomainManager(arg0 persistence.DomainManager) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetDomainManager", arg0)
-}
-
-// SetDomainManager indicates an expected call of SetDomainManager
-func (mr *MockBeanMockRecorder) SetDomainManager(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDomainManager", reflect.TypeOf((*MockBean)(nil).SetDomainManager), arg0)
-}
-
-// GetTaskManager mocks base method
-func (m *MockBean) GetTaskManager() persistence.TaskManager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTaskManager")
-	ret0, _ := ret[0].(persistence.TaskManager)
-	return ret0
-}
-
-// GetTaskManager indicates an expected call of GetTaskManager
-func (mr *MockBeanMockRecorder) GetTaskManager() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskManager", reflect.TypeOf((*MockBean)(nil).GetTaskManager))
-}
-
-// SetTaskManager mocks base method
-func (m *MockBean) SetTaskManager(arg0 persistence.TaskManager) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetTaskManager", arg0)
-}
-
-// SetTaskManager indicates an expected call of SetTaskManager
-func (mr *MockBeanMockRecorder) SetTaskManager(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTaskManager", reflect.TypeOf((*MockBean)(nil).SetTaskManager), arg0)
-}
-
-// GetVisibilityManager mocks base method
-func (m *MockBean) GetVisibilityManager() persistence.VisibilityManager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetVisibilityManager")
-	ret0, _ := ret[0].(persistence.VisibilityManager)
-	return ret0
-}
-
-// GetVisibilityManager indicates an expected call of GetVisibilityManager
-func (mr *MockBeanMockRecorder) GetVisibilityManager() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVisibilityManager", reflect.TypeOf((*MockBean)(nil).GetVisibilityManager))
-}
-
-// SetVisibilityManager mocks base method
-func (m *MockBean) SetVisibilityManager(arg0 persistence.VisibilityManager) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetVisibilityManager", arg0)
-}
-
-// SetVisibilityManager indicates an expected call of SetVisibilityManager
-func (mr *MockBeanMockRecorder) SetVisibilityManager(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVisibilityManager", reflect.TypeOf((*MockBean)(nil).SetVisibilityManager), arg0)
-}
-
-// GetDomainReplicationQueueManager mocks base method
+// GetDomainReplicationQueueManager mocks base method.
 func (m *MockBean) GetDomainReplicationQueueManager() persistence.QueueManager {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDomainReplicationQueueManager")
@@ -155,77 +105,13 @@ func (m *MockBean) GetDomainReplicationQueueManager() persistence.QueueManager {
 	return ret0
 }
 
-// GetDomainReplicationQueueManager indicates an expected call of GetDomainReplicationQueueManager
+// GetDomainReplicationQueueManager indicates an expected call of GetDomainReplicationQueueManager.
 func (mr *MockBeanMockRecorder) GetDomainReplicationQueueManager() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainReplicationQueueManager", reflect.TypeOf((*MockBean)(nil).GetDomainReplicationQueueManager))
 }
 
-// SetDomainReplicationQueueManager mocks base method
-func (m *MockBean) SetDomainReplicationQueueManager(arg0 persistence.QueueManager) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetDomainReplicationQueueManager", arg0)
-}
-
-// SetDomainReplicationQueueManager indicates an expected call of SetDomainReplicationQueueManager
-func (mr *MockBeanMockRecorder) SetDomainReplicationQueueManager(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDomainReplicationQueueManager", reflect.TypeOf((*MockBean)(nil).SetDomainReplicationQueueManager), arg0)
-}
-
-// GetShardManager mocks base method
-func (m *MockBean) GetShardManager() persistence.ShardManager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShardManager")
-	ret0, _ := ret[0].(persistence.ShardManager)
-	return ret0
-}
-
-// GetShardManager indicates an expected call of GetShardManager
-func (mr *MockBeanMockRecorder) GetShardManager() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardManager", reflect.TypeOf((*MockBean)(nil).GetShardManager))
-}
-
-// SetShardManager mocks base method
-func (m *MockBean) SetShardManager(arg0 persistence.ShardManager) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetShardManager", arg0)
-}
-
-// SetShardManager indicates an expected call of SetShardManager
-func (mr *MockBeanMockRecorder) SetShardManager(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShardManager", reflect.TypeOf((*MockBean)(nil).SetShardManager), arg0)
-}
-
-// GetHistoryManager mocks base method
-func (m *MockBean) GetHistoryManager() persistence.HistoryManager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHistoryManager")
-	ret0, _ := ret[0].(persistence.HistoryManager)
-	return ret0
-}
-
-// GetHistoryManager indicates an expected call of GetHistoryManager
-func (mr *MockBeanMockRecorder) GetHistoryManager() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoryManager", reflect.TypeOf((*MockBean)(nil).GetHistoryManager))
-}
-
-// SetHistoryManager mocks base method
-func (m *MockBean) SetHistoryManager(arg0 persistence.HistoryManager) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetHistoryManager", arg0)
-}
-
-// SetHistoryManager indicates an expected call of SetHistoryManager
-func (mr *MockBeanMockRecorder) SetHistoryManager(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHistoryManager", reflect.TypeOf((*MockBean)(nil).SetHistoryManager), arg0)
-}
-
-// GetExecutionManager mocks base method
+// GetExecutionManager mocks base method.
 func (m *MockBean) GetExecutionManager(arg0 int) (persistence.ExecutionManager, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetExecutionManager", arg0)
@@ -234,46 +120,160 @@ func (m *MockBean) GetExecutionManager(arg0 int) (persistence.ExecutionManager, 
 	return ret0, ret1
 }
 
-// GetExecutionManager indicates an expected call of GetExecutionManager
+// GetExecutionManager indicates an expected call of GetExecutionManager.
 func (mr *MockBeanMockRecorder) GetExecutionManager(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionManager", reflect.TypeOf((*MockBean)(nil).GetExecutionManager), arg0)
 }
 
-// SetExecutionManager mocks base method
-func (m *MockBean) SetExecutionManager(arg0 int, arg1 persistence.ExecutionManager) {
+// GetHistoryManager mocks base method.
+func (m *MockBean) GetHistoryManager() persistence.HistoryManager {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetExecutionManager", arg0, arg1)
-}
-
-// SetExecutionManager indicates an expected call of SetExecutionManager
-func (mr *MockBeanMockRecorder) SetExecutionManager(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExecutionManager", reflect.TypeOf((*MockBean)(nil).SetExecutionManager), arg0, arg1)
-}
-
-// GetConfigStoreManager mocks base method
-func (m *MockBean) GetConfigStoreManager() persistence.ConfigStoreManager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfigStoreManager")
-	ret0, _ := ret[0].(persistence.ConfigStoreManager)
+	ret := m.ctrl.Call(m, "GetHistoryManager")
+	ret0, _ := ret[0].(persistence.HistoryManager)
 	return ret0
 }
 
-// GetConfigStoreManager indicates an expected call of GetConfigStoreManager
-func (mr *MockBeanMockRecorder) GetConfigStoreManager() *gomock.Call {
+// GetHistoryManager indicates an expected call of GetHistoryManager.
+func (mr *MockBeanMockRecorder) GetHistoryManager() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigStoreManager", reflect.TypeOf((*MockBean)(nil).GetConfigStoreManager))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistoryManager", reflect.TypeOf((*MockBean)(nil).GetHistoryManager))
 }
 
-// SetConfigStoreManager mocks base method
+// GetShardManager mocks base method.
+func (m *MockBean) GetShardManager() persistence.ShardManager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShardManager")
+	ret0, _ := ret[0].(persistence.ShardManager)
+	return ret0
+}
+
+// GetShardManager indicates an expected call of GetShardManager.
+func (mr *MockBeanMockRecorder) GetShardManager() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShardManager", reflect.TypeOf((*MockBean)(nil).GetShardManager))
+}
+
+// GetTaskManager mocks base method.
+func (m *MockBean) GetTaskManager() persistence.TaskManager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTaskManager")
+	ret0, _ := ret[0].(persistence.TaskManager)
+	return ret0
+}
+
+// GetTaskManager indicates an expected call of GetTaskManager.
+func (mr *MockBeanMockRecorder) GetTaskManager() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskManager", reflect.TypeOf((*MockBean)(nil).GetTaskManager))
+}
+
+// GetVisibilityManager mocks base method.
+func (m *MockBean) GetVisibilityManager() persistence.VisibilityManager {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVisibilityManager")
+	ret0, _ := ret[0].(persistence.VisibilityManager)
+	return ret0
+}
+
+// GetVisibilityManager indicates an expected call of GetVisibilityManager.
+func (mr *MockBeanMockRecorder) GetVisibilityManager() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVisibilityManager", reflect.TypeOf((*MockBean)(nil).GetVisibilityManager))
+}
+
+// SetConfigStoreManager mocks base method.
 func (m *MockBean) SetConfigStoreManager(arg0 persistence.ConfigStoreManager) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetConfigStoreManager", arg0)
 }
 
-// SetConfigStoreManager indicates an expected call of SetConfigStoreManager
+// SetConfigStoreManager indicates an expected call of SetConfigStoreManager.
 func (mr *MockBeanMockRecorder) SetConfigStoreManager(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConfigStoreManager", reflect.TypeOf((*MockBean)(nil).SetConfigStoreManager), arg0)
+}
+
+// SetDomainManager mocks base method.
+func (m *MockBean) SetDomainManager(arg0 persistence.DomainManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDomainManager", arg0)
+}
+
+// SetDomainManager indicates an expected call of SetDomainManager.
+func (mr *MockBeanMockRecorder) SetDomainManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDomainManager", reflect.TypeOf((*MockBean)(nil).SetDomainManager), arg0)
+}
+
+// SetDomainReplicationQueueManager mocks base method.
+func (m *MockBean) SetDomainReplicationQueueManager(arg0 persistence.QueueManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDomainReplicationQueueManager", arg0)
+}
+
+// SetDomainReplicationQueueManager indicates an expected call of SetDomainReplicationQueueManager.
+func (mr *MockBeanMockRecorder) SetDomainReplicationQueueManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDomainReplicationQueueManager", reflect.TypeOf((*MockBean)(nil).SetDomainReplicationQueueManager), arg0)
+}
+
+// SetExecutionManager mocks base method.
+func (m *MockBean) SetExecutionManager(arg0 int, arg1 persistence.ExecutionManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetExecutionManager", arg0, arg1)
+}
+
+// SetExecutionManager indicates an expected call of SetExecutionManager.
+func (mr *MockBeanMockRecorder) SetExecutionManager(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExecutionManager", reflect.TypeOf((*MockBean)(nil).SetExecutionManager), arg0, arg1)
+}
+
+// SetHistoryManager mocks base method.
+func (m *MockBean) SetHistoryManager(arg0 persistence.HistoryManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetHistoryManager", arg0)
+}
+
+// SetHistoryManager indicates an expected call of SetHistoryManager.
+func (mr *MockBeanMockRecorder) SetHistoryManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHistoryManager", reflect.TypeOf((*MockBean)(nil).SetHistoryManager), arg0)
+}
+
+// SetShardManager mocks base method.
+func (m *MockBean) SetShardManager(arg0 persistence.ShardManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetShardManager", arg0)
+}
+
+// SetShardManager indicates an expected call of SetShardManager.
+func (mr *MockBeanMockRecorder) SetShardManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetShardManager", reflect.TypeOf((*MockBean)(nil).SetShardManager), arg0)
+}
+
+// SetTaskManager mocks base method.
+func (m *MockBean) SetTaskManager(arg0 persistence.TaskManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTaskManager", arg0)
+}
+
+// SetTaskManager indicates an expected call of SetTaskManager.
+func (mr *MockBeanMockRecorder) SetTaskManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTaskManager", reflect.TypeOf((*MockBean)(nil).SetTaskManager), arg0)
+}
+
+// SetVisibilityManager mocks base method.
+func (m *MockBean) SetVisibilityManager(arg0 persistence.VisibilityManager) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetVisibilityManager", arg0)
+}
+
+// SetVisibilityManager indicates an expected call of SetVisibilityManager.
+func (mr *MockBeanMockRecorder) SetVisibilityManager(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVisibilityManager", reflect.TypeOf((*MockBean)(nil).SetVisibilityManager), arg0)
 }

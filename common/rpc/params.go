@@ -77,7 +77,7 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		}
 	}
 
-	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound, true)()
+	enableGRPCOutbound := dc.GetBoolProperty(dynamicconfig.EnableGRPCOutbound)()
 
 	publicClientOutbound, err := newPublicClientOutbound(config)
 	if err != nil {

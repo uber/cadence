@@ -154,20 +154,24 @@ func createKeyspace(cli *cli.Context) error {
 	if keyspace == "" {
 		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument "))
 	}
-	err = doCreateKeyspace(*config, keyspace)
+	datacenter := cli.String(schema.CLIOptDatacenter)
+	err = doCreateKeyspace(*config, keyspace, datacenter)
 	if err != nil {
 		return handleErr(fmt.Errorf("error creating Keyspace:%v", err))
 	}
 	return nil
 }
 
-func doCreateKeyspace(cfg CQLClientConfig, name string) error {
+func doCreateKeyspace(cfg CQLClientConfig, name string, datacenter string) error {
 	cfg.Keyspace = SystemKeyspace
 	client, err := NewCQLClient(&cfg)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
+	if datacenter != "" {
+		return client.CreateNTSKeyspace(name, datacenter)
+	}
 	return client.CreateKeyspace(name)
 }
 
@@ -177,6 +181,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.Port = cli.GlobalInt(schema.CLIOptPort)
 	cqlConfig.User = cli.GlobalString(schema.CLIOptUser)
 	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
+	cqlConfig.AllowedAuthenticators = cli.GlobalStringSlice(schema.CLIOptAllowedAuthenticators)
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
 	cqlConfig.ConnectTimeout = cli.GlobalInt(schema.CLIOptConnectTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)

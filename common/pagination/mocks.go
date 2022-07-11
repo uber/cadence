@@ -32,76 +32,90 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockEntity is a mock of Entity interface
+// MockEntity is a mock of Entity interface.
 type MockEntity struct {
 	ctrl     *gomock.Controller
 	recorder *MockEntityMockRecorder
 }
 
-// MockEntityMockRecorder is the mock recorder for MockEntity
+// MockEntityMockRecorder is the mock recorder for MockEntity.
 type MockEntityMockRecorder struct {
 	mock *MockEntity
 }
 
-// NewMockEntity creates a new mock instance
+// NewMockEntity creates a new mock instance.
 func NewMockEntity(ctrl *gomock.Controller) *MockEntity {
 	mock := &MockEntity{ctrl: ctrl}
 	mock.recorder = &MockEntityMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockEntity) EXPECT() *MockEntityMockRecorder {
 	return m.recorder
 }
 
-// MockPageToken is a mock of PageToken interface
+// MockPageToken is a mock of PageToken interface.
 type MockPageToken struct {
 	ctrl     *gomock.Controller
 	recorder *MockPageTokenMockRecorder
 }
 
-// MockPageTokenMockRecorder is the mock recorder for MockPageToken
+// MockPageTokenMockRecorder is the mock recorder for MockPageToken.
 type MockPageTokenMockRecorder struct {
 	mock *MockPageToken
 }
 
-// NewMockPageToken creates a new mock instance
+// NewMockPageToken creates a new mock instance.
 func NewMockPageToken(ctrl *gomock.Controller) *MockPageToken {
 	mock := &MockPageToken{ctrl: ctrl}
 	mock.recorder = &MockPageTokenMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPageToken) EXPECT() *MockPageTokenMockRecorder {
 	return m.recorder
 }
 
-// MockIterator is a mock of Iterator interface
+// MockIterator is a mock of Iterator interface.
 type MockIterator struct {
 	ctrl     *gomock.Controller
 	recorder *MockIteratorMockRecorder
 }
 
-// MockIteratorMockRecorder is the mock recorder for MockIterator
+// MockIteratorMockRecorder is the mock recorder for MockIterator.
 type MockIteratorMockRecorder struct {
 	mock *MockIterator
 }
 
-// NewMockIterator creates a new mock instance
+// NewMockIterator creates a new mock instance.
 func NewMockIterator(ctrl *gomock.Controller) *MockIterator {
 	mock := &MockIterator{ctrl: ctrl}
 	mock.recorder = &MockIteratorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockIterator) EXPECT() *MockIteratorMockRecorder {
 	return m.recorder
 }
 
-// Next mocks base method
+// HasNext mocks base method.
+func (m *MockIterator) HasNext() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasNext")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasNext indicates an expected call of HasNext.
+func (mr *MockIteratorMockRecorder) HasNext() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasNext", reflect.TypeOf((*MockIterator)(nil).HasNext))
+}
+
+// Next mocks base method.
 func (m *MockIterator) Next() (Entity, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Next")
@@ -110,50 +124,36 @@ func (m *MockIterator) Next() (Entity, error) {
 	return ret0, ret1
 }
 
-// Next indicates an expected call of Next
+// Next indicates an expected call of Next.
 func (mr *MockIteratorMockRecorder) Next() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockIterator)(nil).Next))
 }
 
-// HasNext mocks base method
-func (m *MockIterator) HasNext() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HasNext")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// HasNext indicates an expected call of HasNext
-func (mr *MockIteratorMockRecorder) HasNext() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasNext", reflect.TypeOf((*MockIterator)(nil).HasNext))
-}
-
-// MockWriter is a mock of Writer interface
+// MockWriter is a mock of Writer interface.
 type MockWriter struct {
 	ctrl     *gomock.Controller
 	recorder *MockWriterMockRecorder
 }
 
-// MockWriterMockRecorder is the mock recorder for MockWriter
+// MockWriterMockRecorder is the mock recorder for MockWriter.
 type MockWriterMockRecorder struct {
 	mock *MockWriter
 }
 
-// NewMockWriter creates a new mock instance
+// NewMockWriter creates a new mock instance.
 func NewMockWriter(ctrl *gomock.Controller) *MockWriter {
 	mock := &MockWriter{ctrl: ctrl}
 	mock.recorder = &MockWriterMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWriter) EXPECT() *MockWriterMockRecorder {
 	return m.recorder
 }
 
-// Add mocks base method
+// Add mocks base method.
 func (m *MockWriter) Add(arg0 Entity) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Add", arg0)
@@ -161,55 +161,13 @@ func (m *MockWriter) Add(arg0 Entity) error {
 	return ret0
 }
 
-// Add indicates an expected call of Add
+// Add indicates an expected call of Add.
 func (mr *MockWriterMockRecorder) Add(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockWriter)(nil).Add), arg0)
 }
 
-// Flush mocks base method
-func (m *MockWriter) Flush() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Flush")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Flush indicates an expected call of Flush
-func (mr *MockWriterMockRecorder) Flush() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockWriter)(nil).Flush))
-}
-
-// FlushIfNotEmpty mocks base method
-func (m *MockWriter) FlushIfNotEmpty() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FlushIfNotEmpty")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FlushIfNotEmpty indicates an expected call of FlushIfNotEmpty
-func (mr *MockWriterMockRecorder) FlushIfNotEmpty() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushIfNotEmpty", reflect.TypeOf((*MockWriter)(nil).FlushIfNotEmpty))
-}
-
-// FlushedPages mocks base method
-func (m *MockWriter) FlushedPages() []PageToken {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FlushedPages")
-	ret0, _ := ret[0].([]PageToken)
-	return ret0
-}
-
-// FlushedPages indicates an expected call of FlushedPages
-func (mr *MockWriterMockRecorder) FlushedPages() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushedPages", reflect.TypeOf((*MockWriter)(nil).FlushedPages))
-}
-
-// FirstFlushedPage mocks base method
+// FirstFlushedPage mocks base method.
 func (m *MockWriter) FirstFlushedPage() PageToken {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FirstFlushedPage")
@@ -217,13 +175,55 @@ func (m *MockWriter) FirstFlushedPage() PageToken {
 	return ret0
 }
 
-// FirstFlushedPage indicates an expected call of FirstFlushedPage
+// FirstFlushedPage indicates an expected call of FirstFlushedPage.
 func (mr *MockWriterMockRecorder) FirstFlushedPage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FirstFlushedPage", reflect.TypeOf((*MockWriter)(nil).FirstFlushedPage))
 }
 
-// LastFlushedPage mocks base method
+// Flush mocks base method.
+func (m *MockWriter) Flush() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Flush")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Flush indicates an expected call of Flush.
+func (mr *MockWriterMockRecorder) Flush() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flush", reflect.TypeOf((*MockWriter)(nil).Flush))
+}
+
+// FlushIfNotEmpty mocks base method.
+func (m *MockWriter) FlushIfNotEmpty() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FlushIfNotEmpty")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FlushIfNotEmpty indicates an expected call of FlushIfNotEmpty.
+func (mr *MockWriterMockRecorder) FlushIfNotEmpty() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushIfNotEmpty", reflect.TypeOf((*MockWriter)(nil).FlushIfNotEmpty))
+}
+
+// FlushedPages mocks base method.
+func (m *MockWriter) FlushedPages() []PageToken {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FlushedPages")
+	ret0, _ := ret[0].([]PageToken)
+	return ret0
+}
+
+// FlushedPages indicates an expected call of FlushedPages.
+func (mr *MockWriterMockRecorder) FlushedPages() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushedPages", reflect.TypeOf((*MockWriter)(nil).FlushedPages))
+}
+
+// LastFlushedPage mocks base method.
 func (m *MockWriter) LastFlushedPage() PageToken {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LastFlushedPage")
@@ -231,7 +231,7 @@ func (m *MockWriter) LastFlushedPage() PageToken {
 	return ret0
 }
 
-// LastFlushedPage indicates an expected call of LastFlushedPage
+// LastFlushedPage indicates an expected call of LastFlushedPage.
 func (mr *MockWriterMockRecorder) LastFlushedPage() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastFlushedPage", reflect.TypeOf((*MockWriter)(nil).LastFlushedPage))

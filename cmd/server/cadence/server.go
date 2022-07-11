@@ -198,7 +198,6 @@ func (s *server) startService() common.Daemon {
 
 	advancedVisMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
-		common.AdvancedVisibilityWritingModeOn,
 	)()
 	isAdvancedVisEnabled := common.IsAdvancedVisibilityWritingEnabled(advancedVisMode, params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
 	if isAdvancedVisEnabled {
@@ -252,8 +251,8 @@ func (s *server) startService() common.Daemon {
 	)
 
 	params.ArchiverProvider = provider.NewArchiverProvider(s.cfg.Archival.History.Provider, s.cfg.Archival.Visibility.Provider)
-	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit, common.DefaultTransactionSizeLimit)
-	params.PersistenceConfig.ErrorInjectionRate = dc.GetFloat64Property(dynamicconfig.PersistenceErrorInjectionRate, 0)
+	params.PersistenceConfig.TransactionSizeLimit = dc.GetIntProperty(dynamicconfig.TransactionSizeLimit)
+	params.PersistenceConfig.ErrorInjectionRate = dc.GetFloat64Property(dynamicconfig.PersistenceErrorInjectionRate)
 	params.AuthorizationConfig = s.cfg.Authorization
 	params.BlobstoreClient, err = filestore.NewFilestoreClient(s.cfg.Blobstore.Filestore)
 	if err != nil {

@@ -35,30 +35,30 @@ import (
 	types "github.com/uber/cadence/common/types"
 )
 
-// MockActivityReplicator is a mock of ActivityReplicator interface
+// MockActivityReplicator is a mock of ActivityReplicator interface.
 type MockActivityReplicator struct {
 	ctrl     *gomock.Controller
 	recorder *MockActivityReplicatorMockRecorder
 }
 
-// MockActivityReplicatorMockRecorder is the mock recorder for MockActivityReplicator
+// MockActivityReplicatorMockRecorder is the mock recorder for MockActivityReplicator.
 type MockActivityReplicatorMockRecorder struct {
 	mock *MockActivityReplicator
 }
 
-// NewMockActivityReplicator creates a new mock instance
+// NewMockActivityReplicator creates a new mock instance.
 func NewMockActivityReplicator(ctrl *gomock.Controller) *MockActivityReplicator {
 	mock := &MockActivityReplicator{ctrl: ctrl}
 	mock.recorder = &MockActivityReplicatorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockActivityReplicator) EXPECT() *MockActivityReplicatorMockRecorder {
 	return m.recorder
 }
 
-// SyncActivity mocks base method
+// SyncActivity mocks base method.
 func (m *MockActivityReplicator) SyncActivity(ctx context.Context, request *types.SyncActivityRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SyncActivity", ctx, request)
@@ -66,7 +66,7 @@ func (m *MockActivityReplicator) SyncActivity(ctx context.Context, request *type
 	return ret0
 }
 
-// SyncActivity indicates an expected call of SyncActivity
+// SyncActivity indicates an expected call of SyncActivity.
 func (mr *MockActivityReplicatorMockRecorder) SyncActivity(ctx, request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SyncActivity", reflect.TypeOf((*MockActivityReplicator)(nil).SyncActivity), ctx, request)

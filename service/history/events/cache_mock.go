@@ -35,30 +35,30 @@ import (
 	types "github.com/uber/cadence/common/types"
 )
 
-// MockCache is a mock of Cache interface
+// MockCache is a mock of Cache interface.
 type MockCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockCacheMockRecorder
 }
 
-// MockCacheMockRecorder is the mock recorder for MockCache
+// MockCacheMockRecorder is the mock recorder for MockCache.
 type MockCacheMockRecorder struct {
 	mock *MockCache
 }
 
-// NewMockCache creates a new mock instance
+// NewMockCache creates a new mock instance.
 func NewMockCache(ctrl *gomock.Controller) *MockCache {
 	mock := &MockCache{ctrl: ctrl}
 	mock.recorder = &MockCacheMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 	return m.recorder
 }
 
-// GetEvent mocks base method
+// GetEvent mocks base method.
 func (m *MockCache) GetEvent(ctx context.Context, shardID int, domainID, workflowID, runID string, firstEventID, eventID int64, branchToken []byte) (*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetEvent", ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
@@ -67,19 +67,19 @@ func (m *MockCache) GetEvent(ctx context.Context, shardID int, domainID, workflo
 	return ret0, ret1
 }
 
-// GetEvent indicates an expected call of GetEvent
+// GetEvent indicates an expected call of GetEvent.
 func (mr *MockCacheMockRecorder) GetEvent(ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvent", reflect.TypeOf((*MockCache)(nil).GetEvent), ctx, shardID, domainID, workflowID, runID, firstEventID, eventID, branchToken)
 }
 
-// PutEvent mocks base method
+// PutEvent mocks base method.
 func (m *MockCache) PutEvent(domainID, workflowID, runID string, eventID int64, event *types.HistoryEvent) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "PutEvent", domainID, workflowID, runID, eventID, event)
 }
 
-// PutEvent indicates an expected call of PutEvent
+// PutEvent indicates an expected call of PutEvent.
 func (mr *MockCacheMockRecorder) PutEvent(domainID, workflowID, runID, eventID, event interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutEvent", reflect.TypeOf((*MockCache)(nil).PutEvent), domainID, workflowID, runID, eventID, event)
