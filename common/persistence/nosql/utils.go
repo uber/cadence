@@ -49,8 +49,8 @@ func convertCommonErrors(
 		}
 	}
 
-	if errChecker.IsCassandraLWTError(err) {
-		return &p.CassandraLWTError{
+	if errChecker.IsDBUnavailableError(err) {
+		return &p.DBUnavailableError{
 			Msg: fmt.Sprintf("#{operation} operation failed. Error: #{err}"),
 		}
 	}

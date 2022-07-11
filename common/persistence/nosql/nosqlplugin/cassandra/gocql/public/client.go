@@ -72,7 +72,7 @@ func (c client) IsThrottlingError(err error) bool {
 	return false
 }
 
-func (c client) IsCassandraLWTError(err error) bool {
+func (c client) IsDBUnavailableError(err error) bool {
 	if req, ok := err.(gogocql.RequestError); ok {
 		// 0x1000 == UNAVAILABLE
 		if req.Code() != 0x1000 {

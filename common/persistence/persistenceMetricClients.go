@@ -248,10 +248,10 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
 	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-	case *CassandraLWTError:
+	case *DBUnavailableError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrCassandraLWTCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
-		p.logger.Error("Cassandra LWT Error.", tag.Error(err), tag.MetricScope(scope))
+		p.logger.Error("DBUnavailable Error: Cassandra LWT Error.", tag.Error(err), tag.MetricScope(scope))
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)

@@ -69,6 +69,6 @@ func (db *cdb) IsThrottlingError(err error) bool {
 	return db.client.IsThrottlingError(err)
 }
 
-func (db *cdb) IsCassandraLWTError(err error) bool {
-	return db.client.IsCassandraLWTError(err)
+func (db *cdb) IsDBUnavailableError(err error) bool {
+	return db.client.IsDBUnavailableError(err)
 }

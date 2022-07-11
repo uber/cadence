@@ -266,9 +266,8 @@ type (
 		Msg string
 	}
 
-	// CassandraLWTError is returned when we get UNAVAILABLE error code from Cassandra with message containing
-	// "Cannot perform LWT operation"
-	CassandraLWTError struct {
+	// DBUnavailableError is returned when the database is unavailable, could be for various reasons.
+	DBUnavailableError struct {
 		Msg string
 	}
 
@@ -1868,7 +1867,7 @@ func (e *TimeoutError) Error() string {
 	return e.Msg
 }
 
-func (e *CassandraLWTError) Error() string {
+func (e *DBUnavailableError) Error() string {
 	return e.Msg
 }
 

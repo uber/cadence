@@ -76,7 +76,7 @@ type (
 		IsTimeoutError(error) bool
 		IsNotFoundError(error) bool
 		IsThrottlingError(error) bool
-		IsCassandraLWTError(error) bool
+		IsDBUnavailableError(error) bool
 	}
 
 	/**
