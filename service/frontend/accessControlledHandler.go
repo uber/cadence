@@ -604,7 +604,7 @@ func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.C
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendRestartWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "StartWorkflowExecution",
+		APIName:    "RestartWorkflowExecution",
 		DomainName: request.GetDomain(),
 		Permission: authorization.PermissionWrite,
 	}
