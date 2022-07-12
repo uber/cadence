@@ -24,16 +24,12 @@ package frontend
 
 import (
 	"context"
-
-	"github.com/uber/cadence/common/types/mapper/proto"
-
-	"go.uber.org/yarpc"
-
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
 	"github.com/uber/cadence/.gen/go/health"
 	"github.com/uber/cadence/.gen/go/health/metaserver"
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"go.uber.org/yarpc"
 )
 
 // ThriftHandler wrap underlying handler and handles Thrift related type conversions
@@ -263,7 +259,7 @@ func (t ThriftHandler) RespondQueryTaskCompleted(ctx context.Context, request *s
 
 func (t ThriftHandler) RestartWorkflowExecution(ctx context.Context, request *shared.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
 	response, err := t.h.RestartWorkflowExecution(ctx, thrift.ToRestartWorkflowExecutionRequest(request))
-	return thrift.FromStartWorkflowExecutionResponse(response), proto.FromError(err)
+	return thrift.FromStartWorkflowExecutionResponse(response), thrift.FromError(err)
 }
 
 // ScanWorkflowExecutions forwards request to the underlying handler
