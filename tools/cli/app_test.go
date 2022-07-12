@@ -339,6 +339,20 @@ func (s *cliAppSuite) TestShowHistory_PrintDateTime() {
 	s.Nil(err)
 }
 
+func (s *cliAppSuite) TestRestartWorkflow() {
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
+	s.serverFrontendClient.EXPECT().RestartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(1)
+	err := s.app.Run([]string{"", "--do", domainName, "workflow", "restart", "-w", "wid"})
+	s.Nil(err)
+}
+
+func (s *cliAppSuite) TestRestartWorkflow_Failed() {
+	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
+	s.serverFrontendClient.EXPECT().RestartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, &types.BadRequestError{"faked error"})
+	errorCode := s.app.Run([]string{"", "--do", domainName, "workflow", "restart", "-w", "wid"})
+	s.Equal(1, errorCode)
+}
+
 func (s *cliAppSuite) TestStartWorkflow() {
 	resp := &types.StartWorkflowExecutionResponse{RunID: uuid.New()}
 	s.serverFrontendClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(resp, nil).Times(2)
