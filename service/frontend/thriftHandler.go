@@ -25,6 +25,8 @@ package frontend
 import (
 	"context"
 
+	"github.com/uber/cadence/common/types/mapper/proto"
+
 	"go.uber.org/yarpc"
 
 	"github.com/uber/cadence/.gen/go/cadence/workflowserviceserver"
@@ -257,6 +259,11 @@ func (t ThriftHandler) RespondDecisionTaskFailed(ctx context.Context, request *s
 func (t ThriftHandler) RespondQueryTaskCompleted(ctx context.Context, request *shared.RespondQueryTaskCompletedRequest) error {
 	err := t.h.RespondQueryTaskCompleted(ctx, thrift.ToRespondQueryTaskCompletedRequest(request))
 	return thrift.FromError(err)
+}
+
+func (t ThriftHandler) RestartWorkflowExecution(ctx context.Context, request *shared.RestartWorkflowExecutionRequest) (*shared.StartWorkflowExecutionResponse, error) {
+	response, err := t.h.RestartWorkflowExecution(ctx, thrift.ToRestartWorkflowExecutionRequest(request))
+	return thrift.FromStartWorkflowExecutionResponse(response), proto.FromError(err)
 }
 
 // ScanWorkflowExecutions forwards request to the underlying handler

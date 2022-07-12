@@ -335,6 +335,7 @@ var (
 	FrontendClientOperationRespondDecisionTaskCompleted     = clientOperation("frontend-respond-decision-task-completed")
 	FrontendClientOperationRespondDecisionTaskFailed        = clientOperation("frontend-respond-decision-task-failed")
 	FrontendClientOperationRespondQueryTaskCompleted        = clientOperation("frontend-respond-query-task-completed")
+	FrontendClientOperationRestartWorkflowExecution         = clientOperation("frontend-restart-wf-execution")
 	FrontendClientOperationSignalWithStartWorkflowExecution = clientOperation("frontend-signal-with-start-wf-execution")
 	FrontendClientOperationSignalWorkflowExecution          = clientOperation("frontend-signal-wf-execution")
 	FrontendClientOperationStartWorkflowExecution           = clientOperation("frontend-start-wf-execution")

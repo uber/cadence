@@ -622,6 +622,22 @@ func (c *metricClient) RespondQueryTaskCompleted(
 	return err
 }
 
+func (c *metricClient) RestartWorkflowExecution(
+	ctx context.Context,
+	request *types.RestartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendRestartWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RestartWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendRestartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
 func (c *metricClient) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,

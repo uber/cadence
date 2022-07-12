@@ -216,6 +216,11 @@ func (g grpcClient) RespondQueryTaskCompleted(ctx context.Context, request *type
 	return proto.ToError(err)
 }
 
+func (g grpcClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := g.workflow.RestartWorkflowExecution(ctx, proto.FromRestartWorkflowExecutionRequest(request), opts...)
+	return proto.ToRestartStartWorkflowExecutionResponse(response), proto.ToError(err)
+}
+
 func (g grpcClient) ScanWorkflowExecutions(ctx context.Context, request *types.ListWorkflowExecutionsRequest, opts ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error) {
 	response, err := g.visibility.ScanWorkflowExecutions(ctx, proto.FromScanWorkflowExecutionsRequest(request), opts...)
 	return proto.ToScanWorkflowExecutionsResponse(response), proto.ToError(err)

@@ -3289,6 +3289,67 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 	return resp, nil
 }
 
+// RestartWorkflowExecution - retrieves info for an existing workflow then restarts it
+func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+	defer log.CapturePanic(wh.GetLogger(), &retError)
+
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRestartWorkflowExecutionScope, request)
+	defer sw.Stop()
+
+	if wh.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	domainName := request.GetDomain()
+	wfExecution := request.GetWorkflowExecution()
+	tags := getDomainWfIDRunIDTags(domainName, wfExecution)
+
+	if request.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope, tags...)
+	}
+
+	if ok := wh.allow(true, request); !ok {
+		return nil, wh.error(createServiceBusyError(), scope, tags...)
+	}
+
+	if err := validateExecution(wfExecution); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
+	if err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	history, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+		Domain: domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: wfExecution.WorkflowID,
+			RunID:      wfExecution.RunID,
+		},
+	})
+	if err != nil {
+		return nil, wh.error(errHistoryNotFound, scope, tags...)
+	}
+	startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
+		domainName, request.Identity, wfExecution.WorkflowID)
+	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(
+		domainID, startRequest, time.Now()))
+	if err != nil {
+		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
+	}
+
+	return resp, nil
+}
+
 // ScanWorkflowExecutions - retrieves info for large amount of workflow executions in a domain without order
 func (wh *WorkflowHandler) ScanWorkflowExecutions(
 	ctx context.Context,
@@ -4485,4 +4546,31 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 	default:
 		return err
 	}
+}
+func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, identity string, workflowId string) *types.StartWorkflowExecutionRequest {
+
+	startRequest := &types.StartWorkflowExecutionRequest{
+		RequestID:  uuid.New(),
+		Domain:     domain,
+		WorkflowID: workflowId,
+		WorkflowType: &types.WorkflowType{
+			Name: w.WorkflowType.Name,
+		},
+		TaskList: &types.TaskList{
+			Name: w.TaskList.Name,
+		},
+		Input:                               w.Input,
+		ExecutionStartToCloseTimeoutSeconds: w.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      w.TaskStartToCloseTimeoutSeconds,
+		Identity:                            identity,
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyTerminateIfRunning.Ptr(),
+	}
+	startRequest.CronSchedule = w.CronSchedule
+	startRequest.RetryPolicy = w.RetryPolicy
+	startRequest.DelayStartSeconds = w.FirstDecisionTaskBackoffSeconds
+	startRequest.Header = w.Header
+	startRequest.Memo = w.Memo
+	startRequest.SearchAttributes = w.SearchAttributes
+
+	return startRequest
 }

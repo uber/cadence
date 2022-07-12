@@ -213,7 +213,10 @@ func (t thriftClient) ScanWorkflowExecutions(ctx context.Context, request *types
 	response, err := t.c.ScanWorkflowExecutions(ctx, thrift.FromListWorkflowExecutionsRequest(request), opts...)
 	return thrift.ToListWorkflowExecutionsResponse(response), thrift.ToError(err)
 }
-
+func (t thriftClient) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	response, err := t.c.RestartWorkflowExecution(ctx, thrift.FromRestartWorkflowExecutionRequest(request), opts...)
+	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)
+}
 func (t thriftClient) SignalWithStartWorkflowExecution(ctx context.Context, request *types.SignalWithStartWorkflowExecutionRequest, opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
 	response, err := t.c.SignalWithStartWorkflowExecution(ctx, thrift.FromSignalWithStartWorkflowExecutionRequest(request), opts...)
 	return thrift.ToStartWorkflowExecutionResponse(response), thrift.ToError(err)

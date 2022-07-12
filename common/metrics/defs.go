@@ -791,8 +791,10 @@ const (
 
 // -- Operation scopes for Frontend service --
 const (
+	// FrontendRestartWorkflowExecutionScope is the metric for frontend.RestartWorkflowExecution
+	FrontendRestartWorkflowExecutionScope = iota + NumAdminScopes
 	// FrontendStartWorkflowExecutionScope is the metric scope for frontend.StartWorkflowExecution
-	FrontendStartWorkflowExecutionScope = iota + NumAdminScopes
+	FrontendStartWorkflowExecutionScope
 	// PollForDecisionTaskScope is the metric scope for frontend.PollForDecisionTask
 	FrontendPollForDecisionTaskScope
 	// FrontendPollForActivityTaskScope is the metric scope for frontend.PollForActivityTask
@@ -1547,6 +1549,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
 
+		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
 		FrontendPollForDecisionTaskScope:                {operation: "PollForDecisionTask"},
 		FrontendPollForActivityTaskScope:                {operation: "PollForActivityTask"},

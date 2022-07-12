@@ -5897,6 +5897,28 @@ func (v *StartTimerDecisionAttributes) GetStartToFireTimeoutSeconds() (o int64) 
 	return
 }
 
+type RestartWorkflowExecutionRequest struct {
+	Domain            string             `json:"domain,omitempty"`
+	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Identity          string             `json:"identity,omitempty"`
+}
+
+// GetDomain is an internal getter (TBD...)
+func (v *RestartWorkflowExecutionRequest) GetDomain() (o string) {
+	if v != nil {
+		return v.Domain
+	}
+	return
+}
+
+// GetWorkflowExecution is an internal getter (TBD...)
+func (v *RestartWorkflowExecutionRequest) GetWorkflowExecution() (o *WorkflowExecution) {
+	if v != nil && v.WorkflowExecution != nil {
+		return v.WorkflowExecution
+	}
+	return
+}
+
 // StartWorkflowExecutionRequest is an internal type (TBD...)
 type StartWorkflowExecutionRequest struct {
 	Domain                              string                 `json:"domain,omitempty"`
