@@ -654,7 +654,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		if err != nil {
 			return nil, err
 		}
-	} else if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized() {
+	} else if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized() && e.visibilityMgr != nil {
 		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
 			DomainUUID: domainID,
 			Execution: types.WorkflowExecution{
