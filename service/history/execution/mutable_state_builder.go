@@ -2145,7 +2145,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	if err != nil {
 		return nil, nil, nil, false, false, err
 	}
-	activityStartedScope := e.metricsClient.Scope(metrics.HistoryRecordActivityTaskStartedScope, metrics.GetContextTags(ctx)...)
+	activityStartedScope := e.metricsClient.Scope(metrics.HistoryRecordActivityTaskStartedScope)
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
 		activityStartedScope.IncCounter(metrics.CadenceRequests)
 		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, false, false, nil
