@@ -1536,6 +1536,11 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	s.mockVisibilityMgr.On(
+		"RecordWorkflowExecutionUninitialized",
+		mock.Anything,
+		createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState),
+	).Once().Return(nil)
+	s.mockVisibilityMgr.On(
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
@@ -1815,5 +1820,22 @@ func createUpsertWorkflowSearchAttributesRequest(
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
+	}
+}
+
+func createRecordWorkflowExecutionUninitializedRequest(
+	transferTask Task,
+	mutableState execution.MutableState,
+) *persistence.RecordWorkflowExecutionUninitializedRequest {
+	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: taskInfo.WorkflowID,
+		RunID:      taskInfo.RunID,
+	}
+	executionInfo := mutableState.GetExecutionInfo()
+	return &persistence.RecordWorkflowExecutionUninitializedRequest{
+		DomainUUID:       taskInfo.DomainID,
+		Execution:        workflowExecution,
+		WorkflowTypeName: executionInfo.WorkflowTypeName,
 	}
 }
