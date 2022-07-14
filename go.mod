@@ -35,7 +35,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.7.2
 	github.com/uber-go/tally v3.3.15+incompatible
-	github.com/uber/cadence-idl v0.0.0-20220629214750-214d3bc03290
+	github.com/uber/cadence-idl v0.0.0-20220713235846-fda89e95df1e
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.0
 	github.com/urfave/cli v1.22.4
@@ -149,5 +149,3 @@ require (
 
 // ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version
 replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7
-
-replace github.com/uber/cadence-idl => ./idls

@@ -435,7 +435,8 @@ cadence-bench: $(BUILD)/lint
 
 .PHONY: go-generate bins tools release clean
 
-bins: $(BINS)
+bins: $(BINS) ## Make all binaries
+
 tools: $(TOOLS)
 
 go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap
