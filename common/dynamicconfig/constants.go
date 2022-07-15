@@ -3340,7 +3340,7 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableRecordWorkflowExecutionUninitialized: DynamicBool{
 		KeyName:      "history.enableRecordWorkflowExecutionUninitialized",
 		Description:  "EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch",
-		DefaultValue: true,
+		DefaultValue: false,
 	},
 	DisableListVisibilityByFilter: DynamicBool{
 		KeyName:      "frontend.disableListVisibilityByFilter",
