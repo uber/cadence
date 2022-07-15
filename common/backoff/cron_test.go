@@ -91,6 +91,8 @@ func TestCronWithJitterStart(t *testing.T) {
 		{"@every 20s", "2018-12-17T08:00:00+00:00", 15, time.Second * 20, time.Second * 20},
 		{"@every 10s", "2018-12-17T08:00:09+00:00", 0, time.Second * 10, time.Second * 10},
 		{"@every 20s", "2018-12-17T08:00:09+00:00", 15, time.Second * 20, time.Second * 20},
+		{"* * * * *", "0001-01-01T00:00:00+00:00", 0, time.Second * 60, time.Second * 60},
+		{"@every 20s", "0001-01-01T00:00:00+00:00", 0, time.Second * 20, time.Second * 20},
 	}
 
 	rand.Seed(int64(time.Now().Nanosecond()))
@@ -125,8 +127,8 @@ func TestCronWithJitterStart(t *testing.T) {
 				expectedResultTime := startTime.Add(tt.expectedResultSeconds2)
 				backoffTime := startTime.Add(backoff)
 				assert.WithinDuration(t, expectedResultTime, backoffTime, delta,
-					"The test specs are %v and the (SECOND) expected result in seconds is between %s and %s",
-					tt, tt.expectedResultSeconds, tt.expectedResultSeconds+delta)
+					"Iteration %d: The test specs are %v and the expected result in seconds is between %s and %s",
+					i, tt, tt.expectedResultSeconds, tt.expectedResultSeconds+delta)
 				if expectedResultTime == backoffTime {
 					exactCount++
 				}

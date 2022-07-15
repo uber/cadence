@@ -128,7 +128,8 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &types.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
-	errInvalidJitterStartSeconds                  = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request."}
+	errInvalidJitterStartSeconds                  = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (negative)."}
+	errInvalidJitterStartSeconds2                 = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (larger than cron duration)."}
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
@@ -2087,6 +2088,20 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	if startRequest.GetJitterStartSeconds() < 0 {
 		return nil, wh.error(errInvalidJitterStartSeconds, scope, tags...)
+	}
+
+	jitter := startRequest.GetJitterStartSeconds()
+	cron := startRequest.GetCronSchedule()
+	if jitter > 0 && cron != "" {
+		// Calculate the cron duration and ensure that jitter is not greater than the cron duration,
+		// because that would be confusing to users.
+
+		// Request using start/end time zero value, which will get us an exact answer (i.e. its not in the
+		// middle of a minute)
+		backoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(cron, time.Time{}, time.Time{}, jitter)
+		if jitter > backoffSeconds {
+			return nil, wh.error(errInvalidJitterStartSeconds2, scope, tags...)
+		}
 	}
 
 	if startRequest.GetRequestID() == "" {
