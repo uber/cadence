@@ -75,6 +75,13 @@ type (
 		SearchAttributes   map[string][]byte
 	}
 
+	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
+	RecordWorkflowExecutionUninitializedRequest struct {
+		DomainUUID       string
+		Execution        types.WorkflowExecution
+		WorkflowTypeName string
+	}
+
 	// UpsertWorkflowExecutionRequest is used to upsert workflow execution
 	UpsertWorkflowExecutionRequest struct {
 		DomainUUID         string
@@ -187,6 +194,7 @@ type (
 		GetName() string
 		RecordWorkflowExecutionStarted(ctx context.Context, request *RecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(ctx context.Context, request *RecordWorkflowExecutionClosedRequest) error
+		RecordWorkflowExecutionUninitialized(ctx context.Context, request *RecordWorkflowExecutionUninitializedRequest) error
 		UpsertWorkflowExecution(ctx context.Context, request *UpsertWorkflowExecutionRequest) error
 		ListOpenWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)

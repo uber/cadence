@@ -110,6 +110,21 @@ func (v *visibilityDualManager) RecordWorkflowExecutionClosed(
 	)
 }
 
+func (v *visibilityDualManager) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	return v.chooseVisibilityManagerForWrite(
+		ctx,
+		func() error {
+			return v.dbVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
+		},
+		func() error {
+			return v.esVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
+		},
+	)
+}
+
 func (v *visibilityDualManager) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *VisibilityDeleteWorkflowExecutionRequest,
