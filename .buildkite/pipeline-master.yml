@@ -19,6 +19,21 @@ steps:
           run: unit-test
           config: docker/buildkite/docker-compose.yml
 
+  - label: ":golangci-lint: validate code is clean"
+    agents:
+      queue: "workers"
+      docker: "*"
+    command: "./scripts/buildkite/golint.sh"
+    artifact_paths:
+      - ".build/golint/*.out"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: unit-test
+          config: docker/buildkite/docker-compose.yml
+
   - label: ":golang: integration test with cassandra"
     agents:
       queue: "workers"
