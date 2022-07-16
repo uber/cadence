@@ -88,6 +88,7 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 		OriginalExecutionRunID:              originalRunID,
 		Memo:                                request.Memo,
 		SearchAttributes:                    request.SearchAttributes,
+		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 	if parentInfo := startRequest.ParentExecutionInfo; parentInfo != nil {
 		attributes.ParentWorkflowDomainID = &parentInfo.DomainUUID
@@ -366,6 +367,7 @@ func (b *HistoryBuilder) AddContinuedAsNewEvent(decisionCompletedEventID int64, 
 		LastCompletionResult:                attributes.LastCompletionResult,
 		Memo:                                attributes.Memo,
 		SearchAttributes:                    attributes.SearchAttributes,
+		JitterStartSeconds:                  attributes.JitterStartSeconds,
 	}
 
 	return b.addEventToHistory(event)

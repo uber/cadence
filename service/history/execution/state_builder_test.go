@@ -202,7 +202,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 		ParentWorkflowDomain:   common.StringPtr(constants.TestParentDomainName),
 		Initiator:              types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
-			int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now).Seconds()),
+			int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now, 0).Seconds()),
 		),
 	}
 
