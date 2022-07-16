@@ -3088,6 +3088,7 @@ func getStartRequest(
 		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
 		DelayStartSeconds:                   request.DelayStartSeconds,
+		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
