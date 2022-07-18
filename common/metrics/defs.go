@@ -243,6 +243,8 @@ const (
 	PersistenceRecordWorkflowExecutionStartedScope
 	// PersistenceRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
 	PersistenceRecordWorkflowExecutionClosedScope
+	// PersistenceRecordWorkflowExecutionUninitializedScope tracks RecordWorkflowExecutionUninitialized calls made by service to persistence layer
+	PersistenceRecordWorkflowExecutionUninitializedScope
 	// PersistenceUpsertWorkflowExecutionScope tracks UpsertWorkflowExecution calls made by service to persistence layer
 	PersistenceUpsertWorkflowExecutionScope
 	// PersistenceListOpenWorkflowExecutionsScope tracks ListOpenWorkflowExecutions calls made by service to persistence layer
@@ -664,6 +666,8 @@ const (
 	ElasticsearchRecordWorkflowExecutionStartedScope
 	// ElasticsearchRecordWorkflowExecutionClosedScope tracks RecordWorkflowExecutionClosed calls made by service to persistence layer
 	ElasticsearchRecordWorkflowExecutionClosedScope
+	// ElasticsearchRecordWorkflowExecutionUninitializedScope tracks RecordWorkflowExecutionUninitialized calls made by service to persistence layer
+	ElasticsearchRecordWorkflowExecutionUninitializedScope
 	// ElasticsearchUpsertWorkflowExecutionScope tracks UpsertWorkflowExecution calls made by service to persistence layer
 	ElasticsearchUpsertWorkflowExecutionScope
 	// ElasticsearchListOpenWorkflowExecutionsScope tracks ListOpenWorkflowExecutions calls made by service to persistence layer
@@ -1272,6 +1276,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetMetadataScope:                              {operation: "GetMetadata"},
 		PersistenceRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
 		PersistenceRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
+		PersistenceRecordWorkflowExecutionUninitializedScope:     {operation: "RecordWorkflowExecutionUninitialized"},
 		PersistenceUpsertWorkflowExecutionScope:                  {operation: "UpsertWorkflowExecution"},
 		PersistenceListOpenWorkflowExecutionsScope:               {operation: "ListOpenWorkflowExecutions"},
 		PersistenceListClosedWorkflowExecutionsScope:             {operation: "ListClosedWorkflowExecutions"},
@@ -1485,6 +1490,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		ElasticsearchRecordWorkflowExecutionStartedScope:           {operation: "RecordWorkflowExecutionStarted"},
 		ElasticsearchRecordWorkflowExecutionClosedScope:            {operation: "RecordWorkflowExecutionClosed"},
+		ElasticsearchRecordWorkflowExecutionUninitializedScope:     {operation: "RecordWorkflowExecutionUninitialized"},
 		ElasticsearchUpsertWorkflowExecutionScope:                  {operation: "UpsertWorkflowExecution"},
 		ElasticsearchListOpenWorkflowExecutionsScope:               {operation: "ListOpenWorkflowExecutions"},
 		ElasticsearchListClosedWorkflowExecutionsScope:             {operation: "ListClosedWorkflowExecutions"},

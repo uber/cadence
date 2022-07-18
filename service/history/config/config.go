@@ -279,6 +279,7 @@ type Config struct {
 	ReplicationTaskProcessorShardQPS                   dynamicconfig.FloatPropertyFn
 	ReplicationTaskGenerationQPS                       dynamicconfig.FloatPropertyFn
 	EnableReplicationTaskGeneration                    dynamicconfig.BoolPropertyFnWithDomainIDAndWorkflowIDFilter
+	EnableRecordWorkflowExecutionUninitialized         dynamicconfig.BoolPropertyFn
 
 	// The following are used by consistent query
 	EnableConsistentQuery         dynamicconfig.BoolPropertyFn
@@ -519,6 +520,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicationTaskProcessorShardQPS:                   dc.GetFloat64Property(dynamicconfig.ReplicationTaskProcessorShardQPS),
 		ReplicationTaskGenerationQPS:                       dc.GetFloat64Property(dynamicconfig.ReplicationTaskGenerationQPS),
 		EnableReplicationTaskGeneration:                    dc.GetBoolPropertyFilteredByDomainIDAndWorkflowID(dynamicconfig.EnableReplicationTaskGeneration),
+		EnableRecordWorkflowExecutionUninitialized:         dc.GetBoolProperty(dynamicconfig.EnableRecordWorkflowExecutionUninitialized),
 
 		EnableConsistentQuery:                 dc.GetBoolProperty(dynamicconfig.EnableConsistentQuery),
 		EnableConsistentQueryByDomain:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain),

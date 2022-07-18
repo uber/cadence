@@ -120,6 +120,7 @@ var (
 		Header:                              &Header,
 		Memo:                                &Memo,
 		SearchAttributes:                    &SearchAttributes,
+		JitterStartSeconds:                  &Duration1,
 	}
 	FailWorkflowExecutionDecisionAttributes = types.FailWorkflowExecutionDecisionAttributes{
 		Reason:  &FailureReason,

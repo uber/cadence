@@ -1041,6 +1041,16 @@ func (p *visibilityPersistenceClient) RecordWorkflowExecutionClosed(
 	return p.call(metrics.PersistenceRecordWorkflowExecutionClosedScope, op)
 }
 
+func (p *visibilityPersistenceClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	op := func() error {
+		return p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+	}
+	return p.call(metrics.PersistenceRecordWorkflowExecutionUninitializedScope, op)
+}
+
 func (p *visibilityPersistenceClient) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,

@@ -188,6 +188,20 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		SearchAttributes:   searchAttributes,
 	}
 
+	if t.config.EnableRecordWorkflowExecutionUninitialized() {
+		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
+			DomainUUID: domainID,
+			Execution: types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			WorkflowTypeName: workflowTypeName,
+		}
+		if err := t.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
+			t.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
+		}
+	}
+
 	return t.visibilityMgr.RecordWorkflowExecutionStarted(ctx, request)
 }
 
