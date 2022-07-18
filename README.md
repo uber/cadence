@@ -86,7 +86,7 @@ The easiest way to get the schema tool is via homebrew.
  However, easier way is to use new versions of schema tools with old versions of schemas. 
  All you need is to check out the older version of schemas from this repo. Run `git checkout v0.21.3` to get the v0.21.3 schemas in [the schema folder](/schema). 
  
-    
+   
 ## License
 
 MIT License, please see [LICENSE](https://github.com/uber/cadence/blob/master/LICENSE) for details.
