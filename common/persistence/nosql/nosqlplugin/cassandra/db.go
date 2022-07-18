@@ -68,3 +68,7 @@ func (db *cdb) IsTimeoutError(err error) bool {
 func (db *cdb) IsThrottlingError(err error) bool {
 	return db.client.IsThrottlingError(err)
 }
+
+func (db *cdb) IsDBUnavailableError(err error) bool {
+	return db.client.IsDBUnavailableError(err)
+}
