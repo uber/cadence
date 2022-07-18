@@ -135,7 +135,7 @@ func (s *esProcessorSuite) TestStop() {
 }
 
 func (s *esProcessorSuite) TestAdd() {
-	request := &es.GenericBulkableAddRequest{IsDelete: false}
+	request := &es.GenericBulkableAddRequest{RequestType: es.BulkableIndexRequest}
 	mockKafkaMsg := &msgMocks.Message{}
 	key := "test-key"
 	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
@@ -155,7 +155,7 @@ func (s *esProcessorSuite) TestAdd() {
 }
 
 func (s *esProcessorSuite) TestAdd_ConcurrentAdd() {
-	request := &es.GenericBulkableAddRequest{IsDelete: false}
+	request := &es.GenericBulkableAddRequest{RequestType: es.BulkableIndexRequest}
 	mockKafkaMsg := &msgMocks.Message{}
 	key := "test-key"
 

@@ -803,6 +803,14 @@ func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionClosed(
 	return err
 }
 
+func (p *visibilityRateLimitedPersistenceClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	err := p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+	return err
+}
+
 func (p *visibilityRateLimitedPersistenceClient) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,

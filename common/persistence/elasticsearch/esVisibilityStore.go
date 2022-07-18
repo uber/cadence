@@ -141,6 +141,20 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 	return v.producer.Publish(ctx, msg)
 }
 
+func (v *esVisibilityStore) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *p.InternalRecordWorkflowExecutionUninitializedRequest,
+) error {
+	v.checkProducer()
+	msg := getVisibilityMessageForUninitializedWorkflow(
+		request.DomainUUID,
+		request.WorkflowID,
+		request.RunID,
+		request.WorkflowTypeName,
+	)
+	return v.producer.Publish(ctx, msg)
+}
+
 func (v *esVisibilityStore) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
@@ -796,6 +810,27 @@ func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVers
 		WorkflowID:  common.StringPtr(workflowID),
 		RunID:       common.StringPtr(runID),
 		Version:     common.Int64Ptr(docVersion),
+	}
+	return msg
+}
+
+func getVisibilityMessageForUninitializedWorkflow(
+	domainID string,
+	wid,
+	rid string,
+	workflowTypeName string,
+) *indexer.Message {
+	msgType := indexer.MessageTypeCreate
+	fields := map[string]*indexer.Field{
+		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+	}
+
+	msg := &indexer.Message{
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(wid),
+		RunID:       common.StringPtr(rid),
+		Fields:      fields,
 	}
 	return msg
 }

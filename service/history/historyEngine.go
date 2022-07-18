@@ -654,6 +654,19 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		if err != nil {
 			return nil, err
 		}
+	} else if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized() && e.visibilityMgr != nil {
+		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
+			DomainUUID: domainID,
+			Execution: types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      workflowExecution.RunID,
+			},
+			WorkflowTypeName: request.WorkflowType.Name,
+		}
+
+		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
+			e.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
+		}
 	}
 
 	err = e.addStartEventsAndTasks(
@@ -3088,6 +3101,7 @@ func getStartRequest(
 		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
 		DelayStartSeconds:                   request.DelayStartSeconds,
+		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())

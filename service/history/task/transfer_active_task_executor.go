@@ -1683,6 +1683,7 @@ func startWorkflowWithRetry(
 		Memo:                  attributes.Memo,
 		SearchAttributes:      attributes.SearchAttributes,
 		DelayStartSeconds:     attributes.DelayStartSeconds,
+		JitterStartSeconds:    attributes.JitterStartSeconds,
 	}
 
 	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now())

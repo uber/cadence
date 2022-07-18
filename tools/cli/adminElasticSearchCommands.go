@@ -152,6 +152,13 @@ func AdminIndex(c *cli.Context) {
 				Id(docID).
 				VersionType(versionTypeExternal).
 				Version(message.GetVersion())
+		case indexer.MessageTypeCreate:
+			req = elastic.NewBulkIndexRequest().
+				OpType("create").
+				Index(indexName).
+				Type(elasticsearch.GetESDocType()).
+				Id(docID).
+				VersionType("internal")
 		default:
 			ErrorAndExit("Unknown message type", nil)
 		}
