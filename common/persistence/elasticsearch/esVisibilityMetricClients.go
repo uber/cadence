@@ -85,6 +85,23 @@ func (p *visibilityMetricsClient) RecordWorkflowExecutionClosed(
 	return err
 }
 
+func (p *visibilityMetricsClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *p.RecordWorkflowExecutionUninitializedRequest,
+) error {
+	p.metricClient.IncCounter(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, metrics.ElasticsearchRequests)
+
+	sw := p.metricClient.StartTimer(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, metrics.ElasticsearchLatency)
+	err := p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, err)
+	}
+
+	return err
+}
+
 func (p *visibilityMetricsClient) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *p.UpsertWorkflowExecutionRequest,

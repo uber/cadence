@@ -787,6 +787,13 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, startEvent.ID, startEvent.Version)
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
+	if s.mockShard.GetConfig().EnableRecordWorkflowExecutionUninitialized() {
+		s.mockVisibilityMgr.On(
+			"RecordWorkflowExecutionUninitialized",
+			mock.Anything,
+			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState),
+		).Once().Return(nil)
+	}
 	s.mockVisibilityMgr.On(
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,

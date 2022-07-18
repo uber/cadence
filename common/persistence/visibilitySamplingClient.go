@@ -161,6 +161,13 @@ func (p *visibilitySamplingClient) RecordWorkflowExecutionClosed(
 	return nil
 }
 
+func (p *visibilitySamplingClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	return p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+}
+
 func (p *visibilitySamplingClient) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,

@@ -162,6 +162,14 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 	s.Nil(err4)
 	s.Equal(1, len(resp.Executions))
 	s.assertClosedExecutionEquals(closeReq, resp.Executions[0])
+
+	uninitializedReq := &p.RecordWorkflowExecutionUninitializedRequest{
+		DomainUUID:       testDomainUUID,
+		Execution:        workflowExecution,
+		WorkflowTypeName: "visibility-workflow",
+	}
+	err5 := s.VisibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedReq)
+	s.Nil(err5)
 }
 
 // TestCronVisibility test
