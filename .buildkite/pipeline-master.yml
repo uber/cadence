@@ -24,8 +24,7 @@ steps:
       queue: "workers"
       docker: "*"
     command: "./scripts/buildkite/golint.sh"
-    artifact_paths:
-      - ".build/golint/*.out"
+    artifact_paths: []
     retry:
       automatic:
         limit: 1
