@@ -1517,7 +1517,7 @@ const (
 	// KeyName: history.EnableRecordWorkflowExecutionUninitialized
 	// Value type: Bool
 	// Default value: true
-	// Allowed filters: N/A
+	// Allowed filters: DomainName
 	EnableRecordWorkflowExecutionUninitialized
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
