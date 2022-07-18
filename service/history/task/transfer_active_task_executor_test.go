@@ -1535,7 +1535,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, decisionCompletionID, mutableState.GetCurrentVersion())
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	if s.mockShard.GetConfig().EnableRecordWorkflowExecutionUninitialized() {
+	if s.mockShard.GetConfig().EnableRecordWorkflowExecutionUninitialized(s.domainName) {
 		s.mockVisibilityMgr.On(
 			"RecordWorkflowExecutionUninitialized",
 			mock.Anything,
