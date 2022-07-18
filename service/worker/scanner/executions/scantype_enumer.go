@@ -70,8 +70,8 @@ func ScanTypeString(s string) (ScanType, error) {
 	if val, ok := _ScanTypeNameToValueMap[s]; ok {
 		return val, nil
 	}
-	s = strings.ToLower(s)
-	if val, ok := _ScanTypeNameToValueMap[s]; ok {
+
+	if val, ok := _ScanTypeNameToValueMap[strings.ToLower(s)]; ok {
 		return val, nil
 	}
 	return 0, fmt.Errorf("%s does not belong to ScanType values", s)
