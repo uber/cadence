@@ -349,9 +349,6 @@ func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 }
 
 func (p *visibilityMetricsClient) updateErrorMetric(scopeWithDomainTag metrics.Scope, scope int, err error) {
-	//scopeIdx			Tags ...tags
-	//scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchRecordWorkflowExecutionStartedScope,metrics.DomainTag(request.Domain))
-	//scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequests)
 
 	switch err.(type) {
 	case *types.BadRequestError:
