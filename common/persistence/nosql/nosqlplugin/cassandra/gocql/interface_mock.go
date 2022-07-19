@@ -71,6 +71,20 @@ func (mr *MockClientMockRecorder) CreateSession(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockClient)(nil).CreateSession), arg0)
 }
 
+// IsDBUnavailableError mocks base method.
+func (m *MockClient) IsDBUnavailableError(arg0 error) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDBUnavailableError", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsDBUnavailableError indicates an expected call of IsDBUnavailableError.
+func (mr *MockClientMockRecorder) IsDBUnavailableError(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDBUnavailableError", reflect.TypeOf((*MockClient)(nil).IsDBUnavailableError), arg0)
+}
+
 // IsNotFoundError mocks base method.
 func (m *MockClient) IsNotFoundError(arg0 error) bool {
 	m.ctrl.T.Helper()

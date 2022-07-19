@@ -188,7 +188,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		SearchAttributes:   searchAttributes,
 	}
 
-	if t.config.EnableRecordWorkflowExecutionUninitialized() {
+	if t.config.EnableRecordWorkflowExecutionUninitialized(domain) {
 		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
 			DomainUUID: domainID,
 			Execution: types.WorkflowExecution{
