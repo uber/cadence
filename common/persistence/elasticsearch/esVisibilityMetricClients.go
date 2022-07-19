@@ -335,7 +335,7 @@ func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 
-	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchDeleteWorkflowExecutionsScope, metrics.DomainTag(request.Domain))
+	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchDeleteWorkflowExecutionsScope, metrics.DomainTag(request.DomainID))
 	scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequests)
 	sw := scopeWithDomainTag.StartTimer(metrics.ElasticsearchLatency)
 	err := p.persistence.DeleteWorkflowExecution(ctx, request)
