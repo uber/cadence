@@ -70,6 +70,8 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 // IncCounter increments one for a counter and emits
 // to metrics backend
 func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
+	//need to add DomainId/Name parameter
+
 	name := string(m.metricDefs[counterIdx].metricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(1)
 }
@@ -77,6 +79,8 @@ func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
 // AddCounter adds delta to the counter and
 // emits to the metrics backend
 func (m *ClientImpl) AddCounter(scopeIdx int, counterIdx int, delta int64) {
+	//need to add DomainId/Name parameter
+
 	name := string(m.metricDefs[counterIdx].metricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(delta)
 }
@@ -113,6 +117,8 @@ func (m *ClientImpl) Scope(scopeIdx int, tags ...Tag) Scope {
 	scope := m.childScopes[scopeIdx]
 	return newMetricsScope(scope, scope, m.metricDefs, false).Tagged(tags...)
 }
+//add domainID to the tags
+//backtrack tag where it is coming from -> from there I will add one more field inside the tag which is domainId
 
 func (m *ClientImpl) getBuckets(id int) tally.Buckets {
 	if m.metricDefs[id].buckets != nil {
