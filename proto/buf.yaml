@@ -6,5 +6,9 @@ build:
 lint: # Uber style rules: https://docs.buf.build/migration-prototool/#uber1-uber2
   use:
     - DEFAULT
+  ignore_only:
+    FIELD_LOWER_SNAKE_CASE:
+      - uber/cadence/history/v1/service.proto
+      - uber/cadence/matching/v1/service.proto
   enum_zero_value_suffix: _INVALID
   service_suffix: API

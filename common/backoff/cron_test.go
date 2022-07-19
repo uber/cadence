@@ -21,6 +21,8 @@
 package backoff
 
 import (
+	"fmt"
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
@@ -61,8 +63,90 @@ func TestCron(t *testing.T) {
 			if tt.result != NoBackoff {
 				assert.NoError(t, err)
 			}
-			backoff := GetBackoffForNextSchedule(tt.cron, start, end)
+			backoff := GetBackoffForNextSchedule(tt.cron, start, end, 0)
 			assert.Equal(t, tt.result, backoff, "The cron spec is %s and the expected result is %s", tt.cron, tt.result)
+		})
+	}
+}
+
+func TestCronWithJitterStart(t *testing.T) {
+	var cronWithJitterStartTests = []struct {
+		cron                   string
+		startTime              string
+		jitterStartSeconds     int32
+		expectedResultSeconds  time.Duration
+		expectedResultSeconds2 time.Duration
+	}{
+		// Note that the cron scheduler we use (robfig) schedules differently depending on the syntax:
+		// 1) * * * syntax : next run is scheduled on the first second of each minute, starting at next minute
+		// 2) @every X syntax: next run is scheduled X seconds from the time passed in to Next() call.
+		{"* * * * *", "2018-12-17T08:00:00+00:00", 10, time.Second * 60, time.Second * 60},
+		{"* * * * *", "2018-12-17T08:00:10+00:00", 30, time.Second * 50, time.Second * 60},
+		{"* * * * *", "2018-12-17T08:00:25+00:00", 15, time.Second * 35, time.Second * 60},
+		{"* * * * *", "2018-12-17T08:00:45+00:00", 0, time.Second * 15, time.Second * 60},
+		{"@every 60s", "2018-12-17T08:00:45+00:00", 0, time.Second * 60, time.Second * 60},
+		{"* * * * *", "2018-12-17T08:00:45+00:00", 45, time.Second * 15, time.Second * 60},
+		{"@every 60s", "2018-12-17T08:00:45+00:00", 45, time.Second * 60, time.Second * 60},
+		{"* * * * *", "2018-12-17T08:00:00+00:00", 70, time.Second * 60, time.Second * 60},
+		{"@every 20s", "2018-12-17T08:00:00+00:00", 15, time.Second * 20, time.Second * 20},
+		{"@every 10s", "2018-12-17T08:00:09+00:00", 0, time.Second * 10, time.Second * 10},
+		{"@every 20s", "2018-12-17T08:00:09+00:00", 15, time.Second * 20, time.Second * 20},
+		{"* * * * *", "0001-01-01T00:00:00+00:00", 0, time.Second * 60, time.Second * 60},
+		{"@every 20s", "0001-01-01T00:00:00+00:00", 0, time.Second * 20, time.Second * 20},
+	}
+
+	rand.Seed(int64(time.Now().Nanosecond()))
+	for idx, tt := range cronWithJitterStartTests {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			exactCount := 0
+
+			start, _ := time.Parse(time.RFC3339, tt.startTime)
+			end := start
+			err := ValidateSchedule(tt.cron)
+			if tt.expectedResultSeconds != NoBackoff {
+				assert.NoError(t, err)
+			}
+			backoff := GetBackoffForNextSchedule(tt.cron, start, end, tt.jitterStartSeconds)
+			fmt.Printf("Backoff time for test %d = %v\n", idx, backoff)
+			delta := time.Duration(tt.jitterStartSeconds) * time.Second
+			expectedResultTime := start.Add(tt.expectedResultSeconds)
+			backoffTime := start.Add(backoff)
+			assert.WithinDuration(t, expectedResultTime, backoffTime, delta,
+				"The test specs are %v and the expected result in seconds is between %s and %s",
+				tt, tt.expectedResultSeconds, tt.expectedResultSeconds+delta)
+			if expectedResultTime == backoffTime {
+				exactCount++
+			}
+
+			// Also check next X cron times
+			caseCount := 5
+			for i := 1; i < caseCount; i++ {
+				startTime := expectedResultTime
+
+				backoff := GetBackoffForNextSchedule(tt.cron, startTime, startTime, tt.jitterStartSeconds)
+				expectedResultTime := startTime.Add(tt.expectedResultSeconds2)
+				backoffTime := startTime.Add(backoff)
+				assert.WithinDuration(t, expectedResultTime, backoffTime, delta,
+					"Iteration %d: The test specs are %v and the expected result in seconds is between %s and %s",
+					i, tt, tt.expectedResultSeconds, tt.expectedResultSeconds+delta)
+				if expectedResultTime == backoffTime {
+					exactCount++
+				}
+
+			}
+
+			// If jitter is > 0, we want to detect whether jitter is being applied - BUT we don't want the test
+			// to be flaky if the code randomly chooses a jitter of 0, so we try to have enough data points by
+			// checking the next X cron times AND by choosing a jitter thats not super low.
+
+			if tt.jitterStartSeconds > 0 && exactCount == caseCount {
+				// Test to make sure a jitter test case sometimes doesn't get exact values
+				t.Fatalf("FAILED to jitter properly? Test specs = %v\n", tt)
+			} else if tt.jitterStartSeconds == 0 && exactCount != caseCount {
+				// Test to make sure a non-jitter test case always gets exact values
+				t.Fatalf("Jittered when we weren't supposed to? Test specs = %v\n", tt)
+			}
+
 		})
 	}
 }
