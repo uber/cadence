@@ -55,7 +55,7 @@ func (p *visibilityMetricsClient) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.RecordWorkflowExecutionStartedRequest,
 ) error {
-
+	
 	//need to call metrics. Scope from metricsClient
 	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchRecordWorkflowExecutionStartedScope,metrics.DomainTag(request.Domain))
 	scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequests)
