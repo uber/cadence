@@ -70,7 +70,6 @@ func NewClient(scope tally.Scope, serviceIdx ServiceIdx) Client {
 // IncCounter increments one for a counter and emits
 // to metrics backend
 func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
-
 	name := string(m.metricDefs[counterIdx].metricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(1)
 }
@@ -78,7 +77,6 @@ func (m *ClientImpl) IncCounter(scopeIdx int, counterIdx int) {
 // AddCounter adds delta to the counter and
 // emits to the metrics backend
 func (m *ClientImpl) AddCounter(scopeIdx int, counterIdx int, delta int64) {
-	
 	name := string(m.metricDefs[counterIdx].metricName)
 	m.childScopes[scopeIdx].Counter(name).Inc(delta)
 }
