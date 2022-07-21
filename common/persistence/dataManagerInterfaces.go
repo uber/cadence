@@ -427,6 +427,7 @@ type (
 	// TimerTaskInfo describes a timer task.
 	TimerTaskInfo struct {
 		DomainID            string
+		Domain              string
 		WorkflowID          string
 		RunID               string
 		VisibilityTimestamp time.Time
@@ -2754,6 +2755,11 @@ func (t *ReplicationTaskInfo) GetRunID() string {
 // GetDomainID returns the domain ID for replication task
 func (t *ReplicationTaskInfo) GetDomainID() string {
 	return t.DomainID
+}
+
+// GetDomain returns the domain Name for the timer task
+func (t *TimerTaskInfo) GetDomain() string {
+	return t.Domain
 }
 
 // GetTaskID returns the task ID for timer task

@@ -630,7 +630,8 @@ func timerTaskInfoToThrift(info *TimerTaskInfo) *sqlblobs.TimerTaskInfo {
 		return nil
 	}
 	return &sqlblobs.TimerTaskInfo{
-		DomainID:        info.DomainID,
+		DomainID:        info.DomainId,
+		Domain:          info.Domain,
 		WorkflowID:      &info.WorkflowID,
 		RunID:           info.RunID,
 		TaskType:        &info.TaskType,
@@ -647,6 +648,7 @@ func timerTaskInfoFromThrift(info *sqlblobs.TimerTaskInfo) *TimerTaskInfo {
 	}
 	return &TimerTaskInfo{
 		DomainID:        info.DomainID,
+		Domain:          info.Domain,
 		WorkflowID:      info.GetWorkflowID(),
 		RunID:           info.RunID,
 		TaskType:        info.GetTaskType(),

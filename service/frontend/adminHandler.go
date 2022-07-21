@@ -511,6 +511,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromVisibility(
 	ctx context.Context,
 	logger log.Logger,
 	domainID string,
+	domain string,
 	workflowID string,
 	runID string,
 ) bool {
@@ -527,6 +528,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromVisibility(
 		visCtx,
 		&persistence.VisibilityDeleteWorkflowExecutionRequest{
 			DomainID:   domainID,
+			Domain:     domain,
 			RunID:      runID,
 			WorkflowID: workflowID,
 			TaskID:     math.MaxInt64,
@@ -603,7 +605,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	if deletedFromExecutions {
 		// Without deleting the executions record, let's not delete the visibility record.
 		// If we do that, workflow won't be visible but it will exist in the DB
-		deletedFromVisibility = adh.deleteWorkflowFromVisibility(ctx, logger, domainID, workflowID, runID)
+		deletedFromVisibility = adh.deleteWorkflowFromVisibility(ctx, logger, domainID, domainName, workflowID, runID)
 	}
 
 	return &types.AdminDeleteWorkflowResponse{

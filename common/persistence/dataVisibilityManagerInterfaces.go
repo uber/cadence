@@ -181,6 +181,7 @@ type (
 	// VisibilityDeleteWorkflowExecutionRequest contains the request params for DeleteWorkflowExecution call
 	VisibilityDeleteWorkflowExecutionRequest struct {
 		DomainID   string
+		Domain     string
 		RunID      string
 		WorkflowID string
 		TaskID     int64

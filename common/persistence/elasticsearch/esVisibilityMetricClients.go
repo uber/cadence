@@ -23,7 +23,6 @@ package elasticsearch
 import (
 	"context"
 
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -95,9 +94,11 @@ func (p *visibilityMetricsClient) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
 	request *p.RecordWorkflowExecutionUninitializedRequest,
 ) error {
-	p.metricClient.IncCounter(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, metrics.ElasticsearchRequests)
 
-	sw := p.metricClient.StartTimer(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, metrics.ElasticsearchLatency)
+	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, metrics.DomainTag(request.Domain))
+	scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequests)
+
+	sw := scopeWithDomainTag.StartTimer(metrics.ElasticsearchLatency)
 	err := p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
 	sw.Stop()
 
@@ -335,9 +336,8 @@ func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
-	//call domainId to domainname map (GetDomainName present in 'https://github.com/uber/cadence/blob/master/common/cache/domainCache.go')
-	//domainName := cache.GetDomainName(request.DomainID)
-	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchDeleteWorkflowExecutionsScope, metrics.DomainTag(cache.GetDomainName(request.DomainID)))
+
+	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchDeleteWorkflowExecutionsScope, metrics.DomainTag(request.Domain))
 	scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequests)
 	sw := scopeWithDomainTag.StartTimer(metrics.ElasticsearchLatency)
 	err := p.persistence.DeleteWorkflowExecution(ctx, request)

@@ -285,6 +285,7 @@ type (
 	// TimerTaskInfo blob in a serialization agnostic format
 	TimerTaskInfo struct {
 		DomainID        UUID
+		Domain          string
 		WorkflowID      string
 		RunID           UUID
 		TaskType        int16
