@@ -1922,7 +1922,7 @@ func (h *handlerImpl) NotifyFailoverMarkers(
 
 	for _, token := range request.GetFailoverMarkerTokens() {
 		marker := token.GetFailoverMarker()
-		h.GetLogger().Debug("Handling failover maker", tag.WorkflowDomainID(marker.GetDomainID()))
+		h.GetLogger().Info("Handling failover maker", tag.WorkflowDomainID(marker.GetDomainID()))
 		h.failoverCoordinator.ReceiveFailoverMarkers(token.GetShardIDs(), token.GetFailoverMarker())
 	}
 	return nil

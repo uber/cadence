@@ -830,6 +830,7 @@ func (handler *taskHandlerImpl) handleDecisionStartChildWorkflow(
 	if attr.GetDomain() != "" {
 		targetDomainEntry, err := handler.domainCache.GetDomain(attr.GetDomain())
 		if err != nil {
+			handler.logger.Error("Unable to schedule child execution across domain. Issue in getting details from domain cache", tag.Error(err), tag.WorkflowDomainID(attr.GetDomain()))
 			return &types.InternalServiceError{
 				Message: fmt.Sprintf("Unable to schedule child execution across domain %v. Error: %w", attr.GetDomain(), err),
 			}
