@@ -2147,7 +2147,9 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	if err != nil {
 		return nil, nil, nil, false, false, err
 	}
+	activityStartedScope := e.metricsClient.Scope(metrics.HistoryRecordActivityTaskStartedScope)
 	if e.config.EnableActivityLocalDispatchByDomain(e.domainEntry.GetInfo().Name) && attributes.RequestLocalDispatch {
+		activityStartedScope.IncCounter(metrics.CadenceRequests)
 		return event, ai, &types.ActivityLocalDispatchInfo{ActivityID: ai.ActivityID}, false, false, nil
 	}
 	started := false
@@ -2155,6 +2157,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		started = e.tryDispatchActivityTask(event, ai, ctx)
 	}
 	if started {
+		activityStartedScope.IncCounter(metrics.CadenceRequests)
 		return event, ai, nil, true, true, nil
 	}
 	// TODO merge active & passive task generation
