@@ -33,6 +33,7 @@ import (
 // And we have to set the returned error otherwise our handler will return nil as error which is incorrect
 // NOTE: this function MUST be called in a deferred function
 func CapturePanic(logger Logger, retError *error) {
+	// revive:disable-next-line:defer Caller must call from a deferred function
 	if errPanic := recover(); errPanic != nil {
 		err, ok := errPanic.(error)
 		if !ok {
