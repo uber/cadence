@@ -4,6 +4,8 @@ severity = "warning"
 confidence = 0.8
 errorCode = 0
 warningCode = 0
+[directive.specify-disable-reason]
+    severity = "error"
 
 #### roughly what golint does.  probably only disable noisy ones.
 

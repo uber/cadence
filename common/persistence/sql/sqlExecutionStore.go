@@ -269,6 +269,7 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	request *p.InternalGetWorkflowExecutionRequest,
 ) (resp *p.InternalGetWorkflowExecutionResponse, e error) {
 	recoverPanic := func(err *error) {
+		// revive:disable-next-line:defer Func is being called using defer().
 		if r := recover(); r != nil {
 			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
 		}
@@ -619,6 +620,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
 	recoverPanic := func(err *error) {
+		// revive:disable-next-line:defer Func is being called using defer().
 		if r := recover(); r != nil {
 			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
 		}
