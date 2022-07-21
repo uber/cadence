@@ -536,7 +536,7 @@ func (handler *taskHandlerImpl) handleDecisionFailWorkflow(
 			// TODO: serialize reason somehow, may deserve a new field / wrapped errors
 			Details: attr.Details,
 		}
-		if _, err := handler.mutableState.AddCancelWorkflowEvent(handler.decisionTaskCompletedID, &cancelAttrs); err != nil {
+		if _, err := handler.mutableState.AddWorkflowExecutionCanceledEvent(handler.decisionTaskCompletedID, &cancelAttrs); err != nil {
 			return err
 		}
 		return nil
@@ -813,7 +813,7 @@ func (handler *taskHandlerImpl) handleDecisionContinueAsNewWorkflow(
 		cancelAttrs := types.CancelWorkflowExecutionDecisionAttributes{
 			Details: nil, // TODO: serialize continue-as-new data somehow, may deserve a new field
 		}
-		if _, err := handler.mutableState.AddCancelWorkflowEvent(handler.decisionTaskCompletedID, &cancelAttrs); err != nil {
+		if _, err := handler.mutableState.AddWorkflowExecutionCanceledEvent(handler.decisionTaskCompletedID, &cancelAttrs); err != nil {
 			return err
 		}
 		return nil

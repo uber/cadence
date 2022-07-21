@@ -2661,28 +2661,6 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 	return event, nil
 }
 
-func (e *mutableStateBuilder) AddCancelWorkflowEvent(
-	decisionCompletedEventID int64,
-	attributes *types.CancelWorkflowExecutionDecisionAttributes,
-) (*types.HistoryEvent, error) {
-	opTag := tag.WorkflowActionWorkflowCanceled
-	if err := e.checkMutability(opTag); err != nil {
-		return nil, err
-	}
-
-	event := e.hBuilder.AddCancelWorkflowEvent(decisionCompletedEventID, attributes)
-	if err := e.ReplicateWorkflowExecutionCanceledEvent(decisionCompletedEventID, event); err != nil {
-		return nil, err
-	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(
 	firstEventID int64,
 	event *types.HistoryEvent,
@@ -2703,6 +2681,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(
 func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 	firstEventID int64,
 ) (*types.HistoryEvent, error) {
+
 	opTag := tag.WorkflowActionWorkflowTimeout
 	if err := e.checkMutability(opTag); err != nil {
 		return nil, err
