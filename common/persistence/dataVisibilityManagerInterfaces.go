@@ -78,6 +78,7 @@ type (
 	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
 	RecordWorkflowExecutionUninitializedRequest struct {
 		DomainUUID       string
+		Domain           string
 		Execution        types.WorkflowExecution
 		WorkflowTypeName string
 	}

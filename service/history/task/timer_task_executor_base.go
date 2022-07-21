@@ -279,7 +279,7 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 	op := func() error {
 		request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
-			Domain:     task.DomainName,
+			Domain:     task.Domain,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 			TaskID:     task.TaskID,

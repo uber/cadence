@@ -103,7 +103,7 @@ func (p *visibilityMetricsClient) RecordWorkflowExecutionUninitialized(
 	sw.Stop()
 
 	if err != nil {
-		p.updateErrorMetric(metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, err)
+		p.updateErrorMetric(scopeWithDomainTag, metrics.ElasticsearchRecordWorkflowExecutionUninitializedScope, err)
 	}
 
 	return err
