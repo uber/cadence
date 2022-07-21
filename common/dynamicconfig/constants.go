@@ -1513,6 +1513,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainID, WorkflowID
 	EnableReplicationTaskGeneration
+	// EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch
+	// KeyName: history.EnableRecordWorkflowExecutionUninitialized
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: DomainName
+	EnableRecordWorkflowExecutionUninitialized
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -3331,6 +3337,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EmitShardDiffLog is whether emit the shard diff log",
 		DefaultValue: false,
 	},
+	EnableRecordWorkflowExecutionUninitialized: DynamicBool{
+		KeyName:      "history.enableRecordWorkflowExecutionUninitialized",
+		Description:  "EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch",
+		DefaultValue: false,
+	},
 	DisableListVisibilityByFilter: DynamicBool{
 		KeyName:      "frontend.disableListVisibilityByFilter",
 		Description:  "DisableListVisibilityByFilter is config to disable list open/close workflow using filter",
@@ -3913,7 +3924,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	MatchingActivityTaskSyncMatchWaitTime: DynamicDuration{
 		KeyName:      "matching.activityTaskSyncMatchWaitTime",
 		Description:  "MatchingActivityTaskSyncMatchWaitTime is the amount of time activity task will wait to be sync matched",
-		DefaultValue: time.Millisecond * 100,
+		DefaultValue: time.Millisecond * 50,
 	},
 	HistoryLongPollExpirationInterval: DynamicDuration{
 		KeyName:      "history.longPollExpirationInterval",

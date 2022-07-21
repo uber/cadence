@@ -682,6 +682,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		Header:                              startAttributes.Header,
 		Memo:                                startAttributes.Memo,
 		SearchAttributes:                    startAttributes.SearchAttributes,
+		JitterStartSeconds:                  startAttributes.JitterStartSeconds,
 	}
 	newMutableState, err := retryWorkflow(
 		ctx,

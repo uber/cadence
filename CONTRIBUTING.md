@@ -215,6 +215,12 @@ go test -v <path> -run <TestSuite> -testify.m <TestSpercificTaskName>
 go test -v github.com/uber/cadence/common/persistence/persistence-tests -run TestVisibilitySamplingSuite -testify.m TestListClosedWorkflowExecutions
 ```
 
+## IDL Changes
+
+If you make changes in the idls submodule and want to test them locally, you can easily do that by using go mod to use the local idls directory instead of github.com/uber/cadence-idl. Temporarily add the following to the bottom of go.mod:
+
+```replace github.com/uber/cadence-idl => ./idls```
+
 ## Pull Requests
 After all the preparation you are about to write code and make a Pull Request for the issue.
 

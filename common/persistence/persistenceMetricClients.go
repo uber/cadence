@@ -248,6 +248,10 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
 	case *types.ServiceBusyError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+	case *DBUnavailableError:
+		p.metricClient.IncCounter(scope, metrics.PersistenceErrDBUnavailableCounter)
+		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
 		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
@@ -1035,6 +1039,16 @@ func (p *visibilityPersistenceClient) RecordWorkflowExecutionClosed(
 		return p.persistence.RecordWorkflowExecutionClosed(ctx, request)
 	}
 	return p.call(metrics.PersistenceRecordWorkflowExecutionClosedScope, op)
+}
+
+func (p *visibilityPersistenceClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	op := func() error {
+		return p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+	}
+	return p.call(metrics.PersistenceRecordWorkflowExecutionUninitializedScope, op)
 }
 
 func (p *visibilityPersistenceClient) UpsertWorkflowExecution(

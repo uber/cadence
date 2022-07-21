@@ -1053,6 +1053,7 @@ func (handler *taskHandlerImpl) retryCronContinueAsNew(
 		Header:                              attr.Header,
 		Memo:                                attr.Memo,
 		SearchAttributes:                    attr.SearchAttributes,
+		JitterStartSeconds:                  attr.JitterStartSeconds,
 	}
 
 	_, newStateBuilder, err := handler.mutableState.AddContinueAsNewEvent(
