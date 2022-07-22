@@ -2113,9 +2113,9 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskFailedEvent() error {
 }
 
 func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
+	ctx context.Context,
 	decisionCompletedEventID int64,
 	attributes *types.ScheduleActivityTaskDecisionAttributes,
-	ctx context.Context,
 	dispatch bool,
 ) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, bool, error) {
 
@@ -2154,7 +2154,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	}
 	started := false
 	if dispatch {
-		started = e.tryDispatchActivityTask(event, ai, ctx)
+		started = e.tryDispatchActivityTask(ctx, event, ai)
 	}
 	if started {
 		activityStartedScope.IncCounter(metrics.CadenceRequests)
@@ -2171,9 +2171,9 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 }
 
 func (e *mutableStateBuilder) tryDispatchActivityTask(
+	ctx context.Context,
 	scheduledEvent *types.HistoryEvent,
 	ai *persistence.ActivityInfo,
-	ctx context.Context,
 ) bool {
 	taggedScope := e.metricsClient.Scope(metrics.HistoryScheduleDecisionTaskScope).Tagged(
 		metrics.DomainTag(e.domainEntry.GetInfo().Name),
