@@ -3617,11 +3617,11 @@ func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionReques
 	}
 }
 
-func ToRestartStartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.StartWorkflowExecutionResponse {
+func ToRestartStartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
 	if t == nil {
 		return nil
 	}
-	return &types.StartWorkflowExecutionResponse{
+	return &types.RestartWorkflowExecutionResponse{
 		RunID: t.RunId,
 	}
 }

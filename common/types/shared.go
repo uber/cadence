@@ -6016,6 +6016,19 @@ func (v *StartWorkflowExecutionResponse) GetRunID() (o string) {
 	return
 }
 
+// RestartWorkflowExecutionResponse is an internal type (TBD...)
+type RestartWorkflowExecutionResponse struct {
+	RunID string `json:"runId,omitempty"`
+}
+
+// GetRunID is an internal getter (TBD...)
+func (v *RestartWorkflowExecutionResponse) GetRunID() (o string) {
+	if v != nil {
+		return v.RunID
+	}
+	return
+}
+
 // StickyExecutionAttributes is an internal type (TBD...)
 type StickyExecutionAttributes struct {
 	WorkerTaskList                *TaskList `json:"workerTaskList,omitempty"`

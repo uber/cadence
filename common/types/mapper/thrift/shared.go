@@ -5530,6 +5530,16 @@ func ToTaskListType(t *shared.TaskListType) *types.TaskListType {
 	panic("unexpected enum value")
 }
 
+// ToRestartWorkflowExecutionResponse converts thrift RestartWorkflowExecutionResponse type to internal
+func ToRestartWorkflowExecutionResponse(t *shared.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionResponse{
+		RunID: t.GetRunId(),
+	}
+}
+
 // FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
 func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
 	if t == nil {

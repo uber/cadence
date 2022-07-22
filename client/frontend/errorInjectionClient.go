@@ -878,10 +878,10 @@ func (c *errorInjectionClient) RespondQueryTaskCompleted(
 func (c *errorInjectionClient) RestartWorkflowExecution(
 	ctx context.Context,
 	request *types.RestartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *types.StartWorkflowExecutionResponse
+	var resp *types.RestartWorkflowExecutionResponse
 	var clientErr error
 	var forwardCall bool
 	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {

@@ -411,7 +411,7 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 func (c *clientImpl) RestartWorkflowExecution(
 	ctx context.Context,
 	request *types.RestartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
 
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
