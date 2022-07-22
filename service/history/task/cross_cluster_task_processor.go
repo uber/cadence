@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -521,10 +522,11 @@ func (p *crossClusterTaskProcessor) hasShutdown() bool {
 
 func debugLog(preface string, e interface{}) {
 	stack := string(debug.Stack())
+	stack = strings.Replace(stack, "\n", "", 0)
 	d, err := json.Marshal(e)
 	if err != nil {
-		fmt.Printf("%s \n %v\n\n%v", preface, e, stack)
+		fmt.Printf("%s -- %v -- %v \n", preface, e, stack)
 		return
 	}
-	fmt.Printf("%s: %v\n\n%v", preface, d, stack)
+	fmt.Printf("%s -- %v -- %v\n", preface, string(d), stack)
 }

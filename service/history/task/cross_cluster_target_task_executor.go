@@ -442,12 +442,16 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 			// workflow not exists when handling the error
 			return "", errDomainNotExists
 		}
+		debugLog("domain entry from domain cache: got error", err)
 		return "", err
 	}
 
 	if entry.IsDomainPendingActive() {
 		return "", ErrTaskPendingActive
 	}
+	debugLog("current cluster name in domain verification: ", t.shard.GetClusterMetadata().GetCurrentClusterName())
+	isAc, dcErr := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName())
+	debugLog(fmt.Sprintf("current cluster name in domain DC error: %v", isAc), dcErr)
 
 	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
 		return "", fmt.Errorf("domain %s not active in %s: %w", domainID, t.shard.GetClusterMetadata().GetCurrentClusterName(), errTargetDomainNotActive)
