@@ -21,6 +21,7 @@
 package tag
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -842,4 +843,13 @@ func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag 
 // VisibilityQuery returns tag for the query for getting visibility records
 func VisibilityQuery(query string) Tag {
 	return newStringTag("visibility-query", query)
+}
+
+// DebugAny is a slow string tag for debugging. Not safe for production use. Can panic.
+func DebugAny(data interface{}) Tag {
+	d, err := json.Marshal(data)
+	if err != nil {
+		return newStringTag("debug-data", fmt.Sprintf("%v", data))
+	}
+	return newStringTag("debug-data", string(d))
 }

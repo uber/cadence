@@ -153,6 +153,7 @@ func (t *crossClusterTargetTaskExecutor) executeStartChildExecutionTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
+	t.logger.Info("cross-cluster: starting child execution task", tag.DebugAny(attributes))
 	targetDomainName, err := t.verifyDomainActive(attributes.TargetDomainID)
 	if err != nil {
 		return nil, err
@@ -435,7 +436,7 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	domainID string,
 ) (string, error) {
 	entry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
-	debugLog(fmt.Sprintf("domain %s entry from domain cache: ", domainID), entry)
+	t.logger.Info("cross cluster: verify domain active", tag.WorkflowDomainID(domainID), tag.DebugAny(entry), tag.Error(err))
 	if err != nil {
 		if common.IsEntityNotExistsError(err) {
 			// return a special error here so that we can tell the difference from
@@ -449,13 +450,8 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	if entry.IsDomainPendingActive() {
 		return "", ErrTaskPendingActive
 	}
-	debugLog("current cluster name in domain verification: ", t.shard.GetClusterMetadata().GetCurrentClusterName())
-	isAc, dcErr := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName())
-	debugLog(fmt.Sprintf("current cluster name in domain DC error: %v", isAc), dcErr)
-
 	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
 		return "", fmt.Errorf("domain %s not active in %s: %w", domainID, t.shard.GetClusterMetadata().GetCurrentClusterName(), errTargetDomainNotActive)
 	}
-
 	return entry.GetInfo().Name, nil
 }
