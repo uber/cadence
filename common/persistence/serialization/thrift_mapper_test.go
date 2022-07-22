@@ -453,7 +453,6 @@ func TestTransferTaskInfo(t *testing.T) {
 func TestTimerTaskInfo(t *testing.T) {
 	expected := &TimerTaskInfo{
 		DomainID:        UUID(uuid.New()),
-		Domain:          "Sample domain",
 		WorkflowID:      "WorkflowID",
 		RunID:           UUID(uuid.New()),
 		TaskType:        int16(rand.Intn(1000)),
