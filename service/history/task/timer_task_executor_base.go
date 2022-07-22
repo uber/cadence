@@ -275,6 +275,9 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 	ctx context.Context,
 	task *persistence.TimerTaskInfo,
 ) error {
+	
+	//first :set 2 mock behaviour: 
+
 	domain, errorDomainName := t.shard.GetDomainCache().GetDomainName(task.DomainID)
 	if errorDomainName != nil {
 		return errorDomainName
