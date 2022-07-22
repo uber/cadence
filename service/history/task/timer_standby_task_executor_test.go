@@ -64,7 +64,6 @@ type (
 
 		logger               log.Logger
 		domainID             string
-		domain               string
 		domainEntry          *cache.DomainCacheEntry
 		version              int64
 		clusterName          string
@@ -91,7 +90,6 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 
 	config := config.NewForTest()
 	s.domainID = constants.TestDomainID
-	s.domain = constants.TestDomainName
 	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
 	s.clusterName = cluster.TestAlternativeClusterName
@@ -171,7 +169,6 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessUserTimerTimeout_Pending() {
 	timerTask := s.newTimerTaskFromInfo(&persistence.TimerTaskInfo{
 		Version:             s.version,
 		DomainID:            s.domainID,
-		Domain:              s.domain,
 		WorkflowID:          workflowExecution.GetWorkflowID(),
 		RunID:               workflowExecution.GetRunID(),
 		TaskID:              int64(100),
