@@ -41,7 +41,7 @@ type (
 	}
 )
 
-func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) *dnsPeerChooserFactory {
+func NewDNSPeerChooserFactory(interval time.Duration, logger log.Logger) PeerChooserFactory {
 	if interval <= 0 {
 		interval = defaultDNSRefreshInterval
 	}
