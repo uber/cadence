@@ -23,6 +23,7 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
@@ -434,6 +435,7 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	domainID string,
 ) (string, error) {
 	entry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
+	debugLog(fmt.Sprintf("domain %s entry from domain cache: ", domainID), entry)
 	if err != nil {
 		if common.IsEntityNotExistsError(err) {
 			// return a special error here so that we can tell the difference from
@@ -448,7 +450,8 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	}
 
 	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
-		return "", errTargetDomainNotActive
+		fmt.Println("cross-cluster debug: domain isn't active in this cluster", t.shard.GetClusterMetadata().GetCurrentClusterName())
+		return "", fmt.Errorf("domain %s not active in %s: %w", domainID, t.shard.GetClusterMetadata().GetCurrentClusterName(), errTargetDomainNotActive)
 	}
 
 	return entry.GetInfo().Name, nil
