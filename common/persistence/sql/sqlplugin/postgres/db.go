@@ -137,6 +137,6 @@ func (pdb *db) MaxAllowedTTL() (*time.Duration, error) {
 }
 
 // SupportsTTL returns weather Postgre supports Asynchronous transaction
-func (mdb *db) SupportsAsyncTransaction() bool {
+func (pdb *db) SupportsAsyncTransaction() bool {
 	return false
 }
