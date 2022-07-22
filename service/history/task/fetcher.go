@@ -315,7 +315,6 @@ func (f *fetcherImpl) aggregator() {
 		case <-fetchTimer.C:
 			var nextFetchInterval time.Duration
 			if err := f.fetch(outstandingRequests); err != nil {
-				f.logger.Error("Failed to fetch cross cluster tasks", tag.Error(err))
 				if common.IsServiceBusyError(err) {
 					nextFetchInterval = f.options.ServiceBusyBackoffInterval()
 					f.metricsScope.IncCounter(metrics.CrossClusterFetchServiceBusyFailures)
@@ -323,6 +322,7 @@ func (f *fetcherImpl) aggregator() {
 					nextFetchInterval = f.options.ErrorRetryInterval()
 					f.metricsScope.IncCounter(metrics.CrossClusterFetchFailures)
 				}
+				f.logger.Error("Failed to fetch cross cluster tasks", tag.Error(err), tag.NextTicker(nextFetchInterval))
 			} else {
 				nextFetchInterval = f.options.AggregationInterval()
 			}
@@ -354,6 +354,7 @@ func (f *fetcherImpl) fetch(
 		outstandingRequests,
 	)
 	if err != nil {
+		f.logger.Warn("cross-cluster task fetcher error", tag.Error(err))
 		return err
 	}
 

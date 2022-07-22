@@ -2174,6 +2174,7 @@ const (
 	FailoverMarkerUpdateShardFailure
 	FailoverMarkerCallbackCount
 	HistoryFailoverCallbackCount
+	CrossClusterFetchProcessorBackoff
 
 	NumHistoryMetrics
 )

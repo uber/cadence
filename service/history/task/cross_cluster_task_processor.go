@@ -213,10 +213,12 @@ func (p *crossClusterTaskProcessor) processLoop() {
 		}
 
 		if p.numPendingTasks() > p.options.MaxPendingTasks() {
-			time.Sleep(backoff.JitDuration(
+			backoff := backoff.JitDuration(
 				p.options.TaskWaitInterval(),
 				p.options.TimerJitterCoefficient(),
-			))
+			)
+			p.metricsScope.UpdateGauge(metrics.CrossClusterFetchProcessorBackoff, float64(backoff))
+			time.Sleep(backoff)
 			continue
 		}
 
@@ -260,6 +262,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 
 		taskFutures := make(map[int64]future.Future, len(taskRequests))
 		for _, taskRequest := range taskRequests {
+			p.logger.Info("cross-cluster debug: processing task request", tag.TaskID(taskRequest.TaskInfo.TaskID))
 			crossClusterTask, future := NewCrossClusterTargetTask(
 				p.shard,
 				taskRequest,
@@ -275,6 +278,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 			taskFutures[taskRequest.TaskInfo.GetTaskID()] = future
 
 			if err := p.submitTask(crossClusterTask); err != nil {
+				p.logger.Warn("error submitting task during processing", tag.TaskID(taskRequest.TaskInfo.TaskID), tag.Error(err))
 				return
 			}
 		}
@@ -288,11 +292,13 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 		deadlineExceeded := false
 		for taskID, taskFuture := range taskFutures {
 			if deadlineExceeded && !taskFuture.IsReady() {
+				p.logger.Warn("dropping task due to deadline exceeded", tag.TaskID(taskID))
 				continue
 			}
 
 			var taskResponse types.CrossClusterTaskResponse
 			if err := taskFuture.Get(taskWaitContext, &taskResponse); err != nil {
+				p.logger.Error("cross-cluster processing: error processing task", tag.TaskID(taskID), tag.Error(err))
 				if p.ctx.Err() != nil {
 					// root context is no-longer valid, component is being shutdown,
 					// we can return directly
@@ -315,7 +321,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 					TaskID:      taskID,
 					FailedCause: types.CrossClusterTaskFailedCauseUncategorized.Ptr(),
 				}
-				p.logger.Error("Encountered uncategorized error from cross cluster task future", tag.Error(err))
+				p.logger.Error("cross-cluster task: Encountered uncategorized error from cross cluster task future", tag.Error(err))
 			}
 			respondRequest.TaskResponses = append(respondRequest.TaskResponses, &taskResponse)
 		}
@@ -341,8 +347,8 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 			p.pendingTasks[taskID] = future
 		}
 		p.taskLock.Unlock()
-
 		if respondErr != nil {
+			p.logger.Error("cross-cluster task: error processing task", tag.Error(respondErr))
 			return
 		}
 		taskRequests = p.dedupTaskRequests(respondResponse.Tasks)

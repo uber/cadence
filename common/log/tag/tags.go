@@ -568,6 +568,11 @@ func ScheduleAttempt(scheduleAttempt int64) Tag {
 	return newInt64("schedule-attempt", scheduleAttempt)
 }
 
+//  NextTicker is an interval for when the next event is going to occur
+func NextTicker(t time.Duration) Tag {
+	return newDurationTag("next-tick", t)
+}
+
 // ElasticSearch
 
 // ESRequest returns tag for ESRequest
