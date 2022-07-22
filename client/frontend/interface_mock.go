@@ -725,14 +725,14 @@ func (mr *MockClientMockRecorder) RespondQueryTaskCompleted(arg0, arg1 interface
 }
 
 // RestartWorkflowExecution mocks base method.
-func (m *MockClient) RestartWorkflowExecution(arg0 context.Context, arg1 *types.RestartWorkflowExecutionRequest, arg2 ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error) {
+func (m *MockClient) RestartWorkflowExecution(arg0 context.Context, arg1 *types.RestartWorkflowExecutionRequest, arg2 ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "RestartWorkflowExecution", varargs...)
-	ret0, _ := ret[0].(*types.StartWorkflowExecutionResponse)
+	ret0, _ := ret[0].(*types.RestartWorkflowExecutionResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

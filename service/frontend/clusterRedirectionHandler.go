@@ -993,7 +993,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondQueryTaskCompleted(
 	return err
 }
 
-func (handler *ClusterRedirectionHandlerImpl) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+func (handler *ClusterRedirectionHandlerImpl) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
 	var apiName = "RestartWorkflowExecution"
 	var err error
 	var cluster string

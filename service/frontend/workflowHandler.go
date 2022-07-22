@@ -3290,7 +3290,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 }
 
 // RestartWorkflowExecution - retrieves info for an existing workflow then restarts it
-func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.StartWorkflowExecutionResponse, retError error) {
+func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
 	defer log.CapturePanic(wh.GetLogger(), &retError)
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRestartWorkflowExecutionScope, request)
@@ -3341,8 +3341,11 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 	}
 	startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
 		domainName, request.Identity, wfExecution.WorkflowID)
-	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(
+	startResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(
 		domainID, startRequest, time.Now()))
+	resp = &types.RestartWorkflowExecutionResponse{
+		RunID: startResp.RunID,
+	}
 	if err != nil {
 		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
 	}

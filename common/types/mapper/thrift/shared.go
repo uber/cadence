@@ -4756,16 +4756,6 @@ func ToRetryTaskV2Error(t *shared.RetryTaskV2Error) *types.RetryTaskV2Error {
 	}
 }
 
-// FromRestartWorkflowExecutionResponse converts internal StartWorkflowExecutionResponse type to thrift
-func FromRestartWorkflowExecutionResponse(t *types.StartWorkflowExecutionResponse) *shared.RestartWorkflowExecutionResponse {
-	if t == nil {
-		return nil
-	}
-	return &shared.RestartWorkflowExecutionResponse{
-		RunId: &t.RunID,
-	}
-}
-
 // ToRestartWorkflowExecutionRequest converts thrift RestartWorkflowExecutionRequest type to internal
 func ToRestartWorkflowExecutionRequest(t *shared.RestartWorkflowExecutionRequest) *types.RestartWorkflowExecutionRequest {
 	if t == nil {
@@ -5285,6 +5275,16 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
+	}
+}
+
+// FromRestartWorkflowExecutionResponse converts internal RestartWorkflowExecutionResponse type to thrift
+func FromRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *shared.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionResponse{
+		RunId: &t.RunID,
 	}
 }
 

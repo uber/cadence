@@ -3107,7 +3107,7 @@ func ToRetryPolicy(t *apiv1.RetryPolicy) *types.RetryPolicy {
 	}
 }
 
-func FromRestartWorkflowExecutionResponse(t *types.StartWorkflowExecutionResponse) *apiv1.RestartWorkflowExecutionResponse {
+func FromRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *apiv1.RestartWorkflowExecutionResponse {
 	if t == nil {
 		return nil
 	}

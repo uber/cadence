@@ -600,7 +600,7 @@ func (a *AccessControlledWorkflowHandler) RespondQueryTaskCompleted(
 }
 
 // RestartWorkflowExecution API call
-func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error) {
+func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error) {
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendRestartWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
