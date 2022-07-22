@@ -265,7 +265,7 @@ func (p *crossClusterTaskProcessor) processTaskRequests(
 
 		taskFutures := make(map[int64]future.Future, len(taskRequests))
 		for _, taskRequest := range taskRequests {
-			p.logger.Info("cross-cluster debug: processing task request", tag.TaskID(taskRequest.TaskInfo.TaskID))
+			p.logger.Info("cross-cluster debug: processing task request", tag.TaskID(taskRequest.TaskInfo.TaskID), tag.WorkflowDomainID(taskRequest.TaskInfo.DomainID))
 			crossClusterTask, future := NewCrossClusterTargetTask(
 				p.shard,
 				taskRequest,

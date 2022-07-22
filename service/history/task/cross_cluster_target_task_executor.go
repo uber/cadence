@@ -450,7 +450,6 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	}
 
 	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
-		fmt.Println("cross-cluster debug: domain isn't active in this cluster", t.shard.GetClusterMetadata().GetCurrentClusterName())
 		return "", fmt.Errorf("domain %s not active in %s: %w", domainID, t.shard.GetClusterMetadata().GetCurrentClusterName(), errTargetDomainNotActive)
 	}
 

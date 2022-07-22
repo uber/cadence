@@ -226,6 +226,7 @@ func NewCrossClusterTargetTask(
 	}
 
 	future, settable := future.NewFuture()
+	debugLog("creating cross cluster target task", info)
 	return &crossClusterTargetTask{
 		crossClusterTaskBase: newCrossClusterTaskBase(
 			shard,
