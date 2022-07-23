@@ -24,7 +24,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -153,12 +152,13 @@ func (t *crossClusterTargetTaskExecutor) executeStartChildExecutionTask(
 		return nil, errMissingTaskRequestAttributes
 	}
 
-	t.logger.Info("cross-cluster: starting child execution task", tag.DebugAny(attributes))
 	targetDomainName, err := t.verifyDomainActive(attributes.TargetDomainID)
 	if err != nil {
+		t.logger.Warn("cross-cluster: task is being dropped because there's a problem verifying the domain as being active: child execution task", tag.DebugAny(attributes), tag.Error(err), tag.WorkflowDomainName(targetDomainName))
 		return nil, err
 	}
 
+	t.logger.Info("cross-cluster: starting child execution task - validation passed", tag.DebugAny(attributes))
 	switch task.processingState {
 	case processingStateInitialized:
 		runID, err := startWorkflowWithRetry(
