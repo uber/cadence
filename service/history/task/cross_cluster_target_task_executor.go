@@ -24,6 +24,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -436,14 +437,13 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 	domainID string,
 ) (string, error) {
 	entry, err := t.shard.GetDomainCache().GetDomainByID(domainID)
-	t.logger.Info("cross cluster: verify domain active", tag.WorkflowDomainID(domainID), tag.DebugAny(entry), tag.Error(err))
 	if err != nil {
+		t.logger.Warn("cross cluster: domain active verification: couldn't get entry from domain cache", tag.WorkflowDomainID(domainID), tag.DebugAny(entry), tag.Error(err))
 		if common.IsEntityNotExistsError(err) {
 			// return a special error here so that we can tell the difference from
 			// workflow not exists when handling the error
 			return "", errDomainNotExists
 		}
-		debugLog("domain entry from domain cache: got error", err)
 		return "", err
 	}
 
@@ -451,6 +451,8 @@ func (t *crossClusterTargetTaskExecutor) verifyDomainActive(
 		return "", ErrTaskPendingActive
 	}
 	if isActive, _ := entry.IsActiveIn(t.shard.GetClusterMetadata().GetCurrentClusterName()); !isActive {
+		replicationConfig := entry.GetReplicationConfig()
+		t.logger.Warn("cross cluster: domain active verification: domain isn't active in this cluster", tag.WorkflowDomainID(domainID), tag.DebugAny(replicationConfig), tag.Error(err), tag.ClusterName(t.shard.GetClusterMetadata().GetCurrentClusterName()))
 		return "", fmt.Errorf("domain %s not active in %s: %w", domainID, t.shard.GetClusterMetadata().GetCurrentClusterName(), errTargetDomainNotActive)
 	}
 	return entry.GetInfo().Name, nil

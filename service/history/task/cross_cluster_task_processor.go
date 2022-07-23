@@ -22,10 +22,6 @@ package task
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"runtime/debug"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -489,7 +485,6 @@ func (p *crossClusterTaskProcessor) respondTaskCompletedWithRetry(
 func (p *crossClusterTaskProcessor) submitTask(
 	task Task,
 ) error {
-	debugLog("submitting task", task)
 	submitted, err := p.taskProcessor.TrySubmit(task)
 	if err != nil {
 		if p.hasShutdown() {
@@ -518,15 +513,4 @@ func (p *crossClusterTaskProcessor) hasShutdown() bool {
 	default:
 		return false
 	}
-}
-
-func debugLog(preface string, e interface{}) {
-	stack := string(debug.Stack())
-	stack = strings.Replace(stack, "\n", "", 0)
-	d, err := json.Marshal(e)
-	if err != nil {
-		fmt.Printf("%s -- %v -- %v \n", preface, e, stack)
-		return
-	}
-	fmt.Printf("%s -- %v -- %v\n", preface, string(d), stack)
 }
