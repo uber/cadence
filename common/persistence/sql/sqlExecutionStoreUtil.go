@@ -422,6 +422,7 @@ func applyWorkflowMutationAsyncTx(
 	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	recoverPanic := func(err *error) {
+		// revive:disable-next-line:defer Func is being called using defer().
 		if r := recover(); r != nil {
 			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
 		}
@@ -769,6 +770,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	runID := serialization.MustParseUUID(executionInfo.RunID)
 
 	recoverPanic := func(err *error) {
+		// revive:disable-next-line:defer Func is being called using defer().
 		if r := recover(); r != nil {
 			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
 		}

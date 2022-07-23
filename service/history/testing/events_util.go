@@ -145,7 +145,7 @@ func AddActivityTaskScheduledEvent(
 ) (*types.HistoryEvent,
 	*persistence.ActivityInfo) {
 
-	event, ai, _, _, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
+	event, ai, _, _, _, _ := builder.AddActivityTaskScheduledEvent(nil, decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    activityID,
 		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
@@ -154,7 +154,7 @@ func AddActivityTaskScheduledEvent(
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
-	}, nil, false,
+	}, false,
 	)
 
 	return event, ai
@@ -175,7 +175,7 @@ func AddActivityTaskScheduledEventWithRetry(
 	retryPolicy *types.RetryPolicy,
 ) (*types.HistoryEvent, *persistence.ActivityInfo) {
 
-	event, ai, _, _, _, _ := builder.AddActivityTaskScheduledEvent(decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
+	event, ai, _, _, _, _ := builder.AddActivityTaskScheduledEvent(nil, decisionCompletedID, &types.ScheduleActivityTaskDecisionAttributes{
 		ActivityID:                    activityID,
 		ActivityType:                  &types.ActivityType{Name: activityType},
 		TaskList:                      &types.TaskList{Name: taskList},
@@ -185,7 +185,7 @@ func AddActivityTaskScheduledEventWithRetry(
 		StartToCloseTimeoutSeconds:    common.Int32Ptr(startToCloseTimeout),
 		HeartbeatTimeoutSeconds:       common.Int32Ptr(heartbeatTimeout),
 		RetryPolicy:                   retryPolicy,
-	}, nil, false,
+	}, false,
 	)
 
 	return event, ai

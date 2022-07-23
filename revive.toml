@@ -1,9 +1,10 @@
 # config for https://github.com/mgechev/revive
 ignoreGeneratedHeader = false
-severity = "warning"
+severity = "error"
 confidence = 0.8
-errorCode = 0
+errorCode = 1
 warningCode = 0
+
 [directive.specify-disable-reason]
     severity = "error"
 

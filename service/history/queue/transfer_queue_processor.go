@@ -533,10 +533,9 @@ func newTransferQueueStandbyProcessor(
 					// retry the task if failed to find the domain
 					logger.Warn("Cannot find domain", tag.WorkflowDomainID(task.DomainID))
 					return false, err
-				} else {
-					logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(task.DomainID), tag.Value(task))
-					return false, nil
 				}
+				logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(task.DomainID), tag.Value(task))
+				return false, nil
 			}
 		}
 		return taskAllocator.VerifyStandbyTask(clusterName, task.DomainID, task)
