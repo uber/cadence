@@ -276,9 +276,14 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 	task *persistence.TimerTaskInfo,
 ) error {
 
+	domain, errorDomainName := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	op := func() error {
 		request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
+			Domain:     domain,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 			TaskID:     task.TaskID,
