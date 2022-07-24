@@ -31,7 +31,9 @@ import (
 // If the panic value is not error then a default error is returned
 // We have to use pointer is because in golang: "recover return nil if was not called directly by a deferred function."
 // And we have to set the returned error otherwise our handler will return nil as error which is incorrect
-// errPanic MUST be the result from calling recover()
+// errPanic MUST be the result from calling recover, which MUST be done in a single level deep
+// deferred function. The usual way of calling this is:
+// - defer func() { log.CapturePanic(recover(), logger, &err) }()
 func CapturePanic(errPanic interface{}, logger Logger, retError *error) {
 	if errPanic != nil {
 		err, ok := errPanic.(error)

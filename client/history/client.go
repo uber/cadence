@@ -813,7 +813,7 @@ func (c *clientImpl) GetReplicationMessages(
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
 		g.Go(func() (e error) {
-			defer log.CapturePanic(recover(), c.logger, &e)
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
 
 			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
@@ -939,7 +939,7 @@ func (c *clientImpl) CountDLQMessages(
 	for _, peer := range peers {
 		peer := peer
 		g.Go(func() (e error) {
-			defer log.CapturePanic(recover(), c.logger, &e)
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
 
 			response, err := c.client.CountDLQMessages(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 			if err == nil {
@@ -1047,7 +1047,7 @@ func (c *clientImpl) NotifyFailoverMarkers(
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
 		g.Go(func() (e error) {
-			defer log.CapturePanic(recover(), c.logger, &e)
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
 
 			ctx, cancel := c.createContext(ctx)
 			defer cancel()
