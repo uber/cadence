@@ -455,7 +455,7 @@ func applyWorkflowMutationAsyncTx(
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createTransferTasks(
 			ctx,
 			tx,
@@ -469,7 +469,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createCrossClusterTasks(
 			ctx,
 			tx,
@@ -483,7 +483,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createReplicationTasks(
 			ctx,
 			tx,
@@ -497,7 +497,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createTimerTasks(
 			ctx,
 			tx,
@@ -511,7 +511,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateActivityInfos(
 			ctx,
 			tx,
@@ -526,7 +526,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateTimerInfos(
 			ctx,
 			tx,
@@ -542,7 +542,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateChildExecutionInfos(
 			ctx,
 			tx,
@@ -558,7 +558,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateRequestCancelInfos(
 			ctx,
 			tx,
@@ -574,7 +574,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateSignalInfos(
 			ctx,
 			tx,
@@ -590,7 +590,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateSignalsRequested(
 			ctx,
 			tx,
@@ -605,7 +605,7 @@ func applyWorkflowMutationAsyncTx(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		if workflowMutation.ClearBufferedEvents {
 			if e = deleteBufferedEvents(
 				ctx,
@@ -777,7 +777,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = m.createExecution(
 			ctx,
 			tx,
@@ -791,7 +791,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createTransferTasks(
 			ctx,
 			tx,
@@ -805,7 +805,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createCrossClusterTasks(
 			ctx,
 			tx,
@@ -819,7 +819,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createReplicationTasks(
 			ctx,
 			tx,
@@ -833,7 +833,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = createTimerTasks(
 			ctx,
 			tx,
@@ -847,7 +847,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateActivityInfos(
 			ctx,
 			tx,
@@ -862,7 +862,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateTimerInfos(
 			ctx,
 			tx,
@@ -877,7 +877,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateChildExecutionInfos(
 			ctx,
 			tx,
@@ -892,7 +892,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateRequestCancelInfos(
 			ctx,
 			tx,
@@ -907,7 +907,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateSignalInfos(
 			ctx,
 			tx,
@@ -922,7 +922,7 @@ func (m *sqlExecutionStore) applyWorkflowSnapshotAsyncTxAsNew(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(recover(), &e)
+		defer func() { recoverPanic(recover(), &e) }()
 		e = updateSignalsRequested(
 			ctx,
 			tx,
