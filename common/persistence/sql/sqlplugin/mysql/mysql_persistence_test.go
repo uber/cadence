@@ -26,9 +26,11 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/testflags"
 )
 
 func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.HistoryV2PersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -36,6 +38,7 @@ func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
 }
 
 func TestSQLMatchingPersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.MatchingPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -43,6 +46,7 @@ func TestSQLMatchingPersistenceSuite(t *testing.T) {
 }
 
 func TestSQLMetadataPersistenceSuiteV2(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.MetadataPersistenceSuiteV2)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -50,6 +54,7 @@ func TestSQLMetadataPersistenceSuiteV2(t *testing.T) {
 }
 
 func TestSQLShardPersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.ShardPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -57,6 +62,7 @@ func TestSQLShardPersistenceSuite(t *testing.T) {
 }
 
 func TestSQLExecutionManagerSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.ExecutionManagerSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -64,6 +70,7 @@ func TestSQLExecutionManagerSuite(t *testing.T) {
 }
 
 func TestSQLExecutionManagerWithEventsV2(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.ExecutionManagerSuiteForEventsV2)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -71,6 +78,7 @@ func TestSQLExecutionManagerWithEventsV2(t *testing.T) {
 }
 
 func TestSQLVisibilityPersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.DBVisibilityPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -78,6 +86,7 @@ func TestSQLVisibilityPersistenceSuite(t *testing.T) {
 }
 
 func TestSQLQueuePersistence(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.QueuePersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()

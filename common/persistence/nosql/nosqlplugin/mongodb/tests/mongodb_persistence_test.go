@@ -29,9 +29,11 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/mongodb"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/testflags"
 )
 
 func TestConfigStorePersistence(t *testing.T) {
+	testflags.RequireMongoDB(t)
 	s := new(persistencetests.ConfigStorePersistenceSuite)
 	s.TestBase = NewTestBaseWithMongo()
 	s.TestBase.Setup()
