@@ -33,7 +33,7 @@ require (
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/robfig/cron v1.2.0
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.1
 	github.com/uber-go/tally v3.3.15+incompatible
 	github.com/uber/cadence-idl v0.0.0-20220713235846-fda89e95df1e
 	github.com/uber/ringpop-go v0.8.5
