@@ -378,6 +378,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendWorkerRPS
+	// FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.visibilityrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: N/A
+	FrontendVisibilityRPS
 	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
 	// KeyName: frontend.domainrps
 	// Value type: Int
@@ -390,6 +396,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainWorkerRPSPerInstance
+	// FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.domainvisibilityrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	FrontendMaxDomainVisibilityRPSPerInstance
 	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
@@ -402,6 +414,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainWorkerRPS
+	// FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.globalDomainVisibilityrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	FrontendGlobalDomainVisibilityRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
 	// KeyName: frontend.decisionResultCountLimit
 	// Value type: Int
@@ -2290,11 +2308,14 @@ var Keys = map[Key]string{
 	FrontendHistoryMaxPageSize:                  "frontend.historyMaxPageSize",
 	FrontendUserRPS:                             "frontend.rps",
 	FrontendWorkerRPS:                           "frontend.workerrps",
+	FrontendVisibilityRPS:                       "frontend.visibilityrps",
 	FrontendMaxDomainUserRPSPerInstance:         "frontend.domainrps",
 	FrontendMaxDomainWorkerRPSPerInstance:       "frontend.domainworkerrps",
+	FrontendMaxDomainVisibilityRPSPerInstance:   "frontend.domainvisibilityrps",
 	FrontendDecisionResultCountLimit:            "frontend.decisionResultCountLimit",
 	FrontendGlobalDomainUserRPS:                 "frontend.globalDomainrps",
 	FrontendGlobalDomainWorkerRPS:               "frontend.globalDomainWorkerrps",
+	FrontendGlobalDomainVisibilityRPS:           "frontend.globalDomainVisibilityrps",
 	FrontendHistoryMgrNumConns:                  "frontend.historyMgrNumConns",
 	FrontendShutdownDrainDuration:               "frontend.shutdownDrainDuration",
 	DisableListVisibilityByFilter:               "frontend.disableListVisibilityByFilter",
