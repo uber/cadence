@@ -353,6 +353,7 @@ const (
 	// Value type: Int
 	// Default value: 3
 	// Allowed filters: DomainName
+	// deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS
 	FrontendESVisibilityListMaxQPS
 	// FrontendESIndexMaxResultWindow is ElasticSearch index setting max_result_window
 	// KeyName: frontend.esIndexMaxResultWindow
@@ -2297,10 +2298,12 @@ var Keys = map[Key]string{
 	AdminErrorInjectionRate: "admin.errorInjectionRate",
 
 	// frontend settings
-	FrontendPersistenceMaxQPS:                   "frontend.persistenceMaxQPS",
-	FrontendPersistenceGlobalMaxQPS:             "frontend.persistenceGlobalMaxQPS",
-	FrontendVisibilityMaxPageSize:               "frontend.visibilityMaxPageSize",
-	FrontendVisibilityListMaxQPS:                "frontend.visibilityListMaxQPS",
+	FrontendPersistenceMaxQPS:       "frontend.persistenceMaxQPS",
+	FrontendPersistenceGlobalMaxQPS: "frontend.persistenceGlobalMaxQPS",
+	FrontendVisibilityMaxPageSize:   "frontend.visibilityMaxPageSize",
+	// deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility
+	FrontendVisibilityListMaxQPS: "frontend.visibilityListMaxQPS",
+	// deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS
 	FrontendESVisibilityListMaxQPS:              "frontend.esVisibilityListMaxQPS",
 	FrontendMaxBadBinaries:                      "frontend.maxBadBinaries",
 	FrontendFailoverCoolDown:                    "frontend.failoverCoolDown",
