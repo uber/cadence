@@ -599,6 +599,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	workflowID := request.GetWorkflowID()
 	domainID := domainEntry.GetInfo().ID
+	domain := domainEntry.GetInfo().Name
 
 	// grab the current context as a lock, nothing more
 	// use a smaller context timeout to get the lock
@@ -657,6 +658,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	} else if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) && e.visibilityMgr != nil {
 		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
 			DomainUUID: domainID,
+			Domain:     domain,
 			Execution: types.WorkflowExecution{
 				WorkflowID: workflowID,
 				RunID:      workflowExecution.RunID,

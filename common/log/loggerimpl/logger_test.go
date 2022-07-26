@@ -147,11 +147,11 @@ func TestErrorWithDetails(t *testing.T) {
 }
 
 type testError struct {
-	WorkflowId string
+	WorkflowID string
 }
 
 func (e testError) Error() string { return "test error" }
 func (e testError) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddString("workflow-id", e.WorkflowId)
+	enc.AddString("workflow-id", e.WorkflowID)
 	return nil
 }

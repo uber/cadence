@@ -59,7 +59,7 @@ func (m *sqlStore) useAsyncTransaction() bool {
 }
 
 func (m *sqlStore) txExecute(ctx context.Context, dbShardID int, operation string, f func(tx sqlplugin.Tx) error) error {
-	tx, err := m.db.BeginTx(dbShardID, ctx)
+	tx, err := m.db.BeginTx(ctx, dbShardID)
 	if err != nil {
 		return convertCommonErrors(m.db, operation, "Failed to start transaction.", err)
 	}
