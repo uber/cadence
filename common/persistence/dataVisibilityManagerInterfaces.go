@@ -78,6 +78,7 @@ type (
 	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
 	RecordWorkflowExecutionUninitializedRequest struct {
 		DomainUUID       string
+		Domain           string
 		Execution        types.WorkflowExecution
 		WorkflowTypeName string
 	}
@@ -181,6 +182,7 @@ type (
 	// VisibilityDeleteWorkflowExecutionRequest contains the request params for DeleteWorkflowExecution call
 	VisibilityDeleteWorkflowExecutionRequest struct {
 		DomainID   string
+		Domain     string
 		RunID      string
 		WorkflowID string
 		TaskID     int64
