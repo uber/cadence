@@ -24,6 +24,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/uber-go/tally"
@@ -47,6 +48,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
+	"github.com/uber/cadence/testflags"
 
 	// the import is a test dependency
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
@@ -189,7 +191,7 @@ func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
 	return clusterMetadata
 }
 
-func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) testcluster.PersistenceTestCluster {
+func NewPersistenceTestCluster(t *testing.T, clusterConfig *TestClusterConfig) testcluster.PersistenceTestCluster {
 	// NOTE: Override here to keep consistent. clusterConfig will be used in the test for some purposes.
 	clusterConfig.Persistence.StoreType = TestFlags.PersistenceType
 	clusterConfig.Persistence.DBPluginName = TestFlags.SQLPluginName
@@ -200,11 +202,14 @@ func NewPersistenceTestCluster(clusterConfig *TestClusterConfig) testcluster.Per
 		ops := clusterConfig.Persistence
 		ops.DBPluginName = "cassandra"
 		testCluster = nosql.NewTestCluster(ops.DBPluginName, ops.DBName, ops.DBUsername, ops.DBPassword, ops.DBHost, ops.DBPort, ops.ProtoVersion, "")
+		testflags.RequireCassandra(t)
 	} else if TestFlags.PersistenceType == config.StoreTypeSQL {
 		var ops *persistencetests.TestBaseOptions
 		if TestFlags.SQLPluginName == mysql.PluginName {
+			testflags.RequireMySQL(t)
 			ops = mysql.GetTestClusterOption()
 		} else if TestFlags.SQLPluginName == postgres.PluginName {
+			testflags.RequirePostgres(t)
 			ops = postgres.GetTestClusterOption()
 		} else {
 			panic("not supported plugin " + TestFlags.SQLPluginName)
