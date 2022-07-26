@@ -22,7 +22,9 @@ warningCode = 0
 [rule.if-return]
 [rule.increment-decrement]
 [rule.indent-error-flow]
-[rule.package-comments]
+# Disabled because we have 158 packages that need package comments; we could instead add ignore
+# directives for existing packages and require it for new packages.
+#[rule.package-comments]
 [rule.range]
 [rule.receiver-naming]
 [rule.time-naming]
