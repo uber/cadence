@@ -333,7 +333,7 @@ $(BUILD)/proto-lint: $(PROTO_FILES) $(BIN)/$(BUF_VERSION_BIN) | $(BUILD)
 # it's a coarse "you probably don't need to re-lint" filter, nothing more.
 $(BUILD)/lint: $(LINT_SRC) $(BIN)/revive | $(BUILD)
 	$Q echo "lint..."
-	$Q $(BIN)/revive -config revive.toml -exclude './canary/...' -exclude './vendor/...' -formatter unix ./... | sort
+	$Q $(BIN)/revive -config revive.toml -exclude './vendor/...' -formatter stylish ./...
 	$Q touch $@
 
 # fmt and copyright are mutually cyclic with their inputs, so if a copyright header is modified:
@@ -387,7 +387,7 @@ lint: ## (re)run the linter
 fmt: $(BUILD)/fmt ## run goimports
 
 # not identical to the intermediate target, but does provide the same codegen (or more).
-copyright: $(BIN)/copyright ## update copyright headers
+copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
 	$(BIN)/copyright
 	$Q touch $(BUILD)/copyright
 
@@ -435,7 +435,8 @@ cadence-bench: $(BUILD)/lint
 
 .PHONY: go-generate bins tools release clean
 
-bins: $(BINS)
+bins: $(BINS) ## Make all binaries
+
 tools: $(TOOLS)
 
 go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap

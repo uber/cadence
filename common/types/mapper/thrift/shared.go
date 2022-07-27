@@ -5250,6 +5250,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 
@@ -5275,6 +5276,7 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 

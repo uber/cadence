@@ -1,9 +1,12 @@
 # config for https://github.com/mgechev/revive
 ignoreGeneratedHeader = false
-severity = "warning"
+severity = "error"
 confidence = 0.8
-errorCode = 0
+errorCode = 1
 warningCode = 0
+
+[directive.specify-disable-reason]
+    severity = "error"
 
 #### roughly what golint does.  probably only disable noisy ones.
 
@@ -19,7 +22,9 @@ warningCode = 0
 [rule.if-return]
 [rule.increment-decrement]
 [rule.indent-error-flow]
-[rule.package-comments]
+# Disabled because we have 158 packages that need package comments; we could instead add ignore
+# directives for existing packages and require it for new packages.
+#[rule.package-comments]
 [rule.range]
 [rule.receiver-naming]
 [rule.time-naming]
@@ -40,7 +45,7 @@ warningCode = 0
 #
 # the arguments are excluding only "call-chain", which would disallow `defer someFn(...)()` which is both useful and in use.
 [rule.defer]
-arguments=[["loop","method-call","recover","return"]]
+arguments=[["loop","method-call","recover","return", "immediate-recover"]]
 
 # string(int) is almost always a bug.
 # go vet considers this a fatal error, but only in 1.15 or newer, and go.mod currently targets 1.13

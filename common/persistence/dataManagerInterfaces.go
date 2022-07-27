@@ -266,6 +266,11 @@ type (
 		Msg string
 	}
 
+	// DBUnavailableError is returned when the database is unavailable, could be for various reasons.
+	DBUnavailableError struct {
+		Msg string
+	}
+
 	// TransactionSizeLimitError is returned when the transaction size is too large
 	TransactionSizeLimitError struct {
 		Msg string
@@ -1859,6 +1864,10 @@ func (e *WorkflowExecutionAlreadyStartedError) Error() string {
 }
 
 func (e *TimeoutError) Error() string {
+	return e.Msg
+}
+
+func (e *DBUnavailableError) Error() string {
 	return e.Msg
 }
 

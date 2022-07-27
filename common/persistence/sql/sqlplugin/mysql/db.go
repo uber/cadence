@@ -113,7 +113,7 @@ func newDB(xdbs []*sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) (*db, e
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (mdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error) {
+func (mdb *db) BeginTx(ctx context.Context, dbShardID int) (sqlplugin.Tx, error) {
 	xtx, err := mdb.driver.BeginTxx(ctx, dbShardID, nil)
 	if err != nil {
 		return nil, err

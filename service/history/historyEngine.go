@@ -599,6 +599,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	workflowID := request.GetWorkflowID()
 	domainID := domainEntry.GetInfo().ID
+	domain := domainEntry.GetInfo().Name
 
 	// grab the current context as a lock, nothing more
 	// use a smaller context timeout to get the lock
@@ -653,6 +654,20 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		)
 		if err != nil {
 			return nil, err
+		}
+	} else if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) && e.visibilityMgr != nil {
+		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
+			DomainUUID: domainID,
+			Domain:     domain,
+			Execution: types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      workflowExecution.RunID,
+			},
+			WorkflowTypeName: request.WorkflowType.Name,
+		}
+
+		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
+			e.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
 		}
 	}
 
@@ -3088,6 +3103,7 @@ func getStartRequest(
 		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
 		DelayStartSeconds:                   request.DelayStartSeconds,
+		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())

@@ -281,6 +281,7 @@ const (
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
+	JitterStartSeconds                    = "jitter_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
 	FlagJWTPrivateKey                     = "jwt-private-key"
@@ -469,6 +470,10 @@ func getFlagsForStart() []cli.Flag {
 		cli.IntFlag{
 			Name:  DelayStartSeconds,
 			Usage: "Optional workflow start delay in seconds. If set workflow start will be delayed this many seconds",
+		},
+		cli.IntFlag{
+			Name:  JitterStartSeconds,
+			Usage: "Optional workflow start jitter in seconds. If set, workflow start will be jittered between 0-n seconds (after delay)",
 		},
 	}
 }

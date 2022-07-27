@@ -125,7 +125,7 @@ func (mr *MockMutableStateMockRecorder) AddActivityTaskFailedEvent(arg0, arg1, a
 }
 
 // AddActivityTaskScheduledEvent mocks base method.
-func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 int64, arg1 *types.ScheduleActivityTaskDecisionAttributes, arg2 context.Context, arg3 bool) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, bool, error) {
+func (m *MockMutableState) AddActivityTaskScheduledEvent(arg0 context.Context, arg1 int64, arg2 *types.ScheduleActivityTaskDecisionAttributes, arg3 bool) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddActivityTaskScheduledEvent", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*types.HistoryEvent)

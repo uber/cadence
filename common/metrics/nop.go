@@ -51,7 +51,7 @@ func (n noopClientImpl) StartTimer(scope int, timer int) tally.Stopwatch {
 func (n noopClientImpl) RecordTimer(scope int, timer int, d time.Duration) {
 }
 
-func (m *noopClientImpl) RecordHistogramDuration(scope int, timer int, d time.Duration) {
+func (n *noopClientImpl) RecordHistogramDuration(scope int, timer int, d time.Duration) {
 }
 
 func (n noopClientImpl) UpdateGauge(scope int, gauge int, value float64) {

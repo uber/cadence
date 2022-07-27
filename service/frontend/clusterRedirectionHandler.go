@@ -86,7 +86,7 @@ func (handler *ClusterRedirectionHandlerImpl) DeprecateDomain(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionDeprecateDomainScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	return handler.frontendHandler.DeprecateDomain(ctx, request)
@@ -102,7 +102,7 @@ func (handler *ClusterRedirectionHandlerImpl) DescribeDomain(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionDescribeDomainScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	return handler.frontendHandler.DescribeDomain(ctx, request)
@@ -118,7 +118,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListDomains(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionListDomainsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	return handler.frontendHandler.ListDomains(ctx, request)
@@ -134,7 +134,7 @@ func (handler *ClusterRedirectionHandlerImpl) RegisterDomain(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRegisterDomainScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	return handler.frontendHandler.RegisterDomain(ctx, request)
@@ -150,7 +150,7 @@ func (handler *ClusterRedirectionHandlerImpl) UpdateDomain(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionUpdateDomainScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	return handler.frontendHandler.UpdateDomain(ctx, request)
@@ -170,7 +170,7 @@ func (handler *ClusterRedirectionHandlerImpl) DescribeTaskList(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionDescribeTaskListScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -200,7 +200,7 @@ func (handler *ClusterRedirectionHandlerImpl) DescribeWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionDescribeWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -230,7 +230,7 @@ func (handler *ClusterRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetWorkflowExecutionHistoryScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -260,7 +260,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionListArchivedWorkflowExecutionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -290,7 +290,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionListClosedWorkflowExecutionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -320,7 +320,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionListOpenWorkflowExecutionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -350,7 +350,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListWorkflowExecutions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionListWorkflowExecutionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -380,7 +380,7 @@ func (handler *ClusterRedirectionHandlerImpl) ScanWorkflowExecutions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionScanWorkflowExecutionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
 		cluster = targetDC
@@ -409,7 +409,7 @@ func (handler *ClusterRedirectionHandlerImpl) CountWorkflowExecutions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionCountWorkflowExecutionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -436,7 +436,7 @@ func (handler *ClusterRedirectionHandlerImpl) GetSearchAttributes(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetSearchAttributesScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	return handler.frontendHandler.GetSearchAttributes(ctx)
@@ -454,7 +454,7 @@ func (handler *ClusterRedirectionHandlerImpl) PollForActivityTask(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionPollForActivityTaskScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -484,7 +484,7 @@ func (handler *ClusterRedirectionHandlerImpl) PollForDecisionTask(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionPollForDecisionTaskScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -520,7 +520,7 @@ func (handler *ClusterRedirectionHandlerImpl) QueryWorkflow(
 	}
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionQueryWorkflowScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -550,7 +550,7 @@ func (handler *ClusterRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRecordActivityTaskHeartbeatScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
@@ -585,7 +585,7 @@ func (handler *ClusterRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRecordActivityTaskHeartbeatByIDScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -615,7 +615,7 @@ func (handler *ClusterRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRequestCancelWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -645,7 +645,7 @@ func (handler *ClusterRedirectionHandlerImpl) ResetStickyTaskList(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionResetStickyTaskListScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -675,7 +675,7 @@ func (handler *ClusterRedirectionHandlerImpl) ResetWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionResetWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -705,7 +705,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCanceled(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskCanceledScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
@@ -740,7 +740,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskCanceledByIDScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -770,7 +770,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCompleted(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskCompletedScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
@@ -805,7 +805,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskCompletedByIDScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -835,7 +835,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskFailed(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskFailedScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
@@ -870,7 +870,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondActivityTaskFailedByIDScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -900,7 +900,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondDecisionTaskCompletedScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
@@ -935,7 +935,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondDecisionTaskFailed(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondDecisionTaskFailedScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.Deserialize(request.TaskToken)
@@ -970,7 +970,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondQueryTaskCompleted(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRespondQueryTaskCompletedScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	token, err := handler.tokenSerializer.DeserializeQueryTaskToken(request.TaskToken)
@@ -1000,7 +1000,7 @@ func (handler *ClusterRedirectionHandlerImpl) RestartWorkflowExecution(ctx conte
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionStartWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1030,7 +1030,7 @@ func (handler *ClusterRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionSignalWithStartWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1060,7 +1060,7 @@ func (handler *ClusterRedirectionHandlerImpl) SignalWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionSignalWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1089,7 +1089,7 @@ func (handler *ClusterRedirectionHandlerImpl) StartWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionStartWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1119,7 +1119,7 @@ func (handler *ClusterRedirectionHandlerImpl) TerminateWorkflowExecution(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionTerminateWorkflowExecutionScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1149,7 +1149,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListTaskListPartitions(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionListTaskListPartitionsScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1179,7 +1179,7 @@ func (handler *ClusterRedirectionHandlerImpl) GetTaskListsByDomain(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionGetTaskListsByDomainScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1209,7 +1209,7 @@ func (handler *ClusterRedirectionHandlerImpl) RefreshWorkflowTasks(
 
 	scope, startTime := handler.beforeCall(metrics.DCRedirectionRefreshWorkflowTasksScope)
 	defer func() {
-		handler.afterCall(scope, startTime, cluster, &retError)
+		handler.afterCall(recover(), scope, startTime, cluster, &retError)
 	}()
 
 	err = handler.redirectionPolicy.WithDomainNameRedirect(ctx, request.GetDomain(), apiName, func(targetDC string) error {
@@ -1242,13 +1242,14 @@ func (handler *ClusterRedirectionHandlerImpl) beforeCall(
 }
 
 func (handler *ClusterRedirectionHandlerImpl) afterCall(
+	recovered interface{},
 	scope metrics.Scope,
 	startTime time.Time,
 	cluster string,
 	retError *error,
 ) {
 
-	log.CapturePanic(handler.GetLogger(), retError)
+	log.CapturePanic(recovered, handler.GetLogger(), retError)
 
 	scope = scope.Tagged(metrics.TargetClusterTag(cluster))
 	scope.IncCounter(metrics.CadenceDcRedirectionClientRequests)

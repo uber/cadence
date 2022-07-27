@@ -675,6 +675,7 @@ func FromContinueAsNewWorkflowExecutionDecisionAttributes(t *types.ContinueAsNew
 		Header:                       FromHeader(t.Header),
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
+		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 	}
 }
 
@@ -698,6 +699,7 @@ func ToContinueAsNewWorkflowExecutionDecisionAttributes(t *apiv1.ContinueAsNewWo
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
 	}
 }
 
@@ -3358,6 +3360,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 			SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 			Header:                       FromHeader(t.Header),
 			DelayStart:                   secondsToDuration(t.DelayStartSeconds),
+			JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 		},
 		SignalName:  t.SignalName,
 		SignalInput: FromPayload(t.SignalInput),
@@ -3389,6 +3392,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *apiv1.SignalWithStartWorkflowE
 		SearchAttributes:                    ToSearchAttributes(t.StartRequest.SearchAttributes),
 		Header:                              ToHeader(t.StartRequest.Header),
 		DelayStartSeconds:                   durationToSeconds(t.StartRequest.DelayStart),
+		JitterStartSeconds:                  durationToSeconds(t.StartRequest.JitterStart),
 	}
 }
 
@@ -3538,6 +3542,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
+		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 	}
 }
 
@@ -3563,6 +3568,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *apiv1.StartChildWo
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
+		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
 	}
 }
 
@@ -3647,6 +3653,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		Header:                       FromHeader(t.Header),
 		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
+		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 	}
 }
 
@@ -3671,6 +3678,7 @@ func ToStartWorkflowExecutionRequest(t *apiv1.StartWorkflowExecutionRequest) *ty
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
+		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
 	}
 }
 

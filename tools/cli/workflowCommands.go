@@ -334,6 +334,10 @@ func constructStartWorkflowRequest(c *cli.Context) *types.StartWorkflowExecution
 		startRequest.DelayStartSeconds = common.Int32Ptr(int32(c.Int(DelayStartSeconds)))
 	}
 
+	if c.IsSet(JitterStartSeconds) {
+		startRequest.JitterStartSeconds = common.Int32Ptr(int32(c.Int(JitterStartSeconds)))
+	}
+
 	headerFields := processHeader(c)
 	if len(headerFields) != 0 {
 		startRequest.Header = &types.Header{Fields: headerFields}
@@ -602,6 +606,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) *types.SignalWithSt
 		SignalName:                          getRequiredOption(c, FlagName),
 		SignalInput:                         []byte(processJSONInputSignal(c)),
 		DelayStartSeconds:                   startRequest.DelayStartSeconds,
+		JitterStartSeconds:                  startRequest.JitterStartSeconds,
 	}
 }
 
