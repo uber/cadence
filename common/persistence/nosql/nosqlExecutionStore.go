@@ -596,6 +596,7 @@ func (d *nosqlExecutionStore) GetCrossClusterTasks(
 
 	var tTasks []*p.CrossClusterTaskInfo
 	for _, t := range cTasks {
+		// revive:disable-next-line:range-val-address Appending address of TransferTask, not of t.
 		tTasks = append(tTasks, &t.TransferTask)
 	}
 	return &p.GetCrossClusterTasksResponse{

@@ -121,6 +121,9 @@ func (reqCtx *handlerContext) handleErr(err error) error {
 	case *types.RemoteSyncMatchedError:
 		scope.IncCounter(metrics.CadenceErrRemoteSyncMatchFailedPerTaskListCounter)
 		return err
+	case *types.StickyWorkerUnavailableError:
+		scope.IncCounter(metrics.CadenceErrStickyWorkerUnavailablePerTaskListCounter)
+		return err
 	default:
 		scope.IncCounter(metrics.CadenceFailuresPerTaskList)
 		reqCtx.logger.Error("Uncategorized error", tag.Error(err))

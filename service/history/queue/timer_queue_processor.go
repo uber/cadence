@@ -523,10 +523,9 @@ func newTimerQueueStandbyProcessor(
 					// retry the task if failed to find the domain
 					logger.Warn("Cannot find domain", tag.WorkflowDomainID(timer.DomainID))
 					return false, err
-				} else {
-					logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(timer.DomainID), tag.Value(timer))
-					return false, nil
 				}
+				logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(timer.DomainID), tag.Value(timer))
+				return false, nil
 			}
 		}
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)
