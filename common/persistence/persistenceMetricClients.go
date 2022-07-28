@@ -275,7 +275,7 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error, domainNa
 		if p.enableLatencyHistogramMetrics {
 			scopeWithDomainTag.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
 		}
-		
+
 		if err != nil {
 			p.updateErrorMetric(scope, err, scopeWithDomainTag)
 		}
