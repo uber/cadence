@@ -79,7 +79,7 @@ func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, ratePerSecond 
 	}
 }
 
-func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
+func (pollers *pollerHistory) getPollerInfo(earliestAccessTime time.Time) []*types.PollerInfo {
 	var result []*types.PollerInfo
 
 	ite := pollers.history.Iterator()
@@ -90,11 +90,13 @@ func (pollers *pollerHistory) getAllPollerInfo() []*types.PollerInfo {
 		value := entry.Value().(*pollerInfo)
 		// TODO add IP, T1396795
 		lastAccessTime := entry.CreateTime()
-		result = append(result, &types.PollerInfo{
-			Identity:       string(key),
-			LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
-			RatePerSecond:  value.ratePerSecond,
-		})
+		if earliestAccessTime.Before(lastAccessTime) {
+			result = append(result, &types.PollerInfo{
+				Identity:       string(key),
+				LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
+				RatePerSecond:  value.ratePerSecond,
+			})
+		}
 	}
 
 	return result

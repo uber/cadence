@@ -76,8 +76,8 @@ func NewSQLExecutionStore(
 
 // txExecuteShardLocked executes f under transaction and with read lock on shard row
 func (m *sqlExecutionStore) txExecuteShardLocked(
-	dbShardID int,
 	ctx context.Context,
+	dbShardID int,
 	operation string,
 	rangeID int64,
 	fn func(tx sqlplugin.Tx) error,
@@ -105,7 +105,7 @@ func (m *sqlExecutionStore) CreateWorkflowExecution(
 ) (response *p.CreateWorkflowExecutionResponse, err error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
 
-	err = m.txExecuteShardLocked(dbShardID, ctx, "CreateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	err = m.txExecuteShardLocked(ctx, dbShardID, "CreateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		response, err = m.createWorkflowExecutionTx(ctx, tx, request)
 		return err
 	})
@@ -268,10 +268,9 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	ctx context.Context,
 	request *p.InternalGetWorkflowExecutionRequest,
 ) (resp *p.InternalGetWorkflowExecutionResponse, e error) {
-	recoverPanic := func(err *error) {
-		// revive:disable-next-line:defer Func is being called using defer().
-		if r := recover(); r != nil {
-			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
+	recoverPanic := func(recovered interface{}, err *error) {
+		if recovered != nil {
+			*err = fmt.Errorf("DB operation panicked: %v %s", recovered, debug.Stack())
 		}
 	}
 
@@ -291,55 +290,55 @@ func (m *sqlExecutionStore) GetWorkflowExecution(
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		executions, e = m.getExecutions(ctx, request, domainID, wfID, runID)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		activityInfos, e = getActivityInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		timerInfos, e = getTimerInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		childExecutionInfos, e = getChildExecutionInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		requestCancelInfos, e = getRequestCancelInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		signalInfos, e = getSignalInfoMap(
 			ctx, m.db, m.shardID, domainID, wfID, runID, m.parser)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		bufferedEvents, e = getBufferedEvents(
 			ctx, m.db, m.shardID, domainID, wfID, runID)
 		return e
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		signalsRequested, e = getSignalsRequested(
 			ctx, m.db, m.shardID, domainID, wfID, runID)
 		return e
@@ -372,7 +371,7 @@ func (m *sqlExecutionStore) UpdateWorkflowExecution(
 	request *p.InternalUpdateWorkflowExecutionRequest,
 ) error {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
-	return m.txExecuteShardLocked(dbShardID, ctx, "UpdateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	return m.txExecuteShardLocked(ctx, dbShardID, "UpdateWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		return m.updateWorkflowExecutionTx(ctx, tx, request)
 	})
 }
@@ -499,7 +498,7 @@ func (m *sqlExecutionStore) ConflictResolveWorkflowExecution(
 	request *p.InternalConflictResolveWorkflowExecutionRequest,
 ) error {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
-	return m.txExecuteShardLocked(dbShardID, ctx, "ConflictResolveWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
+	return m.txExecuteShardLocked(ctx, dbShardID, "ConflictResolveWorkflowExecution", request.RangeID, func(tx sqlplugin.Tx) error {
 		return m.conflictResolveWorkflowExecutionTx(ctx, tx, request)
 	})
 }
@@ -619,10 +618,9 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.DeleteWorkflowExecutionRequest,
 ) error {
-	recoverPanic := func(err *error) {
-		// revive:disable-next-line:defer Func is being called using defer().
-		if r := recover(); r != nil {
-			*err = fmt.Errorf("DB operation panicked: %v %s", r, debug.Stack())
+	recoverPanic := func(recovered interface{}, err *error) {
+		if recovered != nil {
+			*err = fmt.Errorf("DB operation panicked: %v %s", recovered, debug.Stack())
 		}
 	}
 	domainID := serialization.MustParseUUID(request.DomainID)
@@ -631,7 +629,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromExecutions(ctx, &sqlplugin.ExecutionsFilter{
 			ShardID:    m.shardID,
 			DomainID:   domainID,
@@ -642,7 +640,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
@@ -653,7 +651,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
@@ -664,7 +662,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
@@ -675,7 +673,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
@@ -686,7 +684,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
@@ -697,7 +695,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromBufferedEvents(ctx, &sqlplugin.BufferedEventsFilter{
 			ShardID:    m.shardID,
 			DomainID:   domainID,
@@ -708,7 +706,7 @@ func (m *sqlExecutionStore) DeleteWorkflowExecution(
 	})
 
 	g.Go(func() (e error) {
-		defer recoverPanic(&e)
+		defer func() { recoverPanic(recover(), &e) }()
 		_, e = m.db.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
 			ShardID:    int64(m.shardID),
 			DomainID:   domainID,
@@ -1235,7 +1233,7 @@ func (m *sqlExecutionStore) CreateFailoverMarkerTasks(
 	request *p.CreateFailoverMarkersRequest,
 ) error {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(m.shardID, m.db.GetTotalNumDBShards())
-	return m.txExecuteShardLocked(dbShardID, ctx, "CreateFailoverMarkerTasks", request.RangeID, func(tx sqlplugin.Tx) error {
+	return m.txExecuteShardLocked(ctx, dbShardID, "CreateFailoverMarkerTasks", request.RangeID, func(tx sqlplugin.Tx) error {
 		for _, task := range request.Markers {
 			t := []p.Task{task}
 			if err := createReplicationTasks(

@@ -156,7 +156,7 @@ func (h *handlerImpl) AddActivityTask(
 	ctx context.Context,
 	request *types.AddActivityTaskRequest,
 ) (retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	startT := time.Now()
 	domainName := h.domainName(request.GetDomainUUID())
@@ -191,7 +191,7 @@ func (h *handlerImpl) AddDecisionTask(
 	ctx context.Context,
 	request *types.AddDecisionTaskRequest,
 ) (retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	startT := time.Now()
 	domainName := h.domainName(request.GetDomainUUID())
@@ -225,7 +225,7 @@ func (h *handlerImpl) PollForActivityTask(
 	ctx context.Context,
 	request *types.MatchingPollForActivityTaskRequest,
 ) (resp *types.PollForActivityTaskResponse, retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
@@ -262,7 +262,7 @@ func (h *handlerImpl) PollForDecisionTask(
 	ctx context.Context,
 	request *types.MatchingPollForDecisionTaskRequest,
 ) (resp *types.MatchingPollForDecisionTaskResponse, retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
@@ -300,7 +300,7 @@ func (h *handlerImpl) QueryWorkflow(
 	ctx context.Context,
 	request *types.MatchingQueryWorkflowRequest,
 ) (resp *types.QueryWorkflowResponse, retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
@@ -330,7 +330,7 @@ func (h *handlerImpl) RespondQueryTaskCompleted(
 	ctx context.Context,
 	request *types.MatchingRespondQueryTaskCompletedRequest,
 ) (retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
@@ -353,7 +353,7 @@ func (h *handlerImpl) RespondQueryTaskCompleted(
 // CancelOutstandingPoll is used to cancel outstanding pollers
 func (h *handlerImpl) CancelOutstandingPoll(ctx context.Context,
 	request *types.CancelOutstandingPollRequest) (retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
@@ -380,7 +380,7 @@ func (h *handlerImpl) DescribeTaskList(
 	ctx context.Context,
 	request *types.MatchingDescribeTaskListRequest,
 ) (resp *types.DescribeTaskListResponse, retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	domainName := h.domainName(request.GetDomainUUID())
 	hCtx := h.newHandlerContext(
@@ -406,7 +406,7 @@ func (h *handlerImpl) ListTaskListPartitions(
 	ctx context.Context,
 	request *types.MatchingListTaskListPartitionsRequest,
 ) (resp *types.ListTaskListPartitionsResponse, retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	hCtx := newHandlerContext(
 		ctx,
@@ -433,7 +433,7 @@ func (h *handlerImpl) GetTaskListsByDomain(
 	ctx context.Context,
 	request *types.GetTaskListsByDomainRequest,
 ) (resp *types.GetTaskListsByDomainResponse, retError error) {
-	defer log.CapturePanic(h.logger, &retError)
+	defer func() { log.CapturePanic(recover(), h.logger, &retError) }()
 
 	hCtx := newHandlerContext(
 		ctx,

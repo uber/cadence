@@ -259,7 +259,7 @@ func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
 	}
 
 	event, ai, activityDispatchInfo, dispatched, started, err := handler.mutableState.AddActivityTaskScheduledEvent(
-		handler.decisionTaskCompletedID, attr, ctx, handler.activityCountToDispatch > 0)
+		ctx, handler.decisionTaskCompletedID, attr, handler.activityCountToDispatch > 0)
 	if dispatched {
 		handler.activityCountToDispatch--
 	}

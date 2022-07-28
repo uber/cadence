@@ -261,7 +261,21 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	return t.pushDecision(ctx, task, taskList, decisionTimeout)
+	err = t.pushDecision(ctx, task, taskList, decisionTimeout)
+	if _, ok := err.(*types.StickyWorkerUnavailableError); ok {
+		// sticky worker is unavailable, switch to non-sticky task list
+		taskList = &types.TaskList{
+			Name: mutableState.GetExecutionInfo().TaskList,
+		}
+
+		// Continue to use sticky schedule_to_start timeout as TTL for the matching task. Because the schedule_to_start
+		// timeout timer task is already created which will timeout this task if no worker pick it up in 5s anyway.
+		// There is no need to reset sticky, because if this task is picked by new worker, the new worker will reset
+		// the sticky queue to a new one. However, if worker is completely down, that schedule_to_start timeout task
+		// will re-create a new non-sticky task and reset sticky.
+		err = t.pushDecision(ctx, task, taskList, decisionTimeout)
+	}
+	return err
 }
 
 func (t *transferActiveTaskExecutor) processCloseExecution(
