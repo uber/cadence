@@ -3355,6 +3355,7 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 			WorkflowID: wfExecution.WorkflowID,
 			RunID:      wfExecution.RunID,
 		},
+		SkipArchival: true,
 	})
 	if err != nil {
 		return nil, wh.error(errHistoryNotFound, scope, tags...)
