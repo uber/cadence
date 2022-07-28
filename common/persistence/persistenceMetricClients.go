@@ -281,24 +281,25 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error, domainNa
 		}
 		return err
 
-	} else {
-		p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
+	} 
+	
+	p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
 
-		before := time.Now()
-		err := op()
-		duration := time.Since(before)
+	before := time.Now()
+	err := op()
+	duration := time.Since(before)
 
-		p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
+	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
 
-		if p.enableLatencyHistogramMetrics {
-			p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
-		}
-
-		if err != nil {
-			p.updateErrorMetric(scope, err)
-		}
-		return err
+	if p.enableLatencyHistogramMetrics {
+		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
 	}
+
+	if err != nil {
+		p.updateErrorMetric(scope, err)
+	}
+	return err
+
 }
 
 func (p *shardPersistenceClient) GetName() string {
