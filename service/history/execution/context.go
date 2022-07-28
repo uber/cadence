@@ -943,6 +943,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 		}
 	}
 
+	domainName := workflowEvents.DomainName
 	domainID := workflowEvents.DomainID
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
@@ -962,6 +963,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 			Info:        persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID),
 			BranchToken: branchToken,
 			Events:      events,
+			DomainName:  domainName,
 			// TransactionID is set by shard context
 		},
 	)

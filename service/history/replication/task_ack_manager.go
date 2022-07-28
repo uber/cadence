@@ -326,11 +326,16 @@ func (t *taskAckManagerImpl) getEventsBlob(
 	branchToken []byte,
 	firstEventID int64,
 	nextEventID int64,
+	DomainID string,
 ) (*types.DataBlob, error) {
 
 	var eventBatchBlobs []*persistence.DataBlob
 	var pageToken []byte
 	batchSize := t.shard.GetConfig().ReplicationTaskProcessorReadHistoryBatchSize()
+	domainName, errorDomainName := t.shard.GetDomainCache().GetDomainName(DomainID)
+	if errorDomainName != nil {
+		return nil, errorDomainName
+	}
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -338,6 +343,7 @@ func (t *taskAckManagerImpl) getEventsBlob(
 		PageSize:      batchSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(t.shard.GetShardID()),
+		DomainName:    domainName,
 	}
 
 	for {
@@ -505,6 +511,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				task.BranchToken,
 				task.FirstEventID,
 				task.NextEventID,
+				task.GetDomainID(),
 			)
 			if err != nil {
 				return nil, err
@@ -518,6 +525,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 					task.NewRunBranchToken,
 					common.FirstEventID,
 					common.FirstEventID+1,
+					task.DomainID,
 				)
 				if err != nil {
 					return nil, err

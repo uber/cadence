@@ -224,7 +224,8 @@ func NewConfigStorePersistenceMetricsClient(
 	}
 }
 
-func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
+func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, scopeWithDomainTag ...metrics.Scope) {
+
 	switch err.(type) {
 	case *types.DomainAlreadyExistsError:
 		p.metricClient.IncCounter(scope, metrics.PersistenceErrDomainAlreadyExistsCounter)
@@ -258,20 +259,46 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
 	}
 }
 
-func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
-	p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
-	before := time.Now()
-	err := op()
-	duration := time.Since(before)
-	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
-	if p.enableLatencyHistogramMetrics {
-		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
-	}
+func (p *persistenceMetricsClientBase) call(scope int, op func() error, domainName ...string) error {
 
-	if err != nil {
-		p.updateErrorMetric(scope, err)
+	if domainName != nil {
+		domName := domainName[0]
+		scopeWithDomainTag := p.metricClient.Scope(scope, metrics.DomainTag(domName))
+		scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
+
+		before := time.Now()
+		err := op()
+		duration := time.Since(before)
+
+		scopeWithDomainTag.RecordTimer(metrics.PersistenceLatency, duration)
+
+		if p.enableLatencyHistogramMetrics {
+			scopeWithDomainTag.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
+		}
+
+		if err != nil {
+			p.updateErrorMetric(scope, err, scopeWithDomainTag)
+		}
+		return err
+
+	} else {
+		p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
+
+		before := time.Now()
+		err := op()
+		duration := time.Since(before)
+
+		p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
+
+		if p.enableLatencyHistogramMetrics {
+			p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
+		}
+
+		if err != nil {
+			p.updateErrorMetric(scope, err)
+		}
+		return err
 	}
-	return err
 }
 
 func (p *shardPersistenceClient) GetName() string {
@@ -327,6 +354,7 @@ func (p *workflowExecutionPersistenceClient) GetShardID() int {
 	return p.persistence.GetShardID()
 }
 
+//doubt: backtracking CreateWorkflowExecutionRequest
 func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 	ctx context.Context,
 	request *CreateWorkflowExecutionRequest,
@@ -1275,13 +1303,14 @@ func (p *historyPersistenceClient) AppendHistoryNodes(
 	ctx context.Context,
 	request *AppendHistoryNodesRequest,
 ) (*AppendHistoryNodesResponse, error) {
+
 	var resp *AppendHistoryNodesResponse
 	op := func() error {
 		var err error
 		resp, err = p.persistence.AppendHistoryNodes(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op)
+	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op, request.DomainName)
 	if err != nil {
 		return nil, err
 	}
@@ -1298,11 +1327,12 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 		var err error
 		resp, err = p.persistence.ReadHistoryBranch(ctx, request)
 		if err == nil && len(resp.HistoryEvents) == 0 {
-			p.metricClient.IncCounter(metrics.PersistenceReadHistoryBranchScope, metrics.PersistenceEmptyResponseCounter)
+			scopeWithDomainTag := p.metricClient.Scope(metrics.PersistenceReadHistoryBranchScope, metrics.DomainTag(request.DomainName))
+			scopeWithDomainTag.IncCounter(metrics.PersistenceEmptyResponseCounter)
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, request.DomainName)
 	if err != nil {
 		return nil, err
 	}

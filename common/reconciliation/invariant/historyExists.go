@@ -26,6 +26,7 @@ import (
 	"context"
 
 	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -37,7 +38,8 @@ const (
 
 type (
 	historyExists struct {
-		pr persistence.Retryer
+		pr          persistence.Retryer
+		DomainCache cache.DomainCache
 	}
 )
 
@@ -66,6 +68,11 @@ func (h *historyExists) Check(
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
+	domainID := concreteExecution.GetDomainID()
+	domainName, err := h.DomainCache.GetDomainName(domainID)
+	if err != nil {
+		return CheckResult{}
+	}
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,
 		MinEventID:    c.FirstEventID,
@@ -73,6 +80,7 @@ func (h *historyExists) Check(
 		PageSize:      historyPageSize,
 		NextPageToken: nil,
 		ShardID:       c.IntPtr(concreteExecution.ShardID),
+		DomainName:    domainName,
 	}
 	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(ctx, readHistoryBranchReq)
 	stillExists, existsCheckError := ExecutionStillExists(ctx, &concreteExecution.Execution, h.pr)

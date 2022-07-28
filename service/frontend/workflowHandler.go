@@ -2341,6 +2341,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				ctx,
 				scope,
 				domainID,
+				domainName,
 				*execution,
 				firstEventID,
 				nextEventID,
@@ -2354,6 +2355,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				ctx,
 				scope,
 				domainID,
+				domainName,
 				*execution,
 				firstEventID,
 				nextEventID,
@@ -3805,6 +3807,7 @@ func (wh *WorkflowHandler) getRawHistory(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
+	domainName string,
 	execution types.WorkflowExecution,
 	firstEventID int64,
 	nextEventID int64,
@@ -3823,6 +3826,7 @@ func (wh *WorkflowHandler) getRawHistory(
 		PageSize:      int(pageSize),
 		NextPageToken: nextPageToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -3871,6 +3875,7 @@ func (wh *WorkflowHandler) getHistory(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
+	domainName string,
 	execution types.WorkflowExecution,
 	firstEventID, nextEventID int64,
 	pageSize int32,
@@ -3891,6 +3896,7 @@ func (wh *WorkflowHandler) getHistory(
 		PageSize:      int(pageSize),
 		NextPageToken: nextPageToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	})
 
 	if err != nil {
@@ -4116,6 +4122,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 			ctx,
 			scope,
 			domainID,
+			domainName,
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
