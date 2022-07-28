@@ -355,7 +355,6 @@ func (p *workflowExecutionPersistenceClient) GetShardID() int {
 	return p.persistence.GetShardID()
 }
 
-//doubt: backtracking CreateWorkflowExecutionRequest
 func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 	ctx context.Context,
 	request *CreateWorkflowExecutionRequest,
@@ -1304,7 +1303,6 @@ func (p *historyPersistenceClient) AppendHistoryNodes(
 	ctx context.Context,
 	request *AppendHistoryNodesRequest,
 ) (*AppendHistoryNodesResponse, error) {
-
 	var resp *AppendHistoryNodesResponse
 	op := func() error {
 		var err error
