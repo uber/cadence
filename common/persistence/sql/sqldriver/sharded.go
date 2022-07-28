@@ -162,6 +162,6 @@ func (s *sharded) Rollback() error {
 	return s.tx.Rollback()
 }
 
-func getUnmatchedTxnError(requestShardID, startedShardId int) error {
-	return fmt.Errorf("requested dbShardID %v doesn't match with started transaction shardID %v, must be a bug", requestShardID, startedShardId)
+func getUnmatchedTxnError(requestShardID, startedShardID int) error {
+	return fmt.Errorf("requested dbShardID %v doesn't match with started transaction shardID %v, must be a bug", requestShardID, startedShardID)
 }

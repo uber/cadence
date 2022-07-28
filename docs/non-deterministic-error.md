@@ -37,13 +37,13 @@ In Cadence, we use "close" to describe the opposite status of “open”. For ac
 
 * The decision state machine must be **Scheduled->Started->Closed** 
 
-* The first decision task is triggered by server. Starting from that, the rest decision task is triggered by some events of workflow itself -- when those events mean something the workflow could be waiting for. For example, Signaled, ActivityClosed, ChildWorkflowClosed, TimerFired events. Events like ActivityStarted won’t trigger decisions.  
+* The first decision task is triggered by server. Starting from that, the rest of the decision tasks are triggered by some events of the workflow itself -- when those events mean something the workflow could be waiting for. For example, Signaled, ActivityClosed, ChildWorkflowClosed, TimerFired events. Events like ActivityStarted won’t trigger decisions.
 
 * When a decision is started(internally called in flight), there cannot be any other events written into history before a decision is closed. Those events will be put into a buffer until the decision is closed -- flush buffer will write the events into history.
 
 * **In executing mode**, a decision task will try to complete with some entities: Activities/Timers/Childworkflows/etc Scheduled. 
 
-* **In history replay mode**, decisions use all of those above to rebuild a stack. **Activities/ChildWorkflows/Timers/etc will not be re-executed during history replay.** 
+* **In history replay mode**, decisions use all of those above to rebuild a stack. **Activities/Timers/ChildWorkflows/etc will not be re-executed during history replay.** 
 
 ### Activity 
 
@@ -51,11 +51,11 @@ In Cadence, we use "close" to describe the opposite status of “open”. For ac
 
 * Activity is scheduled by DecisionCompleted
 
-* Activity started by worker. Normally ActivityStartedEvent can be put at any place in history except for the between of DecisionStarted and DecisionClose. 
+* Activity started by worker. Normally, ActivityStartedEvent can be put at any place in history except for in between DecisionStarted and DecisionClose. 
 
 * But Activity with RetryPolicy is a special case. Cadence will only write down Started event when Activity is finally closed. 
 
-* Activity completed/failed by worker, or timeouted by server -- they all consider activity closed, and it will trigger a decision task if no decision task on going. 
+* Activity completed/failed by worker, or timed out by server -- they all consider activity closed, and it will trigger a decision task if no decision task is ongoing. 
 
 * Like in the above, only ActivityClose events could trigger a decision.
 
@@ -65,7 +65,7 @@ In Cadence, we use "close" to describe the opposite status of “open”. For ac
 
 * Local activity is only recorded with DecisionCompleted -- no state machine needed.
 
-* Local activity completed with trigger another decision
+* Local activity completed will trigger another decision
 
 ### Timer
 
@@ -93,7 +93,7 @@ In Cadence, we use "close" to describe the opposite status of “open”. For ac
 
 * State machine is **Initiated->Closed**
 
-* They both initiated by DecisionCompleted, 
+* They are both initiated by DecisionCompleted.
 
 * Closed(completed/failed) by server, it could trigger a decision.
 
@@ -120,16 +120,14 @@ func Workflow(ctx workflow.Context) error {
 	if err != nil {
 		return err
 	}
-      workflow.Sleep(time.Hour)
+	workflow.Sleep(time.Hour)
 	return nil
 }
 ```
 
 The workflow will execute activityA, then wait for 1 minute, then execute activityB, finally waits for 1 hour to complete. 
 
-The history will be the follow if everything runs smoothly (no errors, timeouts, retries, etc):
-
-		
+The history will be as follows if everything runs smoothly (no errors, timeouts, retries, etc):
 
 ```
 ID:1		Workflow Started
