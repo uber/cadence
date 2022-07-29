@@ -169,7 +169,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 	branchToken := []byte{}
 	firstEventID := int64(1)
 	nextEventID := int64(2)
-
+	domainID := uuid.New()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -180,7 +180,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 			},
 			Size: 1,
 		}, nil)
-	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
+	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
 	s.NoError(err)
 }
 
@@ -188,13 +188,13 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 	branchToken := []byte{}
 	firstEventID := int64(1)
 	nextEventID := int64(2)
-
+	domainID := uuid.New()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{},
 			Size:              0,
 		}, nil)
-	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
+	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
 	s.Error(err)
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
@@ -211,11 +211,11 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 			},
 			Size: 2,
 		}, nil)
-	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
+	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
 	s.Error(err)
 
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
-	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID)
+	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
 	s.Error(err)
 }
 
