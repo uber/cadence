@@ -310,6 +310,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_FailedOnDomain
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 	ctx := context.Background()
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainName,nil).AnyTimes()
 	branchToken := []byte{1}
 	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),
@@ -348,6 +349,7 @@ func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2() {
 func (s *adminHandlerSuite) Test_GetWorkflowExecutionRawHistoryV2_SameStartIDAndEndID() {
 	ctx := context.Background()
 	s.mockDomainCache.EXPECT().GetDomainID(s.domainName).Return(s.domainID, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(s.domainName,nil).AnyTimes()
 	branchToken := []byte{1}
 	versionHistory := persistence.NewVersionHistory(branchToken, []*persistence.VersionHistoryItem{
 		persistence.NewVersionHistoryItem(int64(10), int64(100)),

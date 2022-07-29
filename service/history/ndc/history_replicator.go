@@ -509,8 +509,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 		return err
 	}
 
-	domainName := mutableState.GetDomainEntry().GetInfo().Name
-
 	err = r.transactionManager.backfillWorkflow(
 		ctx,
 		task.getEventTime(),
@@ -523,7 +521,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 		),
 		&persistence.WorkflowEvents{
 			DomainID:    task.getDomainID(),
-			DomainName:  domainName,
 			WorkflowID:  task.getExecution().GetWorkflowID(),
 			RunID:       task.getExecution().GetRunID(),
 			BranchToken: versionHistory.GetBranchToken(),

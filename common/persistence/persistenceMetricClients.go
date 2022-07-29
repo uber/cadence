@@ -224,76 +224,63 @@ func NewConfigStorePersistenceMetricsClient(
 	}
 }
 
-func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, scopeWithDomainTag ...metrics.Scope) {
+func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, scopeWithDomainTag metrics.Scope) {
 
 	switch err.(type) {
 	case *types.DomainAlreadyExistsError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrDomainAlreadyExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounter)
 	case *types.BadRequestError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrBadRequestCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBadRequestCounter)
 	case *WorkflowExecutionAlreadyStartedError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrExecutionAlreadyStartedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounter)
 	case *ConditionFailedError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrConditionFailedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrConditionFailedCounter)
 	case *CurrentWorkflowConditionFailedError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
 	case *ShardAlreadyExistError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardExistsCounter)
 	case *ShardOwnershipLostError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardOwnershipLostCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardOwnershipLostCounter)
 	case *types.EntityNotExistsError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrEntityNotExistsCounter)
 	case *TimeoutError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrTimeoutCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
 	case *types.ServiceBusyError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBusyCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
 	case *DBUnavailableError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrDBUnavailableCounter)
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDBUnavailableCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
 		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
 	}
 }
 
-func (p *persistenceMetricsClientBase) call(scope int, op func() error, domainName ...string) error {
-
-	if domainName != nil {
-		domName := domainName[0]
-		scopeWithDomainTag := p.metricClient.Scope(scope, metrics.DomainTag(domName))
-		scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
-
-		before := time.Now()
-		err := op()
-		duration := time.Since(before)
-
-		scopeWithDomainTag.RecordTimer(metrics.PersistenceLatency, duration)
-
-		if p.enableLatencyHistogramMetrics {
-			scopeWithDomainTag.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
-		}
-
-		if err != nil {
-			p.updateErrorMetric(scope, err, scopeWithDomainTag)
-		}
-		return err
+func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...string) error {
+	var scopeWithDomainTag metrics.Scope
+	if tags != nil{
+		domainName := tags[0]
+		scopeWithDomainTag = p.metricClient.Scope(scope,metrics.DomainTag(domainName))
+	}else {
+		scopeWithDomainTag = p.metricClient.Scope(scope)
 	}
-	p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
+	scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
 	before := time.Now()
 	err := op()
 	duration := time.Since(before)
-	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
+	scopeWithDomainTag.RecordTimer(metrics.PersistenceLatency, duration)
+
 	if p.enableLatencyHistogramMetrics {
-		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
+		scopeWithDomainTag.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
 	}
+
 	if err != nil {
-		p.updateErrorMetric(scope, err)
+		p.updateErrorMetric(scope, err, scopeWithDomainTag)
 	}
 	return err
-
 }
 
 func (p *shardPersistenceClient) GetName() string {

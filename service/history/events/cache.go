@@ -60,7 +60,7 @@ type (
 
 	cacheImpl struct {
 		cache.Cache
-		DomainCache    cache.DomainCache
+		domainCache    cache.DomainCache
 		historyManager persistence.HistoryManager
 		disabled       bool
 		logger         log.Logger
@@ -240,7 +240,7 @@ func (e *cacheImpl) getHistoryEventFromStore(
 	defer sw.Stop()
 
 	var historyEvents []*types.HistoryEvent
-	domainName, err := e.DomainCache.GetDomainName(domainID)
+	domainName, err := e.domainCache.GetDomainName(domainID)
 	if err != nil {
 		return nil, err
 	}

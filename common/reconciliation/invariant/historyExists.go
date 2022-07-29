@@ -69,9 +69,14 @@ func (h *historyExists) Check(
 		}
 	}
 	domainID := concreteExecution.GetDomainID()
-	domainName, err := h.DomainCache.GetDomainName(domainID)
-	if err != nil {
-		return CheckResult{}
+	domainName, errorDomainName := h.DomainCache.GetDomainName(domainID)
+	if errorDomainName != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   h.Name(),
+			Info:            "failed to check: expected DomainName",
+			InfoDetails: errorDomainName.Error(),
+		}
 	}
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,

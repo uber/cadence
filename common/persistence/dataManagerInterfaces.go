@@ -979,7 +979,6 @@ type (
 	// WorkflowEvents is used as generic workflow history events transaction container
 	WorkflowEvents struct {
 		DomainID    string
-		DomainName  string
 		WorkflowID  string
 		RunID       string
 		BranchToken []byte

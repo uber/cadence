@@ -511,7 +511,7 @@ func (t *taskAckManagerImpl) generateHistoryReplicationTask(
 				task.BranchToken,
 				task.FirstEventID,
 				task.NextEventID,
-				task.GetDomainID(),
+				task.DomainID,
 			)
 			if err != nil {
 				return nil, err
