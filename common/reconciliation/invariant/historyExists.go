@@ -75,7 +75,7 @@ func (h *historyExists) Check(
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   h.Name(),
 			Info:            "failed to check: expected DomainName",
-			InfoDetails: errorDomainName.Error(),
+			InfoDetails:     errorDomainName.Error(),
 		}
 	}
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{

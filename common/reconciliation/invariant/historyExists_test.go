@@ -137,5 +137,6 @@ func (s *HistoryExistsSuite) TestCheck() {
 		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()))
 		result := i.Check(context.Background(), getOpenConcreteExecution())
 		s.Equal(tc.expectedResult, result)
+		
 	}
 }
