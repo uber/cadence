@@ -944,9 +944,9 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	}
 
 	domainID := workflowEvents.DomainID
-	domainName,err := c.shard.GetDomainCache().GetDomainName(domainID)
-	if err != nil{
-		return -1,err
+	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return -1, err
 	}
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID

@@ -261,10 +261,10 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, s
 
 func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...string) error {
 	var scopeWithDomainTag metrics.Scope
-	if tags != nil{
+	if tags != nil {
 		domainName := tags[0]
-		scopeWithDomainTag = p.metricClient.Scope(scope,metrics.DomainTag(domainName))
-	}else {
+		scopeWithDomainTag = p.metricClient.Scope(scope, metrics.DomainTag(domainName))
+	} else {
 		scopeWithDomainTag = p.metricClient.Scope(scope)
 	}
 	scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
