@@ -39,16 +39,17 @@ const (
 type (
 	historyExists struct {
 		pr          persistence.Retryer
-		DomainCache cache.DomainCache
+		domainCache cache.DomainCache
 	}
 )
 
 // NewHistoryExists returns a new history exists invariant
 func NewHistoryExists(
-	pr persistence.Retryer,
+	pr persistence.Retryer, dc cache.DomainCache,
 ) Invariant {
 	return &historyExists{
 		pr: pr,
+		domainCache: dc,
 	}
 }
 
@@ -69,7 +70,7 @@ func (h *historyExists) Check(
 		}
 	}
 	domainID := concreteExecution.GetDomainID()
-	domainName, errorDomainName := h.DomainCache.GetDomainName(domainID)
+	domainName, errorDomainName := h.domainCache.GetDomainName(domainID)
 	if errorDomainName != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
