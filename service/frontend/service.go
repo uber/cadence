@@ -45,20 +45,25 @@ type Config struct {
 	VisibilityMaxPageSize           dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
-	VisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableReadVisibilityFromES      dynamicconfig.BoolPropertyFnWithDomainFilter
-	ESVisibilityListMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
-	ESIndexMaxResultWindow          dynamicconfig.IntPropertyFn
-	HistoryMaxPageSize              dynamicconfig.IntPropertyFnWithDomainFilter
-	UserRPS                         dynamicconfig.IntPropertyFn
-	WorkerRPS                       dynamicconfig.IntPropertyFn
-	MaxDomainUserRPSPerInstance     dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxDomainWorkerRPSPerInstance   dynamicconfig.IntPropertyFnWithDomainFilter
-	GlobalDomainUserRPS             dynamicconfig.IntPropertyFnWithDomainFilter
-	GlobalDomainWorkerRPS           dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableClientVersionCheck        dynamicconfig.BoolPropertyFn
-	DisallowQuery                   dynamicconfig.BoolPropertyFnWithDomainFilter
-	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
+	// deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility
+	VisibilityListMaxQPS       dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter
+	// deprecated: never read from
+	ESVisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
+	ESIndexMaxResultWindow            dynamicconfig.IntPropertyFn
+	HistoryMaxPageSize                dynamicconfig.IntPropertyFnWithDomainFilter
+	UserRPS                           dynamicconfig.IntPropertyFn
+	WorkerRPS                         dynamicconfig.IntPropertyFn
+	VisibilityRPS                     dynamicconfig.IntPropertyFn
+	MaxDomainUserRPSPerInstance       dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxDomainWorkerRPSPerInstance     dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxDomainVisibilityRPSPerInstance dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainUserRPS               dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainWorkerRPS             dynamicconfig.IntPropertyFnWithDomainFilter
+	GlobalDomainVisibilityRPS         dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableClientVersionCheck          dynamicconfig.BoolPropertyFn
+	DisallowQuery                     dynamicconfig.BoolPropertyFnWithDomainFilter
+	ShutdownDrainDuration             dynamicconfig.DurationPropertyFn
 
 	// id length limits
 	MaxIDLengthWarnLimit  dynamicconfig.IntPropertyFn
@@ -126,10 +131,13 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, enableReadFro
 		HistoryMaxPageSize:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize, common.GetHistoryMaxPageSize),
 		UserRPS:                                     dc.GetIntProperty(dynamicconfig.FrontendUserRPS, 1200),
 		WorkerRPS:                                   dc.GetIntProperty(dynamicconfig.FrontendWorkerRPS, dynamicconfig.UnlimitedRPS),
+		VisibilityRPS:                               dc.GetIntProperty(dynamicconfig.FrontendVisibilityRPS, dynamicconfig.UnlimitedRPS),
 		MaxDomainUserRPSPerInstance:                 dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainUserRPSPerInstance, 1200),
 		MaxDomainWorkerRPSPerInstance:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainWorkerRPSPerInstance, dynamicconfig.UnlimitedRPS),
+		MaxDomainVisibilityRPSPerInstance:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxDomainVisibilityRPSPerInstance, dynamicconfig.UnlimitedRPS),
 		GlobalDomainUserRPS:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainUserRPS, 0),
 		GlobalDomainWorkerRPS:                       dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainWorkerRPS, dynamicconfig.UnlimitedRPS),
+		GlobalDomainVisibilityRPS:                   dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendGlobalDomainVisibilityRPS, dynamicconfig.UnlimitedRPS),
 		MaxIDLengthWarnLimit:                        dc.GetIntProperty(dynamicconfig.MaxIDLengthWarnLimit, common.DefaultIDLengthWarnLimit),
 		DomainNameMaxLength:                         dc.GetIntPropertyFilteredByDomain(dynamicconfig.DomainNameMaxLength, common.DefaultIDLengthErrorLimit),
 		IdentityMaxLength:                           dc.GetIntPropertyFilteredByDomain(dynamicconfig.IdentityMaxLength, common.DefaultIDLengthErrorLimit),
