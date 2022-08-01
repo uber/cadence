@@ -259,11 +259,11 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, s
 	}
 }
 
-func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...string) error {
+func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...metrics.Tag) error {
 	var scopeWithDomainTag metrics.Scope
 	if tags != nil {
 		domainName := tags[0]
-		scopeWithDomainTag = p.metricClient.Scope(scope, metrics.DomainTag(domainName))
+		scopeWithDomainTag = p.metricClient.Scope(scope, metrics.DomainTag(domainName.Value()))
 	} else {
 		scopeWithDomainTag = p.metricClient.Scope(scope)
 	}
@@ -1290,7 +1290,7 @@ func (p *historyPersistenceClient) AppendHistoryNodes(
 		resp, err = p.persistence.AppendHistoryNodes(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op, request.DomainName)
+	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1312,7 +1312,7 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, request.DomainName)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
