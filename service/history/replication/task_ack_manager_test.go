@@ -171,7 +171,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 	nextEventID := int64(2)
 	domainID := uuid.New()
 	domainName := uuid.New()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).Times(1)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).Times(1)
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -192,7 +192,7 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 	nextEventID := int64(2)
 	domainID := uuid.New()
 	domainName := uuid.New()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{},
@@ -580,7 +580,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 		},
 		1,
 	), nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -749,7 +749,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 		},
 		1,
 	), nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -862,7 +862,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 		},
 		1,
 	), nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
 		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
 		NextPageToken: nil,
