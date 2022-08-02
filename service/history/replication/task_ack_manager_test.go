@@ -170,6 +170,8 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
 	firstEventID := int64(1)
 	nextEventID := int64(2)
 	domainID := uuid.New()
+	domainName := uuid.New()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).Times(1)
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -189,6 +191,8 @@ func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
 	firstEventID := int64(1)
 	nextEventID := int64(2)
 	domainID := uuid.New()
+	domainName := uuid.New()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{},
@@ -528,6 +532,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
+	domainName := uuid.New()
 	taskInfo := &persistence.ReplicationTaskInfo{
 		DomainID:     domainID,
 		WorkflowID:   workflowID,
@@ -575,6 +580,7 @@ func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
 		},
 		1,
 	), nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -694,6 +700,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
+	domainName := uuid.New()
 	taskInfo := &persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeHistory,
 		DomainID:     domainID,
@@ -742,6 +749,7 @@ func (s *taskAckManagerSuite) TestToReplicationTask_History() {
 		},
 		1,
 	), nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
 	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
 		&persistence.ReadRawHistoryBranchResponse{
 			HistoryEventBlobs: []*persistence.DataBlob{
@@ -805,6 +813,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 	runID := uuid.New()
 	clusterName := cluster.TestCurrentClusterName
 	taskID := int64(10)
+	domainName := uuid.New()
 	taskInfo := &persistence.ReplicationTaskInfo{
 		TaskType:     persistence.ReplicationTaskTypeHistory,
 		TaskID:       taskID + 1,
@@ -853,6 +862,7 @@ func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
 		},
 		1,
 	), nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
 	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
 		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
 		NextPageToken: nil,
