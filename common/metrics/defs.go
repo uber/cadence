@@ -1922,6 +1922,7 @@ const (
 	CadenceErrUnauthorizedPerTaskListCounter
 	CadenceErrAuthorizeFailedPerTaskListCounter
 	CadenceErrRemoteSyncMatchFailedPerTaskListCounter
+	CadenceErrStickyWorkerUnavailablePerTaskListCounter
 
 	CadenceShardSuccessGauge
 	CadenceShardFailureGauge
@@ -2480,6 +2481,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		},
 		CadenceErrRemoteSyncMatchFailedPerTaskListCounter: {
 			metricName: "cadence_errors_remote_syncmatch_failed_per_tl", metricRollupName: "cadence_errors_remote_syncmatch_failed", metricType: Counter,
+		},
+		CadenceErrStickyWorkerUnavailablePerTaskListCounter: {
+			metricName: "cadence_errors_sticky_worker_unavailable_per_tl", metricRollupName: "cadence_errors_sticky_worker_unavailable_per_tl", metricType: Counter,
 		},
 		CadenceShardSuccessGauge:             {metricName: "cadence_shard_success", metricType: Gauge},
 		CadenceShardFailureGauge:             {metricName: "cadence_shard_failure", metricType: Gauge},
