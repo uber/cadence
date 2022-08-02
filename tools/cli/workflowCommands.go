@@ -49,6 +49,34 @@ import (
 	"github.com/uber/cadence/service/history/execution"
 )
 
+// RestartWorkflow restarts a workflow execution
+func RestartWorkflow(c *cli.Context) {
+	wfClient := getWorkflowClient(c)
+
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := c.String(FlagRunID)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	resp, err := wfClient.RestartWorkflowExecution(
+		ctx,
+		&types.RestartWorkflowExecutionRequest{
+			Domain: domain,
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			}, Identity: getCliIdentity(),
+		},
+	)
+
+	if err != nil {
+		ErrorAndExit("Restart workflow failed.", err)
+	} else {
+		fmt.Printf("Restarted Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
+	}
+}
+
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) {
 	wid := getRequiredOption(c, FlagWorkflowID)

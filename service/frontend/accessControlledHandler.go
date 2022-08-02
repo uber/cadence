@@ -599,6 +599,26 @@ func (a *AccessControlledWorkflowHandler) RespondQueryTaskCompleted(
 	return a.frontendHandler.RespondQueryTaskCompleted(ctx, request)
 }
 
+// RestartWorkflowExecution API call
+func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error) {
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendRestartWorkflowExecutionScope, request)
+
+	attr := &authorization.Attributes{
+		APIName:    "RestartWorkflowExecution",
+		DomainName: request.GetDomain(),
+		Permission: authorization.PermissionWrite,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.frontendHandler.RestartWorkflowExecution(ctx, request)
+}
+
 // ScanWorkflowExecutions API call
 func (a *AccessControlledWorkflowHandler) ScanWorkflowExecutions(
 	ctx context.Context,

@@ -1199,6 +1199,57 @@ func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHist
 	}, []*types.HistoryEvent{{}, {}, {}})
 }
 
+func (s *workflowHandlerSuite) TestRestartWorkflowExecution__Success() {
+	dynamicClient := dc.NewInMemoryClient()
+	err := dynamicClient.UpdateValue(dc.SendRawWorkflowHistory, false)
+	s.NoError(err)
+	wh := s.getWorkflowHandler(
+		NewConfig(
+			dc.NewCollection(
+				dynamicClient,
+				s.mockResource.GetLogger()),
+			numHistoryShards,
+			false,
+		),
+	)
+	ctx := context.Background()
+	s.mockHistoryClient.EXPECT().PollMutableState(gomock.Any(), gomock.Any()).Return(&types.PollMutableStateResponse{
+		CurrentBranchToken: []byte(""),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testRunID,
+		},
+		LastFirstEventID: 0,
+		NextEventID:      2,
+	}, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
+	s.mockVersionChecker.EXPECT().SupportsRawHistoryQuery(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{&types.HistoryEvent{
+			ID: 1,
+			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+				WorkflowType: &types.WorkflowType{
+					Name: "workflowtype",
+				},
+				TaskList: &types.TaskList{
+					Name: "tasklist",
+				},
+			},
+		}},
+	}, nil).Once()
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{
+		RunID: testRunID,
+	}, nil)
+	resp, err := wh.RestartWorkflowExecution(ctx, &types.RestartWorkflowExecutionRequest{
+		Domain: s.testDomain,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+		},
+		Identity: "",
+	})
+	s.Equal(resp.GetRunID(), testRunID)
+	s.NoError(err)
+}
+
 func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, transientDecision *types.TransientDecisionInfo, historyEvents []*types.HistoryEvent) {
 	dynamicClient := dc.NewInMemoryClient()
 	err := dynamicClient.UpdateValue(dc.SendRawWorkflowHistory, true)
