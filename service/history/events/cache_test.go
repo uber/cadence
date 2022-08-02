@@ -50,8 +50,8 @@ type (
 		logger             log.Logger
 		mockHistoryManager *mocks.HistoryV2Manager
 
-		cache *cacheImpl
-		ctrl *gomock.Controller
+		cache       *cacheImpl
+		ctrl        *gomock.Controller
 		domainCache *cache.MockDomainCache
 	}
 )
@@ -88,7 +88,7 @@ func (s *eventsCacheSuite) TearDownTest() {
 
 func (s *eventsCacheSuite) newTestEventsCache() *cacheImpl {
 	return newCacheWithOption(common.IntPtr(10), 16, 32, time.Minute, s.mockHistoryManager, false, s.logger,
-		metrics.NewClient(tally.NoopScope, metrics.History), 0,s.domainCache)
+		metrics.NewClient(tally.NoopScope, metrics.History), 0, s.domainCache)
 }
 
 func (s *eventsCacheSuite) TestEventsCacheHitSuccess() {
@@ -158,8 +158,8 @@ func (s *eventsCacheSuite) TestEventsCacheMissMultiEventsBatchV2Success() {
 		NextPageToken:    nil,
 		LastFirstEventID: event1.ID,
 	}, nil)
-	
-	s.domainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
+
+	s.domainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
 	s.cache.PutEvent(domainID, workflowID, runID, event2.ID, event2)
 	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, event1.ID, event6.ID, []byte("store_token"))
 	s.Nil(err)
@@ -182,8 +182,8 @@ func (s *eventsCacheSuite) TestEventsCacheMissV2Failure() {
 		ShardID:       shardID,
 		DomainName:    domainName,
 	}).Return(nil, expectedErr)
-	
-	s.domainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
+
+	s.domainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
 	actualEvent, err := s.cache.GetEvent(context.Background(), *shardID, domainID, workflowID, runID, int64(11), int64(14), []byte("store_token"))
 	s.Nil(actualEvent)
 	s.Equal(expectedErr, err)
@@ -219,8 +219,8 @@ func (s *eventsCacheSuite) TestEventsCacheDisableSuccess() {
 		NextPageToken:    nil,
 		LastFirstEventID: event2.ID,
 	}, nil)
-	
-	s.domainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil)
+
+	s.domainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
 	s.cache.PutEvent(domainID, workflowID, runID, event1.ID, event1)
 	s.cache.PutEvent(domainID, workflowID, runID, event2.ID, event2)
 	s.cache.disabled = true

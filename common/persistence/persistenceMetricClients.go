@@ -260,7 +260,7 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, s
 }
 
 func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...metrics.Tag) error {
-	scopeWithDomainTag := p.metricClient.Scope(scope,tags...)
+	scopeWithDomainTag := p.metricClient.Scope(scope, tags...)
 	scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
 	before := time.Now()
 	err := op()
