@@ -91,6 +91,7 @@ func NewGlobalCache(
 	logger log.Logger,
 	metricsClient metrics.Client,
 	maxSize uint64,
+	domainCache cache.DomainCache,
 ) Cache {
 	return newCacheWithOption(
 		nil,
@@ -102,6 +103,7 @@ func NewGlobalCache(
 		logger,
 		metricsClient,
 		maxSize,
+		domainCache,
 	)
 }
 
@@ -112,6 +114,7 @@ func NewCache(
 	config *config.Config,
 	logger log.Logger,
 	metricsClient metrics.Client,
+	domainCache cache.DomainCache,
 ) Cache {
 	return newCacheWithOption(
 		&shardID,
@@ -123,6 +126,7 @@ func NewCache(
 		logger,
 		metricsClient,
 		0,
+		domainCache,
 	)
 }
 
@@ -136,6 +140,7 @@ func newCacheWithOption(
 	logger log.Logger,
 	metrics metrics.Client,
 	maxSize uint64,
+	domainCache cache.DomainCache,
 ) *cacheImpl {
 	opts := &cache.Options{}
 	opts.InitialCapacity = initialCount
@@ -148,9 +153,9 @@ func newCacheWithOption(
 			return common.GetSizeOfHistoryEvent(event.(*types.HistoryEvent))
 		}
 	}
-
 	return &cacheImpl{
 		Cache:          cache.New(opts),
+		domainCache:    domainCache,
 		historyManager: historyManager,
 		disabled:       disabled,
 		logger:         logger.WithTags(tag.ComponentEventsCache),

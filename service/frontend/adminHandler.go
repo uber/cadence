@@ -749,10 +749,6 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		return nil, adh.error(err, scope)
 	}
 	scope = scope.Tagged(metrics.DomainTag(request.GetDomain()))
-	domainName, err := adh.GetDomainCache().GetDomainName(domainID)
-	if err != nil {
-		return nil, adh.error(err, scope)
-	}
 
 	execution := request.Execution
 	var pageToken *getWorkflowRawHistoryV2Token
@@ -825,7 +821,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		PageSize:      pageSize,
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
-		DomainName:    domainName,
+		DomainName:    request.GetDomain(),
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {

@@ -260,13 +260,7 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, s
 }
 
 func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...metrics.Tag) error {
-	var scopeWithDomainTag metrics.Scope
-	if tags != nil {
-		domainName := tags[0]
-		scopeWithDomainTag = p.metricClient.Scope(scope, metrics.DomainTag(domainName.Value()))
-	} else {
-		scopeWithDomainTag = p.metricClient.Scope(scope)
-	}
+	scopeWithDomainTag := p.metricClient.Scope(scope,tags...)
 	scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
 	before := time.Now()
 	err := op()
@@ -276,7 +270,6 @@ func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...
 	if p.enableLatencyHistogramMetrics {
 		scopeWithDomainTag.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
 	}
-
 	if err != nil {
 		p.updateErrorMetric(scope, err, scopeWithDomainTag)
 	}

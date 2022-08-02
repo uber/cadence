@@ -119,6 +119,7 @@ func New(
 		params.Logger,
 		params.MetricsClient,
 		uint64(config.EventsCacheMaxSize()),
+	    serviceResource.GetDomainCache(),
 	)
 
 	historyResource = &resourceImpl{

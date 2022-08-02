@@ -51,7 +51,6 @@ type ScanType int
 type (
 	//InvariantFactory represents a function which returns Invariant
 	InvariantFactory  func(retryer persistence.Retryer) invariant.Invariant
-	InvariantsFactory func(retryer persistence.Retryer, dc cache.DomainCache) invariant.Invariant
 
 	//ExecutionFetcher represents a function which returns specific execution entity
 	ExecutionFetcher func(ctx context.Context, retryer persistence.Retryer, request fetcher.ExecutionRequest) (entity.Entity, error)
