@@ -160,6 +160,7 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]
 		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr)
 		fixResult := currentExecutionInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
+		//TO DO: Add domainCache : cache.DomainCache for adding parameter in NewHistoryExists
 		historyInvariant := invariant.NewHistoryExists(pr)
 		fixResult = historyInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
