@@ -1323,7 +1323,7 @@ func (p *historyPersistenceClient) ReadHistoryBranchByBatch(
 		resp, err = p.persistence.ReadHistoryBranchByBatch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1341,7 +1341,7 @@ func (p *historyPersistenceClient) ReadRawHistoryBranch(
 		resp, err = p.persistence.ReadRawHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
