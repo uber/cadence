@@ -415,11 +415,16 @@ func (r *workflowResetterImpl) forkAndGenerateBranchToken(
 ) ([]byte, error) {
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
+	domainName,err := r.domainCache.GetDomainName(domainID)
+	if err != nil{
+		return nil,err
+	}
 	resp, err := r.historyV2Mgr.ForkHistoryBranch(ctx, &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      forkNodeID,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, resetRunID),
 		ShardID:         common.IntPtr(shardID),
+		DomainName:      domainName,
 	})
 	if err != nil {
 		return nil, err

@@ -880,7 +880,7 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 func (s *HistoryV2PersistenceSuite) fork(ctx context.Context, forkBranch []byte, forkNodeID int64) ([]byte, error) {
 
 	bi := []byte{}
-
+	domainName := s.DomainManager.GetName()
 	op := func() error {
 		var err error
 		resp, err := s.HistoryV2Mgr.ForkHistoryBranch(ctx, &p.ForkHistoryBranchRequest{
@@ -888,6 +888,7 @@ func (s *HistoryV2PersistenceSuite) fork(ctx context.Context, forkBranch []byte,
 			ForkNodeID:      forkNodeID,
 			Info:            testForkRunID,
 			ShardID:         common.IntPtr(s.ShardInfo.ShardID),
+			DomainName:      domainName,
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken

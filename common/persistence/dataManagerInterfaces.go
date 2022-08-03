@@ -1602,6 +1602,8 @@ type (
 		Info string
 		// The shard to get history branch data
 		ShardID *int
+		//DomainName to create metrics for Domain Cost Attribution
+		DomainName string
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest

@@ -109,6 +109,7 @@ func (s *branchManagerSuite) TestCreateNewBranch() {
 	baseBranchLCAEventID := int64(1394)
 	baseBranchLastEventVersion := int64(400)
 	baseBranchLastEventID := int64(2333)
+	domainName := "test-domain-name"
 	versionHistory := persistence.NewVersionHistory(baseBranchToken, []*persistence.VersionHistoryItem{
 		persistence.NewVersionHistoryItem(10, 0),
 		persistence.NewVersionHistoryItem(50, 100),
@@ -129,7 +130,7 @@ func (s *branchManagerSuite) TestCreateNewBranch() {
 		WorkflowID: s.workflowID,
 		RunID:      s.runID,
 	}).AnyTimes()
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
 	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.Anything, mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
 		input.Info = ""
 		s.Equal(&persistence.ForkHistoryBranchRequest{
@@ -137,6 +138,7 @@ func (s *branchManagerSuite) TestCreateNewBranch() {
 			ForkNodeID:      baseBranchLCAEventID + 1,
 			Info:            "",
 			ShardID:         common.IntPtr(s.mockShard.GetShardID()),
+			DomainName:      domainName,
 		}, input)
 		return true
 	})).Return(&persistence.ForkHistoryBranchResponse{
@@ -275,6 +277,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMis
 	baseBranchToken := []byte("some random base branch token")
 	baseBranchLCAEventID := int64(85)
 	baseBranchLCAEventVersion := int64(200)
+	domainName := "test-domainName"
 
 	versionHistory := persistence.NewVersionHistory(baseBranchToken, []*persistence.VersionHistoryItem{
 		persistence.NewVersionHistoryItem(10, 0),
@@ -300,7 +303,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMis
 		WorkflowID: s.workflowID,
 		RunID:      s.runID,
 	}).AnyTimes()
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
 	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.Anything, mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
 		input.Info = ""
 		s.Equal(&persistence.ForkHistoryBranchRequest{
@@ -308,6 +311,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMis
 			ForkNodeID:      baseBranchLCAEventID + 1,
 			Info:            "",
 			ShardID:         common.IntPtr(s.mockShard.GetShardID()),
+			DomainName:      domainName,
 		}, input)
 		return true
 	})).Return(&persistence.ForkHistoryBranchResponse{
