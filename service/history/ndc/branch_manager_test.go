@@ -130,7 +130,7 @@ func (s *branchManagerSuite) TestCreateNewBranch() {
 		WorkflowID: s.workflowID,
 		RunID:      s.runID,
 	}).AnyTimes()
-	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.Anything, mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
 		input.Info = ""
 		s.Equal(&persistence.ForkHistoryBranchRequest{
@@ -303,7 +303,7 @@ func (s *branchManagerSuite) TestPrepareVersionHistory_BranchNotAppendable_NoMis
 		WorkflowID: s.workflowID,
 		RunID:      s.runID,
 	}).AnyTimes()
-	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName,nil).AnyTimes()
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	s.mockHistoryV2Manager.On("ForkHistoryBranch", mock.Anything, mock.MatchedBy(func(input *persistence.ForkHistoryBranchRequest) bool {
 		input.Info = ""
 		s.Equal(&persistence.ForkHistoryBranchRequest{

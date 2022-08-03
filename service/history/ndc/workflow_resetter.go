@@ -214,9 +214,9 @@ func (r *workflowResetterImpl) getResetBranchToken(
 
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
-	domainName,err := r.shard.GetDomainCache().GetDomainName(r.domainID)
-	if err != nil{
-		return nil,err
+	domainName, err := r.shard.GetDomainCache().GetDomainName(r.domainID)
+	if err != nil {
+		return nil, err
 	}
 	resp, err := r.historyV2Manager.ForkHistoryBranch(
 		ctx,
