@@ -1520,6 +1520,9 @@ type (
 		Encoding common.EncodingType
 		// The shard to get history node data
 		ShardID *int
+
+		//DomainName to get metrics created with the domain
+		DomainName string
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
@@ -1543,6 +1546,8 @@ type (
 		NextPageToken []byte
 		// The shard to get history branch data
 		ShardID *int
+
+		DomainName string
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest

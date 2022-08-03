@@ -98,6 +98,7 @@ func (st ScanType) ToInvariants(collections []invariant.Collection) []InvariantF
 		for _, collection := range collections {
 			switch collection {
 			case invariant.CollectionHistory:
+
 				fns = append(fns, invariant.NewHistoryExists)
 			case invariant.CollectionMutableState:
 				fns = append(fns, invariant.NewOpenCurrentExecution)

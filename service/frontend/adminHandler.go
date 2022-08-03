@@ -821,6 +821,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		PageSize:      pageSize,
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    request.GetDomain(),
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {

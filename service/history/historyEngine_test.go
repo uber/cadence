@@ -126,6 +126,7 @@ func (s *engineSuite) SetupTest() {
 		s.config,
 		s.mockShard.GetLogger(),
 		s.mockShard.GetMetricsClient(),
+		s.mockDomainCache,
 	)
 	s.mockShard.SetEventsCache(s.eventsCache)
 

@@ -36,12 +36,14 @@ const (
 )
 
 type (
+	//To DO: domainCache cache.DomainCache
 	historyExists struct {
 		pr persistence.Retryer
 	}
 )
 
 // NewHistoryExists returns a new history exists invariant
+//To Do: add dc cache.DomainCache   :: domainCache: dc,
 func NewHistoryExists(
 	pr persistence.Retryer,
 ) Invariant {
@@ -66,6 +68,19 @@ func (h *historyExists) Check(
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
+	//To Do: add domain ID
+	//domainID := concreteExecution.GetDomainID()
+	//domainName, errorDomainName := h.domainCache.GetDomainName(domainID)
+	// if errorDomainName != nil {
+	// 	return CheckResult{
+	// 		CheckResultType: CheckResultTypeFailed,
+	// 		InvariantName:   h.Name(),
+	// 		Info:            "failed to check: expected DomainName",
+	// 		InfoDetails:     errorDomainName.Error(),
+	// 	}
+	// }
+
+	//To Do: Add a domainName to assign DomainName :: DomainName:    domainName,
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,
 		MinEventID:    c.FirstEventID,

@@ -60,6 +60,7 @@ type (
 
 	cacheImpl struct {
 		cache.Cache
+		domainCache    cache.DomainCache
 		historyManager persistence.HistoryManager
 		disabled       bool
 		logger         log.Logger
@@ -90,6 +91,7 @@ func NewGlobalCache(
 	logger log.Logger,
 	metricsClient metrics.Client,
 	maxSize uint64,
+	domainCache cache.DomainCache,
 ) Cache {
 	return newCacheWithOption(
 		nil,
@@ -101,6 +103,7 @@ func NewGlobalCache(
 		logger,
 		metricsClient,
 		maxSize,
+		domainCache,
 	)
 }
 
@@ -111,6 +114,7 @@ func NewCache(
 	config *config.Config,
 	logger log.Logger,
 	metricsClient metrics.Client,
+	domainCache cache.DomainCache,
 ) Cache {
 	return newCacheWithOption(
 		&shardID,
@@ -122,6 +126,7 @@ func NewCache(
 		logger,
 		metricsClient,
 		0,
+		domainCache,
 	)
 }
 
@@ -135,6 +140,7 @@ func newCacheWithOption(
 	logger log.Logger,
 	metrics metrics.Client,
 	maxSize uint64,
+	domainCache cache.DomainCache,
 ) *cacheImpl {
 	opts := &cache.Options{}
 	opts.InitialCapacity = initialCount
@@ -147,9 +153,9 @@ func newCacheWithOption(
 			return common.GetSizeOfHistoryEvent(event.(*types.HistoryEvent))
 		}
 	}
-
 	return &cacheImpl{
 		Cache:          cache.New(opts),
+		domainCache:    domainCache,
 		historyManager: historyManager,
 		disabled:       disabled,
 		logger:         logger.WithTags(tag.ComponentEventsCache),
@@ -196,8 +202,7 @@ func (e *cacheImpl) GetEvent(
 	}
 
 	e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheMissCounter)
-
-	event, err := e.getHistoryEventFromStore(ctx, firstEventID, eventID, branchToken, shardID)
+	event, err := e.getHistoryEventFromStore(ctx, firstEventID, eventID, branchToken, shardID, domainID)
 	if err != nil {
 		e.metricsClient.IncCounter(metrics.EventsCacheGetEventScope, metrics.CacheFailures)
 		e.logger.Error("EventsCache unable to retrieve event from store",
@@ -233,13 +238,17 @@ func (e *cacheImpl) getHistoryEventFromStore(
 	eventID int64,
 	branchToken []byte,
 	shardID int,
+	domainID string,
 ) (*types.HistoryEvent, error) {
 	e.metricsClient.IncCounter(metrics.EventsCacheGetFromStoreScope, metrics.CacheRequests)
 	sw := e.metricsClient.StartTimer(metrics.EventsCacheGetFromStoreScope, metrics.CacheLatency)
 	defer sw.Stop()
 
 	var historyEvents []*types.HistoryEvent
-
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, err
+	}
 	response, err := e.historyManager.ReadHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -247,6 +256,7 @@ func (e *cacheImpl) getHistoryEventFromStore(
 		PageSize:      1,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	})
 
 	if err != nil {
