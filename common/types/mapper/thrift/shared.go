@@ -4756,6 +4756,18 @@ func ToRetryTaskV2Error(t *shared.RetryTaskV2Error) *types.RetryTaskV2Error {
 	}
 }
 
+// ToRestartWorkflowExecutionRequest converts thrift RestartWorkflowExecutionRequest type to internal
+func ToRestartWorkflowExecutionRequest(t *shared.RestartWorkflowExecutionRequest) *types.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionRequest{
+		Domain:            t.GetDomain(),
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
+		Identity:          t.GetIdentity(),
+	}
+}
+
 // FromScheduleActivityTaskDecisionAttributes converts internal ScheduleActivityTaskDecisionAttributes type to thrift
 func FromScheduleActivityTaskDecisionAttributes(t *types.ScheduleActivityTaskDecisionAttributes) *shared.ScheduleActivityTaskDecisionAttributes {
 	if t == nil {
@@ -5268,6 +5280,16 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 	}
 }
 
+// FromRestartWorkflowExecutionResponse converts internal RestartWorkflowExecutionResponse type to thrift
+func FromRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *shared.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionResponse{
+		RunId: &t.RunID,
+	}
+}
+
 // FromStartWorkflowExecutionResponse converts internal StartWorkflowExecutionResponse type to thrift
 func FromStartWorkflowExecutionResponse(t *types.StartWorkflowExecutionResponse) *shared.StartWorkflowExecutionResponse {
 	if t == nil {
@@ -5508,6 +5530,28 @@ func ToTaskListType(t *shared.TaskListType) *types.TaskListType {
 		return &v
 	}
 	panic("unexpected enum value")
+}
+
+// ToRestartWorkflowExecutionResponse converts thrift RestartWorkflowExecutionResponse type to internal
+func ToRestartWorkflowExecutionResponse(t *shared.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionResponse{
+		RunID: t.GetRunId(),
+	}
+}
+
+// FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
+func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionRequest{
+		Domain:            &t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
+		Identity:          &t.Identity,
+	}
 }
 
 // FromTerminateWorkflowExecutionRequest converts internal TerminateWorkflowExecutionRequest type to thrift

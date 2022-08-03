@@ -66,6 +66,7 @@ type (
 		RespondDecisionTaskCompleted(context.Context, *types.RespondDecisionTaskCompletedRequest) (*types.RespondDecisionTaskCompletedResponse, error)
 		RespondDecisionTaskFailed(context.Context, *types.RespondDecisionTaskFailedRequest) error
 		RespondQueryTaskCompleted(context.Context, *types.RespondQueryTaskCompletedRequest) error
+		RestartWorkflowExecution(context.Context, *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error)
 		ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest) (*types.ListWorkflowExecutionsResponse, error)
 		SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest) (*types.StartWorkflowExecutionResponse, error)
 		SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest) error
