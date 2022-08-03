@@ -259,6 +259,11 @@ func (t ThriftHandler) RespondQueryTaskCompleted(ctx context.Context, request *s
 	return thrift.FromError(err)
 }
 
+func (t ThriftHandler) RestartWorkflowExecution(ctx context.Context, request *shared.RestartWorkflowExecutionRequest) (*shared.RestartWorkflowExecutionResponse, error) {
+	response, err := t.h.RestartWorkflowExecution(ctx, thrift.ToRestartWorkflowExecutionRequest(request))
+	return thrift.FromRestartWorkflowExecutionResponse(response), thrift.FromError(err)
+}
+
 // ScanWorkflowExecutions forwards request to the underlying handler
 func (t ThriftHandler) ScanWorkflowExecutions(ctx context.Context, request *shared.ListWorkflowExecutionsRequest) (*shared.ListWorkflowExecutionsResponse, error) {
 	response, err := t.h.ScanWorkflowExecutions(ctx, thrift.ToListWorkflowExecutionsRequest(request))

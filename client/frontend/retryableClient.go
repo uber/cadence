@@ -418,6 +418,18 @@ func (c *retryableClient) RespondQueryTaskCompleted(ctx context.Context, rp1 *ty
 	return c.throttleRetry.Do(ctx, op)
 }
 
+func (c *retryableClient) RestartWorkflowExecution(ctx context.Context, rp1 *types.RestartWorkflowExecutionRequest, p1 ...yarpc.CallOption) (rp2 *types.RestartWorkflowExecutionResponse, err error) {
+
+	var resp *types.RestartWorkflowExecutionResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.RestartWorkflowExecution(ctx, rp1, p1...)
+		return err
+	}
+	err = c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
 func (c *retryableClient) ScanWorkflowExecutions(ctx context.Context, lp1 *types.ListWorkflowExecutionsRequest, p1 ...yarpc.CallOption) (lp2 *types.ListWorkflowExecutionsResponse, err error) {
 
 	var resp *types.ListWorkflowExecutionsResponse
