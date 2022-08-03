@@ -69,6 +69,15 @@ const (
 
 var _ Handler = (*WorkflowHandler)(nil)
 
+// ratelimitType differentiates between the three categories of ratelimiters
+type ratelimitType int
+
+const (
+	ratelimitTypeUser ratelimitType = iota + 1
+	ratelimitTypeWorker
+	ratelimitTypeVisibility
+)
+
 type (
 	// WorkflowHandler - Thrift handler interface for workflow service
 	WorkflowHandler struct {
@@ -79,6 +88,7 @@ type (
 		tokenSerializer           common.TaskTokenSerializer
 		userRateLimiter           quotas.Policy
 		workerRateLimiter         quotas.Policy
+		visibilityRateLimiter     quotas.Policy
 		config                    *Config
 		versionChecker            client.VersionChecker
 		domainHandler             domain.Handler
@@ -182,6 +192,17 @@ func NewWorkflowHandler(
 					service.Frontend,
 					config.GlobalDomainWorkerRPS.AsFloat64(domain),
 					config.MaxDomainWorkerRPSPerInstance.AsFloat64(domain),
+					resource.GetMembershipResolver(),
+				))
+			}),
+		),
+		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
+			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
+			quotas.NewCollection(func(domain string) quotas.Limiter {
+				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
+					service.Frontend,
+					config.GlobalDomainVisibilityRPS.AsFloat64(domain),
+					config.MaxDomainVisibilityRPSPerInstance.AsFloat64(domain),
 					resource.GetMembershipResolver(),
 				))
 			}),
@@ -577,7 +598,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(errIdentityTooLong, scope, tags...)
 	}
 
-	if ok := wh.allow(false, pollRequest); !ok {
+	if ok := wh.allow(ratelimitTypeWorker, pollRequest); !ok {
 		// pollers exponentially back off up to 10s
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
@@ -697,7 +718,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if ok := wh.allow(false, pollRequest); !ok {
+	if ok := wh.allow(ratelimitTypeWorker, pollRequest); !ok {
 		// pollers exponentially back off up to 10s
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
@@ -833,7 +854,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -916,7 +937,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, heartbeatRequest)
+	wh.allow(ratelimitTypeWorker, heartbeatRequest)
 
 	wh.GetLogger().Debug("Received RecordActivityTaskHeartbeatByID")
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
@@ -1046,7 +1067,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1140,7 +1161,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, completeRequest)
+	wh.allow(ratelimitTypeWorker, completeRequest)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1280,7 +1301,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1362,7 +1383,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, failedRequest)
+	wh.allow(ratelimitTypeWorker, failedRequest)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1493,7 +1514,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1587,7 +1608,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, cancelRequest)
+	wh.allow(ratelimitTypeWorker, cancelRequest)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1727,7 +1748,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1837,7 +1858,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1933,7 +1954,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
@@ -2009,7 +2030,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, startRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, startRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2191,7 +2212,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, getRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, getRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2464,7 +2485,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, signalRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, signalRequest); !ok {
 		return wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2581,7 +2602,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, signalWithStartRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, signalWithStartRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2759,7 +2780,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, terminateRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, terminateRequest); !ok {
 		return wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2814,7 +2835,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, resetRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, resetRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2868,7 +2889,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, cancelRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, cancelRequest); !ok {
 		return wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2918,7 +2939,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3035,7 +3056,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3127,7 +3148,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3267,7 +3288,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3336,7 +3357,7 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -3400,7 +3421,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3468,7 +3489,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, countRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, countRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3553,7 +3574,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, resetRequest)
+	wh.allow(ratelimitTypeWorker, resetRequest)
 
 	if err := validateExecution(wfExecution); err != nil {
 		return nil, wh.error(err, scope, tags...)
@@ -3604,7 +3625,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, queryRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, queryRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -3686,7 +3707,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -3739,7 +3760,7 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3789,7 +3810,7 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3826,7 +3847,7 @@ func (wh *WorkflowHandler) GetTaskListsByDomain(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -4451,15 +4472,22 @@ func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain 
 		pageSize > int32(wh.config.ESIndexMaxResultWindow())
 }
 
-func (wh *WorkflowHandler) allow(isUserEndpoint bool, d domainGetter) bool {
+func (wh *WorkflowHandler) allow(requestType ratelimitType, d domainGetter) bool {
 	domain := ""
 	if d != nil {
 		domain = d.GetDomain()
 	}
-	if isUserEndpoint {
+	switch requestType {
+	case ratelimitTypeUser:
 		return wh.userRateLimiter.Allow(quotas.Info{Domain: domain})
+	case ratelimitTypeWorker:
+		return wh.workerRateLimiter.Allow(quotas.Info{Domain: domain})
+	case ratelimitTypeVisibility:
+		return wh.visibilityRateLimiter.Allow(quotas.Info{Domain: domain})
+	default:
+		wh.GetLogger().Fatal("coding error, unrecognized request ratelimit type value", tag.Value(requestType))
+		panic("unreachable")
 	}
-	return wh.workerRateLimiter.Allow(quotas.Info{Domain: domain})
 }
 
 // GetClusterInfo return information about cadence deployment
@@ -4469,7 +4497,7 @@ func (wh *WorkflowHandler) GetClusterInfo(
 	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &err) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendClientGetClusterInfoScope)
-	if ok := wh.allow(true, nil); !ok {
+	if ok := wh.allow(ratelimitTypeUser, nil); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
