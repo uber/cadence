@@ -262,9 +262,14 @@ func (t *timerTaskExecutorBase) deleteWorkflowHistory(
 		if err != nil {
 			return err
 		}
+		domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+		if err != nil {
+			return err
+		}
 		return t.shard.GetHistoryManager().DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     common.IntPtr(t.shard.GetShardID()),
+			DomainName:  domainName,
 		})
 
 	}

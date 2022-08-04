@@ -1359,7 +1359,7 @@ func (p *historyPersistenceClient) ForkHistoryBranch(
 		resp, err = p.persistence.ForkHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceForkHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceForkHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1374,7 +1374,7 @@ func (p *historyPersistenceClient) DeleteHistoryBranch(
 	op := func() error {
 		return p.persistence.DeleteHistoryBranch(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op)
+	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *historyPersistenceClient) GetAllHistoryTreeBranches(

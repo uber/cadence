@@ -281,6 +281,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     &shardIDInt,
+			DomainName:  domain,
 		})
 		if err != nil {
 			if skipError {
