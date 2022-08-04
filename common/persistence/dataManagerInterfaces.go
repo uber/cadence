@@ -1640,6 +1640,8 @@ type (
 		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
+		//DomainName to create metrics
+		DomainName string
 	}
 
 	// HistoryBranchDetail contains detailed information of a branch

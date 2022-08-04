@@ -1408,7 +1408,7 @@ func (p *historyPersistenceClient) GetHistoryTree(
 		resp, err = p.persistence.GetHistoryTree(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetHistoryTreeScope, op)
+	err := p.call(metrics.PersistenceGetHistoryTreeScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}

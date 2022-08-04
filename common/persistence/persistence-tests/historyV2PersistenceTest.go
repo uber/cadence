@@ -777,9 +777,11 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 
 // persistence helper
 func (s *HistoryV2PersistenceSuite) descTreeByToken(ctx context.Context, br []byte) []*workflow.HistoryBranch {
+	domainName := s.DomainManager.GetName()
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(ctx, &p.GetHistoryTreeRequest{
 		BranchToken: br,
 		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
+		DomainName:  domainName,
 	})
 	s.Nil(err)
 	return resp.Branches
