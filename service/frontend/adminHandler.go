@@ -445,7 +445,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromHistory(
 			logger.Error("Cannot decode thrift object", tag.Error(err))
 			continue
 		}
-		domainName, err := adh.Resource.GetDomainCache().GetDomainName(mutableState.ExecutionInfo.DomainID)
+		domainName, err := adh.GetDomainCache().GetDomainName(mutableState.ExecutionInfo.DomainID)
 		if err != nil {
 			return false
 		}
