@@ -1628,6 +1628,8 @@ type (
 		BranchToken []byte
 		// The shard to delete history branch data
 		ShardID *int
+		//DomainName to generate metrics for Domain Cost Attribution
+		DomainName string
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
@@ -1638,6 +1640,8 @@ type (
 		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
+		//DomainName to create metrics
+		DomainName string
 	}
 
 	// HistoryBranchDetail contains detailed information of a branch
