@@ -68,6 +68,7 @@ type (
 		executionCache          *execution.Cache
 		logger                  log.Logger
 		domainID                string
+		domain                  string
 		domainEntry             *cache.DomainCacheEntry
 		version                 int64
 		now                     time.Time
@@ -89,6 +90,7 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 	s.Assertions = require.New(s.T())
 
 	s.domainID = constants.TestDomainID
+	s.domain = constants.TestDomainName
 	s.domainEntry = constants.TestGlobalDomainEntry
 	s.version = s.domainEntry.GetFailoverVersion()
 	s.now = time.Now()
@@ -111,6 +113,7 @@ func (s *timerActiveTaskExecutorSuite) SetupTest() {
 		s.mockShard.GetConfig(),
 		s.mockShard.GetLogger(),
 		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetDomainCache(),
 	))
 	s.mockShard.Resource.TimeSource = s.timeSource
 

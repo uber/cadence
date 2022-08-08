@@ -38,11 +38,7 @@ func TestDNSPeerChooserFactory(t *testing.T) {
 	ctx := context.Background()
 	interval := 100 * time.Millisecond
 
-	// Ensure default interval is set
-	factory := NewDNSPeerChooserFactory(0, logger)
-	assert.Equal(t, defaultDNSRefreshInterval, factory.interval)
-
-	factory = NewDNSPeerChooserFactory(interval, logger)
+	factory := NewDNSPeerChooserFactory(interval, logger)
 	peerTransport := &fakePeerTransport{}
 
 	// Ensure invalid address returns error

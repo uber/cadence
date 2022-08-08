@@ -608,6 +608,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 
 	workflowID := request.GetWorkflowID()
 	domainID := domainEntry.GetInfo().ID
+	domain := domainEntry.GetInfo().Name
 
 	// grab the current context as a lock, nothing more
 	// use a smaller context timeout to get the lock
@@ -662,6 +663,20 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		)
 		if err != nil {
 			return nil, err
+		}
+	} else if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) && e.visibilityMgr != nil {
+		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
+			DomainUUID: domainID,
+			Domain:     domain,
+			Execution: types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      workflowExecution.RunID,
+			},
+			WorkflowTypeName: request.WorkflowType.Name,
+		}
+
+		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
+			e.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
 		}
 	}
 
@@ -1300,7 +1315,19 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 			scope.IncCounter(metrics.DirectQueryDispatchStickySuccessCount)
 			return &types.HistoryQueryWorkflowResponse{Response: matchingResp}, nil
 		}
-		if yarpcError, ok := err.(*yarpcerrors.Status); !ok || yarpcError.Code() != yarpcerrors.CodeDeadlineExceeded {
+		switch v := err.(type) {
+		case *types.StickyWorkerUnavailableError:
+		case *yarpcerrors.Status:
+			if v.Code() != yarpcerrors.CodeDeadlineExceeded {
+				e.logger.Error("query directly though matching on sticky failed, will not attempt query on non-sticky",
+					tag.WorkflowDomainName(queryRequest.GetDomain()),
+					tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
+					tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
+					tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+					tag.Error(err))
+				return nil, err
+			}
+		default:
 			e.logger.Error("query directly though matching on sticky failed, will not attempt query on non-sticky",
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
@@ -1314,7 +1341,8 @@ func (e *historyEngineImpl) queryDirectlyThroughMatching(
 				tag.WorkflowDomainName(queryRequest.GetDomain()),
 				tag.WorkflowID(queryRequest.Execution.GetWorkflowID()),
 				tag.WorkflowRunID(queryRequest.Execution.GetRunID()),
-				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()))
+				tag.WorkflowQueryType(queryRequest.Query.GetQueryType()),
+				tag.Error(err))
 			resetContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			clearStickinessStopWatch := scope.StartTimer(metrics.DirectQueryDispatchClearStickinessLatency)
 			_, err := e.ResetStickyTaskList(resetContext, &types.HistoryResetStickyTaskListRequest{
@@ -3097,6 +3125,7 @@ func getStartRequest(
 		SearchAttributes:                    request.SearchAttributes,
 		Header:                              request.Header,
 		DelayStartSeconds:                   request.DelayStartSeconds,
+		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
 	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())

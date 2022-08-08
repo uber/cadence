@@ -1054,6 +1054,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 
 func (s *workflowHandlerSuite) TestGetHistory() {
 	domainID := uuid.New()
+	domainName := uuid.New()
 	firstEventID := int64(100)
 	nextEventID := int64(101)
 	branchToken := []byte{1}
@@ -1069,6 +1070,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 		PageSize:      0,
 		NextPageToken: []byte{},
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, req).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{
@@ -1084,7 +1086,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
 	scope := metrics.NoopScope(metrics.Frontend)
-	history, token, err := wh.getHistory(context.Background(), scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
+	history, token, err := wh.getHistory(context.Background(), scope, domainID, domainName, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
 	s.NoError(err)
 	s.NotNil(history)
 	s.Equal([]byte{}, token)
@@ -1197,6 +1199,57 @@ func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHist
 		StartedEvent:   &types.HistoryEvent{ID: nextEventID + 1},
 		ScheduledEvent: &types.HistoryEvent{ID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
+}
+
+func (s *workflowHandlerSuite) TestRestartWorkflowExecution__Success() {
+	dynamicClient := dc.NewInMemoryClient()
+	err := dynamicClient.UpdateValue(dc.SendRawWorkflowHistory, false)
+	s.NoError(err)
+	wh := s.getWorkflowHandler(
+		NewConfig(
+			dc.NewCollection(
+				dynamicClient,
+				s.mockResource.GetLogger()),
+			numHistoryShards,
+			false,
+		),
+	)
+	ctx := context.Background()
+	s.mockHistoryClient.EXPECT().PollMutableState(gomock.Any(), gomock.Any()).Return(&types.PollMutableStateResponse{
+		CurrentBranchToken: []byte(""),
+		Execution: &types.WorkflowExecution{
+			WorkflowID: testRunID,
+		},
+		LastFirstEventID: 0,
+		NextEventID:      2,
+	}, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomainID(gomock.Any()).Return(s.testDomainID, nil).AnyTimes()
+	s.mockVersionChecker.EXPECT().SupportsRawHistoryQuery(gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadHistoryBranchResponse{
+		HistoryEvents: []*types.HistoryEvent{&types.HistoryEvent{
+			ID: 1,
+			WorkflowExecutionStartedEventAttributes: &types.WorkflowExecutionStartedEventAttributes{
+				WorkflowType: &types.WorkflowType{
+					Name: "workflowtype",
+				},
+				TaskList: &types.TaskList{
+					Name: "tasklist",
+				},
+			},
+		}},
+	}, nil).Once()
+	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), gomock.Any()).Return(&types.StartWorkflowExecutionResponse{
+		RunID: testRunID,
+	}, nil)
+	resp, err := wh.RestartWorkflowExecution(ctx, &types.RestartWorkflowExecutionRequest{
+		Domain: s.testDomain,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+		},
+		Identity: "",
+	})
+	s.Equal(resp.GetRunID(), testRunID)
+	s.NoError(err)
 }
 
 func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, transientDecision *types.TransientDecisionInfo, historyEvents []*types.HistoryEvent) {

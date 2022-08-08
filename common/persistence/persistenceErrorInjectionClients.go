@@ -1441,6 +1441,30 @@ func (p *visibilityErrorInjectionPersistenceClient) RecordWorkflowExecutionClose
 	return persistenceErr
 }
 
+func (p *visibilityErrorInjectionPersistenceClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationRecordWorkflowExecutionStarted,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
 func (p *visibilityErrorInjectionPersistenceClient) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,

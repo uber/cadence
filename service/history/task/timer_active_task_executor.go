@@ -649,7 +649,9 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		}
 		continueAsNewInitiator = types.ContinueAsNewInitiatorCronSchedule
 	}
-	if backoffInterval == backoff.NoBackoff {
+	// ignore event id
+	isCanceled, _ := mutableState.IsCancelRequested()
+	if isCanceled || backoffInterval == backoff.NoBackoff {
 		if err := timeoutWorkflow(mutableState, eventBatchFirstEventID); err != nil {
 			return err
 		}
@@ -680,6 +682,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		Header:                              startAttributes.Header,
 		Memo:                                startAttributes.Memo,
 		SearchAttributes:                    startAttributes.SearchAttributes,
+		JitterStartSeconds:                  startAttributes.JitterStartSeconds,
 	}
 	newMutableState, err := retryWorkflow(
 		ctx,

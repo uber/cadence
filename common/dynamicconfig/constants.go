@@ -81,6 +81,30 @@ type (
 	}
 )
 
+// ListAllProductionKeys returns all key used in production
+func ListAllProductionKeys() []Key {
+	result := make([]Key, 0, len(IntKeys)+len(BoolKeys)+len(FloatKeys)+len(StringKeys)+len(DurationKeys)+len(MapKeys))
+	for i := TestGetIntPropertyFilteredByTaskListInfoKey + 1; i < LastIntKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetBoolPropertyFilteredByTaskListInfoKey + 1; i < LastBoolKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetFloat64PropertyKey + 1; i < LastFloatKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetStringPropertyKey + 1; i < LastStringKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetDurationPropertyFilteredByTaskListInfoKey + 1; i < LastDurationKey; i++ {
+		result = append(result, i)
+	}
+	for i := TestGetMapPropertyKey + 1; i < LastMapKey; i++ {
+		result = append(result, i)
+	}
+	return result
+}
+
 func GetKeyFromKeyName(keyName string) (Key, error) {
 	keyVal, ok := _keyNames[keyName]
 	if !ok {
@@ -1489,6 +1513,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainID, WorkflowID
 	EnableReplicationTaskGeneration
+	// EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch
+	// KeyName: history.EnableRecordWorkflowExecutionUninitialized
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: DomainName
+	EnableRecordWorkflowExecutionUninitialized
 	// AllowArchivingIncompleteHistory will continue on when seeing some error like history mutated(usually caused by database consistency issues)
 	// KeyName: worker.AllowArchivingIncompleteHistory
 	// Value type: Bool
@@ -3307,6 +3337,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EmitShardDiffLog is whether emit the shard diff log",
 		DefaultValue: false,
 	},
+	EnableRecordWorkflowExecutionUninitialized: DynamicBool{
+		KeyName:      "history.enableRecordWorkflowExecutionUninitialized",
+		Description:  "EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch",
+		DefaultValue: false,
+	},
 	DisableListVisibilityByFilter: DynamicBool{
 		KeyName:      "frontend.disableListVisibilityByFilter",
 		Description:  "DisableListVisibilityByFilter is config to disable list open/close workflow using filter",
@@ -3889,7 +3924,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	MatchingActivityTaskSyncMatchWaitTime: DynamicDuration{
 		KeyName:      "matching.activityTaskSyncMatchWaitTime",
 		Description:  "MatchingActivityTaskSyncMatchWaitTime is the amount of time activity task will wait to be sync matched",
-		DefaultValue: time.Millisecond * 100,
+		DefaultValue: time.Millisecond * 50,
 	},
 	HistoryLongPollExpirationInterval: DynamicDuration{
 		KeyName:      "history.longPollExpirationInterval",

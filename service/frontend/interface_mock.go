@@ -31,6 +31,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -568,6 +569,21 @@ func (m *MockHandler) RespondQueryTaskCompleted(arg0 context.Context, arg1 *type
 func (mr *MockHandlerMockRecorder) RespondQueryTaskCompleted(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondQueryTaskCompleted", reflect.TypeOf((*MockHandler)(nil).RespondQueryTaskCompleted), arg0, arg1)
+}
+
+// RestartWorkflowExecution mocks base method.
+func (m *MockHandler) RestartWorkflowExecution(arg0 context.Context, arg1 *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestartWorkflowExecution", arg0, arg1)
+	ret0, _ := ret[0].(*types.RestartWorkflowExecutionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RestartWorkflowExecution indicates an expected call of RestartWorkflowExecution.
+func (mr *MockHandlerMockRecorder) RestartWorkflowExecution(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartWorkflowExecution", reflect.TypeOf((*MockHandler)(nil).RestartWorkflowExecution), arg0, arg1)
 }
 
 // ScanWorkflowExecutions mocks base method.

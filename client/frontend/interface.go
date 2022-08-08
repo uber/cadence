@@ -29,6 +29,7 @@ import (
 )
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination interface_mock.go -self_package github.com/uber/cadence/client/frontend
+//go:generate gowrap gen -g -p . -i Client -t ./template/retry -o retryableClient.go
 
 // Client is the interface exposed by frontend service client
 type Client interface {
@@ -66,6 +67,7 @@ type Client interface {
 	RespondDecisionTaskCompleted(context.Context, *types.RespondDecisionTaskCompletedRequest, ...yarpc.CallOption) (*types.RespondDecisionTaskCompletedResponse, error)
 	RespondDecisionTaskFailed(context.Context, *types.RespondDecisionTaskFailedRequest, ...yarpc.CallOption) error
 	RespondQueryTaskCompleted(context.Context, *types.RespondQueryTaskCompletedRequest, ...yarpc.CallOption) error
+	RestartWorkflowExecution(context.Context, *types.RestartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error)
 	ScanWorkflowExecutions(context.Context, *types.ListWorkflowExecutionsRequest, ...yarpc.CallOption) (*types.ListWorkflowExecutionsResponse, error)
 	SignalWithStartWorkflowExecution(context.Context, *types.SignalWithStartWorkflowExecutionRequest, ...yarpc.CallOption) (*types.StartWorkflowExecutionResponse, error)
 	SignalWorkflowExecution(context.Context, *types.SignalWorkflowExecutionRequest, ...yarpc.CallOption) error

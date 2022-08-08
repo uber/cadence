@@ -76,6 +76,7 @@ type (
 		IsTimeoutError(error) bool
 		IsNotFoundError(error) bool
 		IsThrottlingError(error) bool
+		IsDBUnavailableError(error) bool
 	}
 
 	/**

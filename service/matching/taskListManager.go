@@ -78,6 +78,7 @@ type (
 		DispatchQueryTask(ctx context.Context, taskID string, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
 		CancelPoller(pollerID string)
 		GetAllPollerInfo() []*types.PollerInfo
+		HasPollerAfter(accessTime time.Time) bool
 		// DescribeTaskList returns information about the target tasklist
 		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
@@ -177,7 +178,7 @@ func newTaskListManager(
 	)
 	tlMgr.pollerHistory = newPollerHistory(func() {
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
-			float64(len(tlMgr.pollerHistory.getAllPollerInfo())))
+			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
@@ -342,6 +343,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	identity, ok := ctx.Value(identityKey).(string)
 	if ok && identity != "" {
 		c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+		defer func() {
+			// to update timestamp of this poller when long poll ends
+			c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+		}()
 	}
 
 	domainEntry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
@@ -365,7 +370,20 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes
 func (c *taskListManagerImpl) GetAllPollerInfo() []*types.PollerInfo {
-	return c.pollerHistory.getAllPollerInfo()
+	return c.pollerHistory.getPollerInfo(time.Time{})
+}
+
+// HasPollerAfter checks if there is any poller after a timestamp
+func (c *taskListManagerImpl) HasPollerAfter(accessTime time.Time) bool {
+	inflightPollerCount := 0
+	c.outstandingPollsLock.Lock()
+	inflightPollerCount = len(c.outstandingPollsMap)
+	c.outstandingPollsLock.Unlock()
+	if inflightPollerCount > 0 {
+		return true
+	}
+	recentPollers := c.pollerHistory.getPollerInfo(accessTime)
+	return len(recentPollers) > 0
 }
 
 func (c *taskListManagerImpl) CancelPoller(pollerID string) {

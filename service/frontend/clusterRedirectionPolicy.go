@@ -242,12 +242,11 @@ func (policy *selectedOrAllAPIsForwardingRedirectionPolicy) getTargetClusterAndI
 	if policy.allDomainAPIs {
 		if policy.targetCluster == "" {
 			return currentActiveCluster, true
-		} else {
-			if policy.targetCluster == currentActiveCluster {
-				return currentActiveCluster, true
-			}
-			// fallback to selected APIs if targetCluster is not empty and not the same as currentActiveCluster
 		}
+		if policy.targetCluster == currentActiveCluster {
+			return currentActiveCluster, true
+		}
+		// fallback to selected APIs if targetCluster is not empty and not the same as currentActiveCluster
 	}
 
 	_, ok := policy.selectedAPIs[apiName]

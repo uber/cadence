@@ -212,10 +212,15 @@ func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg mess
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
 		doc := p.generateESDoc(indexMsg, keyToKafkaMsg)
 		req.Doc = doc
-		req.IsDelete = false
+		req.RequestType = es.BulkableIndexRequest
 	case indexer.MessageTypeDelete:
 		keyToKafkaMsg = docID
-		req.IsDelete = true
+		req.RequestType = es.BulkableDeleteRequest
+	case indexer.MessageTypeCreate:
+		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
+		doc := p.generateESDoc(indexMsg, keyToKafkaMsg)
+		req.Doc = doc
+		req.RequestType = es.BulkableCreateRequest
 	default:
 		logger.Error("Unknown message type")
 		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)

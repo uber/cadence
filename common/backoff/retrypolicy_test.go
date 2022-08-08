@@ -21,6 +21,7 @@
 package backoff
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 
@@ -44,6 +45,7 @@ func TestRetryPolicySuite(t *testing.T) {
 }
 
 func (s *RetryPolicySuite) SetupTest() {
+	rand.Seed(int64(time.Now().Nanosecond()))
 	s.Assertions = require.New(s.T()) // Have to define our overridden assertions in the test setup. If we did it earlier, s.T() will return nil
 }
 
@@ -159,17 +161,19 @@ func (s *RetryPolicySuite) TestDefaultPublishRetryPolicy() {
 		10000 * time.Millisecond,
 		10000 * time.Millisecond,
 		6000 * time.Millisecond,
-		1300 * time.Millisecond,
+		1250 * time.Millisecond,
 		done,
 	}
 
-	for _, expected := range expectedResult {
+	total := 0
+	for i, expected := range expectedResult {
 		next := r.NextBackOff()
+		total += int(next)
 		if expected == done {
 			s.Equal(done, next, "backoff not done yet!!!")
 		} else {
 			min, _ := getNextBackoffRange(expected)
-			s.True(next >= min, "NextBackoff too low: actual: %v, expected: %v", next, expected)
+			s.True(next >= min, "iteration %d: NextBackoff too low: actual: %v, expected: %v", i, next, expected)
 			// s.True(next < max, "NextBackoff too high: actual: %v, expected: %v", next, expected)
 			clock.moveClock(expected)
 		}
@@ -222,7 +226,7 @@ func (s *RetryPolicySuite) TestMultiPhasesRetryPolicy() {
 		32 * time.Second,
 		64 * time.Second,
 		128 * time.Second,
-		46 * time.Second,
+		45650 * time.Millisecond,
 		done,
 	}
 	for _, expected := range expectedResult {

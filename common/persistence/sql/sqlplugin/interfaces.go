@@ -834,7 +834,7 @@ type (
 		ErrorChecker
 
 		GetTotalNumDBShards() int
-		BeginTx(dbShardID int, ctx context.Context) (Tx, error)
+		BeginTx(ctx context.Context, dbShardID int) (Tx, error)
 		PluginName() string
 		Close() error
 	}

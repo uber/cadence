@@ -235,6 +235,45 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed_EmptyRequest() {
 	s.NoError(err)
 }
 
+func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
+	request.DomainUUID = "domainID"
+	request.WorkflowID = "wid"
+	request.RunID = "rid"
+	request.WorkflowTypeName = "wfType"
+
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
+		fields := input.Fields
+		s.Equal(request.DomainUUID, input.GetDomainID())
+		s.Equal(request.WorkflowID, input.GetWorkflowID())
+		s.Equal(request.RunID, input.GetRunID())
+		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionUninitialized(ctx, request)
+	s.NoError(err)
+}
+
+func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized_EmptyRequest() {
+	// test empty request
+	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
+	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
+		s.Equal(indexer.MessageTypeCreate, input.GetMessageType())
+		return true
+	})).Return(nil).Once()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	err := s.visibilityStore.RecordWorkflowExecutionUninitialized(ctx, request)
+	s.NoError(err)
+}
+
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutions() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.True(input.IsOpen)

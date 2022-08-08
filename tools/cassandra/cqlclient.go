@@ -87,6 +87,9 @@ const (
 
 	createKeyspaceCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
+
+	createNTSKeyspaceCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
+		`WITH replication = { 'class' : 'NetworkTopologyStrategy', '%v' : %v};`
 )
 
 var _ schema.SchemaClient = (*CqlClient)(nil)
@@ -128,6 +131,11 @@ func (client *CqlClient) DropDatabase(name string) error {
 // createKeyspace creates a cassandra Keyspace if it doesn't exist
 func (client *CqlClient) CreateKeyspace(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
+}
+
+// createNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
+func (client *CqlClient) CreateNTSKeyspace(name string, datacenter string) error {
+	return client.ExecDDLQuery(fmt.Sprintf(createNTSKeyspaceCQL, name, datacenter, client.nReplicas))
 }
 
 // DropKeyspace drops a Keyspace

@@ -108,6 +108,19 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
 }
 
+func (v *visibilityManagerImpl) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	req := &InternalRecordWorkflowExecutionUninitializedRequest{
+		DomainUUID:       request.DomainUUID,
+		WorkflowID:       request.Execution.GetWorkflowID(),
+		RunID:            request.Execution.GetRunID(),
+		WorkflowTypeName: request.WorkflowTypeName,
+	}
+	return v.persistence.RecordWorkflowExecutionUninitialized(ctx, req)
+}
+
 func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,

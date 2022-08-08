@@ -31,8 +31,9 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	types "github.com/uber/cadence/common/types"
 	yarpc "go.uber.org/yarpc"
+
+	types "github.com/uber/cadence/common/types"
 )
 
 // MockClient is a mock of Client interface.
@@ -724,6 +725,26 @@ func (mr *MockClientMockRecorder) RespondQueryTaskCompleted(arg0, arg1 interface
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RespondQueryTaskCompleted", reflect.TypeOf((*MockClient)(nil).RespondQueryTaskCompleted), varargs...)
+}
+
+// RestartWorkflowExecution mocks base method.
+func (m *MockClient) RestartWorkflowExecution(arg0 context.Context, arg1 *types.RestartWorkflowExecutionRequest, arg2 ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RestartWorkflowExecution", varargs...)
+	ret0, _ := ret[0].(*types.RestartWorkflowExecutionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RestartWorkflowExecution indicates an expected call of RestartWorkflowExecution.
+func (mr *MockClientMockRecorder) RestartWorkflowExecution(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartWorkflowExecution", reflect.TypeOf((*MockClient)(nil).RestartWorkflowExecution), varargs...)
 }
 
 // ScanWorkflowExecutions mocks base method.
