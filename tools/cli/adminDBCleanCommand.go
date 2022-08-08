@@ -34,6 +34,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -181,7 +182,7 @@ func fixExecution(
 	var ivs []invariant.Invariant
 
 	for _, fn := range invariants {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, cache.NewNoOpDomainCache()))
 	}
 
 	ctx, cancel := newContext(c)

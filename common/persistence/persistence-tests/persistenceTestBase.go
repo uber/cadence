@@ -35,6 +35,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -80,6 +81,7 @@ type (
 		TaskMgr                   persistence.TaskManager
 		HistoryV2Mgr              persistence.HistoryManager
 		DomainManager             persistence.DomainManager
+		DomainCache               cache.DomainCache
 		DomainReplicationQueueMgr persistence.QueueManager
 		ShardInfo                 *persistence.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
@@ -116,6 +118,7 @@ func NewTestBaseFromParams(params TestBaseParams) TestBase {
 	if err != nil {
 		panic(err)
 	}
+
 	return TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
@@ -200,6 +203,9 @@ func (s *TestBase) Setup() {
 
 	s.DomainManager, err = factory.NewDomainManager()
 	s.fatalOnError("NewDomainManager", err)
+
+	s.DomainCache = cache.NewDomainCache(s.DomainManager, metricsClient, s.Logger)
+	s.fatalOnError("NewDomainCache", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)
@@ -364,7 +370,8 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 			Checksum:         testWorkflowChecksum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
+		RangeID:    s.ShardInfo.RangeID,
+		DomainName: s.DomainManager.GetName(),
 	})
 
 	return response, err
@@ -439,7 +446,8 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 			TimerTasks:       timerTasks,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
+		RangeID:    s.ShardInfo.RangeID,
+		DomainName: s.DomainManager.GetName(),
 	})
 
 	return response, err
@@ -550,8 +558,9 @@ func (s *TestBase) ContinueAsNewExecution(
 			TimerTasks:       nil,
 			VersionHistories: versionHistories,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: s.DomainManager.GetName(),
 	}
 	req.UpdateWorkflowMutation.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	req.UpdateWorkflowMutation.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
@@ -623,7 +632,8 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 			DeleteTimerInfos:    nil,
 			VersionHistories:    versionHistories,
 		},
-		Encoding: pickRandomEncoding(),
+		Encoding:   pickRandomEncoding(),
+		DomainName: s.DomainManager.GetName(),
 	})
 	return err
 }

@@ -28,6 +28,7 @@ import (
 
 	"go.uber.org/cadence/workflow"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
@@ -55,6 +56,7 @@ type ManagerCB func(
 	context.Context,
 	persistence.Retryer,
 	ScanShardActivityParams,
+	cache.DomainCache,
 ) invariant.Manager
 
 // IteratorCB is a function which returns iterator for scanner.

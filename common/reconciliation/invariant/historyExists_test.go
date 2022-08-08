@@ -27,11 +27,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	c2 "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -135,11 +137,9 @@ func (s *HistoryExistsSuite) TestCheck() {
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		historyManager.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
 
-		//TO DO: add domainCache for mocking the added behaviour of cache call for domainName in historyExists.go
-		//ctrl := gomock.NewController(s.T())
-		// domainCache := cache.NewMockDomainCache(ctrl)
-		// domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil)
-		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()))
+		ctrl := gomock.NewController(s.T())
+		domainCache := cache.NewMockDomainCache(ctrl)
+		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()), domainCache)
 		result := i.Check(context.Background(), getOpenConcreteExecution())
 		s.Equal(tc.expectedResult, result)
 

@@ -88,7 +88,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 	testCases := []struct {
 		params       ScanShardActivityParams
 		wantErr      bool
-		managerHook  func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) invariant.Manager
+		managerHook  func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, cache cache.DomainCache) invariant.Manager
 		itHook       func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) pagination.Iterator
 		workflowName string
 	}{
@@ -96,7 +96,7 @@ func (s *activitiesSuite) TestScanShardActivity() {
 			params: ScanShardActivityParams{
 				Shards: []int{0},
 			},
-			managerHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams) invariant.Manager {
+			managerHook: func(ctx context.Context, pr persistence.Retryer, params ScanShardActivityParams, cache cache.DomainCache) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
 				manager.EXPECT().RunChecks(gomock.Any(), gomock.Any()).
 					AnyTimes().
@@ -185,7 +185,7 @@ func (s *activitiesSuite) TestFixShardActivity() {
 				},
 				ResolvedFixerWorkflowConfig: ResolvedFixerWorkflowConfig{},
 			},
-			managerHook: func(ctx context.Context, pr persistence.Retryer, p FixShardActivityParams) invariant.Manager {
+			managerHook: func(ctx context.Context, pr persistence.Retryer, p FixShardActivityParams, cache cache.DomainCache) invariant.Manager {
 				manager := invariant.NewMockManager(s.controller)
 				manager.EXPECT().RunFixes(gomock.Any(), gomock.Any()).
 					AnyTimes().

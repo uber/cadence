@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -34,15 +35,17 @@ import (
 type (
 	concreteExecutionExists struct {
 		pr persistence.Retryer
+		dc cache.DomainCache
 	}
 )
 
 // NewConcreteExecutionExists returns a new invariant for checking concrete execution
 func NewConcreteExecutionExists(
-	pr persistence.Retryer,
+	pr persistence.Retryer, dc cache.DomainCache,
 ) Invariant {
 	return &concreteExecutionExists{
 		pr: pr,
+		dc: dc,
 	}
 }
 

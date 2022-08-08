@@ -31,6 +31,7 @@ import (
 	"go.uber.org/zap"
 
 	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -134,7 +135,7 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context, fixList []entity.Executio
 	}
 }
 
-func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]invariant.FixResult, error) {
+func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution, cache cache.DomainCache) ([]invariant.FixResult, error) {
 	var result []invariant.FixResult
 	index := 0
 	if activity.HasHeartbeatDetails(ctx) {
@@ -157,11 +158,11 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]
 			return nil, err
 		}
 
-		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr)
+		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr, cache)
 		fixResult := currentExecutionInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
 		//TO DO: Add domainCache : cache.DomainCache for adding parameter in NewHistoryExists
-		historyInvariant := invariant.NewHistoryExists(pr)
+		historyInvariant := invariant.NewHistoryExists(pr, cache)
 		fixResult = historyInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
 		activity.RecordHeartbeat(ctx, index)

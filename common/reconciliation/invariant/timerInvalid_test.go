@@ -136,7 +136,9 @@ func (ts *TimerInvalidTest) TestCheck() {
 			entity:     &entity.Timer{},
 		},
 	}
-
+	//To do: to add domainName for metrics creation
+	// controller := gomock.NewController(ts.T())
+	// mockDomainCache := cache.NewMockDomainCache(controller)
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
@@ -147,6 +149,7 @@ func (ts *TimerInvalidTest) TestCheck() {
 					nil,
 					common.CreatePersistenceRetryPolicy(),
 				),
+				//mockDomainCache,
 			)
 			ctx := context.Background()
 			if tc.ctxExpired {
@@ -260,7 +263,9 @@ func (ts *TimerInvalidTest) TestFix() {
 			ttComplete: nil,
 		},
 	}
-
+	//To Do: add mockDomainCache for GetWorkflowExecutionRequest
+	// controller := gomock.NewController(ts.T())
+	// mockDomainCache := cache.NewMockDomainCache(controller)
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
@@ -272,6 +277,7 @@ func (ts *TimerInvalidTest) TestFix() {
 					nil,
 					common.CreatePersistenceRetryPolicy(),
 				),
+				//mockDomainCache,
 			)
 			ctx := context.Background()
 			if tc.ctxExpired {

@@ -26,6 +26,7 @@ import (
 	"context"
 
 	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -39,16 +40,16 @@ type (
 	//To DO: domainCache cache.DomainCache
 	historyExists struct {
 		pr persistence.Retryer
+		dc cache.DomainCache
 	}
 )
 
-// NewHistoryExists returns a new history exists invariant
-//To Do: add dc cache.DomainCache   :: domainCache: dc,
 func NewHistoryExists(
-	pr persistence.Retryer,
+	pr persistence.Retryer, dc cache.DomainCache,
 ) Invariant {
 	return &historyExists{
 		pr: pr,
+		dc: dc,
 	}
 }
 
