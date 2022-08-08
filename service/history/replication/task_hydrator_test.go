@@ -99,6 +99,7 @@ func TestTaskHydrator_UnknownTask(t *testing.T) {
 	result, err := th.Hydrate(context.Background(), task)
 	assert.Equal(t, errUnknownReplicationTask, err)
 	assert.Nil(t, result)
+	assert.True(t, th.msProvider.(*fakeMutableStateProvider).released)
 }
 
 func TestTaskHydrator_HydrateFailoverMarkerTask(t *testing.T) {
@@ -273,6 +274,7 @@ func TestTaskHydrator_HydrateSyncActivityTask(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectTask, actualTask)
 			}
+			assert.True(t, th.msProvider.(*fakeMutableStateProvider).released)
 		})
 	}
 }
@@ -446,6 +448,7 @@ func TestTaskHydrator_HydrateHistoryReplicationTask(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectTask, actualTask)
 			}
+			assert.True(t, th.msProvider.(*fakeMutableStateProvider).released)
 		})
 	}
 }
@@ -579,18 +582,23 @@ func TestMutableStateLoader_GetMutableState(t *testing.T) {
 
 type fakeMutableStateProvider struct {
 	workflows map[definition.WorkflowIdentifier]mutableState
+	released  bool
 }
 
-func (msp fakeMutableStateProvider) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error) {
+func (msp *fakeMutableStateProvider) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error) {
+	releaseFn := func(error) {
+		msp.released = true
+	}
+
 	if msp.workflows == nil {
-		return nil, execution.NoopReleaseFn, errors.New("error loading mutable state")
+		return nil, releaseFn, errors.New("error loading mutable state")
 	}
 
 	ms, ok := msp.workflows[definition.NewWorkflowIdentifier(domainID, workflowID, runID)]
 	if !ok {
-		return nil, execution.NoopReleaseFn, &types.EntityNotExistsError{}
+		return nil, releaseFn, &types.EntityNotExistsError{}
 	}
-	return ms, execution.NoopReleaseFn, nil
+	return ms, releaseFn, nil
 }
 
 type fakeMutableState struct {

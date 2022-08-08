@@ -70,18 +70,23 @@ func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryMana
 }
 
 // Hydrate will enrich replication task with additional information from mutable state and history events.
-func (h TaskHydrator) Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.ReplicationTask, error) {
+func (h TaskHydrator) Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo) (retTask *types.ReplicationTask, retErr error) {
 	switch task.TaskType {
 	case persistence.ReplicationTaskTypeFailoverMarker:
 		return hydrateFailoverMarkerTask(task), nil
 	}
 
 	ms, release, err := h.msProvider.GetMutableState(ctx, task.DomainID, task.WorkflowID, task.RunID)
+	defer func() {
+		if release != nil {
+			release(retErr)
+		}
+	}()
+
 	if common.IsEntityNotExistsError(err) {
 		return nil, nil
 	}
 	if err != nil {
-		release(err)
 		return nil, err
 	}
 
