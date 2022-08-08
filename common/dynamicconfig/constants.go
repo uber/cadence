@@ -1064,12 +1064,6 @@ const (
 	// Default value: 10
 	// Allowed filters: ShardID
 	ReplicationTaskProcessorErrorRetryMaxAttempts
-	// ReplicationTaskProcessorReadHistoryBatchSize is the batch size to read history events
-	// KeyName: history.ReplicationTaskProcessorReadHistoryBatchSize
-	// Value type: Int
-	// Default value: 5
-	// Allowed filters: N/A
-	ReplicationTaskProcessorReadHistoryBatchSize
 
 	// key for worker
 
@@ -3123,11 +3117,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "history.ReplicationTaskProcessorErrorRetryMaxAttempts",
 		Description:  "ReplicationTaskProcessorErrorRetryMaxAttempts is the max retry attempts for applying replication tasks",
 		DefaultValue: 10,
-	},
-	ReplicationTaskProcessorReadHistoryBatchSize: DynamicInt{
-		KeyName:      "history.ReplicationTaskProcessorReadHistoryBatchSize",
-		Description:  "ReplicationTaskProcessorReadHistoryBatchSize is the batch size to read history events",
-		DefaultValue: 5,
 	},
 	WorkerPersistenceMaxQPS: DynamicInt{
 		KeyName:      "worker.persistenceMaxQPS",
