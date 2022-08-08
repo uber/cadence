@@ -236,12 +236,17 @@ func (r *branchManagerImpl) createNewBranch(
 	executionInfo := r.mutableState.GetExecutionInfo()
 	domainID := executionInfo.DomainID
 	workflowID := executionInfo.WorkflowID
+	domainName, err := r.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return 0, err
+	}
 
 	resp, err := r.historyV2Mgr.ForkHistoryBranch(ctx, &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: baseBranchToken,
 		ForkNodeID:      baseBranchLastEventID + 1,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, uuid.New()),
 		ShardID:         common.IntPtr(shardID),
+		DomainName:      domainName,
 	})
 	if err != nil {
 		return 0, err

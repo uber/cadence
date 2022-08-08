@@ -1323,7 +1323,7 @@ func (p *historyPersistenceClient) ReadHistoryBranchByBatch(
 		resp, err = p.persistence.ReadHistoryBranchByBatch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1341,7 +1341,7 @@ func (p *historyPersistenceClient) ReadRawHistoryBranch(
 		resp, err = p.persistence.ReadRawHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1359,7 +1359,7 @@ func (p *historyPersistenceClient) ForkHistoryBranch(
 		resp, err = p.persistence.ForkHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceForkHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceForkHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1374,7 +1374,7 @@ func (p *historyPersistenceClient) DeleteHistoryBranch(
 	op := func() error {
 		return p.persistence.DeleteHistoryBranch(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op)
+	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
@@ -1408,7 +1408,7 @@ func (p *historyPersistenceClient) GetHistoryTree(
 		resp, err = p.persistence.GetHistoryTree(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetHistoryTreeScope, op)
+	err := p.call(metrics.PersistenceGetHistoryTreeScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}

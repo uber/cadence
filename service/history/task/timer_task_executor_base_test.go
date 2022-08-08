@@ -127,7 +127,7 @@ func (s *timerQueueTaskExecutorBaseSuite) TestDeleteWorkflow_NoErr() {
 	}
 	wfContext := execution.NewContext(task.DomainID, executionInfo, s.mockShard, s.mockExecutionManager, log.NewNoop())
 
-	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("Sample", nil)
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("Sample", nil).AnyTimes()
 
 	s.mockExecutionManager.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(nil).Once()
 	s.mockExecutionManager.On("DeleteWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
