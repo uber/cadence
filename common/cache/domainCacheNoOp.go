@@ -26,7 +26,7 @@ func (c *noOpDomainCache) GetCacheSize() (sizeOfCacheByName int64, sizeOfCacheBy
 }
 
 func (c *noOpDomainCache) GetAllDomain() map[string]*DomainCacheEntry {
-	return nil
+	return map[string]*DomainCacheEntry{}
 }
 
 func (c *noOpDomainCache) RegisterDomainChangeCallback(
@@ -45,13 +45,13 @@ func (c *noOpDomainCache) UnregisterDomainChangeCallback(
 func (c *noOpDomainCache) GetDomain(
 	name string,
 ) (*DomainCacheEntry, error) {
-	return nil, nil
+	return &DomainCacheEntry{}, nil
 }
 
 func (c *noOpDomainCache) GetDomainByID(
 	id string,
 ) (*DomainCacheEntry, error) {
-	return nil, nil
+	return &DomainCacheEntry{}, nil
 }
 
 func (c *noOpDomainCache) GetDomainID(
@@ -69,14 +69,14 @@ func (c *noOpDomainCache) GetDomainName(
 func (c *noOpDomainCache) getDomain(
 	name string,
 ) (*DomainCacheEntry, error) {
-	return nil, nil
+	return &DomainCacheEntry{}, nil
 }
 
 func (c *noOpDomainCache) getDomainByID(
 	id string,
 	deepCopy bool,
 ) (*DomainCacheEntry, error) {
-	return nil, nil
+	return &DomainCacheEntry{}, nil
 }
 
 func NewNoOpDomainCache() DomainCache {
