@@ -218,7 +218,7 @@ func NewEngineWithShardContext(
 		shard.GetHistoryManager(),
 		common.CreatePersistenceRetryPolicy(),
 	)
-	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry, shard.GetDomainCache())
+	openExecutionCheck := invariant.NewConcreteExecutionExists(pRetry)
 
 	historyEngImpl.txProcessor = queue.NewTransferQueueProcessor(
 		shard,

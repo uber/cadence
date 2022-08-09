@@ -131,17 +131,18 @@ func (s *HistoryExistsSuite) TestCheck() {
 		},
 	}
 
+	ctrl := gomock.NewController(s.T())
+	domainCache := cache.NewMockDomainCache(ctrl)
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		historyManager := &mocks.HistoryV2Manager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		historyManager.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
-
-		ctrl := gomock.NewController(s.T())
-		domainCache := cache.NewMockDomainCache(ctrl)
+		domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil)
 		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()), domainCache)
 		result := i.Check(context.Background(), getOpenConcreteExecution())
 		s.Equal(tc.expectedResult, result)
 
 	}
+	ctrl.Finish()
 }

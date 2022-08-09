@@ -35,7 +35,6 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -81,7 +80,6 @@ type (
 		TaskMgr                   persistence.TaskManager
 		HistoryV2Mgr              persistence.HistoryManager
 		DomainManager             persistence.DomainManager
-		DomainCache               cache.DomainCache
 		DomainReplicationQueueMgr persistence.QueueManager
 		ShardInfo                 *persistence.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
@@ -203,9 +201,6 @@ func (s *TestBase) Setup() {
 
 	s.DomainManager, err = factory.NewDomainManager()
 	s.fatalOnError("NewDomainManager", err)
-
-	s.DomainCache = cache.NewDomainCache(s.DomainManager, metricsClient, s.Logger)
-	s.fatalOnError("NewDomainCache", err)
 
 	s.HistoryV2Mgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)
@@ -558,9 +553,10 @@ func (s *TestBase) ContinueAsNewExecution(
 			TimerTasks:       nil,
 			VersionHistories: versionHistories,
 		},
-		RangeID:    s.ShardInfo.RangeID,
-		Encoding:   pickRandomEncoding(),
-		DomainName: s.DomainManager.GetName(),
+		RangeID:  s.ShardInfo.RangeID,
+		Encoding: pickRandomEncoding(),
+		//To DO: next PR for UpdateWorkflowExecution
+		//DomainName: s.DomainManager.GetName(),
 	}
 	req.UpdateWorkflowMutation.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	req.UpdateWorkflowMutation.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
@@ -632,8 +628,9 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 			DeleteTimerInfos:    nil,
 			VersionHistories:    versionHistories,
 		},
-		Encoding:   pickRandomEncoding(),
-		DomainName: s.DomainManager.GetName(),
+		Encoding: pickRandomEncoding(),
+		//To DO: next PR for UpdateWorkflowExecution
+		//DomainName: s.DomainManager.GetName(),
 	})
 	return err
 }

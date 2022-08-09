@@ -961,7 +961,8 @@ type (
 
 		Encoding common.EncodingType // optional binary encoding type
 
-		DomainName string
+		//TO DO: add DomainName for UpdateWorkflowExecution
+		//DomainName string
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run
