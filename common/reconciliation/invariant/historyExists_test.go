@@ -133,6 +133,7 @@ func (s *HistoryExistsSuite) TestCheck() {
 
 	ctrl := gomock.NewController(s.T())
 	domainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		historyManager := &mocks.HistoryV2Manager{}
@@ -144,5 +145,4 @@ func (s *HistoryExistsSuite) TestCheck() {
 		s.Equal(tc.expectedResult, result)
 
 	}
-	ctrl.Finish()
 }
