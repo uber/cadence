@@ -135,7 +135,7 @@ func CheckDataCorruptionWorkflow(ctx workflow.Context, fixList []entity.Executio
 	}
 }
 
-func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution, cache cache.DomainCache) ([]invariant.FixResult, error) {
+func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]invariant.FixResult, error) {
 	var result []invariant.FixResult
 	index := 0
 	if activity.HasHeartbeatDetails(ctx) {
@@ -144,7 +144,7 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution, cac
 
 	for index < len(fixList) {
 		execution := fixList[index]
-		pr, err := getDefaultDAO(ctx, execution.ShardID)
+		pr, cache, err := getDefaultDAO(ctx, execution.ShardID)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,6 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution, cac
 		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr, cache)
 		fixResult := currentExecutionInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
-		//TO DO: Add domainCache : cache.DomainCache for adding parameter in NewHistoryExists
 		historyInvariant := invariant.NewHistoryExists(pr, cache)
 		fixResult = historyInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
@@ -174,19 +173,19 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution, cac
 func getDefaultDAO(
 	ctx context.Context,
 	shardID int,
-) (persistence.Retryer, error) {
+) (persistence.Retryer, cache.DomainCache, error) {
 	sc, err := getScannerContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
+		return nil, nil, fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
 	}
 	res := sc.resource
-
+	cache := res.GetDomainCache()
 	execManager, err := res.GetExecutionManager(shardID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pr := persistence.NewPersistenceRetryer(execManager, res.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
-	return pr, nil
+	return pr, cache, nil
 }
 
 func EmitResultMetricsActivity(ctx context.Context, fixResults []invariant.FixResult) error {
