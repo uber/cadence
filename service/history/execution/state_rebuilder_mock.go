@@ -32,6 +32,7 @@ import (
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+
 	definition "github.com/uber/cadence/common/definition"
 )
 
