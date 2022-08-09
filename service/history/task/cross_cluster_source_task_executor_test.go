@@ -86,6 +86,7 @@ func (s *crossClusterSourceTaskExecutorSuite) SetupTest() {
 		s.mockShard.GetConfig(),
 		s.mockShard.GetLogger(),
 		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetDomainCache(),
 	))
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockEngine.EXPECT().NotifyNewHistoryEvent(gomock.Any()).AnyTimes()

@@ -445,10 +445,15 @@ func (adh *adminHandlerImpl) deleteWorkflowFromHistory(
 			logger.Error("Cannot decode thrift object", tag.Error(err))
 			continue
 		}
+		domainName, err := adh.GetDomainCache().GetDomainName(mutableState.ExecutionInfo.DomainID)
+		if err != nil {
+			return false
+		}
 		logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
 		err = historyManager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     &shardIDInt,
+			DomainName:  domainName,
 		})
 		if err != nil {
 			logger.Error("Failed to delete history", tag.Error(err))
@@ -821,6 +826,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		PageSize:      pageSize,
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    request.GetDomain(),
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {

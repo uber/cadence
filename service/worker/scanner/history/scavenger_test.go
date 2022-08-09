@@ -34,6 +34,7 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -46,8 +47,9 @@ import (
 type (
 	ScavengerTestSuite struct {
 		suite.Suite
-		logger log.Logger
-		metric metrics.Client
+		logger    log.Logger
+		metric    metrics.Client
+		mockCache *cache.MockDomainCache
 	}
 )
 
@@ -62,15 +64,16 @@ func (s *ScavengerTestSuite) SetupTest() {
 	}
 	s.logger = loggerimpl.NewLogger(zapLogger)
 	s.metric = metrics.NewClient(tally.NoopScope, metrics.Worker)
+	controller := gomock.NewController(s.T())
+	s.mockCache = cache.NewMockDomainCache(controller)
 }
 
 func (s *ScavengerTestSuite) createTestScavenger(rps int) (*mocks.HistoryV2Manager, *history.MockClient, *Scavenger, *gomock.Controller) {
 	db := &mocks.HistoryV2Manager{}
 	controller := gomock.NewController(s.T())
 	workflowClient := history.NewMockClient(controller)
-
 	maxWorkflowRetentionInDays := dynamicconfig.GetIntPropertyFn(dynamicconfig.MaxRetentionDays.DefaultInt())
-	scvgr := NewScavenger(db, rps, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays)
+	scvgr := NewScavenger(db, rps, workflowClient, ScavengerHeartbeatDetails{}, s.metric, s.logger, maxWorkflowRetentionInDays, s.mockCache)
 	scvgr.isInTest = true
 	return db, workflowClient, scvgr, controller
 }
@@ -330,30 +333,35 @@ func (s *ScavengerTestSuite) TestDeletingBranchesTwoPages() {
 			RunID:      "runID4",
 		},
 	}).Return(nil, &types.EntityNotExistsError{})
-
+	domainName := "test-domainName"
+	s.mockCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	branchToken1, err := p.NewHistoryBranchTokenByBranchID("treeID1", "branchID1")
 	s.Nil(err)
 	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken1,
 		ShardID:     common.IntPtr(1),
+		DomainName:  domainName,
 	}).Return(nil).Once()
 	branchToken2, err := p.NewHistoryBranchTokenByBranchID("treeID2", "branchID2")
 	s.Nil(err)
 	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken2,
 		ShardID:     common.IntPtr(1),
+		DomainName:  domainName,
 	}).Return(nil).Once()
 	branchToken3, err := p.NewHistoryBranchTokenByBranchID("treeID3", "branchID3")
 	s.Nil(err)
 	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken3,
 		ShardID:     common.IntPtr(1),
+		DomainName:  domainName,
 	}).Return(nil).Once()
 	branchToken4, err := p.NewHistoryBranchTokenByBranchID("treeID4", "branchID4")
 	s.Nil(err)
 	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken4,
 		ShardID:     common.IntPtr(1),
+		DomainName:  domainName,
 	}).Return(nil).Once()
 
 	hbd, err := scvgr.Run(context.Background())
@@ -440,12 +448,14 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 			RunID:      "runID5",
 		},
 	}).Return(nil, nil)
-
+	domainName := "test-domainName"
+	s.mockCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	branchToken3, err := p.NewHistoryBranchTokenByBranchID("treeID3", "branchID3")
 	s.Nil(err)
 	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken3,
 		ShardID:     common.IntPtr(1),
+		DomainName:  domainName,
 	}).Return(nil).Once()
 
 	branchToken4, err := p.NewHistoryBranchTokenByBranchID("treeID4", "branchID4")
@@ -453,6 +463,7 @@ func (s *ScavengerTestSuite) TestMixesTwoPages() {
 	db.On("DeleteHistoryBranch", mock.Anything, &p.DeleteHistoryBranchRequest{
 		BranchToken: branchToken4,
 		ShardID:     common.IntPtr(1),
+		DomainName:  domainName,
 	}).Return(fmt.Errorf("failed to delete history")).Once()
 
 	hbd, err := scvgr.Run(context.Background())

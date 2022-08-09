@@ -1660,6 +1660,7 @@ func acquireShard(
 		context.config,
 		context.logger,
 		context.Resource.GetMetricsClient(),
+		shardItem.GetDomainCache(),
 	)
 
 	context.logger.Debug(fmt.Sprintf("Global event cache mode: %v", context.config.EventsCacheGlobalEnable()))

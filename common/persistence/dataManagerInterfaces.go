@@ -1520,6 +1520,9 @@ type (
 		Encoding common.EncodingType
 		// The shard to get history node data
 		ShardID *int
+
+		//DomainName to get metrics created with the domain
+		DomainName string
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
@@ -1543,6 +1546,8 @@ type (
 		NextPageToken []byte
 		// The shard to get history branch data
 		ShardID *int
+
+		DomainName string
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1597,6 +1602,8 @@ type (
 		Info string
 		// The shard to get history branch data
 		ShardID *int
+		//DomainName to create metrics for Domain Cost Attribution
+		DomainName string
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -1621,6 +1628,8 @@ type (
 		BranchToken []byte
 		// The shard to delete history branch data
 		ShardID *int
+		//DomainName to generate metrics for Domain Cost Attribution
+		DomainName string
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
@@ -1631,6 +1640,8 @@ type (
 		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
+		//DomainName to create metrics
+		DomainName string
 	}
 
 	// HistoryBranchDetail contains detailed information of a branch

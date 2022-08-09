@@ -173,9 +173,11 @@ func (s *IntegrationSuite) isHistoryArchived(domain string, execution *types.Wor
 
 func (s *IntegrationSuite) isHistoryDeleted(domainID string, execution *types.WorkflowExecution) bool {
 	shardID := common.WorkflowIDToHistoryShard(execution.WorkflowID, s.testClusterConfig.HistoryConfig.NumHistoryShards)
+
 	request := &persistence.GetHistoryTreeRequest{
-		TreeID:  execution.GetRunID(),
-		ShardID: common.IntPtr(shardID),
+		TreeID:     execution.GetRunID(),
+		ShardID:    common.IntPtr(shardID),
+		DomainName: s.domainName,
 	}
 	for i := 0; i < retryLimit; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTestPersistenceTimeout)

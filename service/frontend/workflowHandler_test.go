@@ -1054,6 +1054,7 @@ func (s *workflowHandlerSuite) TestGetArchivedHistory_Success_GetFirstPage() {
 
 func (s *workflowHandlerSuite) TestGetHistory() {
 	domainID := uuid.New()
+	domainName := uuid.New()
 	firstEventID := int64(100)
 	nextEventID := int64(101)
 	branchToken := []byte{1}
@@ -1069,6 +1070,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 		PageSize:      0,
 		NextPageToken: []byte{},
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, req).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{
@@ -1084,7 +1086,7 @@ func (s *workflowHandlerSuite) TestGetHistory() {
 	wh := s.getWorkflowHandler(s.newConfig(dc.NewInMemoryClient()))
 
 	scope := metrics.NoopScope(metrics.Frontend)
-	history, token, err := wh.getHistory(context.Background(), scope, domainID, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
+	history, token, err := wh.getHistory(context.Background(), scope, domainID, domainName, we, firstEventID, nextEventID, 0, []byte{}, nil, branchToken)
 	s.NoError(err)
 	s.NotNil(history)
 	s.Equal([]byte{}, token)

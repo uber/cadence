@@ -87,6 +87,7 @@ func (s *crossClusterTaskSuite) SetupTest() {
 		s.mockShard.GetConfig(),
 		s.mockShard.GetLogger(),
 		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetDomainCache(),
 	))
 
 	s.mockDomainCache = s.mockShard.Resource.DomainCache

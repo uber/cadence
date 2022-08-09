@@ -124,6 +124,7 @@ func (s *transferStandbyTaskExecutorSuite) SetupTest() {
 		s.mockShard.GetConfig(),
 		s.mockShard.GetLogger(),
 		s.mockShard.GetMetricsClient(),
+		s.mockShard.GetDomainCache(),
 	))
 	s.mockShard.Resource.TimeSource = s.timeSource
 
