@@ -29,6 +29,7 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
@@ -47,6 +48,7 @@ type FixerManagerCB func(
 	context.Context,
 	persistence.Retryer,
 	FixShardActivityParams,
+	cache.DomainCache,
 ) invariant.Manager
 
 // FixerIteratorCB is a function which returns ScanOutputIterator for fixer.

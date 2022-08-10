@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/cadence/testsuite"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
@@ -243,6 +244,7 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
+				cache cache.DomainCache,
 			) invariant.Manager {
 				return nil
 			},
@@ -255,6 +257,7 @@ func (s *fixerWorkflowSuite) TestNewScannerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params ScanShardActivityParams,
+				cache cache.DomainCache,
 			) invariant.Manager {
 				return nil
 			},

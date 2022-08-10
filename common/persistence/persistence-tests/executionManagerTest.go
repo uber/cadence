@@ -106,6 +106,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionDeDup() {
 	defer cancel()
 
 	domainID := uuid.New()
+	domainName := uuid.New()
 	workflowID := "create-workflow-test-dedup"
 	runID := "3969fae6-6b75-4c2a-b74b-4054edd296a6"
 	workflowExecution := types.WorkflowExecution{
@@ -148,8 +149,9 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionDeDup() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.CreateWorkflowModeBrandNew,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.CreateWorkflowModeBrandNew,
+		DomainName: domainName,
 	}
 
 	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)

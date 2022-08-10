@@ -54,24 +54,6 @@ func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 	stickyTaskList.Name = stl
 	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
 
-	// Start workflow execution
-	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           uuid.New(),
-		Domain:                              s.domainName,
-		WorkflowID:                          id,
-		WorkflowType:                        workflowType,
-		TaskList:                            taskList,
-		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
-		Identity:                            identity,
-	}
-
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
-	s.Nil(err0)
-
-	s.Logger.Info("StartWorkflowExecution: response", tag.WorkflowRunID(we.RunID))
-
 	// decider logic
 	activityScheduled := false
 	activityData := int32(1)
@@ -137,8 +119,37 @@ func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 		StickyScheduleToStartTimeoutSeconds: stickyScheduleToStartTimeoutSeconds,
 	}
 
+	// Make a request with stick tasklist to refresh the stickiness, otherwise we won't be able to add
+	// decisions to the sticky tasklist
+	resp, err := poller.Engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
+		Domain:   poller.Domain,
+		TaskList: poller.StickyTaskList,
+		Identity: poller.Identity,
+	})
+	s.NotNil(resp)
+	s.Equal(0, len(resp.TaskToken))
+	s.Nil(err)
+
+	// Start workflow execution
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           uuid.New(),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		Identity:                            identity,
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Info("StartWorkflowExecution: response", tag.WorkflowRunID(we.RunID))
+
 	// Make first decision to schedule activity
-	_, err := poller.PollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
+	_, err = poller.PollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 
@@ -148,7 +159,6 @@ func (s *IntegrationSuite) TestQueryWorkflow_Sticky() {
 	}
 	queryResultCh := make(chan QueryResult)
 	queryWorkflowFn := func(queryType string) {
-		time.Sleep(100 * time.Millisecond) // sleep for a short time, otherwise sticky tasklist will not have workers available
 		queryResp, err := s.engine.QueryWorkflow(createContext(), &types.QueryWorkflowRequest{
 			Domain: s.domainName,
 			Execution: &types.WorkflowExecution{
@@ -1107,24 +1117,6 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 	stickyTaskList.Kind = types.TaskListKindSticky.Ptr()
 	stickyScheduleToStartTimeoutSeconds := common.Int32Ptr(10)
 
-	// Start workflow execution
-	request := &types.StartWorkflowExecutionRequest{
-		RequestID:                           uuid.New(),
-		Domain:                              s.domainName,
-		WorkflowID:                          id,
-		WorkflowType:                        workflowType,
-		TaskList:                            taskList,
-		Input:                               nil,
-		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
-		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
-		Identity:                            identity,
-	}
-
-	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
-	s.Nil(err0)
-
-	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
-
 	// decider logic
 	activityScheduled := false
 	activityData := int32(1)
@@ -1199,8 +1191,37 @@ func (s *IntegrationSuite) TestQueryWorkflow_Consistent_NewDecisionTask_Sticky()
 		StickyScheduleToStartTimeoutSeconds: stickyScheduleToStartTimeoutSeconds,
 	}
 
+	// Make a request with stick tasklist to refresh the stickiness, otherwise we won't be able to add
+	// decisions to the sticky tasklist
+	resp, err := poller.Engine.PollForDecisionTask(createContext(), &types.PollForDecisionTaskRequest{
+		Domain:   poller.Domain,
+		TaskList: poller.StickyTaskList,
+		Identity: poller.Identity,
+	})
+	s.NotNil(resp)
+	s.Equal(0, len(resp.TaskToken))
+	s.Nil(err)
+
+	// Start workflow execution
+	request := &types.StartWorkflowExecutionRequest{
+		RequestID:                           uuid.New(),
+		Domain:                              s.domainName,
+		WorkflowID:                          id,
+		WorkflowType:                        workflowType,
+		TaskList:                            taskList,
+		Input:                               nil,
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(100),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(10), // ensure longer than time takes to handle signal
+		Identity:                            identity,
+	}
+
+	we, err0 := s.engine.StartWorkflowExecution(createContext(), request)
+	s.Nil(err0)
+
+	s.Logger.Info("StartWorkflowExecution", tag.WorkflowRunID(we.RunID))
+
 	// Make first decision to schedule activity
-	_, err := poller.PollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
+	_, err = poller.PollAndProcessDecisionTaskWithAttempt(false, false, false, true, int64(0))
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
 	s.Nil(err)
 

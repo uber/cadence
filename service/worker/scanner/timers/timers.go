@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -106,6 +107,7 @@ func Manager(
 	_ context.Context,
 	pr persistence.Retryer,
 	_ shardscanner.ScanShardActivityParams,
+	cache cache.DomainCache,
 ) invariant.Manager {
 	return invariant.NewInvariantManager(getInvariants(pr))
 }
@@ -147,6 +149,7 @@ func FixerManager(
 	_ context.Context,
 	pr persistence.Retryer,
 	_ shardscanner.FixShardActivityParams,
+	cache cache.DomainCache,
 ) invariant.Manager {
 	return invariant.NewInvariantManager(getInvariants(pr))
 }

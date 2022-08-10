@@ -31,6 +31,7 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -100,13 +101,14 @@ func ScannerManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
+	domainCache cache.DomainCache,
 ) invariant.Manager {
 
 	collections := ParseCollections(params.ScannerConfig)
 
 	var ivs []invariant.Invariant
 	for _, fn := range ConcreteExecutionType.ToInvariants(collections) {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, domainCache))
 	}
 
 	return invariant.NewInvariantManager(ivs)
@@ -129,14 +131,14 @@ func FixerIterator(ctx context.Context, client blobstore.Client, keys store.Keys
 }
 
 // FixerManager provides invariant manager for concrete execution fixer.
-func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixShardActivityParams) invariant.Manager {
+func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixShardActivityParams, domainCache cache.DomainCache) invariant.Manager {
 	var ivs []invariant.Invariant
 	var collections []invariant.Collection
 
 	collections = append(collections, invariant.CollectionHistory, invariant.CollectionMutableState)
 
 	for _, fn := range ConcreteExecutionType.ToInvariants(collections) {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, domainCache))
 	}
 	return invariant.NewInvariantManager(ivs)
 }
