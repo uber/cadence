@@ -78,7 +78,7 @@ var (
 )
 
 func TestNewDeferredTaskHydrator(t *testing.T) {
-	h := NewDeferredTaskHydrator(0, nil, nil)
+	h := NewDeferredTaskHydrator(0, nil, nil, nil)
 	require.NotNil(t, h)
 	assert.IsType(t, historyLoader{}, h.history)
 	assert.IsType(t, mutableStateLoader{}, h.msProvider)
@@ -457,6 +457,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 	tests := []struct {
 		name           string
 		task           persistence.ReplicationTaskInfo
+		domains        fakeDomainCache
 		mockHistory    func(hm *mocks.HistoryV2Manager)
 		expectDataBlob *types.DataBlob
 		expectErr      string
@@ -464,10 +465,12 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 		{
 			name: "loads data blob",
 			task: persistence.ReplicationTaskInfo{
+				DomainID:     testDomainID,
 				BranchToken:  testBranchToken,
 				FirstEventID: 10,
 				NextEventID:  11,
 			},
+			domains: fakeDomainCache{testDomainID: testDomain},
 			mockHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 					BranchToken: testBranchToken,
@@ -475,6 +478,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 					MaxEventID:  11,
 					PageSize:    2,
 					ShardID:     common.IntPtr(testShardID),
+					DomainName:  testDomainName,
 				}).Return(&persistence.ReadRawHistoryBranchResponse{
 					HistoryEventBlobs: []*persistence.DataBlob{{Encoding: common.EncodingTypeJSON, Data: testDataBlob.Data}},
 				}, nil)
@@ -482,14 +486,25 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 			expectDataBlob: testDataBlob,
 		},
 		{
-			name: "load failure",
+			name:        "failed to get domain name",
+			task:        persistence.ReplicationTaskInfo{DomainID: testDomainID},
+			domains:     fakeDomainCache{},
+			mockHistory: func(hm *mocks.HistoryV2Manager) {},
+			expectErr:   "domain does not exist",
+		},
+		{
+			name:    "load failure",
+			task:    persistence.ReplicationTaskInfo{DomainID: testDomainID},
+			domains: fakeDomainCache{testDomainID: testDomain},
 			mockHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("load failure"))
 			},
 			expectErr: "load failure",
 		},
 		{
-			name: "response must contain exactly one blob",
+			name:    "response must contain exactly one blob",
+			task:    persistence.ReplicationTaskInfo{DomainID: testDomainID},
+			domains: fakeDomainCache{testDomainID: testDomain},
 			mockHistory: func(hm *mocks.HistoryV2Manager) {
 				hm.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(&persistence.ReadRawHistoryBranchResponse{
 					HistoryEventBlobs: []*persistence.DataBlob{{}, {}}, //two blobs
@@ -503,7 +518,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			hm := &mocks.HistoryV2Manager{}
 			tt.mockHistory(hm)
-			loader := historyLoader{shardID: testShardID, history: hm}
+			loader := historyLoader{shardID: testShardID, history: hm, domains: tt.domains}
 			dataBlob, err := loader.GetEventBlob(context.Background(), tt.task)
 			if tt.expectErr != "" {
 				assert.EqualError(t, err, tt.expectErr)
@@ -517,7 +532,7 @@ func TestHistoryLoader_GetEventBlob(t *testing.T) {
 
 func TestHistoryLoader_GetNextRunEventBlob(t *testing.T) {
 	hm := &mocks.HistoryV2Manager{}
-	loader := historyLoader{shardID: testShardID, history: hm}
+	loader := historyLoader{shardID: testShardID, history: hm, domains: fakeDomainCache{testDomainID: testDomain}}
 
 	dataBlob, err := loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{NewRunBranchToken: nil})
 	assert.NoError(t, err)
@@ -529,10 +544,11 @@ func TestHistoryLoader_GetNextRunEventBlob(t *testing.T) {
 		MaxEventID:  2,
 		PageSize:    2,
 		ShardID:     common.IntPtr(testShardID),
+		DomainName:  testDomainName,
 	}).Return(&persistence.ReadRawHistoryBranchResponse{
 		HistoryEventBlobs: []*persistence.DataBlob{{Encoding: common.EncodingTypeJSON, Data: testDataBlob.Data}},
 	}, nil)
-	dataBlob, err = loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{NewRunBranchToken: testBranchTokenNewRun})
+	dataBlob, err = loader.GetNextRunEventBlob(context.Background(), persistence.ReplicationTaskInfo{DomainID: testDomainID, NewRunBranchToken: testBranchTokenNewRun})
 	assert.NoError(t, err)
 	assert.Equal(t, testDataBlob, dataBlob)
 }

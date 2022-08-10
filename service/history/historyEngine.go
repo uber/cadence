@@ -157,7 +157,7 @@ func NewEngineWithShardContext(
 	historyV2Manager := shard.GetHistoryManager()
 	executionCache := execution.NewCache(shard)
 	failoverMarkerNotifier := failover.NewMarkerNotifier(shard, config, failoverCoordinator)
-	replicationHydrator := replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache)
+	replicationHydrator := replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache, shard.GetDomainCache())
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shard,

@@ -62,9 +62,9 @@ type (
 
 // NewDeferredTaskHydrator will enrich replication tasks with additional information that is not available on hand,
 // but is rather loaded in a deferred way later from a database and cache.
-func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryManager, executionCache *execution.Cache) TaskHydrator {
+func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryManager, executionCache *execution.Cache, domains domainCache) TaskHydrator {
 	return TaskHydrator{
-		history:    historyLoader{shardID, historyManager},
+		history:    historyLoader{shardID, historyManager, domains},
 		msProvider: mutableStateLoader{executionCache},
 	}
 }
@@ -212,10 +212,11 @@ func hydrateHistoryReplicationTask(ctx context.Context, task persistence.Replica
 type historyLoader struct {
 	shardID int
 	history persistence.HistoryManager
+	domains domainCache
 }
 
 func (h historyLoader) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
-	return h.getEventsBlob(ctx, task.BranchToken, task.FirstEventID, task.NextEventID)
+	return h.getEventsBlob(ctx, task.DomainID, task.BranchToken, task.FirstEventID, task.NextEventID)
 }
 
 func (h historyLoader) GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
@@ -223,16 +224,22 @@ func (h historyLoader) GetNextRunEventBlob(ctx context.Context, task persistence
 		return nil, nil
 	}
 	// only get the first batch
-	return h.getEventsBlob(ctx, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
+	return h.getEventsBlob(ctx, task.DomainID, task.NewRunBranchToken, common.FirstEventID, common.FirstEventID+1)
 }
 
-func (h historyLoader) getEventsBlob(ctx context.Context, branchToken []byte, minEventID, maxEventID int64) (*types.DataBlob, error) {
+func (h historyLoader) getEventsBlob(ctx context.Context, domainID string, branchToken []byte, minEventID, maxEventID int64) (*types.DataBlob, error) {
+	domain, err := h.domains.GetDomainByID(domainID)
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := h.history.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken: branchToken,
 		MinEventID:  minEventID,
 		MaxEventID:  maxEventID,
 		PageSize:    2, // Load more than one to check for data inconsistency errors
 		ShardID:     &h.shardID,
+		DomainName:  domain.GetInfo().Name,
 	})
 	if err != nil {
 		return nil, err
