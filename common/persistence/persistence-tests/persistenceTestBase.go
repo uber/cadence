@@ -440,8 +440,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 			TimerTasks:       timerTasks,
 			VersionHistories: versionHistories,
 		},
-		RangeID:    s.ShardInfo.RangeID,
-		DomainName: s.DomainManager.GetName(),
+		RangeID: s.ShardInfo.RangeID,
 	})
 
 	return response, err
