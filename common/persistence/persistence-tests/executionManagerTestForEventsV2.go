@@ -107,7 +107,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		WorkflowID: "test-eventsv2-workflow",
 		RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 	}
-
+	domainName := uuid.New()
 	csum := s.newRandomChecksum()
 	decisionScheduleID := int64(2)
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -149,7 +149,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
+		RangeID:    s.ShardInfo.RangeID,
+		DomainName: domainName,
 	})
 
 	s.NoError(err0)
@@ -209,6 +210,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 
 	defer failOnPanic(s.T())
 	domainID := uuid.New()
+	domainName := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "test-eventsv2-workflow-version-history",
 		RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -257,6 +259,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 			TimerTasks: nil,
 			Checksum:   csum,
 		},
+		DomainName: domainName,
 	})
 
 	s.NoError(err0)

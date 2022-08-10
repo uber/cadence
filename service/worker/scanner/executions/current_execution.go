@@ -31,6 +31,7 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -83,11 +84,12 @@ func CurrentExecutionManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
+	domainCache cache.DomainCache,
 ) invariant.Manager {
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
 	for _, fn := range CurrentExecutionType.ToInvariants(collections) {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, domainCache))
 	}
 	return invariant.NewInvariantManager(ivs)
 }

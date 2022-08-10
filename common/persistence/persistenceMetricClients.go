@@ -339,7 +339,7 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
