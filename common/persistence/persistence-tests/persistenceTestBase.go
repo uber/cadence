@@ -365,8 +365,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 			Checksum:         testWorkflowChecksum,
 			VersionHistories: versionHistories,
 		},
-		RangeID:    s.ShardInfo.RangeID,
-		DomainName: s.DomainManager.GetName(),
+		RangeID: s.ShardInfo.RangeID,
 	})
 
 	return response, err

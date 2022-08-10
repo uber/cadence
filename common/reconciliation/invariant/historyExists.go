@@ -37,7 +37,6 @@ const (
 )
 
 type (
-	//To DO: domainCache cache.DomainCache
 	historyExists struct {
 		pr persistence.Retryer
 		dc cache.DomainCache

@@ -171,14 +171,13 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			},
 		},
 	}
-
+	ctrl := gomock.NewController(s.T())
+	domainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
-
-		ctrl := gomock.NewController(s.T())
-		domainCache := cache.NewMockDomainCache(ctrl)
 		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()), domainCache)
 		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}
