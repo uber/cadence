@@ -457,7 +457,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, s.domainID)
 	s.NoError(err)
-
+	domainName := "test-domain-name"
 	identity := "identity"
 	tasklist := "tasklist"
 	activityID1 := "activity 1"
@@ -534,6 +534,7 @@ func (s *timerStandbyTaskExecutorSuite) TestProcessActivityTimeout_Multiple_CanU
 			},
 			NewWorkflowSnapshot: nil,
 			Encoding:            common.EncodingType(s.mockShard.GetConfig().EventEncodingType(s.domainID)),
+			DomainName:          domainName,
 		}, input)
 		return true
 	})).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
