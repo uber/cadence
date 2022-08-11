@@ -448,7 +448,7 @@ func (s *transactionManagerSuite) TestCheckWorkflowExists_DoesExists() {
 	runID := "some random run ID"
 	domainName := "some random Domain Name"
 
-	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil)
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	s.mockExecutionManager.On("GetWorkflowExecution", mock.Anything, &persistence.GetWorkflowExecutionRequest{
 		DomainID: domainID,
 		Execution: types.WorkflowExecution{
