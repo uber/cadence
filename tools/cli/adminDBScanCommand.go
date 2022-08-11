@@ -33,6 +33,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/fetcher"
@@ -142,7 +143,7 @@ func checkExecution(
 	var ivs []invariant.Invariant
 
 	for _, fn := range invariants {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, cache.NewNoOpDomainCache()))
 	}
 
 	return execution, invariant.NewInvariantManager(ivs).RunChecks(ctx, execution)

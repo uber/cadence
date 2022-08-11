@@ -26,6 +26,7 @@ import (
 	"context"
 
 	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -36,19 +37,18 @@ const (
 )
 
 type (
-	//To DO: domainCache cache.DomainCache
 	historyExists struct {
 		pr persistence.Retryer
+		dc cache.DomainCache
 	}
 )
 
-// NewHistoryExists returns a new history exists invariant
-//To Do: add dc cache.DomainCache   :: domainCache: dc,
 func NewHistoryExists(
-	pr persistence.Retryer,
+	pr persistence.Retryer, dc cache.DomainCache,
 ) Invariant {
 	return &historyExists{
 		pr: pr,
+		dc: dc,
 	}
 }
 
@@ -68,19 +68,17 @@ func (h *historyExists) Check(
 			Info:            "failed to check: expected concrete execution",
 		}
 	}
-	//To Do: add domain ID
-	//domainID := concreteExecution.GetDomainID()
-	//domainName, errorDomainName := h.domainCache.GetDomainName(domainID)
-	// if errorDomainName != nil {
-	// 	return CheckResult{
-	// 		CheckResultType: CheckResultTypeFailed,
-	// 		InvariantName:   h.Name(),
-	// 		Info:            "failed to check: expected DomainName",
-	// 		InfoDetails:     errorDomainName.Error(),
-	// 	}
-	// }
+	domainID := concreteExecution.GetDomainID()
+	domainName, errorDomainName := h.dc.GetDomainName(domainID)
+	if errorDomainName != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   h.Name(),
+			Info:            "failed to check: expected DomainName",
+			InfoDetails:     errorDomainName.Error(),
+		}
+	}
 
-	//To Do: Add a domainName to assign DomainName :: DomainName:    domainName,
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,
 		MinEventID:    c.FirstEventID,
@@ -88,6 +86,7 @@ func (h *historyExists) Check(
 		PageSize:      historyPageSize,
 		NextPageToken: nil,
 		ShardID:       c.IntPtr(concreteExecution.ShardID),
+		DomainName:    domainName,
 	}
 	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(ctx, readHistoryBranchReq)
 	stillExists, existsCheckError := ExecutionStillExists(ctx, &concreteExecution.Execution, h.pr)

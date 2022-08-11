@@ -346,7 +346,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 			c.Clear()
 		}
 	}()
-
+	domainName := c.GetDomainName()
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		// workflow create mode & prev run ID & version
 		Mode:                     createMode,
@@ -354,6 +354,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 		PreviousLastWriteVersion: prevLastWriteVersion,
 
 		NewWorkflowSnapshot: *newWorkflow,
+		DomainName:          domainName,
 	}
 
 	historySize += c.GetHistorySize()
@@ -373,7 +374,6 @@ func (c *contextImpl) CreateWorkflowExecution(
 	c.notifyTasksFromWorkflowSnapshot(newWorkflow)
 
 	// finally emit session stats
-	domainName := c.GetDomainName()
 	emitSessionUpdateStats(
 		c.metricsClient,
 		domainName,
