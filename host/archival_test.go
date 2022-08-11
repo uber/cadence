@@ -194,8 +194,8 @@ func (s *IntegrationSuite) isHistoryDeleted(domainID string, execution *types.Wo
 
 func (s *IntegrationSuite) isMutableStateDeleted(domainID string, execution *types.WorkflowExecution) bool {
 	request := &persistence.GetWorkflowExecutionRequest{
-		DomainID:  domainID,
-		Execution: *execution,
+		DomainID:   domainID,
+		Execution:  *execution,
 		DomainName: s.domainName,
 	}
 
