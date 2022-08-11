@@ -400,12 +400,14 @@ const (
 	// Value type: Int
 	// Default value: 10
 	// Allowed filters: DomainName
+	// deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility
 	FrontendVisibilityListMaxQPS
 	// FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch
 	// KeyName: frontend.esVisibilityListMaxQPS
 	// Value type: Int
 	// Default value: 30
 	// Allowed filters: DomainName
+	// deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS
 	FrontendESVisibilityListMaxQPS
 	// FrontendESIndexMaxResultWindow is ElasticSearch index setting max_result_window
 	// KeyName: frontend.esIndexMaxResultWindow
@@ -431,6 +433,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: N/A
 	FrontendWorkerRPS
+	// FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.visibilityrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: N/A
+	FrontendVisibilityRPS
 	// FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second
 	// KeyName: frontend.domainrps
 	// Value type: Int
@@ -443,6 +451,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendMaxDomainWorkerRPSPerInstance
+	// FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.domainvisibilityrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	FrontendMaxDomainVisibilityRPSPerInstance
 	// FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster
 	// KeyName: frontend.globalDomainrps
 	// Value type: Int
@@ -455,6 +469,12 @@ const (
 	// Default value: UnlimitedRPS
 	// Allowed filters: DomainName
 	FrontendGlobalDomainWorkerRPS
+	// FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second
+	// KeyName: frontend.globalDomainVisibilityrps
+	// Value type: Int
+	// Default value: UnlimitedRPS
+	// Allowed filters: DomainName
+	FrontendGlobalDomainVisibilityRPS
 	// FrontendDecisionResultCountLimit is max number of decisions per RespondDecisionTaskCompleted request
 	// KeyName: frontend.decisionResultCountLimit
 	// Value type: Int
@@ -2579,13 +2599,15 @@ var IntKeys = map[IntKey]DynamicInt{
 		DefaultValue: 1000,
 	},
 	FrontendVisibilityListMaxQPS: DynamicInt{
-		KeyName:      "frontend.visibilityListMaxQPS",
-		Description:  "FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows",
+		KeyName: "frontend.visibilityListMaxQPS",
+		Description: "deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility.\n" +
+			"FrontendVisibilityListMaxQPS is max qps frontend can list open/close workflows",
 		DefaultValue: 10,
 	},
 	FrontendESVisibilityListMaxQPS: DynamicInt{
-		KeyName:      "frontend.esVisibilityListMaxQPS",
-		Description:  "FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch",
+		KeyName: "frontend.esVisibilityListMaxQPS",
+		Description: "deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS.\n" +
+			"FrontendESVisibilityListMaxQPS is max qps frontend can list open/close workflows from ElasticSearch",
 		DefaultValue: 30,
 	},
 	FrontendESIndexMaxResultWindow: DynamicInt{
@@ -2608,6 +2630,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "FrontendWorkerRPS is background-processing workflow rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
+	FrontendVisibilityRPS: DynamicInt{
+		KeyName:      "frontend.visibilityrps",
+		Description:  "FrontendVisibilityRPS is the global workflow List*WorkflowExecutions request rate limit per second",
+		DefaultValue: UnlimitedRPS,
+	},
 	FrontendMaxDomainUserRPSPerInstance: DynamicInt{
 		KeyName:      "frontend.domainrps",
 		Description:  "FrontendMaxDomainUserRPSPerInstance is workflow domain rate limit per second",
@@ -2618,6 +2645,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "FrontendMaxDomainWorkerRPSPerInstance is background-processing workflow domain rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
+	FrontendMaxDomainVisibilityRPSPerInstance: DynamicInt{
+		KeyName:      "frontend.domainvisibilityrps",
+		Description:  "FrontendMaxDomainVisibilityRPSPerInstance is the per-instance List*WorkflowExecutions request rate limit per second",
+		DefaultValue: UnlimitedRPS,
+	},
 	FrontendGlobalDomainUserRPS: DynamicInt{
 		KeyName:      "frontend.globalDomainrps",
 		Description:  "FrontendGlobalDomainUserRPS is workflow domain rate limit per second for the whole Cadence cluster",
@@ -2626,6 +2658,11 @@ var IntKeys = map[IntKey]DynamicInt{
 	FrontendGlobalDomainWorkerRPS: DynamicInt{
 		KeyName:      "frontend.globalDomainWorkerrps",
 		Description:  "FrontendGlobalDomainWorkerRPS is background-processing workflow domain rate limit per second for the whole Cadence cluster",
+		DefaultValue: UnlimitedRPS,
+	},
+	FrontendGlobalDomainVisibilityRPS: DynamicInt{
+		KeyName:      "frontend.globalDomainVisibilityrps",
+		Description:  "FrontendGlobalDomainVisibilityRPS is the per-domain List*WorkflowExecutions request rate limit per second",
 		DefaultValue: UnlimitedRPS,
 	},
 	FrontendDecisionResultCountLimit: DynamicInt{

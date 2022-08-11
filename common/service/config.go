@@ -42,8 +42,9 @@ type (
 		DBVisibilityListMaxQPS                      dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 
 		// configs for es visibility
-		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn                 `yaml:"-" json:"-"`
-		ValidSearchAttributes  dynamicconfig.MapPropertyFn                 `yaml:"-" json:"-"`
+		ESIndexMaxResultWindow dynamicconfig.IntPropertyFn `yaml:"-" json:"-"`
+		ValidSearchAttributes  dynamicconfig.MapPropertyFn `yaml:"-" json:"-"`
+		// deprecated: never read from, all ES reads and writes erroneously use PersistenceMaxQPS
 		ESVisibilityListMaxQPS dynamicconfig.IntPropertyFnWithDomainFilter `yaml:"-" json:"-"`
 	}
 )

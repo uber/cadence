@@ -61,7 +61,6 @@ func (h *TimerInvalid) Check(
 			Info:            "failed to check: expected timer entity",
 		}
 	}
-
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: timer.DomainID,
 		Execution: types.WorkflowExecution{

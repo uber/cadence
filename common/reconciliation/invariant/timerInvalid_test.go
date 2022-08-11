@@ -136,7 +136,6 @@ func (ts *TimerInvalidTest) TestCheck() {
 			entity:     &entity.Timer{},
 		},
 	}
-
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
@@ -146,8 +145,7 @@ func (ts *TimerInvalidTest) TestCheck() {
 					execManager,
 					nil,
 					common.CreatePersistenceRetryPolicy(),
-				),
-			)
+				))
 			ctx := context.Background()
 			if tc.ctxExpired {
 				ctx, _ = context.WithDeadline(ctx, time.Now())
@@ -260,7 +258,6 @@ func (ts *TimerInvalidTest) TestFix() {
 			ttComplete: nil,
 		},
 	}
-
 	for _, tc := range testCases {
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
