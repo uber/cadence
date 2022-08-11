@@ -196,6 +196,7 @@ func (s *IntegrationSuite) isMutableStateDeleted(domainID string, execution *typ
 	request := &persistence.GetWorkflowExecutionRequest{
 		DomainID:  domainID,
 		Execution: *execution,
+		DomainName: s.domainName,
 	}
 
 	for i := 0; i < retryLimit; i++ {
