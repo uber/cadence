@@ -310,7 +310,6 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	defer cancel()
 
 	domainID := uuid.New()
-	domainName := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "continue-as-new-workflow-test",
 		RunID:      "551c88d2-d9e6-404f-8131-9eec14f36643",
@@ -383,9 +382,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 			TimerTasks:       nil,
 			VersionHistories: versionHistories,
 		},
-		RangeID:    s.ShardInfo.RangeID,
-		Encoding:   pickRandomEncoding(),
-		DomainName: domainName,
+		RangeID:  s.ShardInfo.RangeID,
+		Encoding: pickRandomEncoding(),
 	})
 
 	s.NoError(err2)
