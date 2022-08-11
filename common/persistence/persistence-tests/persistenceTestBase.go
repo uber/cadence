@@ -23,7 +23,6 @@ package persistencetests
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -206,7 +205,6 @@ func (s *TestBase) Setup() {
 	s.fatalOnError("NewDomainManager", err)
 
 	s.DomainCache = cache.NewDomainCache(s.DomainManager, metricsClient, s.Logger)
-	s.fatalOnError("NewDomainCache", errors.New("Error getting Domain Cache"))
 
 	s.HistoryV2Mgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)
