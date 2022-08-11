@@ -260,8 +260,9 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 
 	if c.mutableState == nil {
 		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
-			DomainID:  c.domainID,
-			Execution: c.workflowExecution,
+			DomainID:   c.domainID,
+			Execution:  c.workflowExecution,
+			DomainName: c.GetDomainName(),
 		})
 		if err != nil {
 			return nil, err
@@ -658,6 +659,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 		Mode:                   persistence.UpdateWorkflowModeIgnoreCurrent,
 		UpdateWorkflowMutation: *currentWorkflow,
 		// Encoding, this is set by shard context
+		DomainName: c.GetDomainName(),
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
@@ -781,6 +783,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		UpdateWorkflowMutation: *currentWorkflow,
 		NewWorkflowSnapshot:    newWorkflow,
 		// Encoding, this is set by shard context
+		DomainName: c.GetDomainName(),
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {

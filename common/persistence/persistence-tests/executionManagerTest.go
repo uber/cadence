@@ -170,8 +170,9 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionDeDup() {
 			Condition:        nextEventID,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeUpdateCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err)
 
@@ -425,6 +426,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 	}
 	tasklist := "some random tasklist"
 	workflowType := "some random workflow type"
+	domainName := "some random domain name"
 	workflowTimeout := int32(10)
 	decisionTimeout := int32(14)
 	lastProcessedEventID := int64(0)
@@ -457,8 +459,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.CreateWorkflowModeBrandNew,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.CreateWorkflowModeBrandNew,
+		DomainName: domainName,
 	}
 
 	req.NewWorkflowSnapshot.ExecutionInfo.State = p.WorkflowStateCreated
@@ -484,8 +487,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeUpdateCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -505,8 +509,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 				ExecutionStats: updatedStats,
 				Condition:      nextEventID,
 			},
-			RangeID: s.ShardInfo.RangeID,
-			Mode:    p.UpdateWorkflowModeUpdateCurrent,
+			RangeID:    s.ShardInfo.RangeID,
+			Mode:       p.UpdateWorkflowModeUpdateCurrent,
+			DomainName: domainName,
 		})
 		s.IsType(&types.InternalServiceError{}, err)
 	}
@@ -521,8 +526,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 			ExecutionStats: updatedStats,
 			Condition:      nextEventID,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeUpdateCurrent,
+		DomainName: domainName,
 	})
 	s.IsType(&types.InternalServiceError{}, err)
 
@@ -535,8 +541,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 				Condition:        nextEventID,
 				VersionHistories: versionHistories,
 			},
-			RangeID: s.ShardInfo.RangeID,
-			Mode:    p.UpdateWorkflowModeUpdateCurrent,
+			RangeID:    s.ShardInfo.RangeID,
+			Mode:       p.UpdateWorkflowModeUpdateCurrent,
+			DomainName: domainName,
 		})
 		s.Nil(err)
 		info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -572,8 +579,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 			Condition:        nextEventID,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeBypassCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeBypassCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -592,8 +600,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionStateCloseStatus() {
 				ExecutionStats: updatedStats,
 				Condition:      nextEventID,
 			},
-			RangeID: s.ShardInfo.RangeID,
-			Mode:    p.UpdateWorkflowModeBypassCurrent,
+			RangeID:    s.ShardInfo.RangeID,
+			Mode:       p.UpdateWorkflowModeBypassCurrent,
+			DomainName: domainName,
 		})
 		s.IsType(&types.InternalServiceError{}, err)
 	}
@@ -612,6 +621,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 	}
 	tasklist := "some random tasklist"
 	workflowType := "some random workflow type"
+	domainName := "some random domain name"
 	workflowTimeout := int32(10)
 	decisionTimeout := int32(14)
 	lastProcessedEventID := int64(0)
@@ -646,8 +656,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.CreateWorkflowModeBrandNew,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.CreateWorkflowModeBrandNew,
+		DomainName: domainName,
 	}
 	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Nil(err)
@@ -671,8 +682,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 			Condition:      nextEventID,
 			Checksum:       csum,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeBypassCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeBypassCurrent,
+		DomainName: domainName,
 	})
 	s.NotNil(err)
 
@@ -687,8 +699,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 			Condition:        nextEventID,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeUpdateCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err)
 
@@ -728,8 +741,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionWithZombieState() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeBypassCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeBypassCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -835,6 +849,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 		WorkflowID: "create-workflow-test-brand-new",
 		RunID:      uuid.New(),
 	}
+	domainName := uuid.New()
 	tasklist := "some random tasklist"
 	workflowType := "some random workflow type"
 	workflowTimeout := int32(10)
@@ -869,8 +884,9 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 			ExecutionStats:   &p.ExecutionStats{},
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.CreateWorkflowModeBrandNew,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.CreateWorkflowModeBrandNew,
+		DomainName: domainName,
 	}
 
 	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
@@ -891,6 +907,7 @@ func (s *ExecutionManagerSuite) TestUpsertWorkflowActivity() {
 	defer cancel()
 
 	domainID := uuid.New()
+	domainName := uuid.New()
 	workflowID := "create-workflow-test-with-upsert-activity"
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: workflowID,
@@ -932,8 +949,9 @@ func (s *ExecutionManagerSuite) TestUpsertWorkflowActivity() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.CreateWorkflowModeBrandNew,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.CreateWorkflowModeBrandNew,
+		DomainName: domainName,
 	}
 	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
 	s.Nil(err)
@@ -964,8 +982,9 @@ func (s *ExecutionManagerSuite) TestUpsertWorkflowActivity() {
 			},
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeUpdateCurrent,
+		DomainName: domainName,
 	})
 	s.Nil(err)
 
@@ -990,8 +1009,9 @@ func (s *ExecutionManagerSuite) TestUpsertWorkflowActivity() {
 			},
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeUpdateCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err)
 	info3, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -1006,6 +1026,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 	defer cancel()
 
 	domainID := uuid.New()
+	domainName := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "create-workflow-test-run-id-reuse-without-replication",
 		RunID:      uuid.New(),
@@ -1075,6 +1096,7 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionRunIDReuseWithoutRepl
 		Mode:                     p.CreateWorkflowModeWorkflowIDReuse,
 		PreviousRunID:            workflowExecution.GetRunID(),
 		PreviousLastWriteVersion: common.EmptyVersion,
+		DomainName:               domainName,
 	})
 	s.NoError(err3)
 }
@@ -1146,6 +1168,7 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflow() {
 	defer cancel()
 
 	domainID := "2d7994bf-9de8-459d-9c81-e723daedb246"
+	domainName := "test-domain-name"
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "start-workflow-test",
 		RunID:      "7f9fe8a0-9237-11e6-ae22-56b6b6499611",
@@ -1207,7 +1230,8 @@ func (s *ExecutionManagerSuite) TestPersistenceStartWorkflow() {
 			TimerTasks:       nil,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID - 1,
+		RangeID:    s.ShardInfo.RangeID - 1,
+		DomainName: domainName,
 	})
 
 	s.Error(err2, "Expected workflow creation to fail.")
@@ -1845,6 +1869,7 @@ func (s *ExecutionManagerSuite) TestCleanupCorruptedWorkflow() {
 	defer cancel()
 
 	domainID := "54d15308-e20e-4b91-a00f-a518a3892790"
+	domainName := "test-domain-name"
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "cleanup-corrupted-workflow-test",
 		RunID:      "6cae4054-6ba7-46d3-8755-e3c2db6f74ea",
@@ -1885,8 +1910,9 @@ func (s *ExecutionManagerSuite) TestCleanupCorruptedWorkflow() {
 			Checksum:         testWorkflowChecksum,
 			VersionHistories: info0.VersionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeBypassCurrent,
+		RangeID:    s.ShardInfo.RangeID,
+		Mode:       p.UpdateWorkflowModeBypassCurrent,
+		DomainName: domainName,
 	})
 	s.NoError(err6)
 

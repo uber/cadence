@@ -23,6 +23,7 @@ package persistencetests
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -35,6 +36,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -80,6 +82,7 @@ type (
 		TaskMgr                   persistence.TaskManager
 		HistoryV2Mgr              persistence.HistoryManager
 		DomainManager             persistence.DomainManager
+		DomainCache               cache.DomainCache
 		DomainReplicationQueueMgr persistence.QueueManager
 		ShardInfo                 *persistence.ShardInfo
 		TaskIDGenerator           TransferTaskIDGenerator
@@ -201,6 +204,9 @@ func (s *TestBase) Setup() {
 
 	s.DomainManager, err = factory.NewDomainManager()
 	s.fatalOnError("NewDomainManager", err)
+
+	s.DomainCache = cache.NewDomainCache(s.DomainManager, metricsClient, s.Logger)
+	s.fatalOnError("NewDomainCache", errors.New("Error getting Domain Cache"))
 
 	s.HistoryV2Mgr, err = factory.NewHistoryManager()
 	s.fatalOnError("NewHistoryManager", err)
@@ -449,9 +455,15 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 // GetWorkflowExecutionInfoWithStats is a utility method to retrieve execution info with size stats
 func (s *TestBase) GetWorkflowExecutionInfoWithStats(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution) (
 	*persistence.MutableStateStats, *persistence.WorkflowMutableState, error) {
+
+	domainName, err := s.DomainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, nil, err
+	}
 	response, err := s.ExecutionManager.GetWorkflowExecution(ctx, &persistence.GetWorkflowExecutionRequest{
-		DomainID:  domainID,
-		Execution: workflowExecution,
+		DomainID:   domainID,
+		Execution:  workflowExecution,
+		DomainName: domainName,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -509,7 +521,10 @@ func (s *TestBase) ContinueAsNewExecution(
 		{decisionScheduleID, common.EmptyVersion},
 	})
 	versionHistories := persistence.NewVersionHistories(versionHistory)
-
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	req := &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:       updatedInfo,
@@ -551,10 +566,9 @@ func (s *TestBase) ContinueAsNewExecution(
 			TimerTasks:       nil,
 			VersionHistories: versionHistories,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
-		//To DO: next PR for UpdateWorkflowExecution
-		//DomainName: s.DomainManager.GetName(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	}
 	req.UpdateWorkflowMutation.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	req.UpdateWorkflowMutation.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
@@ -612,6 +626,10 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 ) error {
 	transferTasks := []persistence.Task{}
 	transferTasks = append(transferTasks, &persistence.CloseExecutionTask{TaskID: s.GetNextSequenceNumber()})
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
@@ -626,9 +644,8 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 			DeleteTimerInfos:    nil,
 			VersionHistories:    versionHistories,
 		},
-		Encoding: pickRandomEncoding(),
-		//To DO: next PR for UpdateWorkflowExecution
-		//DomainName: s.DomainManager.GetName(),
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1066,6 +1083,10 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 			TaskList:   updatedInfo.TaskList,
 			ScheduleID: int64(activityScheduleID)})
 	}
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		RangeID: rangeID,
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
@@ -1094,7 +1115,8 @@ func (s *TestBase) UpdateWorkflowExecutionWithReplication(
 			Condition: condition,
 			Checksum:  testWorkflowChecksum,
 		},
-		Encoding: pickRandomEncoding(),
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1110,6 +1132,10 @@ func (s *TestBase) UpdateWorkflowExecutionTasks(
 	timerTasks []persistence.Task,
 	crossClusterTasks []persistence.Task,
 ) error {
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		Mode: persistence.UpdateWorkflowModeIgnoreCurrent,
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
@@ -1120,8 +1146,9 @@ func (s *TestBase) UpdateWorkflowExecutionTasks(
 			CrossClusterTasks: crossClusterTasks,
 			Condition:         condition,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1136,7 +1163,10 @@ func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 	upsertActivityInfo []*persistence.ActivityInfo,
 	versionHistories *persistence.VersionHistories,
 ) error {
-
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:       updatedInfo,
@@ -1146,8 +1176,9 @@ func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 			UpsertActivityInfos: upsertActivityInfo,
 			VersionHistories:    versionHistories,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1156,6 +1187,10 @@ func (s *TestBase) UpdateWorkflowExecutionWithTransferTasks(
 func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
 	ctx context.Context,
 	updatedInfo *persistence.WorkflowExecutionInfo, updatedStats *persistence.ExecutionStats, condition int64, transferTasks []persistence.Task, childInfos []*persistence.ChildExecutionInfo) error {
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:             updatedInfo,
@@ -1164,8 +1199,9 @@ func (s *TestBase) UpdateWorkflowExecutionForChildExecutionsInitiated(
 			Condition:                 condition,
 			UpsertChildExecutionInfos: childInfos,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1175,6 +1211,10 @@ func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 	ctx context.Context,
 	updatedInfo *persistence.WorkflowExecutionInfo, updatedStats *persistence.ExecutionStats, condition int64, transferTasks []persistence.Task,
 	upsertRequestCancelInfo []*persistence.RequestCancelInfo) error {
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:            updatedInfo,
@@ -1183,8 +1223,9 @@ func (s *TestBase) UpdateWorkflowExecutionForRequestCancel(
 			Condition:                condition,
 			UpsertRequestCancelInfos: upsertRequestCancelInfo,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1194,6 +1235,10 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 	ctx context.Context,
 	updatedInfo *persistence.WorkflowExecutionInfo, updatedStats *persistence.ExecutionStats, condition int64, transferTasks []persistence.Task,
 	upsertSignalInfos []*persistence.SignalInfo) error {
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:     updatedInfo,
@@ -1202,8 +1247,9 @@ func (s *TestBase) UpdateWorkflowExecutionForSignal(
 			Condition:         condition,
 			UpsertSignalInfos: upsertSignalInfos,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1218,7 +1264,10 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 	clearBufferedEvents bool,
 	versionHistories *persistence.VersionHistories,
 ) error {
-
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
 			ExecutionInfo:       updatedInfo,
@@ -1228,8 +1277,9 @@ func (s *TestBase) UpdateWorkflowExecutionForBufferEvents(
 			ClearBufferedEvents: clearBufferedEvents,
 			VersionHistories:    versionHistories,
 		},
-		RangeID:  s.ShardInfo.RangeID,
-		Encoding: pickRandomEncoding(),
+		RangeID:    s.ShardInfo.RangeID,
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
@@ -1265,6 +1315,10 @@ func (s *TestBase) UpdateAllMutableState(ctx context.Context, updatedMutableStat
 	for id := range updatedMutableState.SignalRequestedIDs {
 		srIDs = append(srIDs, id)
 	}
+	domainName, errorDomainName := s.DomainCache.GetDomainName(updatedMutableState.ExecutionInfo.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	_, err := s.ExecutionManager.UpdateWorkflowExecution(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		RangeID: s.ShardInfo.RangeID,
 		UpdateWorkflowMutation: persistence.WorkflowMutation{
@@ -1279,7 +1333,8 @@ func (s *TestBase) UpdateAllMutableState(ctx context.Context, updatedMutableStat
 			UpsertSignalRequestedIDs:  srIDs,
 			VersionHistories:          updatedMutableState.VersionHistories,
 		},
-		Encoding: pickRandomEncoding(),
+		Encoding:   pickRandomEncoding(),
+		DomainName: domainName,
 	})
 	return err
 }
