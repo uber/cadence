@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2017-2022 Uber Technologies Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,928 +25,271 @@ package replication
 import (
 	"context"
 	"errors"
-	"sync/atomic"
 	"testing"
-	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/pborman/uuid"
-	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
-	"github.com/uber/cadence/service/history/execution"
-	"github.com/uber/cadence/service/history/shard"
 )
 
-type (
-	taskAckManagerSuite struct {
-		suite.Suite
-		*require.Assertions
+var (
+	testTask11 = persistence.ReplicationTaskInfo{TaskID: 11, DomainID: testDomainID}
+	testTask12 = persistence.ReplicationTaskInfo{TaskID: 12, DomainID: testDomainID}
+	testTask13 = persistence.ReplicationTaskInfo{TaskID: 13, DomainID: testDomainID}
+	testTask14 = persistence.ReplicationTaskInfo{TaskID: 14, DomainID: testDomainID}
 
-		controller       *gomock.Controller
-		mockShard        *shard.TestContext
-		mockDomainCache  *cache.MockDomainCache
-		mockMutableState *execution.MockMutableState
+	testHydratedTask11 = types.ReplicationTask{SourceTaskID: 11}
+	testHydratedTask12 = types.ReplicationTask{SourceTaskID: 12}
+	testHydratedTask14 = types.ReplicationTask{SourceTaskID: 14}
 
-		mockExecutionMgr *mocks.ExecutionManager
-		mockHistoryMgr   *mocks.HistoryV2Manager
+	testHydratedTaskErrorRecoverable    = types.ReplicationTask{SourceTaskID: -100}
+	testHydratedTaskErrorNonRecoverable = types.ReplicationTask{SourceTaskID: -200}
 
-		logger log.Logger
+	testClusterA = "cluster-A"
+	testClusterB = "cluster-B"
 
-		ackManager *taskAckManagerImpl
-	}
+	testDomainName = "test-domain-name"
+
+	testDomain = cache.NewDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: testDomainID, Name: testDomainName},
+		&persistence.DomainConfig{},
+		true,
+		&persistence.DomainReplicationConfig{Clusters: []*persistence.ClusterReplicationConfig{
+			{ClusterName: testClusterA},
+		}},
+		0, nil,
+	)
 )
 
-func TestTaskAckManagerSuite(t *testing.T) {
-	s := new(taskAckManagerSuite)
-	suite.Run(t, s)
-}
-
-func (s *taskAckManagerSuite) SetupSuite() {
-
-}
-
-func (s *taskAckManagerSuite) TearDownSuite() {
-
-}
-
-func (s *taskAckManagerSuite) SetupTest() {
-	s.Assertions = require.New(s.T())
-
-	s.controller = gomock.NewController(s.T())
-	s.mockMutableState = execution.NewMockMutableState(s.controller)
-
-	s.mockShard = shard.NewTestContext(
-		s.controller,
-		&persistence.ShardInfo{
-			ShardID:                 0,
-			RangeID:                 1,
-			TransferAckLevel:        0,
-			ClusterReplicationLevel: make(map[string]int64),
+func TestTaskAckManager_GetTasks(t *testing.T) {
+	tests := []struct {
+		name           string
+		ackLevels      *fakeAckLevelStore
+		domains        domainCache
+		reader         taskReader
+		hydrator       taskHydrator
+		pollingCluster string
+		lastReadLevel  int64
+		expectResult   *types.ReplicationMessages
+		expectErr      string
+		expectAckLevel int64
+	}{
+		{
+			name: "main flow - continues on recoverable error",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 2},
+			},
+			domains: fakeDomainCache{testDomainID: testDomain},
+			reader:  fakeTaskReader{&testTask11, &testTask12, &testTask13, &testTask14},
+			hydrator: fakeTaskHydrator{
+				testTask11.TaskID: testHydratedTask11,
+				testTask12.TaskID: testHydratedTask12,
+				testTask13.TaskID: testHydratedTaskErrorRecoverable, // Will continue hydrating beyond this point
+				testTask14.TaskID: testHydratedTask14,
+			},
+			pollingCluster: testClusterA,
+			lastReadLevel:  5,
+			expectResult: &types.ReplicationMessages{
+				ReplicationTasks:       []*types.ReplicationTask{&testHydratedTask11, &testHydratedTask12, &testHydratedTask14},
+				LastRetrievedMessageID: 14,
+				HasMore:                false,
+			},
+			expectAckLevel: 5,
 		},
-		config.NewForTest(),
-	)
-
-	s.mockDomainCache = s.mockShard.Resource.DomainCache
-	s.mockExecutionMgr = s.mockShard.Resource.ExecutionMgr
-	s.mockHistoryMgr = s.mockShard.Resource.HistoryMgr
-
-	s.logger = s.mockShard.GetLogger()
-	executionCache := execution.NewCache(s.mockShard)
-
-	s.ackManager = NewTaskAckManager(
-		s.mockShard,
-		executionCache,
-	).(*taskAckManagerImpl)
-}
-
-func (s *taskAckManagerSuite) TearDownTest() {
-	s.controller.Finish()
-	s.mockShard.Finish(s.T())
-}
-
-func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_OK() {
-	task := &persistence.ReplicationTaskInfo{
-		DomainID: uuid.New(),
-	}
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
-		Tasks:         []*persistence.ReplicationTaskInfo{task},
-		NextPageToken: []byte{1},
-	}, nil)
-
-	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(context.Background(), 0, 1)
-	s.NoError(err)
-	s.True(hasMore)
-	s.Len(taskInfo, 1)
-	s.Equal(task.GetDomainID(), taskInfo[0].GetDomainID())
-}
-
-func (s *taskAckManagerSuite) TestReadTasksWithBatchSize_Error() {
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
-
-	taskInfo, hasMore, err := s.ackManager.readTasksWithBatchSize(context.Background(), 0, 1)
-	s.Error(err)
-	s.False(hasMore)
-	s.Len(taskInfo, 0)
-}
-
-func (s *taskAckManagerSuite) TestGetVersionHistoryItems_Error() {
-	_, _, err := getVersionHistoryItems(nil, 0, 0)
-	s.Error(err)
-}
-
-func (s *taskAckManagerSuite) TestGetVersionHistoryItems_OK() {
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 1,
-						Version: 1,
-					},
-				},
+		{
+			name: "main flow - stops at non recoverable error",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 2},
+			},
+			domains: fakeDomainCache{testDomainID: testDomain},
+			reader:  fakeTaskReader{&testTask11, &testTask12, &testTask13, &testTask14},
+			hydrator: fakeTaskHydrator{
+				testTask11.TaskID: testHydratedTask11,
+				testTask12.TaskID: testHydratedTask12,
+				testTask13.TaskID: testHydratedTaskErrorNonRecoverable, // Will stop hydrating beyond this point
+				testTask14.TaskID: testHydratedTask14,
+			},
+			pollingCluster: testClusterA,
+			lastReadLevel:  5,
+			expectResult: &types.ReplicationMessages{
+				ReplicationTasks:       []*types.ReplicationTask{&testHydratedTask11, &testHydratedTask12},
+				LastRetrievedMessageID: 12,
+				HasMore:                true,
+			},
+			expectAckLevel: 5,
+		},
+		{
+			name: "skips tasks for domains non belonging to polling cluster",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 2},
+			},
+			domains:        fakeDomainCache{testDomainID: testDomain},
+			reader:         fakeTaskReader{&testTask11},
+			hydrator:       fakeTaskHydrator{testTask11.TaskID: testHydratedTask11},
+			pollingCluster: testClusterB,
+			lastReadLevel:  5,
+			expectResult: &types.ReplicationMessages{
+				ReplicationTasks:       nil,
+				LastRetrievedMessageID: 11,
+				HasMore:                false,
+			},
+			expectAckLevel: 5,
+		},
+		{
+			name: "uses remote ack level for first fetch (empty task ID)",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 12},
+			},
+			domains:        fakeDomainCache{testDomainID: testDomain},
+			reader:         fakeTaskReader{&testTask11, &testTask12},
+			hydrator:       fakeTaskHydrator{testTask12.TaskID: testHydratedTask12},
+			pollingCluster: testClusterA,
+			lastReadLevel:  -1,
+			expectResult: &types.ReplicationMessages{
+				ReplicationTasks:       []*types.ReplicationTask{&testHydratedTask12},
+				LastRetrievedMessageID: 12,
+				HasMore:                false,
+			},
+			expectAckLevel: 12,
+		},
+		{
+			name: "failed to read replication tasks - return error",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 2},
+			},
+			reader:         (fakeTaskReader)(nil),
+			pollingCluster: testClusterA,
+			lastReadLevel:  5,
+			expectErr:      "error reading replication tasks",
+		},
+		{
+			name: "failed to get domain - return error",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 2},
+			},
+			domains:        fakeDomainCache{},
+			reader:         fakeTaskReader{&testTask11},
+			hydrator:       fakeTaskHydrator{},
+			pollingCluster: testClusterA,
+			lastReadLevel:  5,
+			expectErr:      "domain does not exist",
+		},
+		{
+			name: "failed to update ack level - no error, return response anyway",
+			ackLevels: &fakeAckLevelStore{
+				readLevel: 200,
+				remote:    map[string]int64{testClusterA: 2},
+				updateErr: errors.New("error update ack level"),
+			},
+			domains:        fakeDomainCache{testDomainID: testDomain},
+			reader:         fakeTaskReader{&testTask11},
+			hydrator:       fakeTaskHydrator{testTask11.TaskID: testHydratedTask11},
+			pollingCluster: testClusterA,
+			lastReadLevel:  5,
+			expectResult: &types.ReplicationMessages{
+				ReplicationTasks:       []*types.ReplicationTask{&testHydratedTask11},
+				LastRetrievedMessageID: 11,
+				HasMore:                false,
 			},
 		},
 	}
-	versionHistory, branchToken, err := getVersionHistoryItems(versionHistories, 1, 1)
-	s.NoError(err)
-	s.Equal(versionHistories.Histories[0].GetBranchToken(), branchToken)
-	s.Equal(versionHistories.Histories[0].Items[0].Version, versionHistory[0].Version)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := config.Config{
+				ReplicationTaskGenerationQPS:    dynamicconfig.GetFloatPropertyFn(0),
+				ReplicatorReadTaskMaxRetryCount: dynamicconfig.GetIntPropertyFn(1),
+			}
+
+			ackManager := NewTaskAckManager(testShardID, tt.ackLevels, tt.domains, metrics.NewNoopMetricsClient(), log.NewNoop(), &config, tt.reader, tt.hydrator)
+			result, err := ackManager.GetTasks(context.Background(), tt.pollingCluster, tt.lastReadLevel)
+
+			if tt.expectErr != "" {
+				assert.EqualError(t, err, tt.expectErr)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectResult, result)
+			}
+
+			if tt.expectAckLevel != 0 {
+				assert.Equal(t, tt.expectAckLevel, tt.ackLevels.remote[tt.pollingCluster])
+			}
+		})
+	}
 }
 
-func (s *taskAckManagerSuite) TestGetEventsBlob_OK() {
-	branchToken := []byte{}
-	firstEventID := int64(1)
-	nextEventID := int64(2)
-	domainID := uuid.New()
-	domainName := uuid.New()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).Times(1)
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
-				{
-					Encoding: common.EncodingTypeJSON,
-					Data:     []byte{},
-				},
-			},
-			Size: 1,
-		}, nil)
-	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
-	s.NoError(err)
+type fakeAckLevelStore struct {
+	remote    map[string]int64
+	readLevel int64
+	updateErr error
 }
 
-func (s *taskAckManagerSuite) TestGetEventsBlob_Errors() {
-	branchToken := []byte{}
-	firstEventID := int64(1)
-	nextEventID := int64(2)
-	domainID := uuid.New()
-	domainName := uuid.New()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{},
-			Size:              0,
-		}, nil)
-	_, err := s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
-	s.Error(err)
-
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
-				{
-					Encoding: common.EncodingTypeJSON,
-					Data:     []byte{},
-				},
-				{
-					Encoding: common.EncodingTypeJSON,
-					Data:     []byte{},
-				},
-			},
-			Size: 2,
-		}, nil)
-	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
-	s.Error(err)
-
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(nil, errors.New("test"))
-	_, err = s.ackManager.getEventsBlob(context.Background(), branchToken, firstEventID, nextEventID, domainID)
-	s.Error(err)
+func (s *fakeAckLevelStore) GetTransferMaxReadLevel() int64 {
+	return s.readLevel
+}
+func (s *fakeAckLevelStore) GetClusterReplicationLevel(cluster string) int64 {
+	return s.remote[cluster]
+}
+func (s *fakeAckLevelStore) UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error {
+	s.remote[cluster] = lastTaskID
+	return s.updateErr
 }
 
-func (s *taskAckManagerSuite) TestProcessReplication_OK() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
+type fakeTaskReader []*persistence.ReplicationTaskInfo
+
+func (r fakeTaskReader) Read(ctx context.Context, readLevel int64, maxReadLevel int64) ([]*persistence.ReplicationTaskInfo, bool, error) {
+	if r == nil {
+		return nil, false, errors.New("error reading replication tasks")
 	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
 
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(nil).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-
-	_, err := s.ackManager.processReplication(
-		context.Background(),
-		false,
-		taskInfo,
-		func(
-			activityInfo *persistence.ActivityInfo,
-			versionHistories *persistence.VersionHistories,
-		) (*types.ReplicationTask, error) {
-			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-				domainID,
-				types.WorkflowExecution{
-					WorkflowID: workflowID,
-					RunID:      runID,
-				},
-			)
-			s.NoError(err)
-			defer release(nil)
-			return nil, nil
-		},
-	)
-	s.NoError(err)
-	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	s.NoError(err)
-	release(nil)
-
-	_, err = s.ackManager.processReplication(
-		context.Background(),
-		true,
-		taskInfo,
-		func(
-			activityInfo *persistence.ActivityInfo,
-			versionHistories *persistence.VersionHistories,
-		) (*types.ReplicationTask, error) {
-			_, release, err := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-				domainID,
-				types.WorkflowExecution{
-					WorkflowID: workflowID,
-					RunID:      runID,
-				},
-			)
-			s.NoError(err)
-			release(nil)
-			return nil, nil
-		},
-	)
-	s.NoError(err)
-	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	s.NoError(err)
-	release(nil)
+	hasMore := false
+	var result []*persistence.ReplicationTaskInfo
+	for _, task := range r {
+		if task.TaskID < readLevel {
+			continue
+		}
+		if task.TaskID >= maxReadLevel {
+			hasMore = true
+			break
+		}
+		result = append(result, task)
+	}
+	return result, hasMore, nil
 }
 
-func (s *taskAckManagerSuite) TestProcessReplication_Error() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
+type fakeTaskHydrator map[int64]types.ReplicationTask
+
+func (h fakeTaskHydrator) Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.ReplicationTask, error) {
+	if hydratedTask, ok := h[task.TaskID]; ok {
+		if hydratedTask == testHydratedTaskErrorNonRecoverable {
+			return nil, errors.New("error hydrating task")
+		}
+		if hydratedTask == testHydratedTaskErrorRecoverable {
+			return nil, &types.EntityNotExistsError{}
+		}
+		return &hydratedTask, nil
 	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, errors.New("test")).Times(1)
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(false).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(nil).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-
-	_, err := s.ackManager.processReplication(
-		context.Background(),
-		true,
-		taskInfo,
-		func(
-			activityInfo *persistence.ActivityInfo,
-			versionHistories *persistence.VersionHistories,
-		) (*types.ReplicationTask, error) {
-			return nil, nil
-		},
-	)
-	s.Error(err)
-	_, release, err = s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	s.NoError(err)
-	release(nil)
+	panic("fix the test, should not reach this")
 }
 
-func (s *taskAckManagerSuite) TestGenerateFailoverMarkerTask() {
-	domainID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		DomainID:     domainID,
-		TaskID:       1,
-		Version:      2,
-		CreationTime: 3,
+type fakeDomainCache map[string]*cache.DomainCacheEntry
+
+func (cache fakeDomainCache) GetDomainByID(id string) (*cache.DomainCacheEntry, error) {
+	if entry, ok := cache[id]; ok {
+		return entry, nil
 	}
-	task := s.ackManager.generateFailoverMarkerTask(taskInfo)
-	s.Equal(task.GetSourceTaskID(), int64(1))
-	s.NotNil(task.GetFailoverMarkerAttributes())
-	s.Equal(types.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
-	s.Equal(domainID, task.GetFailoverMarkerAttributes().GetDomainID())
-	s.Equal(int64(2), task.GetFailoverMarkerAttributes().GetFailoverVersion())
-	s.Equal(int64(3), task.GetCreationTime())
-}
-
-func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_OK() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 6,
-						Version: 1,
-					},
-				},
-			},
-		},
-	}
-	activityInfo := &persistence.ActivityInfo{
-		Version:                  1,
-		ScheduleID:               5,
-		ScheduledTime:            time.Now(),
-		StartedID:                6,
-		StartedTime:              time.Now(),
-		DomainID:                 domainID,
-		RequestID:                uuid.New(),
-		LastHeartBeatUpdatedTime: time.Now(),
-	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(activityInfo, true).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-
-	task, err := s.ackManager.generateSyncActivityTask(context.Background(), taskInfo)
-	s.NoError(err)
-	s.NotNil(task)
-	s.NotNil(task.SyncActivityTaskAttributes)
-	s.Equal(types.ReplicationTaskTypeSyncActivity, task.GetTaskType())
-	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainID())
-	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledID())
-	s.Equal(activityInfo.ScheduledTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetScheduledTime())
-	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedID())
-	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
-	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
-	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
-}
-
-func (s *taskAckManagerSuite) TestGenerateSyncActivityTask_Empty() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 6,
-						Version: 1,
-					},
-				},
-			},
-		},
-	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-
-	task, err := s.ackManager.generateSyncActivityTask(context.Background(), taskInfo)
-	s.NoError(err)
-	s.Nil(task)
-}
-
-func (s *taskAckManagerSuite) TestGenerateHistoryReplicationTask() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	domainName := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		DomainID:     domainID,
-		WorkflowID:   workflowID,
-		RunID:        runID,
-		FirstEventID: 6,
-		Version:      1,
-	}
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 6,
-						Version: 1,
-					},
-				},
-			},
-		},
-	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
-				{
-					Encoding: common.EncodingTypeJSON,
-					Data:     []byte{},
-				},
-			},
-			Size: 1,
-		},
-		nil,
-	)
-
-	task, err := s.ackManager.generateHistoryReplicationTask(context.Background(), taskInfo)
-	s.NoError(err)
-	s.NotNil(task)
-	s.NotNil(task.HistoryTaskV2Attributes)
-	s.Equal(types.ReplicationTaskTypeHistoryV2, task.GetTaskType())
-}
-
-func (s *taskAckManagerSuite) TestToReplicationTask_FailoverMarker() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
-		DomainID:     domainID,
-		WorkflowID:   workflowID,
-		RunID:        runID,
-		FirstEventID: 6,
-		Version:      1,
-	}
-
-	task, err := s.ackManager.toReplicationTask(context.Background(), taskInfo)
-	s.NoError(err)
-	s.NotNil(task)
-	s.Equal(types.ReplicationTaskTypeFailoverMarker, task.GetTaskType())
-}
-
-func (s *taskAckManagerSuite) TestToReplicationTask_SyncActivity() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		TaskType:   persistence.ReplicationTaskTypeSyncActivity,
-		DomainID:   domainID,
-		WorkflowID: workflowID,
-		RunID:      runID,
-	}
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 6,
-						Version: 1,
-					},
-				},
-			},
-		},
-	}
-	activityInfo := &persistence.ActivityInfo{
-		Version:                  1,
-		ScheduleID:               5,
-		ScheduledTime:            time.Now(),
-		StartedID:                6,
-		StartedTime:              time.Now(),
-		DomainID:                 domainID,
-		RequestID:                uuid.New(),
-		LastHeartBeatUpdatedTime: time.Now(),
-	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(activityInfo, true).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-
-	task, err := s.ackManager.toReplicationTask(context.Background(), taskInfo)
-	s.NoError(err)
-	s.NotNil(task)
-	s.NotNil(task.SyncActivityTaskAttributes)
-	s.Equal(types.ReplicationTaskTypeSyncActivity, task.GetTaskType())
-	s.Equal(activityInfo.DomainID, task.GetSyncActivityTaskAttributes().GetDomainID())
-	s.Equal(activityInfo.ScheduleID, task.GetSyncActivityTaskAttributes().GetScheduledID())
-	s.Equal(activityInfo.ScheduledTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetScheduledTime())
-	s.Equal(activityInfo.StartedID, task.GetSyncActivityTaskAttributes().GetStartedID())
-	s.Equal(activityInfo.StartedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetStartedTime())
-	s.Equal(activityInfo.LastHeartBeatUpdatedTime.UnixNano(), task.GetSyncActivityTaskAttributes().GetLastHeartbeatTime())
-	s.Equal(activityInfo.Version, task.GetSyncActivityTaskAttributes().GetVersion())
-	s.Equal(versionHistories.Histories[0].ToInternalType(), task.GetSyncActivityTaskAttributes().GetVersionHistory())
-}
-
-func (s *taskAckManagerSuite) TestToReplicationTask_History() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	domainName := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		TaskType:     persistence.ReplicationTaskTypeHistory,
-		DomainID:     domainID,
-		WorkflowID:   workflowID,
-		RunID:        runID,
-		FirstEventID: 6,
-		Version:      1,
-	}
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 6,
-						Version: 1,
-					},
-				},
-			},
-		},
-	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil)
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		&persistence.ReadRawHistoryBranchResponse{
-			HistoryEventBlobs: []*persistence.DataBlob{
-				{
-					Encoding: common.EncodingTypeJSON,
-					Data:     []byte{},
-				},
-			},
-			Size: 1,
-		},
-		nil,
-	)
-
-	task, err := s.ackManager.generateHistoryReplicationTask(context.Background(), taskInfo)
-	s.NoError(err)
-	s.NotNil(task)
-	s.NotNil(task.HistoryTaskV2Attributes)
-	s.Equal(types.ReplicationTaskTypeHistoryV2, task.GetTaskType())
-}
-
-func (s *taskAckManagerSuite) TestGetTasks() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	clusterName := cluster.TestCurrentClusterName
-	taskInfo := &persistence.ReplicationTaskInfo{
-		TaskType:     persistence.ReplicationTaskTypeFailoverMarker,
-		DomainID:     domainID,
-		WorkflowID:   workflowID,
-		RunID:        runID,
-		FirstEventID: 6,
-		Version:      1,
-	}
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
-		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
-		NextPageToken: []byte{1},
-	}, nil)
-	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-
-	_, err := s.ackManager.GetTasks(context.Background(), clusterName, 10)
-	s.NoError(err)
-	ackLevel := s.mockShard.GetClusterReplicationLevel(clusterName)
-	s.Equal(int64(10), ackLevel)
-}
-
-func (s *taskAckManagerSuite) TestGetTasks_ReturnDataErrors() {
-	domainID := uuid.New()
-	workflowID := uuid.New()
-	runID := uuid.New()
-	clusterName := cluster.TestCurrentClusterName
-	taskID := int64(10)
-	domainName := uuid.New()
-	taskInfo := &persistence.ReplicationTaskInfo{
-		TaskType:     persistence.ReplicationTaskTypeHistory,
-		TaskID:       taskID + 1,
-		DomainID:     domainID,
-		WorkflowID:   workflowID,
-		RunID:        runID,
-		FirstEventID: 6,
-		Version:      1,
-	}
-	versionHistories := &persistence.VersionHistories{
-		CurrentVersionHistoryIndex: 0,
-		Histories: []*persistence.VersionHistory{
-			{
-				BranchToken: []byte{1},
-				Items: []*persistence.VersionHistoryItem{
-					{
-						EventID: 6,
-						Version: 1,
-					},
-				},
-			},
-		},
-	}
-	workflowContext, release, _ := s.ackManager.executionCache.GetOrCreateWorkflowExecutionForBackground(
-		domainID,
-		types.WorkflowExecution{
-			WorkflowID: workflowID,
-			RunID:      runID,
-		},
-	)
-	workflowContext.SetWorkflowExecution(s.mockMutableState)
-	release(nil)
-	s.mockMutableState.EXPECT().StartTransaction(gomock.Any(), gomock.Any()).Return(false, nil).AnyTimes()
-	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true).AnyTimes()
-	s.mockMutableState.EXPECT().GetVersionHistories().Return(versionHistories).AnyTimes()
-	s.mockMutableState.EXPECT().GetActivityInfo(gomock.Any()).Return(nil, false).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainByID(domainID).Return(cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	), nil).AnyTimes()
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
-	s.mockExecutionMgr.On("GetReplicationTasks", mock.Anything, mock.Anything).Return(&persistence.GetReplicationTasksResponse{
-		Tasks:         []*persistence.ReplicationTaskInfo{taskInfo},
-		NextPageToken: nil,
-	}, nil)
-	s.mockShard.Resource.ShardMgr.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
-	// Test BadRequestError
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		nil,
-		&types.BadRequestError{},
-	).Times(1)
-	msg, err := s.ackManager.GetTasks(context.Background(), clusterName, taskID)
-	s.NoError(err)
-	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
-
-	// Test InternalDataInconsistencyError
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		nil,
-		&types.InternalDataInconsistencyError{},
-	).Times(1)
-	msg, err = s.ackManager.GetTasks(context.Background(), clusterName, taskID)
-	s.NoError(err)
-	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
-
-	// Test EntityNotExistsError
-	s.mockHistoryMgr.On("ReadRawHistoryBranch", mock.Anything, mock.Anything).Return(
-		nil,
-		&types.EntityNotExistsError{},
-	).Times(1)
-	msg, err = s.ackManager.GetTasks(context.Background(), clusterName, taskID)
-	s.NoError(err)
-	s.Equal(taskID+1, msg.GetLastRetrievedMessageID())
-}
-
-func (s *taskAckManagerSuite) TestSkipTask_ReturnTrue() {
-	domainID := uuid.New()
-	domainEntity := cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	)
-	s.True(skipTask("test", domainEntity))
-}
-
-func (s *taskAckManagerSuite) TestSkipTask_ReturnFalse() {
-	domainID := uuid.New()
-	domainEntity := cache.NewGlobalDomainCacheEntryForTest(
-		&persistence.DomainInfo{ID: domainID, Name: "domainName"},
-		&persistence.DomainConfig{Retention: 1},
-		&persistence.DomainReplicationConfig{
-			ActiveClusterName: cluster.TestCurrentClusterName,
-			Clusters: []*persistence.ClusterReplicationConfig{
-				{ClusterName: cluster.TestCurrentClusterName},
-				{ClusterName: cluster.TestAlternativeClusterName},
-			},
-		},
-		1,
-	)
-	s.False(skipTask(cluster.TestAlternativeClusterName, domainEntity))
-}
-
-func (s *taskAckManagerSuite) TestGetBatchSize_UpperLimit() {
-	s.ackManager.lastTaskCreationTime = atomic.Value{}
-	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Duration(-s.ackManager.maxAllowedLatencyFn()) * time.Second))
-	size := s.ackManager.getBatchSize()
-	s.Equal(s.ackManager.fetchTasksBatchSize(0), size)
-}
-
-func (s *taskAckManagerSuite) TestGetBatchSize_ValidRange() {
-	s.ackManager.lastTaskCreationTime = atomic.Value{}
-	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(-8 * time.Second))
-	size := s.ackManager.getBatchSize()
-	s.True(minReadTaskSize+5 <= size)
-}
-
-func (s *taskAckManagerSuite) TestGetBatchSize_InvalidRange() {
-	s.ackManager.lastTaskCreationTime = atomic.Value{}
-	s.ackManager.lastTaskCreationTime.Store(time.Now().Add(time.Minute))
-	size := s.ackManager.getBatchSize()
-	s.Equal(minReadTaskSize, size)
+	return nil, types.EntityNotExistsError{Message: "domain does not exist"}
 }
