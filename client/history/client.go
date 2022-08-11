@@ -821,7 +821,10 @@ func (c *clientImpl) GetReplicationMessages(
 			requestContext, responseInfo := rpc.ContextWithResponseInfo(requestContext)
 			resp, err := c.client.GetReplicationMessages(requestContext, req, append(opts, yarpc.WithShardKey(peer))...)
 			if err != nil {
-				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
+				c.logger.Warn("Failed to get replication tasks from client",
+					tag.Error(err),
+					tag.ShardReplicationToken(req),
+				)
 				// Returns service busy error to notify replication
 				if _, ok := err.(*types.ServiceBusyError); ok {
 					return err
