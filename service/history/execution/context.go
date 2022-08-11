@@ -659,7 +659,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 		Mode:                   persistence.UpdateWorkflowModeIgnoreCurrent,
 		UpdateWorkflowMutation: *currentWorkflow,
 		// Encoding, this is set by shard context
-		DomainName: c.GetDomainName(),
+		DomainName: c.mutableState.GetDomainEntry().GetInfo().Name,
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
@@ -783,7 +783,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		UpdateWorkflowMutation: *currentWorkflow,
 		NewWorkflowSnapshot:    newWorkflow,
 		// Encoding, this is set by shard context
-		DomainName: c.GetDomainName(),
+		DomainName: c.mutableState.GetDomainEntry().GetInfo().Name,
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
