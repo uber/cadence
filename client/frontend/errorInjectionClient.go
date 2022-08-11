@@ -56,6 +56,32 @@ func NewErrorInjectionClient(
 	}
 }
 
+func (c *errorInjectionClient) CountWorkflowExecutions(
+	ctx context.Context,
+	request *types.CountWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.CountWorkflowExecutionsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.CountWorkflowExecutionsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.CountWorkflowExecutions(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationCountWorkflowExecutions,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
 func (c *errorInjectionClient) DeprecateDomain(
 	ctx context.Context,
 	request *types.DeprecateDomainRequest,
@@ -124,6 +150,82 @@ func (c *errorInjectionClient) DescribeTaskList(
 	if fakeErr != nil {
 		c.logger.Error(msgInjectedFakeErr,
 			tag.FrontendClientOperationDescribeTaskList,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) GetTaskListsByDomain(
+	ctx context.Context,
+	request *types.GetTaskListsByDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetTaskListsByDomainResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetTaskListsByDomainResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetTaskListsByDomain(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationGetTaskListsByDomain,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) GetClusterInfo(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*types.ClusterInfo, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.ClusterInfo
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetClusterInfo(ctx, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationGetClusterInfo,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) GetSearchAttributes(
+	ctx context.Context,
+	opts ...yarpc.CallOption,
+) (*types.GetSearchAttributesResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetSearchAttributesResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetSearchAttributes(ctx, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationGetSearchAttributes,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.ClientError(clientErr),
@@ -211,6 +313,83 @@ func (c *errorInjectionClient) ListArchivedWorkflowExecutions(
 	return resp, clientErr
 }
 
+func (c *errorInjectionClient) ListTaskListPartitions(
+	ctx context.Context,
+	request *types.ListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListTaskListPartitionsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.ListTaskListPartitionsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.ListTaskListPartitions(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationListTaskListPartitions,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *types.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListWorkflowExecutionsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.ListWorkflowExecutionsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.ScanWorkflowExecutions(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationScanWorkflowExecutions,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) RestartWorkflowExecution(
+	ctx context.Context,
+	request *types.RestartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.RestartWorkflowExecutionResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.RestartWorkflowExecution(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationRestartWorkflowExecution,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
 func (c *errorInjectionClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListClosedWorkflowExecutionsRequest,
@@ -263,32 +442,6 @@ func (c *errorInjectionClient) ListDomains(
 	return resp, clientErr
 }
 
-func (c *errorInjectionClient) ListOpenWorkflowExecutions(
-	ctx context.Context,
-	request *types.ListOpenWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListOpenWorkflowExecutionsResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.ListOpenWorkflowExecutionsResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationListOpenWorkflowExecutions,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
 func (c *errorInjectionClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListWorkflowExecutionsRequest,
@@ -315,74 +468,23 @@ func (c *errorInjectionClient) ListWorkflowExecutions(
 	return resp, clientErr
 }
 
-func (c *errorInjectionClient) ScanWorkflowExecutions(
+func (c *errorInjectionClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
-	request *types.ListWorkflowExecutionsRequest,
+	request *types.ListOpenWorkflowExecutionsRequest,
 	opts ...yarpc.CallOption,
-) (*types.ListWorkflowExecutionsResponse, error) {
+) (*types.ListOpenWorkflowExecutionsResponse, error) {
 	fakeErr := errors.GenerateFakeError(c.errorRate)
 
-	var resp *types.ListWorkflowExecutionsResponse
+	var resp *types.ListOpenWorkflowExecutionsResponse
 	var clientErr error
 	var forwardCall bool
 	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.ScanWorkflowExecutions(ctx, request, opts...)
+		resp, clientErr = c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
 	}
 
 	if fakeErr != nil {
 		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationScanWorkflowExecutions,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
-func (c *errorInjectionClient) CountWorkflowExecutions(
-	ctx context.Context,
-	request *types.CountWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.CountWorkflowExecutionsResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.CountWorkflowExecutionsResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.CountWorkflowExecutions(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationCountWorkflowExecutions,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
-func (c *errorInjectionClient) GetSearchAttributes(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (*types.GetSearchAttributesResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.GetSearchAttributesResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.GetSearchAttributes(ctx, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationGetSearchAttributes,
+			tag.FrontendClientOperationListOpenWorkflowExecutions,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.ClientError(clientErr),
@@ -496,6 +598,32 @@ func (c *errorInjectionClient) RecordActivityTaskHeartbeat(
 	return resp, clientErr
 }
 
+func (c *errorInjectionClient) ResetWorkflowExecution(
+	ctx context.Context,
+	request *types.ResetWorkflowExecutionRequest,
+	opts ...yarpc.CallOption,
+) (*types.ResetWorkflowExecutionResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.ResetWorkflowExecutionResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.ResetWorkflowExecution(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationResetWorkflowExecution,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
 func (c *errorInjectionClient) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	request *types.RecordActivityTaskHeartbeatByIDRequest,
@@ -589,32 +717,6 @@ func (c *errorInjectionClient) ResetStickyTaskList(
 	if fakeErr != nil {
 		c.logger.Error(msgInjectedFakeErr,
 			tag.FrontendClientOperationResetStickyTaskList,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
-func (c *errorInjectionClient) ResetWorkflowExecution(
-	ctx context.Context,
-	request *types.ResetWorkflowExecutionRequest,
-	opts ...yarpc.CallOption,
-) (*types.ResetWorkflowExecutionResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.ResetWorkflowExecutionResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.ResetWorkflowExecution(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationResetWorkflowExecution,
 			tag.Error(fakeErr),
 			tag.Bool(forwardCall),
 			tag.ClientError(clientErr),
@@ -875,31 +977,6 @@ func (c *errorInjectionClient) RespondQueryTaskCompleted(
 	return clientErr
 }
 
-func (c *errorInjectionClient) RestartWorkflowExecution(
-	ctx context.Context,
-	request *types.RestartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.RestartWorkflowExecutionResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.RestartWorkflowExecution(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationRestartWorkflowExecution,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
 func (c *errorInjectionClient) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,
@@ -951,6 +1028,32 @@ func (c *errorInjectionClient) SignalWorkflowExecution(
 	return clientErr
 }
 
+func (c *errorInjectionClient) UpdateDomain(
+	ctx context.Context,
+	request *types.UpdateDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateDomainResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.UpdateDomainResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.UpdateDomain(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.FrontendClientOperationUpdateDomain,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
 func (c *errorInjectionClient) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.StartWorkflowExecutionRequest,
@@ -1000,107 +1103,4 @@ func (c *errorInjectionClient) TerminateWorkflowExecution(
 		return fakeErr
 	}
 	return clientErr
-}
-
-func (c *errorInjectionClient) UpdateDomain(
-	ctx context.Context,
-	request *types.UpdateDomainRequest,
-	opts ...yarpc.CallOption,
-) (*types.UpdateDomainResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.UpdateDomainResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.UpdateDomain(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationUpdateDomain,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
-func (c *errorInjectionClient) GetClusterInfo(
-	ctx context.Context,
-	opts ...yarpc.CallOption,
-) (*types.ClusterInfo, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.ClusterInfo
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.GetClusterInfo(ctx, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationGetClusterInfo,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
-func (c *errorInjectionClient) ListTaskListPartitions(
-	ctx context.Context,
-	request *types.ListTaskListPartitionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListTaskListPartitionsResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.ListTaskListPartitionsResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.ListTaskListPartitions(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationListTaskListPartitions,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
-}
-
-func (c *errorInjectionClient) GetTaskListsByDomain(
-	ctx context.Context,
-	request *types.GetTaskListsByDomainRequest,
-	opts ...yarpc.CallOption,
-) (*types.GetTaskListsByDomainResponse, error) {
-	fakeErr := errors.GenerateFakeError(c.errorRate)
-
-	var resp *types.GetTaskListsByDomainResponse
-	var clientErr error
-	var forwardCall bool
-	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
-		resp, clientErr = c.client.GetTaskListsByDomain(ctx, request, opts...)
-	}
-
-	if fakeErr != nil {
-		c.logger.Error(msgInjectedFakeErr,
-			tag.FrontendClientOperationGetTaskListsByDomain,
-			tag.Error(fakeErr),
-			tag.Bool(forwardCall),
-			tag.ClientError(clientErr),
-		)
-		return nil, fakeErr
-	}
-	return resp, clientErr
 }
