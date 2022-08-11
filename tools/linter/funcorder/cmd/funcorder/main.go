@@ -23,8 +23,9 @@
 package main
 
 import (
-	"github.com/uber/cadence/tools/linter/funcorder"
 	"golang.org/x/tools/go/analysis/singlechecker"
+
+	"github.com/uber/cadence/tools/linter/funcorder"
 )
 
 func main() {

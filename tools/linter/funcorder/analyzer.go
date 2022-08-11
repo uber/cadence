@@ -23,11 +23,12 @@
 package funcorder
 
 import (
+	"os"
+	"strings"
+
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"golang.org/x/tools/go/analysis"
-	"os"
-	"strings"
 )
 
 const (
