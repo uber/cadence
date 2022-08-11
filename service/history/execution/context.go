@@ -262,7 +262,7 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
 			DomainID:   c.domainID,
 			Execution:  c.workflowExecution,
-			DomainName: c.GetDomainName(),
+			DomainName: domainEntry.GetInfo().Name,
 		})
 		if err != nil {
 			return nil, err

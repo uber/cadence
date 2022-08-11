@@ -140,7 +140,9 @@ func (ts *TimerInvalidTest) TestCheck() {
 	}
 	ctrl := gomock.NewController(ts.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
+		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
 			execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
@@ -266,7 +268,9 @@ func (ts *TimerInvalidTest) TestFix() {
 	}
 	ctrl := gomock.NewController(ts.T())
 	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
+		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
 			execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
