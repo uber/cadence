@@ -880,10 +880,9 @@ type (
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
-		DomainID  string
-		Execution types.WorkflowExecution
-		//TO DO: add domainName for metrics creation : hindered by same problem as for HistoryExists
-		//DomainName string
+		DomainID   string
+		Execution  types.WorkflowExecution
+		DomainName string
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
@@ -961,8 +960,7 @@ type (
 
 		Encoding common.EncodingType // optional binary encoding type
 
-		//TO DO: add DomainName for UpdateWorkflowExecution
-		//DomainName string
+		DomainName string
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run
