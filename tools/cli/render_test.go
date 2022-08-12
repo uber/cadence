@@ -182,7 +182,7 @@ var testTable = []testRow{
 		StringField: "very long/ string this is",
 		IntField:    456,
 		BoolField:   false,
-		TimeField:   time.Date(2000, 11, 12, 13, 14, 15, 16, time.Local),
+		TimeField:   time.Date(2000, 11, 12, 13, 14, 15, 16, time.FixedZone("UTC+3", 0)),
 		MapField:    nil,
 		SliceField:  nil,
 	},
