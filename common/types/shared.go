@@ -4643,6 +4643,7 @@ type RequestCancelWorkflowExecutionRequest struct {
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Identity          string             `json:"identity,omitempty"`
 	RequestID         string             `json:"requestId,omitempty"`
+	Cause             string             `json:"cause,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)

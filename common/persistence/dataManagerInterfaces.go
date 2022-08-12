@@ -869,6 +869,8 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot WorkflowSnapshot
+
+		DomainName string
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -878,8 +880,9 @@ type (
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
-		DomainID  string
-		Execution types.WorkflowExecution
+		DomainID   string
+		Execution  types.WorkflowExecution
+		DomainName string
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
@@ -956,6 +959,8 @@ type (
 		NewWorkflowSnapshot *WorkflowSnapshot
 
 		Encoding common.EncodingType // optional binary encoding type
+
+		DomainName string
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run

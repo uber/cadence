@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -34,15 +35,17 @@ import (
 type (
 	openCurrentExecution struct {
 		pr persistence.Retryer
+		dc cache.DomainCache
 	}
 )
 
 // NewOpenCurrentExecution returns a new invariant for checking open current execution
 func NewOpenCurrentExecution(
-	pr persistence.Retryer,
+	pr persistence.Retryer, dc cache.DomainCache,
 ) Invariant {
 	return &openCurrentExecution{
 		pr: pr,
+		dc: dc,
 	}
 }
 
@@ -72,7 +75,8 @@ func (o *openCurrentExecution) Check(
 		DomainID:   concreteExecution.DomainID,
 		WorkflowID: concreteExecution.WorkflowID,
 	})
-	stillOpen, stillOpenErr := ExecutionStillOpen(ctx, &concreteExecution.Execution, o.pr)
+
+	stillOpen, stillOpenErr := ExecutionStillOpen(ctx, &concreteExecution.Execution, o.pr, o.dc)
 	if stillOpenErr != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -147,13 +151,19 @@ func ExecutionStillOpen(
 	ctx context.Context,
 	exec *entity.Execution,
 	pr persistence.Retryer,
+	dc cache.DomainCache,
 ) (bool, error) {
+	domainName, err := dc.GetDomainName(exec.DomainID)
+	if err != nil {
+		return false, nil
+	}
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
 		Execution: types.WorkflowExecution{
 			WorkflowID: exec.WorkflowID,
 			RunID:      exec.RunID,
 		},
+		DomainName: domainName,
 	}
 	resp, err := pr.GetWorkflowExecution(ctx, req)
 	if err != nil {

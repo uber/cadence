@@ -339,7 +339,7 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -356,7 +356,7 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(
 		resp, err = p.persistence.GetWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}

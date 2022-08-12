@@ -454,6 +454,11 @@ func ShardReplicationAck(shardReplicationAck int64) Tag {
 	return newInt64("shard-replication-ack", shardReplicationAck)
 }
 
+// ShardReplicationToken returns information about a particular replication request
+func ShardReplicationToken(token interface{}) Tag {
+	return newObjectTag("shard-replication-token", token)
+}
+
 // PreviousShardRangeID returns tag for PreviousShardRangeID
 func PreviousShardRangeID(id int64) Tag {
 	return newInt64("previous-shard-range-id", id)
