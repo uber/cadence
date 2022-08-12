@@ -2292,7 +2292,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				return nil, workflow.ErrCancellationAlreadyRequested
 			}
 
-			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
+			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent(req.CancelRequest.Cause, req); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 

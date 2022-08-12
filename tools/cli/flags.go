@@ -541,6 +541,13 @@ func getFlagsForTerminate() []cli.Flag {
 	})
 }
 
+func getFlagsForCancel() []cli.Flag {
+	return append(flagsForExecution, cli.StringFlag{
+		Name:  FlagReasonWithAlias,
+		Usage: "The reason you want to cancel the workflow",
+	})
+}
+
 func getFormatFlag() cli.Flag {
 	return cli.StringFlag{
 		Name:  FlagFormat,
