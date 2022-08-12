@@ -511,6 +511,7 @@ func CancelWorkflow(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
+	reason := c.String(FlagReason)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -524,6 +525,7 @@ func CancelWorkflow(c *cli.Context) {
 				RunID:      rid,
 			},
 			Identity: getCliIdentity(),
+			Cause:    reason,
 		},
 	)
 	if err != nil {
