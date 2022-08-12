@@ -499,7 +499,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		NewWorkflowSnapshot:     newWorkflow,
 		CurrentWorkflowMutation: currentWorkflow,
 		// Encoding, this is set by shard context
-		DomainName: c.GetDomainName(),
+		DomainName: c.mutableState.GetDomainEntry().GetInfo().Name,
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
