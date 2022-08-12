@@ -1626,7 +1626,7 @@ func (h *handlerImpl) GetReplicationMessages(
 	wg.Wait()
 
 	responseSize := 0
-	maxResponseSize := h.config.GRPCMaxSizeInByte()
+	maxResponseSize := h.config.MaxResponseSize()
 
 	messagesByShard := make(map[int32]*types.ReplicationMessages)
 	result.Range(func(key, value interface{}) bool {
