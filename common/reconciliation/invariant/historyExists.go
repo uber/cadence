@@ -148,7 +148,7 @@ func (h *historyExists) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(ctx, execution, h.pr)
+	fixResult = DeleteExecution(ctx, execution, h.pr, h.dc)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = h.Name()
 	return *fixResult

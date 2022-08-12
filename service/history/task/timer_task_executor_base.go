@@ -225,12 +225,16 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 	ctx context.Context,
 	task *persistence.TimerTaskInfo,
 ) error {
-
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return err
+	}
 	op := func() error {
 		return t.shard.GetExecutionManager().DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
+			DomainName: domainName,
 		})
 	}
 	return t.throttleRetry.Do(ctx, op)

@@ -979,6 +979,8 @@ type (
 		CurrentWorkflowMutation *WorkflowMutation
 
 		Encoding common.EncodingType // optional binary encoding type
+
+		DomainName string
 	}
 
 	// WorkflowEvents is used as generic workflow history events transaction container
@@ -1047,6 +1049,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution

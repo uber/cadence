@@ -117,29 +117,29 @@ func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_WorkflowDoesNotExist() {
 }
 
 func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_NoStartEvent() {
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil).AnyTimes()
 	err := &types.InternalServiceError{Message: "unable to get workflow start event"}
 	s.testMaintainCorruptWorkflow(err, nil, true)
 }
 func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_NoStartEventHistory() {
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil).AnyTimes()
 	err := &types.InternalServiceError{Message: "unable to get workflow start event"}
 	s.testMaintainCorruptWorkflow(nil, err, true)
 }
 
 func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_UnableToGetScheduledEvent() {
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil).AnyTimes()
 	err := &types.InternalServiceError{Message: "unable to get activity scheduled event"}
 	s.testMaintainCorruptWorkflow(err, nil, true)
 }
 func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_UnableToGetScheduledEventHistory() {
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil).AnyTimes()
 	err := &types.InternalServiceError{Message: "unable to get activity scheduled event"}
 	s.testMaintainCorruptWorkflow(nil, err, true)
 }
 
 func (s *adminHandlerSuite) TestMaintainCorruptWorkflow_CorruptedHistory() {
-	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil)
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(s.domainName, nil).AnyTimes()
 	err := &types.InternalDataInconsistencyError{
 		Message: "corrupted history event batch, eventID is not continouous",
 	}

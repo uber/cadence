@@ -81,7 +81,9 @@ func (s *UtilSuite) TestDeleteExecution() {
 			},
 		},
 	}
-
+	ctrl := gomock.NewController(s.T())
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("DeleteWorkflowExecution", mock.Anything, mock.Anything, mock.Anything).Return(tc.deleteConcreteErr).Once()
@@ -89,7 +91,8 @@ func (s *UtilSuite) TestDeleteExecution() {
 			execManager.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(tc.deleteCurrentErr).Once()
 		}
 		pr := persistence.NewPersistenceRetryer(execManager, nil, common.CreatePersistenceRetryPolicy())
-		result := DeleteExecution(context.Background(), &entity.ConcreteExecution{}, pr)
+		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
+		result := DeleteExecution(context.Background(), &entity.ConcreteExecution{}, pr, mockDomainCache)
 		s.Equal(tc.expectedFixResult, result)
 	}
 }
