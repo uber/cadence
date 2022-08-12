@@ -95,7 +95,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				index := i
 				if _, ok := selectedIndex[i]; ok {
 					index = funcList[cursor].Index
-					cursor += 1
+					cursor++
 				}
 				newDecls = append(newDecls, dstF.Decls[index])
 			}
