@@ -25,21 +25,24 @@ package invariant
 import (
 	"context"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
 )
 
 type TimerInvalid struct {
-	pr persistence.Retryer
+	pr    persistence.Retryer
+	cache cache.DomainCache
 }
 
 // NewTimerInvalid returns a new history exists invariant
 func NewTimerInvalid(
-	pr persistence.Retryer,
+	pr persistence.Retryer, cache cache.DomainCache,
 ) Invariant {
 	return &TimerInvalid{
-		pr: pr,
+		pr:    pr,
+		cache: cache,
 	}
 }
 
@@ -61,12 +64,22 @@ func (h *TimerInvalid) Check(
 			Info:            "failed to check: expected timer entity",
 		}
 	}
+	domainID := timer.DomainID
+	domainName, err := h.cache.GetDomainName(timer.DomainID)
+	if err != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   h.Name(),
+			Info:            "failed to check: expected Domain Name",
+		}
+	}
 	req := &persistence.GetWorkflowExecutionRequest{
-		DomainID: timer.DomainID,
+		DomainID: domainID,
 		Execution: types.WorkflowExecution{
 			WorkflowID: timer.WorkflowID,
 			RunID:      timer.RunID,
 		},
+		DomainName: domainName,
 	}
 
 	resp, err := h.pr.GetWorkflowExecution(ctx, req)

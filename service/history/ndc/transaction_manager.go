@@ -382,7 +382,10 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 	workflowID string,
 	runID string,
 ) (bool, error) {
-
+	domainName, errorDomainName := r.shard.GetDomainCache().GetDomainName(domainID)
+	if errorDomainName != nil {
+		return false, errorDomainName
+	}
 	_, err := r.shard.GetExecutionManager().GetWorkflowExecution(
 		ctx,
 		&persistence.GetWorkflowExecutionRequest{
@@ -391,6 +394,7 @@ func (r *transactionManagerImpl) checkWorkflowExists(
 				WorkflowID: workflowID,
 				RunID:      runID,
 			},
+			DomainName: domainName,
 		},
 	)
 

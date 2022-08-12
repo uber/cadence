@@ -112,6 +112,7 @@ type (
 		crossClusterTaskProcessors common.Daemon
 		replicationTaskProcessors  []replication.TaskProcessor
 		replicationAckManager      replication.TaskAckManager
+		replicationHydrator        replication.TaskHydrator
 		publicClient               workflowserviceclient.Interface
 		eventsReapplier            ndc.EventsReapplier
 		matchingClient             matching.Client
@@ -156,6 +157,7 @@ func NewEngineWithShardContext(
 	historyV2Manager := shard.GetHistoryManager()
 	executionCache := execution.NewCache(shard)
 	failoverMarkerNotifier := failover.NewMarkerNotifier(shard, config, failoverCoordinator)
+	replicationHydrator := replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache, shard.GetDomainCache())
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shard,
@@ -203,9 +205,16 @@ func NewEngineWithShardContext(
 		queueTaskProcessor:     queueTaskProcessor,
 		clientChecker:          client.NewVersionChecker(),
 		failoverMarkerNotifier: failoverMarkerNotifier,
+		replicationHydrator:    replicationHydrator,
 		replicationAckManager: replication.NewTaskAckManager(
+			shard.GetShardID(),
 			shard,
-			executionCache,
+			shard.GetDomainCache(),
+			shard.GetMetricsClient(),
+			shard.GetLogger(),
+			shard.GetConfig(),
+			replication.NewDynamicTaskReader(shard.GetShardID(), executionManager, shard.GetTimeSource(), config),
+			replicationHydrator,
 		),
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
@@ -3237,7 +3246,17 @@ func (e *historyEngineImpl) GetDLQReplicationMessages(
 
 	tasks := make([]*types.ReplicationTask, 0, len(taskInfos))
 	for _, taskInfo := range taskInfos {
-		task, err := e.replicationAckManager.GetTask(ctx, taskInfo)
+		task, err := e.replicationHydrator.Hydrate(ctx, persistence.ReplicationTaskInfo{
+			DomainID:     taskInfo.DomainID,
+			WorkflowID:   taskInfo.WorkflowID,
+			RunID:        taskInfo.RunID,
+			TaskID:       taskInfo.TaskID,
+			TaskType:     int(taskInfo.TaskType),
+			FirstEventID: taskInfo.FirstEventID,
+			NextEventID:  taskInfo.NextEventID,
+			Version:      taskInfo.Version,
+			ScheduledID:  taskInfo.ScheduledID,
+		})
 		if err != nil {
 			e.logger.Error("Failed to fetch DLQ replication messages.", tag.Error(err))
 			return nil, err
