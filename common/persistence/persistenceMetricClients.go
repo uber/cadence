@@ -390,7 +390,7 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 		resp, err = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +404,7 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op)
+	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(

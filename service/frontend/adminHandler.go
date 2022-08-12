@@ -479,11 +479,15 @@ func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
 		logger.Error(fmt.Sprintf("Cannot get execution manager for shardID(%v): %#v", shardIDInt, err))
 		return false
 	}
-
+	domainName, err := adh.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return false
+	}
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		DomainName: domainName,
 	}
 
 	deletedFromExecutions := false
