@@ -89,7 +89,7 @@ func (h *historyExists) Check(
 		DomainName:    domainName,
 	}
 	readHistoryBranchResp, readHistoryBranchErr := h.pr.ReadHistoryBranch(ctx, readHistoryBranchReq)
-	stillExists, existsCheckError := ExecutionStillExists(ctx, &concreteExecution.Execution, h.pr)
+	stillExists, existsCheckError := ExecutionStillExists(ctx, &concreteExecution.Execution, h.pr, h.dc)
 	if existsCheckError != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -164,13 +164,19 @@ func ExecutionStillExists(
 	ctx context.Context,
 	exec *entity.Execution,
 	pr persistence.Retryer,
+	dc cache.DomainCache,
 ) (bool, error) {
+	domainName, errorDomainName := dc.GetDomainName(exec.DomainID)
+	if errorDomainName != nil {
+		return false, errorDomainName
+	}
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
 		Execution: types.WorkflowExecution{
 			WorkflowID: exec.WorkflowID,
 			RunID:      exec.RunID,
 		},
+		DomainName: domainName,
 	}
 	_, err := pr.GetWorkflowExecution(ctx, req)
 	if err == nil {
