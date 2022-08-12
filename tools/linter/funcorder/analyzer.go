@@ -24,6 +24,7 @@ package funcorder
 
 import (
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/dave/dst"
@@ -80,14 +81,25 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 		// rearrange dst ordering for each recv
 		for _, funcList := range rFuncs {
-			for i := 0; i < len(funcList)-1; i++ {
-				for j := i + 1; j < len(funcList); j++ {
-					recv1, recv2 := funcList[i], funcList[j]
-					if strings.Compare(recv1.FuncName, recv2.FuncName) > 0 {
-						dstF.Decls[recv1.Index], dstF.Decls[recv2.Index] = dstF.Decls[recv2.Index], dstF.Decls[recv1.Index]
-					}
-				}
+			sort.Slice(funcList, func(i, j int) bool {
+				return strings.Compare(funcList[i].FuncName, funcList[j].FuncName) < 0
+			})
+			selectedIndex := make(map[int]struct{})
+			for i := range funcList {
+				selectedIndex[funcList[i].Index] = struct{}{}
 			}
+
+			cursor := 0
+			var newDecls []dst.Decl
+			for i := 0; i < len(dstF.Decls); i++ {
+				index := i
+				if _, ok := selectedIndex[i]; ok {
+					index = funcList[cursor].Index
+					cursor += 1
+				}
+				newDecls = append(newDecls, dstF.Decls[index])
+			}
+			dstF.Decls = newDecls
 		}
 
 		// save cleaned file

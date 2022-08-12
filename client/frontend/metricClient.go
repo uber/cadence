@@ -119,20 +119,20 @@ func (c *metricClient) DescribeTaskList(
 	return resp, err
 }
 
-func (c *metricClient) GetTaskListsByDomain(
+func (c *metricClient) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *types.GetTaskListsByDomainRequest,
+	request *types.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsByDomainResponse, error) {
+) (*types.DescribeWorkflowExecutionResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientLatency)
-	resp, err := c.client.GetTaskListsByDomain(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.DescribeWorkflowExecution(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
@@ -170,20 +170,20 @@ func (c *metricClient) GetSearchAttributes(
 	return resp, err
 }
 
-func (c *metricClient) DescribeWorkflowExecution(
+func (c *metricClient) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.DescribeWorkflowExecutionRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.DescribeWorkflowExecutionResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientLatency)
-	resp, err := c.client.DescribeWorkflowExecution(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetTaskListsByDomain(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientDescribeWorkflowExecutionScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientGetTaskListsByDomainScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
@@ -224,58 +224,6 @@ func (c *metricClient) ListArchivedWorkflowExecutions(
 	return resp, err
 }
 
-func (c *metricClient) ListTaskListPartitions(
-	ctx context.Context,
-	request *types.ListTaskListPartitionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListTaskListPartitionsResponse, error) {
-
-	c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientLatency)
-	resp, err := c.client.ListTaskListPartitions(ctx, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientFailures)
-	}
-	return resp, err
-}
-
-func (c *metricClient) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *types.ListWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListWorkflowExecutionsResponse, error) {
-
-	c.metricsClient.IncCounter(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientLatency)
-	resp, err := c.client.ScanWorkflowExecutions(ctx, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientFailures)
-	}
-	return resp, err
-}
-
-func (c *metricClient) RestartWorkflowExecution(
-	ctx context.Context,
-	request *types.RestartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
-	c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.FrontendRestartWorkflowExecutionScope, metrics.CadenceClientLatency)
-	resp, err := c.client.RestartWorkflowExecution(ctx, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendRestartWorkflowExecutionScope, metrics.CadenceClientFailures)
-	}
-	return resp, err
-}
-
 func (c *metricClient) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListClosedWorkflowExecutionsRequest,
@@ -312,24 +260,6 @@ func (c *metricClient) ListDomains(
 	return resp, err
 }
 
-func (c *metricClient) ListWorkflowExecutions(
-	ctx context.Context,
-	request *types.ListWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListWorkflowExecutionsResponse, error) {
-
-	c.metricsClient.IncCounter(metrics.FrontendClientListWorkflowExecutionsScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientListWorkflowExecutionsScope, metrics.CadenceClientLatency)
-	resp, err := c.client.ListWorkflowExecutions(ctx, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientListWorkflowExecutionsScope, metrics.CadenceClientFailures)
-	}
-	return resp, err
-}
-
 func (c *metricClient) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListOpenWorkflowExecutionsRequest,
@@ -344,6 +274,42 @@ func (c *metricClient) ListOpenWorkflowExecutions(
 
 	if err != nil {
 		c.metricsClient.IncCounter(metrics.FrontendClientListOpenWorkflowExecutionsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) ListTaskListPartitions(
+	ctx context.Context,
+	request *types.ListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListTaskListPartitionsResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ListTaskListPartitions(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientListTaskListPartitionsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) ListWorkflowExecutions(
+	ctx context.Context,
+	request *types.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListWorkflowExecutionsResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientListWorkflowExecutionsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientListWorkflowExecutionsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ListWorkflowExecutions(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientListWorkflowExecutionsScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
 }
@@ -420,24 +386,6 @@ func (c *metricClient) RecordActivityTaskHeartbeat(
 	return resp, err
 }
 
-func (c *metricClient) ResetStickyTaskList(
-	ctx context.Context,
-	request *types.ResetStickyTaskListRequest,
-	opts ...yarpc.CallOption,
-) (*types.ResetStickyTaskListResponse, error) {
-
-	c.metricsClient.IncCounter(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientLatency)
-	resp, err := c.client.ResetStickyTaskList(ctx, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientFailures)
-	}
-	return resp, err
-}
-
 func (c *metricClient) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	request *types.RecordActivityTaskHeartbeatByIDRequest,
@@ -454,6 +402,24 @@ func (c *metricClient) RecordActivityTaskHeartbeatByID(
 		c.metricsClient.IncCounter(metrics.FrontendClientRecordActivityTaskHeartbeatByIDScope, metrics.CadenceClientFailures)
 	}
 	return resp, err
+}
+
+func (c *metricClient) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
+	err := c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
+	}
+	return err
 }
 
 func (c *metricClient) RegisterDomain(
@@ -492,22 +458,22 @@ func (c *metricClient) RequestCancelWorkflowExecution(
 	return err
 }
 
-func (c *metricClient) RefreshWorkflowTasks(
+func (c *metricClient) ResetStickyTaskList(
 	ctx context.Context,
-	request *types.RefreshWorkflowTasksRequest,
+	request *types.ResetStickyTaskListRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.ResetStickyTaskListResponse, error) {
 
-	c.metricsClient.IncCounter(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientRequests)
+	c.metricsClient.IncCounter(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientRequests)
 
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientLatency)
-	err := c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ResetStickyTaskList(ctx, request, opts...)
 	sw.Stop()
 
 	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientRefreshWorkflowTasksScope, metrics.CadenceClientFailures)
+		c.metricsClient.IncCounter(metrics.FrontendClientResetStickyTaskListScope, metrics.CadenceClientFailures)
 	}
-	return err
+	return resp, err
 }
 
 func (c *metricClient) ResetWorkflowExecution(
@@ -690,6 +656,40 @@ func (c *metricClient) RespondQueryTaskCompleted(
 	return err
 }
 
+func (c *metricClient) RestartWorkflowExecution(
+	ctx context.Context,
+	request *types.RestartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+	c.metricsClient.IncCounter(metrics.FrontendClientStartWorkflowExecutionScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendRestartWorkflowExecutionScope, metrics.CadenceClientLatency)
+	resp, err := c.client.RestartWorkflowExecution(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendRestartWorkflowExecutionScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *types.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListWorkflowExecutionsResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.ScanWorkflowExecutions(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientScanWorkflowExecutionsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
 func (c *metricClient) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,
@@ -726,24 +726,6 @@ func (c *metricClient) SignalWorkflowExecution(
 	return err
 }
 
-func (c *metricClient) UpdateDomain(
-	ctx context.Context,
-	request *types.UpdateDomainRequest,
-	opts ...yarpc.CallOption,
-) (*types.UpdateDomainResponse, error) {
-
-	c.metricsClient.IncCounter(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientRequests)
-
-	sw := c.metricsClient.StartTimer(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientLatency)
-	resp, err := c.client.UpdateDomain(ctx, request, opts...)
-	sw.Stop()
-
-	if err != nil {
-		c.metricsClient.IncCounter(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientFailures)
-	}
-	return resp, err
-}
-
 func (c *metricClient) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.StartWorkflowExecutionRequest,
@@ -778,4 +760,22 @@ func (c *metricClient) TerminateWorkflowExecution(
 		c.metricsClient.IncCounter(metrics.FrontendClientTerminateWorkflowExecutionScope, metrics.CadenceClientFailures)
 	}
 	return err
+}
+
+func (c *metricClient) UpdateDomain(
+	ctx context.Context,
+	request *types.UpdateDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateDomainResponse, error) {
+
+	c.metricsClient.IncCounter(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientRequests)
+
+	sw := c.metricsClient.StartTimer(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientLatency)
+	resp, err := c.client.UpdateDomain(ctx, request, opts...)
+	sw.Stop()
+
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.FrontendClientUpdateDomainScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
 }
