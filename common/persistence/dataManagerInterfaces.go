@@ -895,6 +895,7 @@ type (
 	GetCurrentExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
+		DomainName string
 	}
 
 	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
@@ -1057,6 +1058,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue

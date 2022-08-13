@@ -71,9 +71,18 @@ func (o *openCurrentExecution) Check(
 			InvariantName:   o.Name(),
 		}
 	}
+	domainName, err := o.dc.GetDomainName(concreteExecution.DomainID)
+	if err != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   o.Name(),
+			Info:            "failed to fetch Domain Name",
+		}
+	}
 	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   concreteExecution.DomainID,
 		WorkflowID: concreteExecution.WorkflowID,
+		DomainName: domainName,
 	})
 
 	stillOpen, stillOpenErr := ExecutionStillOpen(ctx, &concreteExecution.Execution, o.pr, o.dc)

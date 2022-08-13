@@ -413,12 +413,16 @@ func (r *transactionManagerImpl) getCurrentWorkflowRunID(
 	domainID string,
 	workflowID string,
 ) (string, error) {
-
+	domainName, err := r.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return "", err
+	}
 	resp, err := r.shard.GetExecutionManager().GetCurrentExecution(
 		ctx,
 		&persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
 			WorkflowID: workflowID,
+			DomainName: domainName,
 		},
 	)
 
