@@ -413,9 +413,10 @@ func (r *transactionManagerImpl) getCurrentWorkflowRunID(
 	domainID string,
 	workflowID string,
 ) (string, error) {
-	domainName, err := r.shard.GetDomainCache().GetDomainName(domainID)
-	if err != nil {
-		return "", err
+
+	domainName, errorDomainName := r.shard.GetDomainCache().GetDomainName(domainID)
+	if errorDomainName != nil {
+		return "", errorDomainName
 	}
 	resp, err := r.shard.GetExecutionManager().GetCurrentExecution(
 		ctx,

@@ -175,6 +175,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_WorkflowClosed() {
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
@@ -234,6 +235,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 		versionHistoryItem0,
 		versionHistoryItem2,
 	})
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -283,7 +285,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_IncomingScheduleIDLarger_Inco
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:    domainID,
 		WorkflowID:  workflowID,
@@ -344,7 +346,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingVers
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -422,7 +424,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_DifferentVersionHistories_Inc
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -511,7 +513,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_IncomingSche
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -596,7 +598,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_SameSchedule
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -668,7 +670,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_VersionHistories_LocalVersion
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -741,7 +743,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityCompleted() {
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -797,7 +799,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_LocalActivity
 	context.EXPECT().Clear().AnyTimes()
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:       domainID,
 		WorkflowID:     workflowID,
@@ -860,7 +862,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	context.EXPECT().Clear().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:          domainID,
 		WorkflowID:        workflowID,
@@ -935,7 +937,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_SameVe
 	context.EXPECT().Clear().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:          domainID,
 		WorkflowID:        workflowID,
@@ -1010,7 +1012,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_Update_Larger
 	context.EXPECT().Clear().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:          domainID,
 		WorkflowID:        workflowID,
@@ -1084,7 +1086,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning() {
 	context.EXPECT().Unlock().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:          domainID,
 		WorkflowID:        workflowID,
@@ -1171,7 +1173,7 @@ func (s *activityReplicatorSuite) TestSyncActivity_ActivityRunning_ZombieWorkflo
 	context.EXPECT().Unlock().Times(1)
 	_, err := s.executionCache.PutIfNotExist(key, context)
 	s.NoError(err)
-
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request := &types.SyncActivityRequest{
 		DomainID:          domainID,
 		WorkflowID:        workflowID,
