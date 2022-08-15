@@ -74,9 +74,17 @@ func (c *concreteExecutionExists) Check(
 			return *runIDCheckResult
 		}
 	}
-
+	domainName, err := c.cache.GetDomainName(currentExecution.DomainID)
+	if err != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   c.Name(),
+			Info:            "Failed to fetch Domain Name",
+		}
+	}
 	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(ctx, &persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
+		DomainName: domainName,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
 	})
