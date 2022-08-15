@@ -571,9 +571,9 @@ func TestMutableStateLoader_GetMutableState(t *testing.T) {
 	expectedMS := execution.NewMockMutableState(controller)
 	msLoader := mutableStateLoader{executionCache}
 
+	domainCache.EXPECT().GetDomainName(gomock.Any()).Return(testDomainName, nil).AnyTimes()
 	exec, release, err := executionCache.GetOrCreateWorkflowExecution(ctx, testDomainID, types.WorkflowExecution{WorkflowID: testWorkflowID, RunID: testRunID})
 	require.NoError(t, err)
-
 	// Try getting mutable state while it is still locked, will result in an error
 	contextWithTimeout, cancel := context.WithTimeout(ctx, time.Millisecond)
 	defer cancel()

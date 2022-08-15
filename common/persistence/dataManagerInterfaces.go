@@ -895,6 +895,7 @@ type (
 	GetCurrentExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
+		DomainName string
 	}
 
 	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
@@ -912,6 +913,7 @@ type (
 	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
 	IsWorkflowExecutionExistsRequest struct {
 		DomainID   string
+		DomainName string
 		WorkflowID string
 		RunID      string
 	}
@@ -979,6 +981,8 @@ type (
 		CurrentWorkflowMutation *WorkflowMutation
 
 		Encoding common.EncodingType // optional binary encoding type
+
+		DomainName string
 	}
 
 	// WorkflowEvents is used as generic workflow history events transaction container
@@ -1047,6 +1051,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
@@ -1054,6 +1059,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
@@ -1155,6 +1161,7 @@ type (
 	PutReplicationTaskToDLQRequest struct {
 		SourceClusterName string
 		TaskInfo          *ReplicationTaskInfo
+		DomainName        string
 	}
 
 	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq
