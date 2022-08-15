@@ -522,6 +522,10 @@ func (p *taskProcessorImpl) generateDLQRequest(
 
 	case types.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
+		domainName, err := p.shard.GetDomainCache().GetDomainName(taskAttributes.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
 		eventsDataBlob := persistence.NewDataBlobFromInternal(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
@@ -545,6 +549,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				NextEventID:  events[len(events)-1].ID + 1,
 				Version:      events[0].Version,
 			},
+			DomainName: domainName,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unknown replication task type")
