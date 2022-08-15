@@ -110,6 +110,7 @@ func DeleteExecution(
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
+		DomainName: domainName,
 	}); err != nil {
 		return &FixResult{
 			FixResultType: FixResultTypeFailed,

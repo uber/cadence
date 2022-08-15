@@ -502,6 +502,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		DomainName: domainName,
 	}
 
 	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)

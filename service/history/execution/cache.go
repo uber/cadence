@@ -254,12 +254,16 @@ func (c *Cache) validateWorkflowExecutionInfo(
 	if execution.GetWorkflowID() == "" {
 		return &types.BadRequestError{Message: "Can't load workflow execution.  WorkflowId not set."}
 	}
-
+	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return err
+	}
 	// RunID is not provided, lets try to retrieve the RunID for current active execution
 	if execution.GetRunID() == "" {
 		response, err := c.getCurrentExecutionWithRetry(ctx, &persistence.GetCurrentExecutionRequest{
 			DomainID:   domainID,
 			WorkflowID: execution.GetWorkflowID(),
+			DomainName: domainName,
 		})
 
 		if err != nil {
