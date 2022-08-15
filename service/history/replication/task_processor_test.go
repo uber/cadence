@@ -226,6 +226,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 			},
 		},
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	request, err := s.taskProcessor.generateDLQRequest(task)
 	s.NoError(err)
 	s.Equal("standby", request.SourceClusterName)
