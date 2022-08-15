@@ -89,6 +89,7 @@ func (db *taskListDB) RenewLease() (taskListState, error) {
 		TaskType:     db.taskType,
 		TaskListKind: db.taskListKind,
 		RangeID:      atomic.LoadInt64(&db.rangeID),
+		DomainName:   db.domainName,
 	})
 	if err != nil {
 		return taskListState{}, err
@@ -111,6 +112,7 @@ func (db *taskListDB) UpdateState(ackLevel int64) error {
 			RangeID:  db.rangeID,
 			Kind:     db.taskListKind,
 		},
+		DomainName: db.domainName,
 	})
 	if err == nil {
 		db.ackLevel = ackLevel
@@ -157,7 +159,8 @@ func (db *taskListDB) CompleteTask(taskID int64) error {
 			Name:     db.taskListName,
 			TaskType: db.taskType,
 		},
-		TaskID: taskID,
+		TaskID:     taskID,
+		DomainName: db.domainName,
 	})
 	if err != nil {
 		db.logger.Error("Persistent store operation failure",
@@ -180,6 +183,7 @@ func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error
 		TaskType:     db.taskType,
 		TaskID:       taskID,
 		Limit:        limit,
+		DomainName:   db.domainName,
 	})
 	if err != nil {
 		db.logger.Error("Persistent store operation failure",
