@@ -175,6 +175,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 			RunID:      uuid.New(),
 			TaskType:   persistence.ReplicationTaskTypeSyncActivity,
 		},
+		DomainName: uuid.New(),
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
 	err := s.taskProcessor.putReplicationTaskToDLQ(request)
@@ -193,6 +194,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 			NextEventID:  2,
 			Version:      1,
 		},
+		DomainName: uuid.New(),
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
 	err := s.taskProcessor.putReplicationTaskToDLQ(request)
@@ -240,6 +242,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
+	domainName := uuid.New()
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
@@ -249,6 +252,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 			ScheduledID: 1,
 		},
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request, err := s.taskProcessor.generateDLQRequest(task)
 	s.NoError(err)
 	s.Equal("standby", request.SourceClusterName)

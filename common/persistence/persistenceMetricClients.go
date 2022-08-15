@@ -464,7 +464,7 @@ func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(
 		resp, err = p.persistence.IsWorkflowExecutionExists(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op)
+	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func (p *workflowExecutionPersistenceClient) PutReplicationTaskToDLQ(
 	op := func() error {
 		return p.persistence.PutReplicationTaskToDLQ(ctx, request)
 	}
-	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op)
+	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(

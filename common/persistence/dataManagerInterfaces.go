@@ -913,6 +913,7 @@ type (
 	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
 	IsWorkflowExecutionExistsRequest struct {
 		DomainID   string
+		DomainName string
 		WorkflowID string
 		RunID      string
 	}
@@ -1160,6 +1161,7 @@ type (
 	PutReplicationTaskToDLQRequest struct {
 		SourceClusterName string
 		TaskInfo          *ReplicationTaskInfo
+		DomainName        string
 	}
 
 	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq

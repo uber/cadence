@@ -503,6 +503,10 @@ func (p *taskProcessorImpl) generateDLQRequest(
 	switch *replicationTask.TaskType {
 	case types.ReplicationTaskTypeSyncActivity:
 		taskAttributes := replicationTask.GetSyncActivityTaskAttributes()
+		domainName, err := p.shard.GetDomainCache().GetDomainName(taskAttributes.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
 		return &persistence.PutReplicationTaskToDLQRequest{
 			SourceClusterName: p.sourceCluster,
 			TaskInfo: &persistence.ReplicationTaskInfo{
@@ -513,6 +517,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				TaskType:    persistence.ReplicationTaskTypeSyncActivity,
 				ScheduledID: taskAttributes.GetScheduledID(),
 			},
+			DomainName: domainName,
 		}, nil
 
 	case types.ReplicationTaskTypeHistoryV2:
