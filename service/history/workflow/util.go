@@ -24,6 +24,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
@@ -83,6 +84,7 @@ func Load(
 	cache *execution.Cache,
 	executionManager persistence.ExecutionManager,
 	domainID string,
+	domainName string,
 	workflowID string,
 	runID string,
 ) (Context, error) {
@@ -108,6 +110,7 @@ func Load(
 			&persistence.GetCurrentExecutionRequest{
 				DomainID:   domainID,
 				WorkflowID: workflowID,
+				DomainName: domainName,
 			},
 		)
 		if err != nil {
@@ -155,12 +158,17 @@ func UpdateCurrentWithActionFunc(
 	cache *execution.Cache,
 	executionManager persistence.ExecutionManager,
 	domainID string,
+	domainCache cache.DomainCache,
 	execution types.WorkflowExecution,
 	now time.Time,
 	action UpdateActionFunc,
 ) (retError error) {
 
-	workflowContext, err := Load(ctx, cache, executionManager, domainID, execution.GetWorkflowID(), execution.GetRunID())
+	domainName, err := domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil
+	}
+	workflowContext, err := Load(ctx, cache, executionManager, domainID, domainName, execution.GetWorkflowID(), execution.GetRunID())
 	if err != nil {
 		return err
 	}

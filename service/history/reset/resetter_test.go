@@ -447,7 +447,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		History:       []*types.History{{Events: newEvents}},
 		NextPageToken: nil,
 	}, nil).Once()
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
 	resetContext := execution.NewMockContext(s.controller)
 	resetContext.EXPECT().Lock(gomock.Any()).Return(nil).Times(1)
 	resetContext.EXPECT().Unlock().Times(1)

@@ -48,6 +48,7 @@ func CurrentExecution(
 	req := persistence.GetCurrentExecutionRequest{
 		DomainID:   request.DomainID,
 		WorkflowID: request.WorkflowID,
+		DomainName: request.DomainName,
 	}
 	e, err := retryer.GetCurrentExecution(ctx, &req)
 	if err != nil {

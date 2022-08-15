@@ -296,6 +296,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		DomainID:   domainID,
 		WorkflowID: wid,
 		RunID:      rid,
+		DomainName: domain,
 	}
 
 	err = exeStore.DeleteWorkflowExecution(ctx, req)
