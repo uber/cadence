@@ -1267,6 +1267,7 @@ type (
 	CreateTasksRequest struct {
 		TaskListInfo *TaskListInfo
 		Tasks        []*CreateTaskInfo
+		DomainName   string
 	}
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
@@ -1288,6 +1289,7 @@ type (
 		ReadLevel    int64  // range exclusive
 		MaxReadLevel *int64 // optional: range inclusive when specified
 		BatchSize    int
+		DomainName   string
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests

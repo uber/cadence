@@ -34,6 +34,7 @@ type (
 	taskListDB struct {
 		sync.Mutex
 		domainID     string
+		domainName   string
 		taskListName string
 		taskListKind int
 		taskType     int
@@ -58,9 +59,10 @@ type (
 // - To provide the guarantee that there is only writer who updates taskList in persistence at any given point in time
 //   This guarantee makes some of the other code simpler and there is no impact to perf because updates to tasklist are
 //   spread out and happen in background routines
-func newTaskListDB(store persistence.TaskManager, domainID string, name string, taskType int, kind int, logger log.Logger) *taskListDB {
+func newTaskListDB(store persistence.TaskManager, domainID string, domainName string, name string, taskType int, kind int, logger log.Logger) *taskListDB {
 	return &taskListDB{
 		domainID:     domainID,
+		domainName:   domainName,
 		taskListName: name,
 		taskListKind: kind,
 		taskType:     taskType,
@@ -129,7 +131,8 @@ func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persist
 			RangeID:  db.rangeID,
 			Kind:     db.taskListKind,
 		},
-		Tasks: tasks,
+		Tasks:      tasks,
+		DomainName: db.domainName,
 	})
 }
 
@@ -142,6 +145,7 @@ func (db *taskListDB) GetTasks(minTaskID int64, maxTaskID int64, batchSize int) 
 		BatchSize:    batchSize,
 		ReadLevel:    minTaskID,  // exclusive
 		MaxReadLevel: &maxTaskID, // inclusive
+		DomainName:   db.domainName,
 	})
 }
 
