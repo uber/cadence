@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -47,6 +48,7 @@ type (
 	Scavenger struct {
 		ctx                      context.Context
 		db                       p.TaskManager
+		cache                    cache.DomainCache
 		executor                 executor.Executor
 		scope                    metrics.Scope
 		logger                   log.Logger
@@ -112,6 +114,7 @@ func NewScavenger(
 	metricsClient metrics.Client,
 	logger log.Logger,
 	opts *Options,
+	cache cache.DomainCache,
 ) *Scavenger {
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize,
@@ -156,10 +159,10 @@ func NewScavenger(
 	if pollInterval == 0 {
 		pollInterval = time.Minute
 	}
-
 	return &Scavenger{
 		ctx:                      ctx,
 		db:                       db,
+		cache:                    cache,
 		scope:                    metricsClient.Scope(metrics.TaskListScavengerScope),
 		logger:                   logger,
 		stopC:                    make(chan struct{}),
