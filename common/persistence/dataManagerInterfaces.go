@@ -1223,6 +1223,7 @@ type (
 	// LeaseTaskListRequest is used to request lease of a task list
 	LeaseTaskListRequest struct {
 		DomainID     string
+		DomainName   string
 		TaskList     string
 		TaskType     int
 		TaskListKind int
@@ -1237,6 +1238,7 @@ type (
 	// UpdateTaskListRequest is used to update task list implementation information
 	UpdateTaskListRequest struct {
 		TaskListInfo *TaskListInfo
+		DomainName   string
 	}
 
 	// UpdateTaskListResponse is the response to UpdateTaskList
@@ -1258,6 +1260,7 @@ type (
 	// DeleteTaskListRequest contains the request params needed to invoke DeleteTaskList API
 	DeleteTaskListRequest struct {
 		DomainID     string
+		DomainName   string
 		TaskListName string
 		TaskListType int
 		RangeID      int64
@@ -1299,8 +1302,9 @@ type (
 
 	// CompleteTaskRequest is used to complete a task
 	CompleteTaskRequest struct {
-		TaskList *TaskListInfo
-		TaskID   int64
+		TaskList   *TaskListInfo
+		TaskID     int64
+		DomainName string
 	}
 
 	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
@@ -1310,6 +1314,7 @@ type (
 		TaskType     int
 		TaskID       int64 // Tasks less than or equal to this ID will be completed
 		Limit        int   // Limit on the max number of tasks that can be completed. Required param
+		DomainName   string
 	}
 
 	// CompleteTasksLessThanResponse is the response of CompleteTasksLessThan
