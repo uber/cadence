@@ -260,8 +260,9 @@ func (c *contextImpl) LoadWorkflowExecutionWithTaskVersion(
 
 	if c.mutableState == nil {
 		response, err := c.getWorkflowExecutionWithRetry(ctx, &persistence.GetWorkflowExecutionRequest{
-			DomainID:  c.domainID,
-			Execution: c.workflowExecution,
+			DomainID:   c.domainID,
+			Execution:  c.workflowExecution,
+			DomainName: domainEntry.GetInfo().Name,
 		})
 		if err != nil {
 			return nil, err
@@ -490,7 +491,10 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	); err != nil {
 		return err
 	}
-
+	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	resp, err := c.shard.ConflictResolveWorkflowExecution(ctx, &persistence.ConflictResolveWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		Mode:                    conflictResolveMode,
@@ -498,6 +502,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		NewWorkflowSnapshot:     newWorkflow,
 		CurrentWorkflowMutation: currentWorkflow,
 		// Encoding, this is set by shard context
+		DomainName: domain,
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
@@ -652,12 +657,16 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
 		HistorySize: c.GetHistorySize(),
 	}
-
+	domainName, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	resp, err := c.updateWorkflowExecutionWithRetry(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		Mode:                   persistence.UpdateWorkflowModeIgnoreCurrent,
 		UpdateWorkflowMutation: *currentWorkflow,
 		// Encoding, this is set by shard context
+		DomainName: domainName,
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
@@ -774,13 +783,17 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	); err != nil {
 		return err
 	}
-
+	domain, errorDomainName := c.shard.GetDomainCache().GetDomainName(c.domainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	resp, err := c.updateWorkflowExecutionWithRetry(ctx, &persistence.UpdateWorkflowExecutionRequest{
 		// RangeID , this is set by shard context
 		Mode:                   updateMode,
 		UpdateWorkflowMutation: *currentWorkflow,
 		NewWorkflowSnapshot:    newWorkflow,
 		// Encoding, this is set by shard context
+		DomainName: domain,
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {

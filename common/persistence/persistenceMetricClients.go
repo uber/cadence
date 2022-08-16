@@ -356,7 +356,7 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(
 		resp, err = p.persistence.GetWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +373,7 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 		resp, err = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -404,7 +404,7 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op)
+	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
@@ -414,7 +414,7 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op)
+	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
@@ -427,7 +427,7 @@ func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
 		resp, err = p.persistence.GetCurrentExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op)
+	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +464,7 @@ func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(
 		resp, err = p.persistence.IsWorkflowExecutionExists(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op)
+	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func (p *workflowExecutionPersistenceClient) PutReplicationTaskToDLQ(
 	op := func() error {
 		return p.persistence.PutReplicationTaskToDLQ(ctx, request)
 	}
-	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op)
+	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
@@ -778,7 +778,7 @@ func (p *taskPersistenceClient) CreateTasks(
 		resp, err = p.persistence.CreateTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateTaskScope, op)
+	err := p.call(metrics.PersistenceCreateTaskScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -798,7 +798,7 @@ func (p *taskPersistenceClient) GetTasks(
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceGetTasksScope, op)
+	err := p.call(metrics.PersistenceGetTasksScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}

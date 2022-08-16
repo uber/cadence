@@ -880,10 +880,9 @@ type (
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
-		DomainID  string
-		Execution types.WorkflowExecution
-		//TO DO: add domainName for metrics creation : hindered by same problem as for HistoryExists
-		//DomainName string
+		DomainID   string
+		Execution  types.WorkflowExecution
+		DomainName string
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
@@ -896,6 +895,7 @@ type (
 	GetCurrentExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
+		DomainName string
 	}
 
 	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
@@ -913,6 +913,7 @@ type (
 	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
 	IsWorkflowExecutionExistsRequest struct {
 		DomainID   string
+		DomainName string
 		WorkflowID string
 		RunID      string
 	}
@@ -961,8 +962,7 @@ type (
 
 		Encoding common.EncodingType // optional binary encoding type
 
-		//TO DO: add DomainName for UpdateWorkflowExecution
-		//DomainName string
+		DomainName string
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run
@@ -981,6 +981,8 @@ type (
 		CurrentWorkflowMutation *WorkflowMutation
 
 		Encoding common.EncodingType // optional binary encoding type
+
+		DomainName string
 	}
 
 	// WorkflowEvents is used as generic workflow history events transaction container
@@ -1049,6 +1051,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
@@ -1056,6 +1059,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
@@ -1157,6 +1161,7 @@ type (
 	PutReplicationTaskToDLQRequest struct {
 		SourceClusterName string
 		TaskInfo          *ReplicationTaskInfo
+		DomainName        string
 	}
 
 	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq
@@ -1262,6 +1267,7 @@ type (
 	CreateTasksRequest struct {
 		TaskListInfo *TaskListInfo
 		Tasks        []*CreateTaskInfo
+		DomainName   string
 	}
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
@@ -1283,6 +1289,7 @@ type (
 		ReadLevel    int64  // range exclusive
 		MaxReadLevel *int64 // optional: range inclusive when specified
 		BatchSize    int
+		DomainName   string
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests

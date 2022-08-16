@@ -83,7 +83,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "cancel",
 			Aliases: []string{"c"},
 			Usage:   "cancel a workflow execution",
-			Flags:   flagsForExecution,
+			Flags:   getFlagsForCancel(),
 			Action: func(c *cli.Context) {
 				CancelWorkflow(c)
 			},

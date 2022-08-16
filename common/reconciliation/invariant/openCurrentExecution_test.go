@@ -178,6 +178,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
+		domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()), domainCache)
 		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}

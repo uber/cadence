@@ -134,7 +134,7 @@ func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 		BackgroundActivityContext: ctx,
 	})
 	tlScavengerHBInterval = time.Millisecond * 10
-	mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil)
+	mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 	_, err := env.ExecuteActivity(ExecutionFixerActivity, fixList)
 	s.NoError(err)
 }

@@ -71,11 +71,21 @@ func (o *openCurrentExecution) Check(
 			InvariantName:   o.Name(),
 		}
 	}
+	domainName, err := o.dc.GetDomainName(concreteExecution.DomainID)
+	if err != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   o.Name(),
+			Info:            "failed to fetch Domain Name",
+		}
+	}
 	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   concreteExecution.DomainID,
 		WorkflowID: concreteExecution.WorkflowID,
+		DomainName: domainName,
 	})
-	stillOpen, stillOpenErr := ExecutionStillOpen(ctx, &concreteExecution.Execution, o.pr)
+
+	stillOpen, stillOpenErr := ExecutionStillOpen(ctx, &concreteExecution.Execution, o.pr, o.dc)
 	if stillOpenErr != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -134,7 +144,7 @@ func (o *openCurrentExecution) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
-	fixResult = DeleteExecution(ctx, execution, o.pr)
+	fixResult = DeleteExecution(ctx, execution, o.pr, o.dc)
 	fixResult.CheckResult = *checkResult
 	fixResult.InvariantName = o.Name()
 	return *fixResult
@@ -150,13 +160,19 @@ func ExecutionStillOpen(
 	ctx context.Context,
 	exec *entity.Execution,
 	pr persistence.Retryer,
+	dc cache.DomainCache,
 ) (bool, error) {
+	domainName, err := dc.GetDomainName(exec.DomainID)
+	if err != nil {
+		return false, nil
+	}
 	req := &persistence.GetWorkflowExecutionRequest{
 		DomainID: exec.DomainID,
 		Execution: types.WorkflowExecution{
 			WorkflowID: exec.WorkflowID,
 			RunID:      exec.RunID,
 		},
+		DomainName: domainName,
 	}
 	resp, err := pr.GetWorkflowExecution(ctx, req)
 	if err != nil {

@@ -25,6 +25,7 @@ package invariant
 import (
 	"context"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 )
@@ -82,12 +83,22 @@ func DeleteExecution(
 	ctx context.Context,
 	exec interface{},
 	pr persistence.Retryer,
+	dc cache.DomainCache,
 ) *FixResult {
 	execution := getExecution(exec)
+	domainName, errorDomainName := dc.GetDomainName(execution.DomainID)
+	if errorDomainName != nil {
+		return &FixResult{
+			FixResultType: FixResultTypeFailed,
+			Info:          "failed to fetch domainName",
+			InfoDetails:   errorDomainName.Error(),
+		}
+	}
 	if err := pr.DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
+		DomainName: domainName,
 	}); err != nil {
 		return &FixResult{
 			FixResultType: FixResultTypeFailed,
@@ -99,6 +110,7 @@ func DeleteExecution(
 		DomainID:   execution.DomainID,
 		WorkflowID: execution.WorkflowID,
 		RunID:      execution.RunID,
+		DomainName: domainName,
 	}); err != nil {
 		return &FixResult{
 			FixResultType: FixResultTypeFailed,

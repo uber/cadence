@@ -2265,7 +2265,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 		RunID:      request.WorkflowExecution.RunID,
 	}
 
-	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, workflowExecution, e.timeSource.Now(),
+	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, e.shard.GetDomainCache(), workflowExecution, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
 			if !mutableState.IsWorkflowExecutionRunning() {
 				return nil, workflow.ErrAlreadyCompleted
@@ -2292,7 +2292,7 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				return nil, workflow.ErrCancellationAlreadyRequested
 			}
 
-			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent("", req); err != nil {
+			if _, err := mutableState.AddWorkflowExecutionCancelRequestedEvent(req.CancelRequest.Cause, req); err != nil {
 				return nil, &types.InternalServiceError{Message: "Unable to cancel workflow execution."}
 			}
 
@@ -2313,7 +2313,6 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		return errDomainDeprecated
 	}
 	domainID := domainEntry.GetInfo().ID
-
 	request := signalRequest.SignalRequest
 	parentExecution := signalRequest.ExternalWorkflowExecution
 	childWorkflowOnly := signalRequest.GetChildWorkflowOnly()
@@ -2327,6 +2326,7 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 		e.executionCache,
 		e.executionManager,
 		domainID,
+		e.shard.GetDomainCache(),
 		workflowExecution,
 		e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
@@ -2605,6 +2605,7 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 		e.executionCache,
 		e.executionManager,
 		domainID,
+		e.shard.GetDomainCache(),
 		workflowExecution,
 		e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
@@ -2765,11 +2766,15 @@ func (e *historyEngineImpl) ResetWorkflowExecution(
 			Message: "Decision finish ID must be > 1 && <= workflow next event ID.",
 		}
 	}
-
+	domainName, err := e.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return nil, err
+	}
 	// also load the current run of the workflow, it can be different from the base runID
 	resp, err := e.executionManager.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: request.WorkflowExecution.GetWorkflowID(),
+		DomainName: domainName,
 	})
 	if err != nil {
 		return nil, err

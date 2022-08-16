@@ -85,10 +85,12 @@ func (s *historyCacheSuite) TestHistoryCacheBasic() {
 	s.cache = NewCache(s.mockShard)
 
 	domainID := "test_domain_id"
+	domainName := "test_domain_name"
 	execution1 := types.WorkflowExecution{
 		WorkflowID: "some random workflow ID",
 		RunID:      uuid.New(),
 	}
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	mockMS1 := NewMockMutableState(s.controller)
 	context, release, err := s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, execution1)
 	s.Nil(err)
@@ -117,7 +119,7 @@ func (s *historyCacheSuite) TestHistoryCachePinning() {
 		WorkflowID: "wf-cache-test-pinning",
 		RunID:      uuid.New(),
 	}
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	context, release, err := s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, we)
 	s.Nil(err)
 
@@ -152,7 +154,7 @@ func (s *historyCacheSuite) TestHistoryCacheClear() {
 		WorkflowID: "wf-cache-test-clear",
 		RunID:      uuid.New(),
 	}
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	context, release, err := s.cache.GetOrCreateWorkflowExecutionForBackground(domainID, we)
 	s.Nil(err)
 	// since we are just testing whether the release function will clear the cache
@@ -199,7 +201,7 @@ func (s *historyCacheSuite) TestHistoryCacheConcurrentAccess() {
 		release(errors.New("some random error message"))
 		waitGroup.Done()
 	}
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 	for i := 0; i < coroutineCount; i++ {
 		waitGroup.Add(1)
 		go testFn()

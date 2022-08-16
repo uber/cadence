@@ -27,11 +27,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/metrics"
@@ -42,11 +44,12 @@ import (
 type (
 	ScavengerTestSuite struct {
 		suite.Suite
-		taskListTable *mockTaskListTable
-		taskTables    map[string]*mockTaskTable
-		taskMgr       *mocks.TaskManager
-		scvgr         *Scavenger
-		scvgrCancelFn context.CancelFunc
+		taskListTable   *mockTaskListTable
+		taskTables      map[string]*mockTaskTable
+		taskMgr         *mocks.TaskManager
+		scvgr           *Scavenger
+		scvgrCancelFn   context.CancelFunc
+		mockDomainCache *cache.MockDomainCache
 	}
 )
 
@@ -69,7 +72,8 @@ func (s *ScavengerTestSuite) SetupTest() {
 		s.Require().NoError(err)
 	}
 	logger := loggerimpl.NewLogger(zapLogger)
-
+	ctrl := gomock.NewController(s.T())
+	s.mockDomainCache = cache.NewMockDomainCache(ctrl)
 	scvgrCtx, scvgrCancelFn := context.WithTimeout(context.Background(), scavengerTestTimeout)
 	s.scvgr = NewScavenger(
 		scvgrCtx,
@@ -82,6 +86,7 @@ func (s *ScavengerTestSuite) SetupTest() {
 			GetOrphanTasksPageSizeFn: dynamicconfig.GetIntPropertyFn(16),
 			ExecutorPollInterval:     time.Millisecond * 50,
 		},
+		s.mockDomainCache,
 	)
 	s.scvgrCancelFn = scvgrCancelFn
 }
@@ -96,6 +101,7 @@ func (s *ScavengerTestSuite) TestAllExpiredTasks() {
 		tt.generate(nTasks, true)
 		s.taskTables[name] = tt
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	s.setupTaskMgrMocks()
 	s.runScavenger()
 	for tl, tbl := range s.taskTables {
@@ -115,6 +121,7 @@ func (s *ScavengerTestSuite) TestAllAliveTasks() {
 		tt.generate(nTasks, false)
 		s.taskTables[name] = tt
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	s.setupTaskMgrMocks()
 	s.runScavenger()
 	for tl, tbl := range s.taskTables {
@@ -135,6 +142,7 @@ func (s *ScavengerTestSuite) TestExpiredTasksFollowedByAlive() {
 		tt.generate(nTasks/2, false)
 		s.taskTables[name] = tt
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	s.setupTaskMgrMocks()
 	s.runScavenger()
 	for tl, tbl := range s.taskTables {
@@ -156,6 +164,7 @@ func (s *ScavengerTestSuite) TestAliveTasksFollowedByExpired() {
 		tt.generate(nTasks/2, true)
 		s.taskTables[name] = tt
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	s.setupTaskMgrMocks()
 	s.runScavenger()
 	for tl, tbl := range s.taskTables {
@@ -175,6 +184,7 @@ func (s *ScavengerTestSuite) TestAllExpiredTasksWithErrors() {
 		tt.generate(nTasks, true)
 		s.taskTables[name] = tt
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	s.setupTaskMgrMocksWithErrors()
 	s.runScavenger()
 	for _, tbl := range s.taskTables {

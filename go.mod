@@ -10,6 +10,7 @@ require (
 	github.com/cactus/go-statsd-client/statsd v0.0.0-20191106001114-12b4e2b38748
 	github.com/cch123/elasticsql v0.0.0-20190321073543-a1a440758eb9
 	github.com/cristalhq/jwt/v3 v3.1.0
+	github.com/dave/dst v0.26.2
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13
 	github.com/emirpasic/gods v0.0.0-20190624094223-e689965507ab
@@ -35,7 +36,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.7.1
 	github.com/uber-go/tally v3.3.15+incompatible
-	github.com/uber/cadence-idl v0.0.0-20220727202351-6774502e78f4
+	github.com/uber/cadence-idl v0.0.0-20220811102637-0db3d82fb0b4
 	github.com/uber/ringpop-go v0.8.5
 	github.com/uber/tchannel-go v1.22.0
 	github.com/urfave/cli v1.22.4
@@ -55,6 +56,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
+	golang.org/x/tools v0.1.11
 	gonum.org/v1/gonum v0.7.0
 	google.golang.org/api v0.26.0
 	google.golang.org/grpc v1.29.1
@@ -133,7 +135,6 @@ require (
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sys v0.0.0-20211019181941-9d821ace8654 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/tools v0.1.11 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20201201144952-b05cb90ed32e // indirect
 	google.golang.org/protobuf v1.25.0 // indirect

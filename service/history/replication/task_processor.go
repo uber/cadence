@@ -494,6 +494,10 @@ func (p *taskProcessorImpl) generateDLQRequest(
 	switch *replicationTask.TaskType {
 	case types.ReplicationTaskTypeSyncActivity:
 		taskAttributes := replicationTask.GetSyncActivityTaskAttributes()
+		domainName, err := p.shard.GetDomainCache().GetDomainName(taskAttributes.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
 		return &persistence.PutReplicationTaskToDLQRequest{
 			SourceClusterName: p.sourceCluster,
 			TaskInfo: &persistence.ReplicationTaskInfo{
@@ -504,10 +508,15 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				TaskType:    persistence.ReplicationTaskTypeSyncActivity,
 				ScheduledID: taskAttributes.GetScheduledID(),
 			},
+			DomainName: domainName,
 		}, nil
 
 	case types.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
+		domainName, err := p.shard.GetDomainCache().GetDomainName(taskAttributes.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
 		eventsDataBlob := persistence.NewDataBlobFromInternal(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
@@ -531,6 +540,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				NextEventID:  events[len(events)-1].ID + 1,
 				Version:      events[0].Version,
 			},
+			DomainName: domainName,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unknown replication task type")

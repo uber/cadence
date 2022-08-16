@@ -4234,6 +4234,7 @@ func FromRequestCancelWorkflowExecutionRequest(t *types.RequestCancelWorkflowExe
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		Identity:          &t.Identity,
 		RequestId:         &t.RequestID,
+		Cause:             &t.Cause,
 	}
 }
 
@@ -4247,6 +4248,7 @@ func ToRequestCancelWorkflowExecutionRequest(t *shared.RequestCancelWorkflowExec
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		Identity:          t.GetIdentity(),
 		RequestID:         t.GetRequestId(),
+		Cause:             t.GetCause(),
 	}
 }
 

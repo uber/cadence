@@ -2652,6 +2652,7 @@ func FromRequestCancelWorkflowExecutionRequest(t *types.RequestCancelWorkflowExe
 		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
 		Identity:          t.Identity,
 		RequestId:         t.RequestID,
+		Cause:             t.Cause,
 	}
 }
 
@@ -2664,6 +2665,7 @@ func ToRequestCancelWorkflowExecutionRequest(t *apiv1.RequestCancelWorkflowExecu
 		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
 		Identity:          t.Identity,
 		RequestID:         t.RequestId,
+		Cause:             t.Cause,
 	}
 }
 
