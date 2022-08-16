@@ -80,26 +80,20 @@ func NewReplicator(
 // Start is called to start replicator
 func (r *Replicator) Start() error {
 	currentClusterName := r.clusterMetadata.GetCurrentClusterName()
-	for clusterName, info := range r.clusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
-
-		if clusterName != currentClusterName {
-			processor := newDomainReplicationProcessor(
-				clusterName,
-				currentClusterName,
-				r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(clusterName)),
-				r.clientBean.GetRemoteAdminClient(clusterName),
-				r.metricsClient,
-				r.domainReplicationTaskExecutor,
-				r.hostInfo,
-				r.membershipResolver,
-				r.domainReplicationQueue,
-				r.replicationMaxRetry,
-			)
-			r.domainProcessors = append(r.domainProcessors, processor)
-		}
+	for clusterName := range r.clusterMetadata.GetRemoteClusterInfo() {
+		processor := newDomainReplicationProcessor(
+			clusterName,
+			currentClusterName,
+			r.logger.WithTags(tag.ComponentReplicationTaskProcessor, tag.SourceCluster(clusterName)),
+			r.clientBean.GetRemoteAdminClient(clusterName),
+			r.metricsClient,
+			r.domainReplicationTaskExecutor,
+			r.hostInfo,
+			r.membershipResolver,
+			r.domainReplicationQueue,
+			r.replicationMaxRetry,
+		)
+		r.domainProcessors = append(r.domainProcessors, processor)
 	}
 
 	for _, domainProcessor := range r.domainProcessors {

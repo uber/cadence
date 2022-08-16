@@ -37,8 +37,12 @@ type (
 		primaryClusterName string
 		// currentClusterName is the name of the current cluster
 		currentClusterName string
-		// clusterGroup contains all cluster name -> corresponding information
-		clusterGroup map[string]config.ClusterInformation
+		// allClusters contains all cluster info
+		allClusters map[string]config.ClusterInformation
+		// enabledClusters contains enabled info
+		enabledClusters map[string]config.ClusterInformation
+		// remoteClusters contains enabled and remote info
+		remoteClusters map[string]config.ClusterInformation
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
 	}
@@ -56,23 +60,41 @@ func NewMetadata(
 		versionToClusterName[info.InitialFailoverVersion] = clusterName
 	}
 
+	// We never use disable clusters, filter them out on start
+	enabledClusters := map[string]config.ClusterInformation{}
+	for cluster, info := range clusterGroup {
+		if info.Enabled {
+			enabledClusters[cluster] = info
+		}
+	}
+
+	// Precompute remote clusters, they are used in multiple places
+	remoteClusters := map[string]config.ClusterInformation{}
+	for cluster, info := range enabledClusters {
+		if cluster != currentClusterName {
+			remoteClusters[cluster] = info
+		}
+	}
+
 	return Metadata{
 		failoverVersionIncrement: failoverVersionIncrement,
 		primaryClusterName:       primaryClusterName,
 		currentClusterName:       currentClusterName,
-		clusterGroup:             clusterGroup,
+		allClusters:              clusterGroup,
+		enabledClusters:          enabledClusters,
+		remoteClusters:           remoteClusters,
 		versionToClusterName:     versionToClusterName,
 	}
 }
 
 // GetNextFailoverVersion return the next failover version based on input
 func (m Metadata) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
-	info, ok := m.clusterGroup[cluster]
+	info, ok := m.allClusters[cluster]
 	if !ok {
 		panic(fmt.Sprintf(
 			"Unknown cluster name: %v with given cluster initial failover version map: %v.",
 			cluster,
-			m.clusterGroup,
+			m.allClusters,
 		))
 	}
 	failoverVersion := currentFailoverVersion/m.failoverVersionIncrement*m.failoverVersionIncrement + info.InitialFailoverVersion
@@ -96,9 +118,19 @@ func (m Metadata) GetCurrentClusterName() string {
 	return m.currentClusterName
 }
 
-// GetAllClusterInfo return the all cluster name -> corresponding information
+// GetAllClusterInfo return all cluster info
 func (m Metadata) GetAllClusterInfo() map[string]config.ClusterInformation {
-	return m.clusterGroup
+	return m.allClusters
+}
+
+// GetEnabledClusterInfo return enabled cluster info
+func (m Metadata) GetEnabledClusterInfo() map[string]config.ClusterInformation {
+	return m.enabledClusters
+}
+
+// GetRemoteClusterInfo return enabled AND remote cluster info
+func (m Metadata) GetRemoteClusterInfo() map[string]config.ClusterInformation {
+	return m.remoteClusters
 }
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
@@ -113,7 +145,7 @@ func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
 		panic(fmt.Sprintf(
 			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
 			initialFailoverVersion,
-			m.clusterGroup,
+			m.allClusters,
 			m.failoverVersionIncrement,
 		))
 	}
