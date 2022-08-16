@@ -238,20 +238,11 @@ func (p *taskProcessorImpl) cleanupReplicationTaskLoop() {
 }
 
 func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
-
-	clusterMetadata := p.shard.GetClusterMetadata()
-	currentCluster := clusterMetadata.GetCurrentClusterName()
 	minAckLevel := int64(math.MaxInt64)
-	for clusterName, clusterInfo := range clusterMetadata.GetAllClusterInfo() {
-		if !clusterInfo.Enabled {
-			continue
-		}
-
-		if clusterName != currentCluster {
-			ackLevel := p.shard.GetClusterReplicationLevel(clusterName)
-			if ackLevel < minAckLevel {
-				minAckLevel = ackLevel
-			}
+	for clusterName := range p.shard.GetClusterMetadata().GetRemoteClusterInfo() {
+		ackLevel := p.shard.GetClusterReplicationLevel(clusterName)
+		if ackLevel < minAckLevel {
+			minAckLevel = ackLevel
 		}
 	}
 	p.logger.Debug("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))

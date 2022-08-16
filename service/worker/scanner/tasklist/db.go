@@ -77,13 +77,18 @@ func (s *Scavenger) completeTask(info *p.TaskListInfo, taskid int64) error {
 func (s *Scavenger) getTasks(info *p.TaskListInfo, batchSize int) (*p.GetTasksResponse, error) {
 	var err error
 	var resp *p.GetTasksResponse
+	domainName, errorDomain := s.cache.GetDomainName(info.DomainID)
+	if errorDomain != nil {
+		return nil, errorDomain
+	}
 	err = s.retryForever(func() error {
 		resp, err = s.db.GetTasks(s.ctx, &p.GetTasksRequest{
-			DomainID:  info.DomainID,
-			TaskList:  info.Name,
-			TaskType:  info.TaskType,
-			ReadLevel: -1, // get the first N tasks sorted by taskID
-			BatchSize: batchSize,
+			DomainID:   info.DomainID,
+			TaskList:   info.Name,
+			TaskType:   info.TaskType,
+			ReadLevel:  -1, // get the first N tasks sorted by taskID
+			BatchSize:  batchSize,
+			DomainName: domainName,
 		})
 		return err
 	})

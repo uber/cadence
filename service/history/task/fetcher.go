@@ -158,14 +158,10 @@ func newTaskFetchers(
 	logger log.Logger,
 ) Fetchers {
 	currentClusterName := clusterMetadata.GetCurrentClusterName()
-	clusterInfos := clusterMetadata.GetAllClusterInfo()
-	fetchers := make([]Fetcher, 0, len(clusterInfos))
+	remoteClusters := clusterMetadata.GetRemoteClusterInfo()
 
-	for clusterName, info := range clusterInfos {
-		if !info.Enabled || clusterName == currentClusterName {
-			continue
-		}
-
+	fetchers := make([]Fetcher, 0, len(remoteClusters))
+	for clusterName := range remoteClusters {
 		fetchers = append(fetchers, newTaskFetcher(
 			currentClusterName,
 			clusterName,

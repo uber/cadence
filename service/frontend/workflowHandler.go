@@ -4355,14 +4355,11 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 	domainName *string,
 ) error {
 
-	clusterMetadata := wh.GetClusterMetadata()
-	respChan := make(chan *types.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
+	enabledClusters := wh.GetClusterMetadata().GetEnabledClusterInfo()
+	respChan := make(chan *types.DescribeDomainResponse, len(enabledClusters))
 
 	g := &errgroup.Group{}
-	for clusterName, cluster := range clusterMetadata.GetAllClusterInfo() {
-		if !cluster.Enabled {
-			continue
-		}
+	for clusterName := range enabledClusters {
 		frontendClient := wh.GetRemoteFrontendClient(clusterName)
 		g.Go(func() (e error) {
 			defer func() { log.CapturePanic(recover(), wh.GetLogger(), &e) }()
