@@ -33,6 +33,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common/membership"
+	"github.com/uber/cadence/common/types/mapper/proto"
 
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
@@ -1624,11 +1625,28 @@ func (h *handlerImpl) GetReplicationMessages(
 
 	wg.Wait()
 
+	responseSize := 0
+	maxResponseSize := h.config.MaxResponseSize()
+
 	messagesByShard := make(map[int32]*types.ReplicationMessages)
 	result.Range(func(key, value interface{}) bool {
 		shardID := key.(int32)
 		tasks := value.(*types.ReplicationMessages)
-		messagesByShard[shardID] = tasks
+
+		size := proto.FromReplicationMessages(tasks).Size()
+		if (responseSize + size) >= maxResponseSize {
+			// Log shards that did not fit for debugging purposes
+			h.GetLogger().Warn("Replication messages did not fit in the response (history host)",
+				tag.ShardID(int(shardID)),
+				tag.ResponseSize(size),
+				tag.ResponseTotalSize(responseSize),
+				tag.ResponseMaxSize(maxResponseSize),
+			)
+		} else {
+			responseSize += size
+			messagesByShard[shardID] = tasks
+		}
+
 		return true
 	})
 
