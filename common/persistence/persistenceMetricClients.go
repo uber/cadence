@@ -778,7 +778,7 @@ func (p *taskPersistenceClient) CreateTasks(
 		resp, err = p.persistence.CreateTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateTaskScope, op)
+	err := p.call(metrics.PersistenceCreateTaskScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -798,7 +798,7 @@ func (p *taskPersistenceClient) GetTasks(
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceGetTasksScope, op)
+	err := p.call(metrics.PersistenceGetTasksScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}

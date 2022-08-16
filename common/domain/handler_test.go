@@ -296,10 +296,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	isGlobalDomain2 := true
 	activeClusterName2 := ""
 	var cluster2 []*types.ClusterReplicationConfiguration
-	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range s.ClusterMetadata.GetEnabledClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName2 = clusterName
 		}
