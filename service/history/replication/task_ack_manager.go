@@ -28,30 +28,23 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/quotas"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/config"
 )
 
 type (
 	// TaskAckManager is the ack manager for replication tasks
 	TaskAckManager struct {
-		ackLevels     ackLevelStore
-		domains       domainCache
-		rateLimiter   *quotas.DynamicRateLimiter
-		throttleRetry *backoff.ThrottleRetry
+		ackLevels ackLevelStore
 
 		scope  metrics.Scope
 		logger log.Logger
 
-		reader   taskReader
-		hydrator taskHydrator
+		reader taskReader
+		store  *TaskStore
 	}
 
 	ackLevelStore interface {
@@ -60,14 +53,8 @@ type (
 		GetClusterReplicationLevel(cluster string) int64
 		UpdateClusterReplicationLevel(cluster string, lastTaskID int64) error
 	}
-	domainCache interface {
-		GetDomainByID(id string) (*cache.DomainCacheEntry, error)
-	}
 	taskReader interface {
 		Read(ctx context.Context, readLevel int64, maxReadLevel int64) ([]*persistence.ReplicationTaskInfo, bool, error)
-	}
-	taskHydrator interface {
-		Hydrate(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.ReplicationTask, error)
 	}
 )
 
@@ -75,33 +62,21 @@ type (
 func NewTaskAckManager(
 	shardID int,
 	ackLevels ackLevelStore,
-	domains domainCache,
 	metricsClient metrics.Client,
 	logger log.Logger,
-	config *config.Config,
 	reader taskReader,
-	hydrator taskHydrator,
+	store *TaskStore,
 ) TaskAckManager {
 
-	retryPolicy := backoff.NewExponentialRetryPolicy(100 * time.Millisecond)
-	retryPolicy.SetMaximumAttempts(config.ReplicatorReadTaskMaxRetryCount())
-	retryPolicy.SetBackoffCoefficient(1)
-
 	return TaskAckManager{
-		ackLevels:   ackLevels,
-		domains:     domains,
-		rateLimiter: quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64()),
-		throttleRetry: backoff.NewThrottleRetry(
-			backoff.WithRetryPolicy(retryPolicy),
-			backoff.WithRetryableError(persistence.IsTransientError),
-		),
+		ackLevels: ackLevels,
 		scope: metricsClient.Scope(
 			metrics.ReplicatorQueueProcessorScope,
 			metrics.InstanceTag(strconv.Itoa(shardID)),
 		),
-		logger:   logger.WithTags(tag.ComponentReplicationAckManager),
-		reader:   reader,
-		hydrator: hydrator,
+		logger: logger.WithTags(tag.ComponentReplicationAckManager),
+		reader: reader,
+		store:  store,
 	}
 }
 
@@ -121,25 +96,8 @@ func (t *TaskAckManager) GetTasks(ctx context.Context, pollingCluster string, la
 	readLevel := lastReadTaskID
 TaskInfoLoop:
 	for _, task := range tasks {
-		// filter task info by domain clusters.
-		domainEntity, err := t.domains.GetDomainByID(task.DomainID)
-		if err != nil {
-			return nil, err
-		}
-		if skipTask(pollingCluster, domainEntity) {
-			readLevel = task.TaskID
-			continue
-		}
+		replicationTask, err := t.store.Get(ctx, pollingCluster, *task)
 
-		// construct replication task from DB
-		_ = t.rateLimiter.Wait(ctx)
-		var replicationTask *types.ReplicationTask
-		op := func() error {
-			var err error
-			replicationTask, err = t.hydrator.Hydrate(ctx, *task)
-			return err
-		}
-		err = t.throttleRetry.Do(ctx, op)
 		switch err.(type) {
 		case nil:
 			// No action
@@ -166,19 +124,14 @@ TaskInfoLoop:
 		t.logger.Error("error updating replication level for shard", tag.Error(err), tag.OperationFailed)
 	}
 
+	if err := t.store.Ack(pollingCluster, lastReadTaskID); err != nil {
+		t.logger.Error("error updating replication level for hydrated task store", tag.Error(err), tag.OperationFailed)
+	}
+
 	t.logger.Debug("Get replication tasks", tag.SourceCluster(pollingCluster), tag.ShardReplicationAck(lastReadTaskID), tag.ReadLevel(readLevel))
 	return &types.ReplicationMessages{
 		ReplicationTasks:       replicationTasks,
 		HasMore:                hasMore,
 		LastRetrievedMessageID: readLevel,
 	}, nil
-}
-
-func skipTask(pollingCluster string, domainEntity *cache.DomainCacheEntry) bool {
-	for _, cluster := range domainEntity.GetReplicationConfig().Clusters {
-		if cluster.ClusterName == pollingCluster {
-			return false
-		}
-	}
-	return true
 }
