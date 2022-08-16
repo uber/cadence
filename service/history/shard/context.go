@@ -644,8 +644,6 @@ Create_Loop:
 			*types.ServiceBusyError:
 			// No special handling required for these errors
 			// We know write to DB fails if these errors are returned
-			// Updating MaxReadLevel doesn't matter in this case
-			s.updateMaxReadLevelLocked(transferMaxReadLevel)
 			return nil, err
 		case *persistence.ShardOwnershipLostError:
 			{
@@ -682,10 +680,6 @@ Create_Loop:
 					)
 					s.closeShard()
 					break Create_Loop
-				} else {
-					// Shard is re-acquired successfully, and we know write to DB is guaranteed to
-					// complete, it's safe to update MaxReadLevel
-					s.updateMaxReadLevelLocked(transferMaxReadLevel)
 				}
 			}
 		}
@@ -772,8 +766,6 @@ Update_Loop:
 			*types.ServiceBusyError:
 			// No special handling required for these errors
 			// We know write to DB fails if these errors are returned
-			// Updating MaxReadLevel doesn't matter in this case
-			s.updateMaxReadLevelLocked(transferMaxReadLevel)
 			return nil, err
 		case *persistence.ShardOwnershipLostError:
 			{
@@ -810,10 +802,6 @@ Update_Loop:
 					)
 					s.closeShard()
 					break Update_Loop
-				} else {
-					// Shard is re-acquired successfully, and we know write to DB is guaranteed to
-					// complete, it's safe to update MaxReadLevel
-					s.updateMaxReadLevelLocked(transferMaxReadLevel)
 				}
 			}
 		}
@@ -908,8 +896,6 @@ Conflict_Resolve_Loop:
 			*types.ServiceBusyError:
 			// No special handling required for these errors
 			// We know write to DB fails if these errors are returned
-			// Updating MaxReadLevel doesn't matter in this case
-			s.updateMaxReadLevelLocked(transferMaxReadLevel)
 			return nil, err
 		case *persistence.ShardOwnershipLostError:
 			{
@@ -946,10 +932,6 @@ Conflict_Resolve_Loop:
 					)
 					s.closeShard()
 					break Conflict_Resolve_Loop
-				} else {
-					// Shard is re-acquired successfully, and we know write to DB is guaranteed to
-					// complete, it's safe to update MaxReadLevel
-					s.updateMaxReadLevelLocked(transferMaxReadLevel)
 				}
 			}
 		}
