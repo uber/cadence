@@ -97,11 +97,11 @@ type (
 		PersistStartWorkflowBatchEvents(
 			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
-		) (int64, error)
+		) (persistence.DataBlob, error)
 		PersistNonStartWorkflowBatchEvents(
 			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
-		) (int64, error)
+		) (persistence.DataBlob, error)
 
 		CreateWorkflowExecution(
 			ctx context.Context,
@@ -411,11 +411,11 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	}
 	resetHistorySize := c.GetHistorySize()
 	for _, workflowEvents := range resetWorkflowEventsSeq {
-		eventsSize, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
+		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 		if err != nil {
 			return err
 		}
-		resetHistorySize += eventsSize
+		resetHistorySize += int64(len(blob.Data))
 	}
 	c.SetHistorySize(resetHistorySize)
 	resetWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -441,11 +441,11 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		}
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
-		eventsSize, err := c.PersistStartWorkflowBatchEvents(ctx, startEvents)
+		blob, err := c.PersistStartWorkflowBatchEvents(ctx, startEvents)
 		if err != nil {
 			return err
 		}
-		newWorkflowSizeSize += eventsSize
+		newWorkflowSizeSize += int64(len(blob.Data))
 		newContext.SetHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
 			HistorySize: newWorkflowSizeSize,
@@ -471,11 +471,11 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		}
 		currentWorkflowSize := currentContext.GetHistorySize()
 		for _, workflowEvents := range currentWorkflowEventsSeq {
-			eventsSize, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
+			blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 			if err != nil {
 				return err
 			}
-			currentWorkflowSize += eventsSize
+			currentWorkflowSize += int64(len(blob.Data))
 		}
 		currentContext.SetHistorySize(currentWorkflowSize)
 		currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -716,11 +716,11 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 
 	currentWorkflowSize := c.GetHistorySize()
 	for _, workflowEvents := range currentWorkflowEventsSeq {
-		eventsSize, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
+		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 		if err != nil {
 			return err
 		}
-		currentWorkflowSize += eventsSize
+		currentWorkflowSize += int64(len(blob.Data))
 	}
 	c.SetHistorySize(currentWorkflowSize)
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -747,21 +747,21 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
 		firstEventID := startEvents.Events[0].ID
-		var eventsSize int64
+		var blob persistence.DataBlob
 		if firstEventID == common.FirstEventID {
-			eventsSize, err = c.PersistStartWorkflowBatchEvents(ctx, startEvents)
+			blob, err = c.PersistStartWorkflowBatchEvents(ctx, startEvents)
 			if err != nil {
 				return err
 			}
 		} else {
 			// NOTE: This is the case for reset workflow, reset workflow already inserted a branch record
-			eventsSize, err = c.PersistNonStartWorkflowBatchEvents(ctx, startEvents)
+			blob, err = c.PersistNonStartWorkflowBatchEvents(ctx, startEvents)
 			if err != nil {
 				return err
 			}
 		}
 
-		newWorkflowSizeSize += eventsSize
+		newWorkflowSizeSize += int64(len(blob.Data))
 		newContext.SetHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
 			HistorySize: newWorkflowSizeSize,
@@ -948,10 +948,10 @@ func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
-) (int64, error) {
+) (persistence.DataBlob, error) {
 
 	if len(workflowEvents.Events) == 0 {
-		return 0, &types.InternalServiceError{
+		return persistence.DataBlob{}, &types.InternalServiceError{
 			Message: "cannot persist first workflow events with empty events",
 		}
 	}
@@ -959,7 +959,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	domainID := workflowEvents.DomainID
 	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
-		return 0, err
+		return persistence.DataBlob{}, err
 	}
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
@@ -970,7 +970,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
 
-	size, err := c.appendHistoryV2EventsWithRetry(
+	resp, err := c.appendHistoryV2EventsWithRetry(
 		ctx,
 		domainID,
 		execution,
@@ -983,16 +983,19 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 			// TransactionID is set by shard context
 		},
 	)
-	return size, err
+	if err != nil {
+		return persistence.DataBlob{}, err
+	}
+	return resp.DataBlob, nil
 }
 
 func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
-) (int64, error) {
+) (persistence.DataBlob, error) {
 
 	if len(workflowEvents.Events) == 0 {
-		return 0, nil // allow update workflow without events
+		return persistence.DataBlob{}, nil // allow update workflow without events
 	}
 
 	domainID := workflowEvents.DomainID
@@ -1003,7 +1006,7 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	branchToken := workflowEvents.BranchToken
 	events := workflowEvents.Events
 
-	size, err := c.appendHistoryV2EventsWithRetry(
+	resp, err := c.appendHistoryV2EventsWithRetry(
 		ctx,
 		domainID,
 		execution,
@@ -1014,7 +1017,10 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 			// TransactionID is set by shard context
 		},
 	)
-	return size, err
+	if err != nil {
+		return persistence.DataBlob{}, err
+	}
+	return resp.DataBlob, nil
 }
 
 func (c *contextImpl) appendHistoryV2EventsWithRetry(
@@ -1022,9 +1028,9 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 	domainID string,
 	execution types.WorkflowExecution,
 	request *persistence.AppendHistoryNodesRequest,
-) (int64, error) {
+) (*persistence.AppendHistoryNodesResponse, error) {
 
-	resp := 0
+	var resp *persistence.AppendHistoryNodesResponse
 	op := func() error {
 		var err error
 		resp, err = c.shard.AppendHistoryV2Events(ctx, request, domainID, execution)
@@ -1036,7 +1042,7 @@ func (c *contextImpl) appendHistoryV2EventsWithRetry(
 		backoff.WithRetryableError(persistence.IsTransientError),
 	)
 	err := throttleRetry.Do(ctx, op)
-	return int64(resp), err
+	return resp, err
 }
 
 func (c *contextImpl) createWorkflowExecutionWithRetry(

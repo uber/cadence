@@ -877,7 +877,7 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 	if err := throttleRetry.Do(ctx, op); err != nil {
 		return err
 	}
-	s.True(resp.Size > 0)
+	s.True(len(resp.DataBlob.Data) > 0)
 
 	return nil
 }

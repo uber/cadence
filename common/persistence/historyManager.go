@@ -256,7 +256,7 @@ func (m *historyV2ManagerImpl) AppendHistoryNodes(
 	err = m.persistence.AppendHistoryNodes(ctx, req)
 
 	return &AppendHistoryNodesResponse{
-		Size: size,
+		DataBlob: *blob,
 	}, err
 }
 

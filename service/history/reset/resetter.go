@@ -291,10 +291,11 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	// reset workflow with decision task failed or timed out
-	resetHistorySize, err = resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
+	blob, err := resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
+	resetHistorySize = int64(len(blob.Data))
 
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,

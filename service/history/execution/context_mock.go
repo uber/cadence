@@ -230,10 +230,10 @@ func (mr *MockContextMockRecorder) Lock(ctx interface{}) *gomock.Call {
 }
 
 // PersistNonStartWorkflowBatchEvents mocks base method.
-func (m *MockContext) PersistNonStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (int64, error) {
+func (m *MockContext) PersistNonStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (persistence.DataBlob, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PersistNonStartWorkflowBatchEvents", ctx, workflowEvents)
-	ret0, _ := ret[0].(int64)
+	ret0, _ := ret[0].(persistence.DataBlob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -245,10 +245,10 @@ func (mr *MockContextMockRecorder) PersistNonStartWorkflowBatchEvents(ctx, workf
 }
 
 // PersistStartWorkflowBatchEvents mocks base method.
-func (m *MockContext) PersistStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (int64, error) {
+func (m *MockContext) PersistStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (persistence.DataBlob, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PersistStartWorkflowBatchEvents", ctx, workflowEvents)
-	ret0, _ := ret[0].(int64)
+	ret0, _ := ret[0].(persistence.DataBlob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

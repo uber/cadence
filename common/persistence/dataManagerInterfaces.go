@@ -1541,8 +1541,8 @@ type (
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
 	AppendHistoryNodesResponse struct {
-		// the size of the event data that has been appended
-		Size int
+		// The data blob that was persisted to database
+		DataBlob DataBlob
 	}
 
 	// ReadHistoryBranchRequest is used to read a history branch
