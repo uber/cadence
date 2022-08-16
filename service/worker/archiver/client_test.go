@@ -64,7 +64,7 @@ func (s *clientSuite) SetupTest() {
 	s.metricsClient = &mmocks.Client{}
 	s.metricsScope = &mmocks.Scope{}
 	s.cadenceClient = &mocks.Client{}
-	s.metricsClient.On("Scope", metrics.ArchiverClientScope, mock.Anything).Return(s.metricsScope).Once()
+	s.metricsClient.On("Scope", metrics.ArchiverClientScope, mock.Anything).Return(s.metricsScope)
 	s.client = NewClient(
 		s.metricsClient,
 		log.NewNoop(),
