@@ -153,7 +153,7 @@ func (d *AttrValidatorImpl) validateClusterName(
 	clusterName string,
 ) error {
 
-	if info, ok := d.clusterMetadata.GetAllClusterInfo()[clusterName]; !ok || !info.Enabled {
+	if _, ok := d.clusterMetadata.GetEnabledClusterInfo()[clusterName]; !ok {
 		return &types.BadRequestError{Message: fmt.Sprintf(
 			"Invalid cluster name: %v",
 			clusterName,

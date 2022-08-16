@@ -460,10 +460,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
-	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range s.ClusterMetadata.GetEnabledClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -504,10 +501,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	emitMetric := true
 	activeClusterName := ""
 	clusters := []*persistence.ClusterReplicationConfig{}
-	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range s.ClusterMetadata.GetEnabledClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -563,10 +557,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	activeClusterName := ""
 	clusters := []*types.ClusterReplicationConfiguration{}
 	clustersDB := []*persistence.ClusterReplicationConfig{}
-	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range s.ClusterMetadata.GetEnabledClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName = clusterName
 		}
@@ -639,10 +630,7 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 	nextActiveClusterName := s.ClusterMetadata.GetCurrentClusterName()
 	clusters := []*types.ClusterReplicationConfiguration{}
 	clustersDB := []*persistence.ClusterReplicationConfig{}
-	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range s.ClusterMetadata.GetEnabledClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			prevActiveClusterName = clusterName
 		}
