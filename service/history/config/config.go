@@ -59,6 +59,7 @@ type Config struct {
 	EnableStickyQuery               dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
 	WorkflowDeletionJitterRange     dynamicconfig.IntPropertyFnWithDomainFilter
+	MaxResponseSize                 dynamicconfig.IntPropertyFn
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -359,6 +360,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskMissingEventsResendDelay:  dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsResendDelay),
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay),
 		WorkflowDeletionJitterRange:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowDeletionJitterRange),
+		MaxResponseSize:                      dc.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte),
 
 		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS),
 		TaskSchedulerType:                       dc.GetIntProperty(dynamicconfig.TaskSchedulerType),
