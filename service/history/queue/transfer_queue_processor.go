@@ -117,10 +117,7 @@ func NewTransferQueueProcessor(
 	)
 
 	standbyQueueProcessors := make(map[string]*transferQueueProcessorBase)
-	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled || clusterName == currentClusterName {
-			continue
-		}
+	for clusterName := range shard.GetClusterMetadata().GetRemoteClusterInfo() {
 		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
@@ -234,10 +231,7 @@ func (t *transferQueueProcessor) FailoverDomain(
 
 	minLevel := t.shard.GetTransferClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
-	for clusterName, info := range t.shard.GetService().GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range t.shard.GetClusterMetadata().GetEnabledClusterInfo() {
 		ackLevel := t.shard.GetTransferClusterAckLevel(clusterName)
 		if ackLevel < minLevel {
 			minLevel = ackLevel
