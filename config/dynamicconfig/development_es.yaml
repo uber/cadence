@@ -18,6 +18,7 @@ frontend.validSearchAttributes:
       TaskList: 1
       IsCron: 1
       NumClusters: 2
+      UpdateTime: 2
       CustomStringField: 0
       CustomKeywordField: 1
       CustomIntField: 2

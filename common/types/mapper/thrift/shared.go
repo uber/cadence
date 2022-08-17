@@ -6265,6 +6265,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
 		TaskList:         &t.TaskList,
 		IsCron:           &t.IsCron,
+		UpdateTime:       t.UpdateTime,
 	}
 }
 
@@ -6288,6 +6289,7 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
 		TaskList:         t.GetTaskList(),
 		IsCron:           t.GetIsCron(),
+		UpdateTime:       t.UpdateTime,
 	}
 }
 
