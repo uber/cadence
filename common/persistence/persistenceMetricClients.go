@@ -812,7 +812,7 @@ func (p *taskPersistenceClient) CompleteTask(
 	op := func() error {
 		return p.persistence.CompleteTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteTaskScope, op)
+	return p.call(metrics.PersistenceCompleteTaskScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *taskPersistenceClient) CompleteTasksLessThan(
@@ -825,7 +825,7 @@ func (p *taskPersistenceClient) CompleteTasksLessThan(
 		resp, err = p.persistence.CompleteTasksLessThan(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCompleteTasksLessThanScope, op)
+	err := p.call(metrics.PersistenceCompleteTasksLessThanScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -856,7 +856,7 @@ func (p *taskPersistenceClient) LeaseTaskList(
 		resp, err = p.persistence.LeaseTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceLeaseTaskListScope, op)
+	err := p.call(metrics.PersistenceLeaseTaskListScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -887,7 +887,7 @@ func (p *taskPersistenceClient) DeleteTaskList(
 	op := func() error {
 		return p.persistence.DeleteTaskList(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteTaskListScope, op)
+	return p.call(metrics.PersistenceDeleteTaskListScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *taskPersistenceClient) UpdateTaskList(
@@ -900,7 +900,7 @@ func (p *taskPersistenceClient) UpdateTaskList(
 		resp, err = p.persistence.UpdateTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateTaskListScope, op)
+	err := p.call(metrics.PersistenceUpdateTaskListScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
