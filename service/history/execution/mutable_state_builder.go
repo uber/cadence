@@ -77,6 +77,8 @@ var (
 	ErrEventsAfterWorkflowFinish = &types.InternalServiceError{Message: "error validating last event being workflow finish event"}
 	// ErrMissingVersionHistories is the error indicating cadence failed to process 2dc workflow type.
 	ErrMissingVersionHistories = &types.BadRequestError{Message: "versionHistories is empty, which is required for NDC feature. It's probably from deprecated 2dc workflows"}
+	// ErrTooManyPendingActivities is the error that currently there are too many pending activities in the workflow
+	ErrTooManyPendingActivities = &types.InternalServiceError{Message: "Too many pending activities"}
 )
 
 type (
@@ -150,13 +152,14 @@ type (
 		decisionTaskManager mutableStateDecisionTaskManager
 		queryRegistry       query.Registry
 
-		shard           shard.Context
-		clusterMetadata cluster.Metadata
-		eventsCache     events.Cache
-		config          *config.Config
-		timeSource      clock.TimeSource
-		logger          log.Logger
-		metricsClient   metrics.Client
+		shard                      shard.Context
+		clusterMetadata            cluster.Metadata
+		eventsCache                events.Cache
+		config                     *config.Config
+		timeSource                 clock.TimeSource
+		logger                     log.Logger
+		metricsClient              metrics.Client
+		pendingActivityWarningSent bool
 	}
 )
 
@@ -2130,6 +2133,28 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 			tag.WorkflowEventID(e.GetNextEventID()),
 			tag.ErrorTypeInvalidHistoryAction)
 		return nil, nil, nil, false, false, e.createCallerError(opTag)
+	}
+
+	pendingActivitiesCount := len(e.pendingActivityInfoIDs)
+
+	if pendingActivitiesCount >= e.config.PendingActivitiesCountLimitError() {
+		e.logger.Error("Pending activity count exceeds error limit",
+			tag.WorkflowDomainName(e.GetDomainEntry().GetInfo().Name),
+			tag.WorkflowID(e.executionInfo.WorkflowID),
+			tag.WorkflowRunID(e.executionInfo.RunID),
+			tag.Number(int64(pendingActivitiesCount)))
+
+		if e.config.PendingActivityValidationEnabled() {
+			return nil, nil, nil, false, false, ErrTooManyPendingActivities
+		}
+	} else if pendingActivitiesCount >= e.config.PendingActivitiesCountLimitWarn() && !e.pendingActivityWarningSent {
+		e.logger.Warn("Pending activity count exceeds warn limit",
+			tag.WorkflowDomainName(e.GetDomainEntry().GetInfo().Name),
+			tag.WorkflowID(e.executionInfo.WorkflowID),
+			tag.WorkflowRunID(e.executionInfo.RunID),
+			tag.Number(int64(pendingActivitiesCount)))
+
+		e.pendingActivityWarningSent = true
 	}
 
 	event := e.hBuilder.AddActivityTaskScheduledEvent(decisionCompletedEventID, attributes)
