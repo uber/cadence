@@ -41,29 +41,28 @@ func init() {
 	flag.BoolVar(&TestFlags.cassandra, "cassandra", false, "Cassandra external dependency")
 }
 
-// TODO: Better instructions:
-// 1) How to start external dependencies - maybe link to docs so we can change it easily?
-// 2) How to run the tests
+// In order to start external dependencies, see documentation at https://github.com/uber/cadence
+
 func RequireMySQL(t *testing.T) {
 	if !TestFlags.mysql {
-		t.Skip("Skipping test that requires 'mysql' to run - start XXX and append '-mysql' to run this test.")
+		t.Skip("Skipping test that requires 'mysql' to run - start mysql and append '-mysql' to run this test.")
 	}
 }
 
 func RequirePostgres(t *testing.T) {
 	if !TestFlags.postgres {
-		t.Skip("Skipping test that requires 'postgres' to run - start XXX and append '-postgres' to run this test.")
+		t.Skip("Skipping test that requires 'postgres' to run - start postgres and append '-postgres' to run this test.")
 	}
 }
 
 func RequireMongoDB(t *testing.T) {
 	if !TestFlags.mongodb {
-		t.Skip("Skipping test that requires 'mongodb' to run - start XXX and append '-mongodb' to run this test.")
+		t.Skip("Skipping test that requires 'mongodb' to run - start mongodb and append '-mongodb' to run this test.")
 	}
 }
 
 func RequireCassandra(t *testing.T) {
 	if !TestFlags.cassandra {
-		t.Skip("Skipping test that requires 'cassandra' to run - start XXX and append '-cassandra' to run this test.")
+		t.Skip("Skipping test that requires 'cassandra' to run - start cassandra and append '-cassandra' to run this test.")
 	}
 }
