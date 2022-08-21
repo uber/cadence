@@ -156,8 +156,10 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 				// Cassandra returns the actual row that caused a condition failure, so we should always return
 				// from the checks above, but just in case.
 				db.logger.Warn("failing to execute create work batch transaction - couldn't find previous record either",
-					tag.WorkflowRunID(currentWorkflowRequest.Row.WorkflowID),
+					tag.WorkflowID(currentWorkflowRequest.Row.WorkflowID),
+					tag.WorkflowRunID(currentWorkflowRequest.Row.RunID),
 					tag.ShardID(currentWorkflowRequest.Row.ShardID),
+					tag.WorkflowDomainID(currentWorkflowRequest.Row.DomainID),
 					tag.DebugReflectionValue("current-workflow-request", currentWorkflowRequest),
 					tag.DebugReflectionValue("workflow-batch-txn-prev-val", previous)) // we'd expect this to be nil
 				break GetFailureReasonLoop
