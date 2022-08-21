@@ -27,6 +27,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -64,6 +66,11 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 			rowType, ok := previous["type"].(int)
 			if !ok {
 				// This should never happen, as all our rows have the type field.
+				db.logger.Warn("failing to execute create work batch transaction - couldn't find previous type",
+					tag.WorkflowRunID(currentWorkflowRequest.Row.WorkflowID),
+					tag.ShardID(currentWorkflowRequest.Row.ShardID),
+					tag.WorkflowRunID(currentWorkflowRequest.Condition.GetCurrentRunID()),
+					tag.DebugReflectionValue("workflow-batch-txn", previous))
 				break GetFailureReasonLoop
 			}
 			runID := previous["run_id"].(gocql.UUID).String()
@@ -148,6 +155,11 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 			if !iter.MapScan(previous) {
 				// Cassandra returns the actual row that caused a condition failure, so we should always return
 				// from the checks above, but just in case.
+				db.logger.Warn("failing to execute create work batch transaction - couldn't find previous record either",
+					tag.WorkflowRunID(currentWorkflowRequest.Row.WorkflowID),
+					tag.ShardID(currentWorkflowRequest.Row.ShardID),
+					tag.DebugReflectionValue("current-workflow-request", currentWorkflowRequest),
+					tag.DebugReflectionValue("workflow-batch-txn-prev-val", previous)) // we'd expect this to be nil
 				break GetFailureReasonLoop
 			}
 		}
