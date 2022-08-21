@@ -49,6 +49,13 @@ func Timestamp(timestamp time.Time) Tag {
 	return newTimeTag("timestamp", timestamp)
 }
 
+// DebugReflectionValue is a reflection based log tag for
+// unknown and dynamic types. Can cause problems for elasticsearch type loggers if the types change
+// and is based upon reflection, so should be used with extreme care.
+func DebugReflectionValue(key string, value interface{}) Tag {
+	return newDebugReflectionTag(key, value)
+}
+
 ///////////////////  Workflow tags defined here: ( wf is short for workflow) ///////////////////
 
 // WorkflowAction returns tag for WorkflowAction

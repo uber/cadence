@@ -98,3 +98,10 @@ func newPredefinedStringTag(key string, value string) Tag {
 		field: zap.String(key, value),
 	}
 }
+
+// Dangerous for performance reasons because it relies on reflection
+func newDebugReflectionTag(key string, value interface{}) Tag {
+	return Tag{
+		field: zap.Any(key, value),
+	}
+}
