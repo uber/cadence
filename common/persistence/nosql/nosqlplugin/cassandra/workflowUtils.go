@@ -66,8 +66,9 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 			rowType, ok := previous["type"].(int)
 			if !ok {
 				// This should never happen, as all our rows have the type field.
-				db.logger.Warn("failing to execute create work batch transaction - couldn't find previous type",
-					tag.WorkflowRunID(currentWorkflowRequest.Row.WorkflowID),
+				db.logger.Error("failing to execute create work batch transaction - couldn't find previous type",
+					tag.WorkflowID(currentWorkflowRequest.Row.WorkflowID),
+					tag.WorkflowRunID(currentWorkflowRequest.Row.RunID),
 					tag.ShardID(currentWorkflowRequest.Row.ShardID),
 					tag.WorkflowRunID(currentWorkflowRequest.Condition.GetCurrentRunID()),
 					tag.DebugReflectionValue("workflow-batch-txn", previous))
@@ -155,7 +156,7 @@ func (db *cdb) executeCreateWorkflowBatchTransaction(
 			if !iter.MapScan(previous) {
 				// Cassandra returns the actual row that caused a condition failure, so we should always return
 				// from the checks above, but just in case.
-				db.logger.Warn("failing to execute create work batch transaction - couldn't find previous record either",
+				db.logger.Error("failing to execute create work batch transaction - couldn't find previous record either",
 					tag.WorkflowID(currentWorkflowRequest.Row.WorkflowID),
 					tag.WorkflowRunID(currentWorkflowRequest.Row.RunID),
 					tag.ShardID(currentWorkflowRequest.Row.ShardID),
