@@ -822,6 +822,10 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		execution.GetWorkflowID(),
 		adh.numberOfHistoryShards,
 	)
+	domainName := request.GetDomain()
+	if domainName == "" {
+		return nil, errors.New("domain Name not set. Check again")
+	}
 	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
@@ -831,7 +835,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		PageSize:      pageSize,
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
-		DomainName:    request.GetDomain(),
+		DomainName:    domainName,
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {

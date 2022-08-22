@@ -1018,6 +1018,10 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	}
 
 	domainID := workflowEvents.DomainID
+	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		return 0, err
+	}
 	execution := types.WorkflowExecution{
 		WorkflowID: workflowEvents.WorkflowID,
 		RunID:      workflowEvents.RunID,
@@ -1033,6 +1037,7 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 			IsNewBranch: false,
 			BranchToken: branchToken,
 			Events:      events,
+			DomainName:  domainName,
 			// TransactionID is set by shard context
 		},
 	)
