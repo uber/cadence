@@ -88,6 +88,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_profile
     environment:
+      - "TEST_FLAGS=-cassandra -mysql -postgres -mongodb"
       - "CASSANDRA_SEEDS=cassandra"
       - "MYSQL_SEEDS=mysql"
       - "POSTGRES_SEEDS=postgres"
@@ -111,6 +112,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_integration_profile
     environment:
+      - "TEST_FLAGS=-cassandra"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -132,6 +134,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_integration_profile
     environment:
+      - "TEST_FLAGS=-mysql"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -154,6 +157,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_integration_profile
     environment:
+      - "TEST_FLAGS=-postgres"
       - "POSTGRES_SEEDS=postgres"
       - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
@@ -177,6 +181,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_integration_profile EVENTSV2=true
     environment:
+      - "TEST_FLAGS=-cassandra"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -198,6 +203,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_ndc_profile
     environment:
+      - "TEST_FLAGS=-cassandra"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -219,6 +225,7 @@ services:
       dockerfile: ./docker/buildkite/Dockerfile
     command: make cover_ndc_profile
     environment:
+      - "TEST_FLAGS=-mysql"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
