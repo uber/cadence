@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	persistence "github.com/uber/cadence/common/persistence"
+	common "github.com/uber/cadence/service/history/common"
 	task "github.com/uber/cadence/service/history/task"
 )
 
@@ -493,18 +493,6 @@ func (mr *MockProcessorMockRecorder) FailoverDomain(domainIDs interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FailoverDomain", reflect.TypeOf((*MockProcessor)(nil).FailoverDomain), domainIDs)
 }
 
-// NotifyNewTask mocks base method
-func (m *MockProcessor) NotifyNewTask(clusterName string, executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTask", clusterName, executionInfo, tasks)
-}
-
-// NotifyNewTask indicates an expected call of NotifyNewTask
-func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, executionInfo, tasks interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, executionInfo, tasks)
-}
-
 // HandleAction mocks base method
 func (m *MockProcessor) HandleAction(ctx context.Context, clusterName string, action *Action) (*ActionResult, error) {
 	m.ctrl.T.Helper()
@@ -532,7 +520,19 @@ func (mr *MockProcessorMockRecorder) LockTaskProcessing() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockTaskProcessing", reflect.TypeOf((*MockProcessor)(nil).LockTaskProcessing))
 }
 
-// UnlockTaskProcessing mocks base method
+// NotifyNewTask mocks base method.
+func (m *MockProcessor) NotifyNewTask(clusterName string, info *common.NotifyTaskInfo) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NotifyNewTask", clusterName, info)
+}
+
+// NotifyNewTask indicates an expected call of NotifyNewTask.
+func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, info interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, info)
+}
+
+// UnlockTaskProcessing mocks base method.
 func (m *MockProcessor) UnlockTaskProcessing() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "UnlockTaskProcessing")
