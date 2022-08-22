@@ -29,8 +29,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -122,10 +122,9 @@ func (c *crossClusterQueueProcessor) Stop() {
 
 func (c *crossClusterQueueProcessor) NotifyNewTask(
 	clusterName string,
-	executionInfo *persistence.WorkflowExecutionInfo,
-	tasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
-	if len(tasks) == 0 {
+	if len(info.Tasks) == 0 {
 		return
 	}
 

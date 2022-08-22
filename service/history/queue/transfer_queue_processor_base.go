@@ -34,6 +34,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/shard"
 	"github.com/uber/cadence/service/history/task"
@@ -204,17 +205,16 @@ func (t *transferQueueProcessorBase) Stop() {
 }
 
 func (t *transferQueueProcessorBase) notifyNewTask(
-	executionInfo *persistence.WorkflowExecutionInfo,
-	transferTasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 	select {
 	case t.notifyCh <- struct{}{}:
 	default:
 	}
 
-	if executionInfo != nil && t.validator != nil {
+	if info.ExecutionInfo != nil && t.validator != nil {
 		// executionInfo will be nil when notifyNewTask is called to trigger a scan, for example during domain failover or sync shard.
-		t.validator.addTasks(executionInfo, transferTasks)
+		t.validator.addTasks(info)
 	}
 }
 

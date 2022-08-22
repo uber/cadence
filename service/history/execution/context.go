@@ -38,6 +38,7 @@ import (
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -365,12 +366,12 @@ func (c *contextImpl) CreateWorkflowExecution(
 	resp, err := c.createWorkflowExecutionWithRetry(ctx, createRequest)
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow)
+			c.notifyTasksFromWorkflowSnapshot(newWorkflow, true)
 		}
 		return err
 	}
 
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow)
+	c.notifyTasksFromWorkflowSnapshot(newWorkflow, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -501,9 +502,9 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowSnapshot(resetWorkflow)
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow)
-			c.notifyTasksFromWorkflowMutation(currentWorkflow)
+			c.notifyTasksFromWorkflowSnapshot(resetWorkflow, true)
+			c.notifyTasksFromWorkflowSnapshot(newWorkflow, true)
+			c.notifyTasksFromWorkflowMutation(currentWorkflow, true)
 		}
 		return err
 	}
@@ -526,9 +527,9 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		workflowCloseState,
 	))
 
-	c.notifyTasksFromWorkflowSnapshot(resetWorkflow)
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow)
-	c.notifyTasksFromWorkflowMutation(currentWorkflow)
+	c.notifyTasksFromWorkflowSnapshot(resetWorkflow, false)
+	c.notifyTasksFromWorkflowSnapshot(newWorkflow, false)
+	c.notifyTasksFromWorkflowMutation(currentWorkflow, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -661,7 +662,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowMutation(currentWorkflow)
+			c.notifyTasksFromWorkflowMutation(currentWorkflow, true)
 		}
 		return err
 	}
@@ -670,7 +671,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
 	// notify current workflow tasks
-	c.notifyTasksFromWorkflowMutation(currentWorkflow)
+	c.notifyTasksFromWorkflowMutation(currentWorkflow, false)
 
 	emitSessionUpdateStats(
 		c.metricsClient,
@@ -784,8 +785,8 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowMutation(currentWorkflow)
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow)
+			c.notifyTasksFromWorkflowMutation(currentWorkflow, true)
+			c.notifyTasksFromWorkflowSnapshot(newWorkflow, true)
 		}
 		return err
 	}
@@ -811,10 +812,10 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	))
 
 	// notify current workflow tasks
-	c.notifyTasksFromWorkflowMutation(currentWorkflow)
+	c.notifyTasksFromWorkflowMutation(currentWorkflow, false)
 
 	// notify new workflow tasks
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow)
+	c.notifyTasksFromWorkflowSnapshot(newWorkflow, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -845,6 +846,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 
 func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 	workflowSnapShot *persistence.WorkflowSnapshot,
+	persistenceError bool,
 ) {
 	if workflowSnapShot == nil {
 		return
@@ -855,11 +857,13 @@ func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 		workflowSnapShot.TransferTasks,
 		workflowSnapShot.TimerTasks,
 		workflowSnapShot.CrossClusterTasks,
+		persistenceError,
 	)
 }
 
 func (c *contextImpl) notifyTasksFromWorkflowMutation(
 	workflowMutation *persistence.WorkflowMutation,
+	persistenceError bool,
 ) {
 	if workflowMutation == nil {
 		return
@@ -870,6 +874,7 @@ func (c *contextImpl) notifyTasksFromWorkflowMutation(
 		workflowMutation.TransferTasks,
 		workflowMutation.TimerTasks,
 		workflowMutation.CrossClusterTasks,
+		persistenceError,
 	)
 }
 
@@ -878,10 +883,27 @@ func (c *contextImpl) notifyTasks(
 	transferTasks []persistence.Task,
 	timerTasks []persistence.Task,
 	crossClusterTasks []persistence.Task,
+	persistenceError bool,
 ) {
-	c.shard.GetEngine().NotifyNewTransferTasks(executionInfo, transferTasks)
-	c.shard.GetEngine().NotifyNewTimerTasks(executionInfo, timerTasks)
-	c.shard.GetEngine().NotifyNewCrossClusterTasks(executionInfo, crossClusterTasks)
+	transferTaskInfo := &hcommon.NotifyTaskInfo{
+		ExecutionInfo:    executionInfo,
+		Tasks:            transferTasks,
+		PersistenceError: persistenceError,
+	}
+	timerTaskInfo := &hcommon.NotifyTaskInfo{
+		ExecutionInfo:    executionInfo,
+		Tasks:            timerTasks,
+		PersistenceError: persistenceError,
+	}
+	crossClusterTaskInfo := &hcommon.NotifyTaskInfo{
+		ExecutionInfo:    executionInfo,
+		Tasks:            crossClusterTasks,
+		PersistenceError: persistenceError,
+	}
+
+	c.shard.GetEngine().NotifyNewTransferTasks(transferTaskInfo)
+	c.shard.GetEngine().NotifyNewTimerTasks(timerTaskInfo)
+	c.shard.GetEngine().NotifyNewCrossClusterTasks(crossClusterTaskInfo)
 }
 
 func (c *contextImpl) mergeContinueAsNewReplicationTasks(
