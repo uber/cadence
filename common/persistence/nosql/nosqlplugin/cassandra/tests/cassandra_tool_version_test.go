@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/testflags"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -48,6 +50,7 @@ type (
 )
 
 func TestVersionTestSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	suite.Run(t, new(VersionTestSuite))
 }
 
