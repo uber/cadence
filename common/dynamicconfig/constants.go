@@ -302,6 +302,16 @@ const (
 	// Default value: 51200 (50*1024)
 	// Allowed filters: DomainName
 	HistoryCountLimitWarn
+	// PendingActivitiesCountLimitError is the limit of how many pending activities a workflow can have at a point in time
+	// KeyName: limit.pendingActivityCount.error
+	// Value type: Int
+	// Default value: 1024
+	PendingActivitiesCountLimitError
+	// PendingActivitiesCountLimitWarn is the limit of how many activities a workflow can have before a warning is logged
+	// KeyName: limit.pendingActivityCount.warn
+	// Value type: Int
+	// Default value: 512
+	PendingActivitiesCountLimitWarn
 	// DomainNameMaxLength is the length limit for domain name
 	// KeyName: limit.domainNameLength
 	// Value type: Int
@@ -1722,6 +1732,12 @@ const (
 	// Default value: false
 	Lockdown
 
+	// PendingActivityValidationEnabled is feature flag if pending activity count validation is enabled
+	// KeyName: limit.pendingActivityCount.enabled
+	// Value type: bool
+	// Default value: false
+	EnablePendingActivityValidation
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -2522,6 +2538,16 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "limit.historyCount.warn",
 		Description:  "HistoryCountLimitWarn is the per workflow execution history event count limit for warning",
 		DefaultValue: 50 * 1024,
+	},
+	PendingActivitiesCountLimitError: DynamicInt{
+		KeyName:      "limit.pendingActivityCount.error",
+		Description:  "PendingActivitiesCountLimitError is the limit of how many pending activities a workflow can have at a point in time",
+		DefaultValue: 1024,
+	},
+	PendingActivitiesCountLimitWarn: DynamicInt{
+		KeyName:      "limit.pendingActivityCount.warn",
+		Description:  "PendingActivitiesCountLimitWarn is the limit of how many activities a workflow can have before a warning is logged",
+		DefaultValue: 512,
 	},
 	DomainNameMaxLength: DynamicInt{
 		KeyName:      "limit.domainNameLength",
@@ -3686,6 +3712,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	Lockdown: DynamicBool{
 		KeyName:      "system.Lockdown",
 		Description:  "Lockdown defines if we want to allow failovers of domains to this cluster",
+		DefaultValue: false,
+	},
+	EnablePendingActivityValidation: DynamicBool{
+		KeyName:      "limit.pendingActivityCount.enabled",
+		Description:  "Enables pending activity count limiting/validation",
 		DefaultValue: false,
 	},
 }
