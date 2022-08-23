@@ -21,6 +21,8 @@
 package execution
 
 import (
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -55,7 +57,7 @@ func NewHistoryBuilderFromEvents(history []*types.HistoryEvent) *HistoryBuilder 
 // originalRunID is the runID when the WorkflowExecutionStarted event is written
 // firstRunID is the very first runID along the chain of ContinueAsNew and Reset
 func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.HistoryStartWorkflowExecutionRequest,
-	previousExecution *persistence.WorkflowExecutionInfo, firstRunID, originalRunID string) *types.HistoryEvent {
+	previousExecution *persistence.WorkflowExecutionInfo, firstRunID string, originalRunID string, firstScheduledTime time.Time) *types.HistoryEvent {
 
 	var prevRunID string
 	var resetPoints *types.ResetPoints
@@ -63,8 +65,16 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 		prevRunID = previousExecution.RunID
 		resetPoints = previousExecution.AutoResetPoints
 	}
+
 	request := startRequest.StartRequest
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionStarted)
+
+	var scheduledTime *int64
+	if request.CronSchedule != "" {
+		//first scheduled time is only necessary for cron workflows.
+		unixNano := firstScheduledTime.UnixNano()
+		scheduledTime = &unixNano
+	}
 	attributes := &types.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        request.WorkflowType,
 		TaskList:                            request.TaskList,
@@ -85,6 +95,7 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 		Initiator:                           startRequest.ContinueAsNewInitiator,
 		FirstDecisionTaskBackoffSeconds:     startRequest.FirstDecisionTaskBackoffSeconds,
 		FirstExecutionRunID:                 firstRunID,
+		FirstScheduleTimeNano:               scheduledTime,
 		OriginalExecutionRunID:              originalRunID,
 		Memo:                                request.Memo,
 		SearchAttributes:                    request.SearchAttributes,

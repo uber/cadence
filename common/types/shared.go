@@ -6999,6 +6999,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	OriginalExecutionRunID              string                  `json:"originalExecutionRunId,omitempty"`
 	Identity                            string                  `json:"identity,omitempty"`
 	FirstExecutionRunID                 string                  `json:"firstExecutionRunId,omitempty"`
+	FirstScheduleTimeNano               *int64                  `json:"firstScheduleTimeNano,omitempty"`
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
 	Attempt                             int32                   `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
@@ -7063,6 +7064,14 @@ func (v *WorkflowExecutionStartedEventAttributes) GetInitiator() (o ContinueAsNe
 func (v *WorkflowExecutionStartedEventAttributes) GetFirstExecutionRunID() (o string) {
 	if v != nil {
 		return v.FirstExecutionRunID
+	}
+	return
+}
+
+// Get
+func (v *WorkflowExecutionStartedEventAttributes) GetFirstScheduledTimeNano() (o int64) {
+	if v != nil && v.FirstScheduleTimeNano != nil {
+		return *v.FirstScheduleTimeNano
 	}
 	return
 }

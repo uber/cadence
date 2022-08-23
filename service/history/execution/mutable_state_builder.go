@@ -1614,6 +1614,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 	previousExecutionState MutableState,
 	attributes *types.ContinueAsNewWorkflowExecutionDecisionAttributes,
 	firstRunID string,
+	firstScheduledTime time.Time,
 ) (*types.HistoryEvent, error) {
 
 	previousExecutionInfo := previousExecutionState.GetExecutionInfo()
@@ -1687,7 +1688,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		parentDomainID = &parentExecutionInfo.DomainUUID
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunID())
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(req, previousExecutionInfo, firstRunID, execution.GetRunID(), firstScheduledTime)
 	if err := e.ReplicateWorkflowExecutionStartedEvent(
 		parentDomainID,
 		execution,
@@ -1742,7 +1743,8 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 		return nil, e.createInternalServerError(opTag)
 	}
 
-	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil, execution.GetRunID(), execution.GetRunID())
+	event := e.hBuilder.AddWorkflowExecutionStartedEvent(startRequest, nil, execution.GetRunID(), execution.GetRunID(),
+		time.Now())
 
 	var parentDomainID *string
 	if startRequest.ParentExecutionInfo != nil {
@@ -3397,6 +3399,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		return nil, nil, err
 	}
 	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+	firstScheduleTime := time.Unix(0, currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstScheduledTimeNano())
 	domainID := e.domainEntry.GetInfo().ID
 	newStateBuilder := NewMutableStateBuilderWithVersionHistories(
 		e.shard,
@@ -3410,6 +3413,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		e,
 		attributes,
 		firstRunID,
+		firstScheduleTime,
 	); err != nil {
 		return nil, nil, &types.InternalServiceError{Message: "Failed to add workflow execution started event."}
 	}

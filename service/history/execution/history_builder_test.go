@@ -1161,6 +1161,11 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *types
 	s.Equal(executionStartToCloseTimeout, *attributes.ExecutionStartToCloseTimeoutSeconds)
 	s.Equal(taskStartToCloseTimeout, *attributes.TaskStartToCloseTimeoutSeconds)
 	s.Equal(identity, attributes.Identity)
+	if attributes.CronSchedule == "" {
+		s.Nil(attributes.FirstScheduleTimeNano)
+	} else {
+		s.NotNil(attributes.FirstScheduleTimeNano)
+	}
 }
 
 func (s *historyBuilderSuite) validateDecisionTaskScheduledEvent(di *DecisionInfo, eventID int64,
