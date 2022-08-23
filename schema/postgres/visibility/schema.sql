@@ -13,6 +13,7 @@ CREATE TABLE executions_visibility (
   task_list            VARCHAR(255) DEFAULT '' NOT NULL,
   is_cron              BOOLEAN DEFAULT false NOT NULL,
   num_clusters         INTEGER NULL,
+  update_time          TIMESTAMP NULL,
 
   PRIMARY KEY  (domain_id, run_id)
 );

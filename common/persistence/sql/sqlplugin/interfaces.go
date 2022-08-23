@@ -538,6 +538,7 @@ type (
 		Encoding         string
 		IsCron           bool
 		NumClusters      int16
+		UpdateTime       time.Time
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that

@@ -51,6 +51,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
 	}
 

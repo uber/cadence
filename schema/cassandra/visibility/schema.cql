@@ -11,6 +11,7 @@ CREATE TABLE open_executions (
   task_list            text,
   is_cron              boolean,
   num_clusters         int,
+  update_time          timestamp,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
 ) WITH CLUSTERING ORDER BY (start_time DESC)
   AND COMPACTION = {
@@ -39,6 +40,7 @@ CREATE TABLE closed_executions (
   task_list            text,
   is_cron              boolean,
   num_clusters         int,
+  update_time          timestamp,
   PRIMARY KEY  ((domain_id, domain_partition), start_time, run_id)
 ) WITH CLUSTERING ORDER BY (start_time DESC)
   AND COMPACTION = {
@@ -68,6 +70,7 @@ CREATE TABLE closed_executions_v2 (
   task_list            text,
   is_cron              boolean,
   num_clusters         int,
+  update_time          timestamp,
   PRIMARY KEY  ((domain_id, domain_partition), close_time, run_id)
 ) WITH CLUSTERING ORDER BY (close_time DESC)
   AND COMPACTION = {
