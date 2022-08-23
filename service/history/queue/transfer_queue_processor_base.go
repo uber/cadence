@@ -410,11 +410,16 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 			t.readyForProcess(level) // re-enqueue the event
 			continue
 		}
+		t.logger.Debug("load transfer tasks from database",
+			tag.ReadLevel(readLevel.(transferTaskKey).taskID),
+			tag.MaxLevel(maxReadLevel.(transferTaskKey).taskID),
+			tag.Counter(len(transferTaskInfos)))
 
 		tasks := make(map[task.Key]task.Task)
 		taskChFull := false
 		for _, taskInfo := range transferTaskInfos {
 			if !domainFilter.Filter(taskInfo.GetDomainID()) {
+				t.logger.Debug("transfer task filtered", tag.TaskID(taskInfo.GetTaskID()))
 				continue
 			}
 
@@ -437,6 +442,10 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 		}
 		queueCollection.AddTasks(tasks, newReadLevel)
 		if t.validator != nil {
+			t.logger.Debug("ack transfer tasks",
+				tag.ReadLevel(readLevel.(transferTaskKey).taskID),
+				tag.MaxLevel(newReadLevel.(transferTaskKey).taskID),
+				tag.Counter(len(tasks)))
 			t.validator.ackTasks(level, readLevel, newReadLevel, tasks)
 		}
 
