@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // AccessDeniedError is an internal type (TBD...)
@@ -6999,7 +7000,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	OriginalExecutionRunID              string                  `json:"originalExecutionRunId,omitempty"`
 	Identity                            string                  `json:"identity,omitempty"`
 	FirstExecutionRunID                 string                  `json:"firstExecutionRunId,omitempty"`
-	FirstScheduleTimeNano               *int64                  `json:"firstScheduleTimeNano,omitempty"`
+	FirstScheduleTime                   *time.Time              `json:"firstScheduleTimeNano,omitempty"`
 	RetryPolicy                         *RetryPolicy            `json:"retryPolicy,omitempty"`
 	Attempt                             int32                   `json:"attempt,omitempty"`
 	ExpirationTimestamp                 *int64                  `json:"expirationTimestamp,omitempty"`
@@ -7069,9 +7070,9 @@ func (v *WorkflowExecutionStartedEventAttributes) GetFirstExecutionRunID() (o st
 }
 
 // Get
-func (v *WorkflowExecutionStartedEventAttributes) GetFirstScheduledTimeNano() (o int64) {
-	if v != nil && v.FirstScheduleTimeNano != nil {
-		return *v.FirstScheduleTimeNano
+func (v *WorkflowExecutionStartedEventAttributes) GetFirstScheduledTime() (o time.Time) {
+	if v != nil && v.FirstScheduleTime != nil {
+		return *v.FirstScheduleTime
 	}
 	return
 }

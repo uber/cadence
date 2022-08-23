@@ -21,7 +21,10 @@
 package thrift
 
 import (
+	"time"
+
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -6320,6 +6323,11 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 	if t == nil {
 		return nil
 	}
+
+	var firstScheduledTimeNano *int64
+	if t.FirstScheduleTime != nil {
+		firstScheduledTimeNano = common.Int64Ptr(t.FirstScheduleTime.UnixNano())
+	}
 	return &shared.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		ParentWorkflowDomain:                t.ParentWorkflowDomain,
@@ -6337,7 +6345,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		OriginalExecutionRunId:              &t.OriginalExecutionRunID,
 		Identity:                            &t.Identity,
 		FirstExecutionRunId:                 &t.FirstExecutionRunID,
-		FirstScheduledTimeNano:              t.FirstScheduleTimeNano,
+		FirstScheduledTimeNano:              firstScheduledTimeNano,
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Attempt:                             &t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
@@ -6355,6 +6363,13 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 	if t == nil {
 		return nil
 	}
+
+	var firstScheduledtime *time.Time
+	if t.FirstScheduledTimeNano != nil {
+		firstScheduledtimeVal := time.Unix(0, *t.FirstScheduledTimeNano)
+		firstScheduledtime = &firstScheduledtimeVal
+	}
+
 	return &types.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		ParentWorkflowDomain:                t.ParentWorkflowDomain,
@@ -6372,7 +6387,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		OriginalExecutionRunID:              t.GetOriginalExecutionRunId(),
 		Identity:                            t.GetIdentity(),
 		FirstExecutionRunID:                 t.GetFirstExecutionRunId(),
-		FirstScheduleTimeNano:               t.FirstScheduledTimeNano,
+		FirstScheduleTime:                   firstScheduledtime,
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.GetAttempt(),
 		ExpirationTimestamp:                 t.ExpirationTimestamp,

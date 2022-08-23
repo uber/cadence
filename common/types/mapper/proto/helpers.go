@@ -79,6 +79,15 @@ func timeToUnixNano(t *gogo.Timestamp) *int64 {
 	return common.Int64Ptr(timestamp.UnixNano())
 }
 
+func timeStampToTime(t *gogo.Timestamp) *time.Time {
+	if t == nil {
+		return nil
+	}
+
+	time := time.Unix(t.GetSeconds(), int64(t.GetNanos()))
+	return &time
+}
+
 func daysToDuration(d *int32) *gogo.Duration {
 	if d == nil {
 		return nil

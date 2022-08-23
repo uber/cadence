@@ -3399,7 +3399,7 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 		return nil, nil, err
 	}
 	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
-	firstScheduleTime := time.Unix(0, currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstScheduledTimeNano())
+	firstScheduleTime := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstScheduledTime()
 	domainID := e.domainEntry.GetInfo().ID
 	newStateBuilder := NewMutableStateBuilderWithVersionHistories(
 		e.shard,

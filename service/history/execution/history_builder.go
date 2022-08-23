@@ -69,11 +69,10 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 	request := startRequest.StartRequest
 	event := b.msBuilder.CreateNewHistoryEvent(types.EventTypeWorkflowExecutionStarted)
 
-	var scheduledTime *int64
+	var scheduledTime *time.Time
 	if request.CronSchedule != "" {
 		//first scheduled time is only necessary for cron workflows.
-		unixNano := firstScheduledTime.UnixNano()
-		scheduledTime = &unixNano
+		scheduledTime = &firstScheduledTime
 	}
 	attributes := &types.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        request.WorkflowType,
@@ -95,7 +94,7 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 		Initiator:                           startRequest.ContinueAsNewInitiator,
 		FirstDecisionTaskBackoffSeconds:     startRequest.FirstDecisionTaskBackoffSeconds,
 		FirstExecutionRunID:                 firstRunID,
-		FirstScheduleTimeNano:               scheduledTime,
+		FirstScheduleTime:                   scheduledTime,
 		OriginalExecutionRunID:              originalRunID,
 		Memo:                                request.Memo,
 		SearchAttributes:                    request.SearchAttributes,

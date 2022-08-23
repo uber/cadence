@@ -2278,7 +2278,7 @@ func (s *NDCIntegrationTestSuite) generateNewRunHistory(
 
 	event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunID = uuid.New()
 
-	firstScheduleTime := int64(1111)
+	firstScheduleTime := time.Unix(0, 100)
 	newRunFirstEvent := &types.HistoryEvent{
 		ID:        common.FirstEventID,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
@@ -2304,7 +2304,7 @@ func (s *NDCIntegrationTestSuite) generateNewRunHistory(
 			OriginalExecutionRunID:              runID,
 			Identity:                            "NDC-test",
 			FirstExecutionRunID:                 runID,
-			FirstScheduleTimeNano:               &firstScheduleTime,
+			FirstScheduleTime:                   &firstScheduleTime,
 			Attempt:                             0,
 			ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
 		},

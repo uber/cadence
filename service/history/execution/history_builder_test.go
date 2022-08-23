@@ -1162,9 +1162,9 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *types
 	s.Equal(taskStartToCloseTimeout, *attributes.TaskStartToCloseTimeoutSeconds)
 	s.Equal(identity, attributes.Identity)
 	if attributes.CronSchedule == "" {
-		s.Nil(attributes.FirstScheduleTimeNano)
+		s.Nil(attributes.FirstScheduleTime)
 	} else {
-		s.NotNil(attributes.FirstScheduleTimeNano)
+		s.NotNil(attributes.FirstScheduleTime)
 	}
 }
 
