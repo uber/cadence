@@ -3716,7 +3716,7 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	},
 	EnablePendingActivityValidation: DynamicBool{
 		KeyName:      "limit.pendingActivityCount.enabled",
-		Description:  "",
+		Description:  "Enables pending activity count limiting/validation",
 		DefaultValue: false,
 	},
 }
