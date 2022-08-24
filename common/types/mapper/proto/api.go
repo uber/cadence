@@ -4796,7 +4796,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *apiv1.WorkflowExecutionStarted
 		OriginalExecutionRunID:              t.OriginalExecutionRunId,
 		Identity:                            t.Identity,
 		FirstExecutionRunID:                 t.FirstExecutionRunId,
-		FirstScheduleTime:                   timeStampToTime(t.FirstScheduledTime),
+		FirstScheduleTime:                   timestampToTime(t.FirstScheduledTime),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 timeToUnixNano(t.ExpirationTime),

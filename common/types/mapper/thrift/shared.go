@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/uber/cadence/.gen/go/shared"
-	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -6324,10 +6323,6 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		return nil
 	}
 
-	var firstScheduledTimeNano *int64
-	if t.FirstScheduleTime != nil {
-		firstScheduledTimeNano = common.Int64Ptr(t.FirstScheduleTime.UnixNano())
-	}
 	return &shared.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		ParentWorkflowDomain:                t.ParentWorkflowDomain,
@@ -6345,7 +6340,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		OriginalExecutionRunId:              &t.OriginalExecutionRunID,
 		Identity:                            &t.Identity,
 		FirstExecutionRunId:                 &t.FirstExecutionRunID,
-		FirstScheduledTimeNano:              firstScheduledTimeNano,
+		FirstScheduledTimeNano:              timeToNano(t.FirstScheduleTime),
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Attempt:                             &t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,

@@ -79,7 +79,7 @@ func timeToUnixNano(t *gogo.Timestamp) *int64 {
 	return common.Int64Ptr(timestamp.UnixNano())
 }
 
-func timeStampToTime(t *gogo.Timestamp) *time.Time {
+func timestampToTime(t *gogo.Timestamp) *time.Time {
 	if t == nil {
 		return nil
 	}
