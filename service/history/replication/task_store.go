@@ -40,7 +40,8 @@ import (
 	"github.com/uber/cadence/service/history/config"
 )
 
-var errUnknownCluster = errors.New("unknown cluster")
+// ErrUnknownCluster is returned when given cluster is not defined in cluster metadata
+var ErrUnknownCluster = errors.New("unknown cluster")
 
 // TaskStore is a component that hydrates and caches replication messages so that they can be reused across several polling source clusters.
 // It also exposes public Put method. This allows pre-store already hydrated messages at the end of successful transaction, saving a DB call to fetch history events.
@@ -110,7 +111,7 @@ func NewTaskStore(
 func (m *TaskStore) Get(ctx context.Context, cluster string, info persistence.ReplicationTaskInfo) (*types.ReplicationTask, error) {
 	cache, ok := m.clusters[cluster]
 	if !ok {
-		return nil, errUnknownCluster
+		return nil, ErrUnknownCluster
 	}
 
 	domain, err := m.domains.GetDomainByID(info.DomainID)
@@ -197,7 +198,7 @@ func (m *TaskStore) Put(task *types.ReplicationTask) {
 func (m *TaskStore) Ack(cluster string, lastTaskID int64) error {
 	cache, ok := m.clusters[cluster]
 	if !ok {
-		return errUnknownCluster
+		return ErrUnknownCluster
 	}
 
 	cache.Ack(lastTaskID)

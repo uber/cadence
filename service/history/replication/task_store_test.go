@@ -44,7 +44,7 @@ func TestTaskStore(t *testing.T) {
 	t.Run("Get error on unknown cluster", func(t *testing.T) {
 		ts := createTestTaskStore(nil, nil)
 		_, err := ts.Get(ctx, "unknown cluster", testTask11)
-		assert.Equal(t, errUnknownCluster, err)
+		assert.Equal(t, ErrUnknownCluster, err)
 	})
 
 	t.Run("Get error resolving domain", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestTaskStore(t *testing.T) {
 	t.Run("Ack error on unknown cluster", func(t *testing.T) {
 		ts := createTestTaskStore(nil, nil)
 		err := ts.Ack("unknown cluster", 0)
-		assert.Equal(t, errUnknownCluster, err)
+		assert.Equal(t, ErrUnknownCluster, err)
 	})
 }
 
