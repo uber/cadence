@@ -133,9 +133,6 @@ func (s *contextTestSuite) TestRenewRangeLockedSuccess() {
 }
 
 func (s *contextTestSuite) TestRenewRangeLockedSuccessAfterRetries() {
-	retryCount := conditionalRetryCount
-	someError := errors.New("some error")
-	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Times(retryCount - 1).Return(someError)
 	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(nil)
 
 	err := s.context.renewRangeLocked(false)
@@ -143,9 +140,8 @@ func (s *contextTestSuite) TestRenewRangeLockedSuccessAfterRetries() {
 }
 
 func (s *contextTestSuite) TestRenewRangeLockedRetriesExceeded() {
-	retryCount := conditionalRetryCount
 	someError := errors.New("some error")
-	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Times(retryCount).Return(someError)
+	s.mockShardManager.On("UpdateShard", mock.Anything, mock.Anything).Return(someError)
 
 	err := s.context.renewRangeLocked(false)
 	s.Error(err)

@@ -167,6 +167,7 @@ func TaskListScavengerActivity(
 		res.GetMetricsClient(),
 		res.GetLogger(),
 		&ctx.cfg.TaskListScannerOptions,
+		res.GetDomainCache(),
 	)
 
 	res.GetLogger().Info("Starting task list scavenger")

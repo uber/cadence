@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -103,6 +104,15 @@ func (s *mutableStateSuite) SetupTest() {
 func (s *mutableStateSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
+}
+
+func (s *mutableStateSuite) TestErrorReturnedWhenSchedulingTooManyPendingActivities() {
+	for i := 0; i < s.msBuilder.config.PendingActivitiesCountLimitError(); i++ {
+		s.msBuilder.pendingActivityInfoIDs[int64(i)] = &persistence.ActivityInfo{}
+	}
+
+	_, _, _, _, _, err := s.msBuilder.AddActivityTaskScheduledEvent(nil, 1, &types.ScheduleActivityTaskDecisionAttributes{}, false)
+	assert.Equal(s.T(), "Too many pending activities", err.Error())
 }
 
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_ReplicateDecisionCompleted() {

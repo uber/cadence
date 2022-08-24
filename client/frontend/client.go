@@ -101,16 +101,15 @@ func (c *clientImpl) DescribeTaskList(
 	return c.client.DescribeTaskList(ctx, request, opts...)
 }
 
-func (c *clientImpl) GetTaskListsByDomain(
+func (c *clientImpl) DescribeWorkflowExecution(
 	ctx context.Context,
-	request *types.GetTaskListsByDomainRequest,
+	request *types.DescribeWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) (*types.GetTaskListsByDomainResponse, error) {
+) (*types.DescribeWorkflowExecutionResponse, error) {
 
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-
-	return c.client.GetTaskListsByDomain(ctx, request, opts...)
+	return c.client.DescribeWorkflowExecution(ctx, request, opts...)
 }
 
 func (c *clientImpl) GetClusterInfo(
@@ -133,15 +132,16 @@ func (c *clientImpl) GetSearchAttributes(
 	return c.client.GetSearchAttributes(ctx, opts...)
 }
 
-func (c *clientImpl) DescribeWorkflowExecution(
+func (c *clientImpl) GetTaskListsByDomain(
 	ctx context.Context,
-	request *types.DescribeWorkflowExecutionRequest,
+	request *types.GetTaskListsByDomainRequest,
 	opts ...yarpc.CallOption,
-) (*types.DescribeWorkflowExecutionResponse, error) {
+) (*types.GetTaskListsByDomainResponse, error) {
 
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return c.client.DescribeWorkflowExecution(ctx, request, opts...)
+
+	return c.client.GetTaskListsByDomain(ctx, request, opts...)
 }
 
 func (c *clientImpl) GetWorkflowExecutionHistory(
@@ -166,39 +166,6 @@ func (c *clientImpl) ListArchivedWorkflowExecutions(
 	return c.client.ListArchivedWorkflowExecutions(ctx, request, opts...)
 }
 
-func (c *clientImpl) ListTaskListPartitions(
-	ctx context.Context,
-	request *types.ListTaskListPartitionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListTaskListPartitionsResponse, error) {
-
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-
-	return c.client.ListTaskListPartitions(ctx, request, opts...)
-}
-
-func (c *clientImpl) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *types.ListWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListWorkflowExecutionsResponse, error) {
-
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return c.client.ScanWorkflowExecutions(ctx, request, opts...)
-}
-
-func (c *clientImpl) RestartWorkflowExecution(
-	ctx context.Context,
-	request *types.RestartWorkflowExecutionRequest,
-	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
-
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return c.client.RestartWorkflowExecution(ctx, request, opts...)
-}
-
 func (c *clientImpl) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListClosedWorkflowExecutionsRequest,
@@ -221,17 +188,6 @@ func (c *clientImpl) ListDomains(
 	return c.client.ListDomains(ctx, request, opts...)
 }
 
-func (c *clientImpl) ListWorkflowExecutions(
-	ctx context.Context,
-	request *types.ListWorkflowExecutionsRequest,
-	opts ...yarpc.CallOption,
-) (*types.ListWorkflowExecutionsResponse, error) {
-
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return c.client.ListWorkflowExecutions(ctx, request, opts...)
-}
-
 func (c *clientImpl) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	request *types.ListOpenWorkflowExecutionsRequest,
@@ -241,6 +197,29 @@ func (c *clientImpl) ListOpenWorkflowExecutions(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.ListOpenWorkflowExecutions(ctx, request, opts...)
+}
+
+func (c *clientImpl) ListTaskListPartitions(
+	ctx context.Context,
+	request *types.ListTaskListPartitionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListTaskListPartitionsResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+
+	return c.client.ListTaskListPartitions(ctx, request, opts...)
+}
+
+func (c *clientImpl) ListWorkflowExecutions(
+	ctx context.Context,
+	request *types.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListWorkflowExecutionsResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.ListWorkflowExecutions(ctx, request, opts...)
 }
 
 func (c *clientImpl) PollForActivityTask(
@@ -287,17 +266,6 @@ func (c *clientImpl) RecordActivityTaskHeartbeat(
 	return c.client.RecordActivityTaskHeartbeat(ctx, request, opts...)
 }
 
-func (c *clientImpl) ResetWorkflowExecution(
-	ctx context.Context,
-	request *types.ResetWorkflowExecutionRequest,
-	opts ...yarpc.CallOption,
-) (*types.ResetWorkflowExecutionResponse, error) {
-
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return c.client.ResetWorkflowExecution(ctx, request, opts...)
-}
-
 func (c *clientImpl) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	request *types.RecordActivityTaskHeartbeatByIDRequest,
@@ -307,6 +275,17 @@ func (c *clientImpl) RecordActivityTaskHeartbeatByID(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.RecordActivityTaskHeartbeatByID(ctx, request, opts...)
+}
+
+func (c *clientImpl) RefreshWorkflowTasks(
+	ctx context.Context,
+	request *types.RefreshWorkflowTasksRequest,
+	opts ...yarpc.CallOption,
+) error {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.RefreshWorkflowTasks(ctx, request, opts...)
 }
 
 func (c *clientImpl) RegisterDomain(
@@ -342,15 +321,15 @@ func (c *clientImpl) ResetStickyTaskList(
 	return c.client.ResetStickyTaskList(ctx, request, opts...)
 }
 
-func (c *clientImpl) RefreshWorkflowTasks(
+func (c *clientImpl) ResetWorkflowExecution(
 	ctx context.Context,
-	request *types.RefreshWorkflowTasksRequest,
+	request *types.ResetWorkflowExecutionRequest,
 	opts ...yarpc.CallOption,
-) error {
+) (*types.ResetWorkflowExecutionResponse, error) {
 
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
-	return c.client.RefreshWorkflowTasks(ctx, request, opts...)
+	return c.client.ResetWorkflowExecution(ctx, request, opts...)
 }
 
 func (c *clientImpl) RespondActivityTaskCanceled(
@@ -452,6 +431,27 @@ func (c *clientImpl) RespondQueryTaskCompleted(
 	return c.client.RespondQueryTaskCompleted(ctx, request, opts...)
 }
 
+func (c *clientImpl) RestartWorkflowExecution(
+	ctx context.Context,
+	request *types.RestartWorkflowExecutionRequest,
+	opts ...yarpc.CallOption) (*types.RestartWorkflowExecutionResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.RestartWorkflowExecution(ctx, request, opts...)
+}
+
+func (c *clientImpl) ScanWorkflowExecutions(
+	ctx context.Context,
+	request *types.ListWorkflowExecutionsRequest,
+	opts ...yarpc.CallOption,
+) (*types.ListWorkflowExecutionsResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.ScanWorkflowExecutions(ctx, request, opts...)
+}
+
 func (c *clientImpl) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	request *types.SignalWithStartWorkflowExecutionRequest,
@@ -488,17 +488,6 @@ func (c *clientImpl) createLongPollContext(parent context.Context) (context.Cont
 	return context.WithTimeout(parent, c.longPollTimeout)
 }
 
-func (c *clientImpl) UpdateDomain(
-	ctx context.Context,
-	request *types.UpdateDomainRequest,
-	opts ...yarpc.CallOption,
-) (*types.UpdateDomainResponse, error) {
-
-	ctx, cancel := c.createContext(ctx)
-	defer cancel()
-	return c.client.UpdateDomain(ctx, request, opts...)
-}
-
 func (c *clientImpl) StartWorkflowExecution(
 	ctx context.Context,
 	request *types.StartWorkflowExecutionRequest,
@@ -519,4 +508,15 @@ func (c *clientImpl) TerminateWorkflowExecution(
 	ctx, cancel := c.createContext(ctx)
 	defer cancel()
 	return c.client.TerminateWorkflowExecution(ctx, request, opts...)
+}
+
+func (c *clientImpl) UpdateDomain(
+	ctx context.Context,
+	request *types.UpdateDomainRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateDomainResponse, error) {
+
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
+	return c.client.UpdateDomain(ctx, request, opts...)
 }

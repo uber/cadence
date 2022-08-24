@@ -143,8 +143,11 @@ func newTaskListManager(
 		normalTaskListKind := types.TaskListKindNormal
 		taskListKind = &normalTaskListKind
 	}
-
-	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
+	domainName, err := e.domainCache.GetDomainName(taskList.domainID)
+	if err != nil {
+		return nil, err
+	}
+	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
 
 	tlMgr := &taskListManagerImpl{
 		domainCache:   e.domainCache,

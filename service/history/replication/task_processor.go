@@ -238,20 +238,11 @@ func (p *taskProcessorImpl) cleanupReplicationTaskLoop() {
 }
 
 func (p *taskProcessorImpl) cleanupAckedReplicationTasks() error {
-
-	clusterMetadata := p.shard.GetClusterMetadata()
-	currentCluster := clusterMetadata.GetCurrentClusterName()
 	minAckLevel := int64(math.MaxInt64)
-	for clusterName, clusterInfo := range clusterMetadata.GetAllClusterInfo() {
-		if !clusterInfo.Enabled {
-			continue
-		}
-
-		if clusterName != currentCluster {
-			ackLevel := p.shard.GetClusterReplicationLevel(clusterName)
-			if ackLevel < minAckLevel {
-				minAckLevel = ackLevel
-			}
+	for clusterName := range p.shard.GetClusterMetadata().GetRemoteClusterInfo() {
+		ackLevel := p.shard.GetClusterReplicationLevel(clusterName)
+		if ackLevel < minAckLevel {
+			minAckLevel = ackLevel
 		}
 	}
 	p.logger.Debug("Cleaning up replication task queue.", tag.ReadLevel(minAckLevel))
@@ -503,6 +494,10 @@ func (p *taskProcessorImpl) generateDLQRequest(
 	switch *replicationTask.TaskType {
 	case types.ReplicationTaskTypeSyncActivity:
 		taskAttributes := replicationTask.GetSyncActivityTaskAttributes()
+		domainName, err := p.shard.GetDomainCache().GetDomainName(taskAttributes.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
 		return &persistence.PutReplicationTaskToDLQRequest{
 			SourceClusterName: p.sourceCluster,
 			TaskInfo: &persistence.ReplicationTaskInfo{
@@ -513,10 +508,15 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				TaskType:    persistence.ReplicationTaskTypeSyncActivity,
 				ScheduledID: taskAttributes.GetScheduledID(),
 			},
+			DomainName: domainName,
 		}, nil
 
 	case types.ReplicationTaskTypeHistoryV2:
 		taskAttributes := replicationTask.GetHistoryTaskV2Attributes()
+		domainName, err := p.shard.GetDomainCache().GetDomainName(taskAttributes.GetDomainID())
+		if err != nil {
+			return nil, err
+		}
 		eventsDataBlob := persistence.NewDataBlobFromInternal(taskAttributes.GetEvents())
 		events, err := p.historySerializer.DeserializeBatchEvents(eventsDataBlob)
 		if err != nil {
@@ -540,6 +540,7 @@ func (p *taskProcessorImpl) generateDLQRequest(
 				NextEventID:  events[len(events)-1].ID + 1,
 				Version:      events[0].Version,
 			},
+			DomainName: domainName,
 		}, nil
 	default:
 		return nil, fmt.Errorf("unknown replication task type")

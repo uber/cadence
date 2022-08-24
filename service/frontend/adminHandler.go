@@ -502,6 +502,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		DomainName: domainName,
 	}
 
 	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
@@ -821,6 +822,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		execution.GetWorkflowID(),
 		adh.numberOfHistoryShards,
 	)
+
 	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.

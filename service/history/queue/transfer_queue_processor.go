@@ -39,6 +39,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -117,10 +118,7 @@ func NewTransferQueueProcessor(
 	)
 
 	standbyQueueProcessors := make(map[string]*transferQueueProcessorBase)
-	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled || clusterName == currentClusterName {
-			continue
-		}
+	for clusterName := range shard.GetClusterMetadata().GetRemoteClusterInfo() {
 		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
@@ -203,15 +201,14 @@ func (t *transferQueueProcessor) Stop() {
 
 func (t *transferQueueProcessor) NotifyNewTask(
 	clusterName string,
-	executionInfo *persistence.WorkflowExecutionInfo,
-	transferTasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
-	if len(transferTasks) == 0 {
+	if len(info.Tasks) == 0 {
 		return
 	}
 
 	if clusterName == t.currentClusterName {
-		t.activeQueueProcessor.notifyNewTask(executionInfo, transferTasks)
+		t.activeQueueProcessor.notifyNewTask(info)
 		return
 	}
 
@@ -219,7 +216,7 @@ func (t *transferQueueProcessor) NotifyNewTask(
 	if !ok {
 		panic(fmt.Sprintf("Cannot find transfer processor for %s.", clusterName))
 	}
-	standbyQueueProcessor.notifyNewTask(executionInfo, transferTasks)
+	standbyQueueProcessor.notifyNewTask(info)
 }
 
 func (t *transferQueueProcessor) FailoverDomain(
@@ -234,10 +231,7 @@ func (t *transferQueueProcessor) FailoverDomain(
 
 	minLevel := t.shard.GetTransferClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
-	for clusterName, info := range t.shard.GetService().GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range t.shard.GetClusterMetadata().GetEnabledClusterInfo() {
 		ackLevel := t.shard.GetTransferClusterAckLevel(clusterName)
 		if ackLevel < minLevel {
 			minLevel = ackLevel

@@ -32,6 +32,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -41,8 +42,9 @@ const (
 
 type (
 	pendingTaskInfo struct {
-		executionInfo *persistence.WorkflowExecutionInfo
-		task          persistence.Task
+		executionInfo    *persistence.WorkflowExecutionInfo
+		task             persistence.Task
+		persistenceError bool
 	}
 
 	transferQueueValidator struct {
@@ -81,35 +83,35 @@ func newTransferQueueValidator(
 }
 
 func (v *transferQueueValidator) addTasks(
-	executionInfo *persistence.WorkflowExecutionInfo,
-	tasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 	v.Lock()
 	defer v.Unlock()
 
-	numTaskToAdd := len(tasks)
+	numTaskToAdd := len(info.Tasks)
 	if numTaskToAdd+len(v.pendingTaskInfos) > defaultMaxPendingTasksSize {
 		numTaskToAdd = defaultMaxPendingTasksSize - len(v.pendingTaskInfos)
 		var taskDump strings.Builder
-		droppedTasks := tasks[numTaskToAdd:]
+		droppedTasks := info.Tasks[numTaskToAdd:]
 		for _, task := range droppedTasks {
 			taskDump.WriteString(fmt.Sprintf("%+v\n", task))
 		}
 		v.logger.Warn(
 			"Too many pending transfer tasks, dropping new tasks",
-			tag.WorkflowDomainID(executionInfo.DomainID),
-			tag.WorkflowID(executionInfo.WorkflowID),
-			tag.WorkflowRunID(executionInfo.RunID),
+			tag.WorkflowDomainID(info.ExecutionInfo.DomainID),
+			tag.WorkflowID(info.ExecutionInfo.WorkflowID),
+			tag.WorkflowRunID(info.ExecutionInfo.RunID),
 			tag.Key("dropped-transfer-tasks"),
 			tag.Value(taskDump.String()),
 		)
 		v.metricsScope.AddCounter(metrics.QueueValidatorDropTaskCounter, int64(len(droppedTasks)))
 	}
 
-	for _, task := range tasks[:numTaskToAdd] {
+	for _, task := range info.Tasks[:numTaskToAdd] {
 		v.pendingTaskInfos[task.GetTaskID()] = pendingTaskInfo{
-			executionInfo: executionInfo,
-			task:          task,
+			executionInfo:    info.ExecutionInfo,
+			task:             task,
+			persistenceError: info.PersistenceError,
 		}
 	}
 }
@@ -176,6 +178,7 @@ func (v *transferQueueValidator) validatePendingTasks() {
 				tag.WorkflowDomainID(taskInfo.executionInfo.DomainID),
 				tag.WorkflowID(taskInfo.executionInfo.WorkflowID),
 				tag.WorkflowRunID(taskInfo.executionInfo.RunID),
+				tag.Bool(taskInfo.persistenceError),
 			)
 			v.metricsScope.IncCounter(metrics.QueueValidatorLostTaskCounter)
 			delete(v.pendingTaskInfos, taskID)

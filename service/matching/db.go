@@ -34,6 +34,7 @@ type (
 	taskListDB struct {
 		sync.Mutex
 		domainID     string
+		domainName   string
 		taskListName string
 		taskListKind int
 		taskType     int
@@ -58,9 +59,10 @@ type (
 // - To provide the guarantee that there is only writer who updates taskList in persistence at any given point in time
 //   This guarantee makes some of the other code simpler and there is no impact to perf because updates to tasklist are
 //   spread out and happen in background routines
-func newTaskListDB(store persistence.TaskManager, domainID string, name string, taskType int, kind int, logger log.Logger) *taskListDB {
+func newTaskListDB(store persistence.TaskManager, domainID string, domainName string, name string, taskType int, kind int, logger log.Logger) *taskListDB {
 	return &taskListDB{
 		domainID:     domainID,
+		domainName:   domainName,
 		taskListName: name,
 		taskListKind: kind,
 		taskType:     taskType,
@@ -87,6 +89,7 @@ func (db *taskListDB) RenewLease() (taskListState, error) {
 		TaskType:     db.taskType,
 		TaskListKind: db.taskListKind,
 		RangeID:      atomic.LoadInt64(&db.rangeID),
+		DomainName:   db.domainName,
 	})
 	if err != nil {
 		return taskListState{}, err
@@ -109,6 +112,7 @@ func (db *taskListDB) UpdateState(ackLevel int64) error {
 			RangeID:  db.rangeID,
 			Kind:     db.taskListKind,
 		},
+		DomainName: db.domainName,
 	})
 	if err == nil {
 		db.ackLevel = ackLevel
@@ -129,7 +133,8 @@ func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persist
 			RangeID:  db.rangeID,
 			Kind:     db.taskListKind,
 		},
-		Tasks: tasks,
+		Tasks:      tasks,
+		DomainName: db.domainName,
 	})
 }
 
@@ -142,6 +147,7 @@ func (db *taskListDB) GetTasks(minTaskID int64, maxTaskID int64, batchSize int) 
 		BatchSize:    batchSize,
 		ReadLevel:    minTaskID,  // exclusive
 		MaxReadLevel: &maxTaskID, // inclusive
+		DomainName:   db.domainName,
 	})
 }
 
@@ -153,7 +159,8 @@ func (db *taskListDB) CompleteTask(taskID int64) error {
 			Name:     db.taskListName,
 			TaskType: db.taskType,
 		},
-		TaskID: taskID,
+		TaskID:     taskID,
+		DomainName: db.domainName,
 	})
 	if err != nil {
 		db.logger.Error("Persistent store operation failure",
@@ -176,6 +183,7 @@ func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error
 		TaskType:     db.taskType,
 		TaskID:       taskID,
 		Limit:        limit,
+		DomainName:   db.domainName,
 	})
 	if err != nil {
 		db.logger.Error("Persistent store operation failure",

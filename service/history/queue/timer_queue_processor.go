@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -105,11 +106,7 @@ func NewTimerQueueProcessor(
 
 	standbyQueueProcessors := make(map[string]*timerQueueProcessorBase)
 	standbyQueueTimerGates := make(map[string]RemoteTimerGate)
-	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled || clusterName == currentClusterName {
-			continue
-		}
-
+	for clusterName := range shard.GetClusterMetadata().GetRemoteClusterInfo() {
 		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
@@ -194,11 +191,10 @@ func (t *timerQueueProcessor) Stop() {
 
 func (t *timerQueueProcessor) NotifyNewTask(
 	clusterName string,
-	_ *persistence.WorkflowExecutionInfo,
-	timerTasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 	if clusterName == t.currentClusterName {
-		t.activeQueueProcessor.notifyNewTimers(timerTasks)
+		t.activeQueueProcessor.notifyNewTimers(info.Tasks)
 		return
 	}
 
@@ -213,7 +209,7 @@ func (t *timerQueueProcessor) NotifyNewTask(
 	}
 
 	standbyQueueTimerGate.SetCurrentTime(t.shard.GetCurrentTime(clusterName))
-	standbyQueueProcessor.notifyNewTimers(timerTasks)
+	standbyQueueProcessor.notifyNewTimers(info.Tasks)
 }
 
 func (t *timerQueueProcessor) FailoverDomain(
@@ -228,11 +224,7 @@ func (t *timerQueueProcessor) FailoverDomain(
 
 	minLevel := t.shard.GetTimerClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
-	for clusterName, info := range t.shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
-
+	for clusterName := range t.shard.GetClusterMetadata().GetEnabledClusterInfo() {
 		ackLevel := t.shard.GetTimerClusterAckLevel(clusterName)
 		if ackLevel.Before(minLevel) {
 			minLevel = ackLevel

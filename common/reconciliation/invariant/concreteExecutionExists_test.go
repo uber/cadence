@@ -160,6 +160,7 @@ func (s *ConcreteExecutionExistsSuite) TestCheck() {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("IsWorkflowExecutionExists", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
+		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		o := NewConcreteExecutionExists(persistence.NewPersistenceRetryer(execManager, nil, c.CreatePersistenceRetryPolicy()), mockDomainCache)
 		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}

@@ -895,6 +895,7 @@ type (
 	GetCurrentExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
+		DomainName string
 	}
 
 	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
@@ -912,6 +913,7 @@ type (
 	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
 	IsWorkflowExecutionExistsRequest struct {
 		DomainID   string
+		DomainName string
 		WorkflowID string
 		RunID      string
 	}
@@ -1057,6 +1059,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
@@ -1158,6 +1161,7 @@ type (
 	PutReplicationTaskToDLQRequest struct {
 		SourceClusterName string
 		TaskInfo          *ReplicationTaskInfo
+		DomainName        string
 	}
 
 	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq
@@ -1219,6 +1223,7 @@ type (
 	// LeaseTaskListRequest is used to request lease of a task list
 	LeaseTaskListRequest struct {
 		DomainID     string
+		DomainName   string
 		TaskList     string
 		TaskType     int
 		TaskListKind int
@@ -1233,6 +1238,7 @@ type (
 	// UpdateTaskListRequest is used to update task list implementation information
 	UpdateTaskListRequest struct {
 		TaskListInfo *TaskListInfo
+		DomainName   string
 	}
 
 	// UpdateTaskListResponse is the response to UpdateTaskList
@@ -1254,6 +1260,7 @@ type (
 	// DeleteTaskListRequest contains the request params needed to invoke DeleteTaskList API
 	DeleteTaskListRequest struct {
 		DomainID     string
+		DomainName   string
 		TaskListName string
 		TaskListType int
 		RangeID      int64
@@ -1263,6 +1270,7 @@ type (
 	CreateTasksRequest struct {
 		TaskListInfo *TaskListInfo
 		Tasks        []*CreateTaskInfo
+		DomainName   string
 	}
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
@@ -1284,6 +1292,7 @@ type (
 		ReadLevel    int64  // range exclusive
 		MaxReadLevel *int64 // optional: range inclusive when specified
 		BatchSize    int
+		DomainName   string
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests
@@ -1293,8 +1302,9 @@ type (
 
 	// CompleteTaskRequest is used to complete a task
 	CompleteTaskRequest struct {
-		TaskList *TaskListInfo
-		TaskID   int64
+		TaskList   *TaskListInfo
+		TaskID     int64
+		DomainName string
 	}
 
 	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
@@ -1304,6 +1314,7 @@ type (
 		TaskType     int
 		TaskID       int64 // Tasks less than or equal to this ID will be completed
 		Limit        int   // Limit on the max number of tasks that can be completed. Required param
+		DomainName   string
 	}
 
 	// CompleteTasksLessThanResponse is the response of CompleteTasksLessThan
