@@ -26,7 +26,7 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/task"
 )
 
@@ -89,7 +89,7 @@ type (
 	Processor interface {
 		common.Daemon
 		FailoverDomain(domainIDs map[string]struct{})
-		NotifyNewTask(clusterName string, executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewTask(clusterName string, info *hcommon.NotifyTaskInfo)
 		HandleAction(ctx context.Context, clusterName string, action *Action) (*ActionResult, error)
 		LockTaskProcessing()
 		UnlockTaskProcessing()

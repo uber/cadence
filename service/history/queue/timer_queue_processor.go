@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -190,11 +191,10 @@ func (t *timerQueueProcessor) Stop() {
 
 func (t *timerQueueProcessor) NotifyNewTask(
 	clusterName string,
-	_ *persistence.WorkflowExecutionInfo,
-	timerTasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 	if clusterName == t.currentClusterName {
-		t.activeQueueProcessor.notifyNewTimers(timerTasks)
+		t.activeQueueProcessor.notifyNewTimers(info.Tasks)
 		return
 	}
 
@@ -209,7 +209,7 @@ func (t *timerQueueProcessor) NotifyNewTask(
 	}
 
 	standbyQueueTimerGate.SetCurrentTime(t.shard.GetCurrentTime(clusterName))
-	standbyQueueProcessor.notifyNewTimers(timerTasks)
+	standbyQueueProcessor.notifyNewTimers(info.Tasks)
 }
 
 func (t *timerQueueProcessor) FailoverDomain(

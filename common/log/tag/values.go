@@ -114,6 +114,7 @@ var (
 	ComponentReplicator                 = component("replicator")
 	ComponentReplicationTaskProcessor   = component("replication-task-processor")
 	ComponentReplicationAckManager      = component("replication-ack-manager")
+	ComponentReplicationCacheManager    = component("replication-cache-manager")
 	ComponentHistoryReplicator          = component("history-replicator")
 	ComponentHistoryResender            = component("history-resender")
 	ComponentIndexer                    = component("indexer")

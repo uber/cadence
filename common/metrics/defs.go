@@ -1089,6 +1089,8 @@ const (
 	HistoryEventNotificationScope
 	// ReplicatorQueueProcessorScope is the scope used by all metric emitted by replicator queue processor
 	ReplicatorQueueProcessorScope
+	// ReplicatorCacheManagerScope is the scope used by all metric emitted by replicator cache manager
+	ReplicatorCacheManagerScope
 	// ReplicatorTaskHistoryScope is the scope used for history task processing by replicator queue processor
 	ReplicatorTaskHistoryScope
 	// ReplicatorTaskSyncActivityScope is the scope used for sync activity by replicator queue processor
@@ -1705,6 +1707,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		CrossClusterTargetTaskApplyParentClosePolicyScope:               {operation: "CrossClusterTargetTaskTypeApplyParentClosePolicy"},
 		HistoryEventNotificationScope:                                   {operation: "HistoryEventNotification"},
 		ReplicatorQueueProcessorScope:                                   {operation: "ReplicatorQueueProcessor"},
+		ReplicatorCacheManagerScope:                                     {operation: "ReplicatorCacheManager"},
 		ReplicatorTaskHistoryScope:                                      {operation: "ReplicatorTaskHistory"},
 		ReplicatorTaskSyncActivityScope:                                 {operation: "ReplicatorTaskSyncActivity"},
 		ReplicateHistoryEventsScope:                                     {operation: "ReplicateHistoryEvents"},
@@ -2082,10 +2085,13 @@ const (
 	UnbufferReplicationTaskTimer
 	HistoryConflictsCounter
 	CompleteTaskFailedCounter
+	CacheSize
 	CacheRequests
 	CacheFailures
 	CacheLatency
+	CacheHitCounter
 	CacheMissCounter
+	CacheFullCounter
 	AcquireLockFailedCounter
 	WorkflowContextCleared
 	MutableStateSize
@@ -2633,10 +2639,13 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		UnbufferReplicationTaskTimer:                        {metricName: "unbuffer_replication_tasks", metricType: Timer},
 		HistoryConflictsCounter:                             {metricName: "history_conflicts", metricType: Counter},
 		CompleteTaskFailedCounter:                           {metricName: "complete_task_fail_count", metricType: Counter},
+		CacheSize:                                           {metricName: "cache_size", metricType: Gauge},
 		CacheRequests:                                       {metricName: "cache_requests", metricType: Counter},
 		CacheFailures:                                       {metricName: "cache_errors", metricType: Counter},
 		CacheLatency:                                        {metricName: "cache_latency", metricType: Timer},
+		CacheHitCounter:                                     {metricName: "cache_hit", metricType: Counter},
 		CacheMissCounter:                                    {metricName: "cache_miss", metricType: Counter},
+		CacheFullCounter:                                    {metricName: "cache_full", metricType: Counter},
 		AcquireLockFailedCounter:                            {metricName: "acquire_lock_failed", metricType: Counter},
 		WorkflowContextCleared:                              {metricName: "workflow_context_cleared", metricType: Counter},
 		MutableStateSize:                                    {metricName: "mutable_state_size", metricType: Timer},

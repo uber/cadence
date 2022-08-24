@@ -109,8 +109,8 @@ func (s *engineSuite) SetupTest() {
 	s.mockTimerProcessor = queue.NewMockProcessor(s.controller)
 	s.mockEventsReapplier = ndc.NewMockEventsReapplier(s.controller)
 	s.mockWorkflowResetter = reset.NewMockWorkflowResetter(s.controller)
-	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockTxProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
+	s.mockTimerProcessor.EXPECT().NotifyNewTask(gomock.Any(), gomock.Any()).AnyTimes()
 
 	s.mockShard = shard.NewTestContext(
 		s.controller,
