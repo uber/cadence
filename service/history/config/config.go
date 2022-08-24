@@ -233,12 +233,15 @@ type Config struct {
 	AllowArchivingIncompleteHistory  dynamicconfig.BoolPropertyFn
 
 	// Size limit related settings
-	BlobSizeLimitError     dynamicconfig.IntPropertyFnWithDomainFilter
-	BlobSizeLimitWarn      dynamicconfig.IntPropertyFnWithDomainFilter
-	HistorySizeLimitError  dynamicconfig.IntPropertyFnWithDomainFilter
-	HistorySizeLimitWarn   dynamicconfig.IntPropertyFnWithDomainFilter
-	HistoryCountLimitError dynamicconfig.IntPropertyFnWithDomainFilter
-	HistoryCountLimitWarn  dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitError               dynamicconfig.IntPropertyFnWithDomainFilter
+	BlobSizeLimitWarn                dynamicconfig.IntPropertyFnWithDomainFilter
+	HistorySizeLimitError            dynamicconfig.IntPropertyFnWithDomainFilter
+	HistorySizeLimitWarn             dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryCountLimitError           dynamicconfig.IntPropertyFnWithDomainFilter
+	HistoryCountLimitWarn            dynamicconfig.IntPropertyFnWithDomainFilter
+	PendingActivitiesCountLimitError dynamicconfig.IntPropertyFn
+	PendingActivitiesCountLimitWarn  dynamicconfig.IntPropertyFn
+	PendingActivityValidationEnabled dynamicconfig.BoolPropertyFn
 
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
 	ValidSearchAttributes             dynamicconfig.MapPropertyFn
@@ -482,12 +485,15 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ArchiveInlineVisibilityGlobalRPS: dc.GetIntProperty(dynamicconfig.ArchiveInlineVisibilityGlobalRPS),
 		AllowArchivingIncompleteHistory:  dc.GetBoolProperty(dynamicconfig.AllowArchivingIncompleteHistory),
 
-		BlobSizeLimitError:     dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError),
-		BlobSizeLimitWarn:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn),
-		HistorySizeLimitError:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError),
-		HistorySizeLimitWarn:   dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn),
-		HistoryCountLimitError: dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError),
-		HistoryCountLimitWarn:  dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn),
+		BlobSizeLimitError:               dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitError),
+		BlobSizeLimitWarn:                dc.GetIntPropertyFilteredByDomain(dynamicconfig.BlobSizeLimitWarn),
+		HistorySizeLimitError:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitError),
+		HistorySizeLimitWarn:             dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistorySizeLimitWarn),
+		HistoryCountLimitError:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitError),
+		HistoryCountLimitWarn:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.HistoryCountLimitWarn),
+		PendingActivitiesCountLimitError: dc.GetIntProperty(dynamicconfig.PendingActivitiesCountLimitError),
+		PendingActivitiesCountLimitWarn:  dc.GetIntProperty(dynamicconfig.PendingActivitiesCountLimitWarn),
+		PendingActivityValidationEnabled: dc.GetBoolProperty(dynamicconfig.EnablePendingActivityValidation),
 
 		ThrottledLogRPS:   dc.GetIntProperty(dynamicconfig.HistoryThrottledLogRPS),
 		EnableStickyQuery: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableStickyQuery),
@@ -572,6 +578,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.MaxActivityCountDispatchByDomain, 0))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnableCrossClusterOperations, true))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
+	panicIfErr(inMem.UpdateValue(dynamicconfig.EnablePendingActivityValidation, true))
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
 	config := New(dc, shardNumber, config.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed
@@ -584,6 +591,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	config.MaxActivityCountDispatchByDomain = dc.GetIntPropertyFilteredByDomain(dynamicconfig.MaxActivityCountDispatchByDomain)
 	config.EnableCrossClusterOperations = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableCrossClusterOperations)
 	config.NormalDecisionScheduleToStartMaxAttempts = dc.GetIntPropertyFilteredByDomain(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts)
+	config.PendingActivityValidationEnabled = dc.GetBoolProperty(dynamicconfig.EnablePendingActivityValidation)
 	return config
 }
 

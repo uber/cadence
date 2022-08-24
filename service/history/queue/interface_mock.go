@@ -32,7 +32,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	persistence "github.com/uber/cadence/common/persistence"
+	common "github.com/uber/cadence/service/history/common"
 	task "github.com/uber/cadence/service/history/task"
 )
 
@@ -497,15 +497,15 @@ func (mr *MockProcessorMockRecorder) LockTaskProcessing() *gomock.Call {
 }
 
 // NotifyNewTask mocks base method.
-func (m *MockProcessor) NotifyNewTask(clusterName string, executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
+func (m *MockProcessor) NotifyNewTask(clusterName string, info *common.NotifyTaskInfo) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTask", clusterName, executionInfo, tasks)
+	m.ctrl.Call(m, "NotifyNewTask", clusterName, info)
 }
 
 // NotifyNewTask indicates an expected call of NotifyNewTask.
-func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, executionInfo, tasks interface{}) *gomock.Call {
+func (mr *MockProcessorMockRecorder) NotifyNewTask(clusterName, info interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, executionInfo, tasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTask", reflect.TypeOf((*MockProcessor)(nil).NotifyNewTask), clusterName, info)
 }
 
 // Start mocks base method.

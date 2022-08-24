@@ -51,6 +51,7 @@ import (
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/decision"
 	"github.com/uber/cadence/service/history/engine"
@@ -477,8 +478,8 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				// its length > 0 and has correct timestamp, to trigger a db scan
 				fakeDecisionTask := []persistence.Task{&persistence.DecisionTask{}}
 				fakeDecisionTimeoutTask := []persistence.Task{&persistence.DecisionTimeoutTask{VisibilityTimestamp: now}}
-				e.txProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTask)
-				e.timerProcessor.NotifyNewTask(e.currentClusterName, nil, fakeDecisionTimeoutTask)
+				e.txProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTask})
+				e.timerProcessor.NotifyNewTask(e.currentClusterName, &hcommon.NotifyTaskInfo{Tasks: fakeDecisionTimeoutTask})
 			}
 
 			// handle graceful failover on active to passive
@@ -2723,9 +2724,9 @@ func (e *historyEngineImpl) SyncShardStatus(
 	// 3. notify the transfer (essentially a no op, just put it here so it looks symmetric)
 	// 4. notify the cross cluster (essentially a no op, just put it here so it looks symmetric)
 	e.shard.SetCurrentTime(clusterName, now)
-	e.txProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
-	e.timerProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
-	e.crossClusterProcessor.NotifyNewTask(clusterName, nil, []persistence.Task{})
+	e.txProcessor.NotifyNewTask(clusterName, &hcommon.NotifyTaskInfo{Tasks: []persistence.Task{}})
+	e.timerProcessor.NotifyNewTask(clusterName, &hcommon.NotifyTaskInfo{Tasks: []persistence.Task{}})
+	e.crossClusterProcessor.NotifyNewTask(clusterName, &hcommon.NotifyTaskInfo{Tasks: []persistence.Task{}})
 	return nil
 }
 
@@ -2886,35 +2887,32 @@ func (e *historyEngineImpl) NotifyNewHistoryEvent(
 }
 
 func (e *historyEngineImpl) NotifyNewTransferTasks(
-	executionInfo *persistence.WorkflowExecutionInfo,
-	tasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 
-	if len(tasks) > 0 {
-		task := tasks[0]
+	if len(info.Tasks) > 0 {
+		task := info.Tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.txProcessor.NotifyNewTask(clusterName, executionInfo, tasks)
+		e.txProcessor.NotifyNewTask(clusterName, info)
 	}
 }
 
 func (e *historyEngineImpl) NotifyNewTimerTasks(
-	executionInfo *persistence.WorkflowExecutionInfo,
-	tasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 
-	if len(tasks) > 0 {
-		task := tasks[0]
+	if len(info.Tasks) > 0 {
+		task := info.Tasks[0]
 		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.timerProcessor.NotifyNewTask(clusterName, executionInfo, tasks)
+		e.timerProcessor.NotifyNewTask(clusterName, info)
 	}
 }
 
 func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
-	executionInfo *persistence.WorkflowExecutionInfo,
-	tasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 	taskByTargetCluster := make(map[string][]persistence.Task)
-	for _, task := range tasks {
+	for _, task := range info.Tasks {
 		// TODO: consider defining a new interface in persistence package
 		// for cross cluster tasks and add a method for returning the target cluster
 		var targetCluster string
@@ -2936,7 +2934,7 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 	}
 
 	for targetCluster, tasks := range taskByTargetCluster {
-		e.crossClusterProcessor.NotifyNewTask(targetCluster, executionInfo, tasks)
+		e.crossClusterProcessor.NotifyNewTask(targetCluster, &hcommon.NotifyTaskInfo{ExecutionInfo: info.ExecutionInfo, Tasks: tasks, PersistenceError: info.PersistenceError})
 	}
 }
 
