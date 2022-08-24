@@ -113,6 +113,7 @@ type (
 		crossClusterTaskProcessors common.Daemon
 		replicationTaskProcessors  []replication.TaskProcessor
 		replicationAckManager      replication.TaskAckManager
+		replicationTaskStore       *replication.TaskStore
 		replicationHydrator        replication.TaskHydrator
 		publicClient               workflowserviceclient.Interface
 		eventsReapplier            ndc.EventsReapplier
@@ -159,6 +160,15 @@ func NewEngineWithShardContext(
 	executionCache := execution.NewCache(shard)
 	failoverMarkerNotifier := failover.NewMarkerNotifier(shard, config, failoverCoordinator)
 	replicationHydrator := replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache, shard.GetDomainCache())
+	replicationTaskStore := replication.NewTaskStore(
+		shard.GetShardID(),
+		shard.GetConfig(),
+		shard.GetClusterMetadata(),
+		shard.GetDomainCache(),
+		shard.GetMetricsClient(),
+		shard.GetLogger(),
+		replicationHydrator,
+	)
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shard,
@@ -210,13 +220,12 @@ func NewEngineWithShardContext(
 		replicationAckManager: replication.NewTaskAckManager(
 			shard.GetShardID(),
 			shard,
-			shard.GetDomainCache(),
 			shard.GetMetricsClient(),
 			shard.GetLogger(),
-			shard.GetConfig(),
 			replication.NewDynamicTaskReader(shard.GetShardID(), executionManager, shard.GetTimeSource(), config),
-			replicationHydrator,
+			replicationTaskStore,
 		),
+		replicationTaskStore: replicationTaskStore,
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,

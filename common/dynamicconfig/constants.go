@@ -951,6 +951,12 @@ const (
 	// Default value: 3
 	// Allowed filters: N/A
 	ReplicatorReadTaskMaxRetryCount
+	// ReplicatorCacheCapacity is the capacity of replication cache in number of tasks
+	// KeyName: history.replicatorCacheCapacity
+	// Value type: Int
+	// Default value: 10000
+	// Allowed filters: N/A
+	ReplicatorCacheCapacity
 
 	// ExecutionMgrNumConns is persistence connections number for ExecutionManager
 	// KeyName: history.executionMgrNumConns
@@ -3065,6 +3071,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "history.replicatorReadTaskMaxRetryCount",
 		Description:  "ReplicatorReadTaskMaxRetryCount is the number of read replication task retry time",
 		DefaultValue: 3,
+	},
+	ReplicatorCacheCapacity: DynamicInt{
+		KeyName:      "history.replicatorCacheCapacity",
+		Description:  "ReplicatorCacheCapacity is the capacity of replication cache in number of tasks",
+		DefaultValue: 10000,
 	},
 	ExecutionMgrNumConns: DynamicInt{
 		KeyName:      "history.executionMgrNumConns",

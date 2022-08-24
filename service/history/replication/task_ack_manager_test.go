@@ -31,12 +31,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/config"
 )
 
 var (
@@ -45,15 +43,16 @@ var (
 	testTask13 = persistence.ReplicationTaskInfo{TaskID: 13, DomainID: testDomainID}
 	testTask14 = persistence.ReplicationTaskInfo{TaskID: 14, DomainID: testDomainID}
 
-	testHydratedTask11 = types.ReplicationTask{SourceTaskID: 11}
-	testHydratedTask12 = types.ReplicationTask{SourceTaskID: 12}
-	testHydratedTask14 = types.ReplicationTask{SourceTaskID: 14}
+	testHydratedTask11 = types.ReplicationTask{SourceTaskID: 11, HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{DomainID: testDomainID}}
+	testHydratedTask12 = types.ReplicationTask{SourceTaskID: 12, SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{DomainID: testDomainID}}
+	testHydratedTask14 = types.ReplicationTask{SourceTaskID: 14, FailoverMarkerAttributes: &types.FailoverMarkerAttributes{DomainID: testDomainID}}
 
 	testHydratedTaskErrorRecoverable    = types.ReplicationTask{SourceTaskID: -100}
 	testHydratedTaskErrorNonRecoverable = types.ReplicationTask{SourceTaskID: -200}
 
 	testClusterA = "cluster-A"
 	testClusterB = "cluster-B"
+	testClusterC = "cluster-C"
 
 	testDomainName = "test-domain-name"
 
@@ -175,7 +174,7 @@ func TestTaskAckManager_GetTasks(t *testing.T) {
 			expectErr:      "error reading replication tasks",
 		},
 		{
-			name: "failed to get domain - return error",
+			name: "failed to get domain - stops",
 			ackLevels: &fakeAckLevelStore{
 				readLevel: 200,
 				remote:    map[string]int64{testClusterA: 2},
@@ -185,7 +184,10 @@ func TestTaskAckManager_GetTasks(t *testing.T) {
 			hydrator:       fakeTaskHydrator{},
 			pollingCluster: testClusterA,
 			lastReadLevel:  5,
-			expectErr:      "domain does not exist",
+			expectResult: &types.ReplicationMessages{
+				LastRetrievedMessageID: 5,
+				HasMore:                true,
+			},
 		},
 		{
 			name: "failed to update ack level - no error, return response anyway",
@@ -209,12 +211,8 @@ func TestTaskAckManager_GetTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := config.Config{
-				ReplicationTaskGenerationQPS:    dynamicconfig.GetFloatPropertyFn(0),
-				ReplicatorReadTaskMaxRetryCount: dynamicconfig.GetIntPropertyFn(1),
-			}
-
-			ackManager := NewTaskAckManager(testShardID, tt.ackLevels, tt.domains, metrics.NewNoopMetricsClient(), log.NewNoop(), &config, tt.reader, tt.hydrator)
+			taskStore := createTestTaskStore(tt.domains, tt.hydrator)
+			ackManager := NewTaskAckManager(testShardID, tt.ackLevels, metrics.NewNoopMetricsClient(), log.NewNoop(), tt.reader, taskStore)
 			result, err := ackManager.GetTasks(context.Background(), tt.pollingCluster, tt.lastReadLevel)
 
 			if tt.expectErr != "" {
@@ -283,13 +281,4 @@ func (h fakeTaskHydrator) Hydrate(ctx context.Context, task persistence.Replicat
 		return &hydratedTask, nil
 	}
 	panic("fix the test, should not reach this")
-}
-
-type fakeDomainCache map[string]*cache.DomainCacheEntry
-
-func (cache fakeDomainCache) GetDomainByID(id string) (*cache.DomainCacheEntry, error) {
-	if entry, ok := cache[id]; ok {
-		return entry, nil
-	}
-	return nil, types.EntityNotExistsError{Message: "domain does not exist"}
 }

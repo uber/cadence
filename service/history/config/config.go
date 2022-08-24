@@ -189,6 +189,7 @@ type Config struct {
 	ReplicatorReadTaskMaxRetryCount        dynamicconfig.IntPropertyFn
 	ReplicatorProcessorFetchTasksBatchSize dynamicconfig.IntPropertyFnWithShardIDFilter
 	ReplicatorUpperLatency                 dynamicconfig.DurationPropertyFn
+	ReplicatorCacheCapacity                dynamicconfig.IntPropertyFn
 
 	// Persistence settings
 	ExecutionMgrNumConns dynamicconfig.IntPropertyFn
@@ -458,6 +459,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		ReplicatorReadTaskMaxRetryCount:        dc.GetIntProperty(dynamicconfig.ReplicatorReadTaskMaxRetryCount),
 		ReplicatorProcessorFetchTasksBatchSize: dc.GetIntPropertyFilteredByShardID(dynamicconfig.ReplicatorTaskBatchSize),
 		ReplicatorUpperLatency:                 dc.GetDurationProperty(dynamicconfig.ReplicatorUpperLatency),
+		ReplicatorCacheCapacity:                dc.GetIntProperty(dynamicconfig.ReplicatorCacheCapacity),
 
 		ExecutionMgrNumConns:            dc.GetIntProperty(dynamicconfig.ExecutionMgrNumConns),
 		HistoryMgrNumConns:              dc.GetIntProperty(dynamicconfig.HistoryMgrNumConns),
