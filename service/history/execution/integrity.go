@@ -58,13 +58,14 @@ func GetResurrectedTimers(
 	if err != nil {
 		return nil, err
 	}
-
+	domainID := mutableState.GetExecutionInfo().DomainID
 	iter := collection.NewPagingIterator(getHistoryPaginationFn(
 		ctx,
 		shard,
 		minTimerStartedID,
 		mutableState.GetNextEventID(),
 		branchToken,
+		domainID,
 	))
 	for iter.HasNext() {
 		item, err := iter.Next()
@@ -113,13 +114,14 @@ func GetResurrectedActivities(
 	if err != nil {
 		return nil, err
 	}
-
+	domainID := mutableState.GetExecutionInfo().DomainID
 	iter := collection.NewPagingIterator(getHistoryPaginationFn(
 		ctx,
 		shard,
 		minActivityScheduledID,
 		mutableState.GetNextEventID(),
 		branchToken,
+		domainID,
 	))
 	for iter.HasNext() {
 		item, err := iter.Next()
@@ -151,7 +153,9 @@ func getHistoryPaginationFn(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
+	domainID string,
 ) collection.PaginationFn {
+	domainCache := shard.GetDomainCache()
 	return func(token []byte) ([]interface{}, []byte, error) {
 		historyEvents, _, token, _, err := persistenceutils.PaginateHistory(
 			ctx,
@@ -163,6 +167,8 @@ func getHistoryPaginationFn(
 			token,
 			NDCDefaultPageSize,
 			common.IntPtr(shard.GetShardID()),
+			domainID,
+			domainCache,
 		)
 		if err != nil {
 			return nil, nil, err
