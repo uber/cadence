@@ -204,6 +204,7 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 		).WithContext(ctx)
 	} else {
 		query = db.session.Query(templateCreateWorkflowExecutionStartedWithTTL,
@@ -219,6 +220,7 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 			ttlSeconds,
 		).WithContext(ctx)
 	}
