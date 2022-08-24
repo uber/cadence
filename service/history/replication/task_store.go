@@ -26,6 +26,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common/backoff"
@@ -72,6 +73,7 @@ type (
 
 // NewTaskStore create new instance of TaskStore
 func NewTaskStore(
+	shardID int,
 	config *config.Config,
 	clusterMetadata cluster.Metadata,
 	domains domainCache,
@@ -97,7 +99,10 @@ func NewTaskStore(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
-		scope:       metricsClient.Scope(metrics.ReplicatorCacheManagerScope),
+		scope: metricsClient.Scope(
+			metrics.ReplicatorCacheManagerScope,
+			metrics.InstanceTag(strconv.Itoa(shardID)),
+		),
 		logger:      logger.WithTags(tag.ComponentReplicationCacheManager),
 		rateLimiter: quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64()),
 	}
