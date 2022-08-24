@@ -1023,7 +1023,7 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	domainID := workflowEvents.DomainID
 	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
-		return 0, err
+		return persistence.DataBlob{}, err
 	}
 	execution := types.WorkflowExecution{
 		WorkflowID: workflowEvents.WorkflowID,
