@@ -21,8 +21,6 @@
 package proto
 
 import (
-	gogo "github.com/gogo/protobuf/types"
-
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/types"
@@ -4741,12 +4739,6 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		return nil
 	}
 
-	var firstScheduledTime *gogo.Timestamp
-	if t.FirstScheduleTime != nil {
-		nanos := t.FirstScheduleTime.UnixNano()
-		firstScheduledTime = unixNanoToTime(&nanos)
-	}
-
 	return &apiv1.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                 FromWorkflowType(t.WorkflowType),
 		ParentExecutionInfo:          FromParentExecutionInfoFields(t.ParentWorkflowDomainID, t.ParentWorkflowDomain, t.ParentWorkflowExecution, t.ParentInitiatedEventID),
@@ -4761,7 +4753,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		OriginalExecutionRunId:       t.OriginalExecutionRunID,
 		Identity:                     t.Identity,
 		FirstExecutionRunId:          t.FirstExecutionRunID,
-		FirstScheduledTime:           firstScheduledTime,
+		FirstScheduledTime:           timeToTimestamp(t.FirstScheduleTime),
 		RetryPolicy:                  FromRetryPolicy(t.RetryPolicy),
 		Attempt:                      t.Attempt,
 		ExpirationTime:               unixNanoToTime(t.ExpirationTimestamp),
