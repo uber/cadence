@@ -46,7 +46,7 @@ const (
          ORDER BY start_time DESC, run_id
          LIMIT ?`
 
-	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, update_time)`
+	templateOpenFieldNames = `workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, is_cron, update_time`
 	templateOpenSelect     = `SELECT ` + templateOpenFieldNames + ` FROM executions_visibility WHERE close_status IS NULL `
 
 	templateClosedSelect = `SELECT ` + templateOpenFieldNames + `, close_time, close_status, history_length
