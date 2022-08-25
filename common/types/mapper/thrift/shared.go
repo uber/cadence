@@ -21,8 +21,6 @@
 package thrift
 
 import (
-	"time"
-
 	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
@@ -6359,12 +6357,6 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		return nil
 	}
 
-	var firstScheduledtime *time.Time
-	if t.FirstScheduledTimeNano != nil {
-		firstScheduledtimeVal := time.Unix(0, *t.FirstScheduledTimeNano)
-		firstScheduledtime = &firstScheduledtimeVal
-	}
-
 	return &types.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		ParentWorkflowDomain:                t.ParentWorkflowDomain,
@@ -6382,7 +6374,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		OriginalExecutionRunID:              t.GetOriginalExecutionRunId(),
 		Identity:                            t.GetIdentity(),
 		FirstExecutionRunID:                 t.GetFirstExecutionRunId(),
-		FirstScheduleTime:                   firstScheduledtime,
+		FirstScheduleTime:                   nanoToTime(t.FirstScheduledTimeNano),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.GetAttempt(),
 		ExpirationTimestamp:                 t.ExpirationTimestamp,

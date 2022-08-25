@@ -37,3 +37,14 @@ func TestTimeToNanoNil(t *testing.T) {
 	result := timeToNano(nil)
 	assert.Nil(t, result)
 }
+
+func TestNanoToTime(t *testing.T) {
+	nanos := int64(1000000001)
+	result := nanoToTime(&nanos)
+	assert.True(t, time.Unix(1, 1).Equal(*result))
+}
+
+func TestNanoToTimeNil(t *testing.T) {
+	result := nanoToTime(nil)
+	assert.Nil(t, result)
+}

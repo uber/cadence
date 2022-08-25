@@ -33,3 +33,12 @@ func timeToNano(t *time.Time) *int64 {
 
 	return common.Int64Ptr(t.UnixNano())
 }
+
+func nanoToTime(nanos *int64) *time.Time {
+	if nanos == nil {
+		return nil
+	}
+
+	result := time.Unix(0, *nanos)
+	return &result
+}
