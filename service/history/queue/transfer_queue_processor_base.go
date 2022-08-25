@@ -415,6 +415,7 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 			tag.MaxLevel(maxReadLevel.(transferTaskKey).taskID),
 			tag.Counter(len(transferTaskInfos)))
 
+		newReadLevel := readLevel
 		tasks := make(map[task.Key]task.Task)
 		taskChFull := false
 		for _, taskInfo := range transferTaskInfos {
@@ -424,7 +425,8 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 			}
 
 			task := t.taskInitializer(taskInfo)
-			tasks[newTransferTaskKey(taskInfo.GetTaskID())] = task
+			taskKey := newTransferTaskKey(taskInfo.GetTaskID())
+			tasks[taskKey] = task
 			submitted, err := t.submitTask(task)
 			if err != nil {
 				// only err here is due to the fact that processor has been shutdown
@@ -432,14 +434,9 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 				return
 			}
 			taskChFull = taskChFull || !submitted
+			newReadLevel = taskKey
 		}
 
-		var newReadLevel task.Key
-		if !more {
-			newReadLevel = maxReadLevel
-		} else {
-			newReadLevel = newTransferTaskKey(transferTaskInfos[len(transferTaskInfos)-1].GetTaskID())
-		}
 		queueCollection.AddTasks(tasks, newReadLevel)
 		if t.validator != nil {
 			t.logger.Debug("ack transfer tasks",
