@@ -115,6 +115,7 @@ func (r *stateRebuilderImpl) Rebuild(
 		common.FirstEventID,
 		baseLastEventID+1,
 		baseBranchToken,
+		targetWorkflowIdentifier.DomainID,
 	))
 
 	domainEntry, err := r.domainCache.GetDomainByID(targetWorkflowIdentifier.DomainID)
@@ -239,6 +240,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
+	domainID string,
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
@@ -253,6 +255,8 @@ func (r *stateRebuilderImpl) getPaginationFn(
 			paginationToken,
 			NDCDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()),
+			domainID,
+			r.domainCache,
 		)
 		if err != nil {
 			return nil, nil, err

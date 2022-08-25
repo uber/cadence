@@ -23,6 +23,7 @@ package persistenceutils
 import (
 	"context"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -100,13 +101,18 @@ func PaginateHistory(
 	tokenIn []byte,
 	pageSize int,
 	shardID *int,
+	domainID string,
+	domainCache cache.DomainCache,
 ) ([]*types.HistoryEvent, []*types.History, []byte, int, error) {
 
 	historyEvents := []*types.HistoryEvent{}
 	historyBatches := []*types.History{}
 	var tokenOut []byte
 	var historySize int
-
+	domainName, err := domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, nil, nil, 0, err
+	}
 	req := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -114,6 +120,7 @@ func PaginateHistory(
 		PageSize:      pageSize,
 		NextPageToken: tokenIn,
 		ShardID:       shardID,
+		DomainName:    domainName,
 	}
 	if byBatch {
 		response, err := historyV2Mgr.ReadHistoryBranchByBatch(ctx, req)
