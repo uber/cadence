@@ -291,10 +291,11 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	// reset workflow with decision task failed or timed out
-	resetHistorySize, err = resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
+	blob, err := resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
+	resetHistorySize = int64(len(blob.Data))
 
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
@@ -541,12 +542,13 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 		// and the decision task is the latest event in the workflow.
 		return "", nil
 	}
-
+	domainID := mutableState.GetExecutionInfo().DomainID
 	iter := collection.NewPagingIterator(r.getPaginationFn(
 		ctx,
 		firstEventID,
 		nextEventID,
 		branchToken,
+		domainID,
 	))
 
 	var nextRunID string
@@ -600,6 +602,7 @@ func (r *workflowResetterImpl) getPaginationFn(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
+	domainID string,
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
@@ -614,6 +617,8 @@ func (r *workflowResetterImpl) getPaginationFn(
 			paginationToken,
 			execution.NDCDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()),
+			domainID,
+			r.domainCache,
 		)
 		if err != nil {
 			return nil, nil, err

@@ -4738,6 +4738,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 	if t == nil {
 		return nil
 	}
+
 	return &apiv1.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                 FromWorkflowType(t.WorkflowType),
 		ParentExecutionInfo:          FromParentExecutionInfoFields(t.ParentWorkflowDomainID, t.ParentWorkflowDomain, t.ParentWorkflowExecution, t.ParentInitiatedEventID),
@@ -4752,6 +4753,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		OriginalExecutionRunId:       t.OriginalExecutionRunID,
 		Identity:                     t.Identity,
 		FirstExecutionRunId:          t.FirstExecutionRunID,
+		FirstScheduledTime:           timeToTimestamp(t.FirstScheduleTime),
 		RetryPolicy:                  FromRetryPolicy(t.RetryPolicy),
 		Attempt:                      t.Attempt,
 		ExpirationTime:               unixNanoToTime(t.ExpirationTimestamp),
@@ -4786,6 +4788,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *apiv1.WorkflowExecutionStarted
 		OriginalExecutionRunID:              t.OriginalExecutionRunId,
 		Identity:                            t.Identity,
 		FirstExecutionRunID:                 t.FirstExecutionRunId,
+		FirstScheduleTime:                   timestampToTime(t.FirstScheduledTime),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 timeToUnixNano(t.ExpirationTime),

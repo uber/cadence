@@ -154,6 +154,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 	firstEventID := common.FirstEventID
 	nextEventID := int64(101)
 	branchToken := []byte("some random branch token")
+	domainName := "some random domain name"
 
 	event1 := &types.HistoryEvent{
 		ID:                                      1,
@@ -179,7 +180,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 	history2 := []*types.History{{Events: []*types.HistoryEvent{event4, event5}}}
 	history := append(history1, history2...)
 	pageToken := []byte("some random token")
-
+	s.mockDomainCache.EXPECT().GetDomainName(s.domainID).Return(domainName, nil).AnyTimes()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -187,6 +188,7 @@ func (s *stateRebuilderSuite) TestPagination() {
 		PageSize:      NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       history1,
 		NextPageToken: pageToken,
@@ -199,13 +201,14 @@ func (s *stateRebuilderSuite) TestPagination() {
 		PageSize:      NDCDefaultPageSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       history2,
 		NextPageToken: nil,
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.nDCStateRebuilder.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken)
+	paginationFn := s.nDCStateRebuilder.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken, s.domainID)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*types.History{}
@@ -262,6 +265,8 @@ func (s *stateRebuilderSuite) TestRebuild() {
 
 	historySize1 := 12345
 	historySize2 := 67890
+
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(targetDomainName, nil).AnyTimes()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -269,6 +274,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		PageSize:      NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    targetDomainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       history1,
 		NextPageToken: pageToken,
@@ -281,6 +287,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 		PageSize:      NDCDefaultPageSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    targetDomainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       history2,
 		NextPageToken: nil,
