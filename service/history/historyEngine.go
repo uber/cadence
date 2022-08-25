@@ -709,7 +709,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	if err != nil {
 		return nil, err
 	}
-	historySize, err := wfContext.PersistStartWorkflowBatchEvents(ctx, newWorkflowEventsSeq[0])
+	historyBlob, err := wfContext.PersistStartWorkflowBatchEvents(ctx, newWorkflowEventsSeq[0])
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +736,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	err = wfContext.CreateWorkflowExecution(
 		ctx,
 		newWorkflow,
-		historySize,
+		int64(len(historyBlob.Data)),
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
@@ -802,7 +802,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		err = wfContext.CreateWorkflowExecution(
 			ctx,
 			newWorkflow,
-			historySize,
+			int64(len(historyBlob.Data)),
 			createMode,
 			prevRunID,
 			t.LastWriteVersion,

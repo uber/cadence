@@ -157,15 +157,15 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 		return err
 	}
 
-	var targetWorkflowHistorySize int64
+	var targetWorkflowHistoryBlob persistence.DataBlob
 	if len(targetWorkflowEventsSeq[0].Events) > 0 {
 		if targetWorkflowEventsSeq[0].Events[0].GetEventType() == types.EventTypeWorkflowExecutionStarted {
-			targetWorkflowHistorySize, err = targetWorkflow.GetContext().PersistStartWorkflowBatchEvents(
+			targetWorkflowHistoryBlob, err = targetWorkflow.GetContext().PersistStartWorkflowBatchEvents(
 				ctx,
 				targetWorkflowEventsSeq[0],
 			)
 		} else { // reset workflows fall into else branch
-			targetWorkflowHistorySize, err = targetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(
+			targetWorkflowHistoryBlob, err = targetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(
 				ctx,
 				targetWorkflowEventsSeq[0],
 			)
@@ -187,7 +187,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 		return targetWorkflow.GetContext().CreateWorkflowExecution(
 			ctx,
 			targetWorkflowSnapshot,
-			targetWorkflowHistorySize,
+			int64(len(targetWorkflowHistoryBlob.Data)),
 			createMode,
 			prevRunID,
 			prevLastWriteVersion,
@@ -201,7 +201,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 	return targetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		targetWorkflowSnapshot,
-		targetWorkflowHistorySize,
+		int64(len(targetWorkflowHistoryBlob.Data)),
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
@@ -235,15 +235,15 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 		return err
 	}
 
-	var targetWorkflowHistorySize int64
+	var targetWorkflowHistoryBlob persistence.DataBlob
 	if len(targetWorkflowEventsSeq[0].Events) > 0 {
 		if targetWorkflowEventsSeq[0].Events[0].GetEventType() == types.EventTypeWorkflowExecutionStarted {
-			targetWorkflowHistorySize, err = targetWorkflow.GetContext().PersistStartWorkflowBatchEvents(
+			targetWorkflowHistoryBlob, err = targetWorkflow.GetContext().PersistStartWorkflowBatchEvents(
 				ctx,
 				targetWorkflowEventsSeq[0],
 			)
 		} else { // reset workflows fall into else branch
-			targetWorkflowHistorySize, err = targetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(
+			targetWorkflowHistoryBlob, err = targetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(
 				ctx,
 				targetWorkflowEventsSeq[0],
 			)
@@ -271,7 +271,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 	err = targetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		targetWorkflowSnapshot,
-		targetWorkflowHistorySize,
+		int64(len(targetWorkflowHistoryBlob.Data)),
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,

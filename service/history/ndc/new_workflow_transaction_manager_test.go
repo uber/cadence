@@ -136,7 +136,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Brand
 	context.EXPECT().PersistStartWorkflowBatchEvents(
 		gomock.Any(),
 		workflowEventsSeq[0],
-	).Return(workflowHistorySize, nil).Times(1)
+	).Return(persistence.DataBlob{Data: make([]byte, workflowHistorySize)}, nil).Times(1)
 	context.EXPECT().CreateWorkflowExecution(
 		gomock.Any(),
 		workflowSnapshot,
@@ -214,7 +214,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetContext.EXPECT().PersistNonStartWorkflowBatchEvents(
 		gomock.Any(),
 		targetWorkflowEventsSeq[0],
-	).Return(targetWorkflowHistorySize, nil).Times(1)
+	).Return(persistence.DataBlob{Data: make([]byte, targetWorkflowHistorySize)}, nil).Times(1)
 	targetContext.EXPECT().CreateWorkflowExecution(
 		gomock.Any(),
 		targetWorkflowSnapshot,
@@ -289,7 +289,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetContext.EXPECT().PersistStartWorkflowBatchEvents(
 		gomock.Any(),
 		targetWorkflowEventsSeq[0],
-	).Return(targetWorkflowHistorySize, nil).Times(1)
+	).Return(persistence.DataBlob{Data: make([]byte, targetWorkflowHistorySize)}, nil).Times(1)
 	targetContext.EXPECT().CreateWorkflowExecution(
 		gomock.Any(),
 		targetWorkflowSnapshot,
@@ -365,7 +365,7 @@ func (s *transactionManagerForNewWorkflowSuite) TestDispatchForNewWorkflow_Creat
 	targetContext.EXPECT().PersistNonStartWorkflowBatchEvents(
 		gomock.Any(),
 		targetWorkflowEventsSeq[0],
-	).Return(targetWorkflowHistorySize, nil).Times(1)
+	).Return(persistence.DataBlob{Data: make([]byte, targetWorkflowHistorySize)}, nil).Times(1)
 	targetContext.EXPECT().CreateWorkflowExecution(
 		gomock.Any(),
 		targetWorkflowSnapshot,
