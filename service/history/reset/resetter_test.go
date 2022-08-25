@@ -373,6 +373,8 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 	newNextEventID := int64(6)
 	newBranchToken := []byte("some random new branch token")
 
+	domainName := "test-domain"
+
 	baseEvent1 := &types.HistoryEvent{
 		ID:                                   124,
 		EventType:                            types.EventTypeDecisionTaskScheduled.Ptr(),
@@ -430,6 +432,7 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       []*types.History{{Events: baseEvents}},
 		NextPageToken: nil,
@@ -443,26 +446,26 @@ func (s *workflowResetterSuite) TestReapplyContinueAsNewWorkflowEvents() {
 		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       []*types.History{{Events: newEvents}},
 		NextPageToken: nil,
 	}, nil).Once()
+	resetMutableState := execution.NewMockMutableState(s.controller)
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain", nil).AnyTimes()
 	resetContext := execution.NewMockContext(s.controller)
-	resetContext.EXPECT().Lock(gomock.Any()).Return(nil).Times(1)
-	resetContext.EXPECT().Unlock().Times(1)
-	resetMutableState := execution.NewMockMutableState(s.controller)
-	resetContext.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(resetMutableState, nil).Times(1)
+	resetContext.EXPECT().Lock(gomock.Any()).Return(nil).AnyTimes()
+	resetContext.EXPECT().Unlock().AnyTimes()
+	resetContext.EXPECT().LoadWorkflowExecution(gomock.Any()).Return(resetMutableState, nil).AnyTimes()
+	resetMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	resetMutableState.EXPECT().GetNextEventID().Return(newNextEventID).AnyTimes()
 	resetMutableState.EXPECT().GetCurrentBranchToken().Return(newBranchToken, nil).AnyTimes()
 	resetContextCacheKey := definition.NewWorkflowIdentifier(s.domainID, s.workflowID, newRunID)
 	_, _ = s.workflowResetter.executionCache.PutIfNotExist(resetContextCacheKey, resetContext)
 
-	mutableState := execution.NewMockMutableState(s.controller)
-
 	err := s.workflowResetter.reapplyResetAndContinueAsNewWorkflowEvents(
 		ctx,
-		mutableState,
+		resetMutableState,
 		s.domainID,
 		s.workflowID,
 		s.baseRunID,
@@ -477,6 +480,7 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 	firstEventID := common.FirstEventID
 	nextEventID := int64(6)
 	branchToken := []byte("some random branch token")
+	domainName := "test-domain"
 
 	newRunID := uuid.New()
 	event1 := &types.HistoryEvent{
@@ -514,13 +518,14 @@ func (s *workflowResetterSuite) TestReapplyWorkflowEvents() {
 		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       []*types.History{{Events: events}},
 		NextPageToken: nil,
 	}, nil).Once()
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	mutableState := execution.NewMockMutableState(s.controller)
-
+	mutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{}).AnyTimes()
 	nextRunID, err := s.workflowResetter.reapplyWorkflowEvents(
 		context.Background(),
 		mutableState,
@@ -638,6 +643,7 @@ func (s *workflowResetterSuite) TestPagination() {
 	firstEventID := common.FirstEventID
 	nextEventID := int64(101)
 	branchToken := []byte("some random branch token")
+	domainName := "some random domain name"
 
 	event1 := &types.HistoryEvent{
 		ID:                                      1,
@@ -663,7 +669,7 @@ func (s *workflowResetterSuite) TestPagination() {
 	history2 := []*types.History{{[]*types.HistoryEvent{event4, event5}}}
 	history := append(history1, history2...)
 	pageToken := []byte("some random token")
-
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return(domainName, nil).AnyTimes()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, &persistence.ReadHistoryBranchRequest{
 		BranchToken:   branchToken,
 		MinEventID:    firstEventID,
@@ -671,6 +677,7 @@ func (s *workflowResetterSuite) TestPagination() {
 		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: nil,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       history1,
 		NextPageToken: pageToken,
@@ -683,13 +690,14 @@ func (s *workflowResetterSuite) TestPagination() {
 		PageSize:      execution.NDCDefaultPageSize,
 		NextPageToken: pageToken,
 		ShardID:       common.IntPtr(s.mockShard.GetShardID()),
+		DomainName:    domainName,
 	}).Return(&persistence.ReadHistoryBranchByBatchResponse{
 		History:       history2,
 		NextPageToken: nil,
 		Size:          67890,
 	}, nil).Once()
 
-	paginationFn := s.workflowResetter.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken)
+	paginationFn := s.workflowResetter.getPaginationFn(context.Background(), firstEventID, nextEventID, branchToken, s.domainID)
 	iter := collection.NewPagingIterator(paginationFn)
 
 	result := []*types.History{}
