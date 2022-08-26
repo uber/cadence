@@ -115,6 +115,7 @@ type (
 		replicationAckManager      replication.TaskAckManager
 		replicationTaskStore       *replication.TaskStore
 		replicationHydrator        replication.TaskHydrator
+		replicationMetricsEmitter  replication.MetricsEmitter
 		publicClient               workflowserviceclient.Interface
 		eventsReapplier            ndc.EventsReapplier
 		matchingClient             matching.Client
@@ -169,6 +170,8 @@ func NewEngineWithShardContext(
 		shard.GetLogger(),
 		replicationHydrator,
 	)
+	replicationReader := replication.NewDynamicTaskReader(shard.GetShardID(), executionManager, shard.GetTimeSource(), config)
+
 	historyEngImpl := &historyEngineImpl{
 		currentClusterName:   currentClusterName,
 		shard:                shard,
@@ -222,10 +225,11 @@ func NewEngineWithShardContext(
 			shard,
 			shard.GetMetricsClient(),
 			shard.GetLogger(),
-			replication.NewDynamicTaskReader(shard.GetShardID(), executionManager, shard.GetTimeSource(), config),
+			replicationReader,
 			replicationTaskStore,
 		),
-		replicationTaskStore: replicationTaskStore,
+		replicationTaskStore:      replicationTaskStore,
+		replicationMetricsEmitter: replication.NewMetricsEmitter(shard, replicationReader, shard.GetMetricsClient()),
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
@@ -361,6 +365,7 @@ func (e *historyEngineImpl) Start() {
 	e.timerProcessor.Start()
 	e.crossClusterProcessor.Start()
 	e.replicationDLQHandler.Start()
+	e.replicationMetricsEmitter.Start()
 
 	// failover callback will try to create a failover queue processor to scan all inflight tasks
 	// if domain needs to be failovered. However, in the multicursor queue logic, the scan range
@@ -377,6 +382,7 @@ func (e *historyEngineImpl) Start() {
 	if e.config.EnableGracefulFailover() {
 		e.failoverMarkerNotifier.Start()
 	}
+
 }
 
 // Stop the service.
@@ -388,6 +394,7 @@ func (e *historyEngineImpl) Stop() {
 	e.timerProcessor.Stop()
 	e.crossClusterProcessor.Stop()
 	e.replicationDLQHandler.Stop()
+	e.replicationMetricsEmitter.Stop()
 
 	e.crossClusterTaskProcessors.Stop()
 
