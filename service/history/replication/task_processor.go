@@ -456,7 +456,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *types.ReplicationTa
 			if errorDomainName != nil {
 				return errorDomainName
 			}
-			mScope.Tagged(metrics.DomainTag(domainName))
+			mScope = mScope.Tagged(metrics.DomainTag(domainName))
 		}
 		// emit the number of replication tasks
 		mScope.IncCounter(metrics.ReplicationTasksAppliedPerDomain)
