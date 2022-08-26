@@ -280,6 +280,7 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 	$(call ensure_idl_submodule)
 	$Q mkdir -p $(PROTO_OUT)
 	$Q echo "protoc..."
+	$Q chmod +x $(BIN)/$(PROTOC_VERSION_BIN)
 	$Q $(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
@@ -290,8 +291,11 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 		--yarpc-go_out=$(PROTO_OUT) \
 		$$(find $(PROTO_DIR) -name '*.proto');\
 	)
-	$Q cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/
-	$Q rm -r $(PROTO_OUT)/uber
+	$Q # This directory exists for local/buildkite but not for docker builds.
+	$Q if [ -d "$(PROTO_OUT)/uber/cadence" ]; then \
+		cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/; \
+		rm -r $(PROTO_OUT)/uber; \
+	   fi
 	$Q touch $@
 
 # ====================================
