@@ -450,7 +450,7 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *types.ReplicationTa
 	} else {
 		now := ts.Now()
 		mScope := p.metricsClient.Scope(scope, metrics.TargetClusterTag(p.sourceCluster))
-		domainID := replicationTask.HistoryTaskV2Attributes.GetDomainID()
+    domainID := replicationTask.HistoryTaskV2Attributes.GetDomainID()
 		if domainID != "" {
 			domainName, errorDomainName := p.shard.GetDomainCache().GetDomainName(domainID)
 			if errorDomainName != nil {
