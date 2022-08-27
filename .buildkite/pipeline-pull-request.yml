@@ -152,3 +152,12 @@ steps:
       - docker-compose#v3.0.0:
           run: coverage-report
           config: docker/buildkite/docker-compose.yml
+
+  - label: ":docker: build (no push)"
+    agents:
+      queue: "workers"
+      docker: "*"
+    command: "scripts/buildkite/docker-build.sh"
+    retry:
+      automatic:
+        limit: 1
