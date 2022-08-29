@@ -6892,6 +6892,7 @@ type WorkflowExecutionInfo struct {
 	AutoResetPoints   *ResetPoints                  `json:"autoResetPoints,omitempty"`
 	TaskList          string                        `json:"taskList,omitempty"`
 	IsCron            bool                          `json:"isCron,omitempty"`
+	UpdateTime        *int64                        `json:"updateTime,omitempty"`
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -6938,6 +6939,14 @@ func (v *WorkflowExecutionInfo) GetCloseStatus() (o WorkflowExecutionCloseStatus
 func (v *WorkflowExecutionInfo) GetExecutionTime() (o int64) {
 	if v != nil && v.ExecutionTime != nil {
 		return *v.ExecutionTime
+	}
+	return
+}
+
+// GetUpdateTime is an internal getter (TBD...)
+func (v *WorkflowExecutionInfo) GetUpdateTime() (o int64) {
+	if v != nil && v.UpdateTime != nil {
+		return *v.UpdateTime
 	}
 	return
 }

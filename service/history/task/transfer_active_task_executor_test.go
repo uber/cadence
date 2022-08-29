@@ -1823,6 +1823,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
+		UpdateTimestamp:    executionInfo.LastUpdatedTimestamp.UnixNano(),
 	}
 }
 

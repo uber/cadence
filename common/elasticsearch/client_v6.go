@@ -676,6 +676,9 @@ func (c *elasticV6) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 		NumClusters:      source.NumClusters,
 		SearchAttributes: source.Attr,
 	}
+	if source.UpdateTime != 0 {
+		record.UpdateTime = time.Unix(0, source.UpdateTime)
+	}
 	if source.CloseTime != 0 {
 		record.CloseTime = time.Unix(0, source.CloseTime)
 		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)

@@ -39,6 +39,7 @@ const (
 	TaskList        = "TaskList"
 	IsCron          = "IsCron"
 	NumClusters     = "NumClusters"
+	UpdateTime      = "UpdateTime"
 	CustomDomain    = "CustomDomain" // to support batch workflow
 	Operator        = "Operator"     // to support batch workflow
 
@@ -100,6 +101,7 @@ var systemIndexedKeys = map[string]interface{}{
 	TaskList:      shared.IndexedValueTypeKeyword,
 	IsCron:        shared.IndexedValueTypeBool,
 	NumClusters:   shared.IndexedValueTypeInt,
+	UpdateTime:    shared.IndexedValueTypeInt,
 }
 
 // IsSystemIndexedKey return true is key is system added
