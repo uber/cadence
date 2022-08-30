@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2022 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package common
+package events
 
 import (
+	"bytes"
+
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/events"
 )
 
 type (
-	// NotifyTaskInfo defines the info of task notification
-	NotifyTaskInfo struct {
-		ExecutionInfo    *persistence.WorkflowExecutionInfo
-		Tasks            []persistence.Task
-		VersionHistories *persistence.VersionHistories
-		Activities       map[int64]*persistence.ActivityInfo
-		History          events.PersistedBlobs
-		PersistenceError bool
+	PersistedBlob struct {
+		persistence.DataBlob
+
+		BranchToken  []byte
+		FirstEventID int64
 	}
+	PersistedBlobs []PersistedBlob
 )
+
+func (blobs PersistedBlobs) Find(branchToken []byte, firstEventID int64) *persistence.DataBlob {
+	// Linear search is ok here, as we will only have 1-2 persisted blobs per transaction
+	for _, blob := range blobs {
+		if bytes.Equal(blob.BranchToken, branchToken) && blob.FirstEventID == firstEventID {
+			return &blob.DataBlob
+		}
+	}
+	return nil
+}

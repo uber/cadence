@@ -83,5 +83,6 @@ type (
 		NotifyNewTransferTasks(info *hcommon.NotifyTaskInfo)
 		NotifyNewTimerTasks(info *hcommon.NotifyTaskInfo)
 		NotifyNewCrossClusterTasks(info *hcommon.NotifyTaskInfo)
+		NotifyNewReplicationTasks(info *hcommon.NotifyTaskInfo)
 	}
 )

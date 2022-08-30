@@ -35,6 +35,7 @@ import (
 
 	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/events"
 )
 
 // MockContext is a mock of Context interface.
@@ -87,17 +88,17 @@ func (mr *MockContextMockRecorder) ConflictResolveWorkflowExecution(ctx, now, co
 }
 
 // CreateWorkflowExecution mocks base method.
-func (m *MockContext) CreateWorkflowExecution(ctx context.Context, newWorkflow *persistence.WorkflowSnapshot, historySize int64, createMode persistence.CreateWorkflowMode, prevRunID string, prevLastWriteVersion int64) error {
+func (m *MockContext) CreateWorkflowExecution(ctx context.Context, newWorkflow *persistence.WorkflowSnapshot, persistedHistory events.PersistedBlob, createMode persistence.CreateWorkflowMode, prevRunID string, prevLastWriteVersion int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWorkflowExecution", ctx, newWorkflow, historySize, createMode, prevRunID, prevLastWriteVersion)
+	ret := m.ctrl.Call(m, "CreateWorkflowExecution", ctx, newWorkflow, persistedHistory, createMode, prevRunID, prevLastWriteVersion)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateWorkflowExecution indicates an expected call of CreateWorkflowExecution.
-func (mr *MockContextMockRecorder) CreateWorkflowExecution(ctx, newWorkflow, historySize, createMode, prevRunID, prevLastWriteVersion interface{}) *gomock.Call {
+func (mr *MockContextMockRecorder) CreateWorkflowExecution(ctx, newWorkflow, persistedHistory, createMode, prevRunID, prevLastWriteVersion interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkflowExecution", reflect.TypeOf((*MockContext)(nil).CreateWorkflowExecution), ctx, newWorkflow, historySize, createMode, prevRunID, prevLastWriteVersion)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorkflowExecution", reflect.TypeOf((*MockContext)(nil).CreateWorkflowExecution), ctx, newWorkflow, persistedHistory, createMode, prevRunID, prevLastWriteVersion)
 }
 
 // GetDomainID mocks base method.
@@ -230,10 +231,10 @@ func (mr *MockContextMockRecorder) Lock(ctx interface{}) *gomock.Call {
 }
 
 // PersistNonStartWorkflowBatchEvents mocks base method.
-func (m *MockContext) PersistNonStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (persistence.DataBlob, error) {
+func (m *MockContext) PersistNonStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (events.PersistedBlob, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PersistNonStartWorkflowBatchEvents", ctx, workflowEvents)
-	ret0, _ := ret[0].(persistence.DataBlob)
+	ret0, _ := ret[0].(events.PersistedBlob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -245,10 +246,10 @@ func (mr *MockContextMockRecorder) PersistNonStartWorkflowBatchEvents(ctx, workf
 }
 
 // PersistStartWorkflowBatchEvents mocks base method.
-func (m *MockContext) PersistStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (persistence.DataBlob, error) {
+func (m *MockContext) PersistStartWorkflowBatchEvents(ctx context.Context, workflowEvents *persistence.WorkflowEvents) (events.PersistedBlob, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PersistStartWorkflowBatchEvents", ctx, workflowEvents)
-	ret0, _ := ret[0].(persistence.DataBlob)
+	ret0, _ := ret[0].(events.PersistedBlob)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

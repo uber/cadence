@@ -237,6 +237,18 @@ func (mr *MockEngineMockRecorder) NotifyNewCrossClusterTasks(info interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewCrossClusterTasks), info)
 }
 
+// NotifyNewReplicationTasks mocks base method.
+func (m *MockEngine) NotifyNewReplicationTasks(info *common.NotifyTaskInfo) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NotifyNewReplicationTasks", info)
+}
+
+// NotifyNewReplicationTasks indicates an expected call of NotifyNewReplicationTasks.
+func (mr *MockEngineMockRecorder) NotifyNewReplicationTasks(info interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewReplicationTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewReplicationTasks), info)
+}
+
 // NotifyNewHistoryEvent mocks base method.
 func (m *MockEngine) NotifyNewHistoryEvent(event *events.Notification) {
 	m.ctrl.T.Helper()

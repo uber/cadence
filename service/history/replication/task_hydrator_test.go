@@ -596,6 +596,181 @@ func TestMutableStateLoader_GetMutableState(t *testing.T) {
 	assert.NotNil(t, release)
 }
 
+func TestImmediateTaskHydrator(t *testing.T) {
+	activityInfo := persistence.ActivityInfo{
+		Version:                  testVersion,
+		ScheduleID:               testScheduleID,
+		ScheduledTime:            testScheduleTime,
+		StartedID:                testStartedID,
+		StartedTime:              testStartedTime,
+		DomainID:                 testDomainID,
+		LastHeartBeatUpdatedTime: testHeartbeatTime,
+		Details:                  testDetails,
+		Attempt:                  testAttempt,
+		LastFailureReason:        testLastFailureReason,
+		LastFailureDetails:       testLastFailureDetails,
+		LastWorkerIdentity:       testWorkerIdentity,
+	}
+	versionHistories := &persistence.VersionHistories{
+		CurrentVersionHistoryIndex: 0,
+		Histories: []*persistence.VersionHistory{
+			{
+				BranchToken: testBranchTokenVersionHistory,
+				Items: []*persistence.VersionHistoryItem{
+					{EventID: testFirstEventID, Version: testVersion},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name             string
+		versionHistories *persistence.VersionHistories
+		activities       map[int64]*persistence.ActivityInfo
+		blob             *persistence.DataBlob
+		nextRunBlob      *persistence.DataBlob
+		task             persistence.ReplicationTaskInfo
+		expectResult     *types.ReplicationTask
+		expectErr        string
+	}{
+		{
+			name:             "sync activity task - happy path",
+			versionHistories: versionHistories,
+			activities:       map[int64]*persistence.ActivityInfo{testScheduleID: &activityInfo},
+			task: persistence.ReplicationTaskInfo{
+				TaskType:     persistence.ReplicationTaskTypeSyncActivity,
+				TaskID:       testTaskID,
+				DomainID:     testDomainID,
+				WorkflowID:   testWorkflowID,
+				RunID:        testRunID,
+				ScheduledID:  testScheduleID,
+				CreationTime: testCreationTime,
+			},
+			expectResult: &types.ReplicationTask{
+				TaskType:     types.ReplicationTaskTypeSyncActivity.Ptr(),
+				SourceTaskID: testTaskID,
+				CreationTime: common.Int64Ptr(testCreationTime),
+				SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
+					DomainID:           testDomainID,
+					WorkflowID:         testWorkflowID,
+					RunID:              testRunID,
+					Version:            testVersion,
+					ScheduledID:        testScheduleID,
+					ScheduledTime:      common.Int64Ptr(testScheduleTime.UnixNano()),
+					StartedID:          testStartedID,
+					StartedTime:        common.Int64Ptr(testStartedTime.UnixNano()),
+					LastHeartbeatTime:  common.Int64Ptr(testHeartbeatTime.UnixNano()),
+					Details:            testDetails,
+					Attempt:            testAttempt,
+					LastFailureReason:  common.StringPtr(testLastFailureReason),
+					LastWorkerIdentity: testWorkerIdentity,
+					LastFailureDetails: testLastFailureDetails,
+					VersionHistory: &types.VersionHistory{
+						Items:       []*types.VersionHistoryItem{{EventID: testFirstEventID, Version: testVersion}},
+						BranchToken: testBranchTokenVersionHistory,
+					},
+				},
+			},
+		},
+		{
+			name:             "sync activity task - missing activity info",
+			versionHistories: versionHistories,
+			activities:       map[int64]*persistence.ActivityInfo{},
+			task: persistence.ReplicationTaskInfo{
+				TaskType:    persistence.ReplicationTaskTypeSyncActivity,
+				ScheduledID: testScheduleID,
+			},
+			expectResult: nil,
+		},
+		{
+			name:             "history task - happy path",
+			versionHistories: versionHistories,
+			blob:             persistence.NewDataBlobFromInternal(testDataBlob),
+			nextRunBlob:      persistence.NewDataBlobFromInternal(testDataBlobNewRun),
+			task: persistence.ReplicationTaskInfo{
+				TaskType:          persistence.ReplicationTaskTypeHistory,
+				TaskID:            testTaskID,
+				DomainID:          testDomainID,
+				WorkflowID:        testWorkflowID,
+				RunID:             testRunID,
+				FirstEventID:      testFirstEventID,
+				NextEventID:       testNextEventID,
+				BranchToken:       testBranchToken,
+				NewRunBranchToken: testBranchTokenNewRun,
+				Version:           testVersion,
+				CreationTime:      testCreationTime,
+			},
+			expectResult: &types.ReplicationTask{
+				TaskType:     types.ReplicationTaskTypeHistoryV2.Ptr(),
+				SourceTaskID: testTaskID,
+				CreationTime: common.Int64Ptr(testCreationTime),
+				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+					DomainID:            testDomainID,
+					WorkflowID:          testWorkflowID,
+					RunID:               testRunID,
+					VersionHistoryItems: []*types.VersionHistoryItem{{EventID: testFirstEventID, Version: testVersion}},
+					Events:              testDataBlob,
+					NewRunEvents:        testDataBlobNewRun,
+				},
+			},
+		},
+		{
+			name:             "history task - no next run",
+			versionHistories: versionHistories,
+			blob:             persistence.NewDataBlobFromInternal(testDataBlob),
+			task: persistence.ReplicationTaskInfo{
+				TaskType:     persistence.ReplicationTaskTypeHistory,
+				TaskID:       testTaskID,
+				DomainID:     testDomainID,
+				WorkflowID:   testWorkflowID,
+				RunID:        testRunID,
+				FirstEventID: testFirstEventID,
+				NextEventID:  testNextEventID,
+				BranchToken:  testBranchToken,
+				Version:      testVersion,
+				CreationTime: testCreationTime,
+			},
+			expectResult: &types.ReplicationTask{
+				TaskType:     types.ReplicationTaskTypeHistoryV2.Ptr(),
+				SourceTaskID: testTaskID,
+				CreationTime: common.Int64Ptr(testCreationTime),
+				HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
+					DomainID:            testDomainID,
+					WorkflowID:          testWorkflowID,
+					RunID:               testRunID,
+					VersionHistoryItems: []*types.VersionHistoryItem{{EventID: testFirstEventID, Version: testVersion}},
+					Events:              testDataBlob,
+				},
+			},
+		},
+		{
+			name:             "history task - missing data blob",
+			versionHistories: versionHistories,
+			task: persistence.ReplicationTaskInfo{
+				TaskType:     persistence.ReplicationTaskTypeHistory,
+				FirstEventID: testFirstEventID,
+				Version:      testVersion,
+				BranchToken:  testBranchToken,
+			},
+			expectErr: "history blob not set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := NewImmediateTaskHydrator(tt.versionHistories, tt.activities, tt.blob, tt.nextRunBlob)
+			result, err := h.Hydrate(context.Background(), tt.task)
+
+			if tt.expectErr != "" {
+				assert.EqualError(t, err, tt.expectErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectResult, result)
+			}
+		})
+	}
+}
+
 type fakeMutableStateProvider struct {
 	workflows map[definition.WorkflowIdentifier]mutableState
 	released  bool
