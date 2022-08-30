@@ -25,11 +25,14 @@ package replication
 import (
 	ctx "context"
 	"fmt"
-	"github.com/uber/cadence/common/clock"
-	"github.com/uber/cadence/common/cluster"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/config"
+
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -42,49 +45,37 @@ const (
 )
 
 type (
-	// MetricsEmitter is responsible for emitting replication metrics occasionally.
-	// TODO: Should this be merged into task_processor or is this a good split?
-	MetricsEmitter interface {
-		common.Daemon
+	// MetricsEmitterImpl is responsible for emitting source side replication metrics occasionally.
+	MetricsEmitterImpl struct {
+		shardID        int
+		currentCluster string
+		remoteClusters map[string]config.ClusterInformation
+		shardData      metricsEmitterShardData
+		reader         taskReader
+		scope          metrics.Scope
+		logger         log.Logger
+		status         int32
+		done           chan struct{}
 	}
 
-	MetricsEmitterShardData interface {
-		GetShardID() int
+	// metricsEmitterShardData is for testing.
+	metricsEmitterShardData interface {
 		GetLogger() log.Logger
 		GetClusterMetadata() cluster.Metadata
-		GetTransferMaxReadLevel() int64
 		GetClusterReplicationLevel(cluster string) int64
 		GetTimeSource() clock.TimeSource
 	}
-
-	metricsEmitterImpl struct {
-		currentCluster     string
-		remoteClusterNames []string
-		shardData          MetricsEmitterShardData
-		reader             taskReader
-		scope              metrics.Scope
-		logger             log.Logger
-		status             int32
-		done               chan struct{}
-	}
 )
-
-var _ MetricsEmitter = (*metricsEmitterImpl)(nil)
 
 // NewMetricsEmitter creates a new metrics emitter, which starts a goroutine to emit replication metrics occasionally.
 func NewMetricsEmitter(
-	shardData MetricsEmitterShardData,
+	shardID int,
+	shardData metricsEmitterShardData,
 	reader taskReader,
 	metricsClient metrics.Client,
-) *metricsEmitterImpl {
-	shardID := shardData.GetShardID()
+) *MetricsEmitterImpl {
 	currentCluster := shardData.GetClusterMetadata().GetCurrentClusterName()
-
 	remoteClusters := shardData.GetClusterMetadata().GetRemoteClusterInfo()
-	remoteClusterNames := make([]string, len(remoteClusters))
-	for remoteCluster := range remoteClusters {
-		remoteClusterNames = append(remoteClusterNames, remoteCluster)
-	}
 
 	scope := metricsClient.Scope(
 		metrics.ReplicationMetricEmitterScope,
@@ -95,19 +86,20 @@ func NewMetricsEmitter(
 		tag.ClusterName(currentCluster),
 		tag.ShardID(shardID))
 
-	return &metricsEmitterImpl{
-		currentCluster:     currentCluster,
-		remoteClusterNames: remoteClusterNames,
-		status:             common.DaemonStatusInitialized,
-		shardData:          shardData,
-		reader:             reader,
-		scope:              scope,
-		logger:             logger,
-		done:               make(chan struct{}),
+	return &MetricsEmitterImpl{
+		shardID:        shardID,
+		currentCluster: currentCluster,
+		remoteClusters: remoteClusters,
+		status:         common.DaemonStatusInitialized,
+		shardData:      shardData,
+		reader:         reader,
+		scope:          scope,
+		logger:         logger,
+		done:           make(chan struct{}),
 	}
 }
 
-func (m *metricsEmitterImpl) Start() {
+func (m *MetricsEmitterImpl) Start() {
 	if !atomic.CompareAndSwapInt32(&m.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
@@ -116,7 +108,7 @@ func (m *metricsEmitterImpl) Start() {
 	m.logger.Info("ReplicationMetricsEmitter started.")
 }
 
-func (m *metricsEmitterImpl) Stop() {
+func (m *MetricsEmitterImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&m.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
@@ -125,7 +117,7 @@ func (m *metricsEmitterImpl) Stop() {
 	close(m.done)
 }
 
-func (m *metricsEmitterImpl) emitMetricsLoop() {
+func (m *MetricsEmitterImpl) emitMetricsLoop() {
 	ticker := time.NewTicker(metricsEmissionInterval)
 	defer ticker.Stop()
 
@@ -139,8 +131,8 @@ func (m *metricsEmitterImpl) emitMetricsLoop() {
 	}
 }
 
-func (m *metricsEmitterImpl) emitMetrics() {
-	for _, remoteClusterName := range m.remoteClusterNames {
+func (m *MetricsEmitterImpl) emitMetrics() {
+	for remoteClusterName := range m.remoteClusters {
 		logger := m.logger.WithTags(tag.RemoteCluster(remoteClusterName))
 		scope := m.scope.Tagged(metrics.TargetClusterTag(remoteClusterName))
 
@@ -154,14 +146,11 @@ func (m *metricsEmitterImpl) emitMetrics() {
 	}
 }
 
-func (m *metricsEmitterImpl) determineReplicationLatency(remoteClusterName string) (time.Duration, error) {
+func (m *MetricsEmitterImpl) determineReplicationLatency(remoteClusterName string) (time.Duration, error) {
 	logger := m.logger.WithTags(tag.RemoteCluster(remoteClusterName))
 	lastReadTaskID := m.shardData.GetClusterReplicationLevel(remoteClusterName)
-	maxReadLevel := m.shardData.GetTransferMaxReadLevel()
 
-	// TODO I should probably use task_store instead to get from cache, even though I don't need it hydrated
-	// TODO Do I need to use a different context? Or add a deadline / cancellation?
-	tasks, _, err := m.reader.Read(ctx.Background(), lastReadTaskID, maxReadLevel)
+	tasks, _, err := m.reader.Read(ctx.Background(), lastReadTaskID, lastReadTaskID+1)
 	if err != nil {
 		logger.Error("Error reading", tag.Error(err))
 		return 0, err

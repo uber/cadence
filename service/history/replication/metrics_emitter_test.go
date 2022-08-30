@@ -1,15 +1,39 @@
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package replication
 
 import (
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	"testing"
-	"time"
 )
 
 var (
@@ -25,7 +49,7 @@ func TestMetricsEmitter(t *testing.T) {
 		cluster2: {Enabled: true},
 		cluster3: {Enabled: true},
 	})
-	testShardData := newTestShardData(t, timeSource, 1, metadata)
+	testShardData := newTestShardData(timeSource, 1, metadata)
 	timeSource.Update(time.Unix(10000, 0))
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
@@ -64,7 +88,7 @@ type testShardData struct {
 	metadata                cluster.Metadata
 }
 
-func newTestShardData(t *testing.T, timeSource clock.TimeSource, shardID int, metadata cluster.Metadata) testShardData {
+func newTestShardData(timeSource clock.TimeSource, shardID int, metadata cluster.Metadata) testShardData {
 	remotes := metadata.GetRemoteClusterInfo()
 	clusterReplicationLevels := make(map[string]int64, len(remotes))
 	for remote := range remotes {
@@ -75,7 +99,6 @@ func newTestShardData(t *testing.T, timeSource clock.TimeSource, shardID int, me
 		logger:                  log.NewNoop(),
 		timeSource:              timeSource,
 		metadata:                metadata,
-		maxReadLevel:            1000,
 		clusterReplicationLevel: clusterReplicationLevels,
 	}
 }
@@ -86,10 +109,6 @@ func (t testShardData) GetShardID() int {
 
 func (t testShardData) GetLogger() log.Logger {
 	return t.logger
-}
-
-func (t testShardData) GetTransferMaxReadLevel() int64 {
-	return t.maxReadLevel
 }
 
 func (t testShardData) GetClusterReplicationLevel(cluster string) int64 {

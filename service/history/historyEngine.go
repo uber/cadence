@@ -115,7 +115,7 @@ type (
 		replicationAckManager      replication.TaskAckManager
 		replicationTaskStore       *replication.TaskStore
 		replicationHydrator        replication.TaskHydrator
-		replicationMetricsEmitter  replication.MetricsEmitter
+		replicationMetricsEmitter  *replication.MetricsEmitterImpl
 		publicClient               workflowserviceclient.Interface
 		eventsReapplier            ndc.EventsReapplier
 		matchingClient             matching.Client
@@ -228,8 +228,9 @@ func NewEngineWithShardContext(
 			replicationReader,
 			replicationTaskStore,
 		),
-		replicationTaskStore:      replicationTaskStore,
-		replicationMetricsEmitter: replication.NewMetricsEmitter(shard, replicationReader, shard.GetMetricsClient()),
+		replicationTaskStore: replicationTaskStore,
+		replicationMetricsEmitter: replication.NewMetricsEmitter(
+			shard.GetShardID(), shard, replicationReader, shard.GetMetricsClient()),
 	}
 	historyEngImpl.decisionHandler = decision.NewHandler(
 		shard,
