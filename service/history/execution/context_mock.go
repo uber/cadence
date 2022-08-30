@@ -35,7 +35,7 @@ import (
 
 	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/events"
+	events "github.com/uber/cadence/service/history/events"
 )
 
 // MockContext is a mock of Context interface.
