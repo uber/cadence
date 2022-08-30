@@ -49,14 +49,14 @@ func TestMetricsEmitter(t *testing.T) {
 		cluster2: {Enabled: true},
 		cluster3: {Enabled: true},
 	})
-	testShardData := newTestShardData(timeSource, 1, metadata)
+	testShardData := newTestShardData(timeSource, metadata)
 	timeSource.Update(time.Unix(10000, 0))
 
 	task1 := persistence.ReplicationTaskInfo{TaskID: 1, CreationTime: timeSource.Now().Add(-time.Hour).UnixNano()}
 	task2 := persistence.ReplicationTaskInfo{TaskID: 2, CreationTime: timeSource.Now().Add(-time.Minute).UnixNano()}
 	reader := fakeTaskReader{&task1, &task2}
 
-	metricsEmitter := NewMetricsEmitter(testShardData, reader, metrics.NewNoopMetricsClient())
+	metricsEmitter := NewMetricsEmitter(1, testShardData, reader, metrics.NewNoopMetricsClient())
 	latency, err := metricsEmitter.determineReplicationLatency(cluster2)
 	assert.NoError(t, err)
 	assert.Equal(t, time.Hour, latency)
@@ -88,23 +88,18 @@ type testShardData struct {
 	metadata                cluster.Metadata
 }
 
-func newTestShardData(timeSource clock.TimeSource, shardID int, metadata cluster.Metadata) testShardData {
+func newTestShardData(timeSource clock.TimeSource, metadata cluster.Metadata) testShardData {
 	remotes := metadata.GetRemoteClusterInfo()
 	clusterReplicationLevels := make(map[string]int64, len(remotes))
 	for remote := range remotes {
-		clusterReplicationLevels[remote] = 0
+		clusterReplicationLevels[remote] = 1
 	}
 	return testShardData{
-		shardID:                 shardID,
 		logger:                  log.NewNoop(),
 		timeSource:              timeSource,
 		metadata:                metadata,
 		clusterReplicationLevel: clusterReplicationLevels,
 	}
-}
-
-func (t testShardData) GetShardID() int {
-	return t.shardID
 }
 
 func (t testShardData) GetLogger() log.Logger {
