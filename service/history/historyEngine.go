@@ -161,7 +161,6 @@ func NewEngineWithShardContext(
 	failoverMarkerNotifier := failover.NewMarkerNotifier(shard, config, failoverCoordinator)
 	replicationHydrator := replication.NewDeferredTaskHydrator(shard.GetShardID(), historyV2Manager, executionCache, shard.GetDomainCache())
 	replicationTaskStore := replication.NewTaskStore(
-		shard.GetShardID(),
 		shard.GetConfig(),
 		shard.GetClusterMetadata(),
 		shard.GetDomainCache(),
