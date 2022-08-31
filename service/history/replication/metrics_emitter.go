@@ -120,6 +120,7 @@ func (m *MetricsEmitterImpl) Stop() {
 func (m *MetricsEmitterImpl) emitMetricsLoop() {
 	ticker := time.NewTicker(metricsEmissionInterval)
 	defer ticker.Stop()
+	defer func() { log.CapturePanic(recover(), m.logger, nil) }()
 
 	for {
 		select {
