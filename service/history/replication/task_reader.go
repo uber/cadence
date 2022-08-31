@@ -64,6 +64,12 @@ func NewDynamicTaskReader(
 // If replication lag is less than config.ReplicatorUpperLatency it will be proportionally smaller.
 // Otherwise default batch size of config.ReplicatorProcessorFetchTasksBatchSize will be used.
 func (r *DynamicTaskReader) Read(ctx context.Context, readLevel int64, maxReadLevel int64) ([]*persistence.ReplicationTaskInfo, bool, error) {
+	// Check if it is even possible to return any results.
+	// If not return early with empty response. Do not hit persistence.
+	if readLevel >= maxReadLevel {
+		return nil, false, nil
+	}
+
 	request := persistence.GetReplicationTasksRequest{
 		ReadLevel:    readLevel,
 		MaxReadLevel: maxReadLevel,
