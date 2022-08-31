@@ -153,7 +153,9 @@ func (m *MetricsEmitterImpl) determineReplicationLatency(remoteClusterName strin
 
 	tasks, _, err := m.reader.Read(ctx.Background(), lastReadTaskID, lastReadTaskID+1)
 	if err != nil {
-		logger.Error("Error reading", tag.Error(err))
+		logger.Error(fmt.Sprintf(
+			"Error reading when determining replication latency, lastReadTaskID=%v", lastReadTaskID),
+			tag.Error(err))
 		return 0, err
 	}
 	logger.Debug("Number of tasks retrieved", tag.Number(int64(len(tasks))))
