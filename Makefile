@@ -519,16 +519,16 @@ test: bins ## Build and run all tests. This target is for local development. The
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q echo Running special test cases without race detector:
-	$Q go test -v ./cmd/server/cadence/ $(TEST_FLAGS)
+	$Q go test -v ./cmd/server/cadence/
 	$Q for dir in $(PKG_TEST_DIRS); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) $(TEST_FLAGS) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 test_e2e: bins
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q for dir in $(INTEG_TEST_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) $(TEST_FLAGS) | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 # need to run end-to-end xdc tests with race detector off because of ringpop bug causing data race issue
@@ -536,7 +536,7 @@ test_e2e_xdc: bins
 	$Q rm -f test
 	$Q rm -f test.log
 	$Q for dir in $(INTEG_TEST_XDC_ROOT); do \
-		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) $(TEST_FLAGS)  | tee -a test.log; \
+		go test $(TEST_ARG) -coverprofile=$@ "$$dir" $(TEST_TAG) | tee -a test.log; \
 	done;
 
 cover_profile: bins
@@ -545,11 +545,11 @@ cover_profile: bins
 	$Q echo "mode: atomic" > $(UNIT_COVER_FILE)
 
 	$Q echo Running special test cases without race detector:
-	$Q go test -v ./cmd/server/cadence/ $(TEST_FLAGS)
+	$Q go test -v ./cmd/server/cadence/
 	$Q echo Running package tests:
 	$Q for dir in $(PKG_TEST_DIRS); do \
 		mkdir -p $(BUILD)/"$$dir"; \
-		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out $(TEST_FLAGS) || exit 1; \
+		go test "$$dir" $(TEST_ARG) -coverprofile=$(BUILD)/"$$dir"/coverage.out || exit 1; \
 		cat $(BUILD)/"$$dir"/coverage.out | grep -v "^mode: \w\+" >> $(UNIT_COVER_FILE); \
 	done;
 
@@ -560,7 +560,7 @@ cover_integration_profile: bins
 
 	$Q echo Running integration test with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
 	$Q mkdir -p $(BUILD)/$(INTEG_TEST_DIR)
-	$Q time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) $(TEST_FLAGS) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
+	$Q time go test $(INTEG_TEST_ROOT) $(TEST_ARG) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_DIR)/coverage.out || exit 1;
 	$Q cat $(BUILD)/$(INTEG_TEST_DIR)/coverage.out | grep -v "^mode: \w\+" >> $(INTEG_COVER_FILE)
 
 cover_ndc_profile: bins
@@ -570,7 +570,7 @@ cover_ndc_profile: bins
 
 	$Q echo Running integration test for 3+ dc with $(PERSISTENCE_TYPE) $(PERSISTENCE_PLUGIN)
 	$Q mkdir -p $(BUILD)/$(INTEG_TEST_NDC_DIR)
-	$Q time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) $(TEST_FLAGS) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
+	$Q time go test -v -timeout $(TEST_TIMEOUT) $(INTEG_TEST_NDC_ROOT) $(TEST_TAG) -persistenceType=$(PERSISTENCE_TYPE) -sqlPluginName=$(PERSISTENCE_PLUGIN) $(GOCOVERPKG_ARG) -coverprofile=$(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out -count=$(TEST_RUN_COUNT) || exit 1;
 	$Q cat $(BUILD)/$(INTEG_TEST_NDC_DIR)/coverage.out | grep -v "^mode: \w\+" | grep -v "mode: set" >> $(INTEG_NDC_COVER_FILE)
 
 $(COVER_ROOT)/cover.out: $(UNIT_COVER_FILE) $(INTEG_COVER_FILE_CASS) $(INTEG_COVER_FILE_MYSQL) $(INTEG_COVER_FILE_POSTGRES) $(INTEG_NDC_COVER_FILE_CASS) $(INTEG_NDC_COVER_FILE_MYSQL) $(INTEG_NDC_COVER_FILE_POSTGRES)
