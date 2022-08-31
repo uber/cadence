@@ -23,31 +23,26 @@
 package events
 
 import (
-	"bytes"
+	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/uber/cadence/common/persistence"
 )
 
-type (
-	// PersistedBlob is a wrapper on persistence.DataBlob with additional field indicating what was persisted.
-	// Additional fields are used as an identification key among other blobs.
-	PersistedBlob struct {
-		persistence.DataBlob
-
-		BranchToken  []byte
-		FirstEventID int64
+func TestPersistedBlobs_Find(t *testing.T) {
+	blob1 := persistence.DataBlob{Data: []byte{1, 2, 3}}
+	blob2 := persistence.DataBlob{Data: []byte{4, 5, 6}}
+	blob3 := persistence.DataBlob{Data: []byte{7, 8, 9}}
+	branchA := []byte{11, 11, 11}
+	branchB := []byte{22, 22, 22}
+	persistedBlobs := PersistedBlobs{
+		PersistedBlob{BranchToken: branchA, FirstEventID: 100, DataBlob: blob1},
+		PersistedBlob{BranchToken: branchA, FirstEventID: 105, DataBlob: blob2},
+		PersistedBlob{BranchToken: branchB, FirstEventID: 100, DataBlob: blob3},
 	}
-	// PersistedBlobs is a slice of PersistedBlob
-	PersistedBlobs []PersistedBlob
-)
-
-// Find searches for persisted event blob. Returns nil when not found.
-func (blobs PersistedBlobs) Find(branchToken []byte, firstEventID int64) *persistence.DataBlob {
-	// Linear search is ok here, as we will only have 1-2 persisted blobs per transaction
-	for _, blob := range blobs {
-		if bytes.Equal(blob.BranchToken, branchToken) && blob.FirstEventID == firstEventID {
-			return &blob.DataBlob
-		}
-	}
-	return nil
+	assert.Equal(t, blob1, *persistedBlobs.Find(branchA, 100))
+	assert.Equal(t, blob2, *persistedBlobs.Find(branchA, 105))
+	assert.Equal(t, blob3, *persistedBlobs.Find(branchB, 100))
+	assert.Nil(t, persistedBlobs.Find(branchB, 105))
+	assert.Nil(t, persistedBlobs.Find([]byte{99}, 100))
 }
