@@ -233,6 +233,7 @@ type (
 		TaskList      string
 		IsCron        bool
 		NumClusters   int16
+		UpdateTime    int64
 		Attr          map[string]interface{}
 	}
 

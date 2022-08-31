@@ -110,6 +110,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		0, // will not be used
 		0, // will not be used
 		0, // will not be used
+		0, // will be updated when workflow execution updates
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -137,6 +138,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		request.CloseTimestamp.UnixNano(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -178,6 +180,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		0, // will not be used
 		0, // will not be used
 		0, // will not be used
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -749,6 +752,7 @@ func createVisibilityMessage(
 	endTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
 	historyLength int64, // close execution
+	updateTimeUnixNano int64, // update execution
 ) *indexer.Message {
 	msgType := indexer.MessageTypeIndex
 
@@ -759,6 +763,7 @@ func createVisibilityMessage(
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
+		es.UpdateTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
 	}
 
 	if len(memo) != 0 {

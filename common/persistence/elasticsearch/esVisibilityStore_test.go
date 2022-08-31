@@ -187,6 +187,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.HistoryLength = int64(20)
 	request.IsCron = false
 	request.NumClusters = 2
+	request.UpdateTimestamp = time.Unix(0, int64(213))
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -204,6 +205,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		s.Equal(indexer.VisibilityOperationRecordClosed, *input.VisibilityOperation)
+		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
 		return true
 	})).Return(nil).Once()
 

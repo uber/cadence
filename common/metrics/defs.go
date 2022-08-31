@@ -2645,7 +2645,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		UnbufferReplicationTaskTimer:                        {metricName: "unbuffer_replication_tasks", metricType: Timer},
 		HistoryConflictsCounter:                             {metricName: "history_conflicts", metricType: Counter},
 		CompleteTaskFailedCounter:                           {metricName: "complete_task_fail_count", metricType: Counter},
-		CacheSize:                                           {metricName: "cache_size", metricType: Gauge},
+		CacheSize:                                           {metricName: "cache_size", metricType: Timer},
 		CacheRequests:                                       {metricName: "cache_requests", metricType: Counter},
 		CacheFailures:                                       {metricName: "cache_errors", metricType: Counter},
 		CacheLatency:                                        {metricName: "cache_latency", metricType: Timer},
