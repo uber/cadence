@@ -42,7 +42,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-cassandra"
+      - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"

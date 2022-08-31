@@ -73,7 +73,10 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-cassandra -mysql -postgres -mongodb"
+      - "CASSANDRA=1"
+      - "MYSQL=1"
+      - "POSTGRES=1"
+      - "MONGODB=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "MYSQL_SEEDS=mysql"
       - "POSTGRES_SEEDS=postgres"
@@ -100,7 +103,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-cassandra"
+      - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -126,7 +129,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-mysql"
+      - "MYSQL=1"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -154,7 +157,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-postgres"
+      - "POSTGRES=1"
       - "POSTGRES_SEEDS=postgres"
       - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
@@ -182,7 +185,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-cassandra"
+      - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -208,7 +211,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-mysql"
+      - "MYSQL=1"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -236,7 +239,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
-      - "TEST_FLAGS=-postgres"
+      - "POSTGRES=1"
       - "POSTGRES_SEEDS=postgres"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
