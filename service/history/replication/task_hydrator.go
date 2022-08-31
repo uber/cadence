@@ -317,7 +317,7 @@ type immediateMutableState struct {
 }
 
 func (ms immediateMutableState) IsWorkflowExecutionRunning() bool {
-	// Online mutable state is always running
+	// Immediate mutable state is always running
 	return true
 }
 func (ms immediateMutableState) GetActivityInfo(id int64) (*persistence.ActivityInfo, bool) {
