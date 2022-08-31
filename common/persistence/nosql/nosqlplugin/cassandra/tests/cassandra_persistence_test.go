@@ -78,14 +78,14 @@ func TestCassandraExecutionManagerWithEventsV2(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestQueuePersistence(t *testing.T) {
+func TestCassandraQueuePersistence(t *testing.T) {
 	s := new(persistencetests.QueuePersistenceSuite)
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestConfigStorePersistence(t *testing.T) {
+func TestCassandraConfigStorePersistence(t *testing.T) {
 	s := new(persistencetests.ConfigStorePersistenceSuite)
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{})
 	s.TestBase.Setup()

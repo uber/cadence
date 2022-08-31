@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/environment"
 )
 
-func TestConfigStorePersistence(t *testing.T) {
+func TestMongoDBConfigStorePersistence(t *testing.T) {
 	s := new(persistencetests.ConfigStorePersistenceSuite)
 	s.TestBase = NewTestBaseWithMongo()
 	s.TestBase.Setup()
@@ -63,7 +63,7 @@ func TestConfigStorePersistence(t *testing.T) {
 // }
 
 // TODO uncomment the test once MessageQueueCRUD is implemented
-// func TestQueuePersistence(t *testing.T) {
+// func TestMongoDBQueuePersistence(t *testing.T) {
 // 	s := new(persistencetests.QueuePersistenceSuite)
 // 	s.TestBase = NewTestBaseWithMongo()
 // 	s.TestBase.Setup()
@@ -71,7 +71,7 @@ func TestConfigStorePersistence(t *testing.T) {
 // }
 
 // TODO uncomment the test once ShardCRUD is implemented
-// func TestCassandraShardPersistence(t *testing.T) {
+// func TestMongoDBShardPersistence(t *testing.T) {
 // 	s := new(persistencetests.ShardPersistenceSuite)
 // 	s.TestBase = NewTestBaseWithMongo()
 // 	s.TestBase.Setup()
@@ -79,7 +79,7 @@ func TestConfigStorePersistence(t *testing.T) {
 // }
 
 // TODO uncomment the test once VisibilityCRUD is implemented
-// func TestCassandraVisibilityPersistence(t *testing.T) {
+// func TestMongoDBVisibilityPersistence(t *testing.T) {
 // 	s := new(persistencetests.DBVisibilityPersistenceSuite)
 // 	s.TestBase = NewTestBaseWithMongo()
 // 	s.TestBase.Setup()
@@ -87,7 +87,7 @@ func TestConfigStorePersistence(t *testing.T) {
 // }
 
 // TODO uncomment the test once WorkflowCRUD is implemented
-// func TestCassandraExecutionManager(t *testing.T) {
+// func TestMongoDBExecutionManager(t *testing.T) {
 // 	s := new(persistencetests.ExecutionManagerSuite)
 // 	s.TestBase = NewTestBaseWithMongo()
 // 	s.TestBase.Setup()
@@ -95,7 +95,7 @@ func TestConfigStorePersistence(t *testing.T) {
 // }
 
 // TODO uncomment the test once WorkflowCRUD is implemented
-// func TestCassandraExecutionManagerWithEventsV2(t *testing.T) {
+// func TestMongoDBExecutionManagerWithEventsV2(t *testing.T) {
 // 	s := new(persistencetests.ExecutionManagerSuiteForEventsV2)
 // 	s.TestBase = NewTestBaseWithMongo()
 // 	s.TestBase.Setup()

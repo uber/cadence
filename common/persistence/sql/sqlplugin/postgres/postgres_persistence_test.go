@@ -28,49 +28,49 @@ import (
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
 )
 
-func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
+func TestPostgresSQLHistoryV2PersistenceSuite(t *testing.T) {
 	s := new(pt.HistoryV2PersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLMatchingPersistenceSuite(t *testing.T) {
+func TestPostgresSQLMatchingPersistenceSuite(t *testing.T) {
 	s := new(pt.MatchingPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLMetadataPersistenceSuiteV2(t *testing.T) {
+func TestPostgresSQLMetadataPersistenceSuiteV2(t *testing.T) {
 	s := new(pt.MetadataPersistenceSuiteV2)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLShardPersistenceSuite(t *testing.T) {
+func TestPostgresSQLShardPersistenceSuite(t *testing.T) {
 	s := new(pt.ShardPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLExecutionManagerSuite(t *testing.T) {
+func TestPostgresSQLExecutionManagerSuite(t *testing.T) {
 	s := new(pt.ExecutionManagerSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLExecutionManagerWithEventsV2(t *testing.T) {
+func TestPostgresSQLExecutionManagerWithEventsV2(t *testing.T) {
 	s := new(pt.ExecutionManagerSuiteForEventsV2)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLVisibilityPersistenceSuite(t *testing.T) {
+func TestPostgresSQLVisibilityPersistenceSuite(t *testing.T) {
 	s := new(pt.DBVisibilityPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
@@ -80,15 +80,15 @@ func TestSQLVisibilityPersistenceSuite(t *testing.T) {
 // TODO flaky test in buildkite
 // https://github.com/uber/cadence/issues/2877
 /*
-FAIL: TestSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
+FAIL: TestPostgresSQLQueuePersistence/TestDomainReplicationQueue (0.26s)
         queuePersistenceTest.go:102:
             	Error Trace:	queuePersistenceTest.go:102
             	Error:      	Not equal:
             	            	expected: 99
             	            	actual  : 98
-            	Test:       	TestSQLQueuePersistence/TestDomainReplicationQueue
+            	Test:       	TestPostgresSQLQueuePersistence/TestDomainReplicationQueue
 */
-//func TestSQLQueuePersistence(t *testing.T) {
+//func TestPostgresSQLQueuePersistence(t *testing.T) {
 //	s := new(pt.QueuePersistenceSuite)
 //	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 //	s.TestBase.Setup()
