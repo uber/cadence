@@ -26,7 +26,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common/backoff"
@@ -60,6 +59,8 @@ type TaskStore struct {
 
 	scope  metrics.Scope
 	logger log.Logger
+
+	lastLogTime time.Time
 }
 
 type (
@@ -73,7 +74,6 @@ type (
 
 // NewTaskStore create new instance of TaskStore
 func NewTaskStore(
-	shardID int,
 	config *config.Config,
 	clusterMetadata cluster.Metadata,
 	domains domainCache,
@@ -99,10 +99,7 @@ func NewTaskStore(
 			backoff.WithRetryPolicy(retryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
-		scope: metricsClient.Scope(
-			metrics.ReplicatorCacheManagerScope,
-			metrics.InstanceTag(strconv.Itoa(shardID)),
-		),
+		scope:       metricsClient.Scope(metrics.ReplicatorCacheManagerScope),
 		logger:      logger.WithTags(tag.ComponentReplicationCacheManager),
 		rateLimiter: quotas.NewDynamicRateLimiter(config.ReplicationTaskGenerationQPS.AsFloat64()),
 	}
@@ -189,12 +186,19 @@ func (m *TaskStore) Put(task *types.ReplicationTask) {
 		switch err {
 		case errCacheFull:
 			scope.IncCounter(metrics.CacheFullCounter)
+
+			// This will help debug which shard is full. Logger already has ShardID tag attached.
+			// Log only once a minute to not flood the logs.
+			if time.Since(m.lastLogTime) > time.Minute {
+				m.logger.Warn("Replication cache is full")
+				m.lastLogTime = time.Now()
+			}
 		case errAlreadyAcked:
 			// No action, this is expected.
 			// Some cluster(s) may be already past this, due to different fetch rates.
 		}
 
-		scope.UpdateGauge(metrics.CacheSize, float64(cache.Size()))
+		scope.RecordTimer(metrics.CacheSize, time.Duration(cache.Size()))
 	}
 }
 
@@ -209,7 +213,7 @@ func (m *TaskStore) Ack(cluster string, lastTaskID int64) error {
 	cache.Ack(lastTaskID)
 
 	scope := m.scope.Tagged(metrics.SourceClusterTag(cluster))
-	scope.UpdateGauge(metrics.CacheSize, float64(cache.Size()))
+	scope.RecordTimer(metrics.CacheSize, time.Duration(cache.Size()))
 
 	return nil
 }

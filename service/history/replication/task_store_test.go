@@ -155,7 +155,7 @@ func createTestTaskStore(domains domainCache, hydrator taskHydrator) *TaskStore 
 		testClusterC: {Enabled: true},
 	})
 
-	return NewTaskStore(1, &cfg, clusterMetadata, domains, metrics.NewNoopMetricsClient(), log.NewNoop(), hydrator)
+	return NewTaskStore(&cfg, clusterMetadata, domains, metrics.NewNoopMetricsClient(), log.NewNoop(), hydrator)
 }
 
 type fakeDomainCache map[string]*cache.DomainCacheEntry
