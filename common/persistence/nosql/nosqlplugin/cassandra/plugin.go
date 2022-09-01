@@ -95,8 +95,8 @@ func toGoCqlConfig(cfg *config.NoSQL) gocql.ClusterConfig {
 		MaxConns:              cfg.MaxConns,
 		TLS:                   cfg.TLS,
 		ProtoVersion:          cfg.ProtoVersion,
-		Consistency:           gocql.LocalQuorum,
-		SerialConsistency:     gocql.LocalSerial,
+		Consistency:           cassandraDefaultConsLevel,
+		SerialConsistency:     cassandraDefaultSerialConsLevel,
 		Timeout:               defaultSessionTimeout,
 		ConnectTimeout:        defaultConnectTimeout,
 	}

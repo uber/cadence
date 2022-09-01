@@ -299,7 +299,7 @@ func (db *cdb) DeleteCurrentWorkflow(ctx context.Context, shardID int, domainID,
 		currentRunIDCondition,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainID, workflowID, runID string) error {
@@ -313,7 +313,7 @@ func (db *cdb) DeleteWorkflowExecution(ctx context.Context, shardID int, domainI
 		rowTypeExecutionTaskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) SelectAllCurrentWorkflows(ctx context.Context, shardID int, pageToken []byte, pageSize int) ([]*p.CurrentWorkflowExecution, []byte, error) {
@@ -456,7 +456,7 @@ func (db *cdb) DeleteTransferTask(ctx context.Context, shardID int, taskID int64
 		taskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
@@ -471,7 +471,7 @@ func (db *cdb) RangeDeleteTransferTasks(ctx context.Context, shardID int, exclus
 		inclusiveEndTaskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) SelectTimerTasksOrderByVisibilityTime(ctx context.Context, shardID, pageSize int, pageToken []byte, inclusiveMinTime, exclusiveMaxTime time.Time) ([]*nosqlplugin.TimerTask, []byte, error) {
@@ -522,7 +522,7 @@ func (db *cdb) DeleteTimerTask(ctx context.Context, shardID int, taskID int64, v
 		taskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusiveMinTime, exclusiveMaxTime time.Time) error {
@@ -538,7 +538,7 @@ func (db *cdb) RangeDeleteTimerTasks(ctx context.Context, shardID int, inclusive
 		end,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) SelectReplicationTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.ReplicationTask, []byte, error) {
@@ -567,7 +567,7 @@ func (db *cdb) DeleteReplicationTask(ctx context.Context, shardID int, taskID in
 		taskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) RangeDeleteReplicationTasks(ctx context.Context, shardID int, inclusiveEndTaskID int64) error {
@@ -581,7 +581,7 @@ func (db *cdb) RangeDeleteReplicationTasks(ctx context.Context, shardID int, inc
 		inclusiveEndTaskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) SelectCrossClusterTasksOrderByTaskID(ctx context.Context, shardID, pageSize int, pageToken []byte, targetCluster string, exclusiveMinTaskID, inclusiveMaxTaskID int64) ([]*nosqlplugin.CrossClusterTask, []byte, error) {
@@ -632,7 +632,7 @@ func (db *cdb) DeleteCrossClusterTask(ctx context.Context, shardID int, targetCl
 		taskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) RangeDeleteCrossClusterTasks(ctx context.Context, shardID int, targetCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
@@ -725,7 +725,7 @@ func (db *cdb) DeleteReplicationDLQTask(ctx context.Context, shardID int, source
 		taskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, sourceCluster string, exclusiveBeginTaskID, inclusiveEndTaskID int64) error {
@@ -740,7 +740,7 @@ func (db *cdb) RangeDeleteReplicationDLQTasks(ctx context.Context, shardID int, 
 		inclusiveEndTaskID,
 	).WithContext(ctx)
 
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 func (db *cdb) InsertReplicationTask(ctx context.Context, tasks []*nosqlplugin.ReplicationTask, shardCondition nosqlplugin.ShardCondition) error {
