@@ -18,19 +18,11 @@ if [ "$BUILDKITE_COMMIT" != "$MASTER_SHA" ]; then
     exit 0
 fi
 
-echo "Building docker image for $BUILDKITE_MESSAGE"
+scripts/buildkite/docker-build.sh
 
-docker build . -f Dockerfile -t ubercadence/server:master --build-arg TARGET=server
+echo "Pushing docker images for $BUILDKITE_MESSAGE"
 docker push ubercadence/server:master
-
-docker build . -f Dockerfile -t ubercadence/server:master-auto-setup --build-arg TARGET=auto-setup
 docker push ubercadence/server:master-auto-setup
-
-docker build . -f Dockerfile -t ubercadence/cli:master --build-arg TARGET=cli
 docker push ubercadence/cli:master
-
-docker build . -f Dockerfile -t ubercadence/cadence-bench:master --build-arg TARGET=bench
 docker push ubercadence/cadence-bench:master
-
-docker build . -f Dockerfile -t ubercadence/cadence-canary:master --build-arg TARGET=canary
 docker push ubercadence/cadence-canary:master

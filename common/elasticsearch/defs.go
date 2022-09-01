@@ -39,6 +39,7 @@ const (
 	IsCron              = "IsCron"
 	NumClusters         = "NumClusters"
 	VisibilityOperation = "VisibilityOperation"
+	UpdateTime          = "UpdateTime"
 
 	KafkaKey = "KafkaKey"
 )

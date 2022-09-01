@@ -52,6 +52,9 @@
         "NumClusters": {
           "type": "integer"
         },
+        "UpdateTime": {
+          "type": "long"
+        },
         "Attr": {
           "properties": {
             "CadenceChangeVersion":  { "type": "keyword" },

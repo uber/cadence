@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -314,11 +315,18 @@ func (db *cdb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 		rowTypeTaskList,
 		taskListTaskID,
 		previousRangeID,
-	).WithContext(ctx)
+	).WithContext(ctx).Consistency(cassandraAllConslevel)
 	previous := make(map[string]interface{})
 	applied, err := query.MapScanCAS(previous)
 	if err != nil {
-		return err
+		if !db.isCassandraConsistencyError(err) {
+			return err
+		}
+		db.logger.Warn("unable to complete the delete operation due to consistency issue", tag.Error(err))
+		applied, err = query.Consistency(cassandraDefaultConsLevel).MapScanCAS(previous)
+		if err != nil {
+			return err
+		}
 	}
 	return handleTaskListAppliedError(applied, previous)
 }
@@ -473,6 +481,5 @@ func (db *cdb) RangeDeleteTasks(ctx context.Context, filter *nosqlplugin.TasksFi
 		filter.MinTaskID,
 		filter.MaxTaskID,
 	).WithContext(ctx)
-	err = query.Exec()
-	return p.UnknownNumRowsAffected, err
+	return p.UnknownNumRowsAffected, db.executeWithConsistencyAll(query)
 }

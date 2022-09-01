@@ -450,8 +450,16 @@ func (p *taskProcessorImpl) processTaskOnce(replicationTask *types.ReplicationTa
 	} else {
 		now := ts.Now()
 		mScope := p.metricsClient.Scope(scope, metrics.TargetClusterTag(p.sourceCluster))
+		domainID := replicationTask.HistoryTaskV2Attributes.GetDomainID()
+		if domainID != "" {
+			domainName, errorDomainName := p.shard.GetDomainCache().GetDomainName(domainID)
+			if errorDomainName != nil {
+				return errorDomainName
+			}
+			mScope = mScope.Tagged(metrics.DomainTag(domainName))
+		}
 		// emit the number of replication tasks
-		mScope.IncCounter(metrics.ReplicationTasksApplied)
+		mScope.IncCounter(metrics.ReplicationTasksAppliedPerDomain)
 		// emit single task processing latency
 		mScope.RecordTimer(metrics.TaskProcessingLatency, now.Sub(startTime))
 		// emit latency from task generated to task received
