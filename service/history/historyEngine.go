@@ -2990,6 +2990,7 @@ func hydrateReplicationTask(
 	}
 
 	hydrator := replication.NewImmediateTaskHydrator(
+		exec.IsRunning(),
 		versionHistories,
 		activities,
 		history.Find(info.BranchToken, info.FirstEventID),

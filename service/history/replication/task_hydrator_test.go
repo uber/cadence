@@ -758,7 +758,7 @@ func TestImmediateTaskHydrator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewImmediateTaskHydrator(tt.versionHistories, tt.activities, tt.blob, tt.nextRunBlob)
+			h := NewImmediateTaskHydrator(true, tt.versionHistories, tt.activities, tt.blob, tt.nextRunBlob)
 			result, err := h.Hydrate(context.Background(), tt.task)
 
 			if tt.expectErr != "" {

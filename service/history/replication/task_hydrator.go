@@ -61,10 +61,10 @@ type (
 )
 
 // NewImmediateTaskHydrator will enrich replication tasks with additional information that is immediately available.
-func NewImmediateTaskHydrator(vh *persistence.VersionHistories, activities map[int64]*persistence.ActivityInfo, blob, nextBlob *persistence.DataBlob) TaskHydrator {
+func NewImmediateTaskHydrator(isRunning bool, vh *persistence.VersionHistories, activities map[int64]*persistence.ActivityInfo, blob, nextBlob *persistence.DataBlob) TaskHydrator {
 	return TaskHydrator{
 		history:    immediateHistoryProvider{blob, nextBlob},
-		msProvider: immediateMutableStateProvider{immediateMutableState{activities, vh}},
+		msProvider: immediateMutableStateProvider{immediateMutableState{isRunning, activities, vh}},
 	}
 }
 
@@ -312,13 +312,13 @@ func (r immediateMutableStateProvider) GetMutableState(ctx context.Context, doma
 }
 
 type immediateMutableState struct {
+	isRunning        bool
 	activities       map[int64]*persistence.ActivityInfo
 	versionHistories *persistence.VersionHistories
 }
 
 func (ms immediateMutableState) IsWorkflowExecutionRunning() bool {
-	// Immediate mutable state is always running
-	return true
+	return ms.isRunning
 }
 func (ms immediateMutableState) GetActivityInfo(id int64) (*persistence.ActivityInfo, bool) {
 	info, ok := ms.activities[id]
