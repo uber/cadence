@@ -119,7 +119,9 @@ func TestDynamicTaskReader(t *testing.T) {
 			expectResponse: testReplicationTasks,
 		},
 		{
-			name: "ensure last creation time is updated",
+			name:         "ensure last creation time is updated",
+			readLevel:    50,
+			maxReadLevel: 100,
 			prepareExecutions: func(m *persistence.MockExecutionManager) {
 				m.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(&persistence.GetReplicationTasksResponse{Tasks: testReplicationTasks}, nil)
 			},
@@ -127,11 +129,22 @@ func TestDynamicTaskReader(t *testing.T) {
 			expectCreateTime: testTime.Add(-1 * time.Second),
 		},
 		{
-			name: "failed to read replication tasks - return error",
+			name:         "failed to read replication tasks - return error",
+			readLevel:    50,
+			maxReadLevel: 100,
 			prepareExecutions: func(m *persistence.MockExecutionManager) {
 				m.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Return(nil, errors.New("failed to read replication tasks"))
 			},
 			expectErr: "failed to read replication tasks",
+		},
+		{
+			name:         "do not hit persistence when no task will be returned",
+			readLevel:    50,
+			maxReadLevel: 50,
+			prepareExecutions: func(m *persistence.MockExecutionManager) {
+				m.EXPECT().GetReplicationTasks(gomock.Any(), gomock.Any()).Times(0)
+			},
+			expectResponse: nil,
 		},
 	}
 

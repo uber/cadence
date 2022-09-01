@@ -1240,16 +1240,19 @@ func (s *contextImpl) allocateTaskIDsLocked(
 	); err != nil {
 		return err
 	}
-	if err := s.allocateTransferIDsLocked(
-		replicationTasks,
-		transferMaxReadLevel,
-	); err != nil {
-		return err
-	}
-	return s.allocateTimerIDsLocked(
+	if err := s.allocateTimerIDsLocked(
 		domainEntry,
 		workflowID,
 		timerTasks,
+	); err != nil {
+		return err
+	}
+
+	// Ensure that task IDs for replication tasks are generated last.
+	// This allows optimizing replication by checking whether there no potential tasks to read.
+	return s.allocateTransferIDsLocked(
+		replicationTasks,
+		transferMaxReadLevel,
 	)
 }
 
