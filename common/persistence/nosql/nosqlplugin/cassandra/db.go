@@ -23,6 +23,7 @@ package cassandra
 import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 )
@@ -71,4 +72,30 @@ func (db *cdb) IsThrottlingError(err error) bool {
 
 func (db *cdb) IsDBUnavailableError(err error) bool {
 	return db.client.IsDBUnavailableError(err)
+}
+
+func (db *cdb) isCassandraConsistencyError(err error) bool {
+	return db.client.IsCassandraConsistencyError(err)
+}
+
+func (db *cdb) executeWithConsistencyAll(q gocql.Query) error {
+	if err := q.Consistency(cassandraAllConslevel).Exec(); err != nil {
+		if db.isCassandraConsistencyError(err) {
+			db.logger.Warn("unable to complete the delete operation due to consistency issue", tag.Error(err))
+			return q.Consistency(cassandraDefaultConsLevel).Exec()
+		}
+		return err
+	}
+	return nil
+}
+
+func (db *cdb) executeBatchWithConsistencyAll(b gocql.Batch) error {
+	if err := db.session.ExecuteBatch(b.Consistency(cassandraAllConslevel)); err != nil {
+		if db.isCassandraConsistencyError(err) {
+			db.logger.Warn("unable to complete the delete operation due to consistency issue", tag.Error(err))
+			return db.session.ExecuteBatch(b.Consistency(cassandraDefaultConsLevel))
+		}
+		return err
+	}
+	return nil
 }

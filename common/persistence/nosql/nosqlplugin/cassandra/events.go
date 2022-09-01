@@ -130,7 +130,7 @@ func (db *cdb) DeleteFromHistoryTreeAndNode(ctx context.Context, treeFilter *nos
 			nodeFilter.BranchID,
 			nodeFilter.MinNodeID)
 	}
-	return db.session.ExecuteBatch(batch)
+	return db.executeBatchWithConsistencyAll(batch)
 }
 
 // SelectAllHistoryTrees will return all tree branches with pagination
