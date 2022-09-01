@@ -45,6 +45,8 @@ func CapturePanic(errPanic interface{}, logger Logger, retError *error) {
 
 		logger.Error("Panic is captured", tag.SysStackTrace(st), tag.Error(err))
 
-		*retError = err
+		if retError != nil {
+			*retError = err
+		}
 	}
 }

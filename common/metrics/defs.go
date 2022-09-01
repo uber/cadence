@@ -1097,6 +1097,8 @@ const (
 	ReplicatorTaskSyncActivityScope
 	// ReplicateHistoryEventsScope is the scope used by historyReplicator API for applying events
 	ReplicateHistoryEventsScope
+	// ReplicationMetricEmitterScope is the scope used by all metrics emitted by replication metric emitter
+	ReplicationMetricEmitterScope
 	// ShardInfoScope is the scope used when updating shard info
 	ShardInfoScope
 	// WorkflowContextScope is the scope used by WorkflowContext component
@@ -1711,6 +1713,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		ReplicatorTaskHistoryScope:                                      {operation: "ReplicatorTaskHistory"},
 		ReplicatorTaskSyncActivityScope:                                 {operation: "ReplicatorTaskSyncActivity"},
 		ReplicateHistoryEventsScope:                                     {operation: "ReplicateHistoryEvents"},
+		ReplicationMetricEmitterScope:                                   {operation: "ReplicationMetricEmitter"},
 		ShardInfoScope:                                                  {operation: "ShardInfo"},
 		WorkflowContextScope:                                            {operation: "WorkflowContext"},
 		HistoryCacheGetAndCreateScope:                                   {operation: "HistoryCacheGetAndCreate", tags: map[string]string{CacheTypeTagName: MutableStateCacheTypeTagValue}},
@@ -1969,6 +1972,7 @@ const (
 	TaskProcessingLatencyPerDomain
 	TaskQueueLatencyPerDomain
 	TransferTaskMissingEventCounterPerDomain
+	ReplicationTasksAppliedPerDomain
 
 	TaskRedispatchQueuePendingTasksTimer
 
@@ -2141,6 +2145,7 @@ const (
 	ArchiverClientVisibilityInlineArchiveThrottledCount
 	LastRetrievedMessageID
 	LastProcessedMessageID
+	ReplicationLatency
 	ReplicationTasksApplied
 	ReplicationTasksFailed
 	ReplicationTasksLag
@@ -2527,6 +2532,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskProcessingLatencyPerDomain:           {metricName: "task_latency_processing_per_domain", metricRollupName: "task_latency_processing", metricType: Timer},
 		TaskQueueLatencyPerDomain:                {metricName: "task_latency_queue_per_domain", metricRollupName: "task_latency_queue", metricType: Timer},
 		TransferTaskMissingEventCounterPerDomain: {metricName: "transfer_task_missing_event_counter_per_domain", metricRollupName: "transfer_task_missing_event_counter", metricType: Counter},
+		ReplicationTasksAppliedPerDomain:         {metricName: "replication_tasks_applied_per_domain", metricRollupName: "replication_tasks_applied", metricType: Counter},
 
 		TaskBatchCompleteCounter:                            {metricName: "task_batch_complete_counter", metricType: Counter},
 		TaskBatchCompleteFailure:                            {metricName: "task_batch_complete_error", metricType: Counter},
@@ -2639,7 +2645,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		UnbufferReplicationTaskTimer:                        {metricName: "unbuffer_replication_tasks", metricType: Timer},
 		HistoryConflictsCounter:                             {metricName: "history_conflicts", metricType: Counter},
 		CompleteTaskFailedCounter:                           {metricName: "complete_task_fail_count", metricType: Counter},
-		CacheSize:                                           {metricName: "cache_size", metricType: Gauge},
+		CacheSize:                                           {metricName: "cache_size", metricType: Timer},
 		CacheRequests:                                       {metricName: "cache_requests", metricType: Counter},
 		CacheFailures:                                       {metricName: "cache_errors", metricType: Counter},
 		CacheLatency:                                        {metricName: "cache_latency", metricType: Timer},
@@ -2691,6 +2697,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ArchiverClientVisibilityInlineArchiveThrottledCount: {metricName: "archiver_client_visibility_inline_archive_throttled", metricType: Counter},
 		LastRetrievedMessageID:                              {metricName: "last_retrieved_message_id", metricType: Gauge},
 		LastProcessedMessageID:                              {metricName: "last_processed_message_id", metricType: Gauge},
+		ReplicationLatency:                                  {metricName: "replication_latency", metricType: Gauge},
 		ReplicationTasksApplied:                             {metricName: "replication_tasks_applied", metricType: Counter},
 		ReplicationTasksFailed:                              {metricName: "replication_tasks_failed", metricType: Counter},
 		ReplicationTasksLag:                                 {metricName: "replication_tasks_lag", metricType: Timer},
