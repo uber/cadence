@@ -447,7 +447,8 @@ func (adh *adminHandlerImpl) deleteWorkflowFromHistory(
 		}
 		domainName, err := adh.GetDomainCache().GetDomainName(mutableState.ExecutionInfo.DomainID)
 		if err != nil {
-			return false
+			logger.Error("Unexpected: Cannot fetch domain name", tag.Error(err))
+			continue
 		}
 		logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
 		err = historyManager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
@@ -481,6 +482,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
 	}
 	domainName, err := adh.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
+		logger.Error("Unexpected: Cannot fetch domain name", tag.Error(err))
 		return false
 	}
 	req := &persistence.DeleteWorkflowExecutionRequest{

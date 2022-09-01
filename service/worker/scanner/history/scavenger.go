@@ -262,7 +262,10 @@ func (s *Scavenger) startTaskProcessor(
 					}
 					domainName, err := s.domainCache.GetDomainName(task.domainID)
 					if err != nil {
-						return
+						respCh <- err
+						s.logger.Error("Unexpected: Encountered error while fetching domain name",
+							getTaskLoggingTags(err, task)...)
+						continue
 					}
 					err = s.db.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
 						BranchToken: branchToken,
