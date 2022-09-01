@@ -71,6 +71,20 @@ func (mr *MockClientMockRecorder) CreateSession(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSession", reflect.TypeOf((*MockClient)(nil).CreateSession), arg0)
 }
 
+// IsCassandraConsistencyError mocks base method.
+func (m *MockClient) IsCassandraConsistencyError(arg0 error) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCassandraConsistencyError", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsCassandraConsistencyError indicates an expected call of IsCassandraConsistencyError.
+func (mr *MockClientMockRecorder) IsCassandraConsistencyError(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCassandraConsistencyError", reflect.TypeOf((*MockClient)(nil).IsCassandraConsistencyError), arg0)
+}
+
 // IsDBUnavailableError mocks base method.
 func (m *MockClient) IsDBUnavailableError(arg0 error) bool {
 	m.ctrl.T.Helper()
@@ -451,6 +465,20 @@ func NewMockBatch(ctrl *gomock.Controller) *MockBatch {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBatch) EXPECT() *MockBatchMockRecorder {
 	return m.recorder
+}
+
+// Consistency mocks base method.
+func (m *MockBatch) Consistency(arg0 Consistency) Batch {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Consistency", arg0)
+	ret0, _ := ret[0].(Batch)
+	return ret0
+}
+
+// Consistency indicates an expected call of Consistency.
+func (mr *MockBatchMockRecorder) Consistency(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Consistency", reflect.TypeOf((*MockBatch)(nil).Consistency), arg0)
 }
 
 // Query mocks base method.

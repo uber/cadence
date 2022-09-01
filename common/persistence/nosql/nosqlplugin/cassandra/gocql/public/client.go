@@ -84,3 +84,11 @@ func (c client) IsDBUnavailableError(err error) bool {
 	}
 	return false
 }
+
+func (c client) IsCassandraConsistencyError(err error) bool {
+	if req, ok := err.(gogocql.RequestError); ok {
+		// 0x1000 == UNAVAILABLE
+		return req.Code() == 0x1000
+	}
+	return false
+}

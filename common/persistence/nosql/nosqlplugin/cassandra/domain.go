@@ -568,10 +568,10 @@ func (db *cdb) deleteDomain(
 	name, ID string,
 ) error {
 	query := db.session.Query(templateDeleteDomainByNameQueryV2, constDomainPartition, name).WithContext(ctx)
-	if err := query.Exec(); err != nil {
+	if err := db.executeWithConsistencyAll(query); err != nil {
 		return err
 	}
 
 	query = db.session.Query(templateDeleteDomainQuery, ID).WithContext(ctx)
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }

@@ -391,7 +391,7 @@ func (db *cdb) DeleteVisibility(ctx context.Context, domainID, workflowID, runID
 			record.StartTime,
 			runID,
 		).WithContext(ctx)
-		return query.Exec()
+		return db.executeWithConsistencyAll(query)
 	}
 	return nil
 }
