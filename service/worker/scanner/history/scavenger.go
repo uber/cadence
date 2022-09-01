@@ -262,6 +262,8 @@ func (s *Scavenger) startTaskProcessor(
 					}
 					domainName, err := s.domainCache.GetDomainName(task.domainID)
 					if err != nil {
+						s.logger.Error("Not able to fetch domain name",
+							getTaskLoggingTags(err, task)...)
 						return
 					}
 					err = s.db.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
