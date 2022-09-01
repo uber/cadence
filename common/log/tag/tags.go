@@ -668,6 +668,10 @@ func SourceCluster(sourceCluster string) Tag {
 	return newStringTag("xdc-source-cluster", sourceCluster)
 }
 
+func RemoteCluster(remoteCluster string) Tag {
+	return newStringTag("xdc-remote-cluster", remoteCluster)
+}
+
 // PrevActiveCluster returns tag for PrevActiveCluster
 func PrevActiveCluster(prevActiveCluster string) Tag {
 	return newStringTag("xdc-prev-active-cluster", prevActiveCluster)
