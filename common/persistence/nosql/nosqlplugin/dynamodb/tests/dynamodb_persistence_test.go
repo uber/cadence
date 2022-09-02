@@ -29,7 +29,7 @@ import (
 
 // This is to make sure adding new noop method when adding new nosql interfaces
 // Remove it when any other tests are implemented.
-func TestNoopStruct(t *testing.T) {
+func TestDynamoDBNoopStruct(t *testing.T) {
 	_, _ = dynamodb.NewDynamoDB(config.NoSQL{}, nil)
 }
 
@@ -54,7 +54,7 @@ func TestDynamoDBDomainPersistence(t *testing.T) {
 	//suite.Run(t, s)
 }
 
-func TestQueuePersistence(t *testing.T) {
+func TestDynamoDBQueuePersistence(t *testing.T) {
 	//s := new(persistencetests.QueuePersistenceSuite)
 	//s.TestBase = public.NewTestBaseWithDynamoDB(&persistencetests.TestBaseOptions{})
 	//s.TestBase.Setup()

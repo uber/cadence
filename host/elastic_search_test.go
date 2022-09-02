@@ -70,7 +70,7 @@ func TestElasticsearchIntegrationSuite(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
+	testCluster := NewPersistenceTestCluster(t, clusterConfig)
 
 	s := new(ElasticSearchIntegrationSuite)
 	params := IntegrationBaseParams{
