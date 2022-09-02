@@ -66,7 +66,7 @@ func TestNDCIntegrationTestSuite(t *testing.T) {
 	}
 	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
 	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
-	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
+	testCluster := host.NewPersistenceTestCluster(t, clusterConfigs[0])
 	params := NDCIntegrationTestSuiteParams{
 		ClusterConfigs:        clusterConfigs,
 		DefaultTestCluster:    testCluster,

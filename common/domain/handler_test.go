@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/testflags"
 )
 
 type (
@@ -67,6 +68,7 @@ type (
 var nowInt64 = time.Now().UnixNano()
 
 func TestDomainHandlerCommonSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	s := new(domainHandlerCommonSuite)
 	suite.Run(t, s)
 }
