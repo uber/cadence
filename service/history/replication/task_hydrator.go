@@ -63,7 +63,7 @@ type (
 // NewImmediateTaskHydrator will enrich replication tasks with additional information that is immediately available.
 func NewImmediateTaskHydrator(isRunning bool, vh *persistence.VersionHistories, activities map[int64]*persistence.ActivityInfo, blob, nextBlob *persistence.DataBlob) TaskHydrator {
 	return TaskHydrator{
-		history:    immediateHistoryProvider{blob, nextBlob},
+		history:    immediateHistoryProvider{blob: blob, nextBlob: nextBlob},
 		msProvider: immediateMutableStateProvider{immediateMutableState{isRunning, activities, vh}},
 	}
 }
@@ -289,14 +289,14 @@ type immediateHistoryProvider struct {
 	nextBlob *persistence.DataBlob
 }
 
-func (h immediateHistoryProvider) GetEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+func (h immediateHistoryProvider) GetEventBlob(_ context.Context, _ persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
 	if h.blob == nil {
 		return nil, errors.New("history blob not set")
 	}
 	return h.blob.ToInternal(), nil
 }
 
-func (h immediateHistoryProvider) GetNextRunEventBlob(ctx context.Context, task persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+func (h immediateHistoryProvider) GetNextRunEventBlob(_ context.Context, _ persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
 	if h.nextBlob == nil {
 		return nil, nil // Expected and common
 	}
@@ -307,7 +307,7 @@ type immediateMutableStateProvider struct {
 	ms immediateMutableState
 }
 
-func (r immediateMutableStateProvider) GetMutableState(ctx context.Context, domainID, workflowID, runID string) (mutableState, execution.ReleaseFunc, error) {
+func (r immediateMutableStateProvider) GetMutableState(_ context.Context, _, _, _ string) (mutableState, execution.ReleaseFunc, error) {
 	return r.ms, execution.NoopReleaseFn, nil
 }
 

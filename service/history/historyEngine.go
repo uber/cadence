@@ -2994,7 +2994,7 @@ func hydrateReplicationTask(
 		versionHistories,
 		activities,
 		history.Find(info.BranchToken, info.FirstEventID),
-		history.Find(info.NewRunBranchToken, 1),
+		history.Find(info.NewRunBranchToken, common.FirstEventID),
 	)
 
 	return hydrator.Hydrate(context.Background(), info)
