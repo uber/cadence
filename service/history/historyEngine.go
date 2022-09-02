@@ -25,6 +25,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -743,7 +744,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 	err = wfContext.CreateWorkflowExecution(
 		ctx,
 		newWorkflow,
-		int64(len(historyBlob.Data)),
+		historyBlob,
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
@@ -809,7 +810,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		err = wfContext.CreateWorkflowExecution(
 			ctx,
 			newWorkflow,
-			int64(len(historyBlob.Data)),
+			historyBlob,
 			createMode,
 			prevRunID,
 			t.LastWriteVersion,
@@ -2944,6 +2945,59 @@ func (e *historyEngineImpl) NotifyNewCrossClusterTasks(
 	for targetCluster, tasks := range taskByTargetCluster {
 		e.crossClusterProcessor.NotifyNewTask(targetCluster, &hcommon.NotifyTaskInfo{ExecutionInfo: info.ExecutionInfo, Tasks: tasks, PersistenceError: info.PersistenceError})
 	}
+}
+
+func (e *historyEngineImpl) NotifyNewReplicationTasks(info *hcommon.NotifyTaskInfo) {
+	for _, task := range info.Tasks {
+		hTask, err := hydrateReplicationTask(task, info.ExecutionInfo, info.VersionHistories, info.Activities, info.History)
+		if err != nil {
+			e.logger.Error("failed to preemptively hydrate replication task", tag.Error(err))
+			continue
+		}
+		e.replicationTaskStore.Put(hTask)
+	}
+}
+
+func hydrateReplicationTask(
+	task persistence.Task,
+	exec *persistence.WorkflowExecutionInfo,
+	versionHistories *persistence.VersionHistories,
+	activities map[int64]*persistence.ActivityInfo,
+	history events.PersistedBlobs,
+) (*types.ReplicationTask, error) {
+	info := persistence.ReplicationTaskInfo{
+		DomainID:     exec.DomainID,
+		WorkflowID:   exec.WorkflowID,
+		RunID:        exec.RunID,
+		TaskType:     task.GetType(),
+		CreationTime: task.GetVisibilityTimestamp().UnixNano(),
+		TaskID:       task.GetTaskID(),
+		Version:      task.GetVersion(),
+	}
+
+	switch t := task.(type) {
+	case *persistence.HistoryReplicationTask:
+		info.BranchToken = t.BranchToken
+		info.NewRunBranchToken = t.NewRunBranchToken
+		info.FirstEventID = t.FirstEventID
+		info.NextEventID = t.NextEventID
+	case *persistence.SyncActivityTask:
+		info.ScheduledID = t.ScheduledID
+	case *persistence.FailoverMarkerTask:
+		// No specific fields, but supported
+	default:
+		return nil, errors.New("unknown replication task")
+	}
+
+	hydrator := replication.NewImmediateTaskHydrator(
+		exec.IsRunning(),
+		versionHistories,
+		activities,
+		history.Find(info.BranchToken, info.FirstEventID),
+		history.Find(info.NewRunBranchToken, common.FirstEventID),
+	)
+
+	return hydrator.Hydrate(context.Background(), info)
 }
 
 func (e *historyEngineImpl) ResetTransferQueue(

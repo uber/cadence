@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -157,7 +158,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 		return err
 	}
 
-	var targetWorkflowHistoryBlob persistence.DataBlob
+	var targetWorkflowHistoryBlob events.PersistedBlob
 	if len(targetWorkflowEventsSeq[0].Events) > 0 {
 		if targetWorkflowEventsSeq[0].Events[0].GetEventType() == types.EventTypeWorkflowExecutionStarted {
 			targetWorkflowHistoryBlob, err = targetWorkflow.GetContext().PersistStartWorkflowBatchEvents(
@@ -187,7 +188,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 		return targetWorkflow.GetContext().CreateWorkflowExecution(
 			ctx,
 			targetWorkflowSnapshot,
-			int64(len(targetWorkflowHistoryBlob.Data)),
+			targetWorkflowHistoryBlob,
 			createMode,
 			prevRunID,
 			prevLastWriteVersion,
@@ -201,7 +202,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsCurrent(
 	return targetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		targetWorkflowSnapshot,
-		int64(len(targetWorkflowHistoryBlob.Data)),
+		targetWorkflowHistoryBlob,
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,
@@ -235,7 +236,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 		return err
 	}
 
-	var targetWorkflowHistoryBlob persistence.DataBlob
+	var targetWorkflowHistoryBlob events.PersistedBlob
 	if len(targetWorkflowEventsSeq[0].Events) > 0 {
 		if targetWorkflowEventsSeq[0].Events[0].GetEventType() == types.EventTypeWorkflowExecutionStarted {
 			targetWorkflowHistoryBlob, err = targetWorkflow.GetContext().PersistStartWorkflowBatchEvents(
@@ -271,7 +272,7 @@ func (r *transactionManagerForNewWorkflowImpl) createAsZombie(
 	err = targetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		targetWorkflowSnapshot,
-		int64(len(targetWorkflowHistoryBlob.Data)),
+		targetWorkflowHistoryBlob,
 		createMode,
 		prevRunID,
 		prevLastWriteVersion,

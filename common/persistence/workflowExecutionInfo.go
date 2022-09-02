@@ -164,6 +164,23 @@ func (e *WorkflowExecutionInfo) UpdateWorkflowStateCloseStatus(
 
 }
 
+func (e *WorkflowExecutionInfo) IsRunning() bool {
+	switch e.State {
+	case WorkflowStateCreated:
+		return true
+	case WorkflowStateRunning:
+		return true
+	case WorkflowStateCompleted:
+		return false
+	case WorkflowStateZombie:
+		return false
+	case WorkflowStateCorrupted:
+		return false
+	default:
+		panic(fmt.Sprintf("unknown workflow state: %v", e.State))
+	}
+}
+
 // UpdateWorkflowStateCloseStatus update the workflow state
 func (e *WorkflowExecutionInfo) createInvalidStateTransitionErr(
 	currentState int,
