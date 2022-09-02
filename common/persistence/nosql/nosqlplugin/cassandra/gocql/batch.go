@@ -63,6 +63,11 @@ func (b *batch) WithTimestamp(timestamp int64) Batch {
 	return b
 }
 
+func (b *batch) Consistency(c Consistency) Batch {
+	b.Batch.SetConsistency(mustConvertConsistency(c))
+	return b
+}
+
 func mustConvertBatchType(batchType BatchType) gocql.BatchType {
 	switch batchType {
 	case LoggedBatch:

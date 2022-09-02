@@ -38,11 +38,20 @@ const (
 	// See https://github.com/uber/cadence/issues/4200
 	maxCassandraTTL = int64(157680000)
 
+	// We use local serial consistency level as the default consistency level for conditional updates
+	cassandraDefaultSerialConsLevel = gocql.LocalSerial
+
+	// We use local quorum consistency level as the default consistency level
+	cassandraDefaultConsLevel = gocql.LocalQuorum
+
 	// Although Cadence core data models always require strong consistency, reading visibility is a special case that
 	// eventual consistency is sufficient.
 	// That's because the engine layer writes into visibility with eventual consistency anyway(using transfer tasks)
 	// Do NOT use it in other places, unless you are sure it's the same special cases like reading visibility
 	cassandraLowConslevel = gocql.One
+
+	// We use all consistency level for delete operations to prevent the data resurrection issue
+	cassandraAllConslevel = gocql.All
 )
 
 const (

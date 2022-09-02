@@ -132,7 +132,7 @@ func (s *workflowTestSuite) TestSanityWorkflow() {
 
 func (s *workflowTestSuite) TestLocalActivityWorkflow() {
 	s.env.OnActivity(getConditionData).Return(int32(20), nil).Once()
-	s.env.ExecuteWorkflow(localActivityWorkfow)
+	s.env.ExecuteWorkflow(localActivityWorkfow, time.Now().UnixNano())
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 
