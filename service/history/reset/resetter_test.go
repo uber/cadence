@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/constants"
+	"github.com/uber/cadence/service/history/events"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
 )
@@ -188,16 +189,16 @@ func (s *workflowResetterSuite) TestPersistToDB_CurrentNotTerminated() {
 			ID: 123,
 		}},
 	}}
-	resetEventsSize := int64(4321)
+	resetEvents := events.PersistedBlob{DataBlob: persistence.DataBlob{Data: make([]byte, 4321)}}
 	resetMutableState.EXPECT().CloseTransactionAsSnapshot(
 		gomock.Any(),
 		execution.TransactionPolicyActive,
 	).Return(resetSnapshot, resetEventsSeq, nil).Times(1)
-	resetContext.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), resetEventsSeq[0]).Return(persistence.DataBlob{Data: make([]byte, resetEventsSize)}, nil).Times(1)
+	resetContext.EXPECT().PersistNonStartWorkflowBatchEvents(gomock.Any(), resetEventsSeq[0]).Return(resetEvents, nil).Times(1)
 	resetContext.EXPECT().CreateWorkflowExecution(
 		gomock.Any(),
 		resetSnapshot,
-		resetEventsSize,
+		resetEvents,
 		persistence.CreateWorkflowModeContinueAsNew,
 		s.currentRunID,
 		currentLastWriteVersion,
