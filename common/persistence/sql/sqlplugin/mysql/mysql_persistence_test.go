@@ -26,58 +26,67 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	pt "github.com/uber/cadence/common/persistence/persistence-tests"
+	"github.com/uber/cadence/testflags"
 )
 
-func TestSQLHistoryV2PersistenceSuite(t *testing.T) {
+func TestMySQLHistoryV2PersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.HistoryV2PersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLMatchingPersistenceSuite(t *testing.T) {
+func TestMySQLMatchingPersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.MatchingPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLMetadataPersistenceSuiteV2(t *testing.T) {
+func TestMySQLMetadataPersistenceSuiteV2(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.MetadataPersistenceSuiteV2)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLShardPersistenceSuite(t *testing.T) {
+func TestMySQLShardPersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.ShardPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLExecutionManagerSuite(t *testing.T) {
+func TestMySQLExecutionManagerSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.ExecutionManagerSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLExecutionManagerWithEventsV2(t *testing.T) {
+func TestMySQLExecutionManagerWithEventsV2(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.ExecutionManagerSuiteForEventsV2)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLVisibilityPersistenceSuite(t *testing.T) {
+func TestMySQLVisibilityPersistenceSuite(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.DBVisibilityPersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()
 	suite.Run(t, s)
 }
 
-func TestSQLQueuePersistence(t *testing.T) {
+func TestMySQLQueuePersistence(t *testing.T) {
+	testflags.RequireMySQL(t)
 	s := new(pt.QueuePersistenceSuite)
 	s.TestBase = pt.NewTestBaseWithSQL(GetTestClusterOption())
 	s.TestBase.Setup()

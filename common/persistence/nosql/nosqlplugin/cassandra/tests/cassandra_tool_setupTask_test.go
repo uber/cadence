@@ -24,6 +24,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/uber/cadence/testflags"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 
@@ -40,6 +42,7 @@ type (
 )
 
 func TestSetupSchemaTestSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	suite.Run(t, new(SetupSchemaTestSuite))
 }
 

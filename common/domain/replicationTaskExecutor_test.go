@@ -35,6 +35,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/testflags"
 )
 
 type (
@@ -46,6 +47,7 @@ type (
 )
 
 func TestDomainReplicationTaskExecutorSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	s := new(domainReplicationTaskExecutorSuite)
 	suite.Run(t, s)
 }

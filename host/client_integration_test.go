@@ -61,13 +61,14 @@ func init() {
 }
 
 func TestClientIntegrationSuite(t *testing.T) {
+
 	flag.Parse()
 
 	clusterConfig, err := GetTestClusterConfig("testdata/clientintegrationtestcluster.yaml")
 	if err != nil {
 		panic(err)
 	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
+	testCluster := NewPersistenceTestCluster(t, clusterConfig)
 
 	s := new(ClientIntegrationSuite)
 	params := IntegrationBaseParams{
