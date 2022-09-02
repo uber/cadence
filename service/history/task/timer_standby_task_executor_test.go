@@ -124,6 +124,7 @@ func (s *timerStandbyTaskExecutorSuite) SetupTest() {
 	s.mockEngine.EXPECT().NotifyNewTransferTasks(gomock.Any()).AnyTimes()
 	s.mockEngine.EXPECT().NotifyNewTimerTasks(gomock.Any()).AnyTimes()
 	s.mockEngine.EXPECT().NotifyNewCrossClusterTasks(gomock.Any()).AnyTimes()
+	s.mockEngine.EXPECT().NotifyNewReplicationTasks(gomock.Any()).AnyTimes()
 	s.mockShard.SetEngine(s.mockEngine)
 	s.mockNDCHistoryResender = ndc.NewMockHistoryResender(s.controller)
 

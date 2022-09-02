@@ -249,6 +249,18 @@ func (mr *MockEngineMockRecorder) NotifyNewHistoryEvent(event interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewHistoryEvent", reflect.TypeOf((*MockEngine)(nil).NotifyNewHistoryEvent), event)
 }
 
+// NotifyNewReplicationTasks mocks base method.
+func (m *MockEngine) NotifyNewReplicationTasks(info *common.NotifyTaskInfo) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NotifyNewReplicationTasks", info)
+}
+
+// NotifyNewReplicationTasks indicates an expected call of NotifyNewReplicationTasks.
+func (mr *MockEngineMockRecorder) NotifyNewReplicationTasks(info interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewReplicationTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewReplicationTasks), info)
+}
+
 // NotifyNewTimerTasks mocks base method.
 func (m *MockEngine) NotifyNewTimerTasks(info *common.NotifyTaskInfo) {
 	m.ctrl.T.Helper()

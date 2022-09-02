@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// Copyright (c) 2022 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package common
+package events
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/service/history/events"
 )
 
-type (
-	// NotifyTaskInfo defines the info of task notification
-	NotifyTaskInfo struct {
-		ExecutionInfo    *persistence.WorkflowExecutionInfo
-		Tasks            []persistence.Task
-		VersionHistories *persistence.VersionHistories
-		Activities       map[int64]*persistence.ActivityInfo
-		History          events.PersistedBlobs
-		PersistenceError bool
+func TestPersistedBlobs_Find(t *testing.T) {
+	blob1 := persistence.DataBlob{Data: []byte{1, 2, 3}}
+	blob2 := persistence.DataBlob{Data: []byte{4, 5, 6}}
+	blob3 := persistence.DataBlob{Data: []byte{7, 8, 9}}
+	branchA := []byte{11, 11, 11}
+	branchB := []byte{22, 22, 22}
+	persistedBlobs := PersistedBlobs{
+		PersistedBlob{BranchToken: branchA, FirstEventID: 100, DataBlob: blob1},
+		PersistedBlob{BranchToken: branchA, FirstEventID: 105, DataBlob: blob2},
+		PersistedBlob{BranchToken: branchB, FirstEventID: 100, DataBlob: blob3},
 	}
-)
+	assert.Equal(t, blob1, *persistedBlobs.Find(branchA, 100))
+	assert.Equal(t, blob2, *persistedBlobs.Find(branchA, 105))
+	assert.Equal(t, blob3, *persistedBlobs.Find(branchB, 100))
+	assert.Nil(t, persistedBlobs.Find(branchB, 105))
+	assert.Nil(t, persistedBlobs.Find([]byte{99}, 100))
+}

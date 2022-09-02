@@ -60,6 +60,14 @@ type (
 	}
 )
 
+// NewImmediateTaskHydrator will enrich replication tasks with additional information that is immediately available.
+func NewImmediateTaskHydrator(isRunning bool, vh *persistence.VersionHistories, activities map[int64]*persistence.ActivityInfo, blob, nextBlob *persistence.DataBlob) TaskHydrator {
+	return TaskHydrator{
+		history:    immediateHistoryProvider{blob: blob, nextBlob: nextBlob},
+		msProvider: immediateMutableStateProvider{immediateMutableState{isRunning, activities, vh}},
+	}
+}
+
 // NewDeferredTaskHydrator will enrich replication tasks with additional information that is not available on hand,
 // but is rather loaded in a deferred way later from a database and cache.
 func NewDeferredTaskHydrator(shardID int, historyManager persistence.HistoryManager, executionCache *execution.Cache, domains domainCache) TaskHydrator {
@@ -274,4 +282,48 @@ func (l mutableStateLoader) GetMutableState(ctx context.Context, domainID, workf
 
 func timeToUnixNano(t time.Time) *int64 {
 	return common.Int64Ptr(t.UnixNano())
+}
+
+type immediateHistoryProvider struct {
+	blob     *persistence.DataBlob
+	nextBlob *persistence.DataBlob
+}
+
+func (h immediateHistoryProvider) GetEventBlob(_ context.Context, _ persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+	if h.blob == nil {
+		return nil, errors.New("history blob not set")
+	}
+	return h.blob.ToInternal(), nil
+}
+
+func (h immediateHistoryProvider) GetNextRunEventBlob(_ context.Context, _ persistence.ReplicationTaskInfo) (*types.DataBlob, error) {
+	if h.nextBlob == nil {
+		return nil, nil // Expected and common
+	}
+	return h.nextBlob.ToInternal(), nil
+}
+
+type immediateMutableStateProvider struct {
+	ms immediateMutableState
+}
+
+func (r immediateMutableStateProvider) GetMutableState(_ context.Context, _, _, _ string) (mutableState, execution.ReleaseFunc, error) {
+	return r.ms, execution.NoopReleaseFn, nil
+}
+
+type immediateMutableState struct {
+	isRunning        bool
+	activities       map[int64]*persistence.ActivityInfo
+	versionHistories *persistence.VersionHistories
+}
+
+func (ms immediateMutableState) IsWorkflowExecutionRunning() bool {
+	return ms.isRunning
+}
+func (ms immediateMutableState) GetActivityInfo(id int64) (*persistence.ActivityInfo, bool) {
+	info, ok := ms.activities[id]
+	return info, ok
+}
+func (ms immediateMutableState) GetVersionHistories() *persistence.VersionHistories {
+	return ms.versionHistories
 }

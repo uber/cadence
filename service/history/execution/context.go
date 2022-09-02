@@ -98,16 +98,16 @@ type (
 		PersistStartWorkflowBatchEvents(
 			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
-		) (persistence.DataBlob, error)
+		) (events.PersistedBlob, error)
 		PersistNonStartWorkflowBatchEvents(
 			ctx context.Context,
 			workflowEvents *persistence.WorkflowEvents,
-		) (persistence.DataBlob, error)
+		) (events.PersistedBlob, error)
 
 		CreateWorkflowExecution(
 			ctx context.Context,
 			newWorkflow *persistence.WorkflowSnapshot,
-			historySize int64,
+			persistedHistory events.PersistedBlob,
 			createMode persistence.CreateWorkflowMode,
 			prevRunID string,
 			prevLastWriteVersion int64,
@@ -337,7 +337,7 @@ func (c *contextImpl) LoadWorkflowExecution(
 func (c *contextImpl) CreateWorkflowExecution(
 	ctx context.Context,
 	newWorkflow *persistence.WorkflowSnapshot,
-	historySize int64,
+	persistedHistory events.PersistedBlob,
 	createMode persistence.CreateWorkflowMode,
 	prevRunID string,
 	prevLastWriteVersion int64,
@@ -359,6 +359,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 		DomainName:          domainName,
 	}
 
+	historySize := int64(len(persistedHistory.Data))
 	historySize += c.GetHistorySize()
 	c.SetHistorySize(historySize)
 	createRequest.NewWorkflowSnapshot.ExecutionStats = &persistence.ExecutionStats{
@@ -368,12 +369,12 @@ func (c *contextImpl) CreateWorkflowExecution(
 	resp, err := c.createWorkflowExecutionWithRetry(ctx, createRequest)
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow, true)
+			c.notifyTasksFromWorkflowSnapshot(newWorkflow, events.PersistedBlobs{persistedHistory}, true)
 		}
 		return err
 	}
 
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow, false)
+	c.notifyTasksFromWorkflowSnapshot(newWorkflow, events.PersistedBlobs{persistedHistory}, false)
 
 	// finally emit session stats
 	emitSessionUpdateStats(
@@ -410,6 +411,8 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	if err != nil {
 		return err
 	}
+
+	var persistedBlobs events.PersistedBlobs
 	resetHistorySize := c.GetHistorySize()
 	for _, workflowEvents := range resetWorkflowEventsSeq {
 		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
@@ -417,6 +420,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 			return err
 		}
 		resetHistorySize += int64(len(blob.Data))
+		persistedBlobs = append(persistedBlobs, blob)
 	}
 	c.SetHistorySize(resetHistorySize)
 	resetWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -451,6 +455,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
 			HistorySize: newWorkflowSizeSize,
 		}
+		persistedBlobs = append(persistedBlobs, blob)
 	}
 
 	var currentWorkflow *persistence.WorkflowMutation
@@ -477,6 +482,7 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 				return err
 			}
 			currentWorkflowSize += int64(len(blob.Data))
+			persistedBlobs = append(persistedBlobs, blob)
 		}
 		currentContext.SetHistorySize(currentWorkflowSize)
 		currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -507,9 +513,9 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowSnapshot(resetWorkflow, true)
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow, true)
-			c.notifyTasksFromWorkflowMutation(currentWorkflow, true)
+			c.notifyTasksFromWorkflowSnapshot(resetWorkflow, persistedBlobs, true)
+			c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, true)
+			c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, true)
 		}
 		return err
 	}
@@ -532,9 +538,9 @@ func (c *contextImpl) ConflictResolveWorkflowExecution(
 		workflowCloseState,
 	))
 
-	c.notifyTasksFromWorkflowSnapshot(resetWorkflow, false)
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow, false)
-	c.notifyTasksFromWorkflowMutation(currentWorkflow, false)
+	c.notifyTasksFromWorkflowSnapshot(resetWorkflow, persistedBlobs, false)
+	c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, false)
+	c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -671,7 +677,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowMutation(currentWorkflow, true)
+			c.notifyTasksFromWorkflowMutation(currentWorkflow, nil, true)
 		}
 		return err
 	}
@@ -680,7 +686,7 @@ func (c *contextImpl) UpdateWorkflowExecutionTasks(
 	c.updateCondition = currentWorkflow.ExecutionInfo.NextEventID
 
 	// notify current workflow tasks
-	c.notifyTasksFromWorkflowMutation(currentWorkflow, false)
+	c.notifyTasksFromWorkflowMutation(currentWorkflow, nil, false)
 
 	emitSessionUpdateStats(
 		c.metricsClient,
@@ -715,6 +721,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		return err
 	}
 
+	var persistedBlobs events.PersistedBlobs
 	currentWorkflowSize := c.GetHistorySize()
 	for _, workflowEvents := range currentWorkflowEventsSeq {
 		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
@@ -722,6 +729,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 			return err
 		}
 		currentWorkflowSize += int64(len(blob.Data))
+		persistedBlobs = append(persistedBlobs, blob)
 	}
 	c.SetHistorySize(currentWorkflowSize)
 	currentWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -748,7 +756,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		newWorkflowSizeSize := newContext.GetHistorySize()
 		startEvents := newWorkflowEventsSeq[0]
 		firstEventID := startEvents.Events[0].ID
-		var blob persistence.DataBlob
+		var blob events.PersistedBlob
 		if firstEventID == common.FirstEventID {
 			blob, err = c.PersistStartWorkflowBatchEvents(ctx, startEvents)
 			if err != nil {
@@ -762,6 +770,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 			}
 		}
 
+		persistedBlobs = append(persistedBlobs, blob)
 		newWorkflowSizeSize += int64(len(blob.Data))
 		newContext.SetHistorySize(newWorkflowSizeSize)
 		newWorkflow.ExecutionStats = &persistence.ExecutionStats{
@@ -798,8 +807,8 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	})
 	if err != nil {
 		if c.isPersistenceTimeoutError(err) {
-			c.notifyTasksFromWorkflowMutation(currentWorkflow, true)
-			c.notifyTasksFromWorkflowSnapshot(newWorkflow, true)
+			c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, true)
+			c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, true)
 		}
 		return err
 	}
@@ -825,10 +834,10 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	))
 
 	// notify current workflow tasks
-	c.notifyTasksFromWorkflowMutation(currentWorkflow, false)
+	c.notifyTasksFromWorkflowMutation(currentWorkflow, persistedBlobs, false)
 
 	// notify new workflow tasks
-	c.notifyTasksFromWorkflowSnapshot(newWorkflow, false)
+	c.notifyTasksFromWorkflowSnapshot(newWorkflow, persistedBlobs, false)
 
 	// finally emit session stats
 	domainName := c.GetDomainName()
@@ -859,6 +868,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 
 func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 	workflowSnapShot *persistence.WorkflowSnapshot,
+	history events.PersistedBlobs,
 	persistenceError bool,
 ) {
 	if workflowSnapShot == nil {
@@ -867,15 +877,20 @@ func (c *contextImpl) notifyTasksFromWorkflowSnapshot(
 
 	c.notifyTasks(
 		workflowSnapShot.ExecutionInfo,
+		workflowSnapShot.VersionHistories,
+		activityInfosToMap(workflowSnapShot.ActivityInfos),
 		workflowSnapShot.TransferTasks,
 		workflowSnapShot.TimerTasks,
 		workflowSnapShot.CrossClusterTasks,
+		workflowSnapShot.ReplicationTasks,
+		history,
 		persistenceError,
 	)
 }
 
 func (c *contextImpl) notifyTasksFromWorkflowMutation(
 	workflowMutation *persistence.WorkflowMutation,
+	history events.PersistedBlobs,
 	persistenceError bool,
 ) {
 	if workflowMutation == nil {
@@ -884,18 +899,34 @@ func (c *contextImpl) notifyTasksFromWorkflowMutation(
 
 	c.notifyTasks(
 		workflowMutation.ExecutionInfo,
+		workflowMutation.VersionHistories,
+		activityInfosToMap(workflowMutation.UpsertActivityInfos),
 		workflowMutation.TransferTasks,
 		workflowMutation.TimerTasks,
 		workflowMutation.CrossClusterTasks,
+		workflowMutation.ReplicationTasks,
+		history,
 		persistenceError,
 	)
 }
 
+func activityInfosToMap(ais []*persistence.ActivityInfo) map[int64]*persistence.ActivityInfo {
+	m := make(map[int64]*persistence.ActivityInfo, len(ais))
+	for _, ai := range ais {
+		m[ai.ScheduleID] = ai
+	}
+	return m
+}
+
 func (c *contextImpl) notifyTasks(
 	executionInfo *persistence.WorkflowExecutionInfo,
+	versionHistories *persistence.VersionHistories,
+	activities map[int64]*persistence.ActivityInfo,
 	transferTasks []persistence.Task,
 	timerTasks []persistence.Task,
 	crossClusterTasks []persistence.Task,
+	replicationTasks []persistence.Task,
+	history events.PersistedBlobs,
 	persistenceError bool,
 ) {
 	transferTaskInfo := &hcommon.NotifyTaskInfo{
@@ -913,10 +944,19 @@ func (c *contextImpl) notifyTasks(
 		Tasks:            crossClusterTasks,
 		PersistenceError: persistenceError,
 	}
+	replicationTaskInfo := &hcommon.NotifyTaskInfo{
+		ExecutionInfo:    executionInfo,
+		Tasks:            replicationTasks,
+		VersionHistories: versionHistories,
+		Activities:       activities,
+		History:          history,
+		PersistenceError: persistenceError,
+	}
 
 	c.shard.GetEngine().NotifyNewTransferTasks(transferTaskInfo)
 	c.shard.GetEngine().NotifyNewTimerTasks(timerTaskInfo)
 	c.shard.GetEngine().NotifyNewCrossClusterTasks(crossClusterTaskInfo)
+	c.shard.GetEngine().NotifyNewReplicationTasks(replicationTaskInfo)
 }
 
 func (c *contextImpl) mergeContinueAsNewReplicationTasks(
@@ -970,10 +1010,10 @@ func (c *contextImpl) mergeContinueAsNewReplicationTasks(
 func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
-) (persistence.DataBlob, error) {
+) (events.PersistedBlob, error) {
 
 	if len(workflowEvents.Events) == 0 {
-		return persistence.DataBlob{}, &types.InternalServiceError{
+		return events.PersistedBlob{}, &types.InternalServiceError{
 			Message: "cannot persist first workflow events with empty events",
 		}
 	}
@@ -981,7 +1021,7 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 	domainID := workflowEvents.DomainID
 	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
-		return persistence.DataBlob{}, err
+		return events.PersistedBlob{}, err
 	}
 	workflowID := workflowEvents.WorkflowID
 	runID := workflowEvents.RunID
@@ -989,8 +1029,6 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 		WorkflowID: workflowEvents.WorkflowID,
 		RunID:      workflowEvents.RunID,
 	}
-	branchToken := workflowEvents.BranchToken
-	events := workflowEvents.Events
 
 	resp, err := c.appendHistoryV2EventsWithRetry(
 		ctx,
@@ -999,38 +1037,40 @@ func (c *contextImpl) PersistStartWorkflowBatchEvents(
 		&persistence.AppendHistoryNodesRequest{
 			IsNewBranch: true,
 			Info:        persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, runID),
-			BranchToken: branchToken,
-			Events:      events,
+			BranchToken: workflowEvents.BranchToken,
+			Events:      workflowEvents.Events,
 			DomainName:  domainName,
 			// TransactionID is set by shard context
 		},
 	)
 	if err != nil {
-		return persistence.DataBlob{}, err
+		return events.PersistedBlob{}, err
 	}
-	return resp.DataBlob, nil
+	return events.PersistedBlob{
+		DataBlob:     resp.DataBlob,
+		BranchToken:  workflowEvents.BranchToken,
+		FirstEventID: workflowEvents.Events[0].ID,
+	}, nil
 }
 
 func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 	ctx context.Context,
 	workflowEvents *persistence.WorkflowEvents,
-) (persistence.DataBlob, error) {
+) (events.PersistedBlob, error) {
 
 	if len(workflowEvents.Events) == 0 {
-		return persistence.DataBlob{}, nil // allow update workflow without events
+		return events.PersistedBlob{}, nil // allow update workflow without events
 	}
 
 	domainID := workflowEvents.DomainID
 	domainName, err := c.shard.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
-		return persistence.DataBlob{}, err
+		return events.PersistedBlob{}, err
 	}
 	execution := types.WorkflowExecution{
 		WorkflowID: workflowEvents.WorkflowID,
 		RunID:      workflowEvents.RunID,
 	}
-	branchToken := workflowEvents.BranchToken
-	events := workflowEvents.Events
 
 	resp, err := c.appendHistoryV2EventsWithRetry(
 		ctx,
@@ -1038,16 +1078,20 @@ func (c *contextImpl) PersistNonStartWorkflowBatchEvents(
 		execution,
 		&persistence.AppendHistoryNodesRequest{
 			IsNewBranch: false,
-			BranchToken: branchToken,
-			Events:      events,
+			BranchToken: workflowEvents.BranchToken,
+			Events:      workflowEvents.Events,
 			DomainName:  domainName,
 			// TransactionID is set by shard context
 		},
 	)
 	if err != nil {
-		return persistence.DataBlob{}, err
+		return events.PersistedBlob{}, err
 	}
-	return resp.DataBlob, nil
+	return events.PersistedBlob{
+		DataBlob:     resp.DataBlob,
+		BranchToken:  workflowEvents.BranchToken,
+		FirstEventID: workflowEvents.Events[0].ID,
+	}, nil
 }
 
 func (c *contextImpl) appendHistoryV2EventsWithRetry(

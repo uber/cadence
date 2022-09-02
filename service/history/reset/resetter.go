@@ -283,7 +283,6 @@ func (r *workflowResetterImpl) persistToDB(
 		return err
 	}
 
-	resetHistorySize := int64(0)
 	if len(resetWorkflowEventsSeq) != 1 {
 		return &types.InternalServiceError{
 			Message: "there should be EXACTLY one batch of events for reset",
@@ -291,16 +290,15 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	// reset workflow with decision task failed or timed out
-	blob, err := resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
+	resetWorkflowHistory, err := resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
-	resetHistorySize = int64(len(blob.Data))
 
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		resetWorkflowSnapshot,
-		resetHistorySize,
+		resetWorkflowHistory,
 		persistence.CreateWorkflowModeContinueAsNew,
 		currentRunID,
 		currentLastWriteVersion,
