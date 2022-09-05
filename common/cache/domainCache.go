@@ -464,6 +464,7 @@ UpdateLoop:
 
 		c.scope.Tagged(
 			metrics.DomainTag(nextEntry.info.Name),
+			metrics.DomainTypeTag(nextEntry.isGlobalDomain),
 			metrics.ActiveClusterTag(nextEntry.replicationConfig.ActiveClusterName),
 		).UpdateGauge(metrics.ActiveClusterGauge, 1)
 
