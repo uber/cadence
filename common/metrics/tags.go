@@ -34,6 +34,7 @@ const (
 	instance               = "instance"
 	domain                 = "domain"
 	domainType             = "domain_type"
+	clusterGroup           = "cluster_group"
 	sourceCluster          = "source_cluster"
 	targetCluster          = "target_cluster"
 	activeCluster          = "active_cluster"
@@ -99,6 +100,11 @@ func DomainTypeTag(isGlobal bool) Tag {
 // DomainUnknownTag returns a new domain:unknown tag-value
 func DomainUnknownTag() Tag {
 	return DomainTag("")
+}
+
+// ClusterGroupTag return a new cluster group tag
+func ClusterGroupTag(value string) Tag {
+	return simpleMetric{key: clusterGroup, value: value}
 }
 
 // InstanceTag returns a new instance tag

@@ -27,12 +27,14 @@ import (
 	"hash/fnv"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/errors"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -99,6 +101,7 @@ type (
 	domainCache struct {
 		status        int32
 		shutdownChan  chan struct{}
+		clusterGroup  string
 		cacheNameToID *atomic.Value
 		cacheByID     *atomic.Value
 		domainManager persistence.DomainManager
@@ -141,6 +144,7 @@ type (
 // NewDomainCache creates a new instance of cache for holding onto domain information to reduce the load on persistence
 func NewDomainCache(
 	domainManager persistence.DomainManager,
+	metadata cluster.Metadata,
 	metricsClient metrics.Client,
 	logger log.Logger,
 ) DomainCache {
@@ -148,6 +152,7 @@ func NewDomainCache(
 	cache := &domainCache{
 		status:           domainCacheInitialized,
 		shutdownChan:     make(chan struct{}),
+		clusterGroup:     getClusterGroupIdentifier(metadata),
 		cacheNameToID:    &atomic.Value{},
 		cacheByID:        &atomic.Value{},
 		domainManager:    domainManager,
@@ -161,6 +166,15 @@ func NewDomainCache(
 	cache.cacheByID.Store(newDomainCache())
 
 	return cache
+}
+
+func getClusterGroupIdentifier(metadata cluster.Metadata) string {
+	var clusters []string
+	for cluster := range metadata.GetEnabledClusterInfo() {
+		clusters = append(clusters, cluster)
+	}
+	sort.Strings(clusters)
+	return strings.Join(clusters, "_")
 }
 
 func newDomainCache() Cache {
@@ -465,6 +479,7 @@ UpdateLoop:
 		c.scope.Tagged(
 			metrics.DomainTag(nextEntry.info.Name),
 			metrics.DomainTypeTag(nextEntry.isGlobalDomain),
+			metrics.ClusterGroupTag(c.clusterGroup),
 			metrics.ActiveClusterTag(nextEntry.replicationConfig.ActiveClusterName),
 		).UpdateGauge(metrics.ActiveClusterGauge, 1)
 
