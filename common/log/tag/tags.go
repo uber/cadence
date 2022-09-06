@@ -88,6 +88,11 @@ func WorkflowID(workflowID string) Tag {
 	return newStringTag("wf-id", workflowID)
 }
 
+// TargetWorkflowID returns tag for target WorkflowID
+func TargetWorkflowID(workflowID string) Tag {
+	return newStringTag("target-wf-id", workflowID)
+}
+
 // WorkflowType returns tag for WorkflowType
 func WorkflowType(wfType string) Tag {
 	return newStringTag("wf-type", wfType)
@@ -101,6 +106,11 @@ func WorkflowState(s int) Tag {
 // WorkflowRunID returns tag for WorkflowRunID
 func WorkflowRunID(runID string) Tag {
 	return newStringTag("wf-run-id", runID)
+}
+
+// TargetWorkflowRunID returns tag for target  WorkflowRunID
+func TargetWorkflowRunID(runID string) Tag {
+	return newStringTag("target-wf-run-id", runID)
 }
 
 // WorkflowResetBaseRunID returns tag for WorkflowResetBaseRunID
@@ -158,6 +168,11 @@ func BlobSizeViolationOperation(operation string) Tag {
 // WorkflowDomainID returns tag for WorkflowDomainID
 func WorkflowDomainID(domainID string) Tag {
 	return newStringTag("wf-domain-id", domainID)
+}
+
+// TargetWorkflowDomainID returns tag for target WorkflowDomainID
+func TargetWorkflowDomainID(domainID string) Tag {
+	return newStringTag("target-wf-domain-id", domainID)
 }
 
 // WorkflowDomainName returns tag for WorkflowDomainName
