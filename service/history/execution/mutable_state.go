@@ -184,7 +184,7 @@ type (
 		ReplicateChildWorkflowExecutionTimedOutEvent(*types.HistoryEvent) error
 		ReplicateDecisionTaskCompletedEvent(*types.HistoryEvent) error
 		ReplicateDecisionTaskFailedEvent() error
-		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64) (*DecisionInfo, error)
+		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64, bool) (*DecisionInfo, error)
 		ReplicateDecisionTaskStartedEvent(*DecisionInfo, int64, int64, int64, string, int64) (*DecisionInfo, error)
 		ReplicateDecisionTaskTimedOutEvent(types.TimeoutType) error
 		ReplicateExternalWorkflowExecutionCancelRequested(*types.HistoryEvent) error
@@ -198,15 +198,15 @@ type (
 		ReplicateTimerCanceledEvent(*types.HistoryEvent) error
 		ReplicateTimerFiredEvent(*types.HistoryEvent) error
 		ReplicateTimerStartedEvent(*types.HistoryEvent) (*persistence.TimerInfo, error)
-		ReplicateTransientDecisionTaskScheduled() (*DecisionInfo, error)
-		ReplicateUpsertWorkflowSearchAttributesEvent(*types.HistoryEvent)
+		ReplicateTransientDecisionTaskScheduled() error
+		ReplicateUpsertWorkflowSearchAttributesEvent(*types.HistoryEvent) error
 		ReplicateWorkflowExecutionCancelRequestedEvent(*types.HistoryEvent) error
 		ReplicateWorkflowExecutionCanceledEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionCompletedEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionContinuedAsNewEvent(int64, string, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionFailedEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionSignaled(*types.HistoryEvent) error
-		ReplicateWorkflowExecutionStartedEvent(*string, types.WorkflowExecution, string, *types.HistoryEvent) error
+		ReplicateWorkflowExecutionStartedEvent(*string, types.WorkflowExecution, string, *types.HistoryEvent, bool) error
 		ReplicateWorkflowExecutionTerminatedEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionTimedoutEvent(int64, *types.HistoryEvent) error
 		SetCurrentBranchToken(branchToken []byte) error
