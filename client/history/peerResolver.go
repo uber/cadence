@@ -67,9 +67,10 @@ func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 	shardIDString := string(rune(shardID))
 	host, err := pr.resolver.Lookup(service.History, shardIDString)
 	if err != nil {
-		return "", err
+		return "", common.ToServiceTransientError(err)
 	}
-	return host.GetNamedAddress(pr.namedPort)
+	peer, err := host.GetNamedAddress(pr.namedPort)
+	return peer, common.ToServiceTransientError(err)
 }
 
 // FromHostAddress resolves the final history peer responsible for the given host address.
@@ -77,22 +78,23 @@ func (pr PeerResolver) FromShardID(shardID int) (string, error) {
 func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 	host, err := pr.resolver.LookupByAddress(service.History, hostAddress)
 	if err != nil {
-		return "", err
+		return "", common.ToServiceTransientError(err)
 	}
-	return host.GetNamedAddress(pr.namedPort)
+	peer, err := host.GetNamedAddress(pr.namedPort)
+	return peer, common.ToServiceTransientError(err)
 }
 
 // GetAllPeers returns all history service peers in the cluster ring.
 func (pr PeerResolver) GetAllPeers() ([]string, error) {
 	hosts, err := pr.resolver.Members(service.History)
 	if err != nil {
-		return nil, err
+		return nil, common.ToServiceTransientError(err)
 	}
 	peers := make([]string, 0, len(hosts))
 	for _, host := range hosts {
 		peer, err := host.GetNamedAddress(pr.namedPort)
 		if err != nil {
-			return nil, err
+			return nil, common.ToServiceTransientError(err)
 		}
 		peers = append(peers, peer)
 	}
