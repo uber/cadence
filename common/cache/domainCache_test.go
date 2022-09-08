@@ -75,7 +75,7 @@ func (s *domainCacheSuite) SetupTest() {
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.metadataMgr = &mocks.MetadataManager{}
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
-	s.domainCache = NewDomainCache(s.metadataMgr, metricsClient, s.logger).(*domainCache)
+	s.domainCache = NewDomainCache(s.metadataMgr, cluster.GetTestClusterMetadata(true), metricsClient, s.logger).(*domainCache)
 
 	s.now = time.Now()
 	s.domainCache.timeSource = clock.NewEventTimeSource().Update(s.now)

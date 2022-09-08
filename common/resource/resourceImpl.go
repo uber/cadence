@@ -183,6 +183,7 @@ func New(
 
 	domainCache := cache.NewDomainCache(
 		persistenceBean.GetDomainManager(),
+		params.ClusterMetadata,
 		params.MetricsClient,
 		logger,
 	)
