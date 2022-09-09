@@ -21,6 +21,7 @@
 package matching
 
 import (
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/service"
 )
@@ -47,23 +48,24 @@ func NewPeerResolver(membership membership.Resolver, namedPort string) PeerResol
 func (pr PeerResolver) FromTaskList(taskListName string) (string, error) {
 	host, err := pr.resolver.Lookup(service.Matching, taskListName)
 	if err != nil {
-		return "", err
+		return "", common.ToServiceTransientError(err)
 	}
 
-	return pr.FromHostAddress(host.GetAddress())
+	peer, err := host.GetNamedAddress(pr.namedPort)
+	return peer, common.ToServiceTransientError(err)
 }
 
 // GetAllPeers returns all matching service peers in the cluster ring.
 func (pr PeerResolver) GetAllPeers() ([]string, error) {
 	hosts, err := pr.resolver.Members(service.Matching)
 	if err != nil {
-		return nil, err
+		return nil, common.ToServiceTransientError(err)
 	}
 	peers := make([]string, 0, len(hosts))
 	for _, host := range hosts {
 		peer, err := pr.FromHostAddress(host.GetAddress())
 		if err != nil {
-			return nil, err
+			return nil, common.ToServiceTransientError(err)
 		}
 		peers = append(peers, peer)
 	}
@@ -76,9 +78,9 @@ func (pr PeerResolver) GetAllPeers() ([]string, error) {
 func (pr PeerResolver) FromHostAddress(hostAddress string) (string, error) {
 	host, err := pr.resolver.LookupByAddress(service.Matching, hostAddress)
 	if err != nil {
-		return "", err
+		return "", common.ToServiceTransientError(err)
 	}
 
-	return host.GetNamedAddress(pr.namedPort)
-
+	peer, err := host.GetNamedAddress(pr.namedPort)
+	return peer, common.ToServiceTransientError(err)
 }
