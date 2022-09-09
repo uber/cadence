@@ -51,6 +51,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    int64 // unit is unix nano, consistent with start/execution timestamp, same in other requests
 		SearchAttributes   map[string][]byte
 	}
 

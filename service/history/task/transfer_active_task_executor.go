@@ -1024,6 +1024,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			isCron,
 			numClusters,
 			visibilityMemo,
+			updateTimestamp.UnixNano(),
 			searchAttr,
 		)
 	}
