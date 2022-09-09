@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
@@ -340,4 +341,21 @@ func TestConvertErrToGetTaskFailedCause(t *testing.T) {
 	for _, tc := range testCases {
 		require.Equal(t, tc.expectedFailedCause, ConvertErrToGetTaskFailedCause(tc.err))
 	}
+}
+
+func TestToServiceTransientError(t *testing.T) {
+	t.Run("it converts nil", func(t *testing.T) {
+		assert.NoError(t, ToServiceTransientError(nil))
+	})
+
+	t.Run("it keeps transient errors", func(t *testing.T) {
+		err := &types.InternalServiceError{}
+		assert.Equal(t, err, ToServiceTransientError(err))
+		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+	})
+
+	t.Run("it converts errors to transient errors", func(t *testing.T) {
+		err := fmt.Errorf("error")
+		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+	})
 }
