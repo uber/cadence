@@ -277,12 +277,14 @@ func (t *taskImpl) HandleErr(
 		return nil
 	}
 
-	if transferTask, ok := t.Info.(*persistence.TransferTaskInfo); ok &&
-		transferTask.TaskType == persistence.TransferTaskTypeCloseExecution &&
-		err == execution.ErrMissingWorkflowStartEvent &&
-		t.shard.GetConfig().EnableDropStuckTaskByDomainID(t.Info.GetDomainID()) { // use domainID here to avoid accessing domainCache
-		t.scope.IncCounter(metrics.TransferTaskMissingEventCounterPerDomain)
-		t.logger.Error("Drop close execution transfer task due to corrupted workflow history", tag.Error(err), tag.LifeCycleProcessingFailed)
+	if t.shouldDropTaskOnError(err) {
+		if err == execution.ErrMissingWorkflowStartEvent {
+			t.scope.IncCounter(metrics.TaskMissingEventCounterPerDomain)
+		}
+		if execution.IsConflictError(err) {
+			t.scope.IncCounter(metrics.TaskConditionalFailedCounterPerDomain)
+		}
+		t.logger.Error("Drop task due to corrupted workflow history", tag.Error(err), tag.TaskType(t.GetTaskType()), tag.LifeCycleProcessingFailed)
 		return nil
 	}
 
@@ -445,6 +447,23 @@ func (t *taskImpl) shouldResubmitOnNack() bool {
 	// this may require change the Nack() interface to Nack(error)
 	return t.GetAttempt() < activeTaskResubmitMaxAttempts &&
 		(t.queueType == QueueTypeActiveTransfer || t.queueType == QueueTypeActiveTimer)
+}
+
+func (t *taskImpl) shouldDropTaskOnError(err error) bool {
+	if t.shard.GetConfig().EnableDropStuckTaskByDomainID(t.Info.GetDomainID()) && // use domainID here to avoid accessing domainCache
+		t.GetAttempt() >= t.criticalRetryCount() { // make sure the dropped tasks won't show up in the logs of 'Crtical error processing task'
+		if err == execution.ErrMissingWorkflowStartEvent || execution.IsConflictError(err) {
+			if transferTask, ok := t.Info.(*persistence.TransferTaskInfo); ok &&
+				transferTask.TaskType == persistence.TransferTaskTypeCloseExecution {
+				return true
+			}
+			if timerTask, ok := t.Info.(*persistence.TimerTaskInfo); ok &&
+				timerTask.TaskType == persistence.TaskTypeWorkflowTimeout {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func logEvent(
