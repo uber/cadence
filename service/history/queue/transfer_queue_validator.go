@@ -179,6 +179,7 @@ func (v *transferQueueValidator) validatePendingTasks() {
 				tag.WorkflowID(taskInfo.executionInfo.WorkflowID),
 				tag.WorkflowRunID(taskInfo.executionInfo.RunID),
 				tag.Bool(taskInfo.persistenceError),
+				tag.MinLevel(minReadTaskID),
 			)
 			v.metricsScope.IncCounter(metrics.QueueValidatorLostTaskCounter)
 			delete(v.pendingTaskInfos, taskID)
