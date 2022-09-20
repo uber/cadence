@@ -442,10 +442,6 @@ func (t *transferQueueProcessorBase) processQueueCollections() {
 		}
 		queueCollection.AddTasks(tasks, newReadLevel)
 		if t.validator != nil {
-			t.logger.Debug("ack transfer tasks",
-				tag.ReadLevel(readLevel.(transferTaskKey).taskID),
-				tag.MaxLevel(newReadLevel.(transferTaskKey).taskID),
-				tag.Counter(len(tasks)))
 			t.validator.ackTasks(level, readLevel, newReadLevel, tasks)
 		}
 

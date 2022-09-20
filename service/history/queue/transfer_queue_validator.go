@@ -88,6 +88,13 @@ func (v *transferQueueValidator) addTasks(
 	v.Lock()
 	defer v.Unlock()
 
+	if len(info.Tasks) > 0 {
+		v.logger.Debug("add transfer tasks",
+			tag.MinLevel(info.Tasks[0].GetTaskID()),
+			tag.MaxLevel(info.Tasks[len(info.Tasks)-1].GetTaskID()),
+			tag.Counter(len(info.Tasks)))
+	}
+
 	numTaskToAdd := len(info.Tasks)
 	if numTaskToAdd+len(v.pendingTaskInfos) > defaultMaxPendingTasksSize {
 		numTaskToAdd = defaultMaxPendingTasksSize - len(v.pendingTaskInfos)
@@ -124,6 +131,11 @@ func (v *transferQueueValidator) ackTasks(
 ) {
 	v.Lock()
 	defer v.Unlock()
+
+	v.logger.Debug("ack transfer tasks",
+		tag.ReadLevel(readLevel.(transferTaskKey).taskID),
+		tag.MaxLevel(maxReadLevel.(transferTaskKey).taskID),
+		tag.Counter(len(loadedTasks)))
 
 	for _, task := range loadedTasks {
 		// note that loadedTasks will contain tasks not in pendingTaskInfos
@@ -179,6 +191,7 @@ func (v *transferQueueValidator) validatePendingTasks() {
 				tag.WorkflowID(taskInfo.executionInfo.WorkflowID),
 				tag.WorkflowRunID(taskInfo.executionInfo.RunID),
 				tag.Bool(taskInfo.persistenceError),
+				tag.MinLevel(minReadTaskID),
 			)
 			v.metricsScope.IncCounter(metrics.QueueValidatorLostTaskCounter)
 			delete(v.pendingTaskInfos, taskID)
