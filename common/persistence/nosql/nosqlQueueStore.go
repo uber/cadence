@@ -98,8 +98,11 @@ func (q *nosqlQueueStore) EnqueueMessage(
 	if err != nil {
 		return err
 	}
-
-	_, err = q.tryEnqueue(ctx, q.queueType, lastMessageID+1, messagePayload)
+	ackLevels, err := q.GetAckLevels(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = q.tryEnqueue(ctx, q.queueType, getNextID(ackLevels, lastMessageID), messagePayload)
 	return err
 }
 
@@ -372,4 +375,16 @@ func (q *nosqlQueueStore) updateAckLevel(
 		return err
 	}
 	return nil
+}
+
+// if, for whatever reason, the ack-levels get ahead of the actual messages
+// then ensure the next ID follows
+func getNextID(acks map[string]int64, lastMessageID int64) int64 {
+	o := lastMessageID
+	for _, v := range acks {
+		if v > o {
+			o = v
+		}
+	}
+	return o + 1
 }
