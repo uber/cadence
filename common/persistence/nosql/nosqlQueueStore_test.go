@@ -23,8 +23,9 @@
 package nosql
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetNextID(t *testing.T) {
