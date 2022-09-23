@@ -57,8 +57,9 @@ func NewNoSQLHistoryStoreFromSession(
 func newNoSQLHistoryStore(
 	cfg config.NoSQL,
 	logger log.Logger,
+	dc *p.DynamicConfiguration,
 ) (p.HistoryStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}

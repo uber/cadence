@@ -39,8 +39,9 @@ type (
 func NewNoSQLConfigStore(
 	cfg config.NoSQL,
 	logger log.Logger,
+	dc *persistence.DynamicConfiguration,
 ) (persistence.ConfigStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}

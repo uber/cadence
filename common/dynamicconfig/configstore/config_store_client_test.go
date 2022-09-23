@@ -68,7 +68,7 @@ func (s *configStoreClientSuite) SetupSuite() {
 
 	mockPlugin := nosqlplugin.NewMockPlugin(s.mockController)
 	mockPlugin.EXPECT().
-		CreateDB(gomock.Any(), gomock.Any()).
+		CreateDB(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil, nil).AnyTimes()
 	nosql.RegisterPlugin("cassandra", mockPlugin)
 }
