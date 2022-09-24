@@ -90,6 +90,9 @@ func (q *nosqlQueueStore) createQueueMetadataEntryIfNotExist() error {
 	return nil
 }
 
+// Warning: This is not a safe concurrent operation in its current state.
+// It's only used for domain replication at the moment, but needs a conditional write guard
+// for concurrent use
 func (q *nosqlQueueStore) EnqueueMessage(
 	ctx context.Context,
 	messagePayload []byte,
