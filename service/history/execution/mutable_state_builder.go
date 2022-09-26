@@ -2149,7 +2149,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		event,
 	)
 
-	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
+	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event, true)
 	if err != nil {
 		return nil, nil, nil, false, false, err
 	}
@@ -2165,6 +2165,10 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 	if started {
 		activityStartedScope.IncCounter(metrics.CadenceRequests)
 		return event, ai, nil, true, true, nil
+	}
+
+	if err := e.taskGenerator.GenerateActivityTransferTasks(event); err != nil {
+		return nil, nil, nil, dispatch, false, err
 	}
 
 	return event, ai, nil, dispatch, false, err
@@ -2208,6 +2212,7 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	firstEventID int64,
 	event *types.HistoryEvent,
+	skipTaskGeneration bool,
 ) (*persistence.ActivityInfo, error) {
 
 	attributes := event.ActivityTaskScheduledEventAttributes
@@ -2259,7 +2264,11 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	e.pendingActivityIDToEventID[ai.ActivityID] = scheduleEventID
 	e.updateActivityInfos[ai.ScheduleID] = ai
 
-	return ai, e.taskGenerator.GenerateActivityTransferTasks(event)
+	if !skipTaskGeneration {
+		return ai, e.taskGenerator.GenerateActivityTransferTasks(event)
+	}
+
+	return ai, nil
 }
 
 func (e *mutableStateBuilder) addTransientActivityStartedEvent(
@@ -4177,9 +4186,7 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 	//  since we only generate at most one activity & user timer,
 	//  regardless of how many activity & user timer created
 	//  so the calculation must be at the very end
-	return e.closeTransactionHandleActivityUserTimerTasks(
-		transactionPolicy,
-	)
+	return e.closeTransactionHandleActivityUserTimerTasks()
 }
 
 func (e *mutableStateBuilder) cleanupTransaction() error {
@@ -4624,10 +4631,7 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 	return nil
 }
 
-func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
-	transactionPolicy TransactionPolicy,
-) error {
-
+func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks() error {
 	if !e.IsWorkflowExecutionRunning() {
 		return nil
 	}

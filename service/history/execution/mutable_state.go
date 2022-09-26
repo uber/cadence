@@ -173,7 +173,7 @@ type (
 		ReplicateActivityTaskCanceledEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskCompletedEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskFailedEvent(*types.HistoryEvent) error
-		ReplicateActivityTaskScheduledEvent(int64, *types.HistoryEvent) (*persistence.ActivityInfo, error)
+		ReplicateActivityTaskScheduledEvent(int64, *types.HistoryEvent, bool) (*persistence.ActivityInfo, error)
 		ReplicateActivityTaskStartedEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskTimedOutEvent(*types.HistoryEvent) error
 		ReplicateChildWorkflowExecutionCanceledEvent(*types.HistoryEvent) error

@@ -221,6 +221,7 @@ func (b *stateBuilderImpl) ApplyEvents(
 			if _, err := b.mutableState.ReplicateActivityTaskScheduledEvent(
 				firstEvent.ID,
 				event,
+				false,
 			); err != nil {
 				return nil, err
 			}

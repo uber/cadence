@@ -961,7 +961,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeActivityTaskScheduled() {
 		TaskList: tasklist,
 	}
 	s.mockMutableState.EXPECT().GetExecutionInfo().Return(executionInfo).AnyTimes()
-	s.mockMutableState.EXPECT().ReplicateActivityTaskScheduledEvent(event.ID, event).Return(ai, nil).Times(1)
+	s.mockMutableState.EXPECT().ReplicateActivityTaskScheduledEvent(event.ID, event, false).Return(ai, nil).Times(1)
 	s.mockUpdateVersion(event)
 	// assertion on timer generated is in `mockUpdateVersion` function, since activity / user timer
 	// need to be refreshed each time
