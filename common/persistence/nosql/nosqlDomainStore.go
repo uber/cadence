@@ -45,8 +45,9 @@ func newNoSQLDomainStore(
 	cfg config.NoSQL,
 	currentClusterName string,
 	logger log.Logger,
+	dc *p.DynamicConfiguration,
 ) (p.DomainStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}

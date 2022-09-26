@@ -27,13 +27,15 @@ import (
 type (
 	// DynamicConfiguration represents dynamic configuration for persistence layer
 	DynamicConfiguration struct {
-		EnableSQLAsyncTransaction dynamicconfig.BoolPropertyFn
+		EnableSQLAsyncTransaction                dynamicconfig.BoolPropertyFn
+		EnableCassandraAllConsistencyLevelDelete dynamicconfig.BoolPropertyFn
 	}
 )
 
 // NewDynamicConfiguration returns new config with default values
 func NewDynamicConfiguration(dc *dynamicconfig.Collection) *DynamicConfiguration {
 	return &DynamicConfiguration{
-		EnableSQLAsyncTransaction: dc.GetBoolProperty(dynamicconfig.EnableSQLAsyncTransaction),
+		EnableSQLAsyncTransaction:                dc.GetBoolProperty(dynamicconfig.EnableSQLAsyncTransaction),
+		EnableCassandraAllConsistencyLevelDelete: dc.GetBoolProperty(dynamicconfig.EnableCassandraAllConsistencyLevelDelete),
 	}
 }

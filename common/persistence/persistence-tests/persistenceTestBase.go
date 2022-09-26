@@ -138,7 +138,8 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 		metadata = cluster.GetTestClusterMetadata(false)
 	}
 	dc := persistence.DynamicConfiguration{
-		EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
@@ -160,7 +161,8 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 		metadata = cluster.GetTestClusterMetadata(false)
 	}
 	dc := persistence.DynamicConfiguration{
-		EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
