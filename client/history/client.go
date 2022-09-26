@@ -30,7 +30,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -48,7 +47,7 @@ const (
 type (
 	clientImpl struct {
 		numberOfShards    int
-		rpcMaxSizeInBytes dynamicconfig.IntPropertyFn // This value currently only used in GetReplicationMessage API
+		rpcMaxSizeInBytes int // This value currently only used in GetReplicationMessage API
 		tokenSerializer   common.TaskTokenSerializer
 		timeout           time.Duration
 		client            Client
@@ -66,7 +65,7 @@ type (
 // NewClient creates a new history service TChannel client
 func NewClient(
 	numberOfShards int,
-	rpcMaxSizeInBytes dynamicconfig.IntPropertyFn,
+	rpcMaxSizeInBytes int,
 	timeout time.Duration,
 	client Client,
 	peerResolver PeerResolver,
@@ -859,7 +858,7 @@ func (c *clientImpl) GetReplicationMessages(
 
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
 	responseTotalSize := 0
-	rpcMaxResponseSize := c.rpcMaxSizeInBytes()
+	rpcMaxResponseSize := c.rpcMaxSizeInBytes
 	for _, resp := range peerResponses {
 		if (responseTotalSize + resp.size) >= rpcMaxResponseSize {
 			// Log shards that did not fit for debugging purposes
