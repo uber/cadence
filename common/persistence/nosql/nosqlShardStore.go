@@ -47,8 +47,9 @@ func newNoSQLShardStore(
 	cfg config.NoSQL,
 	clusterName string,
 	logger log.Logger,
+	dc *p.DynamicConfiguration,
 ) (p.ShardStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
