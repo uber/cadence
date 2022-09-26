@@ -2365,8 +2365,10 @@ func (e *historyEngineImpl) SignalWorkflowExecution(
 			}
 
 			// If history is corrupted, signal will be rejected
-			if err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
-				return nil, &types.EntityNotExistsError{Message: err.Error()}
+			if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+				return nil, err
+			} else if corrupted {
+				return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
@@ -2455,7 +2457,9 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 			}
 
 			// workflow exists but history is corrupted, will restart workflow then signal
-			if err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+			if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+				return nil, err
+			} else if corrupted {
 				prevMutableState = mutableState
 				break
 			}
@@ -2544,10 +2548,10 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	)
 }
 
-func (e *historyEngineImpl) checkForHistoryCorruptions(ctx context.Context, mutableState execution.MutableState) error {
+func (e *historyEngineImpl) checkForHistoryCorruptions(ctx context.Context, mutableState execution.MutableState) (bool, error) {
 	domainName := mutableState.GetDomainEntry().GetInfo().Name
 	if !e.config.EnableHistoryCorruptionCheck(domainName) {
-		return nil
+		return false, nil
 	}
 
 	// Ensure that we can obtain start event. Failing to do so means corrupted history or resurrected mutable state record.
@@ -2564,10 +2568,13 @@ func (e *historyEngineImpl) checkForHistoryCorruptions(ctx context.Context, muta
 			tag.WorkflowType(info.WorkflowTypeName),
 			tag.Error(err))
 
-		return err
+		if errors.Is(err, execution.ErrMissingWorkflowStartEvent) {
+			return true, nil
+		}
+		return false, err
 	}
 
-	return nil
+	return false, nil
 }
 
 // RemoveSignalMutableState remove the signal request id in signal_requested for deduplicate
