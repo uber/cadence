@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
@@ -46,8 +47,9 @@ func newNoSQLQueueStore(
 	cfg config.NoSQL,
 	logger log.Logger,
 	queueType persistence.QueueType,
+	dc *p.DynamicConfiguration,
 ) (persistence.Queue, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
