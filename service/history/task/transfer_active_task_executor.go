@@ -600,7 +600,14 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		targetDomainName,
 		requestCancelInfo.CancelRequestID,
 	); err != nil {
-		t.logger.Info(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
+		t.logger.Error("Failed to cancel external workflow execution",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TargetWorkflowDomainID(task.TargetDomainID),
+			tag.TargetWorkflowID(task.TargetWorkflowID),
+			tag.TargetWorkflowRunID(task.TargetRunID),
+			tag.Error(err))
 
 		// Check to see if the error is non-transient, in which case add RequestCancelFailed
 		// event and complete transfer task by setting the err = nil
@@ -619,11 +626,13 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		)
 	}
 
-	t.logger.Debug(fmt.Sprintf(
-		"RequestCancel successfully recorded to external workflow execution.  task.WorkflowID: %v, RunID: %v",
-		task.TargetWorkflowID,
-		task.TargetRunID,
-	))
+	t.logger.Debug("RequestCancel successfully recorded to external workflow execution",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TargetWorkflowDomainID(task.TargetDomainID),
+		tag.TargetWorkflowID(task.TargetWorkflowID),
+		tag.TargetWorkflowRunID(task.TargetRunID))
 
 	// Record ExternalWorkflowExecutionCancelRequested in source execution
 	return requestCancelExternalExecutionCompleted(
@@ -710,7 +719,14 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		targetDomainName,
 		signalInfo,
 	); err != nil {
-		t.logger.Info(fmt.Sprintf("Failed to signal external workflow execution. Error: %v", err))
+		t.logger.Error("Failed to signal external workflow execution",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TargetWorkflowDomainID(task.TargetDomainID),
+			tag.TargetWorkflowID(task.TargetWorkflowID),
+			tag.TargetWorkflowRunID(task.TargetRunID),
+			tag.Error(err))
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil
@@ -730,11 +746,13 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		)
 	}
 
-	t.logger.Debug(fmt.Sprintf(
-		"Signal successfully recorded to external workflow execution.  task.WorkflowID: %v, RunID: %v",
-		task.TargetWorkflowID,
-		task.TargetRunID,
-	))
+	t.logger.Debug("Signal successfully recorded to external workflow execution",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TargetWorkflowDomainID(task.TargetDomainID),
+		tag.TargetWorkflowID(task.TargetWorkflowID),
+		tag.TargetWorkflowRunID(task.TargetRunID))
 
 	err = signalExternalExecutionCompleted(
 		ctx,
@@ -861,7 +879,13 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		attributes,
 	)
 	if err != nil {
-		t.logger.Debug(fmt.Sprintf("Failed to start child workflow execution. Error: %v", err))
+		t.logger.Error("Failed to start child workflow execution",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TargetWorkflowDomainID(task.TargetDomainID),
+			tag.TargetWorkflowID(attributes.WorkflowID),
+			tag.Error(err))
 
 		// Check to see if the error is non-transient, in which case add StartChildWorkflowExecutionFailed
 		// event and complete transfer task by setting the err = nil
@@ -875,8 +899,13 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return err
 	}
 
-	t.logger.Debug(fmt.Sprintf("Child Execution started successfully.  task.WorkflowID: %v, RunID: %v",
-		attributes.WorkflowID, childRunID))
+	t.logger.Debug("Child Execution started successfully",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TargetWorkflowDomainID(task.TargetDomainID),
+		tag.TargetWorkflowID(attributes.WorkflowID),
+		tag.TargetWorkflowRunID(childRunID))
 
 	// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
 	err = recordChildExecutionStarted(ctx, task, wfContext, attributes, childRunID, t.shard.GetTimeSource().Now())
@@ -995,6 +1024,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			isCron,
 			numClusters,
 			visibilityMemo,
+			updateTimestamp.UnixNano(),
 			searchAttr,
 		)
 	}

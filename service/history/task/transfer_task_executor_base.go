@@ -151,6 +151,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	isCron bool,
 	numClusters int16,
 	visibilityMemo *types.Memo,
+	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -185,6 +186,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		TaskList:           taskList,
 		IsCron:             isCron,
 		NumClusters:        numClusters,
+		UpdateTimestamp:    updateTimeUnixNano,
 		SearchAttributes:   searchAttributes,
 	}
 
@@ -380,7 +382,12 @@ func getWorkflowExecutionTimestamp(
 func getWorkflowLastUpdatedTimestamp(
 	msBuilder execution.MutableState,
 ) time.Time {
-	return msBuilder.GetExecutionInfo().LastUpdatedTimestamp
+
+	executionInfo := msBuilder.GetExecutionInfo()
+	if executionInfo != nil {
+		return executionInfo.LastUpdatedTimestamp
+	}
+	return time.Unix(0, 0)
 }
 
 func getWorkflowMemo(

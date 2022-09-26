@@ -263,6 +263,14 @@ func CheckDecisionResultLimit(
 	return nil
 }
 
+// ToServiceTransientError converts an error to ServiceTransientError
+func ToServiceTransientError(err error) error {
+	if err == nil || IsServiceTransientError(err) {
+		return err
+	}
+	return yarpcerrors.Newf(yarpcerrors.CodeUnavailable, err.Error())
+}
+
 // IsServiceTransientError checks if the error is a transient error.
 func IsServiceTransientError(err error) bool {
 	switch err.(type) {
