@@ -25,6 +25,7 @@ import (
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
@@ -47,12 +48,12 @@ func init() {
 }
 
 // CreateDB initialize the db object
-func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.DB, error) {
-	return p.doCreateDB(cfg, logger)
+func (p *plugin) CreateDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (nosqlplugin.DB, error) {
+	return p.doCreateDB(cfg, logger, dc)
 }
 
 // CreateAdminDB initialize the AdminDB object
-func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugin.AdminDB, error) {
+func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (nosqlplugin.AdminDB, error) {
 	// the keyspace is not created yet, so use empty and let the Cassandra connect
 	keyspace := cfg.Keyspace
 	cfg.Keyspace = ""
@@ -61,15 +62,15 @@ func (p *plugin) CreateAdminDB(cfg *config.NoSQL, logger log.Logger) (nosqlplugi
 		cfg.Keyspace = keyspace
 	}()
 
-	return p.doCreateDB(cfg, logger)
+	return p.doCreateDB(cfg, logger, dc)
 }
 
-func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger) (*cdb, error) {
+func (p *plugin) doCreateDB(cfg *config.NoSQL, logger log.Logger, dc *persistence.DynamicConfiguration) (*cdb, error) {
 	session, err := gocql.GetRegisteredClient().CreateSession(toGoCqlConfig(cfg))
 	if err != nil {
 		return nil, err
 	}
-	db := newCassandraDBFromSession(cfg, session, logger)
+	db := newCassandraDBFromSession(cfg, session, logger, dc)
 	return db, nil
 }
 

@@ -36,6 +36,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -104,10 +105,15 @@ func (s *IntegrationBase) setupSuite() {
 	} else {
 		s.Logger.Info("Running integration test against test cluster")
 		clusterMetadata := NewClusterMetadata(s.testClusterConfig)
+		dc := persistence.DynamicConfiguration{
+			EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+			EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
+		}
 		params := pt.TestBaseParams{
 			DefaultTestCluster:    s.defaultTestCluster,
 			VisibilityTestCluster: s.visibilityTestCluster,
 			ClusterMetadata:       clusterMetadata,
+			DynamicConfiguration:  dc,
 		}
 		cluster, err := NewCluster(s.testClusterConfig, s.Logger, params)
 		s.Require().NoError(err)

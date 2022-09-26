@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/persistence-tests/testcluster"
 )
 
@@ -78,7 +79,7 @@ func (s *testCluster) Config() config.Persistence {
 
 // SetupTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) SetupTestDatabase() {
-	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
+	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger(), &persistence.DynamicConfiguration{})
 
 	if err != nil {
 		log.Fatal(err)
@@ -91,7 +92,7 @@ func (s *testCluster) SetupTestDatabase() {
 
 // TearDownTestDatabase from PersistenceTestCluster interface
 func (s *testCluster) TearDownTestDatabase() {
-	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger())
+	adminDB, err := NewNoSQLAdminDB(&s.cfg, loggerimpl.NewNopLogger(), &persistence.DynamicConfiguration{})
 	if err != nil {
 		log.Fatal(err)
 	}
