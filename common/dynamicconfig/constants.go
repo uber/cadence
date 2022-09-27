@@ -1744,6 +1744,8 @@ const (
 	// Default value: false
 	EnablePendingActivityValidation
 
+	EnableCassandraAllConsistencyLevelDelete
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3723,6 +3725,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnablePendingActivityValidation: DynamicBool{
 		KeyName:      "limit.pendingActivityCount.enabled",
 		Description:  "Enables pending activity count limiting/validation",
+		DefaultValue: false,
+	},
+	EnableCassandraAllConsistencyLevelDelete: DynamicBool{
+		KeyName:      "system.enableCassandraAllConsistencyLevelDelete",
+		Description:  "Uses all consistency level for Cassandra delete operations",
 		DefaultValue: false,
 	},
 }
