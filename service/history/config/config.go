@@ -59,7 +59,7 @@ type Config struct {
 	EnableStickyQuery               dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration           dynamicconfig.DurationPropertyFn
 	WorkflowDeletionJitterRange     dynamicconfig.IntPropertyFnWithDomainFilter
-	MaxResponseSize                 dynamicconfig.IntPropertyFn
+	MaxResponseSize                 int
 
 	// HistoryCache settings
 	// Change of these configs require shard restart
@@ -318,7 +318,7 @@ type Config struct {
 }
 
 // New returns new service config with default values
-func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isAdvancedVisConfigExist bool) *Config {
+func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, storeType string, isAdvancedVisConfigExist bool) *Config {
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
 		IsAdvancedVisConfigExist:             isAdvancedVisConfigExist,
@@ -363,7 +363,7 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, storeType string, isA
 		StandbyTaskMissingEventsResendDelay:  dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsResendDelay),
 		StandbyTaskMissingEventsDiscardDelay: dc.GetDurationProperty(dynamicconfig.StandbyTaskMissingEventsDiscardDelay),
 		WorkflowDeletionJitterRange:          dc.GetIntPropertyFilteredByDomain(dynamicconfig.WorkflowDeletionJitterRange),
-		MaxResponseSize:                      dc.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte),
+		MaxResponseSize:                      maxMessageSize,
 
 		TaskProcessRPS:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.TaskProcessRPS),
 		TaskSchedulerType:                       dc.GetIntProperty(dynamicconfig.TaskSchedulerType),
@@ -580,7 +580,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnablePendingActivityValidation, true))
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
-	config := New(dc, shardNumber, config.StoreTypeCassandra, false)
+	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false)
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain)
