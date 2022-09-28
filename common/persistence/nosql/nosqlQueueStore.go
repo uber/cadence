@@ -27,6 +27,7 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
+	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 	"github.com/uber/cadence/common/types"
 )
@@ -46,8 +47,9 @@ func newNoSQLQueueStore(
 	cfg config.NoSQL,
 	logger log.Logger,
 	queueType persistence.QueueType,
+	dc *p.DynamicConfiguration,
 ) (persistence.Queue, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
@@ -90,6 +92,9 @@ func (q *nosqlQueueStore) createQueueMetadataEntryIfNotExist() error {
 	return nil
 }
 
+// Warning: This is not a safe concurrent operation in its current state.
+// It's only used for domain replication at the moment, but needs a conditional write guard
+// for concurrent use
 func (q *nosqlQueueStore) EnqueueMessage(
 	ctx context.Context,
 	messagePayload []byte,
@@ -98,8 +103,11 @@ func (q *nosqlQueueStore) EnqueueMessage(
 	if err != nil {
 		return err
 	}
-
-	_, err = q.tryEnqueue(ctx, q.queueType, lastMessageID+1, messagePayload)
+	ackLevels, err := q.GetAckLevels(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = q.tryEnqueue(ctx, q.queueType, getNextID(ackLevels, lastMessageID), messagePayload)
 	return err
 }
 
@@ -372,4 +380,16 @@ func (q *nosqlQueueStore) updateAckLevel(
 		return err
 	}
 	return nil
+}
+
+// if, for whatever reason, the ack-levels get ahead of the actual messages
+// then ensure the next ID follows
+func getNextID(acks map[string]int64, lastMessageID int64) int64 {
+	o := lastMessageID
+	for _, v := range acks {
+		if v > o {
+			o = v
+		}
+	}
+	return o + 1
 }

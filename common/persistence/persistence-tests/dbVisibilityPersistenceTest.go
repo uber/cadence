@@ -119,6 +119,7 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 		Execution:        workflowExecution,
 		WorkflowTypeName: "visibility-workflow",
 		StartTimestamp:   startTime,
+		UpdateTimestamp:  0,
 	}
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, startReq)
 	s.Nil(err0)
@@ -139,6 +140,7 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 		WorkflowTypeName: "visibility-workflow",
 		StartTimestamp:   startTime,
 		CloseTimestamp:   time.Now().UnixNano(),
+		UpdateTimestamp:  time.Now().UnixNano(),
 		HistoryLength:    5,
 	}
 	err2 := s.VisibilityMgr.RecordWorkflowExecutionClosed(ctx, closeReq)

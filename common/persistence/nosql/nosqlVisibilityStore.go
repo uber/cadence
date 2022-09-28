@@ -50,8 +50,9 @@ func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
 	cfg config.NoSQL,
 	logger log.Logger,
+	dc *p.DynamicConfiguration,
 ) (p.VisibilityStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +84,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 			TaskList:      request.TaskList,
 			IsCron:        request.IsCron,
 			NumClusters:   request.NumClusters,
+			UpdateTime:    request.UpdateTimestamp,
 		},
 	})
 	if err != nil {
@@ -119,6 +121,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 			Status:        &request.Status,
 			CloseTime:     request.CloseTimestamp,
 			HistoryLength: request.HistoryLength,
+			UpdateTime:    request.UpdateTimestamp,
 		},
 	})
 

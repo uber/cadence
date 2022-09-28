@@ -501,6 +501,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 			isCron,
 			numClusters,
 			visibilityMemo,
+			updateTimestamp.UnixNano(),
 			searchAttr,
 		)
 	}

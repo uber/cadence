@@ -700,6 +700,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    time.Time
 		SearchAttributes   map[string][]byte
 	}
 
