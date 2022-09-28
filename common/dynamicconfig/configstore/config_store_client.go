@@ -96,7 +96,7 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Pe
 }
 
 func newConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (*configStoreClient, error) {
-	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger)
+	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -21,7 +21,6 @@
 package client
 
 import (
-	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -116,18 +115,9 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 
 	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
 
-	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
-	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte)
-	if maxSizeConfig() > supportedMessageSize {
-		return nil, fmt.Errorf(
-			"GRPCMaxSizeInByte dynamic config value %v is larger than supported value %v",
-			maxSizeConfig(),
-			supportedMessageSize,
-		)
-	}
 	client := history.NewClient(
 		cf.numberOfHistoryShards,
-		maxSizeConfig,
+		cf.rpcFactory.GetMaxMessageSize(),
 		timeout,
 		rawClient,
 		peerResolver,

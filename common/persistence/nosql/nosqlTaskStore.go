@@ -53,8 +53,9 @@ var _ p.TaskStore = (*nosqlTaskStore)(nil)
 func newNoSQLTaskStore(
 	cfg config.NoSQL,
 	logger log.Logger,
+	dc *p.DynamicConfiguration,
 ) (p.TaskStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}

@@ -1626,7 +1626,7 @@ func (h *handlerImpl) GetReplicationMessages(
 	wg.Wait()
 
 	responseSize := 0
-	maxResponseSize := h.config.MaxResponseSize()
+	maxResponseSize := h.config.MaxResponseSize
 
 	messagesByShard := make(map[int32]*types.ReplicationMessages)
 	result.Range(func(key, value interface{}) bool {
@@ -2079,7 +2079,7 @@ func (h *handlerImpl) convertError(err error) error {
 
 		return shard.CreateShardOwnershipLostError(h.GetHostInfo(), info)
 	case *persistence.WorkflowExecutionAlreadyStartedError:
-		return &types.WorkflowExecutionAlreadyStartedError{Message: err.Msg}
+		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.CurrentWorkflowConditionFailedError:
 		return &types.InternalServiceError{Message: err.Msg}
 	case *persistence.TransactionSizeLimitError:
