@@ -77,7 +77,7 @@ type (
 )
 
 var (
-	errEventNotFoundInBatch = &types.InternalServiceError{Message: "History event not found within expected batch"}
+	errEventNotFoundInBatch = &types.EntityNotExistsError{Message: "History event not found within expected batch"}
 )
 
 var _ Cache = (*cacheImpl)(nil)

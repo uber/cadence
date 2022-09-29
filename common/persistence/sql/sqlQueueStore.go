@@ -68,7 +68,12 @@ func (q *sqlQueueStore) EnqueueMessage(
 			}
 		}
 
-		_, err = tx.InsertIntoQueue(ctx, newQueueRow(q.queueType, lastMessageID+1, messagePayload))
+		ackLevels, err := tx.GetAckLevels(ctx, q.queueType, true)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.InsertIntoQueue(ctx, newQueueRow(q.queueType, getNextID(ackLevels, lastMessageID), messagePayload))
 		return err
 	})
 }
@@ -271,4 +276,16 @@ func (q *sqlQueueStore) GetDLQSize(
 
 func (q *sqlQueueStore) getDLQTypeFromQueueType() persistence.QueueType {
 	return -q.queueType
+}
+
+// if, for whatever reason, the ack-levels get ahead of the actual messages
+// then ensure the next ID follows
+func getNextID(acks map[string]int64, lastMessageID int64) int64 {
+	o := lastMessageID
+	for _, v := range acks {
+		if v > o {
+			o = v
+		}
+	}
+	return o + 1
 }

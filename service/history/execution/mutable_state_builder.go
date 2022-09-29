@@ -965,6 +965,12 @@ func (e *mutableStateBuilder) GetActivityScheduledEvent(
 		// do not return the original error
 		// since original error can be of type entity not exists
 		// which can cause task processing side to fail silently
+		// However, if the error is a persistence transient error,
+		// we return the original error, because we fail to get
+		// the event because of failure from database
+		if persistence.IsTransientError(err) {
+			return nil, err
+		}
 		return nil, ErrMissingActivityScheduledEvent
 	}
 	return scheduledEvent, nil
@@ -1035,6 +1041,12 @@ func (e *mutableStateBuilder) GetChildExecutionInitiatedEvent(
 		// do not return the original error
 		// since original error can be of type entity not exists
 		// which can cause task processing side to fail silently
+		// However, if the error is a persistence transient error,
+		// we return the original error, because we fail to get
+		// the event because of failure from database
+		if persistence.IsTransientError(err) {
+			return nil, err
+		}
 		return nil, ErrMissingChildWorkflowInitiatedEvent
 	}
 	return initiatedEvent, nil
@@ -1142,6 +1154,12 @@ func (e *mutableStateBuilder) GetCompletionEvent(
 		// do not return the original error
 		// since original error can be of type entity not exists
 		// which can cause task processing side to fail silently
+		// However, if the error is a persistence transient error,
+		// we return the original error, because we fail to get
+		// the event because of failure from database
+		if persistence.IsTransientError(err) {
+			return nil, err
+		}
 		return nil, ErrMissingWorkflowCompletionEvent
 	}
 
@@ -1172,6 +1190,12 @@ func (e *mutableStateBuilder) GetStartEvent(
 		// do not return the original error
 		// since original error can be of type entity not exists
 		// which can cause task processing side to fail silently
+		// However, if the error is a persistence transient error,
+		// we return the original error, because we fail to get
+		// the event because of failure from database
+		if persistence.IsTransientError(err) {
+			return nil, err
+		}
 		return nil, ErrMissingWorkflowStartEvent
 	}
 	return startEvent, nil

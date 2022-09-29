@@ -246,7 +246,8 @@ func (k MapKey) DefaultMap() map[string]interface{} {
 //
 // Since our ratelimiters do int/float conversions, and zero or negative values
 // result in not allowing any requests, math.MaxInt is unsafe:
-//   int(float64(math.MaxInt)) // -9223372036854775808
+//
+//	int(float64(math.MaxInt)) // -9223372036854775808
 //
 // Much higher values are possible, but we can't handle 2 billion RPS, this is good enough.
 const UnlimitedRPS = math.MaxInt32
@@ -270,7 +271,6 @@ const (
 	MaxRetentionDays
 	MinRetentionDays
 	MaxDecisionStartToCloseSeconds
-	GRPCMaxSizeInByte
 	BlobSizeLimitError
 	// BlobSizeLimitWarn is the per event blob size limit for warning
 	// KeyName: limit.blobSize.warn
@@ -1744,6 +1744,8 @@ const (
 	// Default value: false
 	EnablePendingActivityValidation
 
+	EnableCassandraAllConsistencyLevelDelete
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -2509,11 +2511,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.maxDecisionStartToCloseSeconds",
 		Description:  "MaxDecisionStartToCloseSeconds is the maximum allowed value for decision start to close timeout in seconds",
 		DefaultValue: 240,
-	},
-	GRPCMaxSizeInByte: DynamicInt{
-		KeyName:      "system.grpcMaxSizeInByte",
-		Description:  "GRPCMaxSizeInByte is the key for config GRPC response size",
-		DefaultValue: 4 * 1024 * 1024,
 	},
 	BlobSizeLimitError: DynamicInt{
 		KeyName:      "limit.blobSize.error",
@@ -3728,6 +3725,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnablePendingActivityValidation: DynamicBool{
 		KeyName:      "limit.pendingActivityCount.enabled",
 		Description:  "Enables pending activity count limiting/validation",
+		DefaultValue: false,
+	},
+	EnableCassandraAllConsistencyLevelDelete: DynamicBool{
+		KeyName:      "system.enableCassandraAllConsistencyLevelDelete",
+		Description:  "Uses all consistency level for Cassandra delete operations",
 		DefaultValue: false,
 	},
 }
