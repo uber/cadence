@@ -337,3 +337,114 @@ func (s *workflowSuite) TestSuppressWorkflowBy_Zombiefy() {
 	s.Equal(persistence.WorkflowStateZombie, executionInfo.State)
 	s.Equal(persistence.WorkflowCloseStatusNone, executionInfo.CloseStatus)
 }
+
+func (s *workflowSuite) TestRevive_Zombie_Error() {
+	s.mockMutableState.EXPECT().GetWorkflowStateCloseStatus().Return(persistence.WorkflowStateZombie, persistence.WorkflowCloseStatusNone).Times(1)
+	s.mockMutableState.EXPECT().HasProcessedOrPendingDecision().Return(true).Times(1)
+	s.mockMutableState.EXPECT().UpdateWorkflowStateCloseStatus(persistence.WorkflowStateRunning, persistence.WorkflowCloseStatusNone).Return(&types.InternalServiceError{Message: "error"}).Times(1)
+
+	nDCWorkflow := NewWorkflow(
+		context.Background(),
+		cluster.TestActiveClusterMetadata,
+		s.mockContext,
+		s.mockMutableState,
+		NoopReleaseFn,
+	)
+	err := nDCWorkflow.Revive()
+	s.Error(err)
+}
+
+func (s *workflowSuite) TestRevive_Zombie_Success() {
+	s.mockMutableState.EXPECT().GetWorkflowStateCloseStatus().Return(persistence.WorkflowStateZombie, persistence.WorkflowCloseStatusNone).Times(1)
+	s.mockMutableState.EXPECT().HasProcessedOrPendingDecision().Return(true).Times(1)
+	s.mockMutableState.EXPECT().UpdateWorkflowStateCloseStatus(persistence.WorkflowStateRunning, persistence.WorkflowCloseStatusNone).Return(nil).Times(1)
+
+	nDCWorkflow := NewWorkflow(
+		context.Background(),
+		cluster.TestActiveClusterMetadata,
+		s.mockContext,
+		s.mockMutableState,
+		NoopReleaseFn,
+	)
+	err := nDCWorkflow.Revive()
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestRevive_NonZombie_Success() {
+	s.mockMutableState.EXPECT().GetWorkflowStateCloseStatus().Return(persistence.WorkflowStateCompleted, persistence.WorkflowCloseStatusNone).Times(1)
+
+	nDCWorkflow := NewWorkflow(
+		context.Background(),
+		cluster.TestActiveClusterMetadata,
+		s.mockContext,
+		s.mockMutableState,
+		NoopReleaseFn,
+	)
+	err := nDCWorkflow.Revive()
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestFlushBufferedEvents_Success() {
+	lastWriteVersion := cluster.TestCurrentClusterInitialFailoverVersion
+	lastEventTaskID := int64(144)
+	decision := &DecisionInfo{
+		ScheduleID: 1,
+		StartedID:  2,
+	}
+
+	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true)
+	s.mockMutableState.EXPECT().HasBufferedEvents().Return(true)
+	s.mockMutableState.EXPECT().GetLastWriteVersion().Return(lastWriteVersion, nil)
+	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{LastEventTaskID: lastEventTaskID})
+	s.mockMutableState.EXPECT().UpdateCurrentVersion(lastWriteVersion, true).Return(nil)
+	s.mockMutableState.EXPECT().GetInFlightDecision().Return(decision, true)
+	s.mockMutableState.EXPECT().AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, types.DecisionTaskFailedCauseFailoverCloseDecision, nil, IdentityHistoryService, "", "", "", "", int64(0)).Return(&types.HistoryEvent{}, nil)
+	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil)
+
+	nDCWorkflow := NewWorkflow(
+		context.Background(),
+		cluster.TestActiveClusterMetadata,
+		s.mockContext,
+		s.mockMutableState,
+		NoopReleaseFn,
+	)
+	err := nDCWorkflow.FlushBufferedEvents()
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestFlushBufferedEvents_NoBuffer_Success() {
+	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true)
+	s.mockMutableState.EXPECT().HasBufferedEvents().Return(false)
+
+	nDCWorkflow := NewWorkflow(
+		context.Background(),
+		cluster.TestActiveClusterMetadata,
+		s.mockContext,
+		s.mockMutableState,
+		NoopReleaseFn,
+	)
+	err := nDCWorkflow.FlushBufferedEvents()
+	s.NoError(err)
+}
+
+func (s *workflowSuite) TestFlushBufferedEvents_NoDecision_Success() {
+	lastWriteVersion := cluster.TestCurrentClusterInitialFailoverVersion
+	lastEventTaskID := int64(144)
+
+	s.mockMutableState.EXPECT().IsWorkflowExecutionRunning().Return(true)
+	s.mockMutableState.EXPECT().HasBufferedEvents().Return(true)
+	s.mockMutableState.EXPECT().GetLastWriteVersion().Return(lastWriteVersion, nil)
+	s.mockMutableState.EXPECT().GetExecutionInfo().Return(&persistence.WorkflowExecutionInfo{LastEventTaskID: lastEventTaskID})
+	s.mockMutableState.EXPECT().UpdateCurrentVersion(lastWriteVersion, true).Return(nil)
+	s.mockMutableState.EXPECT().GetInFlightDecision().Return(nil, false)
+
+	nDCWorkflow := NewWorkflow(
+		context.Background(),
+		cluster.TestActiveClusterMetadata,
+		s.mockContext,
+		s.mockMutableState,
+		NoopReleaseFn,
+	)
+	err := nDCWorkflow.FlushBufferedEvents()
+	s.NoError(err)
+}
