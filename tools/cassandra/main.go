@@ -144,6 +144,11 @@ func BuildCLIOptions() *cli.App {
 			Usage:  "TLS host verification",
 			EnvVar: "CASSANDRA_TLS_VERIFY_HOST",
 		},
+		cli.StringFlag{
+			Name:   schema.CLIFlagTLSServerName,
+			Usage:  "TLS ServerName",
+			EnvVar: "CASSANDRA_TLS_SERVER_NAME",
+		},
 	}
 
 	app.Commands = []cli.Command{
