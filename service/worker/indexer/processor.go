@@ -168,8 +168,10 @@ func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup) {
 
 func (p *indexProcessor) process(kafkaMsg messaging.Message) error {
 	logger := p.logger.WithTags(tag.KafkaPartition(kafkaMsg.Partition()), tag.KafkaOffset(kafkaMsg.Offset()), tag.AttemptStart(time.Now()))
-
+	logger.Info("PROCESS MESSAGE UNPROCESSED: " + string(kafkaMsg.Value()))
 	indexMsg, err := p.deserialize(kafkaMsg.Value())
+	indexMsgStr, _ := json.Marshal(indexMsg)
+	logger.Info("PROCESS MESSAGE PROCESSED: " + string(indexMsgStr))
 	if err != nil {
 		logger.Error("Failed to deserialize index messages.", tag.Error(err))
 		p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
