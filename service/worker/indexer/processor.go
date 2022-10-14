@@ -136,9 +136,11 @@ func (p *indexProcessor) Stop() {
 func (p *indexProcessor) processorPump() {
 	defer p.shutdownWG.Done()
 
+	p.logger.Info("processor pump state changed", tag.LifeCycleStarting)
 	var workerWG sync.WaitGroup
 	for workerID := 0; workerID < p.config.IndexerConcurrency(); workerID++ {
 		workerWG.Add(1)
+		p.logger.Info(fmt.Sprintf("processor pump - worker started: %d", workerID))
 		go p.messageProcessLoop(&workerWG)
 	}
 
@@ -155,8 +157,9 @@ func (p *indexProcessor) processorPump() {
 
 func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup) {
 	defer workerWG.Done()
-
+	p.logger.Info("message processor loop state changed - starting loop message", tag.LifeCycleStarting)
 	for msg := range p.consumer.Messages() {
+		p.logger.Info("message processor loop state changed", tag.LifeCycleStarted)
 		sw := p.metricsClient.StartTimer(metrics.IndexProcessorScope, metrics.IndexProcessorProcessMsgLatency)
 		err := p.process(msg)
 		sw.Stop()
@@ -167,6 +170,7 @@ func (p *indexProcessor) messageProcessLoop(workerWG *sync.WaitGroup) {
 }
 
 func (p *indexProcessor) process(kafkaMsg messaging.Message) error {
+	p.logger.Info("Started processing")
 	logger := p.logger.WithTags(tag.KafkaPartition(kafkaMsg.Partition()), tag.KafkaOffset(kafkaMsg.Offset()), tag.AttemptStart(time.Now()))
 	logger.Info("PROCESS MESSAGE UNPROCESSED: " + string(kafkaMsg.Value()))
 	indexMsg, err := p.deserialize(kafkaMsg.Value())
