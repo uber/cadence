@@ -224,54 +224,99 @@ func NewConfigStorePersistenceMetricsClient(
 	}
 }
 
-func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, scopeWithDomainTag metrics.Scope) {
-
+func (p *persistenceMetricsClientBase) updateErrorMetricPerDomain(scope int, err error, scopeWithDomainTag metrics.Scope) {
 	switch err.(type) {
 	case *types.DomainAlreadyExistsError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounterPerDomain)
 	case *types.BadRequestError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBadRequestCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBadRequestCounterPerDomain)
 	case *WorkflowExecutionAlreadyStartedError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounterPerDomain)
 	case *ConditionFailedError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrConditionFailedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrConditionFailedCounterPerDomain)
 	case *CurrentWorkflowConditionFailedError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounterPerDomain)
 	case *ShardAlreadyExistError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardExistsCounterPerDomain)
 	case *ShardOwnershipLostError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardOwnershipLostCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardOwnershipLostCounterPerDomain)
 	case *types.EntityNotExistsError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrEntityNotExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrEntityNotExistsCounterPerDomain)
 	case *TimeoutError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrTimeoutCounter)
-		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrTimeoutCounterPerDomain)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
 	case *types.ServiceBusyError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBusyCounter)
-		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBusyCounterPerDomain)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
 	case *DBUnavailableError:
-		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDBUnavailableCounter)
-		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDBUnavailableCounterPerDomain)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
 		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
-		scopeWithDomainTag.IncCounter(metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
+	}
+}
+
+func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, metricsScope metrics.Scope) {
+	switch err.(type) {
+	case *types.DomainAlreadyExistsError:
+		metricsScope.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounter)
+	case *types.BadRequestError:
+		metricsScope.IncCounter(metrics.PersistenceErrBadRequestCounter)
+	case *WorkflowExecutionAlreadyStartedError:
+		metricsScope.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounter)
+	case *ConditionFailedError:
+		metricsScope.IncCounter(metrics.PersistenceErrConditionFailedCounter)
+	case *CurrentWorkflowConditionFailedError:
+		metricsScope.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
+	case *ShardAlreadyExistError:
+		metricsScope.IncCounter(metrics.PersistenceErrShardExistsCounter)
+	case *ShardOwnershipLostError:
+		metricsScope.IncCounter(metrics.PersistenceErrShardOwnershipLostCounter)
+	case *types.EntityNotExistsError:
+		metricsScope.IncCounter(metrics.PersistenceErrEntityNotExistsCounter)
+	case *TimeoutError:
+		metricsScope.IncCounter(metrics.PersistenceErrTimeoutCounter)
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+	case *types.ServiceBusyError:
+		metricsScope.IncCounter(metrics.PersistenceErrBusyCounter)
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+	case *DBUnavailableError:
+		metricsScope.IncCounter(metrics.PersistenceErrDBUnavailableCounter)
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
+	default:
+		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
+		metricsScope.IncCounter(metrics.PersistenceFailures)
 	}
 }
 
 func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...metrics.Tag) error {
-	scopeWithDomainTag := p.metricClient.Scope(scope, tags...)
-	scopeWithDomainTag.IncCounter(metrics.PersistenceRequests)
+	metricsScope := p.metricClient.Scope(scope, tags...)
+	if len(tags) > 0 {
+		metricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
+	} else {
+		metricsScope.IncCounter(metrics.PersistenceRequests)
+	}
 	before := time.Now()
 	err := op()
 	duration := time.Since(before)
-	scopeWithDomainTag.RecordTimer(metrics.PersistenceLatency, duration)
+	if len(tags) > 0 {
+		metricsScope.RecordTimer(metrics.PersistenceLatencyPerDomain, duration)
+	} else {
+		metricsScope.RecordTimer(metrics.PersistenceLatency, duration)
+	}
 
 	if p.enableLatencyHistogramMetrics {
-		scopeWithDomainTag.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
+		metricsScope.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
 	}
 	if err != nil {
-		p.updateErrorMetric(scope, err, scopeWithDomainTag)
+		if len(tags) > 0 {
+			p.updateErrorMetricPerDomain(scope, err, metricsScope)
+		} else {
+			p.updateErrorMetric(scope, err, metricsScope)
+		}
 	}
 	return err
 }
