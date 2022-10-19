@@ -61,6 +61,7 @@ type Config struct {
 	GlobalDomainWorkerRPS             dynamicconfig.IntPropertyFnWithDomainFilter
 	GlobalDomainVisibilityRPS         dynamicconfig.IntPropertyFnWithDomainFilter
 	EnableClientVersionCheck          dynamicconfig.BoolPropertyFn
+	EnableQueryAttributeValidation    dynamicconfig.BoolPropertyFn
 	DisallowQuery                     dynamicconfig.BoolPropertyFnWithDomainFilter
 	ShutdownDrainDuration             dynamicconfig.DurationPropertyFn
 	Lockdown                          dynamicconfig.BoolPropertyFnWithDomainFilter
@@ -160,6 +161,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		DomainFailoverRefreshInterval:               dc.GetDurationProperty(dynamicconfig.DomainFailoverRefreshInterval),
 		DomainFailoverRefreshTimerJitterCoefficient: dc.GetFloat64Property(dynamicconfig.DomainFailoverRefreshTimerJitterCoefficient),
 		EnableClientVersionCheck:                    dc.GetBoolProperty(dynamicconfig.EnableClientVersionCheck),
+		EnableQueryAttributeValidation:              dc.GetBoolProperty(dynamicconfig.EnableQueryAttributeValidation),
 		ValidSearchAttributes:                       dc.GetMapProperty(dynamicconfig.ValidSearchAttributes),
 		SearchAttributesNumberOfKeysLimit:           dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesNumberOfKeysLimit),
 		SearchAttributesSizeOfValueLimit:            dc.GetIntPropertyFilteredByDomain(dynamicconfig.SearchAttributesSizeOfValueLimit),

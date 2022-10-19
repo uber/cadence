@@ -218,7 +218,10 @@ func NewWorkflowHandler(
 			resource.GetArchiverProvider(),
 			resource.GetTimeSource(),
 		),
-		visibilityQueryValidator: validator.NewQueryValidator(config.ValidSearchAttributes),
+		visibilityQueryValidator: validator.NewQueryValidator(
+			config.ValidSearchAttributes,
+			config.EnableQueryAttributeValidation,
+		),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(
 			resource.GetLogger(),
 			config.ValidSearchAttributes,

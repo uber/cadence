@@ -1417,6 +1417,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	FrontendEmitSignalNameMetricsTag
+	// EnableQueryAttributeValidation enables validation of queries' search attributes against the dynamic config whitelist
+	// Keyname: frontend.enableQueryAttributeValidation
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	EnableQueryAttributeValidation
 
 	// key for matching
 
@@ -3461,6 +3467,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "frontend.emitSignalNameMetricsTag",
 		Description:  "FrontendEmitSignalNameMetricsTag enables emitting signal name tag in metrics in frontend client",
 		DefaultValue: false,
+	},
+	EnableQueryAttributeValidation: DynamicBool{
+		KeyName:      "frontend.enableQueryAttributeValidation",
+		Description:  "EnableQueryAttributeValidation enables validation of queries' search attributes against the dynamic config whitelist",
+		DefaultValue: true,
 	},
 	MatchingEnableSyncMatch: DynamicBool{
 		KeyName:      "matching.enableSyncMatch",
