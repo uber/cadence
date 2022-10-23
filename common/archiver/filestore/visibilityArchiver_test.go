@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -65,15 +64,10 @@ func TestVisibilityArchiverSuite(t *testing.T) {
 
 func (s *visibilityArchiverSuite) SetupSuite() {
 	var err error
-	s.testQueryDirectory, err = ioutil.TempDir("", "TestQuery")
-	s.Require().NoError(err)
+	s.testQueryDirectory = s.T().TempDir()
 	s.setupVisibilityDirectory()
 	s.testArchivalURI, err = archiver.NewURI("file:///a/b/c")
 	s.Require().NoError(err)
-}
-
-func (s *visibilityArchiverSuite) TearDownSuite() {
-	os.RemoveAll(s.testQueryDirectory)
 }
 
 func (s *visibilityArchiverSuite) SetupTest() {
@@ -155,9 +149,7 @@ func (s *visibilityArchiverSuite) TestArchive_Fail_NonRetriableErrorOption() {
 }
 
 func (s *visibilityArchiverSuite) TestArchive_Success() {
-	dir, err := ioutil.TempDir("", "TestVisibilityArchive")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
+	dir := s.T().TempDir()
 
 	visibilityArchiver := s.newTestVisibilityArchiver()
 	closeTimestamp := time.Now()
@@ -454,9 +446,7 @@ func (s *visibilityArchiverSuite) TestQuery_Success_SmallPageSize() {
 }
 
 func (s *visibilityArchiverSuite) TestArchiveAndQuery() {
-	dir, err := ioutil.TempDir("", "TestArchiveAndQuery")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
+	dir := s.T().TempDir()
 
 	visibilityArchiver := s.newTestVisibilityArchiver()
 	mockParser := NewMockQueryParser(s.controller)
