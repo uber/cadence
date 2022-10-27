@@ -1843,5 +1843,6 @@ func createRecordWorkflowExecutionUninitializedRequest(
 		DomainUUID:       taskInfo.DomainID,
 		Execution:        workflowExecution,
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
+		UpdateTimestamp:  executionInfo.LastUpdatedTimestamp.UnixNano(),
 	}
 }

@@ -199,6 +199,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 				RunID:      runID,
 			},
 			WorkflowTypeName: workflowTypeName,
+			UpdateTimestamp:  updateTimeUnixNano,
 		}
 		if err := t.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
 			t.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
