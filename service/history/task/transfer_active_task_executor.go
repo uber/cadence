@@ -374,7 +374,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
 	isCron := len(executionInfo.CronSchedule) > 0
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
-	updateTimestamp := executionInfo.LastUpdatedTimestamp
+	updateTimestamp := time.Now().UTC()
 
 	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
@@ -1003,7 +1003,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
-	updateTimestamp := getWorkflowLastUpdatedTimestamp(mutableState)
+	updateTimestamp := time.Now().UTC()
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.

@@ -380,17 +380,6 @@ func getWorkflowExecutionTimestamp(
 	return executionTimestamp
 }
 
-func getWorkflowLastUpdatedTimestamp(
-	msBuilder execution.MutableState,
-) time.Time {
-
-	executionInfo := msBuilder.GetExecutionInfo()
-	if executionInfo != nil {
-		return executionInfo.LastUpdatedTimestamp
-	}
-	return time.Unix(0, 0)
-}
-
 func getWorkflowMemo(
 	memo map[string][]byte,
 ) *types.Memo {
