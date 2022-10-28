@@ -107,10 +107,10 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.NumClusters,
 		request.SearchAttributes,
 		common.RecordStarted,
-		0, // will not be used
-		0, // will not be used
-		0, // will not be used
-		0, // will be updated when workflow execution updates
+		0,                                  // will not be used
+		0,                                  // will not be used
+		0,                                  // will not be used
+		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
 	)
 	return v.producer.Publish(ctx, msg)
 }

@@ -1687,7 +1687,7 @@ func createRecordWorkflowExecutionStartedRequest(
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
-		UpdateTimestamp:    time.Now().UTC().UnixNano(),
+		UpdateTimestamp:    0,
 	}
 }
 
@@ -1825,7 +1825,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
-		UpdateTimestamp:    time.Now().UTC().UnixNano(),
+		UpdateTimestamp:    0,
 	}
 }
 
@@ -1843,6 +1843,6 @@ func createRecordWorkflowExecutionUninitializedRequest(
 		DomainUUID:       taskInfo.DomainID,
 		Execution:        workflowExecution,
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
-		UpdateTimestamp:  time.Now().UTC().UnixNano(),
+		UpdateTimestamp:  0,
 	}
 }
