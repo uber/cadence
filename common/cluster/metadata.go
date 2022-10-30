@@ -22,14 +22,20 @@ package cluster
 
 import (
 	"fmt"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 )
 
 type (
 	// Metadata provides information about clusters
 	Metadata struct {
+		log     log.Logger
+		metrics metrics.Scope
+
 		// failoverVersionIncrement is the increment of each cluster's version when failover happen
 		failoverVersionIncrement int64
 		// primaryClusterName is the name of the primary cluster, only the primary cluster can register / update domain
@@ -45,6 +51,8 @@ type (
 		remoteClusters map[string]config.ClusterInformation
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
+		// allows for a min failover version migration
+		useMinFailoverVersionOverride dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -54,6 +62,9 @@ func NewMetadata(
 	primaryClusterName string,
 	currentClusterName string,
 	clusterGroup map[string]config.ClusterInformation,
+	useMinFailoverVersionOverrideConfig dynamicconfig.BoolPropertyFnWithDomainFilter,
+	metricsClient metrics.Client,
+	logger log.Logger,
 ) Metadata {
 	versionToClusterName := make(map[int64]string)
 	for clusterName, info := range clusterGroup {
@@ -77,36 +88,45 @@ func NewMetadata(
 	}
 
 	return Metadata{
-		failoverVersionIncrement: failoverVersionIncrement,
-		primaryClusterName:       primaryClusterName,
-		currentClusterName:       currentClusterName,
-		allClusters:              clusterGroup,
-		enabledClusters:          enabledClusters,
-		remoteClusters:           remoteClusters,
-		versionToClusterName:     versionToClusterName,
+		log:                           logger,
+		metrics:                       metricsClient.Scope(metrics.ClusterMetadataScope),
+		failoverVersionIncrement:      failoverVersionIncrement,
+		primaryClusterName:            primaryClusterName,
+		currentClusterName:            currentClusterName,
+		allClusters:                   clusterGroup,
+		enabledClusters:               enabledClusters,
+		remoteClusters:                remoteClusters,
+		versionToClusterName:          versionToClusterName,
+		useMinFailoverVersionOverride: useMinFailoverVersionOverrideConfig,
 	}
 }
 
 // GetNextFailoverVersion return the next failover version based on input
-func (m Metadata) GetNextFailoverVersion(cluster string, currentFailoverVersion int64) int64 {
-	info, ok := m.allClusters[cluster]
-	if !ok {
-		panic(fmt.Sprintf(
-			"Unknown cluster name: %v with given cluster initial failover version map: %v.",
-			cluster,
-			m.allClusters,
-		))
-	}
-	failoverVersion := currentFailoverVersion/m.failoverVersionIncrement*m.failoverVersionIncrement + info.InitialFailoverVersion
+func (m Metadata) GetNextFailoverVersion(cluster string, currentFailoverVersion int64, domainName string) int64 {
+	initialFailoverVersion := m.getInitialFailoverVersion(cluster, domainName)
+	failoverVersion := currentFailoverVersion/m.failoverVersionIncrement*m.failoverVersionIncrement + initialFailoverVersion
 	if failoverVersion < currentFailoverVersion {
 		return failoverVersion + m.failoverVersionIncrement
 	}
 	return failoverVersion
 }
 
-// IsVersionFromSameCluster return true if 2 version are used for the same cluster
+// IsVersionFromSameCluster return true if the new version is used for the same cluster
 func (m Metadata) IsVersionFromSameCluster(version1 int64, version2 int64) bool {
-	return (version1-version2)%m.failoverVersionIncrement == 0
+	v1Server, err := m.resolveServerName(version1)
+	if err != nil {
+		// preserving old behaviour however, this should never occur
+		m.metrics.IncCounter(metrics.ClusterMetadataFailureToResolveCounter)
+		m.log.Error("could not resolve an incoming version", tag.Dynamic("failover-version", version1))
+		return false
+	}
+	v2Server, err := m.resolveServerName(version2)
+	if err != nil {
+		m.metrics.IncCounter(metrics.ClusterMetadataFailureToResolveCounter)
+		m.log.Error("could not resolve an incoming version", tag.Dynamic("failover-version", version2))
+		return false
+	}
+	return v1Server == v2Server
 }
 
 func (m Metadata) IsPrimaryCluster() bool {
@@ -138,7 +158,6 @@ func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
 	if failoverVersion == common.EmptyVersion {
 		return m.currentClusterName
 	}
-
 	initialFailoverVersion := failoverVersion % m.failoverVersionIncrement
 	clusterName, ok := m.versionToClusterName[initialFailoverVersion]
 	if !ok {
@@ -150,4 +169,44 @@ func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
 		))
 	}
 	return clusterName
+}
+
+// gets the initial failover version for a cluster / domain
+// along with some helpers for a migration - should it be necessary
+func (m Metadata) getInitialFailoverVersion(cluster string, domainName string) int64 {
+	info, ok := m.allClusters[cluster]
+	if !ok {
+		panic(fmt.Sprintf(
+			"Unknown cluster name: %v with given cluster initial failover version map: %v.",
+			cluster,
+			m.allClusters,
+		))
+	}
+
+	// if using the minFailover Version during a cluster config, then return this from config
+	// (assuming it's safe to do so). This is not the normal state of things and intended only
+	// for when migrating versions.
+	usingMinFailoverVersion := m.useMinFailoverVersionOverride(domainName)
+	if usingMinFailoverVersion && info.MinInitialFailoverVersion != nil && *info.MinInitialFailoverVersion > info.InitialFailoverVersion {
+		m.metrics.IncCounter(metrics.ClusterMetadataGettingMinFailoverVersionCounter)
+		return *info.MinInitialFailoverVersion
+	}
+	// default behaviour - return the initial failover version - a marker to
+	// identify the cluster for all counters
+	m.metrics.IncCounter(metrics.ClusterMetadataGettingFailoverVersionCounter)
+	return info.InitialFailoverVersion
+}
+
+// resolves the server name from
+func (m Metadata) resolveServerName(version int64) (string, error) {
+	moddedFoVersion := version % m.failoverVersionIncrement
+	for name, cluster := range m.allClusters {
+		if cluster.InitialFailoverVersion == moddedFoVersion {
+			return name, nil
+		}
+		if cluster.MinInitialFailoverVersion != nil && *cluster.MinInitialFailoverVersion == moddedFoVersion {
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("could not resolve failover version: %d", version)
 }

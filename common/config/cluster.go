@@ -58,6 +58,12 @@ type (
 		Enabled bool `yaml:"enabled"`
 		// InitialFailoverVersion is the identifier of each cluster. 0 <= the value < failoverVersionIncrement
 		InitialFailoverVersion int64 `yaml:"initialFailoverVersion"`
+		// MinInitialFailover is a new failover version for an initialFailoverVersion migration
+		// for when it's necessary to migrate between two values.
+		//
+		// this is a pointer to imply optionality, it's an optional field and its lack
+		// is indicated by a nil pointer. Zero is a valid field
+		MinInitialFailoverVersion *int64 `yaml:"minInitialFailoverVersion"`
 		// RPCName indicate the remote service name
 		RPCName string `yaml:"rpcName"`
 		// Address indicate the remote service address(Host:Port). Host can be DNS name.
