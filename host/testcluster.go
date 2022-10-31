@@ -22,6 +22,7 @@ package host
 
 import (
 	"context"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -186,6 +187,9 @@ func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
 			options.ClusterGroupMetadata.PrimaryClusterName,
 			options.ClusterGroupMetadata.CurrentClusterName,
 			options.ClusterGroupMetadata.ClusterGroup,
+			func(domain string) bool { return false },
+			metrics.NewNoopMetricsClient(),
+			loggerimpl.NewNopLogger(),
 		)
 	}
 	return clusterMetadata
