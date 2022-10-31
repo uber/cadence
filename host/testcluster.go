@@ -22,11 +22,12 @@ package host
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/log/loggerimpl"
 
 	"github.com/uber-go/tally"
 
