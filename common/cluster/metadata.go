@@ -22,6 +22,7 @@ package cluster
 
 import (
 	"fmt"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"
