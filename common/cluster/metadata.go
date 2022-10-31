@@ -189,11 +189,13 @@ func (m Metadata) getInitialFailoverVersion(cluster string, domainName string) i
 	// for when migrating versions.
 	usingMinFailoverVersion := m.useMinFailoverVersionOverride(domainName)
 	if usingMinFailoverVersion && info.MinInitialFailoverVersion != nil && *info.MinInitialFailoverVersion > info.InitialFailoverVersion {
+		m.log.Debug("using min failover version for cluster", tag.ClusterName(cluster), tag.WorkflowDomainName(domainName))
 		m.metrics.IncCounter(metrics.ClusterMetadataGettingMinFailoverVersionCounter)
 		return *info.MinInitialFailoverVersion
 	}
 	// default behaviour - return the initial failover version - a marker to
 	// identify the cluster for all counters
+	m.log.Debug("getting failover version for cluster", tag.ClusterName(cluster), tag.WorkflowDomainName(domainName))
 	m.metrics.IncCounter(metrics.ClusterMetadataGettingFailoverVersionCounter)
 	return info.InitialFailoverVersion
 }
