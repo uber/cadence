@@ -310,7 +310,7 @@ func initializeClusterMetadata(serviceConfig *config.Config, metrics metrics.Cli
 		clusterGroupMetadata.PrimaryClusterName,
 		clusterGroupMetadata.CurrentClusterName,
 		clusterGroupMetadata.ClusterGroup,
-		nil,
+		func(d string) bool { return false },
 		metrics,
 		logger,
 	)
