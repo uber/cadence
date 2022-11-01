@@ -93,6 +93,7 @@ func TestMetadataBehaviour(t *testing.T) {
 				},
 				useMinFailoverVersionOverride: func(domain string) bool { return false },
 				metrics:                       metrics.NewNoopMetricsClient().Scope(0),
+				log:                           loggerimpl.NewNopLogger(),
 			}
 			assert.Equal(t, td.expectedOut, m.GetNextFailoverVersion(td.failoverCluster, td.currentVersion, "a domain"), name)
 		})
@@ -130,6 +131,7 @@ func TestFailoverVersionLogicIsMonotonic(t *testing.T) {
 		},
 		useMinFailoverVersionOverride: func(domain string) bool { return someDomainMigrating == domain },
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
+		log:                           loggerimpl.NewNopLogger(),
 	}
 
 	current := int64(0)
@@ -221,6 +223,7 @@ func TestResolvingClusterVersion(t *testing.T) {
 			initialFailoverVersionC1: clusterName1,
 			initialFailoverVersionC2: clusterName2,
 		},
+		log: loggerimpl.NewNopLogger(),
 	}
 
 	for name, td := range tests {
@@ -284,6 +287,7 @@ func TestIsPartOfTheSameCluster(t *testing.T) {
 					initialFailoverVersionC1: clusterName1,
 					initialFailoverVersionC2: clusterName2,
 				},
+				log: loggerimpl.NewNopLogger(),
 			}
 
 			assert.Equal(t, td.expectedResult, m.IsVersionFromSameCluster(td.v1, td.v2), name)
@@ -803,6 +807,7 @@ func TestServerResolution(t *testing.T) {
 		},
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
 		useMinFailoverVersionOverride: func(domain string) bool { return domain == domainToMigrate },
+		log:                           loggerimpl.NewNopLogger(),
 	}
 
 	err := quick.Check(func(currentFOVersion int64, migrateDomain bool) bool {
@@ -866,6 +871,7 @@ func TestNoChangesInUnmigratedState(t *testing.T) {
 		},
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
 		useMinFailoverVersionOverride: func(domain string) bool { return false },
+		log:                           loggerimpl.NewNopLogger(),
 	}
 
 	err := quick.CheckEqual(func(currVersion int64) int64 {
