@@ -13,7 +13,7 @@ echo "Updating Version"
 
 ./scripts/update-version.sh
 
-git add common/version.go
+git add common/metrics/version.go
 
 echo "Commit again with the words SKIP VERSION in the commit message"
 
