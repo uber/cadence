@@ -5,7 +5,7 @@ TEMPORARY_FILE_PATH=$1
 COMMIT_MSG=`head -n1 $TEMPORARY_FILE_PATH`
 
 if [[ $COMMIT_MSG =~ "SKIP VERSION" ]]; then 
-    echo "SKIPPING VERSION UPDATE"
+    echo "Skipping version update or already updated"
     exit 0
 fi
 
