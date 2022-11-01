@@ -21,12 +21,12 @@
 package metrics
 
 import (
+	"github.com/uber-go/tally"
+	"github.com/uber/cadence/common"
 	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
-
-	"github.com/uber-go/tally"
 
 	"github.com/uber/cadence/common/log"
 )
@@ -53,7 +53,7 @@ var (
 	// goVersion is the current runtime version.
 	goVersion = runtime.Version()
 	// cadenceVersion is the current version of cadence
-	cadenceVersion = "0.25.x"
+	cadenceVersion = common.VersionString
 )
 
 const (
