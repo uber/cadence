@@ -103,7 +103,7 @@ type Interface interface {
 
 // New builds a new client for the MatchingService service.
 //
-// 	client := matchingserviceclient.New(dispatcher.ClientConfig("matchingservice"))
+//	client := matchingserviceclient.New(dispatcher.ClientConfig("matchingservice"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

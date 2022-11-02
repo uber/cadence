@@ -40,7 +40,7 @@ type (
 
 var _ ConfigStoreManager = (*configStoreManagerImpl)(nil)
 
-//NewConfigStoreManagerImpl returns new ConfigStoreManager
+// NewConfigStoreManagerImpl returns new ConfigStoreManager
 func NewConfigStoreManagerImpl(persistence ConfigStore, logger log.Logger) ConfigStoreManager {
 	return &configStoreManagerImpl{
 		serializer:  NewPayloadSerializer(),

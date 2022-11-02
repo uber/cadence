@@ -304,7 +304,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 	s.assertChecksumsEqual(testWorkflowChecksum, state.Checksum)
 }
 
-//TestContinueAsNew test
+// TestContinueAsNew test
 func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
