@@ -807,7 +807,7 @@ func ToAdminRespondCrossClusterTasksCompletedResponse(t *adminv1.RespondCrossClu
 	}
 }
 
-//FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to proto
+// FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to proto
 func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *adminv1.GetDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -818,7 +818,7 @@ func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *adminv1.GetD
 	}
 }
 
-//ToGetDynamicConfigRequest converts proto GetDynamicConfigRequest type to internal
+// ToGetDynamicConfigRequest converts proto GetDynamicConfigRequest type to internal
 func ToGetDynamicConfigRequest(t *adminv1.GetDynamicConfigRequest) *types.GetDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -829,7 +829,7 @@ func ToGetDynamicConfigRequest(t *adminv1.GetDynamicConfigRequest) *types.GetDyn
 	}
 }
 
-//FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to proto
+// FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to proto
 func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *adminv1.GetDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -839,7 +839,7 @@ func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *adminv1.Ge
 	}
 }
 
-//ToGetDynamicConfigResponse converts proto GetDynamicConfigResponse type to internal
+// ToGetDynamicConfigResponse converts proto GetDynamicConfigResponse type to internal
 func ToGetDynamicConfigResponse(t *adminv1.GetDynamicConfigResponse) *types.GetDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -849,7 +849,7 @@ func ToGetDynamicConfigResponse(t *adminv1.GetDynamicConfigResponse) *types.GetD
 	}
 }
 
-//FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to proto
+// FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to proto
 func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *adminv1.UpdateDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -860,7 +860,7 @@ func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *adminv
 	}
 }
 
-//ToUpdateDynamicConfigRequest converts proto UpdateDynamicConfigRequest type to internal
+// ToUpdateDynamicConfigRequest converts proto UpdateDynamicConfigRequest type to internal
 func ToUpdateDynamicConfigRequest(t *adminv1.UpdateDynamicConfigRequest) *types.UpdateDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -871,7 +871,7 @@ func ToUpdateDynamicConfigRequest(t *adminv1.UpdateDynamicConfigRequest) *types.
 	}
 }
 
-//FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to proto
+// FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to proto
 func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *adminv1.RestoreDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -882,7 +882,7 @@ func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *admi
 	}
 }
 
-//ToRestoreDynamicConfigRequest converts proto RestoreDynamicConfigRequest type to internal
+// ToRestoreDynamicConfigRequest converts proto RestoreDynamicConfigRequest type to internal
 func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *types.RestoreDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -893,7 +893,7 @@ func ToRestoreDynamicConfigRequest(t *adminv1.RestoreDynamicConfigRequest) *type
 	}
 }
 
-//FromAdminDeleteWorkflowRequest converts internal AdminDeleteWorkflowRequest type to proto
+// FromAdminDeleteWorkflowRequest converts internal AdminDeleteWorkflowRequest type to proto
 func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv1.DeleteWorkflowRequest {
 	if t == nil {
 		return nil
@@ -904,7 +904,7 @@ func FromAdminDeleteWorkflowRequest(t *types.AdminDeleteWorkflowRequest) *adminv
 	}
 }
 
-//ToAdminDeleteWorkflowRequest converts proto AdminDeleteWorkflowRequest type to internal
+// ToAdminDeleteWorkflowRequest converts proto AdminDeleteWorkflowRequest type to internal
 func ToAdminDeleteWorkflowRequest(t *adminv1.DeleteWorkflowRequest) *types.AdminDeleteWorkflowRequest {
 	if t == nil {
 		return nil
@@ -915,7 +915,7 @@ func ToAdminDeleteWorkflowRequest(t *adminv1.DeleteWorkflowRequest) *types.Admin
 	}
 }
 
-//FromAdminDeleteWorkflowResponse converts internal AdminDeleteWorkflowRequest type to proto
+// FromAdminDeleteWorkflowResponse converts internal AdminDeleteWorkflowRequest type to proto
 func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *adminv1.DeleteWorkflowResponse {
 	if t == nil {
 		return nil
@@ -927,7 +927,7 @@ func FromAdminDeleteWorkflowResponse(t *types.AdminDeleteWorkflowResponse) *admi
 	}
 }
 
-//ToAdminDeleteWorkflowResponse converts proto AdminDeleteWorkflowResponse type to internal
+// ToAdminDeleteWorkflowResponse converts proto AdminDeleteWorkflowResponse type to internal
 func ToAdminDeleteWorkflowResponse(t *adminv1.DeleteWorkflowResponse) *types.AdminDeleteWorkflowResponse {
 	if t == nil {
 		return nil
@@ -939,7 +939,7 @@ func ToAdminDeleteWorkflowResponse(t *adminv1.DeleteWorkflowResponse) *types.Adm
 	}
 }
 
-//FromAdminMaintainWorkflowRequest converts internal AdminMaintainWorkflowRequest type to proto
+// FromAdminMaintainWorkflowRequest converts internal AdminMaintainWorkflowRequest type to proto
 func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *adminv1.MaintainCorruptWorkflowRequest {
 	if t == nil {
 		return nil
@@ -950,7 +950,7 @@ func FromAdminMaintainWorkflowRequest(t *types.AdminMaintainWorkflowRequest) *ad
 	}
 }
 
-//ToAdminMaintainWorkflowRequest converts proto AdminMaintainWorkflowRequest type to internal
+// ToAdminMaintainWorkflowRequest converts proto AdminMaintainWorkflowRequest type to internal
 func ToAdminMaintainWorkflowRequest(t *adminv1.MaintainCorruptWorkflowRequest) *types.AdminMaintainWorkflowRequest {
 	if t == nil {
 		return nil
@@ -961,7 +961,7 @@ func ToAdminMaintainWorkflowRequest(t *adminv1.MaintainCorruptWorkflowRequest) *
 	}
 }
 
-//FromAdminMaintainWorkflowResponse converts internal AdminMaintainWorkflowResponse type to proto
+// FromAdminMaintainWorkflowResponse converts internal AdminMaintainWorkflowResponse type to proto
 func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *adminv1.MaintainCorruptWorkflowResponse {
 	if t == nil {
 		return nil
@@ -973,7 +973,7 @@ func FromAdminMaintainWorkflowResponse(t *types.AdminMaintainWorkflowResponse) *
 	}
 }
 
-//ToAdminMaintainWorkflowResponse converts proto AdminMaintainWorkflowResponse type to internal
+// ToAdminMaintainWorkflowResponse converts proto AdminMaintainWorkflowResponse type to internal
 func ToAdminMaintainWorkflowResponse(t *adminv1.MaintainCorruptWorkflowResponse) *types.AdminMaintainWorkflowResponse {
 	if t == nil {
 		return nil
@@ -985,7 +985,7 @@ func ToAdminMaintainWorkflowResponse(t *adminv1.MaintainCorruptWorkflowResponse)
 	}
 }
 
-//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
+// FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to proto
 func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.ListDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -995,7 +995,7 @@ func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *adminv1.Li
 	}
 }
 
-//ToListDynamicConfigRequest converts proto ListDynamicConfigRequest type to internal
+// ToListDynamicConfigRequest converts proto ListDynamicConfigRequest type to internal
 func ToListDynamicConfigRequest(t *adminv1.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -1005,7 +1005,7 @@ func ToListDynamicConfigRequest(t *adminv1.ListDynamicConfigRequest) *types.List
 	}
 }
 
-//FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to proto
+// FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to proto
 func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *adminv1.ListDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -1015,7 +1015,7 @@ func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *adminv1.
 	}
 }
 
-//ToListDynamicConfigResponse converts proto ListDynamicConfigResponse type to internal
+// ToListDynamicConfigResponse converts proto ListDynamicConfigResponse type to internal
 func ToListDynamicConfigResponse(t *adminv1.ListDynamicConfigResponse) *types.ListDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -1025,7 +1025,7 @@ func ToListDynamicConfigResponse(t *adminv1.ListDynamicConfigResponse) *types.Li
 	}
 }
 
-//FromDynamicConfigEntryArray converts internal DynamicConfigEntry array type to proto
+// FromDynamicConfigEntryArray converts internal DynamicConfigEntry array type to proto
 func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*adminv1.DynamicConfigEntry {
 	if t == nil {
 		return nil
@@ -1037,7 +1037,7 @@ func FromDynamicConfigEntryArray(t []*types.DynamicConfigEntry) []*adminv1.Dynam
 	return v
 }
 
-//ToDynamicConfigEntryArray converts proto DynamicConfigEntry array type to internal
+// ToDynamicConfigEntryArray converts proto DynamicConfigEntry array type to internal
 func ToDynamicConfigEntryArray(t []*adminv1.DynamicConfigEntry) []*types.DynamicConfigEntry {
 	if t == nil {
 		return nil
@@ -1049,7 +1049,7 @@ func ToDynamicConfigEntryArray(t []*adminv1.DynamicConfigEntry) []*types.Dynamic
 	return v
 }
 
-//FromDynamicConfigEntry converts internal DynamicConfigEntry type to proto
+// FromDynamicConfigEntry converts internal DynamicConfigEntry type to proto
 func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *adminv1.DynamicConfigEntry {
 	if t == nil {
 		return nil
@@ -1060,7 +1060,7 @@ func FromDynamicConfigEntry(t *types.DynamicConfigEntry) *adminv1.DynamicConfigE
 	}
 }
 
-//ToDynamicConfigEntry converts proto DynamicConfigEntry type to internal
+// ToDynamicConfigEntry converts proto DynamicConfigEntry type to internal
 func ToDynamicConfigEntry(t *adminv1.DynamicConfigEntry) *types.DynamicConfigEntry {
 	if t == nil {
 		return nil
@@ -1071,7 +1071,7 @@ func ToDynamicConfigEntry(t *adminv1.DynamicConfigEntry) *types.DynamicConfigEnt
 	}
 }
 
-//FromDynamicConfigValueArray converts internal DynamicConfigValue array type to proto
+// FromDynamicConfigValueArray converts internal DynamicConfigValue array type to proto
 func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*adminv1.DynamicConfigValue {
 	if t == nil {
 		return nil
@@ -1083,7 +1083,7 @@ func FromDynamicConfigValueArray(t []*types.DynamicConfigValue) []*adminv1.Dynam
 	return v
 }
 
-//ToDynamicConfigValueArray converts proto DynamicConfigValue array type to internal
+// ToDynamicConfigValueArray converts proto DynamicConfigValue array type to internal
 func ToDynamicConfigValueArray(t []*adminv1.DynamicConfigValue) []*types.DynamicConfigValue {
 	if t == nil {
 		return nil
@@ -1095,7 +1095,7 @@ func ToDynamicConfigValueArray(t []*adminv1.DynamicConfigValue) []*types.Dynamic
 	return v
 }
 
-//FromDynamicConfigValue converts internal DynamicConfigValue type to proto
+// FromDynamicConfigValue converts internal DynamicConfigValue type to proto
 func FromDynamicConfigValue(t *types.DynamicConfigValue) *adminv1.DynamicConfigValue {
 	if t == nil {
 		return nil
@@ -1106,7 +1106,7 @@ func FromDynamicConfigValue(t *types.DynamicConfigValue) *adminv1.DynamicConfigV
 	}
 }
 
-//ToDynamicConfigValue converts proto DynamicConfigValue type to internal
+// ToDynamicConfigValue converts proto DynamicConfigValue type to internal
 func ToDynamicConfigValue(t *adminv1.DynamicConfigValue) *types.DynamicConfigValue {
 	if t == nil {
 		return nil
@@ -1117,7 +1117,7 @@ func ToDynamicConfigValue(t *adminv1.DynamicConfigValue) *types.DynamicConfigVal
 	}
 }
 
-//FromDynamicConfigFilterArray converts internal DynamicConfigFilter array type to proto
+// FromDynamicConfigFilterArray converts internal DynamicConfigFilter array type to proto
 func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*adminv1.DynamicConfigFilter {
 	if t == nil {
 		return nil
@@ -1129,7 +1129,7 @@ func FromDynamicConfigFilterArray(t []*types.DynamicConfigFilter) []*adminv1.Dyn
 	return v
 }
 
-//ToDynamicConfigFilterArray converts proto DynamicConfigFilter array type to internal
+// ToDynamicConfigFilterArray converts proto DynamicConfigFilter array type to internal
 func ToDynamicConfigFilterArray(t []*adminv1.DynamicConfigFilter) []*types.DynamicConfigFilter {
 	if t == nil {
 		return nil
@@ -1141,7 +1141,7 @@ func ToDynamicConfigFilterArray(t []*adminv1.DynamicConfigFilter) []*types.Dynam
 	return v
 }
 
-//FromDynamicConfigFilter converts internal DynamicConfigFilter type to proto
+// FromDynamicConfigFilter converts internal DynamicConfigFilter type to proto
 func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *adminv1.DynamicConfigFilter {
 	if t == nil {
 		return nil
@@ -1152,7 +1152,7 @@ func FromDynamicConfigFilter(t *types.DynamicConfigFilter) *adminv1.DynamicConfi
 	}
 }
 
-//ToDynamicConfigFilter converts thrift DynamicConfigFilter type to internal
+// ToDynamicConfigFilter converts thrift DynamicConfigFilter type to internal
 func ToDynamicConfigFilter(t *adminv1.DynamicConfigFilter) *types.DynamicConfigFilter {
 	if t == nil {
 		return nil

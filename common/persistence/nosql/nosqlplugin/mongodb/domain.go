@@ -61,7 +61,7 @@ func (db *mdb) SelectAllDomains(
 	panic("TODO")
 }
 
-//  Delete a domain, either by domainID or domainName
+// Delete a domain, either by domainID or domainName
 func (db *mdb) DeleteDomain(
 	ctx context.Context,
 	domainID *string,

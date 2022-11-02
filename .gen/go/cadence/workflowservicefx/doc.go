@@ -26,27 +26,27 @@
 // Package workflowservicefx provides better integration for Fx for services
 // implementing or calling WorkflowService.
 //
-// Clients
+// # Clients
 //
 // If you are making requests to WorkflowService, use the Client function to inject a
 // WorkflowService client into your container.
 //
-// 	fx.Provide(workflowservicefx.Client("..."))
+//	fx.Provide(workflowservicefx.Client("..."))
 //
-// Servers
+// # Servers
 //
 // If you are implementing WorkflowService, provide a workflowserviceserver.Interface into
 // the container and use the Server function.
 //
 // Given,
 //
-// 	func NewWorkflowServiceHandler() workflowserviceserver.Interface
+//	func NewWorkflowServiceHandler() workflowserviceserver.Interface
 //
 // You can do the following to have the procedures of WorkflowService made available
 // to an Fx application.
 //
-// 	fx.Provide(
-// 		NewWorkflowServiceHandler,
-// 		workflowservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		NewWorkflowServiceHandler,
+//		workflowservicefx.Server(),
+//	)
 package workflowservicefx
