@@ -29,8 +29,8 @@ import (
 
 // UUID represents a 16-byte universally unique identifier
 // this type is a wrapper around google/uuid with the following differences
-//  - type is a byte slice instead of [16]byte
-//  - db serialization converts uuid to bytes as opposed to string
+//   - type is a byte slice instead of [16]byte
+//   - db serialization converts uuid to bytes as opposed to string
 type UUID []byte
 
 // MustParseUUID returns a UUID parsed from the given string representation

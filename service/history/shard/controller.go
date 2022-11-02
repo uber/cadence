@@ -348,9 +348,10 @@ func (c *controller) removeHistoryShardItem(shardID int, shardItem *historyShard
 // controller. It is responsible for acquiring /
 // releasing shards in response to any event that can
 // change the shard ownership. These events are
-//   a. Ring membership change
-//   b. Periodic ticker
-//   c. ShardOwnershipLostError and subsequent ShardClosedEvents from engine
+//
+//	a. Ring membership change
+//	b. Periodic ticker
+//	c. ShardOwnershipLostError and subsequent ShardClosedEvents from engine
 func (c *controller) shardManagementPump() {
 
 	defer c.shutdownWG.Done()

@@ -47,8 +47,8 @@ type Interface interface {
 // New prepares an implementation of the Meta service for
 // registration.
 //
-// 	handler := MetaHandler{}
-// 	dispatcher.Register(metaserver.New(handler))
+//	handler := MetaHandler{}
+//	dispatcher.Register(metaserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

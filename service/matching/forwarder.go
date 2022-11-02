@@ -82,10 +82,10 @@ var noopForwarderTokenC <-chan *ForwarderReqToken = make(chan *ForwarderReqToken
 // forwarder is tied to a single task list. All of the exposed
 // methods can return the following errors:
 // Returns following errors:
-//  - errNoParent: If this task list doesn't have a parent to forward to
-//  - errTaskListKind: If the task list is a sticky task list. Sticky task lists are never partitioned
-//  - errForwarderSlowDown: When the rate limit is exceeded
-//  - errInvalidTaskType: If the task list type is invalid
+//   - errNoParent: If this task list doesn't have a parent to forward to
+//   - errTaskListKind: If the task list is a sticky task list. Sticky task lists are never partitioned
+//   - errForwarderSlowDown: When the rate limit is exceeded
+//   - errInvalidTaskType: If the task list type is invalid
 func newForwarder(
 	cfg *forwarderConfig,
 	taskListID *taskListID,
