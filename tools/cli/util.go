@@ -275,13 +275,12 @@ func breakLongWords(input string, maxWordLength int) string {
 
 // ColorEvent takes an event and return string with color
 // Event with color mapping rules:
-//
-//	Failed - red
-//	Timeout - yellow
-//	Canceled - magenta
-//	Completed - green
-//	Started - blue
-//	Others - default (white/black)
+//   Failed - red
+//   Timeout - yellow
+//   Canceled - magenta
+//   Completed - green
+//   Started - blue
+//   Others - default (white/black)
 func ColorEvent(e *types.HistoryEvent) string {
 	var data string
 	switch e.GetEventType() {

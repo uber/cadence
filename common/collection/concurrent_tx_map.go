@@ -68,12 +68,9 @@ type (
 // map during iterator can cause a dead lock.
 //
 // @param initialSz
-//
-//	The initial size for the map
-//
+//		The initial size for the map
 // @param hashfn
-//
-//	The hash function to use for sharding
+// 		The hash function to use for sharding
 func NewShardedConcurrentTxMap(initialCap int, hashfn HashFunc) ConcurrentTxMap {
 	cmap := new(ShardedConcurrentTxMap)
 	cmap.hashfn = hashfn
