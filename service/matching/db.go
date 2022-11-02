@@ -55,10 +55,10 @@ type (
 //
 // This class will serialize writes to persistence that do condition updates. There are
 // two reasons for doing this:
-// - To work around known Cassandra issue where concurrent LWT to the same partition cause timeout errors
-// - To provide the guarantee that there is only writer who updates taskList in persistence at any given point in time
-//   This guarantee makes some of the other code simpler and there is no impact to perf because updates to tasklist are
-//   spread out and happen in background routines
+//   - To work around known Cassandra issue where concurrent LWT to the same partition cause timeout errors
+//   - To provide the guarantee that there is only writer who updates taskList in persistence at any given point in time
+//     This guarantee makes some of the other code simpler and there is no impact to perf because updates to tasklist are
+//     spread out and happen in background routines
 func newTaskListDB(store persistence.TaskManager, domainID string, domainName string, name string, taskType int, kind int, logger log.Logger) *taskListDB {
 	return &taskListDB{
 		domainID:     domainID,
