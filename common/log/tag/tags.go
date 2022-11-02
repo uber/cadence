@@ -185,7 +185,7 @@ func WorkflowDomainIDs(domainIDs interface{}) Tag {
 	return newObjectTag("wf-domain-ids", domainIDs)
 }
 
-// OperationName returns tag for OperationName
+//	OperationName returns tag for OperationName
 func OperationName(operationName string) Tag {
 	return newStringTag("operation-name", operationName)
 }

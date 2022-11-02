@@ -41,7 +41,7 @@ type (
 
 var _ DomainManager = (*domainManagerImpl)(nil)
 
-// NewDomainManagerImpl returns new DomainManager
+//NewDomainManagerImpl returns new DomainManager
 func NewDomainManagerImpl(persistence DomainStore, logger log.Logger) DomainManager {
 	return &domainManagerImpl{
 		serializer:  NewPayloadSerializer(),

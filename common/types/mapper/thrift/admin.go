@@ -468,7 +468,7 @@ func ToHostInfoArray(t []*admin.HostInfo) []*types.HostInfo {
 	return v
 }
 
-// FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to thrift
+//FromGetDynamicConfigRequest converts internal GetDynamicConfigRequest type to thrift
 func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *admin.GetDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -479,7 +479,7 @@ func FromGetDynamicConfigRequest(t *types.GetDynamicConfigRequest) *admin.GetDyn
 	}
 }
 
-// ToGetDynamicConfigRequest converts thrift GetDynamicConfigRequest type to internal
+//ToGetDynamicConfigRequest converts thrift GetDynamicConfigRequest type to internal
 func ToGetDynamicConfigRequest(t *admin.GetDynamicConfigRequest) *types.GetDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -490,7 +490,7 @@ func ToGetDynamicConfigRequest(t *admin.GetDynamicConfigRequest) *types.GetDynam
 	}
 }
 
-// FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to thrift
+//FromGetDynamicConfigResponse converts internal GetDynamicConfigResponse type to thrift
 func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *admin.GetDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -500,7 +500,7 @@ func FromGetDynamicConfigResponse(t *types.GetDynamicConfigResponse) *admin.GetD
 	}
 }
 
-// ToGetDynamicConfigResponse converts thrift GetDynamicConfigResponse type to internal
+//ToGetDynamicConfigResponse converts thrift GetDynamicConfigResponse type to internal
 func ToGetDynamicConfigResponse(t *admin.GetDynamicConfigResponse) *types.GetDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -510,7 +510,7 @@ func ToGetDynamicConfigResponse(t *admin.GetDynamicConfigResponse) *types.GetDyn
 	}
 }
 
-// FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to thrift
+//FromUpdateDynamicConfigRequest converts internal UpdateDynamicConfigRequest type to thrift
 func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *admin.UpdateDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -521,7 +521,7 @@ func FromUpdateDynamicConfigRequest(t *types.UpdateDynamicConfigRequest) *admin.
 	}
 }
 
-// ToUpdateDynamicConfigRequest converts thrift UpdateDynamicConfigRequest type to internal
+//ToUpdateDynamicConfigRequest converts thrift UpdateDynamicConfigRequest type to internal
 func ToUpdateDynamicConfigRequest(t *admin.UpdateDynamicConfigRequest) *types.UpdateDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -532,7 +532,7 @@ func ToUpdateDynamicConfigRequest(t *admin.UpdateDynamicConfigRequest) *types.Up
 	}
 }
 
-// FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to thrift
+//FromRestoreDynamicConfigRequest converts internal RestoreDynamicConfigRequest type to thrift
 func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *admin.RestoreDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -543,7 +543,7 @@ func FromRestoreDynamicConfigRequest(t *types.RestoreDynamicConfigRequest) *admi
 	}
 }
 
-// ToRestoreDynamicConfigRequest converts thrift RestoreDynamicConfigRequest type to internal
+//ToRestoreDynamicConfigRequest converts thrift RestoreDynamicConfigRequest type to internal
 func ToRestoreDynamicConfigRequest(t *admin.RestoreDynamicConfigRequest) *types.RestoreDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -646,7 +646,7 @@ func ToAdminMaintainWorkflowResponse(t *admin.AdminMaintainWorkflowResponse) *ty
 	}
 }
 
-// FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
+//FromListDynamicConfigResponse converts internal ListDynamicConfigResponse type to thrift
 func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.ListDynamicConfigResponse {
 	if t == nil {
 		return nil
@@ -656,7 +656,7 @@ func FromListDynamicConfigResponse(t *types.ListDynamicConfigResponse) *admin.Li
 	}
 }
 
-// FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to thrift
+//FromListDynamicConfigRequest converts internal ListDynamicConfigRequest type to thrift
 func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *admin.ListDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -666,7 +666,7 @@ func FromListDynamicConfigRequest(t *types.ListDynamicConfigRequest) *admin.List
 	}
 }
 
-// ToListDynamicConfigRequest converts thrift ListDynamicConfigRequest type to internal
+//ToListDynamicConfigRequest converts thrift ListDynamicConfigRequest type to internal
 func ToListDynamicConfigRequest(t *admin.ListDynamicConfigRequest) *types.ListDynamicConfigRequest {
 	if t == nil {
 		return nil
@@ -676,7 +676,7 @@ func ToListDynamicConfigRequest(t *admin.ListDynamicConfigRequest) *types.ListDy
 	}
 }
 
-// ToListDynamicConfigResponse converts thrift ListDynamicConfigResponse type to internal
+//ToListDynamicConfigResponse converts thrift ListDynamicConfigResponse type to internal
 func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.ListDynamicConfigResponse {
 	if t == nil {
 		return nil
