@@ -54,12 +54,12 @@ type ServerResult struct {
 // Server provides procedures for Meta to an Fx application. It expects a
 // metafx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyMetaHandler) metaserver.Interface {
-// 			return h
-// 		},
-// 		metafx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyMetaHandler) metaserver.Interface {
+//			return h
+//		},
+//		metafx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := metaserver.New(p.Handler, opts...)
