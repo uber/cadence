@@ -42,7 +42,7 @@ const (
 	templateGetQueueSizeQuery               = `SELECT COUNT(1) AS count FROM queue WHERE queue_type=?`
 )
 
-// Insert message into queue, return error if failed or already exists
+//Insert message into queue, return error if failed or already exists
 // Must return ConditionFailure error if row already exists
 func (db *cdb) InsertIntoQueue(
 	ctx context.Context,

@@ -223,7 +223,6 @@ func (c *canaryImpl) getCrossClusterTargetDomain() string {
 }
 
 // Override worker options to create large number of pollers to improve the chances of activities getting sync matched
-//
 //nolint:unused
 func overrideWorkerOptions(ctx context.Context) context.Context {
 	optionsOverride := make(map[string]map[string]string)

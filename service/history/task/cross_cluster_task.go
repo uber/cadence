@@ -414,14 +414,12 @@ func (t *crossClusterSourceTask) IsReadyForPoll() bool {
 
 // GetCrossClusterRequest returns a CrossClusterTaskRequest and error if there's any
 // If the returned error is not nil:
-//   - there might be error while loading the request, we can retry the function call
-//   - task may be invalidated, in which case caller should submit the task for processing
-//     so that a new task can be created.
-//
+// - there might be error while loading the request, we can retry the function call
+// - task may be invalidated, in which case caller should submit the task for processing
+//   so that a new task can be created.
 // If both returned error and request are nil:
-//   - there's nothing need to be done for the task, task already acked and is not available
-//     for polling again
-//
+// - there's nothing need to be done for the task, task already acked and is not available
+//   for polling again
 // If the returned request is not nil
 // - the request can be returned to the target cluster
 func (t *crossClusterSourceTask) GetCrossClusterRequest() (request *types.CrossClusterTaskRequest, retError error) {

@@ -101,13 +101,13 @@ type (
 // returned object. Calling the Start() method will result in one
 // complete iteration over all of the task lists in the system. For
 // each task list, the scavenger will attempt
-//   - deletion of expired tasks in the task lists
-//   - deletion of task list itself, if there are no tasks and the task list hasn't been updated for a grace period
+//  - deletion of expired tasks in the task lists
+//  - deletion of task list itself, if there are no tasks and the task list hasn't been updated for a grace period
 //
 // The scavenger will retry on all persistence errors infinitely and will only stop under
 // two conditions
-//   - either all task lists are processed successfully (or)
-//   - Stop() method is called to stop the scavenger
+//  - either all task lists are processed successfully (or)
+//  - Stop() method is called to stop the scavenger
 func NewScavenger(
 	ctx context.Context,
 	db p.TaskManager,

@@ -586,7 +586,7 @@ func (s *ESVisibilitySuite) TestShouldSearchAfter() {
 	s.True(es.ShouldSearchAfter(token))
 }
 
-// nolint
+//nolint
 func (s *ESVisibilitySuite) TestGetESQueryDSL() {
 	request := &p.ListWorkflowExecutionsByQueryRequest{
 		DomainUUID: testDomainID,
