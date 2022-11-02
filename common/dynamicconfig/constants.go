@@ -1543,13 +1543,13 @@ const (
 	// Default value: true
 	// Allowed filters: DomainID, WorkflowID
 	EnableReplicationTaskGeneration
-	// UseMinInitialFailoverVersion is a switch to issue a failover version based on the minFailoverVersion
+	// UseNewInitialFailoverVersion is a switch to issue a failover version based on the minFailoverVersion
 	// rather than the default initialFailoverVersion. USed as a per-domain migration switch
-	// KeyName: history.useMinInitialFailoverVersion
+	// KeyName: history.useNewInitialFailoverVersion
 	// Value type: Bool
 	// Default value: false
 	// Allowed filters: N/A
-	UseMinInitialFailoverVersion
+	UseNewInitialFailoverVersion
 	// EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch
 	// KeyName: history.EnableRecordWorkflowExecutionUninitialized
 	// Value type: Bool
@@ -3569,8 +3569,8 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableReplicationTaskGeneration is the flag to control replication generation",
 		DefaultValue: true,
 	},
-	UseMinInitialFailoverVersion: DynamicBool{
-		KeyName:      "history.useMinInitialFailoverVersion",
+	UseNewInitialFailoverVersion: DynamicBool{
+		KeyName:      "history.useNewInitialFailoverVersion",
 		Description:  "use the minInitialFailover version",
 		DefaultValue: false,
 	},

@@ -194,7 +194,7 @@ func (s *server) startService() common.Daemon {
 		clusterGroupMetadata.PrimaryClusterName,
 		clusterGroupMetadata.CurrentClusterName,
 		clusterGroupMetadata.ClusterGroup,
-		dc.GetBoolPropertyFilteredByDomain(dynamicconfig.UseMinInitialFailoverVersion),
+		dc.GetBoolPropertyFilteredByDomain(dynamicconfig.UseNewInitialFailoverVersion),
 		params.MetricsClient,
 		params.Logger,
 	)

@@ -52,8 +52,8 @@ type (
 		remoteClusters map[string]config.ClusterInformation
 		// versionToClusterName contains all initial version -> corresponding cluster name
 		versionToClusterName map[int64]string
-		// allows for a min failover version migration
-		useMinFailoverVersionOverride dynamicconfig.BoolPropertyFnWithDomainFilter
+		// allows for a new failover version migration
+		useNewFailoverVersionOverride dynamicconfig.BoolPropertyFnWithDomainFilter
 	}
 )
 
@@ -98,7 +98,7 @@ func NewMetadata(
 		enabledClusters:               enabledClusters,
 		remoteClusters:                remoteClusters,
 		versionToClusterName:          versionToClusterName,
-		useMinFailoverVersionOverride: useMinFailoverVersionOverrideConfig,
+		useNewFailoverVersionOverride: useMinFailoverVersionOverrideConfig,
 	}
 }
 
@@ -123,7 +123,6 @@ func (m Metadata) IsVersionFromSameCluster(version1 int64, version2 int64) bool 
 	}
 	v2Server, err := m.resolveServerName(version2)
 	if err != nil {
-		m.metrics.IncCounter(metrics.ClusterMetadataFailureToResolveCounter)
 		m.log.Error("could not resolve an incoming version", tag.Dynamic("failover-version", version2))
 		return false
 	}
@@ -159,17 +158,12 @@ func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
 	if failoverVersion == common.EmptyVersion {
 		return m.currentClusterName
 	}
-	initialFailoverVersion := failoverVersion % m.failoverVersionIncrement
-	clusterName, ok := m.versionToClusterName[initialFailoverVersion]
-	if !ok {
-		panic(fmt.Sprintf(
-			"Unknown initial failover version %v with given cluster initial failover version map: %v and failover version increment %v.",
-			initialFailoverVersion,
-			m.allClusters,
-			m.failoverVersionIncrement,
-		))
+	server, err := m.resolveServerName(failoverVersion)
+	if err != nil {
+		m.metrics.IncCounter(metrics.ClusterMetadataResolvingFailoverVersionCounter)
+		panic(fmt.Sprintf("failed to resolve failover version: %v", err))
 	}
-	return clusterName
+	return server
 }
 
 // gets the initial failover version for a cluster / domain
@@ -187,11 +181,11 @@ func (m Metadata) getInitialFailoverVersion(cluster string, domainName string) i
 	// if using the minFailover Version during a cluster config, then return this from config
 	// (assuming it's safe to do so). This is not the normal state of things and intended only
 	// for when migrating versions.
-	usingMinFailoverVersion := m.useMinFailoverVersionOverride(domainName)
-	if usingMinFailoverVersion && info.MinInitialFailoverVersion != nil && *info.MinInitialFailoverVersion > info.InitialFailoverVersion {
-		m.log.Debug("using min failover version for cluster", tag.ClusterName(cluster), tag.WorkflowDomainName(domainName))
+	usingNewFailoverVersion := m.useNewFailoverVersionOverride(domainName)
+	if usingNewFailoverVersion && info.NewInitialFailoverVersion != nil {
+		m.log.Debug("using new failover version for cluster", tag.ClusterName(cluster), tag.WorkflowDomainName(domainName))
 		m.metrics.IncCounter(metrics.ClusterMetadataGettingMinFailoverVersionCounter)
-		return *info.MinInitialFailoverVersion
+		return *info.NewInitialFailoverVersion
 	}
 	// default behaviour - return the initial failover version - a marker to
 	// identify the cluster for all counters
@@ -200,16 +194,23 @@ func (m Metadata) getInitialFailoverVersion(cluster string, domainName string) i
 	return info.InitialFailoverVersion
 }
 
-// resolves the server name from
+// resolves the server name from a version number. Better to use this
+// than to check versionToClusterName directly, as this also falls back to catch
+// when there's a migration NewInitialFailoverVersion
 func (m Metadata) resolveServerName(version int64) (string, error) {
 	moddedFoVersion := version % m.failoverVersionIncrement
+	// attempt a lookup first
+	server, ok := m.versionToClusterName[moddedFoVersion]
+	if ok {
+		return server, nil
+	}
+
+	// else fall back on checking for new failover versions
 	for name, cluster := range m.allClusters {
-		if cluster.InitialFailoverVersion == moddedFoVersion {
-			return name, nil
-		}
-		if cluster.MinInitialFailoverVersion != nil && *cluster.MinInitialFailoverVersion == moddedFoVersion {
+		if cluster.NewInitialFailoverVersion != nil && *cluster.NewInitialFailoverVersion == moddedFoVersion {
 			return name, nil
 		}
 	}
+	m.metrics.IncCounter(metrics.ClusterMetadataFailureToResolveCounter)
 	return "", fmt.Errorf("could not resolve failover version: %d", version)
 }

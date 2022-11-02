@@ -10,3 +10,9 @@ history.EnableConsistentQueryByDomain:
 history.enableCrossClusterOperations:
 - value: true
   constraints: {}
+history.enableCrossClusterOperations:
+- value: true
+  constraints: {}
+history.useNewInitialFailoverVersion:
+- value: true
+  constraints: {}

@@ -91,7 +91,7 @@ func TestMetadataBehaviour(t *testing.T) {
 					initialFailoverVersionC1: clusterName1,
 					initialFailoverVersionC2: clusterName2,
 				},
-				useMinFailoverVersionOverride: func(domain string) bool { return false },
+				useNewFailoverVersionOverride: func(domain string) bool { return false },
 				metrics:                       metrics.NewNoopMetricsClient().Scope(0),
 				log:                           loggerimpl.NewNopLogger(),
 			}
@@ -118,18 +118,18 @@ func TestFailoverVersionLogicIsMonotonic(t *testing.T) {
 		allClusters: map[string]config.ClusterInformation{
 			clusterName1: {
 				InitialFailoverVersion:    initialFailoverVersionC1,
-				MinInitialFailoverVersion: &minFailoverVersionC1,
+				NewInitialFailoverVersion: &minFailoverVersionC1,
 			},
 			clusterName2: {
 				InitialFailoverVersion:    initialFailoverVersionC2,
-				MinInitialFailoverVersion: &minFailoverVersionC2,
+				NewInitialFailoverVersion: &minFailoverVersionC2,
 			},
 		},
 		versionToClusterName: map[int64]string{
 			initialFailoverVersionC1: clusterName1,
 			initialFailoverVersionC2: clusterName2,
 		},
-		useMinFailoverVersionOverride: func(domain string) bool { return someDomainMigrating == domain },
+		useNewFailoverVersionOverride: func(domain string) bool { return someDomainMigrating == domain },
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
 		log:                           loggerimpl.NewNopLogger(),
 	}
@@ -156,10 +156,10 @@ func TestFailoverVersionLogicIsMonotonic(t *testing.T) {
 func TestResolvingClusterVersion(t *testing.T) {
 	const clusterName1 = "c1"
 	const initialFailoverVersionC1 = 0
-	var minInitialFailoverVersionC1 = int64(1)
+	var newInitialFailoverVersionC1 = int64(1)
 	const clusterName2 = "c2"
 	const initialFailoverVersionC2 = 2
-	var minInitialFailoverVersionC2 = int64(3)
+	var newInitialFailoverVersionC2 = int64(3)
 	const failoverVersionIncrement = 100
 
 	tests := map[string]struct {
@@ -172,7 +172,7 @@ func TestResolvingClusterVersion(t *testing.T) {
 			expectedOutput: clusterName1,
 		},
 		"first cluster, minFailover version": {
-			input:          minInitialFailoverVersionC1,
+			input:          newInitialFailoverVersionC1,
 			expectedOutput: clusterName1,
 		},
 		"second cluster, normal version": {
@@ -180,7 +180,7 @@ func TestResolvingClusterVersion(t *testing.T) {
 			expectedOutput: clusterName2,
 		},
 		"second cluster, minFailover version": {
-			input:          minInitialFailoverVersionC2,
+			input:          newInitialFailoverVersionC2,
 			expectedOutput: clusterName2,
 		},
 
@@ -212,18 +212,19 @@ func TestResolvingClusterVersion(t *testing.T) {
 		allClusters: map[string]config.ClusterInformation{
 			clusterName1: {
 				InitialFailoverVersion:    initialFailoverVersionC1,
-				MinInitialFailoverVersion: &minInitialFailoverVersionC1,
+				NewInitialFailoverVersion: &newInitialFailoverVersionC1,
 			},
 			clusterName2: {
 				InitialFailoverVersion:    initialFailoverVersionC2,
-				MinInitialFailoverVersion: &minInitialFailoverVersionC2,
+				NewInitialFailoverVersion: &newInitialFailoverVersionC2,
 			},
 		},
 		versionToClusterName: map[int64]string{
 			initialFailoverVersionC1: clusterName1,
 			initialFailoverVersionC2: clusterName2,
 		},
-		log: loggerimpl.NewNopLogger(),
+		metrics: metrics.NewNoopMetricsClient().Scope(0),
+		log:     loggerimpl.NewNopLogger(),
 	}
 
 	for name, td := range tests {
@@ -287,7 +288,8 @@ func TestIsPartOfTheSameCluster(t *testing.T) {
 					initialFailoverVersionC1: clusterName1,
 					initialFailoverVersionC2: clusterName2,
 				},
-				log: loggerimpl.NewNopLogger(),
+				log:     loggerimpl.NewNopLogger(),
+				metrics: metrics.NewNoopMetricsClient().Scope(0),
 			}
 
 			assert.Equal(t, td.expectedResult, m.IsVersionFromSameCluster(td.v1, td.v2), name)
@@ -526,7 +528,7 @@ func TestIsPartOfTheSameClusterAPIFixing(t *testing.T) {
 			initialFailoverVersionC1: clusterName1,
 			initialFailoverVersionC2: clusterName2,
 		},
-		useMinFailoverVersionOverride: func(domain string) bool { return false },
+		useNewFailoverVersionOverride: func(domain string) bool { return false },
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
 		log:                           loggerimpl.NewNopLogger(),
 	}
@@ -769,7 +771,7 @@ func TestClusterNameForFailoverVersion(t *testing.T) {
 			initialFailoverVersionC2: clusterName2,
 		},
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
-		useMinFailoverVersionOverride: func(domain string) bool { return false },
+		useNewFailoverVersionOverride: func(domain string) bool { return false },
 		log:                           loggerimpl.NewNopLogger(),
 	}
 
@@ -806,7 +808,7 @@ func TestServerResolution(t *testing.T) {
 			initialFailoverVersionC2: clusterName2,
 		},
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
-		useMinFailoverVersionOverride: func(domain string) bool { return domain == domainToMigrate },
+		useNewFailoverVersionOverride: func(domain string) bool { return domain == domainToMigrate },
 		log:                           loggerimpl.NewNopLogger(),
 	}
 
@@ -870,7 +872,7 @@ func TestNoChangesInUnmigratedState(t *testing.T) {
 			initialFailoverVersionC2: clusterName2,
 		},
 		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
-		useMinFailoverVersionOverride: func(domain string) bool { return false },
+		useNewFailoverVersionOverride: func(domain string) bool { return false },
 		log:                           loggerimpl.NewNopLogger(),
 	}
 
@@ -882,4 +884,60 @@ func TestNoChangesInUnmigratedState(t *testing.T) {
 	},
 		&quick.Config{})
 	assert.NoError(t, err)
+}
+
+// the point of this test is to assert that there's no clumsy errors, and
+// in an unmigrated state, the old implementation for getting versions and the new
+// one are equal
+func TestFailoverVersionResolution(t *testing.T) {
+
+	const clusterName1 = "c1"
+	const initialFailoverVersionC1 = 0
+	var newFailoverVersionC1 = int64(1)
+	const clusterName2 = "c2"
+	const initialFailoverVersionC2 = 2
+	const failoverVersionIncrement = 100
+
+	allClusters := map[string]config.ClusterInformation{
+		clusterName1: {
+			InitialFailoverVersion:    initialFailoverVersionC1,
+			NewInitialFailoverVersion: &newFailoverVersionC1,
+		},
+		clusterName2: {
+			InitialFailoverVersion: initialFailoverVersionC2,
+		},
+	}
+
+	sut := Metadata{
+		failoverVersionIncrement: failoverVersionIncrement,
+		allClusters:              allClusters,
+		versionToClusterName: map[int64]string{
+			initialFailoverVersionC1: clusterName1,
+			initialFailoverVersionC2: clusterName2,
+		},
+		metrics:                       metrics.NewNoopMetricsClient().Scope(0),
+		useNewFailoverVersionOverride: func(domain string) bool { return false },
+		log:                           loggerimpl.NewNopLogger(),
+	}
+
+	tests := map[string]struct {
+		in          int64
+		expectedOut string
+		expectedErr error
+	}{
+		"normal failover version": {
+			in:          initialFailoverVersionC1,
+			expectedOut: clusterName1,
+		},
+		"New failover version": {
+			in:          initialFailoverVersionC1,
+			expectedOut: clusterName1,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expectedOut, sut.ClusterNameForFailoverVersion(td.in))
+		})
+	}
 }
