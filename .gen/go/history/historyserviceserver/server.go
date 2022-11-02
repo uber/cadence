@@ -255,8 +255,8 @@ type Interface interface {
 // New prepares an implementation of the HistoryService service for
 // registration.
 //
-//	handler := HistoryServiceHandler{}
-//	dispatcher.Register(historyserviceserver.New(handler))
+// 	handler := HistoryServiceHandler{}
+// 	dispatcher.Register(historyserviceserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
