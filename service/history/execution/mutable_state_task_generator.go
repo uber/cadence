@@ -245,7 +245,11 @@ func (r *mutableStateTaskGeneratorImpl) GenerateWorkflowCloseTasks(
 	}
 
 	closeTimestamp := time.Unix(0, closeEvent.GetTimestamp())
-	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24) + (time.Duration(rand.Intn(workflowDeletionTaskJitterRange)) * time.Minute)
+	retentionDuration := (time.Duration(retentionInDays) * time.Hour * 24)
+	if workflowDeletionTaskJitterRange > 1 {
+		retentionDuration += time.Duration(rand.Intn(workflowDeletionTaskJitterRange*60)) * time.Second
+	}
+
 	r.mutableState.AddTimerTasks(&persistence.DeleteHistoryEventTask{
 		// TaskID is set by shard
 		VisibilityTimestamp: closeTimestamp.Add(retentionDuration),
