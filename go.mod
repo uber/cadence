@@ -45,6 +45,7 @@ require (
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver v1.7.3
 	go.uber.org/atomic v1.7.0
+	go.uber.org/automaxprocs v1.5.1
 	go.uber.org/cadence v0.19.0
 	go.uber.org/config v1.4.0
 	go.uber.org/fx v1.13.1

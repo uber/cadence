@@ -23,6 +23,8 @@ package main
 import (
 	"os"
 
+	_ "go.uber.org/automaxprocs" // automatically set GOMAXPROCS to match Linux container CPU quota.
+
 	"github.com/uber/cadence/cmd/server/cadence"
 	"github.com/uber/cadence/common/metrics"
 	_ "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"              // needed to load cassandra plugin
