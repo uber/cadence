@@ -46,6 +46,7 @@ var (
 		dynamicconfig.ReplicationTaskProcessorErrorRetryWait:        time.Millisecond,
 		dynamicconfig.EnableConsistentQueryByDomain:                 true,
 		dynamicconfig.MinRetentionDays:                              0,
+		dynamicconfig.WorkflowDeletionJitterRange:                   1,
 	}
 )
 
