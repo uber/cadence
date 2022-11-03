@@ -26,6 +26,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/uber/cadence/common/log/loggerimpl"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/cache"
@@ -153,7 +155,11 @@ func createTestTaskStore(domains domainCache, hydrator taskHydrator) *TaskStore 
 		testClusterA: {Enabled: true},
 		testClusterB: {Enabled: true},
 		testClusterC: {Enabled: true},
-	})
+	},
+		func(d string) bool { return false },
+		metrics.NewNoopMetricsClient(),
+		loggerimpl.NewNopLogger(),
+	)
 
 	return NewTaskStore(&cfg, clusterMetadata, domains, metrics.NewNoopMetricsClient(), log.NewNoop(), hydrator)
 }

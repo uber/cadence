@@ -862,3 +862,9 @@ func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag 
 func VisibilityQuery(query string) Tag {
 	return newStringTag("visibility-query", query)
 }
+
+// Dynamic Uses reflection based logging for arbitrary values
+// for not very performant logging
+func Dynamic(key string, v interface{}) Tag {
+	return newPredefinedDynamicTag(key, v)
+}
