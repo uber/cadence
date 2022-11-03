@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	revisionTag     = "revision"
-	branchTag       = "branch"
-	buildDateTag    = "build_date"
-	buildVersionTag = "build_version"
-	goVersionTag    = "go_version"
+	revisionTag       = "revision"
+	branchTag         = "branch"
+	buildDateTag      = "build_date"
+	buildVersionTag   = "build_version"
+	goVersionTag      = "go_version"
+	cadenceVersionTag = "cadence_version"
 
 	instance               = "instance"
 	domain                 = "domain"
