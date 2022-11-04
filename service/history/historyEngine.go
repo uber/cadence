@@ -691,7 +691,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				RunID:      workflowExecution.RunID,
 			},
 			WorkflowTypeName: request.WorkflowType.Name,
-			UpdateTimestamp:  time.Now().UTC().UnixNano(),
+			UpdateTimestamp:  e.shard.GetTimeSource().Now().UnixNano(),
 		}
 
 		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {

@@ -1541,14 +1541,14 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		s.mockVisibilityMgr.On(
 			"RecordWorkflowExecutionUninitialized",
 			mock.Anything,
-			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState),
+			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now()),
 		).Once().Return(nil)
 	}
 	s.mockVisibilityMgr.On(
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1579,7 +1579,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttribu
 		"UpsertWorkflowExecution",
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
 	).Once().Return(nil)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
@@ -1663,6 +1663,7 @@ func createRecordWorkflowExecutionStartedRequest(
 	transferTask Task,
 	mutableState execution.MutableState,
 	numClusters int16,
+	updateTime time.Time,
 ) *persistence.RecordWorkflowExecutionStartedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1687,7 +1688,7 @@ func createRecordWorkflowExecutionStartedRequest(
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
-		UpdateTimestamp:    0,
+		UpdateTimestamp:    updateTime.UnixNano(),
 	}
 }
 
@@ -1799,6 +1800,7 @@ func createUpsertWorkflowSearchAttributesRequest(
 	transferTask Task,
 	mutableState execution.MutableState,
 	numClusters int16,
+	updateTime time.Time,
 ) *persistence.UpsertWorkflowExecutionRequest {
 
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
@@ -1825,13 +1827,14 @@ func createUpsertWorkflowSearchAttributesRequest(
 		TaskList:           taskInfo.TaskList,
 		IsCron:             len(executionInfo.CronSchedule) > 0,
 		NumClusters:        numClusters,
-		UpdateTimestamp:    0,
+		UpdateTimestamp:    updateTime.UnixNano(),
 	}
 }
 
 func createRecordWorkflowExecutionUninitializedRequest(
 	transferTask Task,
 	mutableState execution.MutableState,
+	updateTime time.Time,
 ) *persistence.RecordWorkflowExecutionUninitializedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1843,6 +1846,6 @@ func createRecordWorkflowExecutionUninitializedRequest(
 		DomainUUID:       taskInfo.DomainID,
 		Execution:        workflowExecution,
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
-		UpdateTimestamp:  0,
+		UpdateTimestamp:  updateTime.UnixNano(),
 	}
 }

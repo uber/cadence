@@ -314,7 +314,6 @@ func (_m *VisibilityManager) RecordWorkflowExecutionClosed(ctx context.Context, 
 
 // RecordWorkflowExecutionStarted provides a mock function with given fields: ctx, request
 func (_m *VisibilityManager) RecordWorkflowExecutionStarted(ctx context.Context, request *persistence.RecordWorkflowExecutionStartedRequest) error {
-	request.UpdateTimestamp = 0 // UpdateTimestamp always use the latest UTC time, this is a hack to pass the unit test
 	ret := _m.Called(ctx, request)
 
 	var r0 error
@@ -329,7 +328,6 @@ func (_m *VisibilityManager) RecordWorkflowExecutionStarted(ctx context.Context,
 
 // RecordWorkflowExecutionUninitialized provides a mock function with given fields: ctx, request
 func (_m *VisibilityManager) RecordWorkflowExecutionUninitialized(ctx context.Context, request *persistence.RecordWorkflowExecutionUninitializedRequest) error {
-	request.UpdateTimestamp = 0 // UpdateTimestamp always use the latest UTC time, this is a hack to pass the unit test
 	ret := _m.Called(ctx, request)
 
 	var r0 error
@@ -367,7 +365,6 @@ func (_m *VisibilityManager) ScanWorkflowExecutions(ctx context.Context, request
 
 // UpsertWorkflowExecution provides a mock function with given fields: ctx, request
 func (_m *VisibilityManager) UpsertWorkflowExecution(ctx context.Context, request *persistence.UpsertWorkflowExecutionRequest) error {
-	request.UpdateTimestamp = 0
 	ret := _m.Called(ctx, request)
 
 	var r0 error
