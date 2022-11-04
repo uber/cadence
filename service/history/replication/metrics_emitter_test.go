@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/log/loggerimpl"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/clock"
@@ -48,7 +50,11 @@ func TestMetricsEmitter(t *testing.T) {
 		cluster1: {Enabled: true},
 		cluster2: {Enabled: true},
 		cluster3: {Enabled: true},
-	})
+	},
+		func(d string) bool { return false },
+		metrics.NewNoopMetricsClient(),
+		loggerimpl.NewNopLogger(),
+	)
 	testShardData := newTestShardData(timeSource, metadata)
 	timeSource.Update(time.Unix(10000, 0))
 

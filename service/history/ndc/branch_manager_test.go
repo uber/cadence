@@ -201,6 +201,8 @@ func (s *branchManagerSuite) TestFlushBufferedEvents() {
 		int64(0),
 	).Return(&types.HistoryEvent{}, nil).Times(1)
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil).Times(1)
+	s.mockMutableState.EXPECT().HasPendingDecision().Return(false).Times(1)
+	s.mockMutableState.EXPECT().AddDecisionTaskScheduledEvent(false).Return(&execution.DecisionInfo{}, nil).Times(1)
 
 	s.mockContext.EXPECT().UpdateWorkflowExecutionAsActive(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 

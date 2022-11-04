@@ -94,8 +94,8 @@ func getHistoryCleanupThreshold(maxWorkflowRetentionInDays int) time.Duration {
 // returned object. Calling the Run() method will result in one
 // complete iteration over all of the history branches in the system. For
 // each branch, the scavenger will attempt
-//  - describe the corresponding workflow execution
-//  - deletion of history itself, if there are no workflow execution
+//   - describe the corresponding workflow execution
+//   - deletion of history itself, if there are no workflow execution
 func NewScavenger(
 	db p.HistoryManager,
 	rps int,

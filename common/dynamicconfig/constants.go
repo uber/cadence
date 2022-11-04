@@ -1543,6 +1543,13 @@ const (
 	// Default value: true
 	// Allowed filters: DomainID, WorkflowID
 	EnableReplicationTaskGeneration
+	// UseNewInitialFailoverVersion is a switch to issue a failover version based on the minFailoverVersion
+	// rather than the default initialFailoverVersion. USed as a per-domain migration switch
+	// KeyName: history.useNewInitialFailoverVersion
+	// Value type: Bool
+	// Default value: false
+	// Allowed filters: N/A
+	UseNewInitialFailoverVersion
 	// EnableRecordWorkflowExecutionUninitialized enables record workflow execution uninitialized state in ElasticSearch
 	// KeyName: history.EnableRecordWorkflowExecutionUninitialized
 	// Value type: Bool
@@ -3357,7 +3364,7 @@ var IntKeys = map[IntKey]DynamicInt{
 	WorkflowDeletionJitterRange: DynamicInt{
 		KeyName:      "system.workflowDeletionJitterRange",
 		Description:  "WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering",
-		DefaultValue: 1,
+		DefaultValue: 60,
 	},
 }
 
@@ -3561,6 +3568,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "history.enableReplicationTaskGeneration",
 		Description:  "EnableReplicationTaskGeneration is the flag to control replication generation",
 		DefaultValue: true,
+	},
+	UseNewInitialFailoverVersion: DynamicBool{
+		KeyName:      "history.useNewInitialFailoverVersion",
+		Description:  "use the minInitialFailover version",
+		DefaultValue: false,
 	},
 	AllowArchivingIncompleteHistory: DynamicBool{
 		KeyName:      "worker.AllowArchivingIncompleteHistory",
