@@ -727,6 +727,8 @@ const (
 	DomainFailoverScope
 	// DomainReplicationQueueScope is used in domainreplication queue
 	DomainReplicationQueueScope
+	// ClusterMetadataScope is used for the cluster metadata
+	ClusterMetadataScope
 
 	NumCommonScopes
 )
@@ -1526,6 +1528,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 
 		DomainFailoverScope:         {operation: "DomainFailover"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
+		ClusterMetadataScope:        {operation: "ClusterMetadata"},
 	},
 	// Frontend Scope Names
 	Frontend: {
@@ -2027,6 +2030,12 @@ const (
 	CrossClusterTaskRespondFailures
 	CrossClusterTaskFetchedTimer
 	CrossClusterTaskPendingTimer
+
+	ClusterMetadataFailureToResolveCounter
+	ClusterMetadataGettingMinFailoverVersionCounter
+	ClusterMetadataGettingFailoverVersionCounter
+	ClusterMetadataResolvingFailoverVersionCounter
+	ClusterMetadataResolvingMinFailoverVersionCounter
 
 	ActivityE2ELatency
 	ActivityLostCounter
@@ -2615,6 +2624,11 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CrossClusterTaskRespondFailures:                              {metricName: "cross_cluster_fetch_errors", metricType: Counter},
 		CrossClusterTaskFetchedTimer:                                 {metricName: "cross_cluster_task_fetched", metricType: Timer},
 		CrossClusterTaskPendingTimer:                                 {metricName: "cross_cluster_task_pending", metricType: Timer},
+		ClusterMetadataFailureToResolveCounter:                       {metricName: "failed_to_resolve_failover_version", metricType: Counter},
+		ClusterMetadataGettingMinFailoverVersionCounter:              {metricName: "getting_min_failover_version_counter", metricType: Counter},
+		ClusterMetadataGettingFailoverVersionCounter:                 {metricName: "getting_failover_version_counter", metricType: Counter},
+		ClusterMetadataResolvingFailoverVersionCounter:               {metricName: "resolving_failover_version_counter", metricType: Counter},
+		ClusterMetadataResolvingMinFailoverVersionCounter:            {metricName: "resolving_min_failover_version_counter", metricType: Counter},
 		ActivityE2ELatency:                                           {metricName: "activity_end_to_end_latency", metricType: Timer},
 		ActivityLostCounter:                                          {metricName: "activity_lost", metricType: Counter},
 		AckLevelUpdateCounter:                                        {metricName: "ack_level_update", metricType: Counter},
