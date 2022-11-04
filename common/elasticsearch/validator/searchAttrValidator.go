@@ -35,6 +35,7 @@ import (
 type SearchAttributesValidator struct {
 	logger log.Logger
 
+	enableQueryAttributeValidation    dynamicconfig.BoolPropertyFn
 	validSearchAttributes             dynamicconfig.MapPropertyFn
 	searchAttributesNumberOfKeysLimit dynamicconfig.IntPropertyFnWithDomainFilter
 	searchAttributesSizeOfValueLimit  dynamicconfig.IntPropertyFnWithDomainFilter
@@ -44,6 +45,7 @@ type SearchAttributesValidator struct {
 // NewSearchAttributesValidator create SearchAttributesValidator
 func NewSearchAttributesValidator(
 	logger log.Logger,
+	enableQueryAttributeValidation dynamicconfig.BoolPropertyFn,
 	validSearchAttributes dynamicconfig.MapPropertyFn,
 	searchAttributesNumberOfKeysLimit dynamicconfig.IntPropertyFnWithDomainFilter,
 	searchAttributesSizeOfValueLimit dynamicconfig.IntPropertyFnWithDomainFilter,
@@ -51,6 +53,7 @@ func NewSearchAttributesValidator(
 ) *SearchAttributesValidator {
 	return &SearchAttributesValidator{
 		logger:                            logger,
+		enableQueryAttributeValidation:    enableQueryAttributeValidation,
 		validSearchAttributes:             validSearchAttributes,
 		searchAttributesNumberOfKeysLimit: searchAttributesNumberOfKeysLimit,
 		searchAttributesSizeOfValueLimit:  searchAttributesSizeOfValueLimit,
@@ -74,19 +77,22 @@ func (sv *SearchAttributesValidator) ValidateSearchAttributes(input *types.Searc
 	}
 
 	totalSize := 0
+	validateAttr := sv.enableQueryAttributeValidation()
 	validAttr := sv.validSearchAttributes()
 	for key, val := range fields {
-		// verify: key is whitelisted
-		if !sv.isValidSearchAttributesKey(validAttr, key) {
-			sv.logger.WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
-				Error("invalid search attribute key")
-			return &types.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute key", key)}
-		}
-		// verify: value has the correct type
-		if !sv.isValidSearchAttributesValue(validAttr, key, val) {
-			sv.logger.WithTags(tag.ESKey(key), tag.ESValue(val), tag.WorkflowDomainName(domain)).
-				Error("invalid search attribute value")
-			return &types.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute value for key %s", val, key)}
+		if validateAttr {
+			// verify: key is whitelisted
+			if !sv.isValidSearchAttributesKey(validAttr, key) {
+				sv.logger.WithTags(tag.ESKey(key), tag.WorkflowDomainName(domain)).
+					Error("invalid search attribute key")
+				return &types.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute key", key)}
+			}
+			// verify: value has the correct type
+			if !sv.isValidSearchAttributesValue(validAttr, key, val) {
+				sv.logger.WithTags(tag.ESKey(key), tag.ESValue(val), tag.WorkflowDomainName(domain)).
+					Error("invalid search attribute value")
+				return &types.BadRequestError{Message: fmt.Sprintf("%s is not a valid search attribute value for key %s", val, key)}
+			}
 		}
 		// verify: key is not system reserved
 		if definition.IsSystemIndexedKey(key) {

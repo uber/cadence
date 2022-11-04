@@ -224,6 +224,7 @@ func NewWorkflowHandler(
 		),
 		searchAttributesValidator: validator.NewSearchAttributesValidator(
 			resource.GetLogger(),
+			config.EnableQueryAttributeValidation,
 			config.ValidSearchAttributes,
 			config.SearchAttributesNumberOfKeysLimit,
 			config.SearchAttributesSizeOfValueLimit,

@@ -193,12 +193,13 @@ func NewConfig(params *resource.Params) *Config {
 	)
 	if common.IsAdvancedVisibilityWritingEnabled(advancedVisWritingMode(), params.PersistenceConfig.IsAdvancedVisibilityConfigExist()) {
 		config.IndexerCfg = &indexer.Config{
-			IndexerConcurrency:       dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency),
-			ESProcessorNumOfWorkers:  dc.GetIntProperty(dynamicconfig.WorkerESProcessorNumOfWorkers),
-			ESProcessorBulkActions:   dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkActions),
-			ESProcessorBulkSize:      dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkSize),
-			ESProcessorFlushInterval: dc.GetDurationProperty(dynamicconfig.WorkerESProcessorFlushInterval),
-			ValidSearchAttributes:    dc.GetMapProperty(dynamicconfig.ValidSearchAttributes),
+			IndexerConcurrency:             dc.GetIntProperty(dynamicconfig.WorkerIndexerConcurrency),
+			ESProcessorNumOfWorkers:        dc.GetIntProperty(dynamicconfig.WorkerESProcessorNumOfWorkers),
+			ESProcessorBulkActions:         dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkActions),
+			ESProcessorBulkSize:            dc.GetIntProperty(dynamicconfig.WorkerESProcessorBulkSize),
+			ESProcessorFlushInterval:       dc.GetDurationProperty(dynamicconfig.WorkerESProcessorFlushInterval),
+			ValidSearchAttributes:          dc.GetMapProperty(dynamicconfig.ValidSearchAttributes),
+			EnableQueryAttributeValidation: dc.GetBoolProperty(dynamicconfig.EnableQueryAttributeValidation),
 		}
 	}
 	return config
