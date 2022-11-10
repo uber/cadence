@@ -33,7 +33,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
@@ -1410,12 +1409,18 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 		"key4i": 3,
 		"key5i": 4,
 		"key6i": 5,
-		"key1t": shared.IndexedValueTypeString,
-		"key2t": shared.IndexedValueTypeKeyword,
-		"key3t": shared.IndexedValueTypeInt,
-		"key4t": shared.IndexedValueTypeDouble,
-		"key5t": shared.IndexedValueTypeBool,
-		"key6t": shared.IndexedValueTypeDatetime,
+		"key1t": types.IndexedValueTypeString,
+		"key2t": types.IndexedValueTypeKeyword,
+		"key3t": types.IndexedValueTypeInt,
+		"key4t": types.IndexedValueTypeDouble,
+		"key5t": types.IndexedValueTypeBool,
+		"key6t": types.IndexedValueTypeDatetime,
+		"key1s": "STRING",
+		"key2s": "KEYWORD",
+		"key3s": "INT",
+		"key4s": "DOUBLE",
+		"key5s": "BOOL",
+		"key6s": "DATETIME",
 	}
 	result := wh.convertIndexedKeyToThrift(m)
 	s.Equal(types.IndexedValueTypeString, result["key1"])
@@ -1436,6 +1441,12 @@ func (s *workflowHandlerSuite) TestConvertIndexedKeyToThrift() {
 	s.Equal(types.IndexedValueTypeDouble, result["key4t"])
 	s.Equal(types.IndexedValueTypeBool, result["key5t"])
 	s.Equal(types.IndexedValueTypeDatetime, result["key6t"])
+	s.Equal(types.IndexedValueTypeString, result["key1s"])
+	s.Equal(types.IndexedValueTypeKeyword, result["key2s"])
+	s.Equal(types.IndexedValueTypeInt, result["key3s"])
+	s.Equal(types.IndexedValueTypeDouble, result["key4s"])
+	s.Equal(types.IndexedValueTypeBool, result["key5s"])
+	s.Equal(types.IndexedValueTypeDatetime, result["key6s"])
 	s.Panics(func() {
 		wh.convertIndexedKeyToThrift(map[string]interface{}{
 			"invalidType": "unknown",

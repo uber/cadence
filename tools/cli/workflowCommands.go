@@ -45,7 +45,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/execution"
 )
 
@@ -965,7 +964,7 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *types.SearchAttri
 	indexedFields := searchAttributes.GetIndexedFields()
 	for k, v := range indexedFields {
 		valueType := validKeys[k]
-		deserializedValue, err := common.DeserializeSearchAttributeValue(v, thrift.FromIndexedValueType(valueType))
+		deserializedValue, err := common.DeserializeSearchAttributeValue(v, valueType)
 		if err != nil {
 			ErrorAndExit("Error deserializing search attribute value", err)
 		}
