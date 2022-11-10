@@ -400,6 +400,8 @@ func (s *workflowSuite) TestFlushBufferedEvents_Success() {
 	s.mockMutableState.EXPECT().GetInFlightDecision().Return(decision, true)
 	s.mockMutableState.EXPECT().AddDecisionTaskFailedEvent(decision.ScheduleID, decision.StartedID, types.DecisionTaskFailedCauseFailoverCloseDecision, nil, IdentityHistoryService, "", "", "", "", int64(0)).Return(&types.HistoryEvent{}, nil)
 	s.mockMutableState.EXPECT().FlushBufferedEvents().Return(nil)
+	s.mockMutableState.EXPECT().HasPendingDecision().Return(false)
+	s.mockMutableState.EXPECT().AddDecisionTaskScheduledEvent(false).Return(&DecisionInfo{}, nil)
 
 	nDCWorkflow := NewWorkflow(
 		context.Background(),

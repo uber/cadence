@@ -134,7 +134,7 @@ func (sv *SearchAttributesValidator) isValidSearchAttributesValue(
 	key string,
 	value []byte,
 ) bool {
-	valueType := common.ConvertIndexedValueTypeToThriftType(validAttr[key], sv.logger)
+	valueType := common.ConvertIndexedValueTypeToInternalType(validAttr[key], sv.logger)
 	_, err := common.DeserializeSearchAttributeValue(value, valueType)
 	return err == nil
 }

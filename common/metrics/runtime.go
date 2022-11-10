@@ -52,6 +52,8 @@ var (
 
 	// goVersion is the current runtime version.
 	goVersion = runtime.Version()
+	// cadenceVersion is the current version of cadence
+	cadenceVersion = VersionString
 )
 
 const (
@@ -99,11 +101,12 @@ func NewRuntimeMetricsReporter(
 	}
 	rReporter.buildInfoScope = scope.Tagged(
 		map[string]string{
-			revisionTag:     Revision,
-			branchTag:       Branch,
-			buildDateTag:    BuildDate,
-			buildVersionTag: ReleaseVersion,
-			goVersionTag:    goVersion,
+			revisionTag:       Revision,
+			branchTag:         Branch,
+			buildDateTag:      BuildDate,
+			buildVersionTag:   ReleaseVersion,
+			goVersionTag:      goVersion,
+			cadenceVersionTag: cadenceVersion,
 		},
 	)
 	sec, err := strconv.ParseInt(BuildTimeUnix, base, bitSize)

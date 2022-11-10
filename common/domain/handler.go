@@ -238,7 +238,7 @@ func (d *handlerImpl) RegisterDomain(
 
 	failoverVersion := common.EmptyVersion
 	if registerRequest.GetIsGlobalDomain() {
-		failoverVersion = d.clusterMetadata.GetNextFailoverVersion(activeClusterName, 0)
+		failoverVersion = d.clusterMetadata.GetNextFailoverVersion(activeClusterName, 0, registerRequest.Name)
 	}
 
 	domainRequest := &persistence.CreateDomainRequest{
@@ -521,6 +521,7 @@ func (d *handlerImpl) UpdateDomain(
 			failoverVersion = d.clusterMetadata.GetNextFailoverVersion(
 				replicationConfig.ActiveClusterName,
 				failoverVersion,
+				updateRequest.Name,
 			)
 			failoverNotificationVersion = notificationVersion
 		}
