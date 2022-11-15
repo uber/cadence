@@ -36,7 +36,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -272,11 +271,16 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 	require.True(t, delta < 62*time.Second)
 }
 
-func TestConvertIndexedValueTypeToThriftType(t *testing.T) {
-	expected := workflow.IndexedValueType_Values()
-	for i := 0; i < len(expected); i++ {
-		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(i, nil))
-		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(float64(i), nil))
+func TestConvertIndexedValueTypeToInternalType(t *testing.T) {
+	values := []types.IndexedValueType{types.IndexedValueTypeString, types.IndexedValueTypeKeyword, types.IndexedValueTypeInt, types.IndexedValueTypeDouble, types.IndexedValueTypeBool, types.IndexedValueTypeDatetime}
+	for _, expected := range values {
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(int(expected), nil))
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(float64(expected), nil))
+
+		buffer, err := expected.MarshalText()
+		require.NoError(t, err)
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(buffer, nil))
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(string(buffer), nil))
 	}
 }
 

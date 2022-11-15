@@ -160,9 +160,6 @@ func NewHistoryReplicator(
 				shard,
 				logger,
 				state,
-				func(mutableState execution.MutableState) execution.MutableStateTaskGenerator {
-					return execution.NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), mutableState)
-				},
 			)
 		},
 		newMutableState: func(

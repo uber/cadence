@@ -663,7 +663,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 		obj.Visit(func(k []byte, v *fastjson.Value) { // visit is only way to get object key in fastjson
 			sortField = string(k)
 		})
-		if v.getFieldType(sortField) == workflow.IndexedValueTypeString {
+		if v.getFieldType(sortField) == types.IndexedValueTypeString {
 			return "", errors.New("not able to sort by IndexedValueTypeString field, use IndexedValueTypeKeyword field")
 		}
 		// add RunID as tie-breaker
@@ -673,7 +673,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 	return sortField, nil
 }
 
-func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValueType {
+func (v *esVisibilityStore) getFieldType(fieldName string) types.IndexedValueType {
 	if strings.HasPrefix(fieldName, definition.Attr) {
 		fieldName = fieldName[len(definition.Attr)+1:] // remove prefix
 	}
@@ -682,14 +682,14 @@ func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValue
 	if !ok {
 		v.logger.Error("Unknown fieldName, validation should be done in frontend already", tag.Value(fieldName))
 	}
-	return common.ConvertIndexedValueTypeToThriftType(fieldType, v.logger)
+	return common.ConvertIndexedValueTypeToInternalType(fieldType, v.logger)
 }
 
 func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibilityPageToken, sortField string) (string, error) {
 	var sortVal interface{}
 	var err error
 	switch v.getFieldType(sortField) {
-	case workflow.IndexedValueTypeInt, workflow.IndexedValueTypeDatetime, workflow.IndexedValueTypeBool:
+	case types.IndexedValueTypeInt, types.IndexedValueTypeDatetime, types.IndexedValueTypeBool:
 		sortVal, err = token.SortValue.(json.Number).Int64()
 		if err != nil {
 			err, ok := err.(*strconv.NumError) // field not present, ES will return big int +-9223372036854776000
@@ -702,7 +702,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 				sortVal = math.MaxInt64
 			}
 		}
-	case workflow.IndexedValueTypeDouble:
+	case types.IndexedValueTypeDouble:
 		switch token.SortValue.(type) {
 		case json.Number:
 			sortVal, err = token.SortValue.(json.Number).Float64()
@@ -712,7 +712,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 		case string: // field not present, ES will return "-Infinity" or "Infinity"
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
 		}
-	case workflow.IndexedValueTypeKeyword:
+	case types.IndexedValueTypeKeyword:
 		if token.SortValue != nil {
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
 		} else { // field not present, ES will return null (so token.SortValue is nil)
