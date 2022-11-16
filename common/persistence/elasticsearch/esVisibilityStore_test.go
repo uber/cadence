@@ -241,6 +241,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
+	request.UpdateTimestamp = time.Unix(0, int64(213))
 
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -248,6 +249,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 		s.Equal(request.WorkflowID, input.GetWorkflowID())
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
+		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
 		return true
 	})).Return(nil).Once()
 

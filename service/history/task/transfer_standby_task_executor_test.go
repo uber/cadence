@@ -792,14 +792,14 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 		s.mockVisibilityMgr.On(
 			"RecordWorkflowExecutionUninitialized",
 			mock.Anything,
-			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState),
+			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now()),
 		).Once().Return(nil)
 	}
 	s.mockVisibilityMgr.On(
 		"RecordWorkflowExecutionStarted",
 		mock.Anything,
 		createRecordWorkflowExecutionStartedRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
 	).Return(nil).Once()
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
@@ -833,7 +833,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessUpsertWorkflowSearchAttrib
 		"UpsertWorkflowExecution",
 		mock.Anything,
 		createUpsertWorkflowSearchAttributesRequest(
-			s.domainName, startEvent, transferTask, mutableState, 2),
+			s.domainName, startEvent, transferTask, mutableState, 2, s.mockShard.GetTimeSource().Now()),
 	).Return(nil).Once()
 
 	s.mockShard.SetCurrentTime(s.clusterName, now)
