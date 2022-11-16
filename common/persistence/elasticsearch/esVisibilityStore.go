@@ -516,6 +516,8 @@ var (
 	}
 )
 
+var missingStartTimeRegex = regexp.MustCompile(jsonMissingStartTime)
+
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	sql := getSQLFromListRequest(request)
 	dsl, err := getCustomizedDSLFromSQL(sql, request.DomainUUID)
@@ -632,8 +634,7 @@ func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
 // ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql produces "missing",
 // so use this func to replace.
 func replaceQueryForUninitialized(dsl *fastjson.Value) *fastjson.Value {
-	re := regexp.MustCompile(jsonMissingStartTime)
-	newDslStr := re.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"StartTime"}}}}`)
+	newDslStr := missingStartTimeRegex.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"StartTime"}}}}`)
 	dsl = fastjson.MustParse(newDslStr)
 	return dsl
 }
