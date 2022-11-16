@@ -107,10 +107,10 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.NumClusters,
 		request.SearchAttributes,
 		common.RecordStarted,
-		0, // will not be used
-		0, // will not be used
-		0, // will not be used
-		0, // will be updated when workflow execution updates
+		0,                                  // will not be used
+		0,                                  // will not be used
+		0,                                  // will not be used
+		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -153,6 +153,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionUninitialized(
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -824,10 +825,12 @@ func getVisibilityMessageForUninitializedWorkflow(
 	wid,
 	rid string,
 	workflowTypeName string,
+	updateTimeUnixNano int64, // update execution
 ) *indexer.Message {
 	msgType := indexer.MessageTypeCreate
 	fields := map[string]*indexer.Field{
 		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.UpdateTime:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
 	}
 
 	msg := &indexer.Message{
