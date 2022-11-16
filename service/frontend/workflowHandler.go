@@ -50,7 +50,6 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -4466,7 +4465,7 @@ func (wh *WorkflowHandler) getArchivedHistory(
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]types.IndexedValueType {
 	converted := make(map[string]types.IndexedValueType)
 	for k, v := range keys {
-		converted[k] = thrift.ToIndexedValueType(common.ConvertIndexedValueTypeToThriftType(v, wh.GetLogger()))
+		converted[k] = common.ConvertIndexedValueTypeToInternalType(v, wh.GetLogger())
 	}
 	return converted
 }

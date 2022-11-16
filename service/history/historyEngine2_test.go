@@ -835,6 +835,76 @@ func (s *engine2Suite) TestRequestCancelWorkflowExecutionSuccess() {
 	s.Equal(int64(4), executionBuilder.GetNextEventID())
 }
 
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionAlreadyCancelled_Success() {
+	domainID := constants.TestDomainID
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+	cancelRequestID := "cancelrequestid"
+
+	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, false)
+	msBuilder.GetExecutionInfo().State = p.WorkflowStateCompleted
+	msBuilder.GetExecutionInfo().CloseStatus = p.WorkflowCloseStatusCanceled
+	msBuilder.GetExecutionInfo().CancelRequested = true
+	msBuilder.GetExecutionInfo().CancelRequestID = cancelRequestID
+	ms1 := execution.CreatePersistenceMutableState(msBuilder)
+	gwmsResponse1 := &p.GetWorkflowExecutionResponse{State: ms1}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: workflowExecution.WorkflowID,
+				RunID:      workflowExecution.RunID,
+			},
+			Identity:  "identity",
+			RequestID: cancelRequestID,
+		},
+	})
+	s.Nil(err)
+}
+
+func (s *engine2Suite) TestRequestCancelWorkflowExecutionAlreadyCancelled_Fail() {
+	domainID := constants.TestDomainID
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "wId",
+		RunID:      constants.TestRunID,
+	}
+
+	identity := "testIdentity"
+	tl := "testTaskList"
+	cancelRequestID := "cancelrequestid"
+
+	msBuilder := s.createExecutionStartedState(workflowExecution, tl, identity, false)
+	msBuilder.GetExecutionInfo().State = p.WorkflowStateCompleted
+	msBuilder.GetExecutionInfo().CancelRequested = true
+	msBuilder.GetExecutionInfo().CancelRequestID = cancelRequestID
+	ms1 := execution.CreatePersistenceMutableState(msBuilder)
+	gwmsResponse1 := &p.GetWorkflowExecutionResponse{State: ms1}
+
+	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse1, nil).Once()
+
+	err := s.historyEngine.RequestCancelWorkflowExecution(context.Background(), &types.HistoryRequestCancelWorkflowExecutionRequest{
+		DomainUUID: domainID,
+		CancelRequest: &types.RequestCancelWorkflowExecutionRequest{
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: workflowExecution.WorkflowID,
+				RunID:      workflowExecution.RunID,
+			},
+			Identity:  "identity",
+			RequestID: cancelRequestID + "xxx",
+		},
+	})
+	s.NotNil(err)
+	s.IsType(&types.WorkflowExecutionAlreadyCompletedError{}, err)
+}
+
 func (s *engine2Suite) TestRequestCancelWorkflowExecutionFail() {
 	domainID := constants.TestDomainID
 	workflowExecution := types.WorkflowExecution{
