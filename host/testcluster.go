@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/log/loggerimpl"
+
 	"github.com/uber-go/tally"
 
 	adminClient "github.com/uber/cadence/client/admin"
@@ -186,6 +188,9 @@ func NewClusterMetadata(options *TestClusterConfig) cluster.Metadata {
 			options.ClusterGroupMetadata.PrimaryClusterName,
 			options.ClusterGroupMetadata.CurrentClusterName,
 			options.ClusterGroupMetadata.ClusterGroup,
+			func(domain string) bool { return false },
+			metrics.NewNoopMetricsClient(),
+			loggerimpl.NewNopLogger(),
 		)
 	}
 	return clusterMetadata

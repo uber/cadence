@@ -507,7 +507,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDom
 		ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
 		Clusters:          clusters,
 	}, resp.ReplicationConfiguration)
-	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(s.ClusterMetadata.GetCurrentClusterName(), 0), resp.GetFailoverVersion())
+	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(s.ClusterMetadata.GetCurrentClusterName(), 0, "some-domaain"), resp.GetFailoverVersion())
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
@@ -575,7 +575,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestRegisterGetDom
 		ActiveClusterName: activeClusterName,
 		Clusters:          clusters,
 	}, resp.ReplicationConfiguration)
-	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0), resp.GetFailoverVersion())
+	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0, "some-domain"), resp.GetFailoverVersion())
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 }
 
@@ -640,7 +640,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 			ActiveClusterName: activeClusterName,
 			Clusters:          clusters,
 		}, replicationConfig)
-		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0), failoverVersion)
+		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0, "some-domain"), failoverVersion)
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
@@ -727,7 +727,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 			ActiveClusterName: activeClusterName,
 			Clusters:          clusters,
 		}, replicationConfig)
-		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0), failoverVersion)
+		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(activeClusterName, 0, "some-domain"), failoverVersion)
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
@@ -832,8 +832,8 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateGetDomai
 		}, replicationConfig)
 		s.Equal(s.ClusterMetadata.GetNextFailoverVersion(
 			nextActiveClusterName,
-			s.ClusterMetadata.GetNextFailoverVersion(prevActiveClusterName, 0),
-		), failoverVersion)
+			s.ClusterMetadata.GetNextFailoverVersion(prevActiveClusterName, 0, "some-domain"),
+			"some-domain"), failoverVersion)
 		s.Equal(isGlobalDomain, isGlobalDomain)
 	}
 
@@ -927,7 +927,7 @@ func (s *domainHandlerGlobalDomainEnabledPrimaryClusterSuite) TestUpdateDomain_C
 		ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
 		Clusters:          clusters,
 	}, resp.ReplicationConfiguration)
-	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(s.ClusterMetadata.GetCurrentClusterName(), 0), resp.GetFailoverVersion())
+	s.Equal(s.ClusterMetadata.GetNextFailoverVersion(s.ClusterMetadata.GetCurrentClusterName(), 0, "some-domain"), resp.GetFailoverVersion())
 	s.Equal(isGlobalDomain, resp.GetIsGlobalDomain())
 
 	_, err = s.handler.UpdateDomain(context.Background(), &types.UpdateDomainRequest{

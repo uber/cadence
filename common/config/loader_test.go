@@ -22,7 +22,6 @@ package config
 
 import (
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -55,9 +54,7 @@ func (s *LoaderSuite) SetupTest() {
 
 func (s *LoaderSuite) TestBaseYaml() {
 
-	dir, err := ioutil.TempDir("", "loader.testBaseYaml")
-	s.Nil(err)
-	defer os.RemoveAll(dir)
+	dir := s.T().TempDir()
 
 	s.createFile(dir, "base.yaml", `
 items:
@@ -70,7 +67,7 @@ items:
 	for _, env := range envs {
 		for _, zone := range zones {
 			var cfg testConfig
-			err = Load(env, dir, zone, &cfg)
+			err := Load(env, dir, zone, &cfg)
 			s.Nil(err)
 			s.Equal("base1", cfg.Items.Item1)
 			s.Equal("base2", cfg.Items.Item2)
@@ -80,9 +77,7 @@ items:
 
 func (s *LoaderSuite) TestHierarchy() {
 
-	dir, err := ioutil.TempDir("", "loader.testHierarchy")
-	s.Nil(err)
-	defer os.RemoveAll(dir)
+	dir := s.T().TempDir()
 
 	s.createFile(dir, "base.yaml", `
 items:
@@ -120,7 +115,7 @@ items:
 
 	for _, tc := range testCases {
 		var cfg testConfig
-		err = Load(tc.env, dir, tc.zone, &cfg)
+		err := Load(tc.env, dir, tc.zone, &cfg)
 		s.Nil(err)
 		s.Equal(tc.item1, cfg.Items.Item1)
 		s.Equal(tc.item2, cfg.Items.Item2)

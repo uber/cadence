@@ -51,10 +51,7 @@ func (s *FileUtilSuite) SetupTest() {
 }
 
 func (s *FileUtilSuite) TestFileExists() {
-	dir, err := ioutil.TempDir("", "TestFileExists")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	s.assertDirectoryExists(dir)
+	dir := s.T().TempDir()
 
 	exists, err := FileExists(dir)
 	s.Error(err)
@@ -72,10 +69,7 @@ func (s *FileUtilSuite) TestFileExists() {
 }
 
 func (s *FileUtilSuite) TestDirectoryExists() {
-	dir, err := ioutil.TempDir("", "TestDirectoryExists")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	s.assertDirectoryExists(dir)
+	dir := s.T().TempDir()
 
 	subdir := "subdir"
 	exists, err := DirectoryExists(filepath.Join(dir, subdir))
@@ -91,10 +85,7 @@ func (s *FileUtilSuite) TestDirectoryExists() {
 }
 
 func (s *FileUtilSuite) TestMkdirAll() {
-	dir, err := ioutil.TempDir("", "TestMkdirAll")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	s.assertDirectoryExists(dir)
+	dir := s.T().TempDir()
 
 	s.NoError(MkdirAll(dir, testDirMode))
 	s.assertDirectoryExists(dir)
@@ -112,10 +103,7 @@ func (s *FileUtilSuite) TestMkdirAll() {
 }
 
 func (s *FileUtilSuite) TestWriteFile() {
-	dir, err := ioutil.TempDir("", "TestWriteFile")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	s.assertDirectoryExists(dir)
+	dir := s.T().TempDir()
 
 	filename := "test-file-name"
 	fpath := filepath.Join(dir, filename)
@@ -132,10 +120,7 @@ func (s *FileUtilSuite) TestWriteFile() {
 }
 
 func (s *FileUtilSuite) TestReadFile() {
-	dir, err := ioutil.TempDir("", "TestReadFile")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
-	s.assertDirectoryExists(dir)
+	dir := s.T().TempDir()
 
 	filename := "test-file-name"
 	fpath := filepath.Join(dir, filename)
@@ -151,10 +136,7 @@ func (s *FileUtilSuite) TestReadFile() {
 }
 
 func (s *FileUtilSuite) TestListFilesByPrefix() {
-	dir, err := ioutil.TempDir("", "TestListFiles")
-	s.NoError(err)
-	defer os.Remove(dir)
-	s.assertDirectoryExists(dir)
+	dir := s.T().TempDir()
 
 	filename := "test-file-name"
 	fpath := filepath.Join(dir, filename)

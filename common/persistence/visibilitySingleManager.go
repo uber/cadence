@@ -119,6 +119,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionUninitialized(
 		WorkflowID:       request.Execution.GetWorkflowID(),
 		RunID:            request.Execution.GetRunID(),
 		WorkflowTypeName: request.WorkflowTypeName,
+		UpdateTimestamp:  time.Unix(0, request.UpdateTimestamp),
 	}
 	return v.persistence.RecordWorkflowExecutionUninitialized(ctx, req)
 }

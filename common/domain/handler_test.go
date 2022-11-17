@@ -386,7 +386,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				ActiveClusterName: activeClusterName2,
 				Clusters:          cluster2,
 			},
-			FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0),
+			FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0, "some-domain"),
 			IsGlobalDomain:  isGlobalDomain2,
 		},
 	}, domains)

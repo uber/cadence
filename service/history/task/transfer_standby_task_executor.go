@@ -248,7 +248,7 @@ func (t *transferStandbyTaskExecutor) processCloseExecution(
 		visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 		searchAttr := executionInfo.SearchAttributes
 		isCron := len(executionInfo.CronSchedule) > 0
-		updateTimestamp := getWorkflowLastUpdatedTimestamp(mutableState)
+		updateTimestamp := t.shard.GetTimeSource().Now()
 
 		lastWriteVersion, err := mutableState.GetLastWriteVersion()
 		if err != nil {
@@ -478,7 +478,7 @@ func (t *transferStandbyTaskExecutor) processRecordWorkflowStartedOrUpsertHelper
 	visibilityMemo := getWorkflowMemo(executionInfo.Memo)
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
-	updateTimestamp := getWorkflowLastUpdatedTimestamp(mutableState)
+	updateTimestamp := t.shard.GetTimeSource().Now()
 
 	domainEntry, err := t.shard.GetDomainCache().GetDomainByID(transferTask.DomainID)
 	if err != nil {

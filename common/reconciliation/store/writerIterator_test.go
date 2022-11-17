@@ -25,8 +25,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/pborman/uuid"
@@ -69,9 +67,7 @@ func (s *WriterIteratorSuite) TestWriterIterator() {
 
 	uuid := "uuid"
 	extension := Extension("test")
-	outputDir, err := ioutil.TempDir("", "TestWriterIterator")
-	s.NoError(err)
-	defer os.RemoveAll(outputDir)
+	outputDir := s.T().TempDir()
 	cfg := &config.FileBlobstore{
 		OutputDirectory: outputDir,
 	}

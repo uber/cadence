@@ -185,7 +185,7 @@ func WorkflowDomainIDs(domainIDs interface{}) Tag {
 	return newObjectTag("wf-domain-ids", domainIDs)
 }
 
-//	OperationName returns tag for OperationName
+// OperationName returns tag for OperationName
 func OperationName(operationName string) Tag {
 	return newStringTag("operation-name", operationName)
 }
@@ -861,4 +861,10 @@ func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag 
 // VisibilityQuery returns tag for the query for getting visibility records
 func VisibilityQuery(query string) Tag {
 	return newStringTag("visibility-query", query)
+}
+
+// Dynamic Uses reflection based logging for arbitrary values
+// for not very performant logging
+func Dynamic(key string, v interface{}) Tag {
+	return newPredefinedDynamicTag(key, v)
 }

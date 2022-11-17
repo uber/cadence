@@ -1705,24 +1705,12 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		execution,
 		createRequest.GetRequestID(),
 		event,
+		false,
 	); err != nil {
 		return nil, err
 	}
 
 	if err := e.SetHistoryTree(e.GetExecutionInfo().RunID); err != nil {
-		return nil, err
-	}
-
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowStartTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
-		event,
-	); err != nil {
-		return nil, err
-	}
-	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(
-		event,
-	); err != nil {
 		return nil, err
 	}
 
@@ -1765,21 +1753,11 @@ func (e *mutableStateBuilder) AddWorkflowExecutionStartedEvent(
 		parentDomainID,
 		execution,
 		request.GetRequestID(),
-		event); err != nil {
-		return nil, err
-	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowStartTasks(
-		e.unixNanoToTime(event.GetTimestamp()),
 		event,
-	); err != nil {
+		false); err != nil {
 		return nil, err
 	}
-	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(
-		event,
-	); err != nil {
-		return nil, err
-	}
+
 	return event, nil
 }
 
@@ -1788,6 +1766,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	execution types.WorkflowExecution,
 	requestID string,
 	startEvent *types.HistoryEvent,
+	generateDelayedDecisionTasks bool,
 ) error {
 
 	event := startEvent.WorkflowExecutionStartedEventAttributes
@@ -1860,6 +1839,18 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	}
 
 	e.writeEventToCache(startEvent)
+
+	if err := e.taskGenerator.GenerateWorkflowStartTasks(e.unixNanoToTime(startEvent.GetTimestamp()), startEvent); err != nil {
+		return err
+	}
+	if err := e.taskGenerator.GenerateRecordWorkflowStartedTasks(startEvent); err != nil {
+		return err
+	}
+	if generateDelayedDecisionTasks && event.GetFirstDecisionTaskBackoffSeconds() > 0 {
+		if err := e.taskGenerator.GenerateDelayedDecisionTasks(startEvent); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -1895,7 +1886,7 @@ func (e *mutableStateBuilder) AddDecisionTaskScheduledEventAsHeartbeat(
 	return e.decisionTaskManager.AddDecisionTaskScheduledEventAsHeartbeat(bypassTaskGeneration, originalScheduledTimestamp)
 }
 
-func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() (*DecisionInfo, error) {
+func (e *mutableStateBuilder) ReplicateTransientDecisionTaskScheduled() error {
 	return e.decisionTaskManager.ReplicateTransientDecisionTaskScheduled()
 }
 
@@ -1907,8 +1898,9 @@ func (e *mutableStateBuilder) ReplicateDecisionTaskScheduledEvent(
 	attempt int64,
 	scheduleTimestamp int64,
 	originalScheduledTimestamp int64,
+	bypassTaskGeneration bool,
 ) (*DecisionInfo, error) {
-	return e.decisionTaskManager.ReplicateDecisionTaskScheduledEvent(version, scheduleID, taskList, startToCloseTimeoutSeconds, attempt, scheduleTimestamp, originalScheduledTimestamp)
+	return e.decisionTaskManager.ReplicateDecisionTaskScheduledEvent(version, scheduleID, taskList, startToCloseTimeoutSeconds, attempt, scheduleTimestamp, originalScheduledTimestamp, bypassTaskGeneration)
 }
 
 func (e *mutableStateBuilder) AddDecisionTaskStartedEvent(
@@ -2181,7 +2173,7 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		event,
 	)
 
-	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event)
+	ai, err := e.ReplicateActivityTaskScheduledEvent(decisionCompletedEventID, event, true)
 	if err != nil {
 		return nil, nil, nil, false, false, err
 	}
@@ -2198,10 +2190,8 @@ func (e *mutableStateBuilder) AddActivityTaskScheduledEvent(
 		activityStartedScope.IncCounter(metrics.CadenceRequests)
 		return event, ai, nil, true, true, nil
 	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateActivityTransferTasks(
-		event,
-	); err != nil {
+
+	if err := e.taskGenerator.GenerateActivityTransferTasks(event); err != nil {
 		return nil, nil, nil, dispatch, false, err
 	}
 
@@ -2246,6 +2236,7 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	firstEventID int64,
 	event *types.HistoryEvent,
+	skipTaskGeneration bool,
 ) (*persistence.ActivityInfo, error) {
 
 	attributes := event.ActivityTaskScheduledEventAttributes
@@ -2296,6 +2287,10 @@ func (e *mutableStateBuilder) ReplicateActivityTaskScheduledEvent(
 	e.pendingActivityInfoIDs[scheduleEventID] = ai
 	e.pendingActivityIDToEventID[ai.ActivityID] = scheduleEventID
 	e.updateActivityInfos[ai.ScheduleID] = ai
+
+	if !skipTaskGeneration {
+		return ai, e.taskGenerator.GenerateActivityTransferTasks(event)
+	}
 
 	return ai, nil
 }
@@ -2653,12 +2648,6 @@ func (e *mutableStateBuilder) AddCompletedWorkflowEvent(
 	if err := e.ReplicateWorkflowExecutionCompletedEvent(decisionCompletedEventID, event); err != nil {
 		return nil, err
 	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
-		return nil, err
-	}
 	return event, nil
 }
 
@@ -2676,7 +2665,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCompletedEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(event)
-	return nil
+
+	return e.taskGenerator.GenerateWorkflowCloseTasks(event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name))
 }
 
 func (e *mutableStateBuilder) AddFailWorkflowEvent(
@@ -2691,12 +2681,6 @@ func (e *mutableStateBuilder) AddFailWorkflowEvent(
 
 	event := e.hBuilder.AddFailWorkflowEvent(decisionCompletedEventID, attributes)
 	if err := e.ReplicateWorkflowExecutionFailedEvent(decisionCompletedEventID, event); err != nil {
-		return nil, err
-	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2716,7 +2700,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionFailedEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(event)
-	return nil
+
+	return e.taskGenerator.GenerateWorkflowCloseTasks(event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name))
 }
 
 func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
@@ -2730,12 +2715,6 @@ func (e *mutableStateBuilder) AddTimeoutWorkflowEvent(
 
 	event := e.hBuilder.AddTimeoutWorkflowEvent()
 	if err := e.ReplicateWorkflowExecutionTimedoutEvent(firstEventID, event); err != nil {
-		return nil, err
-	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -2755,7 +2734,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTimedoutEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(event)
-	return nil
+
+	return e.taskGenerator.GenerateWorkflowCloseTasks(event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name))
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionCancelRequestedEvent(
@@ -2811,12 +2791,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionCanceledEvent(
 	if err := e.ReplicateWorkflowExecutionCanceledEvent(decisionTaskCompletedEventID, event); err != nil {
 		return nil, err
 	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
-		return nil, err
-	}
 	return event, nil
 }
 
@@ -2833,7 +2807,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionCanceledEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(event)
-	return nil
+
+	return e.taskGenerator.GenerateWorkflowCloseTasks(event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name))
 }
 
 func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiatedEvent(
@@ -2850,12 +2825,6 @@ func (e *mutableStateBuilder) AddRequestCancelExternalWorkflowExecutionInitiated
 	event := e.hBuilder.AddRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, request)
 	rci, err := e.ReplicateRequestCancelExternalWorkflowExecutionInitiatedEvent(decisionCompletedEventID, event, cancelRequestID)
 	if err != nil {
-		return nil, nil, err
-	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateRequestCancelExternalTasks(
-		event,
-	); err != nil {
 		return nil, nil, err
 	}
 	return event, rci, nil
@@ -2879,7 +2848,7 @@ func (e *mutableStateBuilder) ReplicateRequestCancelExternalWorkflowExecutionIni
 	e.pendingRequestCancelInfoIDs[rci.InitiatedID] = rci
 	e.updateRequestCancelInfos[rci.InitiatedID] = rci
 
-	return rci, nil
+	return rci, e.taskGenerator.GenerateRequestCancelExternalTasks(event)
 }
 
 func (e *mutableStateBuilder) AddExternalWorkflowExecutionCancelRequested(
@@ -2975,12 +2944,6 @@ func (e *mutableStateBuilder) AddSignalExternalWorkflowExecutionInitiatedEvent(
 	if err != nil {
 		return nil, nil, err
 	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateSignalExternalTasks(
-		event,
-	); err != nil {
-		return nil, nil, err
-	}
 	return event, si, nil
 }
 
@@ -3005,7 +2968,8 @@ func (e *mutableStateBuilder) ReplicateSignalExternalWorkflowExecutionInitiatedE
 
 	e.pendingSignalInfoIDs[si.InitiatedID] = si
 	e.updateSignalInfos[si.InitiatedID] = si
-	return si, nil
+
+	return si, e.taskGenerator.GenerateSignalExternalTasks(event)
 }
 
 func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
@@ -3019,9 +2983,7 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 	}
 
 	event := e.hBuilder.AddUpsertWorkflowSearchAttributesEvent(decisionCompletedEventID, request)
-	e.ReplicateUpsertWorkflowSearchAttributesEvent(event)
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowSearchAttrTasks(); err != nil {
+	if err := e.ReplicateUpsertWorkflowSearchAttributesEvent(event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -3029,12 +2991,14 @@ func (e *mutableStateBuilder) AddUpsertWorkflowSearchAttributesEvent(
 
 func (e *mutableStateBuilder) ReplicateUpsertWorkflowSearchAttributesEvent(
 	event *types.HistoryEvent,
-) {
+) error {
 
 	upsertSearchAttr := event.UpsertWorkflowSearchAttributesEventAttributes.GetSearchAttributes().GetIndexedFields()
 	currentSearchAttr := e.GetExecutionInfo().SearchAttributes
 
 	e.executionInfo.SearchAttributes = mergeMapOfByteArray(currentSearchAttr, upsertSearchAttr)
+
+	return e.taskGenerator.GenerateWorkflowSearchAttrTasks()
 }
 
 func mergeMapOfByteArray(
@@ -3317,12 +3281,6 @@ func (e *mutableStateBuilder) AddWorkflowExecutionTerminatedEvent(
 	if err := e.ReplicateWorkflowExecutionTerminatedEvent(firstEventID, event); err != nil {
 		return nil, err
 	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
-		return nil, err
-	}
 	return event, nil
 }
 
@@ -3340,7 +3298,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionTerminatedEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(event)
-	return nil
+
+	return e.taskGenerator.GenerateWorkflowCloseTasks(event, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name))
 }
 
 func (e *mutableStateBuilder) AddWorkflowExecutionSignaled(
@@ -3436,12 +3395,6 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	); err != nil {
 		return nil, nil, err
 	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateWorkflowCloseTasks(
-		continueAsNewEvent, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name),
-	); err != nil {
-		return nil, nil, err
-	}
 
 	return continueAsNewEvent, newStateBuilder, nil
 }
@@ -3484,7 +3437,8 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionContinuedAsNewEvent(
 	e.executionInfo.CompletionEventBatchID = firstEventID // Used when completion event needs to be loaded from database
 	e.ClearStickyness()
 	e.writeEventToCache(continueAsNewEvent)
-	return nil
+
+	return e.taskGenerator.GenerateWorkflowCloseTasks(continueAsNewEvent, e.config.WorkflowDeletionJitterRange(e.domainEntry.GetInfo().Name))
 }
 
 func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
@@ -3509,12 +3463,6 @@ func (e *mutableStateBuilder) AddStartChildWorkflowExecutionInitiatedEvent(
 
 	ci, err := e.ReplicateStartChildWorkflowExecutionInitiatedEvent(decisionCompletedEventID, event, createRequestID)
 	if err != nil {
-		return nil, nil, err
-	}
-	// TODO merge active & passive task generation
-	if err := e.taskGenerator.GenerateChildWorkflowTasks(
-		event,
-	); err != nil {
 		return nil, nil, err
 	}
 	return event, ci, nil
@@ -3555,7 +3503,7 @@ func (e *mutableStateBuilder) ReplicateStartChildWorkflowExecutionInitiatedEvent
 	e.pendingChildExecutionInfoIDs[ci.InitiatedID] = ci
 	e.updateChildExecutionInfos[ci.InitiatedID] = ci
 
-	return ci, nil
+	return ci, e.taskGenerator.GenerateChildWorkflowTasks(event)
 }
 
 func (e *mutableStateBuilder) AddChildWorkflowExecutionStartedEvent(
@@ -4258,14 +4206,11 @@ func (e *mutableStateBuilder) prepareCloseTransaction(
 		}
 	}
 
-	// TODO merge active & passive task generation
 	// NOTE: this function must be the last call
 	//  since we only generate at most one activity & user timer,
 	//  regardless of how many activity & user timer created
 	//  so the calculation must be at the very end
-	return e.closeTransactionHandleActivityUserTimerTasks(
-		transactionPolicy,
-	)
+	return e.closeTransactionHandleActivityUserTimerTasks()
 }
 
 func (e *mutableStateBuilder) cleanupTransaction() error {
@@ -4710,12 +4655,8 @@ func (e *mutableStateBuilder) closeTransactionHandleWorkflowReset(
 	return nil
 }
 
-func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks(
-	transactionPolicy TransactionPolicy,
-) error {
-
-	if transactionPolicy == TransactionPolicyPassive ||
-		!e.IsWorkflowExecutionRunning() {
+func (e *mutableStateBuilder) closeTransactionHandleActivityUserTimerTasks() error {
+	if !e.IsWorkflowExecutionRunning() {
 		return nil
 	}
 

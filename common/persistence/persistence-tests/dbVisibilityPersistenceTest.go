@@ -169,6 +169,7 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 		DomainUUID:       testDomainUUID,
 		Execution:        workflowExecution,
 		WorkflowTypeName: "visibility-workflow",
+		UpdateTimestamp:  time.Now().UnixNano(),
 	}
 	err5 := s.VisibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedReq)
 	s.Nil(err5)

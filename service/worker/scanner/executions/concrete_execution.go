@@ -76,7 +76,7 @@ func ConcreteFixerWorkflow(
 	return wf.Start(ctx)
 }
 
-//ConcreteExecutionHooks provides hooks for concrete executions scanner
+// ConcreteExecutionHooks provides hooks for concrete executions scanner
 func ConcreteExecutionHooks() *shardscanner.ScannerHooks {
 	h, err := shardscanner.NewScannerHooks(ScannerManager, ScannerIterator)
 	if err != nil {

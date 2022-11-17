@@ -508,7 +508,7 @@ func (db *cdb) SelectAllDomains(
 	return rows, nextPageToken, nil
 }
 
-//  Delete a domain, either by domainID or domainName
+// Delete a domain, either by domainID or domainName
 func (db *cdb) DeleteDomain(
 	ctx context.Context,
 	domainID *string,

@@ -104,7 +104,8 @@ const (
 // milliseconds. Thread safe.
 //
 // @param rps
-//    Desired rate per second
+//
+//	Desired rate per second
 //
 // Golang.org has an alternative implementation
 // of the rate limiter. On benchmarking, golang's
@@ -121,7 +122,6 @@ const (
 // BenchmarkGolangRateParallel 	10000000	       153 ns/op
 // BenchmarkTokenBucketParallel-8	10000000	       129 ns/op
 // BenchmarkGolangRateParallel-8 	10000000	       208 ns/op
-//
 func New(rps int, timeSource clock.TimeSource) TokenBucket {
 	return newTokenBucket(rps, timeSource)
 }
@@ -215,7 +215,8 @@ func (tb *tokenBucketImpl) isOverflowRefillDue(now int64) bool {
 // NewDynamicTokenBucket creates and returns a token bucket
 // rate limiter that supports dynamic change of RPS. Thread safe.
 // @param rps
-//    Dynamic config function for rate per second
+//
+//	Dynamic config function for rate per second
 func NewDynamicTokenBucket(rps dynamicconfig.IntPropertyFn, timeSource clock.TimeSource) TokenBucket {
 	initialRPS := rps()
 	return &dynamicTokenBucketImpl{
@@ -257,10 +258,12 @@ func (dtb *dynamicTokenBucketImpl) resetRateIfChanged(newRPS int) {
 // Thread safe.
 //
 // @param numOfPriority
-//    Number of priorities
-// @param rps
-//    Desired rate per second
 //
+//	Number of priorities
+//
+// @param rps
+//
+//	Desired rate per second
 func NewPriorityTokenBucket(numOfPriority, rps int, timeSource clock.TimeSource) PriorityTokenBucket {
 	tb := new(priorityTokenBucketImpl)
 	tb.tokens = make([]int, numOfPriority)
