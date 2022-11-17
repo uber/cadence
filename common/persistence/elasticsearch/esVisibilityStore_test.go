@@ -241,6 +241,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
+	request.UpdateTimestamp = time.Unix(0, int64(213))
 
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -248,6 +249,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 		s.Equal(request.WorkflowID, input.GetWorkflowID())
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
+		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
 		return true
 	})).Return(nil).Once()
 
@@ -743,6 +745,12 @@ func (s *ESVisibilitySuite) TestGetESQueryDSLForCount() {
 	dsl, err = getESQueryDSLForCount(request)
 	s.Nil(err)
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"range":{"ExecutionTime":{"gt":"0"}}},{"bool":{"must":[{"range":{"ExecutionTime":{"lt":"1000"}}}]}}]}}]}}}`, dsl)
+
+	request.Query = `StartTime = missing and UpdateTime >= "2022-10-04T16:00:00+07:00"`
+	dsl, err = getESQueryDSLForCount(request)
+	s.Nil(err)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"bool":{"must_not":{"exists":{"field":"StartTime"}}}},{"range":{"UpdateTime":{"from":"1664874000000000000"}}}]}}]}}}`, dsl)
+
 }
 
 func (s *ESVisibilitySuite) TestAddDomainToQuery() {

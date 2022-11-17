@@ -691,6 +691,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				RunID:      workflowExecution.RunID,
 			},
 			WorkflowTypeName: request.WorkflowType.Name,
+			UpdateTimestamp:  e.shard.GetTimeSource().Now().UnixNano(),
 		}
 
 		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
@@ -2286,7 +2287,15 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, e.shard.GetDomainCache(), workflowExecution, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if !mutableState.IsWorkflowExecutionRunning() {
+				_, closeStatus := mutableState.GetWorkflowStateCloseStatus()
+				if isCancelRequested && closeStatus == persistence.WorkflowCloseStatusCanceled {
+					cancelRequest := req.CancelRequest
+					if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
+						return &workflow.UpdateAction{Noop: true}, nil
+					}
+				}
 				return nil, workflow.ErrAlreadyCompleted
 			}
 
@@ -2300,7 +2309,6 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				}
 			}
 
-			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if isCancelRequested {
 				cancelRequest := req.CancelRequest
 				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {

@@ -107,10 +107,10 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.NumClusters,
 		request.SearchAttributes,
 		common.RecordStarted,
-		0, // will not be used
-		0, // will not be used
-		0, // will not be used
-		0, // will be updated when workflow execution updates
+		0,                                  // will not be used
+		0,                                  // will not be used
+		0,                                  // will not be used
+		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -153,6 +153,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionUninitialized(
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -489,6 +490,7 @@ const (
 	jsonRangeOnExecutionTime = `{"range":{"ExecutionTime":`
 	jsonSortForOpen          = `[{"StartTime":"desc"},{"RunID":"desc"}]`
 	jsonSortWithTieBreaker   = `{"RunID":"desc"}`
+	jsonMissingStartTime     = `{"missing":{"field":"StartTime"}}` //used to identify uninitialized workflow execution records
 
 	dslFieldSort        = "sort"
 	dslFieldSearchAfter = "search_after"
@@ -503,6 +505,7 @@ var (
 		es.StartTime:     true,
 		es.CloseTime:     true,
 		es.ExecutionTime: true,
+		es.UpdateTime:    true,
 	}
 	rangeKeys = map[string]bool{
 		"from":  true,
@@ -512,6 +515,8 @@ var (
 		"query": true,
 	}
 )
+
+var missingStartTimeRegex = regexp.MustCompile(jsonMissingStartTime)
 
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	sql := getSQLFromListRequest(request)
@@ -600,6 +605,9 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 		return nil, err
 	}
 	dslStr = dsl.String()
+	if strings.Contains(dslStr, jsonMissingStartTime) { // isUninitialized
+		dsl = replaceQueryForUninitialized(dsl)
+	}
 	if strings.Contains(dslStr, jsonMissingCloseTime) { // isOpen
 		dsl = replaceQueryForOpen(dsl)
 	}
@@ -619,6 +627,14 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
 	re := regexp.MustCompile(jsonMissingCloseTime)
 	newDslStr := re.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"CloseTime"}}}}`)
+	dsl = fastjson.MustParse(newDslStr)
+	return dsl
+}
+
+// ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql produces "missing",
+// so use this func to replace.
+func replaceQueryForUninitialized(dsl *fastjson.Value) *fastjson.Value {
+	newDslStr := missingStartTimeRegex.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"StartTime"}}}}`)
 	dsl = fastjson.MustParse(newDslStr)
 	return dsl
 }
@@ -824,10 +840,12 @@ func getVisibilityMessageForUninitializedWorkflow(
 	wid,
 	rid string,
 	workflowTypeName string,
+	updateTimeUnixNano int64, // update execution
 ) *indexer.Message {
 	msgType := indexer.MessageTypeCreate
 	fields := map[string]*indexer.Field{
 		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.UpdateTime:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
 	}
 
 	msg := &indexer.Message{

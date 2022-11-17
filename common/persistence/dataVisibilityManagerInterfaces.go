@@ -83,6 +83,7 @@ type (
 		Domain           string
 		Execution        types.WorkflowExecution
 		WorkflowTypeName string
+		UpdateTimestamp  int64
 	}
 
 	// UpsertWorkflowExecutionRequest is used to upsert workflow execution
