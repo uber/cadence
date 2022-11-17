@@ -22,7 +22,5 @@
 
 package metrics
 
-const MajorVersion = "0.25"
-
-// VersionString this is updated via scripts/update-version.sh
-const VersionString = "0.25.1667344608"
+// VersionString the current release version
+const VersionString = "0.26.x"
