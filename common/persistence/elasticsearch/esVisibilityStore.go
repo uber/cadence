@@ -107,10 +107,10 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.NumClusters,
 		request.SearchAttributes,
 		common.RecordStarted,
-		0, // will not be used
-		0, // will not be used
-		0, // will not be used
-		0, // will be updated when workflow execution updates
+		0,                                  // will not be used
+		0,                                  // will not be used
+		0,                                  // will not be used
+		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -153,6 +153,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionUninitialized(
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -489,6 +490,7 @@ const (
 	jsonRangeOnExecutionTime = `{"range":{"ExecutionTime":`
 	jsonSortForOpen          = `[{"StartTime":"desc"},{"RunID":"desc"}]`
 	jsonSortWithTieBreaker   = `{"RunID":"desc"}`
+	jsonMissingStartTime     = `{"missing":{"field":"StartTime"}}` //used to identify uninitialized workflow execution records
 
 	dslFieldSort        = "sort"
 	dslFieldSearchAfter = "search_after"
@@ -503,6 +505,7 @@ var (
 		es.StartTime:     true,
 		es.CloseTime:     true,
 		es.ExecutionTime: true,
+		es.UpdateTime:    true,
 	}
 	rangeKeys = map[string]bool{
 		"from":  true,
@@ -512,6 +515,8 @@ var (
 		"query": true,
 	}
 )
+
+var missingStartTimeRegex = regexp.MustCompile(jsonMissingStartTime)
 
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	sql := getSQLFromListRequest(request)
@@ -600,6 +605,9 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 		return nil, err
 	}
 	dslStr = dsl.String()
+	if strings.Contains(dslStr, jsonMissingStartTime) { // isUninitialized
+		dsl = replaceQueryForUninitialized(dsl)
+	}
 	if strings.Contains(dslStr, jsonMissingCloseTime) { // isOpen
 		dsl = replaceQueryForOpen(dsl)
 	}
@@ -619,6 +627,14 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
 	re := regexp.MustCompile(jsonMissingCloseTime)
 	newDslStr := re.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"CloseTime"}}}}`)
+	dsl = fastjson.MustParse(newDslStr)
+	return dsl
+}
+
+// ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql produces "missing",
+// so use this func to replace.
+func replaceQueryForUninitialized(dsl *fastjson.Value) *fastjson.Value {
+	newDslStr := missingStartTimeRegex.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"StartTime"}}}}`)
 	dsl = fastjson.MustParse(newDslStr)
 	return dsl
 }
@@ -663,7 +679,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 		obj.Visit(func(k []byte, v *fastjson.Value) { // visit is only way to get object key in fastjson
 			sortField = string(k)
 		})
-		if v.getFieldType(sortField) == workflow.IndexedValueTypeString {
+		if v.getFieldType(sortField) == types.IndexedValueTypeString {
 			return "", errors.New("not able to sort by IndexedValueTypeString field, use IndexedValueTypeKeyword field")
 		}
 		// add RunID as tie-breaker
@@ -673,7 +689,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 	return sortField, nil
 }
 
-func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValueType {
+func (v *esVisibilityStore) getFieldType(fieldName string) types.IndexedValueType {
 	if strings.HasPrefix(fieldName, definition.Attr) {
 		fieldName = fieldName[len(definition.Attr)+1:] // remove prefix
 	}
@@ -682,14 +698,14 @@ func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValue
 	if !ok {
 		v.logger.Error("Unknown fieldName, validation should be done in frontend already", tag.Value(fieldName))
 	}
-	return common.ConvertIndexedValueTypeToThriftType(fieldType, v.logger)
+	return common.ConvertIndexedValueTypeToInternalType(fieldType, v.logger)
 }
 
 func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibilityPageToken, sortField string) (string, error) {
 	var sortVal interface{}
 	var err error
 	switch v.getFieldType(sortField) {
-	case workflow.IndexedValueTypeInt, workflow.IndexedValueTypeDatetime, workflow.IndexedValueTypeBool:
+	case types.IndexedValueTypeInt, types.IndexedValueTypeDatetime, types.IndexedValueTypeBool:
 		sortVal, err = token.SortValue.(json.Number).Int64()
 		if err != nil {
 			err, ok := err.(*strconv.NumError) // field not present, ES will return big int +-9223372036854776000
@@ -702,7 +718,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 				sortVal = math.MaxInt64
 			}
 		}
-	case workflow.IndexedValueTypeDouble:
+	case types.IndexedValueTypeDouble:
 		switch token.SortValue.(type) {
 		case json.Number:
 			sortVal, err = token.SortValue.(json.Number).Float64()
@@ -712,7 +728,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 		case string: // field not present, ES will return "-Infinity" or "Infinity"
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
 		}
-	case workflow.IndexedValueTypeKeyword:
+	case types.IndexedValueTypeKeyword:
 		if token.SortValue != nil {
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
 		} else { // field not present, ES will return null (so token.SortValue is nil)
@@ -824,10 +840,12 @@ func getVisibilityMessageForUninitializedWorkflow(
 	wid,
 	rid string,
 	workflowTypeName string,
+	updateTimeUnixNano int64, // update execution
 ) *indexer.Message {
 	msgType := indexer.MessageTypeCreate
 	fields := map[string]*indexer.Field{
 		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.UpdateTime:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
 	}
 
 	msg := &indexer.Message{

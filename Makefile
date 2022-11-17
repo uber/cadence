@@ -19,9 +19,27 @@ default: help
 
 # temporary build products and book-keeping targets that are always good to / safe to clean.
 BUILD := .build
-# less-than-temporary build products, e.g. tools.
+# bins that are `make clean` friendly, i.e. they build quickly and do not require new downloads.
+# in particular this should include goimports, as it changes based on which version of go compiles it,
+# and few know to do more than `make clean`.
+BIN := $(BUILD)/bin
+# relatively stable build products, e.g. tools.
 # usually unnecessary to clean, and may require downloads to restore, so this folder is not automatically cleaned.
-BIN := .bin
+STABLE_BIN := .bin
+
+
+# current (when committed) version of Go used in CI, and ideally also our docker images.
+# this generally does not matter, but can impact goimports output.
+# for maximum stability, make sure you use the same version as CI uses.
+#
+# this can _likely_ remain a major version, as fmt output does not tend to change in minor versions,
+# which will allow findstring to match any minor version.
+EXPECTED_GO_VERSION := go1.17
+CURRENT_GO_VERSION := $(shell go version)
+ifeq (,$(findstring $(EXPECTED_GO_VERSION),$(CURRENT_GO_VERSION)))
+# if you are seeing this warning: consider using https://github.com/travis-ci/gimme to pin your version
+$(warning Caution: you are not using CI's go version. Expected: $(EXPECTED_GO_VERSION), current: $(CURRENT_GO_VERSION))
+endif
 
 # ====================================
 # book-keeping files that are used to control sequencing.
@@ -88,7 +106,7 @@ PROJECT_ROOT = github.com/uber/cadence
 
 # helper for executing bins that need other bins, just `$(BIN_PATH) the_command ...`
 # I'd recommend not exporting this in general, to reduce the chance of accidentally using non-versioned tools.
-BIN_PATH := PATH="$(abspath $(BIN)):$$PATH"
+BIN_PATH := PATH="$(abspath $(BIN)):$(abspath $(STABLE_BIN)):$$PATH"
 
 # version, git sha, etc flags.
 # reasonable to make a :=, but it's only used in one place, so just leave it lazy or do it inline.
@@ -144,7 +162,7 @@ endef
 
 # utility target.
 # use as an order-only prerequisite for targets that do not implicitly create these folders.
-$(BIN) $(BUILD):
+$(BIN) $(BUILD) $(STABLE_BIN):
 	$Q mkdir -p $@
 
 $(BIN)/thriftrw: go.mod
@@ -200,7 +218,7 @@ BUF_URL = https://github.com/bufbuild/buf/releases/download/v$(BUF_VERSION)/buf-
 # use BUF_VERSION_BIN as a bin prerequisite, not "buf", so the correct version will be used.
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 BUF_VERSION_BIN = buf-$(BUF_VERSION)
-$(BIN)/$(BUF_VERSION_BIN): | $(BIN)
+$(STABLE_BIN)/$(BUF_VERSION_BIN): | $(STABLE_BIN)
 	$Q echo "downloading buf $(BUF_VERSION)"
 	$Q curl -sSL $(BUF_URL) -o $@
 	$Q chmod +x $@
@@ -211,17 +229,17 @@ $(BIN)/$(BUF_VERSION_BIN): | $(BIN)
 PROTOC_VERSION = 3.14.0
 PROTOC_URL = https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/protoc-$(PROTOC_VERSION)-$(subst Darwin,osx,$(OS))-$(ARCH).zip
 # the zip contains an /include folder that we need to use to learn the well-known types
-PROTOC_UNZIP_DIR = $(BIN)/protoc-$(PROTOC_VERSION)-zip
+PROTOC_UNZIP_DIR = $(STABLE_BIN)/protoc-$(PROTOC_VERSION)-zip
 # use PROTOC_VERSION_BIN as a bin prerequisite, not "protoc", so the correct version will be used.
 # otherwise this must be a .PHONY rule, or the buf bin / symlink could become out of date.
 PROTOC_VERSION_BIN = protoc-$(PROTOC_VERSION)
-$(BIN)/$(PROTOC_VERSION_BIN): | $(BIN)
+$(STABLE_BIN)/$(PROTOC_VERSION_BIN): | $(STABLE_BIN)
 	$Q echo "downloading protoc $(PROTOC_VERSION): $(PROTOC_URL)"
 	$Q # recover from partial success
-	$Q rm -rf $(BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
+	$Q rm -rf $(STABLE_BIN)/protoc.zip $(PROTOC_UNZIP_DIR)
 	$Q # download, unzip, copy to a normal location
-	$Q curl -sSL $(PROTOC_URL) -o $(BIN)/protoc.zip
-	$Q unzip -q $(BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
+	$Q curl -sSL $(PROTOC_URL) -o $(STABLE_BIN)/protoc.zip
+	$Q unzip -q $(STABLE_BIN)/protoc.zip -d $(PROTOC_UNZIP_DIR)
 	$Q cp $(PROTOC_UNZIP_DIR)/bin/protoc $@
 
 # ====================================
@@ -276,12 +294,12 @@ PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
 # import paths due to multiple packages being compiled at once.
 #
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
-$(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
+$(BUILD)/protoc: $(PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
 	$(call ensure_idl_submodule)
 	$Q mkdir -p $(PROTO_OUT)
 	$Q echo "protoc..."
-	$Q chmod +x $(BIN)/$(PROTOC_VERSION_BIN)
-	$Q $(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(BIN)/$(PROTOC_VERSION_BIN) \
+	$Q chmod +x $(STABLE_BIN)/$(PROTOC_VERSION_BIN)
+	$Q $(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
 		-I=$(PROTO_ROOT)/public \
@@ -310,15 +328,15 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 .fake-codegen: .fake-protoc .fake-thrift
 	$(warning build-tool binaries have been faked, you will need to delete the $(BIN) folder if you wish to build real ones)
 	$Q # touch a marker-file for a `make clean` warning.  this does not impact behavior.
-	touch $(BIN)/fake-codegen
+	touch $(STABLE_BIN)/fake-codegen
 
 # "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
 # order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
-.fake-protoc: | $(BIN) $(BUILD)
-	touch $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go
+.fake-protoc: | $(STABLE_BIN) $(BUILD) $(BIN)
+	touch $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go
 	touch $(BUILD)/protoc
 
-.fake-thrift: | $(BIN) $(BUILD)
+.fake-thrift: | $(BUILD) $(BIN)
 	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
 	$Q # if the submodule exists, touch thrift_gen markers to fake their generation.
 	$Q # if it does not, do nothing - there are none.
@@ -329,8 +347,8 @@ $(BUILD)/protoc: $(PROTO_FILES) $(BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-g
 # other intermediates
 # ====================================
 
-$(BUILD)/proto-lint: $(PROTO_FILES) $(BIN)/$(BUF_VERSION_BIN) | $(BUILD)
-	$Q cd $(PROTO_ROOT) && ../$(BIN)/$(BUF_VERSION_BIN) lint
+$(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
+	$Q cd $(PROTO_ROOT) && ../$(STABLE_BIN)/$(BUF_VERSION_BIN) lint
 	$Q touch $@
 
 # note that LINT_SRC is fairly fake as a prerequisite.

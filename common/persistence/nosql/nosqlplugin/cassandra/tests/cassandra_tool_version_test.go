@@ -142,10 +142,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	keyspace := fmt.Sprintf("version_test_%v", r.Int63())
 	defer s.createKeyspace(keyspace)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + keyspace
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
@@ -171,7 +168,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		Password:   environment.GetCassandraPassword(),
 		Keyspace:   keyspace,
 	}
-	err = cassandra.CheckCompatibleVersion(cfg, expected)
+	err := cassandra.CheckCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {
 		s.Error(err)
 		s.Contains(err.Error(), errStr)

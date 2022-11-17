@@ -199,6 +199,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 				RunID:      runID,
 			},
 			WorkflowTypeName: workflowTypeName,
+			UpdateTimestamp:  updateTimeUnixNano,
 		}
 		if err := t.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
 			t.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
@@ -377,17 +378,6 @@ func getWorkflowExecutionTimestamp(
 		executionTimestamp = startTimestamp.Add(time.Duration(backoffSeconds) * time.Second)
 	}
 	return executionTimestamp
-}
-
-func getWorkflowLastUpdatedTimestamp(
-	msBuilder execution.MutableState,
-) time.Time {
-
-	executionInfo := msBuilder.GetExecutionInfo()
-	if executionInfo != nil {
-		return executionInfo.LastUpdatedTimestamp
-	}
-	return time.Unix(0, 0)
 }
 
 func getWorkflowMemo(

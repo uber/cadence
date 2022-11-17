@@ -204,9 +204,6 @@ func (r *stateRebuilderImpl) initializeBuilders(
 		r.shard,
 		r.logger,
 		resetMutableStateBuilder,
-		func(mutableState MutableState) MutableStateTaskGenerator {
-			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), mutableState)
-		},
 	)
 	return resetMutableStateBuilder, stateBuilder
 }

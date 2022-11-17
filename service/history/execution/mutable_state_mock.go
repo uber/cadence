@@ -1883,18 +1883,18 @@ func (mr *MockMutableStateMockRecorder) ReplicateActivityTaskFailedEvent(arg0 in
 }
 
 // ReplicateActivityTaskScheduledEvent mocks base method.
-func (m *MockMutableState) ReplicateActivityTaskScheduledEvent(arg0 int64, arg1 *types.HistoryEvent) (*persistence.ActivityInfo, error) {
+func (m *MockMutableState) ReplicateActivityTaskScheduledEvent(arg0 int64, arg1 *types.HistoryEvent, arg2 bool) (*persistence.ActivityInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReplicateActivityTaskScheduledEvent", arg0, arg1)
+	ret := m.ctrl.Call(m, "ReplicateActivityTaskScheduledEvent", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*persistence.ActivityInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ReplicateActivityTaskScheduledEvent indicates an expected call of ReplicateActivityTaskScheduledEvent.
-func (mr *MockMutableStateMockRecorder) ReplicateActivityTaskScheduledEvent(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) ReplicateActivityTaskScheduledEvent(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateActivityTaskScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).ReplicateActivityTaskScheduledEvent), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateActivityTaskScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).ReplicateActivityTaskScheduledEvent), arg0, arg1, arg2)
 }
 
 // ReplicateActivityTaskStartedEvent mocks base method.
@@ -2038,18 +2038,18 @@ func (mr *MockMutableStateMockRecorder) ReplicateDecisionTaskFailedEvent() *gomo
 }
 
 // ReplicateDecisionTaskScheduledEvent mocks base method.
-func (m *MockMutableState) ReplicateDecisionTaskScheduledEvent(arg0, arg1 int64, arg2 string, arg3 int32, arg4, arg5, arg6 int64) (*DecisionInfo, error) {
+func (m *MockMutableState) ReplicateDecisionTaskScheduledEvent(arg0, arg1 int64, arg2 string, arg3 int32, arg4, arg5, arg6 int64, arg7 bool) (*DecisionInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReplicateDecisionTaskScheduledEvent", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "ReplicateDecisionTaskScheduledEvent", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	ret0, _ := ret[0].(*DecisionInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ReplicateDecisionTaskScheduledEvent indicates an expected call of ReplicateDecisionTaskScheduledEvent.
-func (mr *MockMutableStateMockRecorder) ReplicateDecisionTaskScheduledEvent(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) ReplicateDecisionTaskScheduledEvent(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateDecisionTaskScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).ReplicateDecisionTaskScheduledEvent), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateDecisionTaskScheduledEvent", reflect.TypeOf((*MockMutableState)(nil).ReplicateDecisionTaskScheduledEvent), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 }
 
 // ReplicateDecisionTaskStartedEvent mocks base method.
@@ -2240,12 +2240,11 @@ func (mr *MockMutableStateMockRecorder) ReplicateTimerStartedEvent(arg0 interfac
 }
 
 // ReplicateTransientDecisionTaskScheduled mocks base method.
-func (m *MockMutableState) ReplicateTransientDecisionTaskScheduled() (*DecisionInfo, error) {
+func (m *MockMutableState) ReplicateTransientDecisionTaskScheduled() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReplicateTransientDecisionTaskScheduled")
-	ret0, _ := ret[0].(*DecisionInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // ReplicateTransientDecisionTaskScheduled indicates an expected call of ReplicateTransientDecisionTaskScheduled.
@@ -2255,9 +2254,11 @@ func (mr *MockMutableStateMockRecorder) ReplicateTransientDecisionTaskScheduled(
 }
 
 // ReplicateUpsertWorkflowSearchAttributesEvent mocks base method.
-func (m *MockMutableState) ReplicateUpsertWorkflowSearchAttributesEvent(arg0 *types.HistoryEvent) {
+func (m *MockMutableState) ReplicateUpsertWorkflowSearchAttributesEvent(arg0 *types.HistoryEvent) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "ReplicateUpsertWorkflowSearchAttributesEvent", arg0)
+	ret := m.ctrl.Call(m, "ReplicateUpsertWorkflowSearchAttributesEvent", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // ReplicateUpsertWorkflowSearchAttributesEvent indicates an expected call of ReplicateUpsertWorkflowSearchAttributesEvent.
@@ -2351,17 +2352,17 @@ func (mr *MockMutableStateMockRecorder) ReplicateWorkflowExecutionSignaled(arg0 
 }
 
 // ReplicateWorkflowExecutionStartedEvent mocks base method.
-func (m *MockMutableState) ReplicateWorkflowExecutionStartedEvent(arg0 *string, arg1 types.WorkflowExecution, arg2 string, arg3 *types.HistoryEvent) error {
+func (m *MockMutableState) ReplicateWorkflowExecutionStartedEvent(arg0 *string, arg1 types.WorkflowExecution, arg2 string, arg3 *types.HistoryEvent, arg4 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReplicateWorkflowExecutionStartedEvent", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "ReplicateWorkflowExecutionStartedEvent", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ReplicateWorkflowExecutionStartedEvent indicates an expected call of ReplicateWorkflowExecutionStartedEvent.
-func (mr *MockMutableStateMockRecorder) ReplicateWorkflowExecutionStartedEvent(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockMutableStateMockRecorder) ReplicateWorkflowExecutionStartedEvent(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateWorkflowExecutionStartedEvent", reflect.TypeOf((*MockMutableState)(nil).ReplicateWorkflowExecutionStartedEvent), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReplicateWorkflowExecutionStartedEvent", reflect.TypeOf((*MockMutableState)(nil).ReplicateWorkflowExecutionStartedEvent), arg0, arg1, arg2, arg3, arg4)
 }
 
 // ReplicateWorkflowExecutionTerminatedEvent mocks base method.

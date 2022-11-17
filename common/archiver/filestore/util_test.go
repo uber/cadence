@@ -90,9 +90,7 @@ func (s *UtilSuite) TestEncodeDecodeHistoryBatches() {
 }
 
 func (s *UtilSuite) TestValidateDirPath() {
-	dir, err := ioutil.TempDir("", "TestValidateDirPath")
-	s.NoError(err)
-	defer os.RemoveAll(dir)
+	dir := s.T().TempDir()
 	s.assertDirectoryExists(dir)
 	filename := "test-file-name"
 	s.createFile(dir, filename)

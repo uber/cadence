@@ -92,16 +92,16 @@ func (e *ESql) SetBucketNum(bucketNumArg int) {
 // Transform sql to elasticsearch dsl, and prettify the output json
 //
 // usage:
-//  - dsl, sortField, err := e.ConvertPretty(sql, pageParam1, pageParam2, ...)
+//   - dsl, sortField, err := e.ConvertPretty(sql, pageParam1, pageParam2, ...)
 //
 // arguments:
-//  - sql: the sql query needs conversion in string format
-//  - pagination: variadic arguments that indicates es search_after for pagination
+//   - sql: the sql query needs conversion in string format
+//   - pagination: variadic arguments that indicates es search_after for pagination
 //
 // return values:
-//  - dsl: the elasticsearch dsl json style string
-//  - sortField: string array that contains all column names used for sorting. useful for pagination.
-//  - err: contains err information
+//   - dsl: the elasticsearch dsl json style string
+//   - sortField: string array that contains all column names used for sorting. useful for pagination.
+//   - err: contains err information
 func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string, sortField []string, err error) {
 	dsl, sortField, err = e.Convert(sql, pagination...)
 	if err != nil {
@@ -120,16 +120,16 @@ func (e *ESql) ConvertPretty(sql string, pagination ...interface{}) (dsl string,
 // Transform sql to elasticsearch dsl string
 //
 // usage:
-//  - dsl, sortField, err := e.Convert(sql, pageParam1, pageParam2, ...)
+//   - dsl, sortField, err := e.Convert(sql, pageParam1, pageParam2, ...)
 //
 // arguments:
-//  - sql: the sql query needs conversion in string format
-//  - pagination: variadic arguments that indicates es search_after
+//   - sql: the sql query needs conversion in string format
+//   - pagination: variadic arguments that indicates es search_after
 //
 // return values:
-//	- dsl: the elasticsearch dsl json style string
-//	- sortField: string array that contains all column names used for sorting. useful for pagination.
-//  - err: contains err information
+//   - dsl: the elasticsearch dsl json style string
+//   - sortField: string array that contains all column names used for sorting. useful for pagination.
+//   - err: contains err information
 func (e *ESql) Convert(sql string, pagination ...interface{}) (dsl string, sortField []string, err error) {
 	stmt, err := sqlparser.Parse(sql)
 	if err != nil {

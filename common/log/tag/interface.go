@@ -98,3 +98,9 @@ func newPredefinedStringTag(key string, value string) Tag {
 		field: zap.String(key, value),
 	}
 }
+
+func newPredefinedDynamicTag(key string, value interface{}) Tag {
+	return Tag{
+		field: zap.Any(key, value),
+	}
+}

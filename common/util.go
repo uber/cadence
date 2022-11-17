@@ -36,7 +36,6 @@ import (
 	"github.com/pborman/uuid"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -788,28 +787,42 @@ func IsJustOrderByClause(clause string) bool {
 	return strings.HasPrefix(whereClause, "order by")
 }
 
-// ConvertIndexedValueTypeToThriftType takes fieldType as interface{} and convert to IndexedValueType.
+// ConvertIndexedValueTypeToInternalType takes fieldType as interface{} and convert to IndexedValueType.
 // Because different implementation of dynamic config client may lead to different types
-func ConvertIndexedValueTypeToThriftType(fieldType interface{}, logger log.Logger) workflow.IndexedValueType {
+func ConvertIndexedValueTypeToInternalType(fieldType interface{}, logger log.Logger) types.IndexedValueType {
 	switch t := fieldType.(type) {
 	case float64:
-		return workflow.IndexedValueType(t)
+		return types.IndexedValueType(t)
 	case int:
-		return workflow.IndexedValueType(t)
-	case workflow.IndexedValueType:
+		return types.IndexedValueType(t)
+	case types.IndexedValueType:
 		return t
+	case []byte:
+		var result types.IndexedValueType
+		if err := result.UnmarshalText(t); err != nil {
+			logger.Error("unknown index value type", tag.Value(fieldType), tag.ValueType(t), tag.Error(err))
+			return fieldType.(types.IndexedValueType) // it will panic and been captured by logger
+		}
+		return result
+	case string:
+		var result types.IndexedValueType
+		if err := result.UnmarshalText([]byte(t)); err != nil {
+			logger.Error("unknown index value type", tag.Value(fieldType), tag.ValueType(t), tag.Error(err))
+			return fieldType.(types.IndexedValueType) // it will panic and been captured by logger
+		}
+		return result
 	default:
 		// Unknown fieldType, please make sure dynamic config return correct value type
 		logger.Error("unknown index value type", tag.Value(fieldType), tag.ValueType(t))
-		return fieldType.(workflow.IndexedValueType) // it will panic and been captured by logger
+		return fieldType.(types.IndexedValueType) // it will panic and been captured by logger
 	}
 }
 
 // DeserializeSearchAttributeValue takes json encoded search attribute value and it's type as input, then
 // unmarshal the value into a concrete type and return the value
-func DeserializeSearchAttributeValue(value []byte, valueType workflow.IndexedValueType) (interface{}, error) {
+func DeserializeSearchAttributeValue(value []byte, valueType types.IndexedValueType) (interface{}, error) {
 	switch valueType {
-	case workflow.IndexedValueTypeString, workflow.IndexedValueTypeKeyword:
+	case types.IndexedValueTypeString, types.IndexedValueTypeKeyword:
 		var val string
 		if err := json.Unmarshal(value, &val); err != nil {
 			var listVal []string
@@ -817,7 +830,7 @@ func DeserializeSearchAttributeValue(value []byte, valueType workflow.IndexedVal
 			return listVal, err
 		}
 		return val, nil
-	case workflow.IndexedValueTypeInt:
+	case types.IndexedValueTypeInt:
 		var val int64
 		if err := json.Unmarshal(value, &val); err != nil {
 			var listVal []int64
@@ -825,7 +838,7 @@ func DeserializeSearchAttributeValue(value []byte, valueType workflow.IndexedVal
 			return listVal, err
 		}
 		return val, nil
-	case workflow.IndexedValueTypeDouble:
+	case types.IndexedValueTypeDouble:
 		var val float64
 		if err := json.Unmarshal(value, &val); err != nil {
 			var listVal []float64
@@ -833,7 +846,7 @@ func DeserializeSearchAttributeValue(value []byte, valueType workflow.IndexedVal
 			return listVal, err
 		}
 		return val, nil
-	case workflow.IndexedValueTypeBool:
+	case types.IndexedValueTypeBool:
 		var val bool
 		if err := json.Unmarshal(value, &val); err != nil {
 			var listVal []bool
@@ -841,7 +854,7 @@ func DeserializeSearchAttributeValue(value []byte, valueType workflow.IndexedVal
 			return listVal, err
 		}
 		return val, nil
-	case workflow.IndexedValueTypeDatetime:
+	case types.IndexedValueTypeDatetime:
 		var val time.Time
 		if err := json.Unmarshal(value, &val); err != nil {
 			var listVal []time.Time
