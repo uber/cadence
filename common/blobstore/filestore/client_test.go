@@ -24,7 +24,6 @@ package filestore
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -58,15 +57,14 @@ func (s *ClientSuite) TestNewFilestoreClient_InvalidConfig() {
 }
 
 func (s *ClientSuite) TestNewFilestoreClient_DirectoryAlreadyExists() {
-	name := s.createTempDir("TestNewFilestoreClient_DirectoryAlreadyExists")
-	defer os.RemoveAll(name)
+	name := s.T().TempDir()
 	c, err := NewFilestoreClient(&config.FileBlobstore{OutputDirectory: name})
 	s.NoError(err)
 	s.Equal(name, c.(*client).outputDirectory)
 }
 
 func (s *ClientSuite) TestNewFilestoreClient_DirectoryNotAlreadyExists() {
-	name := s.createTempDir("TestNewFilestoreClient_DirectoryNotAlreadyExists")
+	name := s.T().TempDir()
 	os.RemoveAll(name)
 	exists, err := util.DirectoryExists(name)
 	s.NoError(err)
@@ -81,8 +79,7 @@ func (s *ClientSuite) TestNewFilestoreClient_DirectoryNotAlreadyExists() {
 }
 
 func (s *ClientSuite) TestCrudOperations() {
-	name := s.createTempDir("TestCrudOperations")
-	defer os.RemoveAll(name)
+	name := s.T().TempDir()
 	c, err := NewFilestoreClient(&config.FileBlobstore{OutputDirectory: name})
 	s.NoError(err)
 	ctx := context.Background()
@@ -153,10 +150,4 @@ func (s *ClientSuite) TestCrudOperations() {
 	get1, err = c.Get(ctx, &blobstore.GetRequest{Key: key1})
 	s.Error(err)
 	s.Nil(get1)
-}
-
-func (s *ClientSuite) createTempDir(prefix string) string {
-	name, err := ioutil.TempDir("", prefix)
-	s.NoError(err)
-	return name
 }
