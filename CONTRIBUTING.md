@@ -235,10 +235,6 @@ You have a few options for choosing when to submit:
 
 ### Commit Messages And Titles of Pull Requests
 
-We use githooks to enforce versions and some commit messages. Please run: `git config core.hooksPath .githooks
-`. When committing the githook will automatically run a script to update an internal version number
-that we. In order to skip include the string `SKIP VERSION` in your message. i.e `some message SKIP VERSION`.
-
 Overcommit adds some requirements to your commit messages. At Uber, we follow the
 [Chris Beams](http://chris.beams.io/posts/git-commit/) guide to writing git
 commit messages. Read it, follow it, learn it, love it.
