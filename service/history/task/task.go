@@ -38,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/worker/watchdog"
 )
 
 const (
@@ -224,23 +223,6 @@ func (t *taskImpl) Execute() error {
 	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
-func (t *taskImpl) reportCorruptWorkflowToWatchDog() error {
-	domainID := t.GetDomainID()
-	wid := t.GetWorkflowID()
-	rid := t.GetRunID()
-
-	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
-	if err != nil {
-		return err
-	}
-
-	watchDogClient := watchdog.NewClient(
-		t.shard.GetLogger(),
-		t.shard.GetService().GetSDKClient(),
-	)
-	return watchDogClient.ReportCorruptWorkflow(domainName, wid, rid)
-}
-
 func (t *taskImpl) HandleErr(
 	err error,
 ) (retErr error) {
@@ -259,8 +241,6 @@ func (t *taskImpl) HandleErr(
 					tag.OperationCritical,
 					tag.TaskType(t.GetTaskType()),
 				)
-
-				t.reportCorruptWorkflowToWatchDog()
 			}
 		}
 	}()
