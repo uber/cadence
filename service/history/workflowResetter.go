@@ -204,7 +204,7 @@ func (r *workflowResetterImpl) prepareResetWorkflow(
 			Message: fmt.Sprintf("Can only reset workflow to DecisionTaskStarted + 1: %v", baseRebuildLastEventID+1),
 		}
 	}
-	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 {
+	if len(resetMutableState.GetPendingChildExecutionInfos()) > 0 && resetMutableState.IsWorkflowExecutionRunning() {
 		return nil, &shared.BadRequestError{
 			Message: fmt.Sprintf("Can only reset workflow with pending child workflows"),
 		}

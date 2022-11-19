@@ -162,7 +162,7 @@ func (w *workflowResetorImpl) checkDomainStatus(newMutableState mutableState, pr
 }
 
 func (w *workflowResetorImpl) validateResetWorkflowBeforeReplay(baseMutableState, currMutableState mutableState) error {
-	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 {
+	if len(currMutableState.GetPendingChildExecutionInfos()) > 0 && currMutableState.IsWorkflowExecutionRunning() {
 		return &workflow.BadRequestError{
 			Message: fmt.Sprintf("reset is not allowed when current workflow has pending child workflow."),
 		}
