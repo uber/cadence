@@ -39,6 +39,7 @@ CREATE TYPE workflow_execution (
   domain_id                        uuid,
   workflow_id                      text,
   run_id                           uuid,
+  first_run_id                     uuid,   -- Run ID of the first run of a ContinuedAsNew workflow
   parent_domain_id                 uuid,   -- Domain ID of parent workflow which started the workflow execution
   parent_workflow_id               text,   -- ID of parent workflow which started the workflow execution
   parent_run_id                    uuid,   -- RunID of parent workflow which started the workflow execution

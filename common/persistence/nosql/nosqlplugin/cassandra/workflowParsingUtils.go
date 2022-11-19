@@ -54,6 +54,14 @@ func parseWorkflowExecutionInfo(
 			info.WorkflowID = v.(string)
 		case "run_id":
 			info.RunID = v.(gocql.UUID).String()
+		case "first_run_id":
+			info.FirstExecutionRunID = v.(gocql.UUID).String()
+			if info.FirstExecutionRunID == _emptyUUID.String() {
+				// for backward compatibility, the gocql library doesn't handle the null uuid correectly https://github.com/gocql/gocql/blob/master/marshal.go#L1807
+				info.FirstExecutionRunID = ""
+			} else if info.FirstExecutionRunID == emptyRunID {
+				info.FirstExecutionRunID = ""
+			}
 		case "parent_domain_id":
 			info.ParentDomainID = v.(gocql.UUID).String()
 			if info.ParentDomainID == emptyDomainID {

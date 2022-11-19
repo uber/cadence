@@ -1774,6 +1774,10 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	e.executionInfo.DomainID = e.domainEntry.GetInfo().ID
 	e.executionInfo.WorkflowID = execution.GetWorkflowID()
 	e.executionInfo.RunID = execution.GetRunID()
+	e.executionInfo.FirstExecutionRunID = event.GetFirstExecutionRunID()
+	if e.executionInfo.FirstExecutionRunID == "" {
+		e.executionInfo.FirstExecutionRunID = execution.GetRunID()
+	}
 	e.executionInfo.TaskList = event.TaskList.GetName()
 	e.executionInfo.WorkflowTypeName = event.WorkflowType.GetName()
 	e.executionInfo.WorkflowTimeout = event.GetExecutionStartToCloseTimeoutSeconds()
@@ -3368,7 +3372,13 @@ func (e *mutableStateBuilder) AddContinueAsNewEvent(
 	if err != nil {
 		return nil, nil, err
 	}
-	firstRunID := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+	firstRunID := e.executionInfo.FirstExecutionRunID
+	// This is needed for backwards compatibility.  Workflow execution create with Cadence release v0.25.0 or earlier
+	// does not have FirstExecutionRunID stored as part of mutable state.  If this is not set then load it from
+	// workflow execution started event.
+	if len(firstRunID) == 0 {
+		firstRunID = currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+	}
 	firstScheduleTime := currentStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstScheduledTime()
 	domainID := e.domainEntry.GetInfo().ID
 	newStateBuilder := NewMutableStateBuilderWithVersionHistories(

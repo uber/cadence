@@ -246,6 +246,7 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		Memo:                                    info.Memo,
 		VersionHistories:                        info.VersionHistories,
 		VersionHistoriesEncoding:                &info.VersionHistoriesEncoding,
+		FirstExecutionRunID:                     info.FirstExecutionRunID,
 	}
 }
 
@@ -312,6 +313,7 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		Memo:                               info.Memo,
 		VersionHistories:                   info.VersionHistories,
 		VersionHistoriesEncoding:           info.GetVersionHistoriesEncoding(),
+		FirstExecutionRunID:                info.FirstExecutionRunID,
 	}
 }
 

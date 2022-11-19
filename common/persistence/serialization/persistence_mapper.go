@@ -72,6 +72,7 @@ func ToInternalWorkflowExecutionInfo(info *WorkflowExecutionInfo) *persistence.I
 		Memo:                               info.GetMemo(),
 		SearchAttributes:                   info.GetSearchAttributes(),
 		HistorySize:                        info.GetHistorySize(),
+		FirstExecutionRunID:                info.FirstExecutionRunID.String(),
 	}
 	if info.ParentDomainID != nil {
 		result.ParentDomainID = info.ParentDomainID.String()
@@ -152,6 +153,7 @@ func FromInternalWorkflowExecutionInfo(executionInfo *persistence.InternalWorkfl
 		CompletionEventEncoding:            string(common.EncodingTypeEmpty),
 		VersionHistoriesEncoding:           string(common.EncodingTypeEmpty),
 		InitiatedID:                        common.EmptyEventID,
+		FirstExecutionRunID:                MustParseUUID(executionInfo.FirstExecutionRunID),
 	}
 
 	if executionInfo.CompletionEvent != nil {
