@@ -81,7 +81,6 @@ func NewCliApp() *cli.App {
 		},
 		cli.StringFlag{
 			Name:   FlagTLSCertPathWithAlias,
-			Value:  "",
 			Usage:  "optional argument for path to TLS certificate. Defaults to an empty string if not provided",
 			EnvVar: "CADENCE_CLI_TLS_CERT_PATH",
 		},
