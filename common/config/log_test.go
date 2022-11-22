@@ -21,7 +21,6 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -54,9 +53,7 @@ func (s *LogSuite) TestParseLogLevel() {
 
 func (s *LogSuite) TestNewLogger() {
 
-	dir, err := ioutil.TempDir("", "config.testNewLogger")
-	s.Nil(err)
-	defer os.RemoveAll(dir)
+	dir := s.T().TempDir()
 
 	config := &Logger{
 		Level:      "info",
@@ -65,6 +62,6 @@ func (s *LogSuite) TestNewLogger() {
 
 	log, _ := config.NewZapLogger()
 	s.NotNil(log)
-	_, err = os.Stat(dir + "/test.log")
+	_, err := os.Stat(dir + "/test.log")
 	s.Nil(err)
 }

@@ -44,17 +44,9 @@ func (s *UpdateTaskTestSuite) SetupSuite() {
 
 func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 
-	emptyDir, err := ioutil.TempDir("", "update_schema_test_empty")
-	s.NoError(err)
-	defer os.RemoveAll(emptyDir)
-
-	tmpDir, err := ioutil.TempDir("", "update_schema_test")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	squashDir, err := ioutil.TempDir("", "update_schema_test_squash")
-	s.NoError(err)
-	defer os.RemoveAll(squashDir)
+	emptyDir := s.T().TempDir()
+	tmpDir := s.T().TempDir()
+	squashDir := s.T().TempDir()
 
 	subDirs := []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0"}
 	for _, d := range subDirs {
@@ -66,7 +58,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 		s.NoError(os.Mkdir(squashDir+"/"+d, os.FileMode(0444)))
 	}
 
-	_, err = readSchemaDir(tmpDir, "11.0", "11.2")
+	_, err := readSchemaDir(tmpDir, "11.0", "11.2")
 	s.Error(err)
 	_, err = readSchemaDir(tmpDir, "0.5", "10.3")
 	s.Error(err)
@@ -108,9 +100,7 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 
 func (s *UpdateTaskTestSuite) TestReadManifest() {
 
-	tmpDir, err := ioutil.TempDir("", "update_schema_test")
-	s.Nil(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	input := `{
 		"CurrVersion": "0.4",

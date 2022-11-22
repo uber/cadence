@@ -731,6 +731,7 @@ type (
 		WorkflowID       string
 		RunID            string
 		WorkflowTypeName string
+		UpdateTimestamp  time.Time
 	}
 
 	// InternalUpsertWorkflowExecutionRequest is request to UpsertWorkflowExecution

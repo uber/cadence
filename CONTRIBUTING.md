@@ -84,9 +84,9 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 ### 3. Schema installation 
 Based on the above dependency setup, you also need to install the schemas. 
 
-* If you use `cassandra.yml` then run `make install-schema` to install Casandra schemas
-* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Casandra & ElasticSearch schemas
-* If you use `cassandra-opensearch-kafka.yml` then run `make install-schema && make install-schema-opensearch` to install Casandra & ElasticSearch schemas 
+* If you use `cassandra.yml` then run `make install-schema` to install Cassandra schemas
+* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Cassandra & ElasticSearch schemas
+* If you use `cassandra-opensearch-kafka.yml` then run `make install-schema && make install-schema-es-opensearch` to install Cassandra & OpenSearch schemas 
 * If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
 * If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
 * `mysql-esv7-kafka.yml` can be used for single MySQL + ElasticSearch or multiple MySQL + ElasticSearch mode
@@ -234,10 +234,6 @@ You have a few options for choosing when to submit:
 * For small changes where the approach seems obvious, you can open a PR with what you believe to be production-ready or near-production-ready code. As you get more experience with how we develop code, you'll find that more PRs will begin falling into this category.
 
 ### Commit Messages And Titles of Pull Requests
-
-We use githooks to enforce versions and some commit messages. Please run: `git config core.hooksPath .githooks
-`. When committing the githook will automatically run a script to update an internal version number
-that we. In order to skip include the string `SKIP VERSION` in your message. i.e `some message SKIP VERSION`.
 
 Overcommit adds some requirements to your commit messages. At Uber, we follow the
 [Chris Beams](http://chris.beams.io/posts/git-commit/) guide to writing git

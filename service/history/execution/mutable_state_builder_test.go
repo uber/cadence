@@ -616,6 +616,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
 		0,
 		0,
+		false,
 	)
 	s.NoError(err)
 	s.NotNil(di)
@@ -719,6 +720,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		execution,
 		uuid.New(),
 		workflowStartEvent,
+		false,
 	)
 	s.Nil(err)
 
@@ -731,6 +733,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
 		0,
 		0,
+		false,
 	)
 	s.Nil(err)
 	s.NotNil(di)
@@ -782,6 +785,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
 		0,
 		0,
+		false,
 	)
 	s.Nil(err)
 	s.NotNil(di)
@@ -879,7 +883,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	activityInfos := map[int64]*persistence.ActivityInfo{
 		5: {
 			Version:                failoverVersion,
-			ScheduleID:             int64(90),
+			ScheduleID:             int64(5),
 			ScheduledTime:          time.Now(),
 			StartedID:              common.EmptyEventID,
 			StartedTime:            time.Now(),

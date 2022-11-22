@@ -691,6 +691,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 				RunID:      workflowExecution.RunID,
 			},
 			WorkflowTypeName: request.WorkflowType.Name,
+			UpdateTimestamp:  e.shard.GetTimeSource().Now().UnixNano(),
 		}
 
 		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
@@ -1206,6 +1207,12 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
+	// If history is corrupted, query will be rejected
+	if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+		return nil, err
+	} else if corrupted {
+		return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
+	}
 
 	// There are two ways in which queries get dispatched to decider. First, queries can be dispatched on decision tasks.
 	// These decision tasks potentially contain new events and queries. The events are treated as coming before the query in time.
@@ -1578,6 +1585,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if err1 != nil {
 		return nil, err1
 	}
+	// If history is corrupted, return an error to the end user
+	if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+		return nil, err
+	} else if corrupted {
+		return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
+	}
+
 	executionInfo := mutableState.GetExecutionInfo()
 
 	result := &types.DescribeWorkflowExecutionResponse{
@@ -2286,7 +2300,15 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, e.shard.GetDomainCache(), workflowExecution, e.timeSource.Now(),
 		func(wfContext execution.Context, mutableState execution.MutableState) (*workflow.UpdateAction, error) {
+			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if !mutableState.IsWorkflowExecutionRunning() {
+				_, closeStatus := mutableState.GetWorkflowStateCloseStatus()
+				if isCancelRequested && closeStatus == persistence.WorkflowCloseStatusCanceled {
+					cancelRequest := req.CancelRequest
+					if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {
+						return &workflow.UpdateAction{Noop: true}, nil
+					}
+				}
 				return nil, workflow.ErrAlreadyCompleted
 			}
 
@@ -2300,7 +2322,6 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 				}
 			}
 
-			isCancelRequested, cancelRequestID := mutableState.IsCancelRequested()
 			if isCancelRequested {
 				cancelRequest := req.CancelRequest
 				if cancelRequest.RequestID != "" && cancelRequest.RequestID == cancelRequestID {

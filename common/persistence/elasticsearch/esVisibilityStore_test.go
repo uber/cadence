@@ -35,7 +35,6 @@ import (
 	"github.com/valyala/fastjson"
 
 	"github.com/uber/cadence/.gen/go/indexer"
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -46,7 +45,6 @@ import (
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type ESVisibilitySuite struct {
@@ -182,8 +180,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
 	request.CloseTimestamp = time.Unix(0, int64(999))
-	closeStatus := workflow.WorkflowExecutionCloseStatusTerminated
-	request.Status = *thrift.ToWorkflowExecutionCloseStatus(&closeStatus)
+	request.Status = types.WorkflowExecutionCloseStatusTerminated
 	request.HistoryLength = int64(20)
 	request.IsCron = false
 	request.NumClusters = 2
@@ -200,7 +197,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal(memoBytes, fields[es.Memo].GetBinaryData())
 		s.Equal(string(common.EncodingTypeThriftRW), fields[es.Encoding].GetStringData())
 		s.Equal(request.CloseTimestamp.UnixNano(), fields[es.CloseTime].GetIntData())
-		s.Equal(int64(closeStatus), fields[es.CloseStatus].GetIntData())
+		s.Equal(int64(request.Status), fields[es.CloseStatus].GetIntData())
 		s.Equal(request.HistoryLength, fields[es.HistoryLength].GetIntData())
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
@@ -244,6 +241,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 	request.WorkflowID = "wid"
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
+	request.UpdateTimestamp = time.Unix(0, int64(213))
 
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -251,6 +249,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 		s.Equal(request.WorkflowID, input.GetWorkflowID())
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
+		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
 		return true
 	})).Return(nil).Once()
 
@@ -439,10 +438,10 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 		return true
 	})).Return(testSearchResult, nil).Once()
 
-	closeStatus := workflow.WorkflowExecutionCloseStatus(testCloseStatus)
+	closeStatus := types.WorkflowExecutionCloseStatus(testCloseStatus)
 	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
 		InternalListWorkflowExecutionsRequest: *testRequest,
-		Status:                                *thrift.ToWorkflowExecutionCloseStatus(&closeStatus),
+		Status:                                closeStatus,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
@@ -746,6 +745,12 @@ func (s *ESVisibilitySuite) TestGetESQueryDSLForCount() {
 	dsl, err = getESQueryDSLForCount(request)
 	s.Nil(err)
 	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"range":{"ExecutionTime":{"gt":"0"}}},{"bool":{"must":[{"range":{"ExecutionTime":{"lt":"1000"}}}]}}]}}]}}}`, dsl)
+
+	request.Query = `StartTime = missing and UpdateTime >= "2022-10-04T16:00:00+07:00"`
+	dsl, err = getESQueryDSLForCount(request)
+	s.Nil(err)
+	s.Equal(`{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"bfd5c907-f899-4baf-a7b2-2ab85e623ebd"}}},{"bool":{"must":[{"bool":{"must_not":{"exists":{"field":"StartTime"}}}},{"range":{"UpdateTime":{"from":"1664874000000000000"}}}]}}]}}}`, dsl)
+
 }
 
 func (s *ESVisibilitySuite) TestAddDomainToQuery() {
@@ -978,8 +983,8 @@ func (s *ESVisibilitySuite) TestProcessAllValuesForKey() {
 }
 
 func (s *ESVisibilitySuite) TestGetFieldType() {
-	s.Equal(workflow.IndexedValueTypeInt, s.visibilityStore.getFieldType("StartTime"))
-	s.Equal(workflow.IndexedValueTypeDatetime, s.visibilityStore.getFieldType("Attr.CustomDatetimeField"))
+	s.Equal(types.IndexedValueTypeInt, s.visibilityStore.getFieldType("StartTime"))
+	s.Equal(types.IndexedValueTypeDatetime, s.visibilityStore.getFieldType("Attr.CustomDatetimeField"))
 }
 
 func (s *ESVisibilitySuite) TestGetValueOfSearchAfterInJSON() {
