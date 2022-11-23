@@ -868,6 +868,14 @@ func (w *WorkflowExecutionInfo) GetHasRetryPolicy() (o bool) {
 	return
 }
 
+// GetFirstExecutionRunID internal sql blob getter
+func (w *WorkflowExecutionInfo) GetFirstExecutionRunID() (o []byte) {
+	if w != nil {
+		return w.FirstExecutionRunID
+	}
+	return
+}
+
 // GetVersion internal sql blob getter
 func (a *ActivityInfo) GetVersion() (o int64) {
 	if a != nil {

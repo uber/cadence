@@ -302,6 +302,7 @@ type (
 		DomainID                           string
 		WorkflowID                         string
 		RunID                              string
+		FirstExecutionRunID                string
 		ParentDomainID                     string
 		ParentWorkflowID                   string
 		ParentRunID                        string
