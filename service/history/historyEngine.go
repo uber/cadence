@@ -1207,6 +1207,12 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
+	// If history is corrupted, query will be rejected
+	if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+		return nil, err
+	} else if corrupted {
+		return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
+	}
 
 	// There are two ways in which queries get dispatched to decider. First, queries can be dispatched on decision tasks.
 	// These decision tasks potentially contain new events and queries. The events are treated as coming before the query in time.
@@ -1579,6 +1585,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if err1 != nil {
 		return nil, err1
 	}
+	// If history is corrupted, return an error to the end user
+	if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+		return nil, err
+	} else if corrupted {
+		return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
+	}
+
 	executionInfo := mutableState.GetExecutionInfo()
 
 	result := &types.DescribeWorkflowExecutionResponse{

@@ -324,6 +324,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		DomainID:                           sourceInfo.DomainID,
 		WorkflowID:                         sourceInfo.WorkflowID,
 		RunID:                              sourceInfo.RunID,
+		FirstExecutionRunID:                sourceInfo.FirstExecutionRunID,
 		ParentDomainID:                     sourceInfo.ParentDomainID,
 		ParentWorkflowID:                   sourceInfo.ParentWorkflowID,
 		ParentRunID:                        sourceInfo.ParentRunID,

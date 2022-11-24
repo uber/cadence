@@ -168,6 +168,9 @@ const (
 	CLIFlagTLSCaFile = "tls-ca-file"
 	// CLIFlagTLSEnableHostVerification enables tls host verification (tls must be enabled)
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
+	// CLIFlagTLSServerName is the Server Name Indication to verify the hostname on the returned certificates.
+	// It is also included in the client's handshake to support virtual hosting unless it is an IP address.
+	CLIFlagTLSServerName = "tls-server-name"
 )
 
 var rmspaceRegex = regexp.MustCompile(`\s+`)

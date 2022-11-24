@@ -161,6 +161,7 @@ type (
 		Memo                               map[string][]byte
 		VersionHistories                   []byte
 		VersionHistoriesEncoding           string
+		FirstExecutionRunID                UUID
 	}
 
 	// ActivityInfo blob in a serialization agnostic format
