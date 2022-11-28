@@ -39,6 +39,7 @@ func TestInternalWorkflowExecutionInfo(t *testing.T) {
 		ParentDomainID:                     uuid.New(),
 		ParentWorkflowID:                   "ParentWorkflowID",
 		ParentRunID:                        uuid.New(),
+		FirstExecutionRunID:                uuid.New(),
 		InitiatedID:                        int64(rand.Intn(1000)),
 		CompletionEventBatchID:             int64(rand.Intn(1000)),
 		CompletionEvent:                    persistence.NewDataBlob([]byte(`CompletionEvent`), common.EncodingTypeJSON),
@@ -92,6 +93,7 @@ func TestInternalWorkflowExecutionInfo(t *testing.T) {
 	assert.Equal(t, expected.ParentDomainID, actual.ParentDomainID)
 	assert.Equal(t, expected.ParentWorkflowID, actual.ParentWorkflowID)
 	assert.Equal(t, expected.ParentRunID, actual.ParentRunID)
+	assert.Equal(t, expected.FirstExecutionRunID, actual.FirstExecutionRunID)
 	assert.Equal(t, expected.InitiatedID, actual.InitiatedID)
 	assert.Equal(t, expected.CompletionEventBatchID, actual.CompletionEventBatchID)
 	assert.Equal(t, expected.CompletionEvent, actual.CompletionEvent)
