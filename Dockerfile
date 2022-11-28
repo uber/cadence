@@ -4,7 +4,7 @@ ARG TARGET=server
 ARG GOPROXY
 
 # Build Cadence binaries
-FROM golang:1.17.13-alpine3.15 AS builder
+FROM golang:1.18.8-alpine3.15 AS builder
 
 ARG RELEASE_VERSION
 
