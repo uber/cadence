@@ -327,10 +327,10 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 				Domain: "some random domain name",
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "some random workflow id",
-					RunID:      "some random run id",
 				},
-				Identity:  "history-service",
-				RequestID: "",
+				Identity:            "history-service",
+				RequestID:           "",
+				FirstExecutionRunID: "some random run id",
 			},
 		}
 	}
@@ -450,7 +450,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 				func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest, option ...yarpc.CallOption) error {
 					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
 					s.Equal(childAttr.ChildWorkflowID, request.GetCancelRequest().GetWorkflowExecution().GetWorkflowID())
-					s.Equal(childAttr.ChildRunID, request.GetCancelRequest().GetWorkflowExecution().GetRunID())
+					s.Equal(childAttr.ChildRunID, request.GetCancelRequest().GetFirstExecutionRunID())
 					s.True(request.GetChildWorkflowOnly())
 					s.Equal(taskInfo.GetWorkflowID(), request.GetExternalWorkflowExecution().GetWorkflowID())
 					s.Equal(taskInfo.GetRunID(), request.GetExternalWorkflowExecution().GetRunID())
@@ -461,7 +461,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 				func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, option ...yarpc.CallOption) error {
 					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
 					s.Equal(childAttr.ChildWorkflowID, request.GetTerminateRequest().GetWorkflowExecution().GetWorkflowID())
-					s.Equal(childAttr.ChildRunID, request.GetTerminateRequest().GetWorkflowExecution().GetRunID())
+					s.Equal(childAttr.ChildRunID, request.GetTerminateRequest().GetFirstExecutionRunID())
 					s.True(request.GetChildWorkflowOnly())
 					s.Equal(taskInfo.GetWorkflowID(), request.GetExternalWorkflowExecution().GetWorkflowID())
 					s.Equal(taskInfo.GetRunID(), request.GetExternalWorkflowExecution().GetRunID())

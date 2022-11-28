@@ -4229,11 +4229,12 @@ func FromRequestCancelWorkflowExecutionRequest(t *types.RequestCancelWorkflowExe
 		return nil
 	}
 	return &shared.RequestCancelWorkflowExecutionRequest{
-		Domain:            &t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Identity:          &t.Identity,
-		RequestId:         &t.RequestID,
-		Cause:             &t.Cause,
+		Domain:              &t.Domain,
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
+		Identity:            &t.Identity,
+		RequestId:           &t.RequestID,
+		Cause:               &t.Cause,
+		FirstExecutionRunID: &t.FirstExecutionRunID,
 	}
 }
 
@@ -4243,11 +4244,12 @@ func ToRequestCancelWorkflowExecutionRequest(t *shared.RequestCancelWorkflowExec
 		return nil
 	}
 	return &types.RequestCancelWorkflowExecutionRequest{
-		Domain:            t.GetDomain(),
-		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Identity:          t.GetIdentity(),
-		RequestID:         t.GetRequestId(),
-		Cause:             t.GetCause(),
+		Domain:              t.GetDomain(),
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
+		Identity:            t.GetIdentity(),
+		RequestID:           t.GetRequestId(),
+		Cause:               t.GetCause(),
+		FirstExecutionRunID: t.GetFirstExecutionRunID(),
 	}
 }
 
@@ -5561,11 +5563,12 @@ func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRe
 		return nil
 	}
 	return &shared.TerminateWorkflowExecutionRequest{
-		Domain:            &t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Reason:            &t.Reason,
-		Details:           t.Details,
-		Identity:          &t.Identity,
+		Domain:              &t.Domain,
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
+		Reason:              &t.Reason,
+		Details:             t.Details,
+		Identity:            &t.Identity,
+		FirstExecutionRunID: &t.FirstExecutionRunID,
 	}
 }
 
@@ -5575,11 +5578,12 @@ func ToTerminateWorkflowExecutionRequest(t *shared.TerminateWorkflowExecutionReq
 		return nil
 	}
 	return &types.TerminateWorkflowExecutionRequest{
-		Domain:            t.GetDomain(),
-		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.GetReason(),
-		Details:           t.Details,
-		Identity:          t.GetIdentity(),
+		Domain:              t.GetDomain(),
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
+		Reason:              t.GetReason(),
+		Details:             t.Details,
+		Identity:            t.GetIdentity(),
+		FirstExecutionRunID: t.GetFirstExecutionRunID(),
 	}
 }
 
