@@ -2034,10 +2034,12 @@ func applyParentClosePolicy(
 				Domain: childDomainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childStartedWorkflowID,
-					RunID:      childStartedRunID,
 				},
 				Reason:   "by parent close policy",
 				Identity: execution.IdentityHistoryService,
+				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be terminated across runs.
+				// If the child does continue as new it still propagates the RunID of first execution.
+				FirstExecutionRunID: childStartedRunID,
 			},
 			ExternalWorkflowExecution: parentWorkflowExecution,
 			ChildWorkflowOnly:         true,
@@ -2050,9 +2052,11 @@ func applyParentClosePolicy(
 				Domain: childDomainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childStartedWorkflowID,
-					RunID:      childStartedRunID,
 				},
 				Identity: execution.IdentityHistoryService,
+				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be canceled across runs.
+				// If the child does continue as new it still propagates the RunID of first execution.
+				FirstExecutionRunID: childStartedRunID,
 			},
 			ExternalWorkflowExecution: parentWorkflowExecution,
 			ChildWorkflowOnly:         true,

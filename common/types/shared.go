@@ -4640,11 +4640,12 @@ func (v *RequestCancelExternalWorkflowExecutionInitiatedEventAttributes) GetChil
 
 // RequestCancelWorkflowExecutionRequest is an internal type (TBD...)
 type RequestCancelWorkflowExecutionRequest struct {
-	Domain            string             `json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Identity          string             `json:"identity,omitempty"`
-	RequestID         string             `json:"requestId,omitempty"`
-	Cause             string             `json:"cause,omitempty"`
+	Domain              string             `json:"domain,omitempty"`
+	WorkflowExecution   *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Identity            string             `json:"identity,omitempty"`
+	RequestID           string             `json:"requestId,omitempty"`
+	Cause               string             `json:"cause,omitempty"`
+	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4667,6 +4668,14 @@ func (v *RequestCancelWorkflowExecutionRequest) GetWorkflowExecution() (o *Workf
 func (v *RequestCancelWorkflowExecutionRequest) GetRequestID() (o string) {
 	if v != nil {
 		return v.RequestID
+	}
+	return
+}
+
+// GetFirstExecutionRunID is an internal getter (TBD...)
+func (v *RequestCancelWorkflowExecutionRequest) GetFirstExecutionRunID() (o string) {
+	if v != nil {
+		return v.FirstExecutionRunID
 	}
 	return
 }
@@ -6295,11 +6304,12 @@ const (
 
 // TerminateWorkflowExecutionRequest is an internal type (TBD...)
 type TerminateWorkflowExecutionRequest struct {
-	Domain            string             `json:"domain,omitempty"`
-	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
-	Reason            string             `json:"reason,omitempty"`
-	Details           []byte             `json:"details,omitempty"`
-	Identity          string             `json:"identity,omitempty"`
+	Domain              string             `json:"domain,omitempty"`
+	WorkflowExecution   *WorkflowExecution `json:"workflowExecution,omitempty"`
+	Reason              string             `json:"reason,omitempty"`
+	Details             []byte             `json:"details,omitempty"`
+	Identity            string             `json:"identity,omitempty"`
+	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6338,6 +6348,14 @@ func (v *TerminateWorkflowExecutionRequest) GetDetails() (o []byte) {
 func (v *TerminateWorkflowExecutionRequest) GetIdentity() (o string) {
 	if v != nil {
 		return v.Identity
+	}
+	return
+}
+
+// GetFirstExecutionRunID is an internal getter (TBD...)
+func (v *TerminateWorkflowExecutionRequest) GetFirstExecutionRunID() (o string) {
+	if v != nil {
+		return v.FirstExecutionRunID
 	}
 	return
 }
