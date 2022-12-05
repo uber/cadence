@@ -35,7 +35,7 @@ func VerifyCompatibleVersion(
 
 	version, err := db.ReadSchemaVersion()
 	if err != nil {
-		return fmt.Errorf("unable to read schema version keyspace/database: %s error: %v", dbName, err.Error())
+		return fmt.Errorf("reading schema version keyspace/database: %q, error: %w", dbName, err)
 	}
 	// In most cases, the versions should match. However if after a schema upgrade there is a code
 	// rollback, the code version (expected version) would fall lower than the actual version in
