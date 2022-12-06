@@ -22,6 +22,12 @@ package esanalyzer
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/persistence"
+	"go.uber.org/cadence/activity"
 	"testing"
 	"time"
 
@@ -66,6 +72,7 @@ type esanalyzerWorkflowTestSuite struct {
 	WorkflowType       string
 	WorkflowID         string
 	RunID              string
+	WorkflowVersion    string
 }
 
 func TestESAnalyzerWorkflowTestSuite(t *testing.T) {
@@ -78,19 +85,20 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.WorkflowType = "test-workflow-type"
 	s.WorkflowID = "test-workflow_id"
 	s.RunID = "test-run_id"
+	s.WorkflowVersion = "test-workflow-version"
 
-	//activeDomainCache := cache.NewGlobalDomainCacheEntryForTest(
-	//	&persistence.DomainInfo{ID: s.DomainID, Name: s.DomainName},
-	//	&persistence.DomainConfig{Retention: 1},
-	//	&persistence.DomainReplicationConfig{
-	//		ActiveClusterName: cluster.TestCurrentClusterName,
-	//		Clusters: []*persistence.ClusterReplicationConfig{
-	//			{ClusterName: cluster.TestCurrentClusterName},
-	//			{ClusterName: cluster.TestAlternativeClusterName},
-	//		},
-	//	},
-	//	1234,
-	//)
+	activeDomainCache := cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: s.DomainID, Name: s.DomainName},
+		&persistence.DomainConfig{Retention: 1},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234,
+	)
 
 	s.config = Config{
 		ESAnalyzerPause:                          dynamicconfig.GetBoolPropertyFn(false),
@@ -121,7 +129,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.scopedMetricClient.On("Tagged", mock.Anything, mock.Anything).Return(s.scopedMetricClient).Once()
 	//
 	//s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
-	//s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
 
 	// SET UP ANALYZER
 	s.analyzer = &Analyzer{
@@ -141,6 +149,14 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.workflowEnv.RegisterWorkflowWithOptions(
 		s.workflow.workflowFunc,
 		workflow.RegisterOptions{Name: esanalyzerWFTypeName})
+	s.workflowEnv.RegisterActivityWithOptions(
+		s.workflow.emitWorkflowVersionMetrics,
+		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
+	)
+	s.activityEnv.RegisterActivityWithOptions(
+		s.workflow.emitWorkflowVersionMetrics,
+		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
+	)
 }
 
 func (s *esanalyzerWorkflowTestSuite) TearDownTest() {
@@ -151,8 +167,40 @@ func (s *esanalyzerWorkflowTestSuite) TearDownTest() {
 }
 
 func (s *esanalyzerWorkflowTestSuite) TestExecuteWorkflow() {
+	s.workflowEnv.OnActivity(emitWorkflowVersionMetricsActivity, mock.Anything).Return(nil).Times(1)
 
-	s.workflowEnv.ExecuteWorkflow(esanalyzerWFTypeName)
+	s.workflowEnv.ExecuteWorkflow(esanalyzerWFTypeName, mock.Anything)
 	err := s.workflowEnv.GetWorkflowResult(nil)
 	s.NoError(err)
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
+	s.config.ESAnalyzerWorkflowVersionDomains = dynamicconfig.GetStringPropertyFn(
+		fmt.Sprintf(`["%s"]`, s.DomainName),
+	)
+
+	esResult := struct {
+		Buckets []WorkflowVersionCount `json:"buckets"`
+	}{
+		Buckets: []WorkflowVersionCount{
+			{
+				WorkflowVersion: s.WorkflowVersion,
+				NumWorkflows:    100,
+			},
+		},
+	}
+	encoded, err := json.Marshal(esResult)
+	s.NoError(err)
+	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+		&elasticsearch.RawResponse{
+			TookInMillis: 12,
+			Aggregations: map[string]json.RawMessage{
+				"WorkflowVersions": encoded,
+			},
+		}, nil).Times(1)
+	s.scopedMetricClient.On("UpdateGauge", metrics.WorkflowVersionCount, float64(esResult.Buckets[0].NumWorkflows)).Return().Once()
+	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowVersionMetrics)
+
+	s.NoError(err)
+
 }

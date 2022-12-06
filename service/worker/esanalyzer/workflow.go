@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/types"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/zap"
 	"time"
@@ -40,9 +39,10 @@ const (
 	wfTypesAggKey = "wfTypes"
 
 	// workflow constants
-	esAnalyzerWFID       = "cadence-sys-tl-esanalyzer"
-	taskListName         = "cadence-sys-es-analyzer"
-	esanalyzerWFTypeName = "cadence-sys-es-analyzer-workflow"
+	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
+	taskListName                       = "cadence-sys-es-analyzer"
+	esanalyzerWFTypeName               = "cadence-sys-es-analyzer-workflow"
+	emitWorkflowVersionMetricsActivity = "cadence-sys-es-analyzer-emit-workflow-version-metrics"
 )
 
 type (
@@ -84,6 +84,10 @@ var (
 func initWorkflow(a *Analyzer) {
 	w := Workflow{analyzer: a}
 	workflow.RegisterWithOptions(w.workflowFunc, workflow.RegisterOptions{Name: esanalyzerWFTypeName})
+	activity.RegisterWithOptions(
+		w.emitWorkflowVersionMetrics,
+		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
+	)
 }
 
 // workflowFunc queries ElasticSearch to detect issues and mitigates them
@@ -92,6 +96,14 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 		logger := workflow.GetLogger(ctx)
 		logger.Info("Skipping ESAnalyzer execution cycle since it was paused")
 		return nil
+	}
+	var err error
+	err = workflow.ExecuteActivity(
+		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
+		emitWorkflowVersionMetricsActivity,
+	).Get(ctx, &err)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -172,9 +184,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 					zap.String("DomainName", domainName),
 					zap.String("VisibilityQuery", wfVersionEsQuery),
 				)
-				return types.InternalServiceError{
-					Message: fmt.Sprintf("ElasticSearch error: aggeregation failed. Query: %v", wfVersionEsQuery),
-				}
+				return err
 			}
 			var domainWorkflowVersionCount DomainWorkflowVersionCount
 			err = json.Unmarshal(agg, &domainWorkflowVersionCount)
@@ -185,9 +195,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 					zap.String("DomainName", domainName),
 					zap.String("VisibilityQuery", wfVersionEsQuery),
 				)
-				return types.InternalServiceError{
-					Message: "ElasticSearch error parsing aggregation",
-				}
+				return err
 			}
 			for _, workflowVersion := range domainWorkflowVersionCount.WorkflowVersions {
 				w.analyzer.scopedMetricClient.Tagged(metrics.DomainTag(domainName),
