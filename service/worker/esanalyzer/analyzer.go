@@ -74,6 +74,7 @@ type (
 		ESAnalyzerBufferWaitTime                 dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerMinNumWorkflowsForAvg          dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerWorkflowDurationWarnThresholds dynamicconfig.StringPropertyFn
+		ESAnalyzerWorkflowVersionDomains         dynamicconfig.StringPropertyFn
 	}
 )
 

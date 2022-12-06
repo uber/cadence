@@ -2004,6 +2004,11 @@ const (
 	// Value type: string [{"DomainName":"<domain>", "WorkflowType":"<workflowType>", "Threshold":"<duration>", "Refresh":<shouldRefresh>, "MaxNumWorkflows":<maxNumber>}]
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
+	// ESAnalyzerWorkflowVersionMetricDomains defines the domains we want to emit wf version metrics on
+	// KeyName: worker.ESAnalyzerWorkflowVersionMetricDomains
+	// Value type: string ["test-domain","test-domain2"]
+	// Default value: ""
+	ESAnalyzerWorkflowVersionMetricDomains
 
 	// LastStringKey must be the last one in this const group
 	LastStringKey
@@ -3637,7 +3642,7 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableESAnalyzer: DynamicBool{
 		KeyName:      "system.enableESAnalyzer",
 		Description:  "EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer",
-		DefaultValue: false,
+		DefaultValue: true,
 	},
 	EnableWatchDog: DynamicBool{
 		KeyName:      "system.EnableWatchDog",
@@ -3943,6 +3948,11 @@ var StringKeys = map[StringKey]DynamicString{
 	ESAnalyzerWorkflowDurationWarnThresholds: DynamicString{
 		KeyName:      "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types",
+		DefaultValue: "",
+	},
+	ESAnalyzerWorkflowVersionMetricDomains: DynamicString{
+		KeyName:      "worker.ESAnalyzerWorkflowVersionMetricDomains",
+		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
 	},
 }
