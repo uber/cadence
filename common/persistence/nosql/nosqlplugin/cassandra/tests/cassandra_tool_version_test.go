@@ -37,8 +37,8 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/environment"
-	"github.com/uber/cadence/tools/cassandra"
 	"github.com/uber/cadence/testflags"
+	"github.com/uber/cadence/tools/cassandra"
 )
 
 type (
