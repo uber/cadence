@@ -77,7 +77,7 @@ var (
 		ID:                           esAnalyzerWFID,
 		TaskList:                     taskListName,
 		ExecutionStartToCloseTimeout: 1 * time.Hour,
-		CronSchedule:                 "0 * * * *", // "At minute 0" => every hour
+		CronSchedule:                 "*/5 * * * *", // "At minute 0" => every hour
 	}
 )
 
@@ -153,6 +153,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
 	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
+	logger.Info("Domains to get metrics on", zap.String("DomainsToGetMetrics", workflowMetricDomains))
 	if len(workflowMetricDomains) > 0 {
 		err := json.Unmarshal([]byte(workflowMetricDomains), &workflowMetricDomainNames)
 		if err != nil {
@@ -177,6 +178,8 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				return err
 			}
 			agg, foundAggregation := response.Aggregations["WorkflowVersions"]
+			logger.Info("raw response", zap.String("RawResponse", string(agg)))
+
 			if !foundAggregation {
 				logger.Error("ElasticSearch error: aggregation failed.",
 					zap.Error(err),
