@@ -198,6 +198,10 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				return err
 			}
 			for _, workflowVersion := range domainWorkflowVersionCount.WorkflowVersions {
+				logger.Info("Workflow Version Emitting metric",
+					zap.String("DomainName", domainName),
+					zap.Int("VersionCount", int(workflowVersion.NumWorkflows)),
+					zap.String("Workflow Version", workflowVersion.WorkflowVersion))
 				w.analyzer.scopedMetricClient.Tagged(metrics.DomainTag(domainName),
 					metrics.WorkflowVersionTag(workflowVersion.WorkflowVersion)).UpdateGauge(metrics.WorkflowVersionCount, float64(workflowVersion.NumWorkflows))
 			}
