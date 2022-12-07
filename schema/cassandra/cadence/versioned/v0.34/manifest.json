@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.34",
+  "MinCompatibleVersion": "0.34",
+  "Description": "Added first run id to workflow execution type",
+  "SchemaUpdateCqlFiles": [
+    "workflow_execution_first_run_id.cql"
+  ]
+}

@@ -238,6 +238,7 @@ const (
 	FlagServiceZoneWithAlias              = FlagServiceZone + ", sz"
 	FlagEnableTLS                         = "tls"
 	FlagTLSCertPath                       = "tls_cert_path"
+	FlagTLSCertPathWithAlias              = FlagTLSCertPath + ", tcp"
 	FlagTLSKeyPath                        = "tls_key_path"
 	FlagTLSCaPath                         = "tls_ca_path"
 	FlagTLSEnableHostVerification         = "tls_enable_host_verification"

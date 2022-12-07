@@ -298,10 +298,11 @@ var (
 		WorkerVersionInfo: &WorkerVersionInfo,
 	}
 	RequestCancelWorkflowExecutionRequest = types.RequestCancelWorkflowExecutionRequest{
-		Domain:            DomainName,
-		WorkflowExecution: &WorkflowExecution,
-		Identity:          Identity,
-		RequestID:         RequestID,
+		Domain:              DomainName,
+		WorkflowExecution:   &WorkflowExecution,
+		Identity:            Identity,
+		RequestID:           RequestID,
+		FirstExecutionRunID: RunID,
 	}
 	StartWorkflowExecutionRequest = types.StartWorkflowExecutionRequest{
 		Domain:                              DomainName,
@@ -364,11 +365,12 @@ var (
 		RunID: RunID,
 	}
 	TerminateWorkflowExecutionRequest = types.TerminateWorkflowExecutionRequest{
-		Domain:            DomainName,
-		WorkflowExecution: &WorkflowExecution,
-		Reason:            Reason,
-		Details:           Payload1,
-		Identity:          Identity,
+		Domain:              DomainName,
+		WorkflowExecution:   &WorkflowExecution,
+		Reason:              Reason,
+		Details:             Payload1,
+		Identity:            Identity,
+		FirstExecutionRunID: RunID,
 	}
 	DescribeWorkflowExecutionRequest = types.DescribeWorkflowExecutionRequest{
 		Domain:    DomainName,

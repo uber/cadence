@@ -1207,6 +1207,12 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
+	// If history is corrupted, query will be rejected
+	if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+		return nil, err
+	} else if corrupted {
+		return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
+	}
 
 	// There are two ways in which queries get dispatched to decider. First, queries can be dispatched on decision tasks.
 	// These decision tasks potentially contain new events and queries. The events are treated as coming before the query in time.
@@ -1579,6 +1585,13 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 	if err1 != nil {
 		return nil, err1
 	}
+	// If history is corrupted, return an error to the end user
+	if corrupted, err := e.checkForHistoryCorruptions(ctx, mutableState); err != nil {
+		return nil, err
+	} else if corrupted {
+		return nil, &types.EntityNotExistsError{Message: "Workflow execution corrupted."}
+	}
+
 	executionInfo := mutableState.GetExecutionInfo()
 
 	result := &types.DescribeWorkflowExecutionResponse{
@@ -2282,7 +2295,10 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	childWorkflowOnly := req.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: request.WorkflowExecution.WorkflowID,
-		RunID:      request.WorkflowExecution.RunID,
+	}
+	// If firstExecutionRunID is set on the request always try to cancel currently running execution
+	if request.GetFirstExecutionRunID() == "" {
+		workflowExecution.RunID = request.WorkflowExecution.RunID
 	}
 
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, e.shard.GetDomainCache(), workflowExecution, e.timeSource.Now(),
@@ -2300,6 +2316,22 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
+			if request.GetFirstExecutionRunID() != "" {
+				firstRunID := executionInfo.FirstExecutionRunID
+				if firstRunID == "" {
+					// This is needed for backwards compatibility.  Workflow execution create with Cadence release v0.25.0 or earlier
+					// does not have FirstExecutionRunID stored as part of mutable state.  If this is not set then load it from
+					// workflow execution started event.
+					startEvent, err := mutableState.GetStartEvent(ctx)
+					if err != nil {
+						return nil, err
+					}
+					firstRunID = startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+				}
+				if request.GetFirstExecutionRunID() != firstRunID {
+					return nil, &types.EntityNotExistsError{Message: "Workflow execution not found"}
+				}
+			}
 			if childWorkflowOnly {
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
@@ -2631,7 +2663,10 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	childWorkflowOnly := terminateRequest.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: request.WorkflowExecution.WorkflowID,
-		RunID:      request.WorkflowExecution.RunID,
+	}
+	// If firstExecutionRunID is set on the request always try to cancel currently running execution
+	if request.GetFirstExecutionRunID() == "" {
+		workflowExecution.RunID = request.WorkflowExecution.RunID
 	}
 
 	return workflow.UpdateCurrentWithActionFunc(
@@ -2647,8 +2682,24 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 				return nil, workflow.ErrAlreadyCompleted
 			}
 
+			executionInfo := mutableState.GetExecutionInfo()
+			if request.GetFirstExecutionRunID() != "" {
+				firstRunID := executionInfo.FirstExecutionRunID
+				if firstRunID == "" {
+					// This is needed for backwards compatibility.  Workflow execution create with Cadence release v0.25.0 or earlier
+					// does not have FirstExecutionRunID stored as part of mutable state.  If this is not set then load it from
+					// workflow execution started event.
+					startEvent, err := mutableState.GetStartEvent(ctx)
+					if err != nil {
+						return nil, err
+					}
+					firstRunID = startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+				}
+				if request.GetFirstExecutionRunID() != firstRunID {
+					return nil, &types.EntityNotExistsError{Message: "Workflow execution not found"}
+				}
+			}
 			if childWorkflowOnly {
-				executionInfo := mutableState.GetExecutionInfo()
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
 				if parentExecution.GetWorkflowID() != parentWorkflowID ||

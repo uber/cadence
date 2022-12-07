@@ -165,10 +165,10 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Domain: domainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: execution.WorkflowID,
-						RunID:      execution.RunID,
 					},
-					Reason:   "by parent close policy",
-					Identity: processorWFTypeName,
+					Reason:              "by parent close policy",
+					Identity:            processorWFTypeName,
+					FirstExecutionRunID: execution.RunID,
 				},
 			}
 			if childWorkflowOnly {
@@ -183,9 +183,9 @@ func ProcessorActivity(ctx context.Context, request Request) error {
 					Domain: domainName,
 					WorkflowExecution: &types.WorkflowExecution{
 						WorkflowID: execution.WorkflowID,
-						RunID:      execution.RunID,
 					},
-					Identity: processorWFTypeName,
+					Identity:            processorWFTypeName,
+					FirstExecutionRunID: execution.RunID,
 				},
 			}
 			if childWorkflowOnly {
