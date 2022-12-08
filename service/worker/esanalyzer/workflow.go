@@ -102,8 +102,6 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
 		emitWorkflowVersionMetricsActivity,
 	).Get(ctx, &err)
-	w.analyzer.tallyScope.Gauge("TestMetric").Update(float64(123))
-	w.analyzer.scopedMetricClient.UpdateGauge(metrics.WorkflowVersionCount, float64(123))
 	if err != nil {
 		return err
 	}
@@ -155,7 +153,6 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
 	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
-	logger.Info("Domains to get metrics on", zap.String("DomainsToGetMetrics", workflowMetricDomains))
 	if len(workflowMetricDomains) > 0 {
 		err := json.Unmarshal([]byte(workflowMetricDomains), &workflowMetricDomainNames)
 		if err != nil {
@@ -180,7 +177,6 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				return err
 			}
 			agg, foundAggregation := response.Aggregations["WorkflowVersions"]
-			logger.Info("raw response", zap.String("RawResponse", string(agg)))
 
 			if !foundAggregation {
 				logger.Error("ElasticSearch error: aggregation failed.",
@@ -206,7 +202,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				logger.Info("Workflow Version Emitting metric",
 					zap.String("DomainName", domainName),
 					zap.Int("VersionCount", int(workflowVersion.NumWorkflows)),
-					zap.String("Workflow Version", workflowVersion.WorkflowVersion))
+					zap.String("WorkflowVersion", workflowVersion.WorkflowVersion))
 				w.analyzer.scopedMetricClient.Tagged(metrics.DomainTag(domainName),
 					metrics.WorkflowVersionTag(workflowVersion.WorkflowVersion)).UpdateGauge(metrics.WorkflowVersionCount, float64(workflowVersion.NumWorkflows))
 			}
