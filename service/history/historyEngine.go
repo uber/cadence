@@ -942,6 +942,9 @@ func (e *historyEngineImpl) addStartEventsAndTasks(
 	if signalWithStartRequest != nil {
 		// Add signal event
 		sRequest := signalWithStartRequest.SignalWithStartRequest
+		if sRequest.GetRequestID() != "" {
+			mutableState.AddSignalRequested(sRequest.GetRequestID())
+		}
 		_, err := mutableState.AddWorkflowExecutionSignaled(
 			sRequest.GetSignalName(),
 			sRequest.GetSignalInput(),
@@ -2491,6 +2494,11 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 				}
 				return nil, err1
 			}
+
+			if mutableState.IsSignalRequested(sRequest.GetRequestID()) {
+				return &types.StartWorkflowExecutionResponse{RunID: wfContext.GetExecution().RunID}, nil
+			}
+
 			// workflow exist but not running, will restart workflow then signal
 			if !mutableState.IsWorkflowExecutionRunning() {
 				prevMutableState = mutableState
