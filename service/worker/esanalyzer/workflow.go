@@ -77,7 +77,7 @@ var (
 		ID:                           esAnalyzerWFID,
 		TaskList:                     taskListName,
 		ExecutionStartToCloseTimeout: 1 * time.Hour,
-		CronSchedule:                 "*/5 * * * *", // "At minute 0" => every hour
+		CronSchedule:                 "*/5 * * * *",
 	}
 )
 
