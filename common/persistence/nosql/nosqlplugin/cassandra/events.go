@@ -98,7 +98,7 @@ func (db *cdb) InsertIntoHistoryTreeAndNode(ctx context.Context, treeRow *nosqlp
 
 // SelectFromHistoryNode read nodes based on a filter
 func (db *cdb) SelectFromHistoryNode(ctx context.Context, filter *nosqlplugin.HistoryNodeFilter) ([]*nosqlplugin.HistoryNodeRow, []byte, error) {
-	query := db.session.Query(v2templateReadData, filter.TreeID, filter.BranchID, filter.MinNodeID, filter.MaxNodeID)
+	query := db.session.Query(v2templateReadData, filter.TreeID, filter.BranchID, filter.MinNodeID, filter.MaxNodeID).WithContext(ctx)
 	iter := query.PageSize(filter.PageSize).PageState(filter.NextPageToken).Iter()
 	if iter == nil {
 		return nil, nil, &types.InternalServiceError{
