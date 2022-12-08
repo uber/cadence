@@ -97,8 +97,6 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 		return nil
 	}
 	var err error
-	w.analyzer.tallyScope.Gauge("TestMetric").Update(float64(123))
-	w.analyzer.scopedMetricClient.UpdateGauge(metrics.ESAnalyzerScope, metrics.WorkflowVersionCount, float64(1234))
 	w.analyzer.resource.GetMetricsClient().Scope(metrics.ESAnalyzerScope).UpdateGauge(metrics.WorkflowVersionCount, float64(1234))
 	err = workflow.ExecuteActivity(
 		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
@@ -153,8 +151,6 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
 // emitWorkflowVersionMetrics is an activity that emits the running WF versions of a domain
 func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 	w.analyzer.tallyScope.Gauge("TestMetric123").Update(float64(123))
-	analyzer := ctx.Value("test123").(*Analyzer)
-	analyzer.scopedMetricClient.UpdateGauge(metrics.ESAnalyzerScope, metrics.WorkflowVersionCount, float64(999))
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
 	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
@@ -208,8 +204,9 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 					zap.String("DomainName", domainName),
 					zap.Int("VersionCount", int(workflowVersion.NumWorkflows)),
 					zap.String("WorkflowVersion", workflowVersion.WorkflowVersion))
-				analyzer.scopedMetricClient.Scope(metrics.ESAnalyzerScope).Tagged(metrics.DomainTag(domainName),
-					metrics.WorkflowVersionTag(workflowVersion.WorkflowVersion)).UpdateGauge(metrics.WorkflowVersionCount, float64(workflowVersion.NumWorkflows))
+				w.analyzer.tallyScope.Tagged(
+					map[string]string{"domain": domainName, "workflowVersion": workflowVersion.WorkflowVersion},
+				).Gauge("workflow_version_count").Update(float64(workflowVersion.NumWorkflows))
 			}
 		}
 	}

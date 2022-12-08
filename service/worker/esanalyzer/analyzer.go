@@ -53,7 +53,6 @@ type (
 		clientBean          client.Bean
 		esClient            es.GenericClient
 		logger              log.Logger
-		scopedMetricClient  metrics.Client
 		tallyScope          tally.Scope
 		visibilityIndexName string
 		resource            resource.Resource
@@ -100,7 +99,6 @@ func New(
 		clientBean:          clientBean,
 		esClient:            esClient,
 		logger:              logger,
-		scopedMetricClient:  metricsClient,
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 		resource:            resource,
@@ -109,13 +107,9 @@ func New(
 	}
 }
 
-func getScopedMetricsClient(metricsClient metrics.Client) metrics.Scope {
-	return metricsClient.Scope(metrics.ESAnalyzerScope)
-}
-
 // Start starts the scanner
 func (a *Analyzer) Start() error {
-	ctx := context.WithValue(context.Background(), "test123", a)
+	ctx := context.Background()
 	a.StartWorkflow(ctx)
 
 	workerOpts := worker.Options{
@@ -130,7 +124,6 @@ func (a *Analyzer) Start() error {
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
 	initWorkflow(a)
-	a.scopedMetricClient.UpdateGauge(metrics.ESAnalyzerScope, metrics.WorkflowVersionCount, float64(12345))
 	go workercommon.StartWorkflowWithRetry(esanalyzerWFTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
 		_, err := client.StartWorkflow(ctx, wfOptions, esanalyzerWFTypeName)
 		switch err.(type) {

@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/uber-go/tally"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/persistence"
@@ -64,6 +65,7 @@ type esanalyzerWorkflowTestSuite struct {
 	mockMetricClient   *mocks.Client
 	scopedMetricClient *mocks.Scope
 	mockESClient       *esMocks.GenericClient
+	tallyScope         tally.Scope
 	analyzer           *Analyzer
 	workflow           *Workflow
 	config             Config
@@ -86,7 +88,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.WorkflowID = "test-workflow_id"
 	s.RunID = "test-run_id"
 	s.WorkflowVersion = "test-workflow-version"
-
+	s.tallyScope = tally.NoopScope
 	activeDomainCache := cache.NewGlobalDomainCacheEntryForTest(
 		&persistence.DomainInfo{ID: s.DomainID, Name: s.DomainName},
 		&persistence.DomainConfig{Retention: 1},
@@ -140,6 +142,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		scopedMetricClient: s.mockMetricClient,
 		esClient:           s.mockESClient,
 		config:             &s.config,
+		tallyScope:         s.tallyScope,
 	}
 	s.activityEnv.SetTestTimeout(time.Second * 5)
 	s.activityEnv.SetWorkerOptions(worker.Options{BackgroundActivityContext: context.Background()})
