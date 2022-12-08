@@ -291,7 +291,6 @@ func (s *Service) startESAnalyzer() {
 		s.params.ESClient,
 		s.params.ESConfig,
 		s.GetLogger(),
-		s.GetMetricsClient(),
 		s.params.MetricScope,
 		s.Resource,
 		s.GetDomainCache(),
