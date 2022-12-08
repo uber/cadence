@@ -137,7 +137,7 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		clientBean:         s.clientBean,
 		domainCache:        s.mockDomainCache,
 		logger:             s.logger,
-		scopedMetricClient: getScopedMetricsClient(s.mockMetricClient),
+		scopedMetricClient: s.mockMetricClient,
 		esClient:           s.mockESClient,
 		config:             &s.config,
 	}

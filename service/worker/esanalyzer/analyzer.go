@@ -53,7 +53,7 @@ type (
 		clientBean          client.Bean
 		esClient            es.GenericClient
 		logger              log.Logger
-		scopedMetricClient  metrics.Scope
+		scopedMetricClient  metrics.Client
 		tallyScope          tally.Scope
 		visibilityIndexName string
 		resource            resource.Resource
@@ -100,7 +100,7 @@ func New(
 		clientBean:          clientBean,
 		esClient:            esClient,
 		logger:              logger,
-		scopedMetricClient:  getScopedMetricsClient(metricsClient),
+		scopedMetricClient:  metricsClient,
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 		resource:            resource,
@@ -130,7 +130,7 @@ func (a *Analyzer) Start() error {
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
 	initWorkflow(a)
-	a.scopedMetricClient.UpdateGauge(metrics.WorkflowVersionCount, float64(12345))
+	a.scopedMetricClient.UpdateGauge(metrics.ESAnalyzerScope, metrics.WorkflowVersionCount, float64(12345))
 	go workercommon.StartWorkflowWithRetry(esanalyzerWFTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
 		_, err := client.StartWorkflow(ctx, wfOptions, esanalyzerWFTypeName)
 		switch err.(type) {
