@@ -153,6 +153,8 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
 // emitWorkflowVersionMetrics is an activity that emits the running WF versions of a domain
 func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 	w.analyzer.tallyScope.Gauge("TestMetric").Update(float64(123))
+	analyzer := ctx.Value("test123").(*Analyzer)
+	analyzer.scopedMetricClient.UpdateGauge(metrics.WorkflowVersionCount, float64(999))
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
 	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
