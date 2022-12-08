@@ -3642,7 +3642,7 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableESAnalyzer: DynamicBool{
 		KeyName:      "system.enableESAnalyzer",
 		Description:  "EnableESAnalyzer decides whether to enable system workers for processing ElasticSearch Analyzer",
-		DefaultValue: true,
+		DefaultValue: false,
 	},
 	EnableWatchDog: DynamicBool{
 		KeyName:      "system.EnableWatchDog",
