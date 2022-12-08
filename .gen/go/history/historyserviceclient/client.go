@@ -296,7 +296,7 @@ type Interface interface {
 
 // New builds a new client for the HistoryService service.
 //
-// 	client := historyserviceclient.New(dispatcher.ClientConfig("historyservice"))
+//	client := historyserviceclient.New(dispatcher.ClientConfig("historyservice"))
 func New(c transport.ClientConfig, opts ...thrift.ClientOption) Interface {
 	return client{
 		c: thrift.New(thrift.Config{

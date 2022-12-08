@@ -54,12 +54,12 @@ type ServerResult struct {
 // Server provides procedures for MatchingService to an Fx application. It expects a
 // matchingservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyMatchingServiceHandler) matchingserviceserver.Interface {
-// 			return h
-// 		},
-// 		matchingservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyMatchingServiceHandler) matchingserviceserver.Interface {
+//			return h
+//		},
+//		matchingservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := matchingserviceserver.New(p.Handler, opts...)
