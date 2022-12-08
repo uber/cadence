@@ -99,6 +99,7 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 	var err error
 	w.analyzer.tallyScope.Gauge("TestMetric").Update(float64(123))
 	w.analyzer.scopedMetricClient.UpdateGauge(metrics.WorkflowVersionCount, float64(1234))
+	w.analyzer.resource.GetMetricsClient().Scope(metrics.ESAnalyzerScope).UpdateGauge(metrics.WorkflowVersionCount, float64(1234))
 	err = workflow.ExecuteActivity(
 		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
 		emitWorkflowVersionMetricsActivity,
