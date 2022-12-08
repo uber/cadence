@@ -127,22 +127,19 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 	s.scopedMetricClient = &mocks.Scope{}
 	s.mockESClient = &esMocks.GenericClient{}
 
-	s.mockMetricClient.On("Scope", metrics.ESAnalyzerScope, mock.Anything).Return(s.scopedMetricClient).Once()
-	s.scopedMetricClient.On("Tagged", mock.Anything, mock.Anything).Return(s.scopedMetricClient).Once()
 	//
 	//s.mockDomainCache.EXPECT().GetDomainByID(s.DomainID).Return(activeDomainCache, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomain(s.DomainName).Return(activeDomainCache, nil).AnyTimes()
 
 	// SET UP ANALYZER
 	s.analyzer = &Analyzer{
-		svcClient:          s.resource.GetSDKClient(),
-		clientBean:         s.clientBean,
-		domainCache:        s.mockDomainCache,
-		logger:             s.logger,
-		scopedMetricClient: s.mockMetricClient,
-		esClient:           s.mockESClient,
-		config:             &s.config,
-		tallyScope:         s.tallyScope,
+		svcClient:   s.resource.GetSDKClient(),
+		clientBean:  s.clientBean,
+		domainCache: s.mockDomainCache,
+		logger:      s.logger,
+		esClient:    s.mockESClient,
+		config:      &s.config,
+		tallyScope:  s.tallyScope,
 	}
 	s.activityEnv.SetTestTimeout(time.Second * 5)
 	s.activityEnv.SetWorkerOptions(worker.Options{BackgroundActivityContext: context.Background()})
@@ -222,12 +219,9 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
 	`
 	var rawEs elasticsearch.RawResponse
 	err := json.Unmarshal([]byte(esRaw), &rawEs)
-	//encoded, err := json.Marshal(esResult)
 	s.NoError(err)
 	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
 		&rawEs, nil).Times(1)
-	s.scopedMetricClient.On("Tagged", mock.Anything, mock.Anything).
-		Return(s.scopedMetricClient).On("UpdateGauge", mock.Anything, mock.Anything).Return().Times(3)
 	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowVersionMetrics)
 
 	s.NoError(err)

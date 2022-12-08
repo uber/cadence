@@ -40,7 +40,6 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/workercommon"
 )
@@ -87,7 +86,6 @@ func New(
 	esClient es.GenericClient,
 	esConfig *config.ElasticSearchConfig,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	tallyScope tally.Scope,
 	resource resource.Resource,
 	domainCache cache.DomainCache,

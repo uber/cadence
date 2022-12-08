@@ -24,7 +24,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/metrics"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/zap"
 	"time"
@@ -35,7 +34,10 @@ import (
 )
 
 const (
-	workflowVersionAggKey = "WorkflowVersions"
+	workflowVersionAggKey       = "WorkflowVersions"
+	domainTag                   = "domain"
+	workflowVersionTag          = "workflowVersion"
+	workflowVersionCountMetrics = "workflow_version_count"
 
 	// workflow constants
 	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
@@ -63,20 +65,20 @@ var (
 		InitialInterval:    10 * time.Second,
 		BackoffCoefficient: 1.7,
 		MaximumInterval:    5 * time.Minute,
-		ExpirationInterval: time.Hour,
+		ExpirationInterval: 10 * time.Minute,
 	}
 
 	getWorkflowMetricsOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
-		StartToCloseTimeout:    10 * time.Minute,
+		StartToCloseTimeout:    5 * time.Minute,
 		RetryPolicy:            &retryPolicy,
 	}
 
 	wfOptions = cclient.StartWorkflowOptions{
 		ID:                           esAnalyzerWFID,
 		TaskList:                     taskListName,
-		ExecutionStartToCloseTimeout: 1 * time.Hour,
-		CronSchedule:                 "*/5 * * * *",
+		ExecutionStartToCloseTimeout: 10 * time.Minute,
+		CronSchedule:                 "*/10 * * * *",
 	}
 )
 
@@ -89,7 +91,7 @@ func initWorkflow(a *Analyzer) {
 	)
 }
 
-// workflowFunc queries ElasticSearch to detect issues and mitigates them
+// workflowFunc queries ElasticSearch for information and do something with it
 func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 	if w.analyzer.config.ESAnalyzerPause() {
 		logger := workflow.GetLogger(ctx)
@@ -97,7 +99,6 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 		return nil
 	}
 	var err error
-	w.analyzer.resource.GetMetricsClient().Scope(metrics.ESAnalyzerScope).UpdateGauge(metrics.WorkflowVersionCount, float64(1234))
 	err = workflow.ExecuteActivity(
 		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
 		emitWorkflowVersionMetricsActivity,
@@ -150,7 +151,6 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
 
 // emitWorkflowVersionMetrics is an activity that emits the running WF versions of a domain
 func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
-	w.analyzer.tallyScope.Gauge("TestMetric123").Update(float64(123))
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
 	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
@@ -200,13 +200,9 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				return err
 			}
 			for _, workflowVersion := range domainWorkflowVersionCount.WorkflowVersions {
-				logger.Info("Workflow Version Emitting metric",
-					zap.String("DomainName", domainName),
-					zap.Int("VersionCount", int(workflowVersion.NumWorkflows)),
-					zap.String("WorkflowVersion", workflowVersion.WorkflowVersion))
 				w.analyzer.tallyScope.Tagged(
-					map[string]string{"domain": domainName, "workflowVersion": workflowVersion.WorkflowVersion},
-				).Gauge("workflow_version_count").Update(float64(workflowVersion.NumWorkflows))
+					map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.WorkflowVersion},
+				).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.NumWorkflows))
 			}
 		}
 	}
