@@ -35,8 +35,7 @@ import (
 )
 
 const (
-	domainsAggKey = "domains"
-	wfTypesAggKey = "wfTypes"
+	workflowVersionAggKey = "WorkflowVersions"
 
 	// workflow constants
 	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
@@ -98,6 +97,8 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 		return nil
 	}
 	var err error
+	w.analyzer.tallyScope.Gauge("TestMetric").Update(float64(123))
+	w.analyzer.scopedMetricClient.UpdateGauge(metrics.WorkflowVersionCount, float64(1234))
 	err = workflow.ExecuteActivity(
 		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
 		emitWorkflowVersionMetricsActivity,
@@ -150,6 +151,7 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
 
 // emitWorkflowVersionMetrics is an activity that emits the running WF versions of a domain
 func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
+	w.analyzer.tallyScope.Gauge("TestMetric").Update(float64(123))
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
 	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
@@ -176,7 +178,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				)
 				return err
 			}
-			agg, foundAggregation := response.Aggregations["WorkflowVersions"]
+			agg, foundAggregation := response.Aggregations[workflowVersionAggKey]
 
 			if !foundAggregation {
 				logger.Error("ElasticSearch error: aggregation failed.",
