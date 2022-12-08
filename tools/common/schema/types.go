@@ -22,6 +22,7 @@ package schema
 
 import (
 	"fmt"
+	"io/fs"
 	"regexp"
 )
 
@@ -36,7 +37,7 @@ type (
 	UpdateConfig struct {
 		DBName        string
 		TargetVersion string
-		SchemaDir     string
+		SchemaFS      fs.FS
 		IsDryRun      bool
 	}
 	// SetupConfig holds the config

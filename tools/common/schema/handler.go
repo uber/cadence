@@ -22,6 +22,7 @@ package schema
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli"
 )
@@ -86,7 +87,11 @@ func Update(cli *cli.Context, db SchemaClient) error {
 
 func newUpdateConfig(cli *cli.Context) (*UpdateConfig, error) {
 	config := new(UpdateConfig)
-	config.SchemaDir = cli.String(CLIOptSchemaDir)
+	schemaDir := cli.String(CLIOptSchemaDir)
+	if len(schemaDir) == 0 {
+		return nil, NewConfigError("missing " + flag(CLIOptSchemaDir) + " argument ")
+	}
+	config.SchemaFS = os.DirFS(schemaDir)
 	config.IsDryRun = cli.Bool(CLIOptDryrun)
 	config.TargetVersion = cli.String(CLIOptTargetVersion)
 
@@ -129,8 +134,8 @@ func validateSetupConfig(config *SetupConfig) error {
 }
 
 func validateUpdateConfig(config *UpdateConfig) error {
-	if len(config.SchemaDir) == 0 {
-		return NewConfigError("missing " + flag(CLIOptSchemaDir) + " argument ")
+	if config.SchemaFS == nil {
+		return NewConfigError("schema file system is not set")
 	}
 	if len(config.TargetVersion) > 0 {
 		ver, err := parseValidateVersion(config.TargetVersion)
