@@ -237,10 +237,10 @@ type FxMatchingAPIYARPCClientResult struct {
 // NewFxMatchingAPIYARPCClient provides a MatchingAPIYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    matchingv1.NewFxMatchingAPIYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  matchingv1.NewFxMatchingAPIYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxMatchingAPIYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxMatchingAPIYARPCClientParams) FxMatchingAPIYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -286,10 +286,10 @@ type FxMatchingAPIYARPCProceduresResult struct {
 // NewFxMatchingAPIYARPCProcedures provides MatchingAPIYARPCServer procedures to an Fx application.
 // It expects a MatchingAPIYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    matchingv1.NewFxMatchingAPIYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  matchingv1.NewFxMatchingAPIYARPCProcedures(),
+//	  ...
+//	)
 func NewFxMatchingAPIYARPCProcedures() interface{} {
 	return func(params FxMatchingAPIYARPCProceduresParams) FxMatchingAPIYARPCProceduresResult {
 		return FxMatchingAPIYARPCProceduresResult{

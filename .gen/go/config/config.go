@@ -79,14 +79,14 @@ func (_List_DynamicConfigEntry_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DynamicConfigBlob) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -146,16 +146,16 @@ func _List_DynamicConfigEntry_Read(l wire.ValueList) ([]*DynamicConfigEntry, err
 // An error is returned if we were unable to build a DynamicConfigBlob struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DynamicConfigBlob
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DynamicConfigBlob
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DynamicConfigBlob) FromWire(w wire.Value) error {
 	var err error
 
@@ -495,14 +495,14 @@ func (_List_DynamicConfigValue_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DynamicConfigEntry) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -562,16 +562,16 @@ func _List_DynamicConfigValue_Read(l wire.ValueList) ([]*DynamicConfigValue, err
 // An error is returned if we were unable to build a DynamicConfigEntry struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DynamicConfigEntry
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DynamicConfigEntry
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DynamicConfigEntry) FromWire(w wire.Value) error {
 	var err error
 
@@ -882,14 +882,14 @@ type DynamicConfigFilter struct {
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DynamicConfigFilter) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -931,16 +931,16 @@ func _DataBlob_Read(w wire.Value) (*shared.DataBlob, error) {
 // An error is returned if we were unable to build a DynamicConfigFilter struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DynamicConfigFilter
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DynamicConfigFilter
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DynamicConfigFilter) FromWire(w wire.Value) error {
 	var err error
 
@@ -1193,14 +1193,14 @@ func (_List_DynamicConfigFilter_ValueList) Close() {}
 // An error is returned if the struct or any of its fields failed to
 // validate.
 //
-//   x, err := v.ToWire()
-//   if err != nil {
-//     return err
-//   }
+//	x, err := v.ToWire()
+//	if err != nil {
+//	  return err
+//	}
 //
-//   if err := binaryProtocol.Encode(x, writer); err != nil {
-//     return err
-//   }
+//	if err := binaryProtocol.Encode(x, writer); err != nil {
+//	  return err
+//	}
 func (v *DynamicConfigValue) ToWire() (wire.Value, error) {
 	var (
 		fields [2]wire.Field
@@ -1260,16 +1260,16 @@ func _List_DynamicConfigFilter_Read(l wire.ValueList) ([]*DynamicConfigFilter, e
 // An error is returned if we were unable to build a DynamicConfigValue struct
 // from the provided intermediate representation.
 //
-//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
-//   if err != nil {
-//     return nil, err
-//   }
+//	x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//	if err != nil {
+//	  return nil, err
+//	}
 //
-//   var v DynamicConfigValue
-//   if err := v.FromWire(x); err != nil {
-//     return nil, err
-//   }
-//   return &v, nil
+//	var v DynamicConfigValue
+//	if err := v.FromWire(x); err != nil {
+//	  return nil, err
+//	}
+//	return &v, nil
 func (v *DynamicConfigValue) FromWire(w wire.Value) error {
 	var err error
 

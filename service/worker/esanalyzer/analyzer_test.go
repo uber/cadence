@@ -24,13 +24,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/uber-go/tally"
+	"go.uber.org/cadence/activity"
+
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/persistence"
-	"go.uber.org/cadence/activity"
-	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"

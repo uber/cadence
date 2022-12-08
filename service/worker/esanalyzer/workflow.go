@@ -24,9 +24,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"go.uber.org/cadence/activity"
 	"go.uber.org/zap"
-	"time"
 
 	"go.uber.org/cadence"
 	cclient "go.uber.org/cadence/client"
