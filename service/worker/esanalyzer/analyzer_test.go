@@ -178,27 +178,53 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
 	s.config.ESAnalyzerWorkflowVersionDomains = dynamicconfig.GetStringPropertyFn(
 		fmt.Sprintf(`["%s"]`, s.DomainName),
 	)
+	esRaw := `
+{
+  "took": 198,
+  "timed_out": false,
+  "_shards": {
+    "total": 20,
+    "successful": 20,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": 7438,
+    "max_score": 0,
+    "hits": [
 
-	esResult := struct {
-		Buckets []WorkflowVersionCount `json:"buckets"`
-	}{
-		Buckets: []WorkflowVersionCount{
-			{
-				WorkflowVersion: s.WorkflowVersion,
-				NumWorkflows:    100,
-			},
-		},
-	}
-	encoded, err := json.Marshal(esResult)
+    ]
+  },
+  "aggregations": {
+    "WorkflowVersions": {
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0,
+      "buckets": [
+        {
+          "key": "max_fare_05dc2382-1",
+          "doc_count": 7436
+        },
+        {
+          "key": "finalize_order_delay_329c8aef-1",
+          "doc_count": 7275
+        },
+        {
+          "key": "timeout_duration_a71dbec7-1",
+          "doc_count": 2
+        }
+      ]
+    }
+  }
+}
+	`
+	var rawEs elasticsearch.RawResponse
+	err := json.Unmarshal([]byte(esRaw), &rawEs)
+	//encoded, err := json.Marshal(esResult)
 	s.NoError(err)
 	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
-		&elasticsearch.RawResponse{
-			TookInMillis: 12,
-			Aggregations: map[string]json.RawMessage{
-				"WorkflowVersions": encoded,
-			},
-		}, nil).Times(1)
-	s.scopedMetricClient.On("UpdateGauge", metrics.WorkflowVersionCount, float64(esResult.Buckets[0].NumWorkflows)).Return().Once()
+		&rawEs, nil).Times(1)
+	s.scopedMetricClient.On("Tagged", mock.Anything, mock.Anything).
+		Return(s.scopedMetricClient).On("UpdateGauge", mock.Anything, mock.Anything).Return().Times(3)
 	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowVersionMetrics)
 
 	s.NoError(err)
