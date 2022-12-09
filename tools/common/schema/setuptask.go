@@ -20,7 +20,10 @@
 
 package schema
 
-import "log"
+import (
+	"log"
+	"os"
+)
 
 // SetupTask represents a task
 // that sets up cassandra schema on
@@ -57,7 +60,11 @@ func (task *SetupTask) Run() error {
 	}
 
 	if len(config.SchemaFilePath) > 0 {
-		stmts, err := ParseFile(config.SchemaFilePath)
+		file, err := os.Open(config.SchemaFilePath)
+		if err != nil {
+			return err
+		}
+		stmts, err := ParseFile(file)
 		if err != nil {
 			return err
 		}
