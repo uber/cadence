@@ -2295,7 +2295,10 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 	childWorkflowOnly := req.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: request.WorkflowExecution.WorkflowID,
-		RunID:      request.WorkflowExecution.RunID,
+	}
+	// If firstExecutionRunID is set on the request always try to cancel currently running execution
+	if request.GetFirstExecutionRunID() == "" {
+		workflowExecution.RunID = request.WorkflowExecution.RunID
 	}
 
 	return workflow.UpdateCurrentWithActionFunc(ctx, e.executionCache, e.executionManager, domainID, e.shard.GetDomainCache(), workflowExecution, e.timeSource.Now(),
@@ -2313,6 +2316,22 @@ func (e *historyEngineImpl) RequestCancelWorkflowExecution(
 			}
 
 			executionInfo := mutableState.GetExecutionInfo()
+			if request.GetFirstExecutionRunID() != "" {
+				firstRunID := executionInfo.FirstExecutionRunID
+				if firstRunID == "" {
+					// This is needed for backwards compatibility.  Workflow execution create with Cadence release v0.25.0 or earlier
+					// does not have FirstExecutionRunID stored as part of mutable state.  If this is not set then load it from
+					// workflow execution started event.
+					startEvent, err := mutableState.GetStartEvent(ctx)
+					if err != nil {
+						return nil, err
+					}
+					firstRunID = startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+				}
+				if request.GetFirstExecutionRunID() != firstRunID {
+					return nil, &types.EntityNotExistsError{Message: "Workflow execution not found"}
+				}
+			}
 			if childWorkflowOnly {
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
@@ -2644,7 +2663,10 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 	childWorkflowOnly := terminateRequest.GetChildWorkflowOnly()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: request.WorkflowExecution.WorkflowID,
-		RunID:      request.WorkflowExecution.RunID,
+	}
+	// If firstExecutionRunID is set on the request always try to cancel currently running execution
+	if request.GetFirstExecutionRunID() == "" {
+		workflowExecution.RunID = request.WorkflowExecution.RunID
 	}
 
 	return workflow.UpdateCurrentWithActionFunc(
@@ -2660,8 +2682,24 @@ func (e *historyEngineImpl) TerminateWorkflowExecution(
 				return nil, workflow.ErrAlreadyCompleted
 			}
 
+			executionInfo := mutableState.GetExecutionInfo()
+			if request.GetFirstExecutionRunID() != "" {
+				firstRunID := executionInfo.FirstExecutionRunID
+				if firstRunID == "" {
+					// This is needed for backwards compatibility.  Workflow execution create with Cadence release v0.25.0 or earlier
+					// does not have FirstExecutionRunID stored as part of mutable state.  If this is not set then load it from
+					// workflow execution started event.
+					startEvent, err := mutableState.GetStartEvent(ctx)
+					if err != nil {
+						return nil, err
+					}
+					firstRunID = startEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstExecutionRunID()
+				}
+				if request.GetFirstExecutionRunID() != firstRunID {
+					return nil, &types.EntityNotExistsError{Message: "Workflow execution not found"}
+				}
+			}
 			if childWorkflowOnly {
-				executionInfo := mutableState.GetExecutionInfo()
 				parentWorkflowID := executionInfo.ParentWorkflowID
 				parentRunID := executionInfo.ParentRunID
 				if parentExecution.GetWorkflowID() != parentWorkflowID ||
