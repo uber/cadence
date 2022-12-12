@@ -42,9 +42,9 @@ const (
 
 type (
 	pendingTaskInfo struct {
-		executionInfo    *persistence.WorkflowExecutionInfo
-		task             persistence.Task
-		persistenceError bool
+		executionInfo          *persistence.WorkflowExecutionInfo
+		task                   persistence.Task
+		potentialFalsePositive bool
 	}
 
 	transferQueueValidator struct {
@@ -57,6 +57,7 @@ type (
 
 		pendingTaskInfos   map[int64]pendingTaskInfo
 		maxReadLevels      map[int]task.Key
+		minReadTaskID      int64
 		lastValidateTime   time.Time
 		validationInterval dynamicconfig.DurationPropertyFn
 	}
@@ -77,6 +78,7 @@ func newTransferQueueValidator(
 
 		pendingTaskInfos:   make(map[int64]pendingTaskInfo),
 		maxReadLevels:      make(map[int]task.Key),
+		minReadTaskID:      0,
 		lastValidateTime:   timeSource.Now(),
 		validationInterval: validationInterval,
 	}
@@ -108,10 +110,13 @@ func (v *transferQueueValidator) addTasks(
 	}
 
 	for _, task := range info.Tasks[:numTaskToAdd] {
+		// It is possible that a task is acked before it is added to the validator
+		// In that case, the lost task could be a potential false positive case
+		potentialFalsePositive := info.PersistenceError || task.GetTaskID() <= v.minReadTaskID
 		v.pendingTaskInfos[task.GetTaskID()] = pendingTaskInfo{
-			executionInfo:    info.ExecutionInfo,
-			task:             task,
-			persistenceError: info.PersistenceError,
+			executionInfo:          info.ExecutionInfo,
+			task:                   task,
+			potentialFalsePositive: potentialFalsePositive,
 		}
 	}
 }
@@ -178,10 +183,11 @@ func (v *transferQueueValidator) validatePendingTasks() {
 				tag.WorkflowDomainID(taskInfo.executionInfo.DomainID),
 				tag.WorkflowID(taskInfo.executionInfo.WorkflowID),
 				tag.WorkflowRunID(taskInfo.executionInfo.RunID),
-				tag.Bool(taskInfo.persistenceError),
+				tag.Bool(taskInfo.potentialFalsePositive),
 			)
 			v.metricsScope.IncCounter(metrics.QueueValidatorLostTaskCounter)
 			delete(v.pendingTaskInfos, taskID)
 		}
 	}
+	v.minReadTaskID = minReadTaskID
 }
