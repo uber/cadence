@@ -40,7 +40,7 @@ type (
 	}
 )
 
-var _ test.DB = (*cassandra.CqlClient)(nil)
+var _ test.DB = (cassandra.CqlClient)(nil)
 
 func TestCQLClientTestSuite(t *testing.T) {
 	testflags.RequireCassandra(t)
