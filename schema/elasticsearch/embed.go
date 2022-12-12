@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Uber Technologies, Inc.
+// Copyright (c) 2019 Uber Technologies, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -18,44 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package nosql
+package elasticsearch
 
-import (
-	"fmt"
+//go:embed v6/visibility/index_template.json
+var IndexTemplateV6 []byte
 
-	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
-	"github.com/uber/cadence/common/types"
-)
-
-func convertCommonErrors(
-	errChecker nosqlplugin.ClientErrorChecker,
-	operation string,
-	err error,
-) error {
-	if errChecker.IsNotFoundError(err) {
-		return &types.EntityNotExistsError{
-			Message: fmt.Sprintf("%v failed. Error: %v ", operation, err),
-		}
-	}
-
-	if errChecker.IsTimeoutError(err) {
-		return &p.TimeoutError{Msg: fmt.Sprintf("%v timed out. Error: %v", operation, err)}
-	}
-
-	if errChecker.IsThrottlingError(err) {
-		return &types.ServiceBusyError{
-			Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-
-	if errChecker.IsDBUnavailableError(err) {
-		return &p.DBUnavailableError{
-			Msg: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-		}
-	}
-
-	return &types.InternalServiceError{
-		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
-	}
-}
+//go:embed v7/visibility/index_template.json
+var IndexTemplateV7 []byte
