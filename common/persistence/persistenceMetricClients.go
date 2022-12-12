@@ -224,48 +224,99 @@ func NewConfigStorePersistenceMetricsClient(
 	}
 }
 
-func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error) {
+func (p *persistenceMetricsClientBase) updateErrorMetricPerDomain(scope int, err error, scopeWithDomainTag metrics.Scope) {
 	switch err.(type) {
 	case *types.DomainAlreadyExistsError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrDomainAlreadyExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounterPerDomain)
 	case *types.BadRequestError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrBadRequestCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBadRequestCounterPerDomain)
 	case *WorkflowExecutionAlreadyStartedError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrExecutionAlreadyStartedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounterPerDomain)
 	case *ConditionFailedError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrConditionFailedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrConditionFailedCounterPerDomain)
 	case *CurrentWorkflowConditionFailedError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounterPerDomain)
 	case *ShardAlreadyExistError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardExistsCounterPerDomain)
 	case *ShardOwnershipLostError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrShardOwnershipLostCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrShardOwnershipLostCounterPerDomain)
 	case *types.EntityNotExistsError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrEntityNotExistsCounter)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrEntityNotExistsCounterPerDomain)
 	case *TimeoutError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrTimeoutCounter)
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrTimeoutCounterPerDomain)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
 	case *types.ServiceBusyError:
-		p.metricClient.IncCounter(scope, metrics.PersistenceErrBusyCounter)
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrBusyCounterPerDomain)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
+	case *DBUnavailableError:
+		scopeWithDomainTag.IncCounter(metrics.PersistenceErrDBUnavailableCounterPerDomain)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
+		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
 	default:
 		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
-		p.metricClient.IncCounter(scope, metrics.PersistenceFailures)
+		scopeWithDomainTag.IncCounter(metrics.PersistenceFailuresPerDomain)
 	}
 }
 
-func (p *persistenceMetricsClientBase) call(scope int, op func() error) error {
-	p.metricClient.IncCounter(scope, metrics.PersistenceRequests)
+func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, metricsScope metrics.Scope) {
+	switch err.(type) {
+	case *types.DomainAlreadyExistsError:
+		metricsScope.IncCounter(metrics.PersistenceErrDomainAlreadyExistsCounter)
+	case *types.BadRequestError:
+		metricsScope.IncCounter(metrics.PersistenceErrBadRequestCounter)
+	case *WorkflowExecutionAlreadyStartedError:
+		metricsScope.IncCounter(metrics.PersistenceErrExecutionAlreadyStartedCounter)
+	case *ConditionFailedError:
+		metricsScope.IncCounter(metrics.PersistenceErrConditionFailedCounter)
+	case *CurrentWorkflowConditionFailedError:
+		metricsScope.IncCounter(metrics.PersistenceErrCurrentWorkflowConditionFailedCounter)
+	case *ShardAlreadyExistError:
+		metricsScope.IncCounter(metrics.PersistenceErrShardExistsCounter)
+	case *ShardOwnershipLostError:
+		metricsScope.IncCounter(metrics.PersistenceErrShardOwnershipLostCounter)
+	case *types.EntityNotExistsError:
+		metricsScope.IncCounter(metrics.PersistenceErrEntityNotExistsCounter)
+	case *TimeoutError:
+		metricsScope.IncCounter(metrics.PersistenceErrTimeoutCounter)
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+	case *types.ServiceBusyError:
+		metricsScope.IncCounter(metrics.PersistenceErrBusyCounter)
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+	case *DBUnavailableError:
+		metricsScope.IncCounter(metrics.PersistenceErrDBUnavailableCounter)
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+		p.logger.Error("DBUnavailable Error:", tag.Error(err), tag.MetricScope(scope))
+	default:
+		p.logger.Error("Operation failed with internal error.", tag.Error(err), tag.MetricScope(scope))
+		metricsScope.IncCounter(metrics.PersistenceFailures)
+	}
+}
+
+func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...metrics.Tag) error {
+	metricsScope := p.metricClient.Scope(scope, tags...)
+	if len(tags) > 0 {
+		metricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
+	} else {
+		metricsScope.IncCounter(metrics.PersistenceRequests)
+	}
 	before := time.Now()
 	err := op()
 	duration := time.Since(before)
-	p.metricClient.RecordTimer(scope, metrics.PersistenceLatency, duration)
-	if p.enableLatencyHistogramMetrics {
-		p.metricClient.RecordHistogramDuration(scope, metrics.PersistenceLatencyHistogram, duration)
+	if len(tags) > 0 {
+		metricsScope.RecordTimer(metrics.PersistenceLatencyPerDomain, duration)
+	} else {
+		metricsScope.RecordTimer(metrics.PersistenceLatency, duration)
 	}
 
+	if p.enableLatencyHistogramMetrics {
+		metricsScope.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
+	}
 	if err != nil {
-		p.updateErrorMetric(scope, err)
+		if len(tags) > 0 {
+			p.updateErrorMetricPerDomain(scope, err, metricsScope)
+		} else {
+			p.updateErrorMetric(scope, err, metricsScope)
+		}
 	}
 	return err
 }
@@ -333,7 +384,7 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +401,7 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(
 		resp, err = p.persistence.GetWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +418,7 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +435,7 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 		resp, err = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op)
+	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +449,7 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op)
+	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
@@ -408,7 +459,7 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op)
+	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
@@ -421,7 +472,7 @@ func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
 		resp, err = p.persistence.GetCurrentExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op)
+	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -436,6 +487,9 @@ func (p *workflowExecutionPersistenceClient) ListCurrentExecutions(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ListCurrentExecutions(ctx, request)
+		if err == nil && len(resp.Executions) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceListCurrentExecutionsScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceListCurrentExecutionsScope, op)
@@ -455,7 +509,7 @@ func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(
 		resp, err = p.persistence.IsWorkflowExecutionExists(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op)
+	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -487,6 +541,9 @@ func (p *workflowExecutionPersistenceClient) GetTransferTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetTransferTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetTransferTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetTransferTasksScope, op)
@@ -504,6 +561,9 @@ func (p *workflowExecutionPersistenceClient) GetCrossClusterTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetCrossClusterTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetCrossClusterTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetCrossClusterTasksScope, op)
@@ -521,6 +581,9 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetReplicationTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetReplicationTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetReplicationTasksScope, op)
@@ -618,7 +681,7 @@ func (p *workflowExecutionPersistenceClient) PutReplicationTaskToDLQ(
 	op := func() error {
 		return p.persistence.PutReplicationTaskToDLQ(ctx, request)
 	}
-	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op)
+	return p.call(metrics.PersistencePutReplicationTaskToDLQScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
@@ -629,6 +692,9 @@ func (p *workflowExecutionPersistenceClient) GetReplicationTasksFromDLQ(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetReplicationTasksFromDLQ(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetReplicationTasksFromDLQScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetReplicationTasksFromDLQScope, op)
@@ -700,6 +766,9 @@ func (p *workflowExecutionPersistenceClient) GetTimerIndexTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetTimerIndexTasks(ctx, request)
+		if err == nil && len(resp.Timers) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetTimerIndexTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetTimerIndexTasksScope, op)
@@ -754,7 +823,7 @@ func (p *taskPersistenceClient) CreateTasks(
 		resp, err = p.persistence.CreateTasks(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateTaskScope, op)
+	err := p.call(metrics.PersistenceCreateTaskScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -769,9 +838,12 @@ func (p *taskPersistenceClient) GetTasks(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetTasks(ctx, request)
+		if err == nil && len(resp.Tasks) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetTasksScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
-	err := p.call(metrics.PersistenceGetTasksScope, op)
+	err := p.call(metrics.PersistenceGetTasksScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -785,7 +857,7 @@ func (p *taskPersistenceClient) CompleteTask(
 	op := func() error {
 		return p.persistence.CompleteTask(ctx, request)
 	}
-	return p.call(metrics.PersistenceCompleteTaskScope, op)
+	return p.call(metrics.PersistenceCompleteTaskScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *taskPersistenceClient) CompleteTasksLessThan(
@@ -798,7 +870,7 @@ func (p *taskPersistenceClient) CompleteTasksLessThan(
 		resp, err = p.persistence.CompleteTasksLessThan(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCompleteTasksLessThanScope, op)
+	err := p.call(metrics.PersistenceCompleteTasksLessThanScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -829,7 +901,7 @@ func (p *taskPersistenceClient) LeaseTaskList(
 		resp, err = p.persistence.LeaseTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceLeaseTaskListScope, op)
+	err := p.call(metrics.PersistenceLeaseTaskListScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -860,7 +932,7 @@ func (p *taskPersistenceClient) DeleteTaskList(
 	op := func() error {
 		return p.persistence.DeleteTaskList(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteTaskListScope, op)
+	return p.call(metrics.PersistenceDeleteTaskListScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *taskPersistenceClient) UpdateTaskList(
@@ -873,7 +945,7 @@ func (p *taskPersistenceClient) UpdateTaskList(
 		resp, err = p.persistence.UpdateTaskList(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateTaskListScope, op)
+	err := p.call(metrics.PersistenceUpdateTaskListScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -960,6 +1032,9 @@ func (p *metadataPersistenceClient) ListDomains(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ListDomains(ctx, request)
+		if err == nil && len(resp.Domains) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceListDomainScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceListDomainScope, op)
@@ -1011,6 +1086,16 @@ func (p *visibilityPersistenceClient) RecordWorkflowExecutionClosed(
 		return p.persistence.RecordWorkflowExecutionClosed(ctx, request)
 	}
 	return p.call(metrics.PersistenceRecordWorkflowExecutionClosedScope, op)
+}
+
+func (p *visibilityPersistenceClient) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	op := func() error {
+		return p.persistence.RecordWorkflowExecutionUninitialized(ctx, request)
+	}
+	return p.call(metrics.PersistenceRecordWorkflowExecutionUninitializedScope, op)
 }
 
 func (p *visibilityPersistenceClient) UpsertWorkflowExecution(
@@ -1243,7 +1328,7 @@ func (p *historyPersistenceClient) AppendHistoryNodes(
 		resp, err = p.persistence.AppendHistoryNodes(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op)
+	err := p.call(metrics.PersistenceAppendHistoryNodesScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1259,9 +1344,13 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ReadHistoryBranch(ctx, request)
+		if err == nil && len(resp.HistoryEvents) == 0 {
+			scopeWithDomainTag := p.metricClient.Scope(metrics.PersistenceReadHistoryBranchScope, metrics.DomainTag(request.DomainName))
+			scopeWithDomainTag.IncCounter(metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1279,7 +1368,7 @@ func (p *historyPersistenceClient) ReadHistoryBranchByBatch(
 		resp, err = p.persistence.ReadHistoryBranchByBatch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1297,7 +1386,7 @@ func (p *historyPersistenceClient) ReadRawHistoryBranch(
 		resp, err = p.persistence.ReadRawHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1315,7 +1404,7 @@ func (p *historyPersistenceClient) ForkHistoryBranch(
 		resp, err = p.persistence.ForkHistoryBranch(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceForkHistoryBranchScope, op)
+	err := p.call(metrics.PersistenceForkHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1330,7 +1419,7 @@ func (p *historyPersistenceClient) DeleteHistoryBranch(
 	op := func() error {
 		return p.persistence.DeleteHistoryBranch(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op)
+	return p.call(metrics.PersistenceDeleteHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
@@ -1341,6 +1430,9 @@ func (p *historyPersistenceClient) GetAllHistoryTreeBranches(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.GetAllHistoryTreeBranches(ctx, request)
+		if err == nil && len(resp.Branches) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceGetAllHistoryTreeBranchesScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceGetAllHistoryTreeBranchesScope, op)
@@ -1361,7 +1453,7 @@ func (p *historyPersistenceClient) GetHistoryTree(
 		resp, err = p.persistence.GetHistoryTree(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetHistoryTreeScope, op)
+	err := p.call(metrics.PersistenceGetHistoryTreeScope, op, metrics.DomainTag(request.DomainName))
 	if err != nil {
 		return nil, err
 	}
@@ -1387,6 +1479,9 @@ func (p *queuePersistenceClient) ReadMessages(
 	op := func() error {
 		var err error
 		resp, err = p.persistence.ReadMessages(ctx, lastMessageID, maxCount)
+		if err == nil && len(resp) == 0 {
+			p.metricClient.IncCounter(metrics.PersistenceReadQueueMessagesScope, metrics.PersistenceEmptyResponseCounter)
+		}
 		return err
 	}
 	err := p.call(metrics.PersistenceReadQueueMessagesScope, op)

@@ -22,6 +22,7 @@ package task
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
-	"github.com/uber/cadence/service/worker/watchdog"
 )
 
 const (
@@ -50,11 +50,24 @@ const (
 	stickyTaskMaxRetryCount = 100
 )
 
+// redispatchError is the error indicating that the timer / transfer task should be redispatched and retried.
+type redispatchError struct {
+	Reason string
+}
+
+// Error explains why this task should be redispatched
+func (r *redispatchError) Error() string {
+	return fmt.Sprintf("Redispatch reason: %q", r.Reason)
+}
+
+func isRedispatchErr(err error) bool {
+	var redispatchErr *redispatchError
+	return errors.As(err, &redispatchErr)
+}
+
 var (
 	// ErrTaskDiscarded is the error indicating that the timer / transfer task is pending for too long and discarded.
 	ErrTaskDiscarded = errors.New("passive task pending for too long")
-	// ErrTaskRedispatch is the error indicating that the timer / transfer task should be re0dispatched and retried.
-	ErrTaskRedispatch = errors.New("passive task should be redispatched due to condition in mutable state is not met")
 	// ErrTaskPendingActive is the error indicating that the task should be re-dispatched
 	ErrTaskPendingActive = errors.New("redispatch the task while the domain is pending-active")
 )
@@ -163,7 +176,7 @@ func newTask(
 		Info:               taskInfo,
 		shard:              shard,
 		state:              ctask.TaskStatePending,
-		priority:           ctask.NoPriority,
+		priority:           common.NoPriority,
 		queueType:          queueType,
 		scopeIdx:           scopeIdx,
 		scope:              nil,
@@ -210,23 +223,6 @@ func (t *taskImpl) Execute() error {
 	return t.taskExecutor.Execute(t, t.shouldProcessTask)
 }
 
-func (t *taskImpl) reportCorruptWorkflowToWatchDog() error {
-	domainID := t.GetDomainID()
-	wid := t.GetWorkflowID()
-	rid := t.GetRunID()
-
-	domainName, err := t.shard.GetDomainCache().GetDomainName(domainID)
-	if err != nil {
-		return err
-	}
-
-	watchDogClient := watchdog.NewClient(
-		t.shard.GetLogger(),
-		t.shard.GetService().GetSDKClient(),
-	)
-	return watchDogClient.ReportCorruptWorkflow(domainName, wid, rid)
-}
-
 func (t *taskImpl) HandleErr(
 	err error,
 ) (retErr error) {
@@ -241,8 +237,10 @@ func (t *taskImpl) HandleErr(
 			if t.attempt > t.criticalRetryCount() {
 				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
 				t.logger.Error("Critical error processing task, retrying.",
-					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
-				t.reportCorruptWorkflowToWatchDog()
+					tag.Error(err),
+					tag.OperationCritical,
+					tag.TaskType(t.GetTaskType()),
+				)
 			}
 		}
 	}()
@@ -274,7 +272,7 @@ func (t *taskImpl) HandleErr(
 	}
 
 	// this is a transient error
-	if err == ErrTaskRedispatch {
+	if isRedispatchErr(err) {
 		t.scope.IncCounter(metrics.TaskStandbyRetryCounterPerDomain)
 		return err
 	}
@@ -300,7 +298,8 @@ func (t *taskImpl) HandleErr(
 	// so that a cross-cluster task can be created.
 	if err == errTargetDomainNotActive {
 		t.scope.IncCounter(metrics.TaskTargetNotActiveCounterPerDomain)
-		return err
+		t.logger.Error("Dropping 'domain-not-active' error as non-retriable", tag.Error(err))
+		return nil
 	}
 
 	// this is a transient error, and means source domain not active
@@ -336,7 +335,7 @@ func (t *taskImpl) HandleErr(
 func (t *taskImpl) RetryErr(
 	err error,
 ) bool {
-	if err == errWorkflowBusy || err == ErrTaskRedispatch || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
+	if err == errWorkflowBusy || isRedispatchErr(err) || err == ErrTaskPendingActive || common.IsContextTimeoutError(err) {
 		return false
 	}
 

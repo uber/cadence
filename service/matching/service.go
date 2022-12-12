@@ -84,7 +84,19 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("matching starting")
 
-	s.handler = NewHandler(s, s.config)
+	engine := NewEngine(
+		s.GetTaskManager(),
+		s.GetClusterMetadata(),
+		s.GetHistoryClient(),
+		s.GetMatchingRawClient(), // Use non retry client inside matching
+		s.config,
+		s.GetLogger(),
+		s.GetMetricsClient(),
+		s.GetDomainCache(),
+		s.GetMembershipResolver(),
+	)
+
+	s.handler = NewHandler(engine, s.config, s.GetDomainCache(), s.GetMetricsClient(), s.GetLogger(), s.GetThrottledLogger())
 
 	thriftHandler := NewThriftHandler(s.handler)
 	thriftHandler.register(s.GetDispatcher())

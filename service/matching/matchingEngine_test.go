@@ -36,6 +36,7 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -141,6 +142,7 @@ func newMatchingEngine(
 ) *matchingEngineImpl {
 	return &matchingEngineImpl{
 		taskManager:     taskMgr,
+		clusterMetadata: cluster.GetTestClusterMetadata(true),
 		historyService:  mockHistoryClient,
 		taskLists:       make(map[taskListID]taskListManager),
 		logger:          logger,
@@ -228,12 +230,25 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	}
 
 	_, err := s.matchingEngine.AddDecisionTask(s.handlerContext, &addRequest)
+	s.Error(err)
+	s.Contains(err.Error(), "sticky worker is unavailable")
+	// poll the sticky tasklist, should get no result
+	resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
+		DomainUUID: domainID,
+		PollRequest: &types.PollForDecisionTaskRequest{
+			TaskList: stickyTaskList,
+			Identity: identity},
+	})
+	s.NoError(err)
+	s.Equal(emptyPollForDecisionTaskResponse, resp)
+	// add task to sticky tasklist again, this time it should pass
+	_, err = s.matchingEngine.AddDecisionTask(s.handlerContext, &addRequest)
 	s.NoError(err)
 
 	taskList := &types.TaskList{}
 	taskList.Name = tl
 
-	resp, err := s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
+	resp, err = s.matchingEngine.PollForDecisionTask(s.handlerContext, &types.MatchingPollForDecisionTaskRequest{
 		DomainUUID: domainID,
 		PollRequest: &types.PollForDecisionTaskRequest{
 			TaskList: stickyTaskList,

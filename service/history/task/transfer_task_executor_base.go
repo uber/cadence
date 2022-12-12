@@ -151,6 +151,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 	isCron bool,
 	numClusters int16,
 	visibilityMemo *types.Memo,
+	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -185,7 +186,24 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		TaskList:           taskList,
 		IsCron:             isCron,
 		NumClusters:        numClusters,
+		UpdateTimestamp:    updateTimeUnixNano,
 		SearchAttributes:   searchAttributes,
+	}
+
+	if t.config.EnableRecordWorkflowExecutionUninitialized(domain) {
+		uninitializedRequest := &persistence.RecordWorkflowExecutionUninitializedRequest{
+			DomainUUID: domainID,
+			Domain:     domain,
+			Execution: types.WorkflowExecution{
+				WorkflowID: workflowID,
+				RunID:      runID,
+			},
+			WorkflowTypeName: workflowTypeName,
+			UpdateTimestamp:  updateTimeUnixNano,
+		}
+		if err := t.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
+			t.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
+		}
 	}
 
 	return t.visibilityMgr.RecordWorkflowExecutionStarted(ctx, request)
@@ -205,6 +223,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 	visibilityMemo *types.Memo,
 	isCron bool,
 	numClusters int16,
+	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -233,6 +252,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		IsCron:             isCron,
 		NumClusters:        numClusters,
 		SearchAttributes:   searchAttributes,
+		UpdateTimestamp:    updateTimeUnixNano,
 	}
 
 	return t.visibilityMgr.UpsertWorkflowExecution(ctx, request)
@@ -254,6 +274,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 	taskList string,
 	isCron bool,
 	numClusters int16,
+	updateTimeUnixNano int64,
 	searchAttributes map[string][]byte,
 ) error {
 
@@ -303,6 +324,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			TaskList:           taskList,
 			SearchAttributes:   searchAttributes,
 			IsCron:             isCron,
+			UpdateTimestamp:    updateTimeUnixNano,
 			NumClusters:        numClusters,
 		}); err != nil {
 			return err

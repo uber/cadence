@@ -22,6 +22,7 @@ package public
 
 import (
 	"context"
+	"strings"
 
 	gogocql "github.com/gocql/gocql"
 
@@ -67,6 +68,27 @@ func (c client) IsThrottlingError(err error) bool {
 	if req, ok := err.(gogocql.RequestError); ok {
 		// gocql does not expose the constant errOverloaded = 0x1001
 		return req.Code() == 0x1001
+	}
+	return false
+}
+
+func (c client) IsDBUnavailableError(err error) bool {
+	if req, ok := err.(gogocql.RequestError); ok {
+		// 0x1000 == UNAVAILABLE
+		if req.Code() != 0x1000 {
+			return false
+		}
+		if strings.Contains(req.Message(), "Cannot perform LWT operation") {
+			return true
+		}
+	}
+	return false
+}
+
+func (c client) IsCassandraConsistencyError(err error) bool {
+	if req, ok := err.(gogocql.RequestError); ok {
+		// 0x1000 == UNAVAILABLE
+		return req.Code() == 0x1000
 	}
 	return false
 }

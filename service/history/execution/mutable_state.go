@@ -61,7 +61,7 @@ type (
 		AddActivityTaskCanceledEvent(int64, int64, int64, []uint8, string) (*types.HistoryEvent, error)
 		AddActivityTaskCompletedEvent(int64, int64, *types.RespondActivityTaskCompletedRequest) (*types.HistoryEvent, error)
 		AddActivityTaskFailedEvent(int64, int64, *types.RespondActivityTaskFailedRequest) (*types.HistoryEvent, error)
-		AddActivityTaskScheduledEvent(int64, *types.ScheduleActivityTaskDecisionAttributes) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, error)
+		AddActivityTaskScheduledEvent(context.Context, int64, *types.ScheduleActivityTaskDecisionAttributes, bool) (*types.HistoryEvent, *persistence.ActivityInfo, *types.ActivityLocalDispatchInfo, bool, bool, error)
 		AddActivityTaskStartedEvent(*persistence.ActivityInfo, int64, string, string) (*types.HistoryEvent, error)
 		AddActivityTaskTimedOutEvent(int64, int64, types.TimeoutType, []uint8) (*types.HistoryEvent, error)
 		AddCancelTimerFailedEvent(int64, *types.CancelTimerDecisionAttributes, string) (*types.HistoryEvent, error)
@@ -173,7 +173,7 @@ type (
 		ReplicateActivityTaskCanceledEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskCompletedEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskFailedEvent(*types.HistoryEvent) error
-		ReplicateActivityTaskScheduledEvent(int64, *types.HistoryEvent) (*persistence.ActivityInfo, error)
+		ReplicateActivityTaskScheduledEvent(int64, *types.HistoryEvent, bool) (*persistence.ActivityInfo, error)
 		ReplicateActivityTaskStartedEvent(*types.HistoryEvent) error
 		ReplicateActivityTaskTimedOutEvent(*types.HistoryEvent) error
 		ReplicateChildWorkflowExecutionCanceledEvent(*types.HistoryEvent) error
@@ -184,7 +184,7 @@ type (
 		ReplicateChildWorkflowExecutionTimedOutEvent(*types.HistoryEvent) error
 		ReplicateDecisionTaskCompletedEvent(*types.HistoryEvent) error
 		ReplicateDecisionTaskFailedEvent() error
-		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64) (*DecisionInfo, error)
+		ReplicateDecisionTaskScheduledEvent(int64, int64, string, int32, int64, int64, int64, bool) (*DecisionInfo, error)
 		ReplicateDecisionTaskStartedEvent(*DecisionInfo, int64, int64, int64, string, int64) (*DecisionInfo, error)
 		ReplicateDecisionTaskTimedOutEvent(types.TimeoutType) error
 		ReplicateExternalWorkflowExecutionCancelRequested(*types.HistoryEvent) error
@@ -198,15 +198,15 @@ type (
 		ReplicateTimerCanceledEvent(*types.HistoryEvent) error
 		ReplicateTimerFiredEvent(*types.HistoryEvent) error
 		ReplicateTimerStartedEvent(*types.HistoryEvent) (*persistence.TimerInfo, error)
-		ReplicateTransientDecisionTaskScheduled() (*DecisionInfo, error)
-		ReplicateUpsertWorkflowSearchAttributesEvent(*types.HistoryEvent)
+		ReplicateTransientDecisionTaskScheduled() error
+		ReplicateUpsertWorkflowSearchAttributesEvent(*types.HistoryEvent) error
 		ReplicateWorkflowExecutionCancelRequestedEvent(*types.HistoryEvent) error
 		ReplicateWorkflowExecutionCanceledEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionCompletedEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionContinuedAsNewEvent(int64, string, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionFailedEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionSignaled(*types.HistoryEvent) error
-		ReplicateWorkflowExecutionStartedEvent(*string, types.WorkflowExecution, string, *types.HistoryEvent) error
+		ReplicateWorkflowExecutionStartedEvent(*string, types.WorkflowExecution, string, *types.HistoryEvent, bool) error
 		ReplicateWorkflowExecutionTerminatedEvent(int64, *types.HistoryEvent) error
 		ReplicateWorkflowExecutionTimedoutEvent(int64, *types.HistoryEvent) error
 		SetCurrentBranchToken(branchToken []byte) error

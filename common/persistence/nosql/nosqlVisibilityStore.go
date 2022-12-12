@@ -50,8 +50,9 @@ func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
 	cfg config.NoSQL,
 	logger log.Logger,
+	dc *p.DynamicConfiguration,
 ) (p.VisibilityStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger)
+	db, err := NewNoSQLDB(&cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +84,7 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 			TaskList:      request.TaskList,
 			IsCron:        request.IsCron,
 			NumClusters:   request.NumClusters,
+			UpdateTime:    request.UpdateTimestamp,
 		},
 	})
 	if err != nil {
@@ -119,12 +121,21 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionClosed(
 			Status:        &request.Status,
 			CloseTime:     request.CloseTimestamp,
 			HistoryLength: request.HistoryLength,
+			UpdateTime:    request.UpdateTimestamp,
 		},
 	})
 
 	if err != nil {
 		return convertCommonErrors(v.db, "RecordWorkflowExecutionClosed", err)
 	}
+	return nil
+}
+
+func (v *nosqlVisibilityStore) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *p.InternalRecordWorkflowExecutionUninitializedRequest,
+) error {
+	// temporary: not implemented, only implemented for ES
 	return nil
 }
 
@@ -135,7 +146,7 @@ func (v *nosqlVisibilityStore) UpsertWorkflowExecution(
 	if p.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.NewOperationNotSupportErrorForVis()
+	return p.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) ListOpenWorkflowExecutions(
@@ -352,21 +363,21 @@ func (v *nosqlVisibilityStore) DeleteWorkflowExecution(
 }
 
 func (v *nosqlVisibilityStore) ListWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (v *nosqlVisibilityStore) CountWorkflowExecutions(
-	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
+	_ context.Context,
+	_ *p.CountWorkflowExecutionsRequest,
 ) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }

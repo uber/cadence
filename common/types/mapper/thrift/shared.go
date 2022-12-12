@@ -21,9 +21,8 @@
 package thrift
 
 import (
-	"github.com/uber/cadence/common/types"
-
 	"github.com/uber/cadence/.gen/go/shared"
+	"github.com/uber/cadence/common/types"
 )
 
 // FromAccessDeniedError converts internal AccessDeniedError type to thrift
@@ -4230,10 +4229,12 @@ func FromRequestCancelWorkflowExecutionRequest(t *types.RequestCancelWorkflowExe
 		return nil
 	}
 	return &shared.RequestCancelWorkflowExecutionRequest{
-		Domain:            &t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Identity:          &t.Identity,
-		RequestId:         &t.RequestID,
+		Domain:              &t.Domain,
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
+		Identity:            &t.Identity,
+		RequestId:           &t.RequestID,
+		Cause:               &t.Cause,
+		FirstExecutionRunID: &t.FirstExecutionRunID,
 	}
 }
 
@@ -4243,10 +4244,12 @@ func ToRequestCancelWorkflowExecutionRequest(t *shared.RequestCancelWorkflowExec
 		return nil
 	}
 	return &types.RequestCancelWorkflowExecutionRequest{
-		Domain:            t.GetDomain(),
-		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Identity:          t.GetIdentity(),
-		RequestID:         t.GetRequestId(),
+		Domain:              t.GetDomain(),
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
+		Identity:            t.GetIdentity(),
+		RequestID:           t.GetRequestId(),
+		Cause:               t.GetCause(),
+		FirstExecutionRunID: t.GetFirstExecutionRunID(),
 	}
 }
 
@@ -4756,6 +4759,18 @@ func ToRetryTaskV2Error(t *shared.RetryTaskV2Error) *types.RetryTaskV2Error {
 	}
 }
 
+// ToRestartWorkflowExecutionRequest converts thrift RestartWorkflowExecutionRequest type to internal
+func ToRestartWorkflowExecutionRequest(t *shared.RestartWorkflowExecutionRequest) *types.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionRequest{
+		Domain:            t.GetDomain(),
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
+		Identity:          t.GetIdentity(),
+	}
+}
+
 // FromScheduleActivityTaskDecisionAttributes converts internal ScheduleActivityTaskDecisionAttributes type to thrift
 func FromScheduleActivityTaskDecisionAttributes(t *types.ScheduleActivityTaskDecisionAttributes) *shared.ScheduleActivityTaskDecisionAttributes {
 	if t == nil {
@@ -5238,6 +5253,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		SearchAttributes:                    FromSearchAttributes(t.SearchAttributes),
 		Header:                              FromHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
+		JitterStartSeconds:                  t.JitterStartSeconds,
 	}
 }
 
@@ -5263,6 +5279,17 @@ func ToStartWorkflowExecutionRequest(t *shared.StartWorkflowExecutionRequest) *t
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   t.DelayStartSeconds,
+		JitterStartSeconds:                  t.JitterStartSeconds,
+	}
+}
+
+// FromRestartWorkflowExecutionResponse converts internal RestartWorkflowExecutionResponse type to thrift
+func FromRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *shared.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionResponse{
+		RunId: &t.RunID,
 	}
 }
 
@@ -5508,17 +5535,40 @@ func ToTaskListType(t *shared.TaskListType) *types.TaskListType {
 	panic("unexpected enum value")
 }
 
+// ToRestartWorkflowExecutionResponse converts thrift RestartWorkflowExecutionResponse type to internal
+func ToRestartWorkflowExecutionResponse(t *shared.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionResponse{
+		RunID: t.GetRunId(),
+	}
+}
+
+// FromRestartWorkflowExecutionRequest converts internal RestartWorkflowExecutionRequest type to thrift
+func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *shared.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &shared.RestartWorkflowExecutionRequest{
+		Domain:            &t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
+		Identity:          &t.Identity,
+	}
+}
+
 // FromTerminateWorkflowExecutionRequest converts internal TerminateWorkflowExecutionRequest type to thrift
 func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRequest) *shared.TerminateWorkflowExecutionRequest {
 	if t == nil {
 		return nil
 	}
 	return &shared.TerminateWorkflowExecutionRequest{
-		Domain:            &t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Reason:            &t.Reason,
-		Details:           t.Details,
-		Identity:          &t.Identity,
+		Domain:              &t.Domain,
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
+		Reason:              &t.Reason,
+		Details:             t.Details,
+		Identity:            &t.Identity,
+		FirstExecutionRunID: &t.FirstExecutionRunID,
 	}
 }
 
@@ -5528,11 +5578,12 @@ func ToTerminateWorkflowExecutionRequest(t *shared.TerminateWorkflowExecutionReq
 		return nil
 	}
 	return &types.TerminateWorkflowExecutionRequest{
-		Domain:            t.GetDomain(),
-		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.GetReason(),
-		Details:           t.Details,
-		Identity:          t.GetIdentity(),
+		Domain:              t.GetDomain(),
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
+		Reason:              t.GetReason(),
+		Details:             t.Details,
+		Identity:            t.GetIdentity(),
+		FirstExecutionRunID: t.GetFirstExecutionRunID(),
 	}
 }
 
@@ -6218,6 +6269,7 @@ func FromWorkflowExecutionInfo(t *types.WorkflowExecutionInfo) *shared.WorkflowE
 		AutoResetPoints:  FromResetPoints(t.AutoResetPoints),
 		TaskList:         &t.TaskList,
 		IsCron:           &t.IsCron,
+		UpdateTime:       t.UpdateTime,
 	}
 }
 
@@ -6241,6 +6293,7 @@ func ToWorkflowExecutionInfo(t *shared.WorkflowExecutionInfo) *types.WorkflowExe
 		AutoResetPoints:  ToResetPoints(t.AutoResetPoints),
 		TaskList:         t.GetTaskList(),
 		IsCron:           t.GetIsCron(),
+		UpdateTime:       t.UpdateTime,
 	}
 }
 
@@ -6273,6 +6326,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 	if t == nil {
 		return nil
 	}
+
 	return &shared.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        FromWorkflowType(t.WorkflowType),
 		ParentWorkflowDomain:                t.ParentWorkflowDomain,
@@ -6290,6 +6344,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		OriginalExecutionRunId:              &t.OriginalExecutionRunID,
 		Identity:                            &t.Identity,
 		FirstExecutionRunId:                 &t.FirstExecutionRunID,
+		FirstScheduledTimeNano:              timeToNano(t.FirstScheduleTime),
 		RetryPolicy:                         FromRetryPolicy(t.RetryPolicy),
 		Attempt:                             &t.Attempt,
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
@@ -6307,6 +6362,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 	if t == nil {
 		return nil
 	}
+
 	return &types.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                        ToWorkflowType(t.WorkflowType),
 		ParentWorkflowDomain:                t.ParentWorkflowDomain,
@@ -6324,6 +6380,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *shared.WorkflowExecutionStarte
 		OriginalExecutionRunID:              t.GetOriginalExecutionRunId(),
 		Identity:                            t.GetIdentity(),
 		FirstExecutionRunID:                 t.GetFirstExecutionRunId(),
+		FirstScheduleTime:                   nanoToTime(t.FirstScheduledTimeNano),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.GetAttempt(),
 		ExpirationTimestamp:                 t.ExpirationTimestamp,
@@ -7851,5 +7908,25 @@ func ToRespondCrossClusterTasksCompletedResponse(t *shared.RespondCrossClusterTa
 	}
 	return &types.RespondCrossClusterTasksCompletedResponse{
 		Tasks: ToCrossClusterTaskRequestArray(t.Tasks),
+	}
+}
+
+// FromStickyWorkerUnavailableError converts internal StickyWorkerUnavailableError type to thrift
+func FromStickyWorkerUnavailableError(t *types.StickyWorkerUnavailableError) *shared.StickyWorkerUnavailableError {
+	if t == nil {
+		return nil
+	}
+	return &shared.StickyWorkerUnavailableError{
+		Message: t.Message,
+	}
+}
+
+// ToStickyWorkerUnavailableError converts thrift StickyWorkerUnavailableError type to internal
+func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *types.StickyWorkerUnavailableError {
+	if t == nil {
+		return nil
+	}
+	return &types.StickyWorkerUnavailableError{
+		Message: t.Message,
 	}
 }

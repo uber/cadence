@@ -44,7 +44,7 @@ func TestSizeLimitIntegrationSuite(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
+	testCluster := NewPersistenceTestCluster(t, clusterConfig)
 
 	s := new(SizeLimitIntegrationSuite)
 	params := IntegrationBaseParams{

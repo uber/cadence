@@ -26,6 +26,7 @@ const (
 		`domain_id: ?, ` +
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
+		`first_run_id: ?, ` +
 		`parent_domain_id: ?, ` +
 		`parent_workflow_id: ?, ` +
 		`parent_run_id: ?, ` +

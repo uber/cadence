@@ -32,6 +32,15 @@ import (
 func newWorkflowCommands() []cli.Command {
 	return []cli.Command{
 		{
+			Name:    "restart",
+			Aliases: []string{"res"},
+			Usage:   "restarts a previous workflow execution",
+			Flags:   flagsForExecution,
+			Action: func(c *cli.Context) {
+				RestartWorkflow(c)
+			},
+		},
+		{
 			Name:        "activity",
 			Aliases:     []string{"act"},
 			Usage:       "operate activities of workflow",
@@ -74,7 +83,7 @@ func newWorkflowCommands() []cli.Command {
 			Name:    "cancel",
 			Aliases: []string{"c"},
 			Usage:   "cancel a workflow execution",
-			Flags:   flagsForExecution,
+			Flags:   getFlagsForCancel(),
 			Action: func(c *cli.Context) {
 				CancelWorkflow(c)
 			},

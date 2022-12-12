@@ -79,6 +79,11 @@ func NewCliApp() *cli.App {
 			Usage:  "optional argument for transport protocol format, either 'grpc' or 'tchannel'. Defaults to tchannel if not provided",
 			EnvVar: "CADENCE_CLI_TRANSPORT_PROTOCOL",
 		},
+		cli.StringFlag{
+			Name:   FlagTLSCertPathWithAlias,
+			Usage:  "optional argument for path to TLS certificate. Defaults to an empty string if not provided",
+			EnvVar: "CADENCE_CLI_TLS_CERT_PATH",
+		},
 	}
 	app.Commands = []cli.Command{
 		{

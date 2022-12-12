@@ -72,7 +72,6 @@ services:
       port: 7940
 
 clusterGroupMetadata:
-  enableGlobalDomain: true
   failoverVersionIncrement: 10
   primaryClusterName: "cluster0"
   currentClusterName: "cluster0"
@@ -80,6 +79,7 @@ clusterGroupMetadata:
     cluster0:
       enabled: true
       initialFailoverVersion: 0
+      newInitialFailoverVersion: 1 # migrating to this new failover version
       rpcAddress: "localhost:7833" # this is to let worker service and XDC replicator connected to the frontend service. In cluster setup, localhost will not work
       rpcTransport: "grpc"
 

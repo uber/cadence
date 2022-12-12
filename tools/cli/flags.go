@@ -37,6 +37,7 @@ const (
 	FlagDBAddress                         = "db_address"
 	FlagDBPort                            = "db_port"
 	FlagDBRegion                          = "db_region"
+	FlagDBShard                           = "db_shard"
 	FlagHistoryAddressWithAlias           = FlagHistoryAddress + ", had"
 	FlagProtoVersion                      = "protocol_version"
 	FlagDomainID                          = "domain_id"
@@ -82,6 +83,8 @@ const (
 	FlagInputWithAlias                    = FlagInput + ", i"
 	FlagInputFile                         = "input_file"
 	FlagInputFileWithAlias                = FlagInputFile + ", if"
+	FlagInputEncoding                     = "encoding"
+	FlagInputEncodingWithAlias            = FlagInputEncoding + ", enc"
 	FlagSignalInput                       = "signal_input"
 	FlagSignalInputWithAlias              = FlagSignalInput + ", si"
 	FlagSignalInputFile                   = "signal_input_file"
@@ -235,6 +238,7 @@ const (
 	FlagServiceZoneWithAlias              = FlagServiceZone + ", sz"
 	FlagEnableTLS                         = "tls"
 	FlagTLSCertPath                       = "tls_cert_path"
+	FlagTLSCertPathWithAlias              = FlagTLSCertPath + ", tcp"
 	FlagTLSKeyPath                        = "tls_key_path"
 	FlagTLSCaPath                         = "tls_ca_path"
 	FlagTLSEnableHostVerification         = "tls_enable_host_verification"
@@ -279,6 +283,7 @@ const (
 	FlagShardMultiplier                   = "shard_multiplier"
 	FlagBucketSize                        = "bucket_size"
 	DelayStartSeconds                     = "delay_start_seconds"
+	JitterStartSeconds                    = "jitter_start_seconds"
 	FlagConnectionAttributes              = "conn_attrs"
 	FlagJWT                               = "jwt"
 	FlagJWTPrivateKey                     = "jwt-private-key"
@@ -468,6 +473,10 @@ func getFlagsForStart() []cli.Flag {
 			Name:  DelayStartSeconds,
 			Usage: "Optional workflow start delay in seconds. If set workflow start will be delayed this many seconds",
 		},
+		cli.IntFlag{
+			Name:  JitterStartSeconds,
+			Usage: "Optional workflow start jitter in seconds. If set, workflow start will be jittered between 0-n seconds (after delay)",
+		},
 	}
 }
 
@@ -531,6 +540,13 @@ func getFlagsForTerminate() []cli.Flag {
 	return append(flagsForExecution, cli.StringFlag{
 		Name:  FlagReasonWithAlias,
 		Usage: "The reason you want to terminate the workflow",
+	})
+}
+
+func getFlagsForCancel() []cli.Flag {
+	return append(flagsForExecution, cli.StringFlag{
+		Name:  FlagReasonWithAlias,
+		Usage: "The reason you want to cancel the workflow",
 	})
 }
 

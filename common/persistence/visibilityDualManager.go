@@ -110,6 +110,21 @@ func (v *visibilityDualManager) RecordWorkflowExecutionClosed(
 	)
 }
 
+func (v *visibilityDualManager) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	return v.chooseVisibilityManagerForWrite(
+		ctx,
+		func() error {
+			return v.dbVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
+		},
+		func() error {
+			return v.esVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
+		},
+	)
+}
+
 func (v *visibilityDualManager) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *VisibilityDeleteWorkflowExecutionRequest,
@@ -166,30 +181,29 @@ func (v *visibilityDualManager) chooseVisibilityManagerForWrite(ctx context.Cont
 
 	switch writeMode {
 	case common.AdvancedVisibilityWritingModeOff:
-		if v.dbVisibilityManager == nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
-			}
+		if v.dbVisibilityManager != nil {
+			return dbVisFunc()
 		}
-		return dbVisFunc()
-	case common.AdvancedVisibilityWritingModeOn:
-		if v.esVisibilityManager == nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
-			}
-		}
-
+		v.logger.Warn("basic visibility is not available to write, fall back to advanced visibility")
 		return esVisFunc()
+	case common.AdvancedVisibilityWritingModeOn:
+		if v.esVisibilityManager != nil {
+			return esVisFunc()
+		}
+		v.logger.Warn("advanced visibility is not available to write, fall back to basic visibility")
+		return dbVisFunc()
 	case common.AdvancedVisibilityWritingModeDual:
-		if v.dbVisibilityManager == nil || v.esVisibilityManager == nil {
-			return &types.InternalServiceError{
-				Message: fmt.Sprintf("visibility writing mode: %s is misconfigured", writeMode),
+		if v.esVisibilityManager != nil {
+			if err := esVisFunc(); err != nil {
+				return err
 			}
+			if v.dbVisibilityManager != nil {
+				return dbVisFunc()
+			}
+			v.logger.Warn("basic visibility is not available to write")
+			return nil
 		}
-
-		if err := esVisFunc(); err != nil {
-			return err
-		}
+		v.logger.Warn("advanced visibility is not available to write")
 		return dbVisFunc()
 	default:
 		return &types.InternalServiceError{

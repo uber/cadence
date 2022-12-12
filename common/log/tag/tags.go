@@ -88,6 +88,11 @@ func WorkflowID(workflowID string) Tag {
 	return newStringTag("wf-id", workflowID)
 }
 
+// TargetWorkflowID returns tag for target WorkflowID
+func TargetWorkflowID(workflowID string) Tag {
+	return newStringTag("target-wf-id", workflowID)
+}
+
 // WorkflowType returns tag for WorkflowType
 func WorkflowType(wfType string) Tag {
 	return newStringTag("wf-type", wfType)
@@ -101,6 +106,11 @@ func WorkflowState(s int) Tag {
 // WorkflowRunID returns tag for WorkflowRunID
 func WorkflowRunID(runID string) Tag {
 	return newStringTag("wf-run-id", runID)
+}
+
+// TargetWorkflowRunID returns tag for target  WorkflowRunID
+func TargetWorkflowRunID(runID string) Tag {
+	return newStringTag("target-wf-run-id", runID)
 }
 
 // WorkflowResetBaseRunID returns tag for WorkflowResetBaseRunID
@@ -160,6 +170,11 @@ func WorkflowDomainID(domainID string) Tag {
 	return newStringTag("wf-domain-id", domainID)
 }
 
+// TargetWorkflowDomainID returns tag for target WorkflowDomainID
+func TargetWorkflowDomainID(domainID string) Tag {
+	return newStringTag("target-wf-domain-id", domainID)
+}
+
 // WorkflowDomainName returns tag for WorkflowDomainName
 func WorkflowDomainName(domainName string) Tag {
 	return newStringTag("wf-domain-name", domainName)
@@ -168,6 +183,11 @@ func WorkflowDomainName(domainName string) Tag {
 // WorkflowDomainIDs returns tag for WorkflowDomainIDs
 func WorkflowDomainIDs(domainIDs interface{}) Tag {
 	return newObjectTag("wf-domain-ids", domainIDs)
+}
+
+// OperationName returns tag for OperationName
+func OperationName(operationName string) Tag {
+	return newStringTag("operation-name", operationName)
 }
 
 // history event ID related
@@ -200,16 +220,6 @@ func WorkflowFirstEventID(firstEventID int64) Tag {
 // WorkflowNextEventID returns tag for WorkflowNextEventID
 func WorkflowNextEventID(nextEventID int64) Tag {
 	return newInt64("wf-next-event-id", nextEventID)
-}
-
-// WorkflowBeginningFirstEventID returns tag for WorkflowBeginningFirstEventID
-func WorkflowBeginningFirstEventID(beginningFirstEventID int64) Tag {
-	return newInt64("wf-begining-first-event-id", beginningFirstEventID)
-}
-
-// WorkflowEndingNextEventID returns tag for WorkflowEndingNextEventID
-func WorkflowEndingNextEventID(endingNextEventID int64) Tag {
-	return newInt64("wf-ending-next-event-id", endingNextEventID)
 }
 
 // WorkflowResetNextEventID returns tag for WorkflowResetNextEventID
@@ -286,6 +296,10 @@ func WorkflowHistorySizeBytes(historySizeBytes int) Tag {
 // WorkflowEventCount returns tag for EventCount
 func WorkflowEventCount(eventCount int) Tag {
 	return newInt("wf-event-count", eventCount)
+}
+
+func WorkflowEventType(eventType string) Tag {
+	return newStringTag("wf-event-type", eventType)
 }
 
 ///////////////////  System tags defined here:  ///////////////////
@@ -453,6 +467,11 @@ func ShardTime(shardTime interface{}) Tag {
 // ShardReplicationAck returns tag for ShardReplicationAck
 func ShardReplicationAck(shardReplicationAck int64) Tag {
 	return newInt64("shard-replication-ack", shardReplicationAck)
+}
+
+// ShardReplicationToken returns information about a particular replication request
+func ShardReplicationToken(token interface{}) Tag {
+	return newObjectTag("shard-replication-token", token)
 }
 
 // PreviousShardRangeID returns tag for PreviousShardRangeID
@@ -664,6 +683,10 @@ func SourceCluster(sourceCluster string) Tag {
 	return newStringTag("xdc-source-cluster", sourceCluster)
 }
 
+func RemoteCluster(remoteCluster string) Tag {
+	return newStringTag("xdc-remote-cluster", remoteCluster)
+}
+
 // PrevActiveCluster returns tag for PrevActiveCluster
 func PrevActiveCluster(prevActiveCluster string) Tag {
 	return newStringTag("xdc-prev-active-cluster", prevActiveCluster)
@@ -707,6 +730,21 @@ func LastEventVersion(version int64) Tag {
 // TokenLastEventVersion returns tag for TokenLastEventVersion
 func TokenLastEventVersion(version int64) Tag {
 	return newInt64("xdc-token-last-event-version", version)
+}
+
+// ResponseSize returns tag for ResponseSize
+func ResponseSize(size int) Tag {
+	return newInt("response-size", size)
+}
+
+// ResponseTotalSize returns tag for ResponseTotalSize
+func ResponseTotalSize(size int) Tag {
+	return newInt("response-total-size", size)
+}
+
+// ResponseMaxSize returns tag for ResponseMaxSize
+func ResponseMaxSize(size int) Tag {
+	return newInt("response-max-size", size)
 }
 
 ///////////////////  Archival tags defined here: archival- ///////////////////
@@ -823,4 +861,10 @@ func ArchivalBlobstoreContextTimeout(blobstoreContextTimeout time.Duration) Tag 
 // VisibilityQuery returns tag for the query for getting visibility records
 func VisibilityQuery(query string) Tag {
 	return newStringTag("visibility-query", query)
+}
+
+// Dynamic Uses reflection based logging for arbitrary values
+// for not very performant logging
+func Dynamic(key string, v interface{}) Tag {
+	return newPredefinedDynamicTag(key, v)
 }

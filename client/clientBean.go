@@ -68,11 +68,7 @@ func NewClientBean(factory Factory, dispatcher *yarpc.Dispatcher, clusterMetadat
 
 	remoteAdminClients := map[string]admin.Client{}
 	remoteFrontendClients := map[string]frontend.Client{}
-	for clusterName, info := range clusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
-
+	for clusterName := range clusterMetadata.GetEnabledClusterInfo() {
 		clientConfig := dispatcher.ClientConfig(clusterName)
 
 		adminClient, err := factory.NewAdminClientWithTimeoutAndConfig(

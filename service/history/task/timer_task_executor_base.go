@@ -225,12 +225,16 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 	ctx context.Context,
 	task *persistence.TimerTaskInfo,
 ) error {
-
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return err
+	}
 	op := func() error {
 		return t.shard.GetExecutionManager().DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
+			DomainName: domainName,
 		})
 	}
 	return t.throttleRetry.Do(ctx, op)
@@ -240,12 +244,16 @@ func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
 	ctx context.Context,
 	task *persistence.TimerTaskInfo,
 ) error {
-
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return err
+	}
 	op := func() error {
 		return t.shard.GetExecutionManager().DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
+			DomainName: domainName,
 		})
 	}
 	return t.throttleRetry.Do(ctx, op)
@@ -262,9 +270,14 @@ func (t *timerTaskExecutorBase) deleteWorkflowHistory(
 		if err != nil {
 			return err
 		}
+		domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+		if err != nil {
+			return err
+		}
 		return t.shard.GetHistoryManager().DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     common.IntPtr(t.shard.GetShardID()),
+			DomainName:  domainName,
 		})
 
 	}
@@ -276,9 +289,14 @@ func (t *timerTaskExecutorBase) deleteWorkflowVisibility(
 	task *persistence.TimerTaskInfo,
 ) error {
 
+	domain, errorDomainName := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if errorDomainName != nil {
+		return errorDomainName
+	}
 	op := func() error {
 		request := &persistence.VisibilityDeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
+			Domain:     domain,
 			WorkflowID: task.WorkflowID,
 			RunID:      task.RunID,
 			TaskID:     task.TaskID,

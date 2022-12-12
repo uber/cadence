@@ -21,7 +21,6 @@
 package cassandra
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -47,18 +46,18 @@ type (
 		AllowedAuthenticators []string
 		Keyspace              string
 		Timeout               int
+		ConnectTimeout        int
 		NumReplicas           int
 		ProtoVersion          int
 		TLS                   *config.TLS
 	}
 )
 
-var errGetSchemaVersion = errors.New("failed to get current schema version from cassandra")
-
 const (
-	DefaultTimeout       = 30 // Timeout in seconds
-	DefaultCassandraPort = 9042
-	SystemKeyspace       = "system"
+	DefaultTimeout        = 30 // Timeout in seconds
+	DefaultConnectTimeout = 2  // Connect timeout in seconds
+	DefaultCassandraPort  = 9042
+	SystemKeyspace        = "system"
 )
 
 const (
@@ -85,6 +84,9 @@ const (
 
 	createKeyspaceCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
 		`WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : %v};`
+
+	createNTSKeyspaceCQL = `CREATE KEYSPACE IF NOT EXISTS %v ` +
+		`WITH replication = { 'class' : 'NetworkTopologyStrategy', '%v' : %v};`
 )
 
 var _ schema.SchemaClient = (*CqlClient)(nil)
@@ -105,6 +107,7 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 		Keyspace:              cfg.Keyspace,
 		TLS:                   cfg.TLS,
 		Timeout:               time.Duration(cfg.Timeout) * time.Second,
+		ConnectTimeout:        time.Duration(cfg.ConnectTimeout) * time.Second,
 		ProtoVersion:          cfg.ProtoVersion,
 		Consistency:           gocql.All,
 	})
@@ -122,9 +125,14 @@ func (client *CqlClient) DropDatabase(name string) error {
 	return client.DropKeyspace(name)
 }
 
-// createKeyspace creates a cassandra Keyspace if it doesn't exist
+// CreateKeyspace creates a cassandra Keyspace if it doesn't exist
 func (client *CqlClient) CreateKeyspace(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
+}
+
+// CreateNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
+func (client *CqlClient) CreateNTSKeyspace(name string, datacenter string) error {
+	return client.ExecDDLQuery(fmt.Sprintf(createNTSKeyspaceCQL, name, datacenter, client.nReplicas))
 }
 
 // DropKeyspace drops a Keyspace
@@ -150,8 +158,8 @@ func (client *CqlClient) ReadSchemaVersion() (string, error) {
 	iter := query.Iter()
 	var version string
 	if !iter.Scan(&version) {
-		iter.Close()
-		return "", errGetSchemaVersion
+		err := iter.Close()
+		return "", fmt.Errorf("reading schema version: %w", err)
 	}
 	if err := iter.Close(); err != nil {
 		return "", err
@@ -159,7 +167,7 @@ func (client *CqlClient) ReadSchemaVersion() (string, error) {
 	return version, nil
 }
 
-// UpdateShemaVersion updates the schema version for the Keyspace
+// UpdateSchemaVersion updates the schema version for the Keyspace
 func (client *CqlClient) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
 	query := client.session.Query(writeSchemaVersionCQL, client.cfg.Keyspace, time.Now(), newVersion, minCompatibleVersion)
 	return query.Exec()

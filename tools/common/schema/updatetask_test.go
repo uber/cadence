@@ -21,12 +21,17 @@
 package schema
 
 import (
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/uber/cadence/schema/cassandra"
+	"github.com/uber/cadence/schema/mysql"
+	"github.com/uber/cadence/schema/postgres"
 )
 
 type UpdateTaskTestSuite struct {
@@ -44,17 +49,9 @@ func (s *UpdateTaskTestSuite) SetupSuite() {
 
 func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 
-	emptyDir, err := ioutil.TempDir("", "update_schema_test_empty")
-	s.NoError(err)
-	defer os.RemoveAll(emptyDir)
-
-	tmpDir, err := ioutil.TempDir("", "update_schema_test")
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
-
-	squashDir, err := ioutil.TempDir("", "update_schema_test_squash")
-	s.NoError(err)
-	defer os.RemoveAll(squashDir)
+	emptyDir := s.T().TempDir()
+	tmpDir := s.T().TempDir()
+	squashDir := s.T().TempDir()
 
 	subDirs := []string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2", "abc", "2.0", "3.0"}
 	for _, d := range subDirs {
@@ -66,51 +63,87 @@ func (s *UpdateTaskTestSuite) TestReadSchemaDir() {
 		s.NoError(os.Mkdir(squashDir+"/"+d, os.FileMode(0444)))
 	}
 
-	_, err = readSchemaDir(tmpDir, "11.0", "11.2")
+	_, err := readSchemaDir(os.DirFS(tmpDir), "11.0", "11.2")
 	s.Error(err)
-	_, err = readSchemaDir(tmpDir, "0.5", "10.3")
+	_, err = readSchemaDir(os.DirFS(tmpDir), "0.5", "10.3")
 	s.Error(err)
-	_, err = readSchemaDir(tmpDir, "1.5", "1.5")
+	_, err = readSchemaDir(os.DirFS(tmpDir), "1.5", "1.5")
 	s.Error(err)
-	_, err = readSchemaDir(tmpDir, "1.5", "0.5")
+	_, err = readSchemaDir(os.DirFS(tmpDir), "1.5", "0.5")
 	s.Error(err)
-	_, err = readSchemaDir(tmpDir, "10.3", "")
+	_, err = readSchemaDir(os.DirFS(tmpDir), "10.3", "")
 	s.Error(err)
-	_, err = readSchemaDir(emptyDir, "11.0", "")
+	_, err = readSchemaDir(os.DirFS(emptyDir), "11.0", "")
 	s.Error(err)
-	_, err = readSchemaDir(emptyDir, "10.1", "")
+	_, err = readSchemaDir(os.DirFS(emptyDir), "10.1", "")
 	s.Error(err)
 
-	ans, err := readSchemaDir(tmpDir, "0.4", "10.2")
+	ans, err := readSchemaDir(os.DirFS(tmpDir), "0.4", "10.2")
 	s.NoError(err)
 	s.Equal([]string{"v0.5", "v1.5", "v2.5", "v3.5", "v10.2"}, ans)
 
-	ans, err = readSchemaDir(tmpDir, "0.5", "3.5")
+	ans, err = readSchemaDir(os.DirFS(tmpDir), "0.5", "3.5")
 	s.NoError(err)
 	s.Equal([]string{"v1.5", "v2.5", "v3.5"}, ans)
 
-	ans, err = readSchemaDir(tmpDir, "10.2", "")
+	ans, err = readSchemaDir(os.DirFS(tmpDir), "10.2", "")
 	s.NoError(err)
 	s.Equal(0, len(ans))
 
-	ans, err = readSchemaDir(squashDir, "0.4", "10.2")
+	ans, err = readSchemaDir(os.DirFS(squashDir), "0.4", "10.2")
 	s.NoError(err)
 	s.Equal([]string{"v0.5", "s0.5-10.2"}, ans)
 
-	ans, err = readSchemaDir(squashDir, "0.5", "3.5")
+	ans, err = readSchemaDir(os.DirFS(squashDir), "0.5", "3.5")
 	s.NoError(err)
 	s.Equal([]string{"v1.5", "s1.5-3.5"}, ans)
 
-	ans, err = readSchemaDir(squashDir, "10.2", "")
+	ans, err = readSchemaDir(os.DirFS(squashDir), "10.2", "")
 	s.NoError(err)
 	s.Empty(ans)
 }
 
+func (s *UpdateTaskTestSuite) TestReadSchemaDirFromEmbeddings() {
+	fsys, err := fs.Sub(cassandra.SchemaFS, "cadence/versioned")
+	s.NoError(err)
+	ans, err := readSchemaDir(fsys, "0.30", "")
+	s.NoError(err)
+	s.Equal([]string{"v0.31", "v0.32", "v0.33", "v0.34"}, ans)
+
+	fsys, err = fs.Sub(cassandra.SchemaFS, "visibility/versioned")
+	s.NoError(err)
+	ans, err = readSchemaDir(fsys, "0.6", "")
+	s.NoError(err)
+	s.Equal([]string{"v0.7", "v0.8"}, ans)
+
+	fsys, err = fs.Sub(mysql.SchemaFS, "v57/cadence/versioned")
+	s.NoError(err)
+	ans, err = readSchemaDir(fsys, "0.3", "")
+	s.NoError(err)
+	s.Equal([]string{"v0.4", "v0.5"}, ans)
+
+	fsys, err = fs.Sub(mysql.SchemaFS, "v57/visibility/versioned")
+	s.NoError(err)
+	ans, err = readSchemaDir(fsys, "0.5", "")
+	s.NoError(err)
+	s.Equal([]string{"v0.6"}, ans)
+
+	fsys, err = fs.Sub(postgres.SchemaFS, "cadence/versioned")
+	s.NoError(err)
+	ans, err = readSchemaDir(fsys, "0.3", "")
+	s.NoError(err)
+	s.Equal([]string{"v0.4"}, ans)
+
+	fsys, err = fs.Sub(postgres.SchemaFS, "visibility/versioned")
+	s.NoError(err)
+	ans, err = readSchemaDir(fsys, "0.5", "")
+	s.NoError(err)
+	s.Equal([]string{"v0.6"}, ans)
+}
+
 func (s *UpdateTaskTestSuite) TestReadManifest() {
 
-	tmpDir, err := ioutil.TempDir("", "update_schema_test")
-	s.Nil(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	input := `{
 		"CurrVersion": "0.4",
@@ -299,7 +332,7 @@ func (s *UpdateTaskTestSuite) runReadManifestTest(dir, input, currVer, minVer, d
 	err := ioutil.WriteFile(file, []byte(input), os.FileMode(0644))
 	s.Nil(err)
 
-	m, err := readManifest(dir)
+	m, err := readManifest(os.DirFS(dir), ".")
 	if isErr {
 		s.Error(err)
 		return

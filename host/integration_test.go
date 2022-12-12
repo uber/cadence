@@ -53,7 +53,7 @@ func TestIntegrationSuite(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	testCluster := NewPersistenceTestCluster(clusterConfig)
+	testCluster := NewPersistenceTestCluster(t, clusterConfig)
 
 	s := new(IntegrationSuite)
 	params := IntegrationBaseParams{
@@ -554,7 +554,7 @@ func (s *IntegrationSuite) TestDelayStartWorkflow() {
 	)
 
 	targetBackoffDuration := time.Second * 10
-	backoffDurationTolerance := time.Millisecond * 3000
+	backoffDurationTolerance := time.Millisecond * 4000
 	backoffDuration := time.Since(startWorkflowTS)
 	s.True(
 		backoffDuration > targetBackoffDuration,
@@ -1649,7 +1649,7 @@ func (s *IntegrationSuite) TestRateLimitBufferedEvents() {
 	// first decision to send 101 signals, the last signal will force fail decision and flush buffered events.
 	_, err := poller.PollAndProcessDecisionTask(false, false)
 	s.Logger.Info("PollAndProcessDecisionTask", tag.Error(err))
-	s.EqualError(err, "EntityNotExistsError{Message: Decision task not found.}")
+	s.EqualError(err, "Decision task not found.")
 
 	// Process signal in decider
 	_, err = poller.PollAndProcessDecisionTask(false, false)

@@ -63,7 +63,7 @@ func (s *DBVisibilityPersistenceSuite) SetupSuite() {
 	}
 	clusterName := s.ClusterMetadata.GetCurrentClusterName()
 	vCfg := s.VisibilityTestCluster.Config()
-	visibilityFactory := client.NewFactory(&vCfg, nil, clusterName, nil, s.Logger)
+	visibilityFactory := client.NewFactory(&vCfg, nil, clusterName, nil, s.Logger, &s.DynamicConfiguration)
 	// SQL currently doesn't have support for visibility manager
 	var err error
 	s.VisibilityMgr, err = visibilityFactory.NewVisibilityManager(
@@ -119,6 +119,7 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 		Execution:        workflowExecution,
 		WorkflowTypeName: "visibility-workflow",
 		StartTimestamp:   startTime,
+		UpdateTimestamp:  0,
 	}
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, startReq)
 	s.Nil(err0)
@@ -139,6 +140,7 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 		WorkflowTypeName: "visibility-workflow",
 		StartTimestamp:   startTime,
 		CloseTimestamp:   time.Now().UnixNano(),
+		UpdateTimestamp:  time.Now().UnixNano(),
 		HistoryLength:    5,
 	}
 	err2 := s.VisibilityMgr.RecordWorkflowExecutionClosed(ctx, closeReq)
@@ -162,6 +164,15 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 	s.Nil(err4)
 	s.Equal(1, len(resp.Executions))
 	s.assertClosedExecutionEquals(closeReq, resp.Executions[0])
+
+	uninitializedReq := &p.RecordWorkflowExecutionUninitializedRequest{
+		DomainUUID:       testDomainUUID,
+		Execution:        workflowExecution,
+		WorkflowTypeName: "visibility-workflow",
+		UpdateTimestamp:  time.Now().UnixNano(),
+	}
+	err5 := s.VisibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedReq)
+	s.Nil(err5)
 }
 
 // TestCronVisibility test
@@ -834,7 +845,7 @@ func (s *DBVisibilityPersistenceSuite) TestUpsertWorkflowExecution() {
 				Memo:               nil,
 				SearchAttributes:   nil,
 			},
-			expected: p.NewOperationNotSupportErrorForVis(),
+			expected: p.ErrVisibilityOperationNotSupported,
 		},
 	}
 

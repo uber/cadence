@@ -39,17 +39,17 @@ const (
 
 const (
 	///////////////// Open Executions /////////////////
-	openExecutionsColumnsForSelect = " workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, task_list, is_cron, num_clusters "
+	openExecutionsColumnsForSelect = " workflow_id, run_id, start_time, execution_time, workflow_type_name, memo, encoding, task_list, is_cron, num_clusters, update_time "
 
 	openExecutionsColumnsForInsert = "(domain_id, domain_partition, " + openExecutionsColumnsForSelect + ")"
 
 	templateCreateWorkflowExecutionStartedWithTTL = `INSERT INTO open_executions ` +
 		openExecutionsColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionStarted = `INSERT INTO open_executions` +
 		openExecutionsColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateDeleteWorkflowExecutionStarted = `DELETE FROM open_executions ` +
 		`WHERE domain_id = ? ` +
@@ -96,25 +96,25 @@ const (
 		`and run_id = ? `
 
 	///////////////// Closed Executions /////////////////
-	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list, is_cron, num_clusters "
+	closedExecutionColumnsForSelect = " workflow_id, run_id, start_time, execution_time, close_time, workflow_type_name, status, history_length, memo, encoding, task_list, is_cron, num_clusters, update_time "
 
 	closedExecutionColumnsForInsert = "(domain_id, domain_partition, " + closedExecutionColumnsForSelect + ")"
 
 	templateCreateWorkflowExecutionClosedWithTTL = `INSERT INTO closed_executions ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionClosed = `INSERT INTO closed_executions ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateCreateWorkflowExecutionClosedWithTTLV2 = `INSERT INTO closed_executions_v2 ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) using TTL ?`
 
 	templateCreateWorkflowExecutionClosedV2 = `INSERT INTO closed_executions_v2 ` +
 		closedExecutionColumnsForInsert +
-		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	templateGetClosedWorkflowExecutions = `SELECT ` + closedExecutionColumnsForSelect +
 		`FROM closed_executions ` +
@@ -204,6 +204,7 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 		).WithContext(ctx)
 	} else {
 		query = db.session.Query(templateCreateWorkflowExecutionStartedWithTTL,
@@ -219,6 +220,7 @@ func (db *cdb) InsertVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 			ttlSeconds,
 		).WithContext(ctx)
 	}
@@ -262,6 +264,7 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 		)
 		// duplicate write to v2 to order by close time
 		batch.Query(templateCreateWorkflowExecutionClosedV2,
@@ -280,6 +283,7 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 		)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionClosedWithTTL,
@@ -298,6 +302,7 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 			ttlSeconds,
 		)
 		// duplicate write to v2 to order by close time
@@ -317,6 +322,7 @@ func (db *cdb) UpdateVisibility(ctx context.Context, ttlSeconds int64, row *nosq
 			row.TaskList,
 			row.IsCron,
 			row.NumClusters,
+			row.UpdateTime,
 			ttlSeconds,
 		)
 	}
@@ -391,7 +397,7 @@ func (db *cdb) DeleteVisibility(ctx context.Context, domainID, workflowID, runID
 			record.StartTime,
 			runID,
 		).WithContext(ctx)
-		return query.Exec()
+		return db.executeWithConsistencyAll(query)
 	}
 	return nil
 }
@@ -683,7 +689,8 @@ func readOpenWorkflowExecutionRecord(
 	var taskList string
 	var isCron bool
 	var numClusters int16
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList, &isCron, &numClusters) {
+	var updateTime time.Time
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &typeName, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime) {
 		record := &persistence.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
 			RunID:         runID,
@@ -694,6 +701,7 @@ func readOpenWorkflowExecutionRecord(
 			TaskList:      taskList,
 			IsCron:        isCron,
 			NumClusters:   numClusters,
+			UpdateTime:    updateTime,
 		}
 		return record, true
 	}
@@ -716,7 +724,8 @@ func readClosedWorkflowExecutionRecord(
 	var taskList string
 	var isCron bool
 	var numClusters int16
-	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList, &isCron, &numClusters) {
+	var updateTime time.Time
+	if iter.Scan(&workflowID, &runID, &startTime, &executionTime, &closeTime, &typeName, &status, &historyLength, &memo, &encoding, &taskList, &isCron, &numClusters, &updateTime) {
 		record := &persistence.InternalVisibilityWorkflowExecutionInfo{
 			WorkflowID:    workflowID,
 			RunID:         runID,
@@ -730,6 +739,7 @@ func readClosedWorkflowExecutionRecord(
 			TaskList:      taskList,
 			IsCron:        isCron,
 			NumClusters:   numClusters,
+			UpdateTime:    updateTime,
 		}
 		return record, true
 	}

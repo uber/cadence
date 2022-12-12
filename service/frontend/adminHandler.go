@@ -202,7 +202,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	request *types.AddSearchAttributeRequest,
 ) (retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminAddSearchAttributeScope)
 	defer sw.Stop()
 
@@ -221,8 +221,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	}
 
 	searchAttr := request.GetSearchAttribute()
-	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(
-		dc.ValidSearchAttributes, nil, definition.GetDefaultIndexedKeys())
+	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(dc.ValidSearchAttributes, nil)
 	if err != nil {
 		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to get dynamic config, err: %v", err)}, scope)
 	}
@@ -275,7 +274,7 @@ func (adh *adminHandlerImpl) DescribeWorkflowExecution(
 	request *types.AdminDescribeWorkflowExecutionRequest,
 ) (resp *types.AdminDescribeWorkflowExecutionResponse, retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeWorkflowExecutionScope)
 	defer sw.Stop()
 
@@ -323,7 +322,7 @@ func (adh *adminHandlerImpl) RemoveTask(
 	request *types.RemoveTaskRequest,
 ) (retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminRemoveTaskScope)
 	defer sw.Stop()
 
@@ -446,10 +445,16 @@ func (adh *adminHandlerImpl) deleteWorkflowFromHistory(
 			logger.Error("Cannot decode thrift object", tag.Error(err))
 			continue
 		}
+		domainName, err := adh.GetDomainCache().GetDomainName(mutableState.ExecutionInfo.DomainID)
+		if err != nil {
+			logger.Error("Unexpected: Cannot fetch domain name", tag.Error(err))
+			continue
+		}
 		logger.Info(fmt.Sprintf("Deleting history events for %#v", branchInfo))
 		err = historyManager.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     &shardIDInt,
+			DomainName:  domainName,
 		})
 		if err != nil {
 			logger.Error("Failed to delete history", tag.Error(err))
@@ -475,11 +480,16 @@ func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
 		logger.Error(fmt.Sprintf("Cannot get execution manager for shardID(%v): %#v", shardIDInt, err))
 		return false
 	}
-
+	domainName, err := adh.GetDomainCache().GetDomainName(domainID)
+	if err != nil {
+		logger.Error("Unexpected: Cannot fetch domain name", tag.Error(err))
+		return false
+	}
 	req := &persistence.DeleteWorkflowExecutionRequest{
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		DomainName: domainName,
 	}
 
 	deletedFromExecutions := false
@@ -494,6 +504,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromExecutions(
 		DomainID:   domainID,
 		WorkflowID: workflowID,
 		RunID:      runID,
+		DomainName: domainName,
 	}
 
 	err = exeStore.DeleteCurrentWorkflowExecution(ctx, deleteCurrentReq)
@@ -512,6 +523,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromVisibility(
 	ctx context.Context,
 	logger log.Logger,
 	domainID string,
+	domain string,
 	workflowID string,
 	runID string,
 ) bool {
@@ -528,6 +540,7 @@ func (adh *adminHandlerImpl) deleteWorkflowFromVisibility(
 		visCtx,
 		&persistence.VisibilityDeleteWorkflowExecutionRequest{
 			DomainID:   domainID,
+			Domain:     domain,
 			RunID:      runID,
 			WorkflowID: workflowID,
 			TaskID:     math.MaxInt64,
@@ -604,7 +617,7 @@ func (adh *adminHandlerImpl) DeleteWorkflow(
 	if deletedFromExecutions {
 		// Without deleting the executions record, let's not delete the visibility record.
 		// If we do that, workflow won't be visible but it will exist in the DB
-		deletedFromVisibility = adh.deleteWorkflowFromVisibility(ctx, logger, domainID, workflowID, runID)
+		deletedFromVisibility = adh.deleteWorkflowFromVisibility(ctx, logger, domainID, domainName, workflowID, runID)
 	}
 
 	return &types.AdminDeleteWorkflowResponse{
@@ -620,7 +633,7 @@ func (adh *adminHandlerImpl) CloseShard(
 	request *types.CloseShardRequest,
 ) (retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminCloseShardScope)
 	defer sw.Stop()
 
@@ -639,7 +652,7 @@ func (adh *adminHandlerImpl) ResetQueue(
 	request *types.ResetQueueRequest,
 ) (retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminResetQueueScope)
 	defer sw.Stop()
 
@@ -662,7 +675,7 @@ func (adh *adminHandlerImpl) DescribeQueue(
 	request *types.DescribeQueueRequest,
 ) (resp *types.DescribeQueueResponse, retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeQueueScope)
 	defer sw.Stop()
 
@@ -682,7 +695,7 @@ func (adh *adminHandlerImpl) DescribeShardDistribution(
 	request *types.DescribeShardDistributionRequest,
 ) (resp *types.DescribeShardDistributionResponse, retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	_, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeShardDistributionScope)
 	defer sw.Stop()
 
@@ -711,7 +724,7 @@ func (adh *adminHandlerImpl) DescribeHistoryHost(
 	request *types.DescribeHistoryHostRequest,
 ) (resp *types.DescribeHistoryHostResponse, retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeHistoryHostScope)
 	defer sw.Stop()
 
@@ -734,7 +747,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 	request *types.GetWorkflowExecutionRawHistoryV2Request,
 ) (resp *types.GetWorkflowExecutionRawHistoryV2Response, retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
 	defer sw.Stop()
 
@@ -811,6 +824,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		execution.GetWorkflowID(),
 		adh.numberOfHistoryShards,
 	)
+
 	rawHistoryResponse, err := adh.GetHistoryManager().ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 		BranchToken: targetVersionHistory.GetBranchToken(),
 		// GetWorkflowExecutionRawHistoryV2 is exclusive exclusive.
@@ -820,6 +834,7 @@ func (adh *adminHandlerImpl) GetWorkflowExecutionRawHistoryV2(
 		PageSize:      pageSize,
 		NextPageToken: pageToken.PersistenceToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    request.GetDomain(),
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {
@@ -865,7 +880,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 	ctx context.Context,
 ) (resp *types.DescribeClusterResponse, retError error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
 	defer sw.Stop()
 
@@ -938,7 +953,7 @@ func (adh *adminHandlerImpl) GetReplicationMessages(
 	request *types.GetReplicationMessagesRequest,
 ) (resp *types.GetReplicationMessagesResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetReplicationMessagesScope)
 	defer sw.Stop()
 
@@ -962,7 +977,7 @@ func (adh *adminHandlerImpl) GetDomainReplicationMessages(
 	request *types.GetDomainReplicationMessagesRequest,
 ) (resp *types.GetDomainReplicationMessagesResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetDomainReplicationMessagesScope)
 	defer sw.Stop()
 
@@ -1021,7 +1036,7 @@ func (adh *adminHandlerImpl) GetDLQReplicationMessages(
 	request *types.GetDLQReplicationMessagesRequest,
 ) (resp *types.GetDLQReplicationMessagesResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetDLQReplicationMessagesScope)
 	defer sw.Stop()
 
@@ -1045,7 +1060,7 @@ func (adh *adminHandlerImpl) ReapplyEvents(
 	request *types.ReapplyEventsRequest,
 ) (err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminReapplyEventsScope)
 	defer sw.Stop()
 
@@ -1085,7 +1100,7 @@ func (adh *adminHandlerImpl) ReadDLQMessages(
 	request *types.ReadDLQMessagesRequest,
 ) (resp *types.ReadDLQMessagesResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminReadDLQMessagesScope)
 	defer sw.Stop()
 
@@ -1146,7 +1161,7 @@ func (adh *adminHandlerImpl) PurgeDLQMessages(
 	request *types.PurgeDLQMessagesRequest,
 ) (err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminPurgeDLQMessagesScope)
 	defer sw.Stop()
 
@@ -1193,7 +1208,7 @@ func (adh *adminHandlerImpl) CountDLQMessages(
 	ctx context.Context,
 	request *types.CountDLQMessagesRequest,
 ) (resp *types.CountDLQMessagesResponse, err error) {
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminCountDLQMessagesScope)
 	defer sw.Stop()
@@ -1220,7 +1235,7 @@ func (adh *adminHandlerImpl) MergeDLQMessages(
 	request *types.MergeDLQMessagesRequest,
 ) (resp *types.MergeDLQMessagesResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminMergeDLQMessagesScope)
 	defer sw.Stop()
 
@@ -1276,7 +1291,7 @@ func (adh *adminHandlerImpl) RefreshWorkflowTasks(
 	ctx context.Context,
 	request *types.RefreshWorkflowTasksRequest,
 ) (err error) {
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminRefreshWorkflowTasksScope)
 	defer sw.Stop()
 
@@ -1306,7 +1321,7 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 	ctx context.Context,
 	request *types.ResendReplicationTasksRequest,
 ) (err error) {
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminResendReplicationTasksScope)
 	defer sw.Stop()
 
@@ -1319,7 +1334,6 @@ func (adh *adminHandlerImpl) ResendReplicationTasks(
 		func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 			return adh.GetHistoryClient().ReplicateEventsV2(ctx, request)
 		},
-		adh.eventSerializer,
 		nil,
 		nil,
 		adh.GetLogger(),
@@ -1340,7 +1354,7 @@ func (adh *adminHandlerImpl) GetCrossClusterTasks(
 	request *types.GetCrossClusterTasksRequest,
 ) (resp *types.GetCrossClusterTasksResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetCrossClusterTasksScope)
 	defer sw.Stop()
 
@@ -1363,7 +1377,7 @@ func (adh *adminHandlerImpl) RespondCrossClusterTasksCompleted(
 	request *types.RespondCrossClusterTasksCompletedRequest,
 ) (resp *types.RespondCrossClusterTasksCompletedResponse, err error) {
 
-	defer log.CapturePanic(adh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &err) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminRespondCrossClusterTasksCompletedScope)
 	defer sw.Stop()
 
@@ -1461,12 +1475,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// this is a special case, target branch remains the same
 	} else {
 		endItem := persistence.NewVersionHistoryItem(request.GetEndEventID(), request.GetEndEventVersion())
-		idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(endItem)
-		if err != nil {
-			return nil, err
-		}
-
-		targetBranch, err = versionHistories.GetVersionHistory(idx)
+		_, targetBranch, err = versionHistories.FindFirstVersionHistoryByItem(endItem)
 		if err != nil {
 			return nil, err
 		}
@@ -1480,11 +1489,7 @@ func (adh *adminHandlerImpl) setRequestDefaultValueAndGetTargetVersionHistory(
 		// this is a special case, start event is on the same branch as target branch
 	} else {
 		if !targetBranch.ContainsItem(startItem) {
-			idx, err := versionHistories.FindFirstVersionHistoryIndexByItem(startItem)
-			if err != nil {
-				return nil, err
-			}
-			startBranch, err := versionHistories.GetVersionHistory(idx)
+			_, startBranch, err := versionHistories.FindFirstVersionHistoryByItem(startItem)
 			if err != nil {
 				return nil, err
 			}
@@ -1601,7 +1606,7 @@ func deserializeRawHistoryToken(bytes []byte) (*getWorkflowRawHistoryV2Token, er
 }
 
 func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (_ *types.GetDynamicConfigResponse, retError error) {
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetDynamicConfigScope)
 	defer sw.Stop()
 
@@ -1609,14 +1614,14 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return nil, adh.error(err, scope)
 	}
 
 	var value interface{}
 	if request.Filters == nil {
-		value, err = adh.params.DynamicConfig.GetValue(keyVal, nil)
+		value, err = adh.params.DynamicConfig.GetValue(keyVal)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -1625,7 +1630,7 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
-		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters, nil)
+		value, err = adh.params.DynamicConfig.GetValueWithFilters(keyVal, convFilters)
 		if err != nil {
 			return nil, adh.error(err, scope)
 		}
@@ -1645,15 +1650,15 @@ func (adh *adminHandlerImpl) GetDynamicConfig(ctx context.Context, request *type
 }
 
 func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) (retError error) {
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminUpdateDynamicConfigScope)
 	defer sw.Stop()
 
-	if request == nil {
+	if request == nil || request.ConfigName == "" {
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -1662,7 +1667,7 @@ func (adh *adminHandlerImpl) UpdateDynamicConfig(ctx context.Context, request *t
 }
 
 func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) (retError error) {
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminRestoreDynamicConfigScope)
 	defer sw.Stop()
 
@@ -1670,7 +1675,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 		return adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
 	if err != nil {
 		return adh.error(err, scope)
 	}
@@ -1689,7 +1694,7 @@ func (adh *adminHandlerImpl) RestoreDynamicConfig(ctx context.Context, request *
 }
 
 func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (_ *types.ListDynamicConfigResponse, retError error) {
-	defer log.CapturePanic(adh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
 	scope, sw := adh.startRequestProfile(ctx, metrics.AdminListDynamicConfigScope)
 	defer sw.Stop()
 
@@ -1697,9 +1702,9 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 
-	keyVal, err := checkValidKey(request.ConfigName)
-	if err != nil {
-		entries, err2 := adh.params.DynamicConfig.ListValue(dc.UnknownKey)
+	keyVal, err := dc.GetKeyFromKeyName(request.ConfigName)
+	if err != nil || request.ConfigName == "" {
+		entries, err2 := adh.params.DynamicConfig.ListValue(nil)
 		if err2 != nil {
 			return nil, adh.error(err2, scope)
 		}
@@ -1717,15 +1722,6 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil
-}
-
-func checkValidKey(keyName string) (dc.Key, error) {
-	keyVal, ok := dc.KeyNames[keyName]
-	if !ok || keyVal == dc.UnknownKey {
-		return dc.UnknownKey, errors.New(fmt.Sprintf(
-			"invalid dynamic config parameter name: %s", keyName))
-	}
-	return keyVal, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

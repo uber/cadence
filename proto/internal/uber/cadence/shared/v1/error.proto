@@ -25,7 +25,7 @@ package uber.cadence.shared.v1;
 option go_package = "github.com/uber/cadence/.gen/proto/shared/v1;sharedv1";
 
 import "uber/cadence/api/v1/common.proto";
-import "uber/cadence/shared/v1/history.proto";
+import "uber/cadence/admin/v1/history.proto";
 
 message CurrentBranchChangedError {
   bytes current_branch_token = 1;
@@ -43,8 +43,8 @@ message RemoteSyncMatchedError {
 message RetryTaskV2Error {
   string domain_id = 1;
   api.v1.WorkflowExecution workflow_execution = 2;
-  VersionHistoryItem start_event = 3;
-  VersionHistoryItem end_event = 4;
+  admin.v1.VersionHistoryItem start_event = 3;
+  admin.v1.VersionHistoryItem end_event = 4;
 }
 
 message ShardOwnershipLostError {

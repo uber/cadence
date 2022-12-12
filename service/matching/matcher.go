@@ -100,9 +100,9 @@ func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scopeFunc func() me
 // correct context timeout.
 //
 // returns error when:
-//  - ratelimit is exceeded (does not apply to query task)
-//  - context deadline is exceeded
-//  - task is matched and consumer returns error in response channel
+//   - ratelimit is exceeded (does not apply to query task)
+//   - context deadline is exceeded
+//   - task is matched and consumer returns error in response channel
 func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, error) {
 	var err error
 	var rsv *rate.Reservation
@@ -164,7 +164,7 @@ func (tm *TaskMatcher) offerOrTimeout(ctx context.Context, task *InternalTask) (
 				return false, nil
 			}
 		}
-		return false, nil
+		return task.activityTaskDispatchInfo != nil, nil
 	case <-ctx.Done():
 		return false, nil
 	}

@@ -69,6 +69,10 @@ func (db *ddb) IsThrottlingError(err error) bool {
 	panic("TODO")
 }
 
+func (db *ddb) IsDBUnavailableError(err error) bool {
+	panic("TODO")
+}
+
 func (db *ddb) IsConditionFailedError(err error) bool {
 	return err == errConditionFailed
 }

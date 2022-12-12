@@ -55,6 +55,7 @@ func ConcreteExecution(
 			WorkflowID: request.WorkflowID,
 			RunID:      request.RunID,
 		},
+		DomainName: request.DomainName,
 	}
 	e, err := retryer.GetWorkflowExecution(ctx, &req)
 	if err != nil {

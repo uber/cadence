@@ -91,7 +91,6 @@ func NewStateRebuilder(
 			shard.GetClusterMetadata(),
 			shard.GetDomainCache(),
 			shard.GetEventsCache(),
-			logger,
 			shard.GetShardID(),
 		),
 		rebuiltHistorySize: 0,
@@ -116,6 +115,7 @@ func (r *stateRebuilderImpl) Rebuild(
 		common.FirstEventID,
 		baseLastEventID+1,
 		baseBranchToken,
+		targetWorkflowIdentifier.DomainID,
 	))
 
 	domainEntry, err := r.domainCache.GetDomainByID(targetWorkflowIdentifier.DomainID)
@@ -204,9 +204,6 @@ func (r *stateRebuilderImpl) initializeBuilders(
 		r.shard,
 		r.logger,
 		resetMutableStateBuilder,
-		func(mutableState MutableState) MutableStateTaskGenerator {
-			return NewMutableStateTaskGenerator(r.shard.GetClusterMetadata(), r.shard.GetDomainCache(), r.logger, mutableState)
-		},
 	)
 	return resetMutableStateBuilder, stateBuilder
 }
@@ -230,9 +227,9 @@ func (r *stateRebuilderImpl) applyEvents(
 	)
 	if err != nil {
 		r.logger.Error("nDCStateRebuilder unable to rebuild mutable state.", tag.Error(err))
-		return err
 	}
-	return nil
+
+	return err
 }
 
 func (r *stateRebuilderImpl) getPaginationFn(
@@ -240,6 +237,7 @@ func (r *stateRebuilderImpl) getPaginationFn(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
+	domainID string,
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
@@ -254,6 +252,8 @@ func (r *stateRebuilderImpl) getPaginationFn(
 			paginationToken,
 			NDCDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()),
+			domainID,
+			r.domainCache,
 		)
 		if err != nil {
 			return nil, nil, err

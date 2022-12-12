@@ -98,7 +98,6 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 			},
 		},
 		1234,
-		cluster.GetTestClusterMetadata(true, true),
 	)
 
 	s.config = Config{
@@ -382,7 +381,7 @@ func (s *esanalyzerWorkflowTestSuite) TestRefreshStuckWorkflowsFromSameWorkflowI
 
 	_, err := s.activityEnv.ExecuteActivity(s.workflow.refreshStuckWorkflowsFromSameWorkflowType, workflows)
 	s.Error(err)
-	s.EqualError(err, "InternalServiceError{Message: Inconsistent worklow. Expected domainID: deadbeef-0123-4567-890a-bcdef0123460, actual: another-domain-id}")
+	s.EqualError(err, "Inconsistent worklow. Expected domainID: deadbeef-0123-4567-890a-bcdef0123460, actual: another-domain-id")
 }
 
 func (s *esanalyzerWorkflowTestSuite) TestGetLongRunCheckEntriesSingleEntry() {

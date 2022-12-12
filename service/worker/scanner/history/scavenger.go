@@ -29,6 +29,7 @@ import (
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -58,6 +59,7 @@ type (
 		metrics                    metrics.Client
 		logger                     log.Logger
 		isInTest                   bool
+		domainCache                cache.DomainCache
 	}
 
 	taskDetail struct {
@@ -92,8 +94,8 @@ func getHistoryCleanupThreshold(maxWorkflowRetentionInDays int) time.Duration {
 // returned object. Calling the Run() method will result in one
 // complete iteration over all of the history branches in the system. For
 // each branch, the scavenger will attempt
-//  - describe the corresponding workflow execution
-//  - deletion of history itself, if there are no workflow execution
+//   - describe the corresponding workflow execution
+//   - deletion of history itself, if there are no workflow execution
 func NewScavenger(
 	db p.HistoryManager,
 	rps int,
@@ -102,6 +104,7 @@ func NewScavenger(
 	metricsClient metrics.Client,
 	logger log.Logger,
 	maxWorkflowRetentionInDays dynamicconfig.IntPropertyFn,
+	domainCache cache.DomainCache,
 ) *Scavenger {
 
 	rateLimiter := rate.NewLimiter(rate.Limit(rps), rps)
@@ -115,6 +118,7 @@ func NewScavenger(
 		maxWorkflowRetentionInDays: maxWorkflowRetentionInDays,
 		metrics:                    metricsClient,
 		logger:                     logger,
+		domainCache:                domainCache,
 	}
 }
 
@@ -256,13 +260,20 @@ func (s *Scavenger) startTaskProcessor(
 							getTaskLoggingTags(err, task)...)
 						continue
 					}
-
+					domainName, err := s.domainCache.GetDomainName(task.domainID)
+					if err != nil {
+						respCh <- err
+						s.logger.Error("Unexpected: Encountered error while fetching domain name",
+							getTaskLoggingTags(err, task)...)
+						continue
+					}
 					err = s.db.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
 						BranchToken: branchToken,
 						// This is a required argument but it is not needed for Cassandra.
 						// Since this scanner is only for Cassandra,
 						// we can fill any number here to let to code go through
-						ShardID: common.IntPtr(1),
+						ShardID:    common.IntPtr(1),
+						DomainName: domainName,
 					})
 					if err != nil {
 						respCh <- err

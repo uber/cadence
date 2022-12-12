@@ -30,7 +30,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/future"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -48,7 +47,7 @@ const (
 type (
 	clientImpl struct {
 		numberOfShards    int
-		rpcMaxSizeInBytes dynamicconfig.IntPropertyFn // This value currently only used in GetReplicationMessage API
+		rpcMaxSizeInBytes int // This value currently only used in GetReplicationMessage API
 		tokenSerializer   common.TaskTokenSerializer
 		timeout           time.Duration
 		client            Client
@@ -59,13 +58,14 @@ type (
 	getReplicationMessagesWithSize struct {
 		response *types.GetReplicationMessagesResponse
 		size     int
+		peer     string
 	}
 )
 
 // NewClient creates a new history service TChannel client
 func NewClient(
 	numberOfShards int,
-	rpcMaxSizeInBytes dynamicconfig.IntPropertyFn,
+	rpcMaxSizeInBytes int,
 	timeout time.Duration,
 	client Client,
 	peerResolver PeerResolver,
@@ -812,7 +812,7 @@ func (c *clientImpl) GetReplicationMessages(
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
 		g.Go(func() (e error) {
-			defer log.CapturePanic(c.logger, &e)
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
 
 			requestContext, cancel := common.CreateChildContext(ctx, 0.05)
 			defer cancel()
@@ -820,7 +820,10 @@ func (c *clientImpl) GetReplicationMessages(
 			requestContext, responseInfo := rpc.ContextWithResponseInfo(requestContext)
 			resp, err := c.client.GetReplicationMessages(requestContext, req, append(opts, yarpc.WithShardKey(peer))...)
 			if err != nil {
-				c.logger.Warn("Failed to get replication tasks from client", tag.Error(err))
+				c.logger.Warn("Failed to get replication tasks from client",
+					tag.Error(err),
+					tag.ShardReplicationToken(req),
+				)
 				// Returns service busy error to notify replication
 				if _, ok := err.(*types.ServiceBusyError); ok {
 					return err
@@ -831,6 +834,7 @@ func (c *clientImpl) GetReplicationMessages(
 			peerResponses = append(peerResponses, &getReplicationMessagesWithSize{
 				response: resp,
 				size:     responseInfo.Size,
+				peer:     peer,
 			})
 			responseMutex.Unlock()
 			return nil
@@ -854,12 +858,26 @@ func (c *clientImpl) GetReplicationMessages(
 
 	response := &types.GetReplicationMessagesResponse{MessagesByShard: make(map[int32]*types.ReplicationMessages)}
 	responseTotalSize := 0
+	rpcMaxResponseSize := c.rpcMaxSizeInBytes
 	for _, resp := range peerResponses {
-		// return partial response if the response size exceeded supported max size
-		responseTotalSize += resp.size
-		if responseTotalSize >= c.rpcMaxSizeInBytes() {
-			return response, nil
+		if (responseTotalSize + resp.size) >= rpcMaxResponseSize {
+			// Log shards that did not fit for debugging purposes
+			for shardID := range resp.response.GetMessagesByShard() {
+				c.logger.Warn("Replication messages did not fit in the response",
+					tag.ShardID(int(shardID)),
+					tag.Address(resp.peer),
+					tag.ResponseSize(resp.size),
+					tag.ResponseTotalSize(responseTotalSize),
+					tag.ResponseMaxSize(rpcMaxResponseSize),
+				)
+			}
+
+			// return partial response if the response size exceeded supported max size
+			// but continue with next peer response, as it may still fit
+			continue
 		}
+
+		responseTotalSize += resp.size
 
 		for shardID, tasks := range resp.response.GetMessagesByShard() {
 			response.MessagesByShard[shardID] = tasks
@@ -923,7 +941,7 @@ func (c *clientImpl) CountDLQMessages(
 	for _, peer := range peers {
 		peer := peer
 		g.Go(func() (e error) {
-			defer log.CapturePanic(c.logger, &e)
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
 
 			response, err := c.client.CountDLQMessages(ctx, request, append(opts, yarpc.WithShardKey(peer))...)
 			if err == nil {
@@ -1031,7 +1049,7 @@ func (c *clientImpl) NotifyFailoverMarkers(
 	for peer, req := range requestsByPeer {
 		peer, req := peer, req
 		g.Go(func() (e error) {
-			defer log.CapturePanic(c.logger, &e)
+			defer func() { log.CapturePanic(recover(), c.logger, &e) }()
 
 			ctx, cancel := c.createContext(ctx)
 			defer cancel()

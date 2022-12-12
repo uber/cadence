@@ -78,6 +78,7 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionStarted(
 		IsCron:             request.IsCron,
 		NumClusters:        request.NumClusters,
 		Memo:               v.serializeMemo(request.Memo, request.DomainUUID, request.Execution.GetWorkflowID(), request.Execution.GetRunID()),
+		UpdateTimestamp:    time.Unix(0, request.UpdateTimestamp),
 		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.RecordWorkflowExecutionStarted(ctx, req)
@@ -104,8 +105,23 @@ func (v *visibilityManagerImpl) RecordWorkflowExecutionClosed(
 		RetentionPeriod:    common.SecondsToDuration(request.RetentionSeconds),
 		IsCron:             request.IsCron,
 		NumClusters:        request.NumClusters,
+		UpdateTimestamp:    time.Unix(0, request.UpdateTimestamp),
 	}
 	return v.persistence.RecordWorkflowExecutionClosed(ctx, req)
+}
+
+func (v *visibilityManagerImpl) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *RecordWorkflowExecutionUninitializedRequest,
+) error {
+	req := &InternalRecordWorkflowExecutionUninitializedRequest{
+		DomainUUID:       request.DomainUUID,
+		WorkflowID:       request.Execution.GetWorkflowID(),
+		RunID:            request.Execution.GetRunID(),
+		WorkflowTypeName: request.WorkflowTypeName,
+		UpdateTimestamp:  time.Unix(0, request.UpdateTimestamp),
+	}
+	return v.persistence.RecordWorkflowExecutionUninitialized(ctx, req)
 }
 
 func (v *visibilityManagerImpl) UpsertWorkflowExecution(
@@ -124,6 +140,7 @@ func (v *visibilityManagerImpl) UpsertWorkflowExecution(
 		TaskList:           request.TaskList,
 		IsCron:             request.IsCron,
 		NumClusters:        request.NumClusters,
+		UpdateTimestamp:    time.Unix(0, request.UpdateTimestamp),
 		SearchAttributes:   request.SearchAttributes,
 	}
 	return v.persistence.UpsertWorkflowExecution(ctx, req)

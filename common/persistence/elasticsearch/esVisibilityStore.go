@@ -92,7 +92,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	msg := getVisibilityMessage(
+	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -106,6 +106,11 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		request.IsCron,
 		request.NumClusters,
 		request.SearchAttributes,
+		common.RecordStarted,
+		0,                                  // will not be used
+		0,                                  // will not be used
+		0,                                  // will not be used
+		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -115,23 +120,40 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 	request *p.InternalRecordWorkflowExecutionClosedRequest,
 ) error {
 	v.checkProducer()
-	msg := getVisibilityMessageForCloseExecution(
+	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
 		request.WorkflowTypeName,
+		request.TaskList,
 		request.StartTimestamp.UnixNano(),
 		request.ExecutionTimestamp.UnixNano(),
-		request.CloseTimestamp.UnixNano(),
-		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
-		request.HistoryLength,
 		request.TaskID,
 		request.Memo.Data,
-		request.TaskList,
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
 		request.SearchAttributes,
+		common.RecordClosed,
+		request.CloseTimestamp.UnixNano(),
+		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
+		request.HistoryLength,
+		request.UpdateTimestamp.UnixNano(),
+	)
+	return v.producer.Publish(ctx, msg)
+}
+
+func (v *esVisibilityStore) RecordWorkflowExecutionUninitialized(
+	ctx context.Context,
+	request *p.InternalRecordWorkflowExecutionUninitializedRequest,
+) error {
+	v.checkProducer()
+	msg := getVisibilityMessageForUninitializedWorkflow(
+		request.DomainUUID,
+		request.WorkflowID,
+		request.RunID,
+		request.WorkflowTypeName,
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -141,7 +163,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	v.checkProducer()
-	msg := getVisibilityMessage(
+	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -155,6 +177,11 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		request.IsCron,
 		request.NumClusters,
 		request.SearchAttributes,
+		common.UpsertSearchAttributes,
+		0, // will not be used
+		0, // will not be used
+		0, // will not be used
+		request.UpdateTimestamp.UnixNano(),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -463,6 +490,7 @@ const (
 	jsonRangeOnExecutionTime = `{"range":{"ExecutionTime":`
 	jsonSortForOpen          = `[{"StartTime":"desc"},{"RunID":"desc"}]`
 	jsonSortWithTieBreaker   = `{"RunID":"desc"}`
+	jsonMissingStartTime     = `{"missing":{"field":"StartTime"}}` //used to identify uninitialized workflow execution records
 
 	dslFieldSort        = "sort"
 	dslFieldSearchAfter = "search_after"
@@ -477,6 +505,7 @@ var (
 		es.StartTime:     true,
 		es.CloseTime:     true,
 		es.ExecutionTime: true,
+		es.UpdateTime:    true,
 	}
 	rangeKeys = map[string]bool{
 		"from":  true,
@@ -486,6 +515,8 @@ var (
 		"query": true,
 	}
 )
+
+var missingStartTimeRegex = regexp.MustCompile(jsonMissingStartTime)
 
 func getESQueryDSLForScan(request *p.ListWorkflowExecutionsByQueryRequest) (string, error) {
 	sql := getSQLFromListRequest(request)
@@ -574,6 +605,9 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 		return nil, err
 	}
 	dslStr = dsl.String()
+	if strings.Contains(dslStr, jsonMissingStartTime) { // isUninitialized
+		dsl = replaceQueryForUninitialized(dsl)
+	}
 	if strings.Contains(dslStr, jsonMissingCloseTime) { // isOpen
 		dsl = replaceQueryForOpen(dsl)
 	}
@@ -593,6 +627,14 @@ func getCustomizedDSLFromSQL(sql string, domainID string) (*fastjson.Value, erro
 func replaceQueryForOpen(dsl *fastjson.Value) *fastjson.Value {
 	re := regexp.MustCompile(jsonMissingCloseTime)
 	newDslStr := re.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"CloseTime"}}}}`)
+	dsl = fastjson.MustParse(newDslStr)
+	return dsl
+}
+
+// ES v6 only accepts "must_not exists" query instead of "missing" query, but elasticsql produces "missing",
+// so use this func to replace.
+func replaceQueryForUninitialized(dsl *fastjson.Value) *fastjson.Value {
+	newDslStr := missingStartTimeRegex.ReplaceAllString(dsl.String(), `{"bool":{"must_not":{"exists":{"field":"StartTime"}}}}`)
 	dsl = fastjson.MustParse(newDslStr)
 	return dsl
 }
@@ -637,7 +679,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 		obj.Visit(func(k []byte, v *fastjson.Value) { // visit is only way to get object key in fastjson
 			sortField = string(k)
 		})
-		if v.getFieldType(sortField) == workflow.IndexedValueTypeString {
+		if v.getFieldType(sortField) == types.IndexedValueTypeString {
 			return "", errors.New("not able to sort by IndexedValueTypeString field, use IndexedValueTypeKeyword field")
 		}
 		// add RunID as tie-breaker
@@ -647,7 +689,7 @@ func (v *esVisibilityStore) processSortField(dsl *fastjson.Value) (string, error
 	return sortField, nil
 }
 
-func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValueType {
+func (v *esVisibilityStore) getFieldType(fieldName string) types.IndexedValueType {
 	if strings.HasPrefix(fieldName, definition.Attr) {
 		fieldName = fieldName[len(definition.Attr)+1:] // remove prefix
 	}
@@ -656,14 +698,14 @@ func (v *esVisibilityStore) getFieldType(fieldName string) workflow.IndexedValue
 	if !ok {
 		v.logger.Error("Unknown fieldName, validation should be done in frontend already", tag.Value(fieldName))
 	}
-	return common.ConvertIndexedValueTypeToThriftType(fieldType, v.logger)
+	return common.ConvertIndexedValueTypeToInternalType(fieldType, v.logger)
 }
 
 func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibilityPageToken, sortField string) (string, error) {
 	var sortVal interface{}
 	var err error
 	switch v.getFieldType(sortField) {
-	case workflow.IndexedValueTypeInt, workflow.IndexedValueTypeDatetime, workflow.IndexedValueTypeBool:
+	case types.IndexedValueTypeInt, types.IndexedValueTypeDatetime, types.IndexedValueTypeBool:
 		sortVal, err = token.SortValue.(json.Number).Int64()
 		if err != nil {
 			err, ok := err.(*strconv.NumError) // field not present, ES will return big int +-9223372036854776000
@@ -676,7 +718,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 				sortVal = math.MaxInt64
 			}
 		}
-	case workflow.IndexedValueTypeDouble:
+	case types.IndexedValueTypeDouble:
 		switch token.SortValue.(type) {
 		case json.Number:
 			sortVal, err = token.SortValue.(json.Number).Float64()
@@ -686,7 +728,7 @@ func (v *esVisibilityStore) getValueOfSearchAfterInJSON(token *es.ElasticVisibil
 		case string: // field not present, ES will return "-Infinity" or "Infinity"
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
 		}
-	case workflow.IndexedValueTypeKeyword:
+	case types.IndexedValueTypeKeyword:
 		if token.SortValue != nil {
 			sortVal = fmt.Sprintf(`"%s"`, token.SortValue.(string))
 		} else { // field not present, ES will return null (so token.SortValue is nil)
@@ -706,81 +748,40 @@ func (v *esVisibilityStore) checkProducer() {
 	}
 }
 
-func getVisibilityMessage(
+func createVisibilityMessage(
+	// common parameters
 	domainID string,
 	wid,
 	rid string,
 	workflowTypeName string,
 	taskList string,
-	startTimeUnixNano,
-	executionTimeUnixNano int64,
-	taskID int64,
-	memo []byte,
-	encoding common.EncodingType,
-	isCron bool,
-	NumClusters int16,
-	searchAttributes map[string][]byte,
-) *indexer.Message {
-
-	msgType := indexer.MessageTypeIndex
-	fields := map[string]*indexer.Field{
-		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
-		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
-		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
-		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
-		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
-		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
-	}
-	if len(memo) != 0 {
-		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
-		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
-	}
-	for k, v := range searchAttributes {
-		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
-	}
-
-	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(wid),
-		RunID:       common.StringPtr(rid),
-		Version:     common.Int64Ptr(taskID),
-		Fields:      fields,
-	}
-	return msg
-}
-
-func getVisibilityMessageForCloseExecution(
-	domainID string,
-	wid,
-	rid string,
-	workflowTypeName string,
 	startTimeUnixNano int64,
 	executionTimeUnixNano int64,
-	endTimeUnixNano int64,
-	closeStatus workflow.WorkflowExecutionCloseStatus,
-	historyLength int64,
 	taskID int64,
 	memo []byte,
-	taskList string,
 	encoding common.EncodingType,
 	isCron bool,
 	NumClusters int16,
 	searchAttributes map[string][]byte,
+	visibilityOperation common.VisibilityOperation,
+	// specific to certain status
+	endTimeUnixNano int64, // close execution
+	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
+	historyLength int64, // close execution
+	updateTimeUnixNano int64, // update execution
 ) *indexer.Message {
-
 	msgType := indexer.MessageTypeIndex
+
 	fields := map[string]*indexer.Field{
 		es.WorkflowType:  {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
 		es.StartTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(startTimeUnixNano)},
 		es.ExecutionTime: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(executionTimeUnixNano)},
-		es.CloseTime:     {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)},
-		es.CloseStatus:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))},
-		es.HistoryLength: {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)},
 		es.TaskList:      {Type: &es.FieldTypeString, StringData: common.StringPtr(taskList)},
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
+		es.UpdateTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
 	}
+
 	if len(memo) != 0 {
 		fields[es.Memo] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: memo}
 		fields[es.Encoding] = &indexer.Field{Type: &es.FieldTypeString, StringData: common.StringPtr(string(encoding))}
@@ -789,14 +790,36 @@ func getVisibilityMessageForCloseExecution(
 		fields[k] = &indexer.Field{Type: &es.FieldTypeBinary, BinaryData: v}
 	}
 
-	msg := &indexer.Message{
-		MessageType: &msgType,
-		DomainID:    common.StringPtr(domainID),
-		WorkflowID:  common.StringPtr(wid),
-		RunID:       common.StringPtr(rid),
-		Version:     common.Int64Ptr(taskID),
-		Fields:      fields,
+	switch visibilityOperation {
+	case common.RecordStarted:
+	case common.RecordClosed:
+		fields[es.CloseTime] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(endTimeUnixNano)}
+		fields[es.CloseStatus] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(closeStatus))}
+		fields[es.HistoryLength] = &indexer.Field{Type: &es.FieldTypeInt, IntData: common.Int64Ptr(historyLength)}
 	}
+
+	var visibilityOperationThrift indexer.VisibilityOperation = -1
+	switch visibilityOperation {
+	case common.RecordStarted:
+		visibilityOperationThrift = indexer.VisibilityOperationRecordStarted
+	case common.RecordClosed:
+		visibilityOperationThrift = indexer.VisibilityOperationRecordClosed
+	case common.UpsertSearchAttributes:
+		visibilityOperationThrift = indexer.VisibilityOperationUpsertSearchAttributes
+	default:
+		panic("VisibilityOperation not set")
+	}
+
+	msg := &indexer.Message{
+		MessageType:         &msgType,
+		DomainID:            common.StringPtr(domainID),
+		WorkflowID:          common.StringPtr(wid),
+		RunID:               common.StringPtr(rid),
+		Version:             common.Int64Ptr(taskID),
+		Fields:              fields,
+		VisibilityOperation: &visibilityOperationThrift,
+	}
+
 	return msg
 }
 
@@ -808,6 +831,29 @@ func getVisibilityMessageForDeletion(domainID, workflowID, runID string, docVers
 		WorkflowID:  common.StringPtr(workflowID),
 		RunID:       common.StringPtr(runID),
 		Version:     common.Int64Ptr(docVersion),
+	}
+	return msg
+}
+
+func getVisibilityMessageForUninitializedWorkflow(
+	domainID string,
+	wid,
+	rid string,
+	workflowTypeName string,
+	updateTimeUnixNano int64, // update execution
+) *indexer.Message {
+	msgType := indexer.MessageTypeCreate
+	fields := map[string]*indexer.Field{
+		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
+		es.UpdateTime:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
+	}
+
+	msg := &indexer.Message{
+		MessageType: &msgType,
+		DomainID:    common.StringPtr(domainID),
+		WorkflowID:  common.StringPtr(wid),
+		RunID:       common.StringPtr(rid),
+		Fields:      fields,
 	}
 	return msg
 }

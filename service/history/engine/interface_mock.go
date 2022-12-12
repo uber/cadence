@@ -32,8 +32,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
+	common "github.com/uber/cadence/service/history/common"
 	events "github.com/uber/cadence/service/history/events"
 )
 
@@ -226,15 +226,15 @@ func (mr *MockEngineMockRecorder) MergeDLQMessages(ctx, messagesRequest interfac
 }
 
 // NotifyNewCrossClusterTasks mocks base method.
-func (m *MockEngine) NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
+func (m *MockEngine) NotifyNewCrossClusterTasks(info *common.NotifyTaskInfo) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewCrossClusterTasks", executionInfo, tasks)
+	m.ctrl.Call(m, "NotifyNewCrossClusterTasks", info)
 }
 
 // NotifyNewCrossClusterTasks indicates an expected call of NotifyNewCrossClusterTasks.
-func (mr *MockEngineMockRecorder) NotifyNewCrossClusterTasks(executionInfo, tasks interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) NotifyNewCrossClusterTasks(info interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewCrossClusterTasks), executionInfo, tasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewCrossClusterTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewCrossClusterTasks), info)
 }
 
 // NotifyNewHistoryEvent mocks base method.
@@ -249,28 +249,40 @@ func (mr *MockEngineMockRecorder) NotifyNewHistoryEvent(event interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewHistoryEvent", reflect.TypeOf((*MockEngine)(nil).NotifyNewHistoryEvent), event)
 }
 
-// NotifyNewTimerTasks mocks base method.
-func (m *MockEngine) NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
+// NotifyNewReplicationTasks mocks base method.
+func (m *MockEngine) NotifyNewReplicationTasks(info *common.NotifyTaskInfo) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTimerTasks", executionInfo, tasks)
+	m.ctrl.Call(m, "NotifyNewReplicationTasks", info)
+}
+
+// NotifyNewReplicationTasks indicates an expected call of NotifyNewReplicationTasks.
+func (mr *MockEngineMockRecorder) NotifyNewReplicationTasks(info interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewReplicationTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewReplicationTasks), info)
+}
+
+// NotifyNewTimerTasks mocks base method.
+func (m *MockEngine) NotifyNewTimerTasks(info *common.NotifyTaskInfo) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "NotifyNewTimerTasks", info)
 }
 
 // NotifyNewTimerTasks indicates an expected call of NotifyNewTimerTasks.
-func (mr *MockEngineMockRecorder) NotifyNewTimerTasks(executionInfo, tasks interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) NotifyNewTimerTasks(info interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTimerTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTimerTasks), executionInfo, tasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTimerTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTimerTasks), info)
 }
 
 // NotifyNewTransferTasks mocks base method.
-func (m *MockEngine) NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task) {
+func (m *MockEngine) NotifyNewTransferTasks(info *common.NotifyTaskInfo) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "NotifyNewTransferTasks", executionInfo, tasks)
+	m.ctrl.Call(m, "NotifyNewTransferTasks", info)
 }
 
 // NotifyNewTransferTasks indicates an expected call of NotifyNewTransferTasks.
-func (mr *MockEngineMockRecorder) NotifyNewTransferTasks(executionInfo, tasks interface{}) *gomock.Call {
+func (mr *MockEngineMockRecorder) NotifyNewTransferTasks(info interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTransferTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTransferTasks), executionInfo, tasks)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NotifyNewTransferTasks", reflect.TypeOf((*MockEngine)(nil).NotifyNewTransferTasks), info)
 }
 
 // PollMutableState mocks base method.

@@ -210,8 +210,10 @@ func (s *parallelTaskProcessorSuite) TestMonitor() {
 
 	s.processor.shutdownWG.Add(1) // for monitor
 	dcClient := dynamicconfig.NewInMemoryClient()
+	err := dcClient.UpdateValue(dynamicconfig.TaskSchedulerWorkerCount, workerCount)
+	s.NoError(err)
 	dcCollection := dynamicconfig.NewCollection(dcClient, s.processor.logger)
-	s.processor.options.WorkerCount = dcCollection.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount, workerCount)
+	s.processor.options.WorkerCount = dcCollection.GetIntProperty(dynamicconfig.TaskSchedulerWorkerCount)
 
 	testMonitorTickerDuration := 100 * time.Millisecond
 	go s.processor.workerMonitor(testMonitorTickerDuration)
@@ -227,7 +229,8 @@ func (s *parallelTaskProcessorSuite) TestMonitor() {
 	s.processor.shutdownWG.Add(workerCount + 1)
 
 	newWorkerCount := 3
-	dcClient.UpdateValue(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
+	err = dcClient.UpdateValue(dynamicconfig.TaskSchedulerWorkerCount, newWorkerCount)
+	s.NoError(err)
 
 	time.Sleep(2 * testMonitorTickerDuration)
 	for i := 0; i != newWorkerCount+1; i++ {

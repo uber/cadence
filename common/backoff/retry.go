@@ -202,9 +202,8 @@ func (tr *ThrottleRetry) Do(ctx context.Context, op Operation) error {
 		case <-ctx.Done():
 			if prevErr != nil {
 				return prevErr
-			} else {
-				return err
 			}
+			return err
 		case <-time.After(next):
 		}
 	}

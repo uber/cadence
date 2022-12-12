@@ -75,7 +75,7 @@ func verifyCompatibleVersion(
 	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
 	// should be gone and we can use constant at that time
 	if ds.NoSQL.PluginName != "cassandra" {
-		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
+		return fmt.Errorf("unknown NoSQL plugin name: %q", ds.NoSQL.PluginName)
 	}
 
 	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
@@ -95,11 +95,12 @@ func CheckCompatibleVersion(
 		Keyspace:              cfg.Keyspace,
 		AllowedAuthenticators: cfg.AllowedAuthenticators,
 		Timeout:               DefaultTimeout,
+		ConnectTimeout:        DefaultConnectTimeout,
 		TLS:                   cfg.TLS,
 		ProtoVersion:          cfg.ProtoVersion,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
+		return fmt.Errorf("creating CQL client: %w", err)
 	}
 	defer client.Close()
 
@@ -153,20 +154,24 @@ func createKeyspace(cli *cli.Context) error {
 	if keyspace == "" {
 		return handleErr(schema.NewConfigError("missing " + flag(schema.CLIOptKeyspace) + " argument "))
 	}
-	err = doCreateKeyspace(*config, keyspace)
+	datacenter := cli.String(schema.CLIOptDatacenter)
+	err = doCreateKeyspace(*config, keyspace, datacenter)
 	if err != nil {
 		return handleErr(fmt.Errorf("error creating Keyspace:%v", err))
 	}
 	return nil
 }
 
-func doCreateKeyspace(cfg CQLClientConfig, name string) error {
+func doCreateKeyspace(cfg CQLClientConfig, name string, datacenter string) error {
 	cfg.Keyspace = SystemKeyspace
 	client, err := NewCQLClient(&cfg)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
+	if datacenter != "" {
+		return client.CreateNTSKeyspace(name, datacenter)
+	}
 	return client.CreateKeyspace(name)
 }
 
@@ -176,7 +181,9 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 	cqlConfig.Port = cli.GlobalInt(schema.CLIOptPort)
 	cqlConfig.User = cli.GlobalString(schema.CLIOptUser)
 	cqlConfig.Password = cli.GlobalString(schema.CLIOptPassword)
+	cqlConfig.AllowedAuthenticators = cli.GlobalStringSlice(schema.CLIOptAllowedAuthenticators)
 	cqlConfig.Timeout = cli.GlobalInt(schema.CLIOptTimeout)
+	cqlConfig.ConnectTimeout = cli.GlobalInt(schema.CLIOptConnectTimeout)
 	cqlConfig.Keyspace = cli.GlobalString(schema.CLIOptKeyspace)
 	cqlConfig.NumReplicas = cli.Int(schema.CLIOptReplicationFactor)
 	cqlConfig.ProtoVersion = cli.Int(schema.CLIOptProtoVersion)
@@ -188,6 +195,7 @@ func newCQLClientConfig(cli *cli.Context) (*CQLClientConfig, error) {
 			KeyFile:                cli.GlobalString(schema.CLIFlagTLSKeyFile),
 			CaFile:                 cli.GlobalString(schema.CLIFlagTLSCaFile),
 			EnableHostVerification: cli.GlobalBool(schema.CLIFlagTLSEnableHostVerification),
+			ServerName:             cli.GlobalString(schema.CLIFlagTLSServerName),
 		}
 	}
 

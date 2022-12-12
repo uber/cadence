@@ -27,11 +27,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	c2 "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -107,7 +109,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 				CheckResultType: CheckResultTypeCorrupted,
 				InvariantName:   OpenCurrentExecution,
 				Info:            "execution is open without having current execution",
-				InfoDetails:     "EntityNotExistsError{Message: }",
+				InfoDetails:     "",
 			},
 		},
 		{
@@ -169,12 +171,15 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 			},
 		},
 	}
-
+	ctrl := gomock.NewController(s.T())
+	domainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
 		execManager := &mocks.ExecutionManager{}
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
-		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()))
+		domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
+		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()), domainCache)
 		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}
 }

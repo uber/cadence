@@ -28,7 +28,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
-//Insert message into queue, return error if failed or already exists
+// Insert message into queue, return error if failed or already exists
 // Return ConditionFailure if the condition doesn't meet
 func (db *mdb) InsertIntoQueue(
 	ctx context.Context,

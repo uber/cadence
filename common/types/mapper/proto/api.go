@@ -675,6 +675,7 @@ func FromContinueAsNewWorkflowExecutionDecisionAttributes(t *types.ContinueAsNew
 		Header:                       FromHeader(t.Header),
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
+		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 	}
 }
 
@@ -698,6 +699,7 @@ func ToContinueAsNewWorkflowExecutionDecisionAttributes(t *apiv1.ContinueAsNewWo
 		Header:                              ToHeader(t.Header),
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
+		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
 	}
 }
 
@@ -2646,10 +2648,12 @@ func FromRequestCancelWorkflowExecutionRequest(t *types.RequestCancelWorkflowExe
 		return nil
 	}
 	return &apiv1.RequestCancelWorkflowExecutionRequest{
-		Domain:            t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Identity:          t.Identity,
-		RequestId:         t.RequestID,
+		Domain:              t.Domain,
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
+		Identity:            t.Identity,
+		RequestId:           t.RequestID,
+		Cause:               t.Cause,
+		FirstExecutionRunId: t.FirstExecutionRunID,
 	}
 }
 
@@ -2658,10 +2662,12 @@ func ToRequestCancelWorkflowExecutionRequest(t *apiv1.RequestCancelWorkflowExecu
 		return nil
 	}
 	return &types.RequestCancelWorkflowExecutionRequest{
-		Domain:            t.Domain,
-		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Identity:          t.Identity,
-		RequestID:         t.RequestId,
+		Domain:              t.Domain,
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
+		Identity:            t.Identity,
+		RequestID:           t.RequestId,
+		Cause:               t.Cause,
+		FirstExecutionRunID: t.FirstExecutionRunId,
 	}
 }
 
@@ -3107,6 +3113,26 @@ func ToRetryPolicy(t *apiv1.RetryPolicy) *types.RetryPolicy {
 	}
 }
 
+func FromRestartWorkflowExecutionResponse(t *types.RestartWorkflowExecutionResponse) *apiv1.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.RestartWorkflowExecutionResponse{
+		RunId: t.RunID,
+	}
+}
+
+func ToRestartWorkflowExecutionRequest(t *apiv1.RestartWorkflowExecutionRequest) *types.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
+		Identity:          t.Identity,
+	}
+}
+
 func FromScanWorkflowExecutionsRequest(t *types.ListWorkflowExecutionsRequest) *apiv1.ScanWorkflowExecutionsRequest {
 	if t == nil {
 		return nil
@@ -3338,6 +3364,7 @@ func FromSignalWithStartWorkflowExecutionRequest(t *types.SignalWithStartWorkflo
 			SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 			Header:                       FromHeader(t.Header),
 			DelayStart:                   secondsToDuration(t.DelayStartSeconds),
+			JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 		},
 		SignalName:  t.SignalName,
 		SignalInput: FromPayload(t.SignalInput),
@@ -3369,6 +3396,7 @@ func ToSignalWithStartWorkflowExecutionRequest(t *apiv1.SignalWithStartWorkflowE
 		SearchAttributes:                    ToSearchAttributes(t.StartRequest.SearchAttributes),
 		Header:                              ToHeader(t.StartRequest.Header),
 		DelayStartSeconds:                   durationToSeconds(t.StartRequest.DelayStart),
+		JitterStartSeconds:                  durationToSeconds(t.StartRequest.JitterStart),
 	}
 }
 
@@ -3518,6 +3546,7 @@ func FromStartChildWorkflowExecutionInitiatedEventAttributes(t *types.StartChild
 		Memo:                         FromMemo(t.Memo),
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
+		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 	}
 }
 
@@ -3543,6 +3572,7 @@ func ToStartChildWorkflowExecutionInitiatedEventAttributes(t *apiv1.StartChildWo
 		Memo:                                ToMemo(t.Memo),
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
+		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
 	}
 }
 
@@ -3586,6 +3616,26 @@ func ToStartTimerDecisionAttributes(t *apiv1.StartTimerDecisionAttributes) *type
 	}
 }
 
+func FromRestartWorkflowExecutionRequest(t *types.RestartWorkflowExecutionRequest) *apiv1.RestartWorkflowExecutionRequest {
+	if t == nil {
+		return nil
+	}
+	return &apiv1.RestartWorkflowExecutionRequest{
+		Domain:            t.Domain,
+		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
+		Identity:          t.Identity,
+	}
+}
+
+func ToRestartStartWorkflowExecutionResponse(t *apiv1.RestartWorkflowExecutionResponse) *types.RestartWorkflowExecutionResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.RestartWorkflowExecutionResponse{
+		RunID: t.RunId,
+	}
+}
+
 func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *apiv1.StartWorkflowExecutionRequest {
 	if t == nil {
 		return nil
@@ -3607,6 +3657,7 @@ func FromStartWorkflowExecutionRequest(t *types.StartWorkflowExecutionRequest) *
 		SearchAttributes:             FromSearchAttributes(t.SearchAttributes),
 		Header:                       FromHeader(t.Header),
 		DelayStart:                   secondsToDuration(t.DelayStartSeconds),
+		JitterStart:                  secondsToDuration(t.JitterStartSeconds),
 	}
 }
 
@@ -3631,6 +3682,7 @@ func ToStartWorkflowExecutionRequest(t *apiv1.StartWorkflowExecutionRequest) *ty
 		SearchAttributes:                    ToSearchAttributes(t.SearchAttributes),
 		Header:                              ToHeader(t.Header),
 		DelayStartSeconds:                   durationToSeconds(t.DelayStart),
+		JitterStartSeconds:                  durationToSeconds(t.JitterStart),
 	}
 }
 
@@ -3867,11 +3919,12 @@ func FromTerminateWorkflowExecutionRequest(t *types.TerminateWorkflowExecutionRe
 		return nil
 	}
 	return &apiv1.TerminateWorkflowExecutionRequest{
-		Domain:            t.Domain,
-		WorkflowExecution: FromWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.Reason,
-		Details:           FromPayload(t.Details),
-		Identity:          t.Identity,
+		Domain:              t.Domain,
+		WorkflowExecution:   FromWorkflowExecution(t.WorkflowExecution),
+		Reason:              t.Reason,
+		Details:             FromPayload(t.Details),
+		Identity:            t.Identity,
+		FirstExecutionRunId: t.FirstExecutionRunID,
 	}
 }
 
@@ -3880,11 +3933,12 @@ func ToTerminateWorkflowExecutionRequest(t *apiv1.TerminateWorkflowExecutionRequ
 		return nil
 	}
 	return &types.TerminateWorkflowExecutionRequest{
-		Domain:            t.Domain,
-		WorkflowExecution: ToWorkflowExecution(t.WorkflowExecution),
-		Reason:            t.Reason,
-		Details:           ToPayload(t.Details),
-		Identity:          t.Identity,
+		Domain:              t.Domain,
+		WorkflowExecution:   ToWorkflowExecution(t.WorkflowExecution),
+		Reason:              t.Reason,
+		Details:             ToPayload(t.Details),
+		Identity:            t.Identity,
+		FirstExecutionRunID: t.FirstExecutionRunId,
 	}
 }
 
@@ -4688,6 +4742,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 	if t == nil {
 		return nil
 	}
+
 	return &apiv1.WorkflowExecutionStartedEventAttributes{
 		WorkflowType:                 FromWorkflowType(t.WorkflowType),
 		ParentExecutionInfo:          FromParentExecutionInfoFields(t.ParentWorkflowDomainID, t.ParentWorkflowDomain, t.ParentWorkflowExecution, t.ParentInitiatedEventID),
@@ -4702,6 +4757,7 @@ func FromWorkflowExecutionStartedEventAttributes(t *types.WorkflowExecutionStart
 		OriginalExecutionRunId:       t.OriginalExecutionRunID,
 		Identity:                     t.Identity,
 		FirstExecutionRunId:          t.FirstExecutionRunID,
+		FirstScheduledTime:           timeToTimestamp(t.FirstScheduleTime),
 		RetryPolicy:                  FromRetryPolicy(t.RetryPolicy),
 		Attempt:                      t.Attempt,
 		ExpirationTime:               unixNanoToTime(t.ExpirationTimestamp),
@@ -4736,6 +4792,7 @@ func ToWorkflowExecutionStartedEventAttributes(t *apiv1.WorkflowExecutionStarted
 		OriginalExecutionRunID:              t.OriginalExecutionRunId,
 		Identity:                            t.Identity,
 		FirstExecutionRunID:                 t.FirstExecutionRunId,
+		FirstScheduleTime:                   timestampToTime(t.FirstScheduledTime),
 		RetryPolicy:                         ToRetryPolicy(t.RetryPolicy),
 		Attempt:                             t.Attempt,
 		ExpirationTimestamp:                 timeToUnixNano(t.ExpirationTime),

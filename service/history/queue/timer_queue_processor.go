@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
@@ -51,9 +52,8 @@ type (
 		historyEngine engine.Engine
 		taskProcessor task.Processor
 
-		config                *config.Config
-		isGlobalDomainEnabled bool
-		currentClusterName    string
+		config             *config.Config
+		currentClusterName string
 
 		metricsClient metrics.Client
 		logger        log.Logger
@@ -106,21 +106,16 @@ func NewTimerQueueProcessor(
 
 	standbyQueueProcessors := make(map[string]*timerQueueProcessorBase)
 	standbyQueueTimerGates := make(map[string]RemoteTimerGate)
-	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled || clusterName == currentClusterName {
-			continue
-		}
-
+	for clusterName := range shard.GetClusterMetadata().GetRemoteClusterInfo() {
 		historyResender := ndc.NewHistoryResender(
 			shard.GetDomainCache(),
 			shard.GetService().GetClientBean().GetRemoteAdminClient(clusterName),
 			func(ctx context.Context, request *types.ReplicateEventsV2Request) error {
 				return historyEngine.ReplicateEventsV2(ctx, request)
 			},
-			shard.GetService().GetPayloadSerializer(),
 			config.StandbyTaskReReplicationContextTimeout,
 			executionCheck,
-			shard.GetLogger().WithTags(tag.ComponentHistoryResender),
+			shard.GetLogger(),
 		)
 		standbyTaskExecutor := task.NewTimerStandbyTaskExecutor(
 			shard,
@@ -148,9 +143,8 @@ func NewTimerQueueProcessor(
 		historyEngine: historyEngine,
 		taskProcessor: taskProcessor,
 
-		config:                config,
-		isGlobalDomainEnabled: shard.GetClusterMetadata().IsGlobalDomainEnabled(),
-		currentClusterName:    currentClusterName,
+		config:             config,
+		currentClusterName: currentClusterName,
 
 		metricsClient: shard.GetMetricsClient(),
 		logger:        logger,
@@ -173,10 +167,8 @@ func (t *timerQueueProcessor) Start() {
 	}
 
 	t.activeQueueProcessor.Start()
-	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			standbyQueueProcessor.Start()
-		}
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		standbyQueueProcessor.Start()
 	}
 
 	t.shutdownWG.Add(1)
@@ -189,10 +181,8 @@ func (t *timerQueueProcessor) Stop() {
 	}
 
 	t.activeQueueProcessor.Stop()
-	if t.isGlobalDomainEnabled {
-		for _, standbyQueueProcessor := range t.standbyQueueProcessors {
-			standbyQueueProcessor.Stop()
-		}
+	for _, standbyQueueProcessor := range t.standbyQueueProcessors {
+		standbyQueueProcessor.Stop()
 	}
 
 	close(t.shutdownChan)
@@ -201,11 +191,10 @@ func (t *timerQueueProcessor) Stop() {
 
 func (t *timerQueueProcessor) NotifyNewTask(
 	clusterName string,
-	_ *persistence.WorkflowExecutionInfo,
-	timerTasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
 	if clusterName == t.currentClusterName {
-		t.activeQueueProcessor.notifyNewTimers(timerTasks)
+		t.activeQueueProcessor.notifyNewTimers(info.Tasks)
 		return
 	}
 
@@ -220,7 +209,7 @@ func (t *timerQueueProcessor) NotifyNewTask(
 	}
 
 	standbyQueueTimerGate.SetCurrentTime(t.shard.GetCurrentTime(clusterName))
-	standbyQueueProcessor.notifyNewTimers(timerTasks)
+	standbyQueueProcessor.notifyNewTimers(info.Tasks)
 }
 
 func (t *timerQueueProcessor) FailoverDomain(
@@ -235,11 +224,7 @@ func (t *timerQueueProcessor) FailoverDomain(
 
 	minLevel := t.shard.GetTimerClusterAckLevel(t.currentClusterName)
 	standbyClusterName := t.currentClusterName
-	for clusterName, info := range t.shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
-
+	for clusterName := range t.shard.GetClusterMetadata().GetEnabledClusterInfo() {
 		ackLevel := t.shard.GetTimerClusterAckLevel(clusterName)
 		if ackLevel.Before(minLevel) {
 			minLevel = ackLevel
@@ -394,21 +379,19 @@ func (t *timerQueueProcessor) completeTimer() error {
 		newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
 	}
 
-	if t.isGlobalDomainEnabled {
-		for standbyClusterName := range t.standbyQueueProcessors {
-			actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
-			if err != nil {
-				return err
-			}
-			for _, queueState := range actionResult.GetStateActionResult.States {
-				newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
-			}
+	for standbyClusterName := range t.standbyQueueProcessors {
+		actionResult, err := t.HandleAction(context.Background(), standbyClusterName, NewGetStateAction())
+		if err != nil {
+			return err
 		}
+		for _, queueState := range actionResult.GetStateActionResult.States {
+			newAckLevel = minTaskKey(newAckLevel, queueState.AckLevel())
+		}
+	}
 
-		for _, failoverInfo := range t.shard.GetAllTimerFailoverLevels() {
-			failoverLevel := newTimerTaskKey(failoverInfo.MinLevel, 0)
-			newAckLevel = minTaskKey(newAckLevel, failoverLevel)
-		}
+	for _, failoverInfo := range t.shard.GetAllTimerFailoverLevels() {
+		failoverLevel := newTimerTaskKey(failoverInfo.MinLevel, 0)
+		newAckLevel = minTaskKey(newAckLevel, failoverLevel)
 	}
 
 	if newAckLevel == maximumTimerTaskKey {
@@ -532,10 +515,9 @@ func newTimerQueueStandbyProcessor(
 					// retry the task if failed to find the domain
 					logger.Warn("Cannot find domain", tag.WorkflowDomainID(timer.DomainID))
 					return false, err
-				} else {
-					logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(timer.DomainID), tag.Value(timer))
-					return false, nil
 				}
+				logger.Warn("Cannot find domain, default to not process task.", tag.WorkflowDomainID(timer.DomainID), tag.Value(timer))
+				return false, nil
 			}
 		}
 		return taskAllocator.VerifyStandbyTask(clusterName, timer.DomainID, timer)

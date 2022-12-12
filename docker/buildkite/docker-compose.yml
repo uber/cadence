@@ -73,6 +73,10 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "CASSANDRA=1"
+      - "MYSQL=1"
+      - "POSTGRES=1"
+      - "MONGODB=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "MYSQL_SEEDS=mysql"
       - "POSTGRES_SEEDS=postgres"
@@ -99,6 +103,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -124,6 +129,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "MYSQL=1"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
@@ -151,6 +157,7 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "POSTGRES=1"
       - "POSTGRES_SEEDS=postgres"
       - "PERSISTENCE_PLUGIN=postgres"
       - "ES_SEEDS=elasticsearch"
@@ -178,11 +185,11 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "CASSANDRA=1"
       - "CASSANDRA_SEEDS=cassandra"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "TEST_TAG=esintegration"
-      - "TEST_RUN_COUNT=10"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID
@@ -204,13 +211,13 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "MYSQL=1"
       - "MYSQL_SEEDS=mysql"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
       - "PERSISTENCE_PLUGIN=mysql"
       - "TEST_TAG=esintegration"
-      - "TEST_RUN_COUNT=10"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID
@@ -232,13 +239,13 @@ services:
       context: ../../
       dockerfile: ./docker/buildkite/Dockerfile
     environment:
+      - "POSTGRES=1"
       - "POSTGRES_SEEDS=postgres"
       - "ES_SEEDS=elasticsearch"
       - "KAFKA_SEEDS=kafka"
       - "PERSISTENCE_TYPE=sql"
       - "PERSISTENCE_PLUGIN=postgres"
       - "TEST_TAG=esintegration"
-      - "TEST_RUN_COUNT=10"
       - BUILDKITE_AGENT_ACCESS_TOKEN
       - BUILDKITE_JOB_ID
       - BUILDKITE_BUILD_ID

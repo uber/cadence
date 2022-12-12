@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
 	"github.com/uber/cadence/common/types"
@@ -33,16 +34,18 @@ import (
 
 type (
 	concreteExecutionExists struct {
-		pr persistence.Retryer
+		pr    persistence.Retryer
+		cache cache.DomainCache
 	}
 )
 
 // NewConcreteExecutionExists returns a new invariant for checking concrete execution
 func NewConcreteExecutionExists(
-	pr persistence.Retryer,
+	pr persistence.Retryer, cache cache.DomainCache,
 ) Invariant {
 	return &concreteExecutionExists{
-		pr: pr,
+		pr:    pr,
+		cache: cache,
 	}
 }
 
@@ -71,9 +74,17 @@ func (c *concreteExecutionExists) Check(
 			return *runIDCheckResult
 		}
 	}
-
+	domainName, err := c.cache.GetDomainName(currentExecution.DomainID)
+	if err != nil {
+		return CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   c.Name(),
+			Info:            "Failed to fetch Domain Name",
+		}
+	}
 	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(ctx, &persistence.IsWorkflowExecutionExistsRequest{
 		DomainID:   currentExecution.DomainID,
+		DomainName: domainName,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
 	})
@@ -130,10 +141,20 @@ func (c *concreteExecutionExists) Fix(
 	if fixResult != nil {
 		return *fixResult
 	}
+	domainName, errorDomain := c.cache.GetDomainName(currentExecution.DomainID)
+	if errorDomain != nil {
+		return FixResult{
+			FixResultType: FixResultTypeFailed,
+			InvariantName: c.Name(),
+			Info:          "failed to fetch Domain Name",
+			InfoDetails:   errorDomain.Error(),
+		}
+	}
 	if err := c.pr.DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
 		RunID:      currentExecution.CurrentRunID,
+		DomainName: domainName,
 	}); err != nil {
 		return FixResult{
 			FixResultType: FixResultTypeFailed,
@@ -157,10 +178,19 @@ func (c *concreteExecutionExists) validateCurrentRunID(
 	ctx context.Context,
 	currentExecution *entity.CurrentExecution,
 ) (*entity.CurrentExecution, *CheckResult) {
-
+	domainName, err := c.cache.GetDomainName(currentExecution.DomainID)
+	if err != nil {
+		return nil, &CheckResult{
+			CheckResultType: CheckResultTypeFailed,
+			InvariantName:   c.Name(),
+			Info:            "Failed to fetch domainName",
+			InfoDetails:     err.Error(),
+		}
+	}
 	resp, err := c.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 		DomainID:   currentExecution.DomainID,
 		WorkflowID: currentExecution.WorkflowID,
+		DomainName: domainName,
 	})
 	if err != nil {
 		switch err.(type) {

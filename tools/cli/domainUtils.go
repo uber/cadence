@@ -241,10 +241,7 @@ func initializeAdminDomainHandler(
 
 	metricsClient := initializeMetricsClient()
 	logger := initializeLogger(configuration)
-	clusterMetadata := initializeClusterMetadata(
-		configuration,
-		logger,
-	)
+	clusterMetadata := initializeClusterMetadata(configuration, metricsClient, logger)
 	metadataMgr := initializeDomainManager(context)
 	dynamicConfig := initializeDynamicConfig(configuration, logger)
 	return initializeDomainHandler(
@@ -279,9 +276,9 @@ func initializeDomainHandler(
 ) domain.Handler {
 
 	domainConfig := domain.Config{
-		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(domain.DefaultMinWorkflowRetentionInDays),
-		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(domain.MaxBadBinaries),
-		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(domain.FailoverCoolDown),
+		MinRetentionDays:  dynamicconfig.GetIntPropertyFn(dynamicconfig.MinRetentionDays.DefaultInt()),
+		MaxBadBinaryCount: dynamicconfig.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries.DefaultInt()),
+		FailoverCoolDown:  dynamicconfig.GetDurationPropertyFnFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown.DefaultDuration()),
 	}
 	return domain.NewHandler(
 		domainConfig,
@@ -305,19 +302,17 @@ func initializeLogger(
 	return loggerimpl.NewLogger(zapLogger)
 }
 
-func initializeClusterMetadata(
-	serviceConfig *config.Config,
-	logger log.Logger,
-) cluster.Metadata {
+func initializeClusterMetadata(serviceConfig *config.Config, metrics metrics.Client, logger log.Logger) cluster.Metadata {
 
 	clusterGroupMetadata := serviceConfig.ClusterGroupMetadata
 	return cluster.NewMetadata(
-		logger,
-		dynamicconfig.GetBoolPropertyFn(clusterGroupMetadata.EnableGlobalDomain),
 		clusterGroupMetadata.FailoverVersionIncrement,
 		clusterGroupMetadata.PrimaryClusterName,
 		clusterGroupMetadata.CurrentClusterName,
 		clusterGroupMetadata.ClusterGroup,
+		func(d string) bool { return false },
+		metrics,
+		logger,
 	)
 }
 

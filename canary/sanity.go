@@ -41,6 +41,7 @@ var sanityChildWFList = []string{
 	wfTypeHistoryArchival,
 	wfTypeVisibilityArchival,
 	wfTypeBatch,
+	wfTypeCrossClusterParent,
 }
 
 func init() {

@@ -24,8 +24,11 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/olivere/elastic"
 	"github.com/urfave/cli"
@@ -33,10 +36,14 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
+
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
-	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -152,9 +159,29 @@ func (b *clientFactory) ensureDispatcher(c *cli.Context) {
 	if addr := c.GlobalString(FlagAddress); addr != "" {
 		b.hostPort = addr
 	}
+	var outbounds transport.Outbounds
+	if shouldUseGrpc {
+		grpcTransport := grpc.NewTransport()
+		outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(b.hostPort)}
 
-	outbounds := transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(b.hostPort)}
-	if !shouldUseGrpc {
+		tlsCertificatePath := c.GlobalString(FlagTLSCertPath)
+		if tlsCertificatePath != "" {
+			caCert, err := ioutil.ReadFile(tlsCertificatePath)
+			if err != nil {
+				b.logger.Fatal("Failed to load server CA certificate", zap.Error(err))
+			}
+			caCertPool := x509.NewCertPool()
+			if !caCertPool.AppendCertsFromPEM(caCert) {
+				b.logger.Fatal("Failed to add server CA certificate", zap.Error(err))
+			}
+			tlsConfig := tls.Config{
+				RootCAs: caCertPool,
+			}
+			tlsCreds := credentials.NewTLS(&tlsConfig)
+			tlsChooser := peer.NewSingle(hostport.Identify(b.hostPort), grpcTransport.NewDialer(grpc.DialerCredentials(tlsCreds)))
+			outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewOutbound(tlsChooser)}
+		}
+	} else {
 		ch, err := tchannel.NewChannelTransport(tchannel.ServiceName(cadenceClientName), tchannel.ListenAddr("127.0.0.1:0"))
 		if err != nil {
 			b.logger.Fatal("Failed to create transport channel", zap.Error(err))

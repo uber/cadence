@@ -28,10 +28,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/entity"
@@ -136,8 +138,11 @@ func (ts *TimerInvalidTest) TestCheck() {
 			entity:     &entity.Timer{},
 		},
 	}
-
+	ctrl := gomock.NewController(ts.T())
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
+		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
 			execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
@@ -147,6 +152,7 @@ func (ts *TimerInvalidTest) TestCheck() {
 					nil,
 					common.CreatePersistenceRetryPolicy(),
 				),
+				mockDomainCache,
 			)
 			ctx := context.Background()
 			if tc.ctxExpired {
@@ -260,8 +266,11 @@ func (ts *TimerInvalidTest) TestFix() {
 			ttComplete: nil,
 		},
 	}
-
+	ctrl := gomock.NewController(ts.T())
+	mockDomainCache := cache.NewMockDomainCache(ctrl)
+	defer ctrl.Finish()
 	for _, tc := range testCases {
+		mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 		ts.Run(tc.name, func() {
 			execManager := &mocks.ExecutionManager{}
 			execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
@@ -272,6 +281,7 @@ func (ts *TimerInvalidTest) TestFix() {
 					nil,
 					common.CreatePersistenceRetryPolicy(),
 				),
+				mockDomainCache,
 			)
 			ctx := context.Background()
 			if tc.ctxExpired {

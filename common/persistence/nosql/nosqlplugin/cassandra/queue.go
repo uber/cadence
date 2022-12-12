@@ -42,7 +42,7 @@ const (
 	templateGetQueueSizeQuery               = `SELECT COUNT(1) AS count FROM queue WHERE queue_type=?`
 )
 
-//Insert message into queue, return error if failed or already exists
+// Insert message into queue, return error if failed or already exists
 // Must return ConditionFailure error if row already exists
 func (db *cdb) InsertIntoQueue(
 	ctx context.Context,
@@ -156,7 +156,7 @@ func (db *cdb) DeleteMessagesBefore(
 	exclusiveBeginMessageID int64,
 ) error {
 	query := db.session.Query(templateRangeDeleteMessagesBeforeQuery, queueType, exclusiveBeginMessageID).WithContext(ctx)
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 // Delete all messages in a range between exclusiveBeginMessageID and inclusiveEndMessageID
@@ -167,7 +167,7 @@ func (db *cdb) DeleteMessagesInRange(
 	inclusiveEndMessageID int64,
 ) error {
 	query := db.session.Query(templateRangeDeleteMessagesBetweenQuery, queueType, exclusiveBeginMessageID, inclusiveEndMessageID).WithContext(ctx)
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 // Delete one message
@@ -177,7 +177,7 @@ func (db *cdb) DeleteMessage(
 	messageID int64,
 ) error {
 	query := db.session.Query(templateDeleteMessageQuery, queueType, messageID).WithContext(ctx)
-	return query.Exec()
+	return db.executeWithConsistencyAll(query)
 }
 
 // Insert an empty metadata row, starting from a version

@@ -49,6 +49,12 @@ func convertCommonErrors(
 		}
 	}
 
+	if errChecker.IsDBUnavailableError(err) {
+		return &p.DBUnavailableError{
+			Msg: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
+		}
+	}
+
 	return &types.InternalServiceError{
 		Message: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 	}

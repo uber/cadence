@@ -39,13 +39,14 @@ type (
 	}
 
 	canaryImpl struct {
-		canaryClient   cadenceClient
-		canaryDomain   string
-		archivalClient cadenceClient
-		systemClient   cadenceClient
-		batcherClient  cadenceClient
-		runtime        *RuntimeContext
-		canaryConfig   *Canary
+		canaryClient           cadenceClient
+		canaryDomain           string
+		crossClusterDestClient *cadenceClient
+		archivalClient         cadenceClient
+		systemClient           cadenceClient
+		batcherClient          cadenceClient
+		runtime                *RuntimeContext
+		canaryConfig           *Canary
 	}
 
 	activityContext struct {
@@ -67,14 +68,19 @@ func newCanary(domain string, rc *RuntimeContext, canaryConfig *Canary) Runnable
 	archivalClient := newCadenceClient(archivalDomain, rc)
 	systemClient := newCadenceClient(common.SystemLocalDomainName, rc)
 	batcherClient := newCadenceClient(common.BatcherLocalDomainName, rc)
+	var xClusterDest cadenceClient
+	if canaryConfig.CrossClusterTestMode == CrossClusterCanaryModeFull {
+		xClusterDest = newCadenceClient(deriveCanaryDomain(domain), rc)
+	}
 	return &canaryImpl{
-		canaryClient:   canaryClient,
-		canaryDomain:   domain,
-		archivalClient: archivalClient,
-		systemClient:   systemClient,
-		batcherClient:  batcherClient,
-		runtime:        rc,
-		canaryConfig:   canaryConfig,
+		canaryClient:           canaryClient,
+		canaryDomain:           domain,
+		crossClusterDestClient: &xClusterDest,
+		archivalClient:         archivalClient,
+		systemClient:           systemClient,
+		batcherClient:          batcherClient,
+		runtime:                rc,
+		canaryConfig:           canaryConfig,
 	}
 }
 
@@ -88,10 +94,12 @@ func (c *canaryImpl) Run(mode string) error {
 
 	if err = c.createDomain(); err != nil {
 		log.Error("createDomain failed", zap.Error(err))
+		return err
 	}
 
 	if err = c.createArchivalDomain(); err != nil {
 		log.Error("createArchivalDomain failed", zap.Error(err))
+		return err
 	}
 
 	if mode == ModeAll || mode == ModeCronCanary {
@@ -127,6 +135,10 @@ func (c *canaryImpl) startWorker() error {
 		return err
 	}
 	canaryWorker := worker.New(c.canaryClient.Service, c.canaryDomain, taskListName, options)
+	if c.canaryConfig.CrossClusterTestMode == CrossClusterCanaryModeFull {
+		go worker.New(c.canaryClient.Service, c.canaryDomain, crossClusterSrcTasklist, options).Run()
+		go worker.New(c.crossClusterDestClient.Service, c.getCrossClusterTargetDomain(), crossClusterDestTasklist, options).Run()
+	}
 	return canaryWorker.Run()
 }
 
@@ -141,6 +153,7 @@ func (c *canaryImpl) startCronWorkflow() {
 	span := opentracing.StartSpan("start-cron-workflow-span")
 	defer span.Finish()
 	ctx = opentracing.ContextWithSpan(ctx, span)
+	c.registerMethods()
 	_, err := c.canaryClient.StartWorkflow(ctx, opts, cronWorkflow, wfTypeSanity)
 	if err != nil {
 		// TODO: improvement: compare the cron schedule to decide whether or not terminating the current one
@@ -169,7 +182,32 @@ func (c *canaryImpl) createDomain() error {
 	desc := "Domain for running cadence canary workflows"
 	owner := "cadence-canary"
 	archivalStatus := shared.ArchivalStatusDisabled
-	return c.canaryClient.createDomain(name, desc, owner, &archivalStatus)
+	err := c.canaryClient.createDomain(name, desc, owner, &archivalStatus, true, c.canaryConfig.CanaryDomainClusters)
+	if err != nil {
+		return err
+	}
+	if c.canaryConfig.CrossClusterTestMode == CrossClusterCanaryModeFull {
+		err := c.crossClusterDestClient.createDomain(
+			deriveCanaryDomain(c.canaryDomain),
+			"cross cluster canary dest domain",
+			owner,
+			&archivalStatus,
+			true,
+			c.canaryConfig.CanaryDomainClusters,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to setup cross-cluster domain on canary domain registration: %w", err)
+		}
+	}
+	return nil
+}
+
+// registers workflow methods and activities
+func (c *canaryImpl) registerMethods() {
+	registerWorkflow(c.crossClusterParentWf, wfTypeCrossClusterParent)
+	registerWorkflow(c.crossClusterChildWf, wfTypeCrossClusterChild)
+	registerActivity(c.crossClusterSampleActivity, activityTypeCrossCluster)
+	registerActivity(c.failoverDestDomainActivity, activityTypeCrossClusterFailover)
 }
 
 func (c *canaryImpl) createArchivalDomain() error {
@@ -177,10 +215,15 @@ func (c *canaryImpl) createArchivalDomain() error {
 	desc := "Domain used by cadence canary workflows to verify archival"
 	owner := "cadence-canary"
 	archivalStatus := shared.ArchivalStatusEnabled
-	return c.archivalClient.createDomain(name, desc, owner, &archivalStatus)
+	return c.archivalClient.createDomain(name, desc, owner, &archivalStatus, true, c.canaryConfig.CanaryDomainClusters)
+}
+
+func (c *canaryImpl) getCrossClusterTargetDomain() string {
+	return deriveCanaryDomain(c.canaryDomain)
 }
 
 // Override worker options to create large number of pollers to improve the chances of activities getting sync matched
+//
 //nolint:unused
 func overrideWorkerOptions(ctx context.Context) context.Context {
 	optionsOverride := make(map[string]map[string]string)
@@ -189,4 +232,8 @@ func overrideWorkerOptions(ctx context.Context) context.Context {
 	}
 
 	return context.WithValue(ctx, testTagsContextKey, optionsOverride)
+}
+
+func deriveCanaryDomain(domain string) string {
+	return fmt.Sprintf("%s-cross-cluster", domain)
 }

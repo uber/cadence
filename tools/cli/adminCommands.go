@@ -49,7 +49,7 @@ func AdminShowWorkflow(c *cli.Context) {
 	bid := c.String(FlagBranchID)
 	sid := c.Int(FlagShardID)
 	outputFileName := c.String(FlagOutputFilename)
-
+	domainName := c.String(FlagDomain)
 	ctx, cancel := newContext(c)
 	defer cancel()
 	serializer := persistence.NewPayloadSerializer()
@@ -70,6 +70,7 @@ func AdminShowWorkflow(c *cli.Context) {
 			MaxEventID:  maxEventID,
 			PageSize:    maxEventID,
 			ShardID:     &sid,
+			DomainName:  domainName,
 		})
 		if err != nil {
 			ErrorAndExit("ReadHistoryBranch err", err)
@@ -280,6 +281,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		err = histV2.DeleteHistoryBranch(ctx, &persistence.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     &shardIDInt,
+			DomainName:  domain,
 		})
 		if err != nil {
 			if skipError {
@@ -294,6 +296,7 @@ func AdminDeleteWorkflow(c *cli.Context) {
 		DomainID:   domainID,
 		WorkflowID: wid,
 		RunID:      rid,
+		DomainName: domain,
 	}
 
 	err = exeStore.DeleteWorkflowExecution(ctx, req)

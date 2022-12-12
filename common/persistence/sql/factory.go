@@ -41,6 +41,7 @@ type (
 		clusterName string
 		logger      log.Logger
 		parser      serialization.Parser
+		dc          *p.DynamicConfiguration
 	}
 
 	// dbConn represents a logical mysql connection - its a
@@ -61,6 +62,7 @@ func NewFactory(
 	clusterName string,
 	logger log.Logger,
 	parser serialization.Parser,
+	dc *p.DynamicConfiguration,
 ) *Factory {
 	return &Factory{
 		cfg:         cfg,
@@ -68,6 +70,7 @@ func NewFactory(
 		logger:      logger,
 		dbConn:      newRefCountedDBConn(&cfg),
 		parser:      parser,
+		dc:          dc,
 	}
 }
 
@@ -113,7 +116,7 @@ func (f *Factory) NewExecutionStore(shardID int) (p.ExecutionStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewSQLExecutionStore(conn, f.logger, shardID, f.parser)
+	return NewSQLExecutionStore(conn, f.logger, shardID, f.parser, f.dc)
 }
 
 // NewVisibilityStore returns a visibility store
@@ -132,7 +135,7 @@ func (f *Factory) NewQueue(queueType p.QueueType) (p.Queue, error) {
 	return newQueueStore(conn, f.logger, queueType)
 }
 
-//NewConfigStore returns a new config store backed by sql. Not Yet Implemented.
+// NewConfigStore returns a new config store backed by sql. Not Yet Implemented.
 func (f *Factory) NewConfigStore() (p.ConfigStore, error) {
 	return nil, errors.New("sql config store not yet implemented")
 }

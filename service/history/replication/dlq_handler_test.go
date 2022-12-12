@@ -32,7 +32,6 @@ import (
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -50,10 +49,9 @@ type (
 		config           *config.Config
 		mockClientBean   *client.MockBean
 		adminClient      *admin.MockClient
-		clusterMetadata  *cluster.MockMetadata
 		executionManager *mocks.ExecutionManager
 		shardManager     *mocks.ShardManager
-		taskExecutor     *MockTaskExecutor
+		taskExecutor     *fakeTaskExecutor
 		taskExecutors    map[string]TaskExecutor
 		sourceCluster    string
 
@@ -92,13 +90,11 @@ func (s *dlqHandlerSuite) SetupTest() {
 
 	s.mockClientBean = s.mockShard.Resource.ClientBean
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
-	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
 	s.shardManager = s.mockShard.Resource.ShardMgr
 
-	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
 	s.taskExecutors = make(map[string]TaskExecutor)
-	s.taskExecutor = NewMockTaskExecutor(s.controller)
+	s.taskExecutor = &fakeTaskExecutor{}
 	s.sourceCluster = "test"
 	s.taskExecutors[s.sourceCluster] = s.taskExecutor
 
@@ -212,7 +208,6 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 		Return(&types.GetDLQReplicationMessagesResponse{
 			ReplicationTasks: []*types.ReplicationTask{replicationTask},
 		}, nil)
-	s.taskExecutor.EXPECT().execute(replicationTask, true).Return(0, nil).Times(1)
 	s.executionManager.On("RangeDeleteReplicationTaskFromDLQ", mock.Anything,
 		&persistence.RangeDeleteReplicationTaskFromDLQRequest{
 			SourceClusterName:    s.sourceCluster,
@@ -223,4 +218,17 @@ func (s *dlqHandlerSuite) TestMergeMessages_OK() {
 	token, err := s.messageHandler.MergeMessages(ctx, s.sourceCluster, lastMessageID, pageSize, pageToken)
 	s.NoError(err)
 	s.Nil(token)
+	s.Equal(1, len(s.taskExecutor.executedTasks))
+}
+
+type fakeTaskExecutor struct {
+	scope int
+	err   error
+
+	executedTasks []*types.ReplicationTask
+}
+
+func (e *fakeTaskExecutor) execute(replicationTask *types.ReplicationTask, forceApply bool) (int, error) {
+	e.executedTasks = append(e.executedTasks, replicationTask)
+	return e.scope, e.err
 }

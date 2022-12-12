@@ -29,8 +29,8 @@ import (
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/engine"
 	"github.com/uber/cadence/service/history/execution"
 	"github.com/uber/cadence/service/history/shard"
@@ -61,14 +61,9 @@ func NewCrossClusterQueueProcessor(
 	taskProcessor task.Processor,
 ) Processor {
 	logger := shard.GetLogger().WithTags(tag.ComponentCrossClusterQueueProcessor)
-	currentClusterName := shard.GetClusterMetadata().GetCurrentClusterName()
 
 	queueProcessors := make(map[string]*crossClusterQueueProcessorBase)
-	for clusterName, info := range shard.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled || clusterName == currentClusterName {
-			continue
-		}
-
+	for clusterName := range shard.GetClusterMetadata().GetRemoteClusterInfo() {
 		taskExecutor := task.NewCrossClusterSourceTaskExecutor(
 			shard,
 			executionCache,
@@ -103,10 +98,8 @@ func (c *crossClusterQueueProcessor) Start() {
 		return
 	}
 
-	if c.shard.GetClusterMetadata().IsGlobalDomainEnabled() {
-		for _, queueProcessor := range c.queueProcessors {
-			queueProcessor.Start()
-		}
+	for _, queueProcessor := range c.queueProcessors {
+		queueProcessor.Start()
 	}
 }
 
@@ -124,10 +117,9 @@ func (c *crossClusterQueueProcessor) Stop() {
 
 func (c *crossClusterQueueProcessor) NotifyNewTask(
 	clusterName string,
-	executionInfo *persistence.WorkflowExecutionInfo,
-	tasks []persistence.Task,
+	info *hcommon.NotifyTaskInfo,
 ) {
-	if len(tasks) == 0 {
+	if len(info.Tasks) == 0 {
 		return
 	}
 

@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
@@ -63,15 +62,12 @@ type (
 		mockShard          *shard.TestContext
 		mockEngine         *engine.MockEngine
 		config             *config.Config
-		taskFetcher        *MockTaskFetcher
 		mockDomainCache    *cache.MockDomainCache
 		mockClientBean     *client.MockBean
 		mockFrontendClient *frontend.MockClient
 		adminClient        *admin.MockClient
-		clusterMetadata    *cluster.MockMetadata
 		executionManager   *mocks.ExecutionManager
 		requestChan        chan *request
-		taskExecutor       *MockTaskExecutor
 
 		taskProcessor *taskProcessorImpl
 	}
@@ -108,9 +104,7 @@ func (s *taskProcessorSuite) SetupTest() {
 	s.mockClientBean = s.mockShard.Resource.ClientBean
 	s.mockFrontendClient = s.mockShard.Resource.RemoteFrontendClient
 	s.adminClient = s.mockShard.Resource.RemoteAdminClient
-	s.clusterMetadata = s.mockShard.Resource.ClusterMetadata
 	s.executionManager = s.mockShard.Resource.ExecutionMgr
-	s.taskExecutor = NewMockTaskExecutor(s.controller)
 
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.config = config.NewForTest()
@@ -118,22 +112,19 @@ func (s *taskProcessorSuite) SetupTest() {
 	metricsClient := metrics.NewClient(tally.NoopScope, metrics.History)
 	s.requestChan = make(chan *request, 10)
 
-	s.taskFetcher = NewMockTaskFetcher(s.controller)
-	rateLimiter := quotas.NewDynamicRateLimiter(func() float64 {
-		return 100
-	})
-	s.taskFetcher.EXPECT().GetSourceCluster().Return("standby").AnyTimes()
-	s.taskFetcher.EXPECT().GetRequestChan().Return(s.requestChan).AnyTimes()
-	s.taskFetcher.EXPECT().GetRateLimiter().Return(rateLimiter).AnyTimes()
-	s.clusterMetadata.EXPECT().GetCurrentClusterName().Return("active").AnyTimes()
+	taskFetcher := &fakeTaskFetcher{
+		sourceCluster: "standby",
+		requestChan:   s.requestChan,
+		rateLimiter:   quotas.NewDynamicRateLimiter(func() float64 { return 100 }),
+	}
 
 	s.taskProcessor = NewTaskProcessor(
 		s.mockShard,
 		s.mockEngine,
 		s.config,
 		metricsClient,
-		s.taskFetcher,
-		s.taskExecutor,
+		taskFetcher,
+		nil,
 	).(*taskProcessorImpl)
 }
 
@@ -184,6 +175,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_SyncActivityReplication
 			RunID:      uuid.New(),
 			TaskType:   persistence.ReplicationTaskTypeSyncActivity,
 		},
+		DomainName: uuid.New(),
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
 	err := s.taskProcessor.putReplicationTaskToDLQ(request)
@@ -202,6 +194,7 @@ func (s *taskProcessorSuite) TestPutReplicationTaskToDLQ_HistoryV2ReplicationTas
 			NextEventID:  2,
 			Version:      1,
 		},
+		DomainName: uuid.New(),
 	}
 	s.executionManager.On("PutReplicationTaskToDLQ", mock.Anything, request).Return(nil)
 	err := s.taskProcessor.putReplicationTaskToDLQ(request)
@@ -233,6 +226,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeHistoryV2
 			},
 		},
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test_domain_name", nil).AnyTimes()
 	request, err := s.taskProcessor.generateDLQRequest(task)
 	s.NoError(err)
 	s.Equal("standby", request.SourceClusterName)
@@ -249,6 +243,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 	domainID := uuid.New()
 	workflowID := uuid.New()
 	runID := uuid.New()
+	domainName := uuid.New()
 	task := &types.ReplicationTask{
 		TaskType: types.ReplicationTaskTypeSyncActivity.Ptr(),
 		SyncActivityTaskAttributes: &types.SyncActivityTaskAttributes{
@@ -258,6 +253,7 @@ func (s *taskProcessorSuite) TestGenerateDLQRequest_ReplicationTaskTypeSyncActiv
 			ScheduledID: 1,
 		},
 	}
+	s.mockDomainCache.EXPECT().GetDomainName(domainID).Return(domainName, nil).AnyTimes()
 	request, err := s.taskProcessor.generateDLQRequest(task)
 	s.NoError(err)
 	s.Equal("standby", request.SourceClusterName)
@@ -300,8 +296,25 @@ func (s *taskProcessorSuite) TestTriggerDataInconsistencyScan_Success() {
 			s.Equal(reconciliation.CheckDataCorruptionWorkflowSignalName, request.GetSignalName())
 			s.Equal(jsArray, request.GetSignalInput())
 		}).Return(&types.StartWorkflowExecutionResponse{}, nil)
-	s.clusterMetadata.EXPECT().ClusterNameForFailoverVersion(int64(100)).Return("active")
 
 	err = s.taskProcessor.triggerDataInconsistencyScan(task)
 	s.NoError(err)
+}
+
+type fakeTaskFetcher struct {
+	sourceCluster string
+	requestChan   chan<- *request
+	rateLimiter   *quotas.DynamicRateLimiter
+}
+
+func (f fakeTaskFetcher) Start() {}
+func (f fakeTaskFetcher) Stop()  {}
+func (f fakeTaskFetcher) GetSourceCluster() string {
+	return f.sourceCluster
+}
+func (f fakeTaskFetcher) GetRequestChan() chan<- *request {
+	return f.requestChan
+}
+func (f fakeTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
+	return f.rateLimiter
 }

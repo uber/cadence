@@ -261,7 +261,21 @@ func (t *transferActiveTaskExecutor) processDecisionTask(
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
 	release(nil)
-	return t.pushDecision(ctx, task, taskList, decisionTimeout)
+	err = t.pushDecision(ctx, task, taskList, decisionTimeout)
+	if _, ok := err.(*types.StickyWorkerUnavailableError); ok {
+		// sticky worker is unavailable, switch to non-sticky task list
+		taskList = &types.TaskList{
+			Name: mutableState.GetExecutionInfo().TaskList,
+		}
+
+		// Continue to use sticky schedule_to_start timeout as TTL for the matching task. Because the schedule_to_start
+		// timeout timer task is already created which will timeout this task if no worker pick it up in 5s anyway.
+		// There is no need to reset sticky, because if this task is picked by new worker, the new worker will reset
+		// the sticky queue to a new one. However, if worker is completely down, that schedule_to_start timeout task
+		// will re-create a new non-sticky task and reset sticky.
+		err = t.pushDecision(ctx, task, taskList, decisionTimeout)
+	}
+	return err
 }
 
 func (t *transferActiveTaskExecutor) processCloseExecution(
@@ -360,6 +374,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 	workflowHistoryLength := mutableState.GetNextEventID() - 1
 	isCron := len(executionInfo.CronSchedule) > 0
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
+	updateTimestamp := t.shard.GetTimeSource().Now()
 
 	startEvent, err := mutableState.GetStartEvent(ctx)
 	if err != nil {
@@ -459,6 +474,7 @@ func (t *transferActiveTaskExecutor) processCloseExecutionTaskHelper(
 			executionInfo.TaskList,
 			isCron,
 			numClusters,
+			updateTimestamp.UnixNano(),
 			searchAttr,
 		); err != nil {
 			return err
@@ -584,11 +600,18 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		targetDomainName,
 		requestCancelInfo.CancelRequestID,
 	); err != nil {
-		t.logger.Debug(fmt.Sprintf("Failed to cancel external workflow execution. Error: %v", err))
+		t.logger.Error("Failed to cancel external workflow execution",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TargetWorkflowDomainID(task.TargetDomainID),
+			tag.TargetWorkflowID(task.TargetWorkflowID),
+			tag.TargetWorkflowRunID(task.TargetRunID),
+			tag.Error(err))
 
 		// Check to see if the error is non-transient, in which case add RequestCancelFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) || err == errTargetDomainNotActive {
+		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
 			// for retryable error just return
 			return err
 		}
@@ -603,11 +626,13 @@ func (t *transferActiveTaskExecutor) processCancelExecution(
 		)
 	}
 
-	t.logger.Debug(fmt.Sprintf(
-		"RequestCancel successfully recorded to external workflow execution.  task.WorkflowID: %v, RunID: %v",
-		task.TargetWorkflowID,
-		task.TargetRunID,
-	))
+	t.logger.Debug("RequestCancel successfully recorded to external workflow execution",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TargetWorkflowDomainID(task.TargetDomainID),
+		tag.TargetWorkflowID(task.TargetWorkflowID),
+		tag.TargetWorkflowRunID(task.TargetRunID))
 
 	// Record ExternalWorkflowExecutionCancelRequested in source execution
 	return requestCancelExternalExecutionCompleted(
@@ -694,11 +719,18 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		targetDomainName,
 		signalInfo,
 	); err != nil {
-		t.logger.Debug(fmt.Sprintf("Failed to signal external workflow execution. Error: %v", err))
+		t.logger.Error("Failed to signal external workflow execution",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TargetWorkflowDomainID(task.TargetDomainID),
+			tag.TargetWorkflowID(task.TargetWorkflowID),
+			tag.TargetWorkflowRunID(task.TargetRunID),
+			tag.Error(err))
 
 		// Check to see if the error is non-transient, in which case add SignalFailed
 		// event and complete transfer task by setting the err = nil
-		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) || err == errTargetDomainNotActive {
+		if common.IsServiceTransientError(err) || common.IsContextTimeoutError(err) {
 			// for retryable error just return
 			return err
 		}
@@ -714,11 +746,13 @@ func (t *transferActiveTaskExecutor) processSignalExecution(
 		)
 	}
 
-	t.logger.Debug(fmt.Sprintf(
-		"Signal successfully recorded to external workflow execution.  task.WorkflowID: %v, RunID: %v",
-		task.TargetWorkflowID,
-		task.TargetRunID,
-	))
+	t.logger.Debug("Signal successfully recorded to external workflow execution",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TargetWorkflowDomainID(task.TargetDomainID),
+		tag.TargetWorkflowID(task.TargetWorkflowID),
+		tag.TargetWorkflowRunID(task.TargetRunID))
 
 	err = signalExternalExecutionCompleted(
 		ctx,
@@ -845,7 +879,13 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		attributes,
 	)
 	if err != nil {
-		t.logger.Debug(fmt.Sprintf("Failed to start child workflow execution. Error: %v", err))
+		t.logger.Error("Failed to start child workflow execution",
+			tag.WorkflowDomainID(task.DomainID),
+			tag.WorkflowID(task.WorkflowID),
+			tag.WorkflowRunID(task.RunID),
+			tag.TargetWorkflowDomainID(task.TargetDomainID),
+			tag.TargetWorkflowID(attributes.WorkflowID),
+			tag.Error(err))
 
 		// Check to see if the error is non-transient, in which case add StartChildWorkflowExecutionFailed
 		// event and complete transfer task by setting the err = nil
@@ -859,8 +899,13 @@ func (t *transferActiveTaskExecutor) processStartChildExecution(
 		return err
 	}
 
-	t.logger.Debug(fmt.Sprintf("Child Execution started successfully.  task.WorkflowID: %v, RunID: %v",
-		attributes.WorkflowID, childRunID))
+	t.logger.Debug("Child Execution started successfully",
+		tag.WorkflowDomainID(task.DomainID),
+		tag.WorkflowID(task.WorkflowID),
+		tag.WorkflowRunID(task.RunID),
+		tag.TargetWorkflowDomainID(task.TargetDomainID),
+		tag.TargetWorkflowID(attributes.WorkflowID),
+		tag.TargetWorkflowRunID(childRunID))
 
 	// Child execution is successfully started, record ChildExecutionStartedEvent in parent execution
 	err = recordChildExecutionStarted(ctx, task, wfContext, attributes, childRunID, t.shard.GetTimeSource().Now())
@@ -958,6 +1003,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	searchAttr := copySearchAttributes(executionInfo.SearchAttributes)
 	isCron := len(executionInfo.CronSchedule) > 0
 	numClusters := (int16)(len(domainEntry.GetReplicationConfig().Clusters))
+	updateTimestamp := t.shard.GetTimeSource().Now()
 
 	// release the context lock since we no longer need mutable state builder and
 	// the rest of logic is making RPC call, which takes time.
@@ -978,6 +1024,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 			isCron,
 			numClusters,
 			visibilityMemo,
+			updateTimestamp.UnixNano(),
 			searchAttr,
 		)
 	}
@@ -995,6 +1042,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 		visibilityMemo,
 		isCron,
 		numClusters,
+		updateTimestamp.UnixNano(),
 		searchAttr,
 	)
 }
@@ -1030,13 +1078,17 @@ func (t *transferActiveTaskExecutor) processResetWorkflow(
 		tag.WorkflowID(task.WorkflowID),
 		tag.WorkflowRunID(task.RunID),
 	)
-
+	domainName, err := t.shard.GetDomainCache().GetDomainName(task.DomainID)
+	if err != nil {
+		return err
+	}
 	if !currentMutableState.IsWorkflowExecutionRunning() {
 		// it means this this might not be current anymore, we need to check
 		var resp *persistence.GetCurrentExecutionResponse
 		resp, err = t.shard.GetExecutionManager().GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
+			DomainName: domainName,
 		})
 		if err != nil {
 			return err
@@ -1448,7 +1500,6 @@ func (t *transferActiveTaskExecutor) generateCrossClusterTasks(
 	taskGenerator := execution.NewMutableStateTaskGenerator(
 		t.shard.GetClusterMetadata(),
 		t.shard.GetDomainCache(),
-		t.logger,
 		mutableState,
 	)
 	for _, generator := range generators {
@@ -1684,6 +1735,7 @@ func startWorkflowWithRetry(
 		Memo:                  attributes.Memo,
 		SearchAttributes:      attributes.SearchAttributes,
 		DelayStartSeconds:     attributes.DelayStartSeconds,
+		JitterStartSeconds:    attributes.JitterStartSeconds,
 	}
 
 	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now())
@@ -1767,7 +1819,6 @@ func (t *transferActiveTaskExecutor) resetWorkflow(
 		uuid.New(),
 		execution.NewWorkflow(
 			resetCtx,
-			t.shard.GetDomainCache(),
 			t.shard.GetClusterMetadata(),
 			currentContext,
 			currentMutableState,
@@ -1983,10 +2034,12 @@ func applyParentClosePolicy(
 				Domain: childDomainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childStartedWorkflowID,
-					RunID:      childStartedRunID,
 				},
 				Reason:   "by parent close policy",
 				Identity: execution.IdentityHistoryService,
+				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be terminated across runs.
+				// If the child does continue as new it still propagates the RunID of first execution.
+				FirstExecutionRunID: childStartedRunID,
 			},
 			ExternalWorkflowExecution: parentWorkflowExecution,
 			ChildWorkflowOnly:         true,
@@ -1999,9 +2052,11 @@ func applyParentClosePolicy(
 				Domain: childDomainName,
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: childStartedWorkflowID,
-					RunID:      childStartedRunID,
 				},
 				Identity: execution.IdentityHistoryService,
+				// Include StartedRunID as FirstExecutionRunID on the request to allow child to be canceled across runs.
+				// If the child does continue as new it still propagates the RunID of first execution.
+				FirstExecutionRunID: childStartedRunID,
 			},
 			ExternalWorkflowExecution: parentWorkflowExecution,
 			ChildWorkflowOnly:         true,

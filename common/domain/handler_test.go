@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql/public"
 	persistencetests "github.com/uber/cadence/common/persistence/persistence-tests"
 	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/testflags"
 )
 
 type (
@@ -67,6 +68,7 @@ type (
 var nowInt64 = time.Now().UnixNano()
 
 func TestDomainHandlerCommonSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	s := new(domainHandlerCommonSuite)
 	suite.Run(t, s)
 }
@@ -77,7 +79,7 @@ func (s *domainHandlerCommonSuite) SetupSuite() {
 	}
 
 	s.TestBase = public.NewTestBaseWithPublicCassandra(&persistencetests.TestBaseOptions{
-		ClusterMetadata: cluster.GetTestClusterMetadata(true, true),
+		ClusterMetadata: cluster.GetTestClusterMetadata(true),
 	})
 	s.TestBase.Setup()
 }
@@ -296,10 +298,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	isGlobalDomain2 := true
 	activeClusterName2 := ""
 	var cluster2 []*types.ClusterReplicationConfiguration
-	for clusterName, info := range s.ClusterMetadata.GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
+	for clusterName := range s.ClusterMetadata.GetEnabledClusterInfo() {
 		if clusterName != s.ClusterMetadata.GetCurrentClusterName() {
 			activeClusterName2 = clusterName
 		}
@@ -387,7 +386,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				ActiveClusterName: activeClusterName2,
 				Clusters:          cluster2,
 			},
-			FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0),
+			FailoverVersion: s.ClusterMetadata.GetNextFailoverVersion(activeClusterName2, 0, "some-domain"),
 			IsGlobalDomain:  isGlobalDomain2,
 		},
 	}, domains)

@@ -39,6 +39,7 @@ import (
 	adminClient "github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -66,7 +67,7 @@ func TestNDCIntegrationTestSuite(t *testing.T) {
 	}
 	clusterConfigs[0].WorkerConfig = &host.WorkerConfig{}
 	clusterConfigs[1].WorkerConfig = &host.WorkerConfig{}
-	testCluster := host.NewPersistenceTestCluster(clusterConfigs[0])
+	testCluster := host.NewPersistenceTestCluster(t, clusterConfigs[0])
 	params := NDCIntegrationTestSuiteParams{
 		ClusterConfigs:        clusterConfigs,
 		DefaultTestCluster:    testCluster,
@@ -113,11 +114,16 @@ func (s *NDCIntegrationTestSuite) SetupSuite() {
 	s.mockAdminClient["other"] = mockOtherClient
 	s.clusterConfigs[0].MockAdminClient = s.mockAdminClient
 
-	clusterMetadata := host.NewClusterMetadata(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])))
+	clusterMetadata := host.NewClusterMetadata(s.clusterConfigs[0])
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
+	}
 	params := pt.TestBaseParams{
 		DefaultTestCluster:    s.defaultTestCluster,
 		VisibilityTestCluster: s.visibilityTestCluster,
 		ClusterMetadata:       clusterMetadata,
+		DynamicConfiguration:  dc,
 	}
 	cluster, err := host.NewCluster(s.clusterConfigs[0], s.logger.WithTags(tag.ClusterName(clusterName[0])), params)
 	s.Require().NoError(err)
@@ -2278,6 +2284,7 @@ func (s *NDCIntegrationTestSuite) generateNewRunHistory(
 
 	event.WorkflowExecutionContinuedAsNewEventAttributes.NewExecutionRunID = uuid.New()
 
+	firstScheduleTime := time.Unix(0, 100)
 	newRunFirstEvent := &types.HistoryEvent{
 		ID:        common.FirstEventID,
 		Timestamp: common.Int64Ptr(time.Now().UnixNano()),
@@ -2303,6 +2310,7 @@ func (s *NDCIntegrationTestSuite) generateNewRunHistory(
 			OriginalExecutionRunID:              runID,
 			Identity:                            "NDC-test",
 			FirstExecutionRunID:                 runID,
+			FirstScheduleTime:                   &firstScheduleTime,
 			Attempt:                             0,
 			ExpirationTimestamp:                 common.Int64Ptr(time.Now().Add(time.Minute).UnixNano()),
 		},
@@ -2406,7 +2414,6 @@ func (s *NDCIntegrationTestSuite) applyEventsThroughFetcher(
 			TaskType:     &taskType,
 			SourceTaskID: 1,
 			HistoryTaskV2Attributes: &types.HistoryTaskV2Attributes{
-				TaskID:              1,
 				DomainID:            s.domainID,
 				WorkflowID:          workflowID,
 				RunID:               runID,

@@ -160,9 +160,6 @@ func NewHistoryReplicator(
 				shard,
 				logger,
 				state,
-				func(mutableState execution.MutableState) execution.MutableStateTaskGenerator {
-					return execution.NewMutableStateTaskGenerator(shard.GetClusterMetadata(), shard.GetDomainCache(), logger, mutableState)
-				},
 			)
 		},
 		newMutableState: func(
@@ -309,7 +306,6 @@ func (r *historyReplicatorImpl) applyStartEvents(
 		task.getEventTime(),
 		execution.NewWorkflow(
 			ctx,
-			r.domainCache,
 			r.clusterMetadata,
 			context,
 			mutableState,
@@ -410,7 +406,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsToCurrentBranch(
 
 	targetWorkflow := execution.NewWorkflow(
 		ctx,
-		r.domainCache,
 		r.clusterMetadata,
 		context,
 		mutableState,
@@ -433,7 +428,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsToCurrentBranch(
 
 		newWorkflow = execution.NewWorkflow(
 			ctx,
-			r.domainCache,
 			r.clusterMetadata,
 			newContext,
 			newMutableState,
@@ -517,7 +511,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsToNoneCurrentBranchWithoutCon
 		task.getEventTime(),
 		execution.NewWorkflow(
 			ctx,
-			r.domainCache,
 			r.clusterMetadata,
 			context,
 			mutableState,
@@ -664,7 +657,6 @@ func (r *historyReplicatorImpl) applyNonStartEventsResetWorkflow(
 
 	targetWorkflow := execution.NewWorkflow(
 		ctx,
-		r.domainCache,
 		r.clusterMetadata,
 		context,
 		mutableState,

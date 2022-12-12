@@ -22,6 +22,7 @@ package schema
 
 import (
 	"fmt"
+	"io/fs"
 	"regexp"
 )
 
@@ -36,7 +37,7 @@ type (
 	UpdateConfig struct {
 		DBName        string
 		TargetVersion string
-		SchemaDir     string
+		SchemaFS      fs.FS
 		IsDryRun      bool
 	}
 	// SetupConfig holds the config
@@ -76,10 +77,16 @@ const (
 	CLIOptUser = "user"
 	// CLIOptPassword is the cli option for password
 	CLIOptPassword = "password"
+	// CLIOptAllowedAuthenticatorsis the cli option for cassandra allowed authenticators
+	CLIOptAllowedAuthenticators = "allowed-authenticators"
 	// CLIOptTimeout is the cli option for timeout
 	CLIOptTimeout = "timeout"
+	// CLIOptConnectTimeout is the cli option for connection timeout
+	CLIOptConnectTimeout = "connect-timeout"
 	// CLIOptKeyspace is the cli option for keyspace
 	CLIOptKeyspace = "keyspace"
+	// CLIOptDatabase is the cli option for datacenter
+	CLIOptDatacenter = "datacenter"
 	// CLIOptDatabase is the cli option for database
 	CLIOptDatabase = "database"
 	// CLIOptPluginName is the cli option for plugin name
@@ -115,10 +122,16 @@ const (
 	CLIFlagUser = CLIOptUser + ", u"
 	// CLIFlagPassword is the cli flag for password
 	CLIFlagPassword = CLIOptPassword + ", pw"
+	// CLIFlagAllowedAuthenticators is the cli flag for whitelisting custom authenticators
+	CLIFlagAllowedAuthenticators = CLIOptAllowedAuthenticators + ", aa"
+	// CLIFlagConnectTimeout is the cli flag for connection timeout
+	CLIFlagConnectTimeout = CLIOptConnectTimeout + ", ct"
 	// CLIFlagTimeout is the cli flag for timeout
 	CLIFlagTimeout = CLIOptTimeout + ", t"
 	// CLIFlagKeyspace is the cli flag for keyspace
 	CLIFlagKeyspace = CLIOptKeyspace + ", k"
+	// CLIFlagDatacenter is the cli flag for datacenter
+	CLIFlagDatacenter = CLIOptDatacenter + ", dc"
 	// CLIFlagDatabase is the cli flag for database
 	CLIFlagDatabase = CLIOptDatabase + ", db"
 	// CLIFlagPluginName is the cli flag for plugin name
@@ -156,6 +169,9 @@ const (
 	CLIFlagTLSCaFile = "tls-ca-file"
 	// CLIFlagTLSEnableHostVerification enables tls host verification (tls must be enabled)
 	CLIFlagTLSEnableHostVerification = "tls-enable-host-verification"
+	// CLIFlagTLSServerName is the Server Name Indication to verify the hostname on the returned certificates.
+	// It is also included in the client's handshake to support virtual hosting unless it is an IP address.
+	CLIFlagTLSServerName = "tls-server-name"
 )
 
 var rmspaceRegex = regexp.MustCompile(`\s+`)

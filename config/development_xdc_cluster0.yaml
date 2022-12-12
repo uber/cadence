@@ -69,7 +69,6 @@ services:
       port: 7941
 
 clusterGroupMetadata:
-  enableGlobalDomain: true
   failoverVersionIncrement: 10
   primaryClusterName: "cluster0"
   currentClusterName: "cluster0"
@@ -125,3 +124,14 @@ domainDefaults:
 blobstore:
   filestore:
     outputDirectory: "/tmp/blobstore"
+
+dynamicconfig:
+  client: filebased
+  configstore:
+    pollInterval: "10s"
+    updateRetryAttempts: 2
+    FetchTimeout: "2s"
+    UpdateTimeout: "2s"
+  filebased:
+    filepath: "config/dynamicconfig/development.yaml"
+    pollInterval: "10s"

@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/testflags"
 	"github.com/uber/cadence/tools/cassandra"
 )
 
@@ -48,6 +49,7 @@ type (
 )
 
 func TestVersionTestSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	suite.Run(t, new(VersionTestSuite))
 }
 
@@ -103,7 +105,7 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 		{"2.0", "1.0", "version mismatch", false},
 		{"1.0", "1.0", "", false},
 		{"1.0", "2.0", "", false},
-		{"1.0", "abc", "unable to read schema version keyspace/database", false},
+		{"1.0", "abc", "reading schema version: unconfigured table schema_version", false},
 	}
 	for _, flag := range flags {
 		s.runCheckCompatibleVersion(flag.expectedVersion, flag.actualVersion, flag.errStr, flag.expectedFail)
@@ -139,10 +141,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 	keyspace := fmt.Sprintf("version_test_%v", r.Int63())
 	defer s.createKeyspace(keyspace)()
 
-	dir := "check_version"
-	tmpDir, err := ioutil.TempDir("", dir)
-	s.NoError(err)
-	defer os.RemoveAll(tmpDir)
+	tmpDir := s.T().TempDir()
 
 	subdir := tmpDir + "/" + keyspace
 	s.NoError(os.Mkdir(subdir, os.FileMode(0744)))
@@ -168,7 +167,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		Password:   environment.GetCassandraPassword(),
 		Keyspace:   keyspace,
 	}
-	err = cassandra.CheckCompatibleVersion(cfg, expected)
+	err := cassandra.CheckCompatibleVersion(cfg, expected)
 	if len(errStr) > 0 {
 		s.Error(err)
 		s.Contains(err.Error(), errStr)

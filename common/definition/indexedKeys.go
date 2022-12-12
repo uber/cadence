@@ -20,7 +20,7 @@
 
 package definition
 
-import "github.com/uber/cadence/.gen/go/shared"
+import "github.com/uber/cadence/common/types"
 
 // valid indexed fields on ES
 const (
@@ -39,6 +39,9 @@ const (
 	TaskList        = "TaskList"
 	IsCron          = "IsCron"
 	NumClusters     = "NumClusters"
+	UpdateTime      = "UpdateTime"
+	CustomDomain    = "CustomDomain" // to support batch workflow
+	Operator        = "Operator"     // to support batch workflow
 
 	CustomStringField    = "CustomStringField"
 	CustomKeywordField   = "CustomKeywordField"
@@ -62,14 +65,16 @@ var defaultIndexedKeys = createDefaultIndexedKeys()
 
 func createDefaultIndexedKeys() map[string]interface{} {
 	defaultIndexedKeys := map[string]interface{}{
-		CustomStringField:    shared.IndexedValueTypeString,
-		CustomKeywordField:   shared.IndexedValueTypeKeyword,
-		CustomIntField:       shared.IndexedValueTypeInt,
-		CustomBoolField:      shared.IndexedValueTypeBool,
-		CustomDoubleField:    shared.IndexedValueTypeDouble,
-		CustomDatetimeField:  shared.IndexedValueTypeDatetime,
-		CadenceChangeVersion: shared.IndexedValueTypeKeyword,
-		BinaryChecksums:      shared.IndexedValueTypeKeyword,
+		CustomStringField:    types.IndexedValueTypeString,
+		CustomKeywordField:   types.IndexedValueTypeKeyword,
+		CustomIntField:       types.IndexedValueTypeInt,
+		CustomBoolField:      types.IndexedValueTypeBool,
+		CustomDoubleField:    types.IndexedValueTypeDouble,
+		CustomDatetimeField:  types.IndexedValueTypeDatetime,
+		CadenceChangeVersion: types.IndexedValueTypeKeyword,
+		BinaryChecksums:      types.IndexedValueTypeKeyword,
+		CustomDomain:         types.IndexedValueTypeString,
+		Operator:             types.IndexedValueTypeString,
 	}
 	for k, v := range systemIndexedKeys {
 		defaultIndexedKeys[k] = v
@@ -84,18 +89,19 @@ func GetDefaultIndexedKeys() map[string]interface{} {
 
 // systemIndexedKeys is Cadence created visibility keys
 var systemIndexedKeys = map[string]interface{}{
-	DomainID:      shared.IndexedValueTypeKeyword,
-	WorkflowID:    shared.IndexedValueTypeKeyword,
-	RunID:         shared.IndexedValueTypeKeyword,
-	WorkflowType:  shared.IndexedValueTypeKeyword,
-	StartTime:     shared.IndexedValueTypeInt,
-	ExecutionTime: shared.IndexedValueTypeInt,
-	CloseTime:     shared.IndexedValueTypeInt,
-	CloseStatus:   shared.IndexedValueTypeInt,
-	HistoryLength: shared.IndexedValueTypeInt,
-	TaskList:      shared.IndexedValueTypeKeyword,
-	IsCron:        shared.IndexedValueTypeBool,
-	NumClusters:   shared.IndexedValueTypeInt,
+	DomainID:      types.IndexedValueTypeKeyword,
+	WorkflowID:    types.IndexedValueTypeKeyword,
+	RunID:         types.IndexedValueTypeKeyword,
+	WorkflowType:  types.IndexedValueTypeKeyword,
+	StartTime:     types.IndexedValueTypeInt,
+	ExecutionTime: types.IndexedValueTypeInt,
+	CloseTime:     types.IndexedValueTypeInt,
+	CloseStatus:   types.IndexedValueTypeInt,
+	HistoryLength: types.IndexedValueTypeInt,
+	TaskList:      types.IndexedValueTypeKeyword,
+	IsCron:        types.IndexedValueTypeBool,
+	NumClusters:   types.IndexedValueTypeInt,
+	UpdateTime:    types.IndexedValueTypeInt,
 }
 
 // IsSystemIndexedKey return true is key is system added

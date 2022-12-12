@@ -3,20 +3,12 @@ ARG TARGET=server
 # Can be used in case a proxy is necessary
 ARG GOPROXY
 
-# Build tcheck binary
-FROM golang:1.17-alpine3.15 AS tcheck
-
-WORKDIR /go/src/github.com/uber/tcheck
-
-COPY go.* ./
-RUN go build -mod=readonly -o /go/bin/tcheck github.com/uber/tcheck
-
 # Build Cadence binaries
-FROM golang:1.17-alpine3.13 AS builder
+FROM golang:1.17.13-alpine3.15 AS builder
 
 ARG RELEASE_VERSION
 
-RUN apk add --update --no-cache ca-certificates make git curl mercurial unzip
+RUN apk add --update --no-cache ca-certificates make git curl mercurial unzip bash
 
 WORKDIR /cadence
 
@@ -51,7 +43,7 @@ RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSI
 
 
 # Alpine base image
-FROM alpine:3.11 AS alpine
+FROM alpine:3.15 AS alpine
 
 RUN apk add --update --no-cache ca-certificates tzdata bash curl
 
@@ -68,7 +60,6 @@ FROM alpine AS cadence-server
 ENV CADENCE_HOME /etc/cadence
 RUN mkdir -p /etc/cadence
 
-COPY --from=tcheck /go/bin/tcheck /usr/local/bin
 COPY --from=dockerize /usr/local/bin/dockerize /usr/local/bin
 COPY --from=builder /cadence/cadence-cassandra-tool /usr/local/bin
 COPY --from=builder /cadence/cadence-sql-tool /usr/local/bin
@@ -105,7 +96,6 @@ CMD /start.sh
 # Cadence CLI
 FROM alpine AS cadence-cli
 
-COPY --from=tcheck /go/bin/tcheck /usr/local/bin
 COPY --from=builder /cadence/cadence /usr/local/bin
 
 ENTRYPOINT ["cadence"]

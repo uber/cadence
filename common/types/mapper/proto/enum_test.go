@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	sharedv1 "github.com/uber/cadence/.gen/proto/shared/v1"
 	"github.com/uber/cadence/common"
@@ -53,7 +54,7 @@ func TestDLQType(t *testing.T) {
 	} {
 		assert.Equal(t, item, ToDLQType(FromDLQType(item)))
 	}
-	assert.Panics(t, func() { ToDLQType(sharedv1.DLQType(UnknownValue)) })
+	assert.Panics(t, func() { ToDLQType(adminv1.DLQType(UnknownValue)) })
 	assert.Panics(t, func() { FromDLQType(types.DLQType(UnknownValue).Ptr()) })
 }
 func TestDomainOperation(t *testing.T) {
@@ -64,7 +65,7 @@ func TestDomainOperation(t *testing.T) {
 	} {
 		assert.Equal(t, item, ToDomainOperation(FromDomainOperation(item)))
 	}
-	assert.Panics(t, func() { ToDomainOperation(sharedv1.DomainOperation(UnknownValue)) })
+	assert.Panics(t, func() { ToDomainOperation(adminv1.DomainOperation(UnknownValue)) })
 	assert.Panics(t, func() { FromDomainOperation(types.DomainOperation(UnknownValue).Ptr()) })
 }
 func TestReplicationTaskType(t *testing.T) {
@@ -80,7 +81,7 @@ func TestReplicationTaskType(t *testing.T) {
 	} {
 		assert.Equal(t, item, ToReplicationTaskType(FromReplicationTaskType(item)))
 	}
-	assert.Panics(t, func() { ToReplicationTaskType(sharedv1.ReplicationTaskType(UnknownValue)) })
+	assert.Panics(t, func() { ToReplicationTaskType(adminv1.ReplicationTaskType(UnknownValue)) })
 	assert.Panics(t, func() { FromReplicationTaskType(types.ReplicationTaskType(UnknownValue).Ptr()) })
 }
 func TestArchivalStatus(t *testing.T) {
@@ -405,6 +406,6 @@ func TestTaskType(t *testing.T) {
 	} {
 		assert.Equal(t, item, ToTaskType(FromTaskType(item)))
 	}
-	assert.Panics(t, func() { ToTaskType(sharedv1.TaskType(UnknownValue)) })
+	assert.Panics(t, func() { ToTaskType(adminv1.TaskType(UnknownValue)) })
 	assert.Panics(t, func() { FromTaskType(common.Int32Ptr(UnknownValue)) })
 }

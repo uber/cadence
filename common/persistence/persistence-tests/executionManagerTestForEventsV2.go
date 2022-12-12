@@ -107,7 +107,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 		WorkflowID: "test-eventsv2-workflow",
 		RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
 	}
-
+	domainName := uuid.New()
 	csum := s.newRandomChecksum()
 	decisionScheduleID := int64(2)
 	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
@@ -121,6 +121,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 				DomainID:                    domainID,
 				WorkflowID:                  workflowExecution.GetWorkflowID(),
 				RunID:                       workflowExecution.GetRunID(),
+				FirstExecutionRunID:         workflowExecution.GetRunID(),
 				TaskList:                    "taskList",
 				WorkflowTypeName:            "wType",
 				WorkflowTimeout:             20,
@@ -149,7 +150,8 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreation() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
+		RangeID:    s.ShardInfo.RangeID,
+		DomainName: domainName,
 	})
 
 	s.NoError(err0)
@@ -209,6 +211,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 
 	defer failOnPanic(s.T())
 	domainID := uuid.New()
+	domainName := uuid.New()
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: "test-eventsv2-workflow-version-history",
 		RunID:      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
@@ -229,6 +232,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 				DomainID:                    domainID,
 				WorkflowID:                  workflowExecution.GetWorkflowID(),
 				RunID:                       workflowExecution.GetRunID(),
+				FirstExecutionRunID:         workflowExecution.GetRunID(),
 				TaskList:                    "taskList",
 				WorkflowTypeName:            "wType",
 				WorkflowTimeout:             20,
@@ -257,6 +261,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 			TimerTasks: nil,
 			Checksum:   csum,
 		},
+		DomainName: domainName,
 	})
 
 	s.NoError(err0)
@@ -301,7 +306,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestWorkflowCreationWithVersionHistor
 	s.assertChecksumsEqual(testWorkflowChecksum, state.Checksum)
 }
 
-//TestContinueAsNew test
+// TestContinueAsNew test
 func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
@@ -360,6 +365,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 				DomainID:                    updatedInfo.DomainID,
 				WorkflowID:                  newWorkflowExecution.GetWorkflowID(),
 				RunID:                       newWorkflowExecution.GetRunID(),
+				FirstExecutionRunID:         updatedInfo.FirstExecutionRunID,
 				TaskList:                    updatedInfo.TaskList,
 				WorkflowTypeName:            updatedInfo.WorkflowTypeName,
 				WorkflowTimeout:             updatedInfo.WorkflowTimeout,

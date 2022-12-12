@@ -26,15 +26,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/yarpc/yarpcerrors"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -106,29 +107,124 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithCron(t *testing.T) 
 	require.True(t, time.Unix(0, expirationTime).Sub(now) > 60*time.Second)
 }
 
-func TestCreateHistoryStartWorkflowRequest_DelayStart(t *testing.T) {
-	testDelayStart(t, 0)
+// Test to ensure we get the right value for FirstDecisionTaskBackoff during StartWorkflow request,
+// with & without cron, delayStart and jitterStart.
+// - Also see tests in cron_test.go for more exhaustive testing.
+func TestFirstDecisionTaskBackoffDuringStartWorkflow(t *testing.T) {
+	var tests = []struct {
+		cron               bool
+		jitterStartSeconds int32
+		delayStartSeconds  int32
+	}{
+		{true, 0, 0},
+		{true, 15, 0},
+		{true, 0, 600},
+		{true, 15, 600},
+		{false, 0, 0},
+		{false, 15, 0},
+		{false, 0, 600},
+		{false, 15, 600},
+	}
+
+	rand.Seed(int64(time.Now().Nanosecond()))
+
+	for idx, tt := range tests {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			domainID := uuid.New()
+			request := &types.StartWorkflowExecutionRequest{
+				DelayStartSeconds:  Int32Ptr(tt.delayStartSeconds),
+				JitterStartSeconds: Int32Ptr(tt.jitterStartSeconds),
+			}
+			if tt.cron {
+				request.CronSchedule = "* * * * *"
+			}
+
+			// Run X loops so that the test isn't flaky, since jitter adds randomness.
+			caseCount := 10
+			exactCount := 0
+			for i := 0; i < caseCount; i++ {
+				// Start at the minute boundary so we know what the backoff should be
+				startTime, _ := time.Parse(time.RFC3339, "2018-12-17T08:00:00+00:00")
+				startRequest := CreateHistoryStartWorkflowRequest(domainID, request, startTime)
+				require.NotNil(t, startRequest)
+
+				backoff := startRequest.GetFirstDecisionTaskBackoffSeconds()
+
+				expectedWithoutJitter := tt.delayStartSeconds
+				if tt.cron {
+					expectedWithoutJitter += 60
+				}
+				expectedMax := expectedWithoutJitter + tt.jitterStartSeconds
+
+				if backoff == expectedWithoutJitter {
+					exactCount++
+				}
+
+				if tt.jitterStartSeconds == 0 {
+					require.Equal(t, expectedWithoutJitter, backoff, "test specs = %v", tt)
+				} else {
+					require.True(t, backoff >= expectedWithoutJitter && backoff <= expectedMax,
+						"test specs = %v, backoff (%v) should be >= %v and <= %v",
+						tt, backoff, expectedWithoutJitter, expectedMax)
+				}
+
+			}
+
+			// If jitter is > 0, we want to detect whether jitter is being applied - BUT we don't want the test
+			// to be flaky if the code randomly chooses a jitter of 0, so we try to have enough data points by
+			// checking the next X cron times AND by choosing a jitter thats not super low.
+
+			if tt.jitterStartSeconds > 0 && exactCount == caseCount {
+				// Test to make sure a jitter test case sometimes doesn't get exact values
+				t.Fatalf("FAILED to jitter properly? Test specs = %v\n", tt)
+			} else if tt.jitterStartSeconds == 0 && exactCount != caseCount {
+				// Test to make sure a non-jitter test case always gets exact values
+				t.Fatalf("Jittered when we weren't supposed to? Test specs = %v\n", tt)
+			}
+
+		})
+	}
 }
 
-func TestCreateHistoryStartWorkflowRequest_DelayStartWithCron(t *testing.T) {
-	testDelayStart(t, 300)
+func TestCreateHistoryStartWorkflowRequest(t *testing.T) {
+	var tests = []struct {
+		delayStartSeconds  int
+		cronSeconds        int
+		jitterStartSeconds int
+	}{
+		{0, 0, 0},
+		{100, 0, 0},
+		{100, 300, 0},
+		{0, 0, 2000},
+		{100, 0, 2000},
+		{0, 300, 2000},
+		{100, 300, 2000},
+		{0, 300, 2000},
+		{0, 300, 2000},
+	}
+
+	for idx, tt := range tests {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			testExpirationTime(t, tt.delayStartSeconds, tt.cronSeconds, tt.jitterStartSeconds)
+		})
+	}
 }
 
-func testDelayStart(t *testing.T, cronSeconds int) {
+func testExpirationTime(t *testing.T, delayStartSeconds int, cronSeconds int, jitterSeconds int) {
 	domainID := uuid.New()
-	delayStartSeconds := 100
 	request := &types.StartWorkflowExecutionRequest{
 		RetryPolicy: &types.RetryPolicy{
 			InitialIntervalInSeconds:    60,
 			ExpirationIntervalInSeconds: 60,
 		},
-		DelayStartSeconds: Int32Ptr(int32(delayStartSeconds)),
+		DelayStartSeconds:  Int32Ptr(int32(delayStartSeconds)),
+		JitterStartSeconds: Int32Ptr(int32(jitterSeconds)),
 	}
 	if cronSeconds > 0 {
 		request.CronSchedule = fmt.Sprintf("@every %ds", cronSeconds)
 	}
 	minDelay := delayStartSeconds + cronSeconds
-	maxDelay := delayStartSeconds + 2*cronSeconds
+	maxDelay := delayStartSeconds + 2*cronSeconds + jitterSeconds
 	now := time.Now()
 	startRequest := CreateHistoryStartWorkflowRequest(domainID, request, now)
 	require.NotNil(t, startRequest)
@@ -175,11 +271,16 @@ func TestCreateHistoryStartWorkflowRequest_ExpirationTimeWithoutCron(t *testing.
 	require.True(t, delta < 62*time.Second)
 }
 
-func TestConvertIndexedValueTypeToThriftType(t *testing.T) {
-	expected := workflow.IndexedValueType_Values()
-	for i := 0; i < len(expected); i++ {
-		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(i, nil))
-		require.Equal(t, expected[i], ConvertIndexedValueTypeToThriftType(float64(i), nil))
+func TestConvertIndexedValueTypeToInternalType(t *testing.T) {
+	values := []types.IndexedValueType{types.IndexedValueTypeString, types.IndexedValueTypeKeyword, types.IndexedValueTypeInt, types.IndexedValueTypeDouble, types.IndexedValueTypeBool, types.IndexedValueTypeDatetime}
+	for _, expected := range values {
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(int(expected), nil))
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(float64(expected), nil))
+
+		buffer, err := expected.MarshalText()
+		require.NoError(t, err)
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(buffer, nil))
+		require.Equal(t, expected, ConvertIndexedValueTypeToInternalType(string(buffer), nil))
 	}
 }
 
@@ -244,4 +345,21 @@ func TestConvertErrToGetTaskFailedCause(t *testing.T) {
 	for _, tc := range testCases {
 		require.Equal(t, tc.expectedFailedCause, ConvertErrToGetTaskFailedCause(tc.err))
 	}
+}
+
+func TestToServiceTransientError(t *testing.T) {
+	t.Run("it converts nil", func(t *testing.T) {
+		assert.NoError(t, ToServiceTransientError(nil))
+	})
+
+	t.Run("it keeps transient errors", func(t *testing.T) {
+		err := &types.InternalServiceError{}
+		assert.Equal(t, err, ToServiceTransientError(err))
+		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+	})
+
+	t.Run("it converts errors to transient errors", func(t *testing.T) {
+		err := fmt.Errorf("error")
+		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
+	})
 }

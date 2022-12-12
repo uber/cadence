@@ -31,6 +31,7 @@ import (
 	"go.uber.org/zap"
 
 	c "github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
@@ -143,7 +144,7 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]
 
 	for index < len(fixList) {
 		execution := fixList[index]
-		pr, err := getDefaultDAO(ctx, execution.ShardID)
+		pr, cache, err := getDefaultDAO(ctx, execution.ShardID)
 		if err != nil {
 			return nil, err
 		}
@@ -157,10 +158,10 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]
 			return nil, err
 		}
 
-		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr)
+		currentExecutionInvariant := invariant.NewOpenCurrentExecution(pr, cache)
 		fixResult := currentExecutionInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
-		historyInvariant := invariant.NewHistoryExists(pr)
+		historyInvariant := invariant.NewHistoryExists(pr, cache)
 		fixResult = historyInvariant.Fix(ctx, concreteExecution)
 		result = append(result, fixResult)
 		activity.RecordHeartbeat(ctx, index)
@@ -172,19 +173,19 @@ func ExecutionFixerActivity(ctx context.Context, fixList []entity.Execution) ([]
 func getDefaultDAO(
 	ctx context.Context,
 	shardID int,
-) (persistence.Retryer, error) {
+) (persistence.Retryer, cache.DomainCache, error) {
 	sc, err := getScannerContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
+		return nil, nil, fmt.Errorf("cannot find key %v in context", reconciliation.CheckDataCorruptionWorkflowType)
 	}
 	res := sc.resource
-
+	cache := res.GetDomainCache()
 	execManager, err := res.GetExecutionManager(shardID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pr := persistence.NewPersistenceRetryer(execManager, res.GetHistoryManager(), c.CreatePersistenceRetryPolicy())
-	return pr, nil
+	return pr, cache, nil
 }
 
 func EmitResultMetricsActivity(ctx context.Context, fixResults []invariant.FixResult) error {

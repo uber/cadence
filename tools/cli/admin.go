@@ -936,12 +936,16 @@ func newDBCommands() []cli.Command {
 		},
 		{
 			Name:  "decode_thrift",
-			Usage: "decode thrift object of HEX, print into JSON if the HEX data is matching with any supported struct",
+			Usage: "decode thrift object, print into JSON if the data is matching with any supported struct",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:   FlagInputWithAlias,
 					EnvVar: "Input",
-					Usage:  "HEX input of the binary data, you may get from database query like SELECT HEX(...) FROM ...",
+					Usage:  "Input of Thrift encoded data structure.",
+				},
+				cli.StringFlag{
+					Name:  FlagInputEncodingWithAlias,
+					Usage: "Encoding of the input: [hex|base64] (Default: hex)",
 				},
 			},
 			Action: func(c *cli.Context) {

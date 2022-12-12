@@ -236,6 +236,7 @@ func (i *historyIterator) readHistory(ctx context.Context, firstEventID int64) (
 		MaxEventID:  common.EndEventID,
 		PageSize:    i.historyPageSize,
 		ShardID:     common.IntPtr(i.request.ShardID),
+		DomainName:  i.request.DomainName,
 	}
 	historyBatches, _, _, err := persistenceutils.ReadFullPageV2EventsByBatch(ctx, i.historyV2Manager, req)
 	return historyBatches, err

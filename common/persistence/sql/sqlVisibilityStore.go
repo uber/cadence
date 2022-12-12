@@ -77,6 +77,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		Encoding:         string(request.Memo.GetEncoding()),
 		IsCron:           request.IsCron,
 		NumClusters:      request.NumClusters,
+		UpdateTime:       request.UpdateTimestamp,
 	})
 
 	if err != nil {
@@ -104,6 +105,7 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		Encoding:         string(request.Memo.GetEncoding()),
 		IsCron:           request.IsCron,
 		NumClusters:      request.NumClusters,
+		UpdateTime:       request.UpdateTimestamp,
 	})
 	if err != nil {
 		return convertCommonErrors(s.db, "RecordWorkflowExecutionClosed", "", err)
@@ -122,14 +124,22 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 	return nil
 }
 
-func (s *sqlVisibilityStore) UpsertWorkflowExecution(
+func (s *sqlVisibilityStore) RecordWorkflowExecutionUninitialized(
 	ctx context.Context,
+	request *p.InternalRecordWorkflowExecutionUninitializedRequest,
+) error {
+	// temporary: not implemented, only implemented for ES
+	return nil
+}
+
+func (s *sqlVisibilityStore) UpsertWorkflowExecution(
+	_ context.Context,
 	request *p.InternalUpsertWorkflowExecutionRequest,
 ) error {
 	if p.IsNopUpsertWorkflowRequest(request) {
 		return nil
 	}
-	return p.NewOperationNotSupportErrorForVis()
+	return p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) ListOpenWorkflowExecutions(
@@ -293,24 +303,24 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(
 }
 
 func (s *sqlVisibilityStore) ListWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) ScanWorkflowExecutions(
-	ctx context.Context,
-	request *p.ListWorkflowExecutionsByQueryRequest,
+	_ context.Context,
+	_ *p.ListWorkflowExecutionsByQueryRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) CountWorkflowExecutions(
-	ctx context.Context,
-	request *p.CountWorkflowExecutionsRequest,
+	_ context.Context,
+	_ *p.CountWorkflowExecutionsRequest,
 ) (*p.CountWorkflowExecutionsResponse, error) {
-	return nil, p.NewOperationNotSupportErrorForVis()
+	return nil, p.ErrVisibilityOperationNotSupported
 }
 
 func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.InternalVisibilityWorkflowExecutionInfo {
@@ -326,6 +336,7 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 		IsCron:        row.IsCron,
 		NumClusters:   row.NumClusters,
 		Memo:          p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
+		UpdateTime:    row.UpdateTime,
 	}
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)

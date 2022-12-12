@@ -25,14 +25,17 @@ import (
 )
 
 const (
-	revisionTag     = "revision"
-	branchTag       = "branch"
-	buildDateTag    = "build_date"
-	buildVersionTag = "build_version"
-	goVersionTag    = "go_version"
+	revisionTag       = "revision"
+	branchTag         = "branch"
+	buildDateTag      = "build_date"
+	buildVersionTag   = "build_version"
+	goVersionTag      = "go_version"
+	cadenceVersionTag = "cadence_version"
 
 	instance               = "instance"
 	domain                 = "domain"
+	domainType             = "domain_type"
+	clusterGroup           = "cluster_group"
 	sourceCluster          = "source_cluster"
 	targetCluster          = "target_cluster"
 	activeCluster          = "active_cluster"
@@ -83,9 +86,26 @@ func DomainTag(value string) Tag {
 	return metricWithUnknown(domain, value)
 }
 
+// DomainTypeTag returns a tag for domain type.
+// This allows differentiating between global/local domains.
+func DomainTypeTag(isGlobal bool) Tag {
+	var value string
+	if isGlobal {
+		value = "global"
+	} else {
+		value = "local"
+	}
+	return simpleMetric{key: domainType, value: value}
+}
+
 // DomainUnknownTag returns a new domain:unknown tag-value
 func DomainUnknownTag() Tag {
 	return DomainTag("")
+}
+
+// ClusterGroupTag return a new cluster group tag
+func ClusterGroupTag(value string) Tag {
+	return simpleMetric{key: clusterGroup, value: value}
 }
 
 // InstanceTag returns a new instance tag

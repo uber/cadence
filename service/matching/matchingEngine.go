@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/service"
 
 	"github.com/pborman/uuid"
@@ -46,6 +47,10 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
+
+// If sticky poller is not seem in last 10s, we treat it as sticky worker unavailable
+// This seems aggressive, but the default sticky schedule_to_start timeout is 5s, so 10s seems reasonable.
+const _stickyPollerUnavailableWindow = 10 * time.Second
 
 // Implements matching.Engine
 // TODO: Switch implementation from lock/channel based to a partitioned agent
@@ -70,6 +75,7 @@ type (
 
 	matchingEngineImpl struct {
 		taskManager          persistence.TaskManager
+		clusterMetadata      cluster.Metadata
 		historyService       history.Client
 		matchingClient       matching.Client
 		tokenSerializer      common.TaskTokenSerializer
@@ -99,12 +105,15 @@ var (
 
 	pollerIDKey pollerIDCtxKey = "pollerID"
 	identityKey identityCtxKey = "identity"
+
+	_stickyPollerUnavailableError = &types.StickyWorkerUnavailableError{Message: "sticky worker is unavailable, please use non-sticky task list."}
 )
 
 var _ Engine = (*matchingEngineImpl)(nil) // Asserts that interface is indeed implemented
 
 // NewEngine creates an instance of matching engine
 func NewEngine(taskManager persistence.TaskManager,
+	clusterMetadata cluster.Metadata,
 	historyService history.Client,
 	matchingClient matching.Client,
 	config *Config,
@@ -113,9 +122,9 @@ func NewEngine(taskManager persistence.TaskManager,
 	domainCache cache.DomainCache,
 	resolver membership.Resolver,
 ) Engine {
-
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
+		clusterMetadata:      clusterMetadata,
 		historyService:       historyService,
 		tokenSerializer:      common.NewJSONTaskTokenSerializer(),
 		taskLists:            make(map[taskListID]taskListManager),
@@ -287,6 +296,13 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		return false, err
 	}
 
+	if taskListKind != nil && *taskListKind == types.TaskListKindSticky {
+		// check if the sticky worker is still available, if not, fail this request early
+		if !tlMgr.HasPollerAfter(time.Now().Add(-_stickyPollerUnavailableWindow)) {
+			return false, _stickyPollerUnavailableError
+		}
+	}
+
 	taskInfo := &persistence.TaskInfo{
 		DomainID:               domainID,
 		RunID:                  request.Execution.GetRunID(),
@@ -344,10 +360,11 @@ func (e *matchingEngineImpl) AddActivityTask(
 		CreatedTime:            time.Now(),
 	}
 	return tlMgr.AddTask(hCtx.Context, addTaskParams{
-		execution:     request.Execution,
-		taskInfo:      taskInfo,
-		source:        request.GetSource(),
-		forwardedFrom: request.GetForwardedFrom(),
+		execution:                request.Execution,
+		taskInfo:                 taskInfo,
+		source:                   request.GetSource(),
+		forwardedFrom:            request.GetForwardedFrom(),
+		activityTaskDispatchInfo: request.ActivityTaskDispatchInfo,
 	})
 }
 
@@ -505,6 +522,10 @@ pollLoop:
 			// tasks received from remote are already started. So, simply forward the response
 			return task.pollForActivityResponse(), nil
 		}
+		if task.activityTaskDispatchInfo != nil {
+			task.finish(nil)
+			return e.createSyncMatchPollForActivityTaskResponse(task, task.activityTaskDispatchInfo), nil
+		}
 
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
 		if err != nil {
@@ -532,6 +553,45 @@ pollLoop:
 	}
 }
 
+func (e *matchingEngineImpl) createSyncMatchPollForActivityTaskResponse(
+	task *InternalTask,
+	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
+) *types.PollForActivityTaskResponse {
+
+	scheduledEvent := activityTaskDispatchInfo.ScheduledEvent
+	attributes := scheduledEvent.ActivityTaskScheduledEventAttributes
+	response := &types.PollForActivityTaskResponse{}
+	response.ActivityID = attributes.ActivityID
+	response.ActivityType = attributes.ActivityType
+	response.Header = attributes.Header
+	response.Input = attributes.Input
+	response.WorkflowExecution = task.workflowExecution()
+	response.ScheduledTimestampOfThisAttempt = activityTaskDispatchInfo.ScheduledTimestampOfThisAttempt
+	response.ScheduledTimestamp = scheduledEvent.Timestamp
+	response.ScheduleToCloseTimeoutSeconds = attributes.ScheduleToCloseTimeoutSeconds
+	response.StartedTimestamp = activityTaskDispatchInfo.StartedTimestamp
+	response.StartToCloseTimeoutSeconds = attributes.StartToCloseTimeoutSeconds
+	response.HeartbeatTimeoutSeconds = attributes.HeartbeatTimeoutSeconds
+
+	token := &common.TaskToken{
+		DomainID:        task.event.DomainID,
+		WorkflowID:      task.event.WorkflowID,
+		WorkflowType:    activityTaskDispatchInfo.WorkflowType.GetName(),
+		RunID:           task.event.RunID,
+		ScheduleID:      task.event.ScheduleID,
+		ScheduleAttempt: common.Int64Default(activityTaskDispatchInfo.Attempt),
+		ActivityID:      attributes.GetActivityID(),
+		ActivityType:    attributes.GetActivityType().GetName(),
+	}
+
+	response.TaskToken, _ = e.tokenSerializer.Serialize(token)
+	response.Attempt = int32(token.ScheduleAttempt)
+	response.HeartbeatDetails = activityTaskDispatchInfo.HeartbeatDetails
+	response.WorkflowType = activityTaskDispatchInfo.WorkflowType
+	response.WorkflowDomain = activityTaskDispatchInfo.WorkflowDomain
+	return response
+}
+
 // QueryWorkflow creates a DecisionTask with query data, send it through sync match channel, wait for that DecisionTask
 // to be processed by worker, and then return the query result.
 func (e *matchingEngineImpl) QueryWorkflow(
@@ -550,6 +610,14 @@ func (e *matchingEngineImpl) QueryWorkflow(
 	if err != nil {
 		return nil, err
 	}
+
+	if taskListKind != nil && *taskListKind == types.TaskListKindSticky {
+		// check if the sticky worker is still available, if not, fail this request early
+		if !tlMgr.HasPollerAfter(time.Now().Add(-_stickyPollerUnavailableWindow)) {
+			return nil, _stickyPollerUnavailableError
+		}
+	}
+
 	taskID := uuid.New()
 	resp, err := tlMgr.DispatchQueryTask(hCtx.Context, taskID, queryRequest)
 

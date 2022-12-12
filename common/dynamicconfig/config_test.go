@@ -48,17 +48,17 @@ func (s *configSuite) SetupSuite() {
 }
 
 func (s *configSuite) TestGetProperty() {
-	key := TestGetPropertyKey
-	value := s.cln.GetProperty(key, "a")
-	s.Equal("a", value())
+	key := TestGetStringPropertyKey
+	value := s.cln.GetProperty(key)
+	s.Equal(key.DefaultValue(), value())
 	s.client.SetValue(key, "b")
 	s.Equal("b", value())
 }
 
 func (s *configSuite) TestGetIntProperty() {
 	key := TestGetIntPropertyKey
-	value := s.cln.GetIntProperty(key, 10)
-	s.Equal(10, value())
+	value := s.cln.GetIntProperty(key)
+	s.Equal(key.DefaultInt(), value())
 	s.client.SetValue(key, 50)
 	s.Equal(50, value())
 }
@@ -66,8 +66,8 @@ func (s *configSuite) TestGetIntProperty() {
 func (s *configSuite) TestGetIntPropertyFilteredByDomain() {
 	key := TestGetIntPropertyFilteredByDomainKey
 	domain := "testDomain"
-	value := s.cln.GetIntPropertyFilteredByDomain(key, 10)
-	s.Equal(10, value(domain))
+	value := s.cln.GetIntPropertyFilteredByDomain(key)
+	s.Equal(key.DefaultInt(), value(domain))
 	s.client.SetValue(key, 50)
 	s.Equal(50, value(domain))
 }
@@ -75,8 +75,8 @@ func (s *configSuite) TestGetIntPropertyFilteredByDomain() {
 func (s *configSuite) TestGetStringPropertyFnWithDomainFilter() {
 	key := DefaultEventEncoding
 	domain := "testDomain"
-	value := s.cln.GetStringPropertyFilteredByDomain(key, "abc")
-	s.Equal("abc", value(domain))
+	value := s.cln.GetStringPropertyFilteredByDomain(key)
+	s.Equal(key.DefaultString(), value(domain))
 	s.client.SetValue(key, "efg")
 	s.Equal("efg", value(domain))
 }
@@ -86,24 +86,24 @@ func (s *configSuite) TestGetIntPropertyFilteredByTaskListInfo() {
 	domain := "testDomain"
 	taskList := "testTaskList"
 	taskType := 0
-	value := s.cln.GetIntPropertyFilteredByTaskListInfo(key, 10)
-	s.Equal(10, value(domain, taskList, taskType))
+	value := s.cln.GetIntPropertyFilteredByTaskListInfo(key)
+	s.Equal(key.DefaultInt(), value(domain, taskList, taskType))
 	s.client.SetValue(key, 50)
 	s.Equal(50, value(domain, taskList, taskType))
 }
 
 func (s *configSuite) TestGetFloat64Property() {
 	key := TestGetFloat64PropertyKey
-	value := s.cln.GetFloat64Property(key, 0.1)
-	s.Equal(0.1, value())
+	value := s.cln.GetFloat64Property(key)
+	s.Equal(key.DefaultFloat(), value())
 	s.client.SetValue(key, 0.01)
 	s.Equal(0.01, value())
 }
 
 func (s *configSuite) TestGetBoolProperty() {
 	key := TestGetBoolPropertyKey
-	value := s.cln.GetBoolProperty(key, true)
-	s.Equal(true, value())
+	value := s.cln.GetBoolProperty(key)
+	s.Equal(key.DefaultBool(), value())
 	s.client.SetValue(key, false)
 	s.Equal(false, value())
 }
@@ -111,8 +111,8 @@ func (s *configSuite) TestGetBoolProperty() {
 func (s *configSuite) TestGetBoolPropertyFilteredByDomainID() {
 	key := TestGetBoolPropertyFilteredByDomainIDKey
 	domainID := "testDomainID"
-	value := s.cln.GetBoolPropertyFilteredByDomainID(key, true)
-	s.Equal(true, value(domainID))
+	value := s.cln.GetBoolPropertyFilteredByDomainID(key)
+	s.Equal(key.DefaultBool(), value(domainID))
 	s.client.SetValue(key, false)
 	s.Equal(false, value(domainID))
 }
@@ -122,16 +122,16 @@ func (s *configSuite) TestGetBoolPropertyFilteredByTaskListInfo() {
 	domain := "testDomain"
 	taskList := "testTaskList"
 	taskType := 0
-	value := s.cln.GetBoolPropertyFilteredByTaskListInfo(key, false)
-	s.Equal(false, value(domain, taskList, taskType))
+	value := s.cln.GetBoolPropertyFilteredByTaskListInfo(key)
+	s.Equal(key.DefaultBool(), value(domain, taskList, taskType))
 	s.client.SetValue(key, true)
 	s.Equal(true, value(domain, taskList, taskType))
 }
 
 func (s *configSuite) TestGetDurationProperty() {
 	key := TestGetDurationPropertyKey
-	value := s.cln.GetDurationProperty(key, time.Second)
-	s.Equal(time.Second, value())
+	value := s.cln.GetDurationProperty(key)
+	s.Equal(key.DefaultDuration(), value())
 	s.client.SetValue(key, time.Minute)
 	s.Equal(time.Minute, value())
 }
@@ -139,8 +139,8 @@ func (s *configSuite) TestGetDurationProperty() {
 func (s *configSuite) TestGetDurationPropertyFilteredByDomain() {
 	key := TestGetDurationPropertyFilteredByDomainKey
 	domain := "testDomain"
-	value := s.cln.GetDurationPropertyFilteredByDomain(key, time.Second)
-	s.Equal(time.Second, value(domain))
+	value := s.cln.GetDurationPropertyFilteredByDomain(key)
+	s.Equal(key.DefaultDuration(), value(domain))
 	s.client.SetValue(key, time.Minute)
 	s.Equal(time.Minute, value(domain))
 }
@@ -150,8 +150,8 @@ func (s *configSuite) TestGetDurationPropertyFilteredByTaskListInfo() {
 	domain := "testDomain"
 	taskList := "testTaskList"
 	taskType := 0
-	value := s.cln.GetDurationPropertyFilteredByTaskListInfo(key, time.Second)
-	s.Equal(time.Second, value(domain, taskList, taskType))
+	value := s.cln.GetDurationPropertyFilteredByTaskListInfo(key)
+	s.Equal(key.DefaultDuration(), value(domain, taskList, taskType))
 	s.client.SetValue(key, time.Minute)
 	s.Equal(time.Minute, value(domain, taskList, taskType))
 }
@@ -161,8 +161,8 @@ func (s *configSuite) TestGetMapProperty() {
 	val := map[string]interface{}{
 		"testKey": 123,
 	}
-	value := s.cln.GetMapProperty(key, val)
-	s.Equal(val, value())
+	value := s.cln.GetMapProperty(key)
+	s.Equal(key.DefaultMap(), value())
 	val["testKey"] = "321"
 	s.client.SetValue(key, val)
 	s.Equal(val, value())
@@ -171,7 +171,7 @@ func (s *configSuite) TestGetMapProperty() {
 
 func (s *configSuite) TestUpdateConfig() {
 	key := TestGetBoolPropertyKey
-	value := s.cln.GetBoolProperty(key, true)
+	value := s.cln.GetBoolProperty(key)
 	err := s.client.UpdateValue(key, false)
 	s.NoError(err)
 	s.Equal(false, value())
@@ -181,10 +181,35 @@ func (s *configSuite) TestUpdateConfig() {
 }
 
 func TestDynamicConfigKeyIsMapped(t *testing.T) {
-	for i := UnknownKey; i < LastKeyForTest; i++ {
-		key, ok := Keys[i]
-		require.True(t, ok)
-		require.NotEmpty(t, key)
+	for i := UnknownIntKey + 1; i < LastIntKey; i++ {
+		key, ok := IntKeys[i]
+		require.True(t, ok, "missing IntKey: %d", i)
+		require.NotEmpty(t, key, "empty IntKey: %d", i)
+	}
+	for i := UnknownBoolKey + 1; i < LastBoolKey; i++ {
+		key, ok := BoolKeys[i]
+		require.True(t, ok, "missing BoolKey: %d", i)
+		require.NotEmpty(t, key, "empty BoolKey: %d", i)
+	}
+	for i := UnknownFloatKey + 1; i < LastFloatKey; i++ {
+		key, ok := FloatKeys[i]
+		require.True(t, ok, "missing FloatKey: %d", i)
+		require.NotEmpty(t, key, "empty FloatKey: %d", i)
+	}
+	for i := UnknownStringKey + 1; i < LastStringKey; i++ {
+		key, ok := StringKeys[i]
+		require.True(t, ok, "missing StringKey: %d", i)
+		require.NotEmpty(t, key, "empty StringKey: %d", i)
+	}
+	for i := UnknownDurationKey + 1; i < LastDurationKey; i++ {
+		key, ok := DurationKeys[i]
+		require.True(t, ok, "missing DurationKey: %d", i)
+		require.NotEmpty(t, key, "empty DurationKey: %d", i)
+	}
+	for i := UnknownMapKey + 1; i < LastMapKey; i++ {
+		key, ok := MapKeys[i]
+		require.True(t, ok, "missing MapKey: %d", i)
+		require.NotEmpty(t, key, "empty MapKey: %d", i)
 	}
 }
 

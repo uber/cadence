@@ -22,9 +22,11 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
+
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/persistence"
@@ -43,7 +45,7 @@ func standbyTaskPostActionNoOp(
 	ctx context.Context,
 	taskInfo Info,
 	postActionInfo interface{},
-	logger log.Logger,
+	_ log.Logger,
 ) error {
 
 	if postActionInfo == nil {
@@ -51,7 +53,7 @@ func standbyTaskPostActionNoOp(
 	}
 
 	// return error so task processing logic will retry
-	return ErrTaskRedispatch
+	return &redispatchError{Reason: fmt.Sprintf("post action is %T", postActionInfo)}
 }
 
 func standbyTransferTaskPostActionTaskDiscarded(
@@ -120,16 +122,6 @@ type (
 	}
 )
 
-func newHistoryResendInfo(
-	lastEventID int64,
-	lastEventVersion int64,
-) *historyResendInfo {
-	return &historyResendInfo{
-		lastEventID:      common.Int64Ptr(lastEventID),
-		lastEventVersion: common.Int64Ptr(lastEventVersion),
-	}
-}
-
 func newPushActivityToMatchingInfo(
 	activityScheduleToStartTimeout int32,
 ) *pushActivityToMatchingInfo {
@@ -166,7 +158,10 @@ func getHistoryResendInfo(
 	if err != nil {
 		return nil, err
 	}
-	return newHistoryResendInfo(lastItem.EventID, lastItem.Version), nil
+	return &historyResendInfo{
+		lastEventID:      common.Int64Ptr(lastItem.EventID),
+		lastEventVersion: common.Int64Ptr(lastItem.Version),
+	}, nil
 }
 
 func getStandbyPostActionFn(

@@ -41,6 +41,7 @@ type (
 		CreateSession(ClusterConfig) (Session, error)
 
 		nosqlplugin.ClientErrorChecker
+		IsCassandraConsistencyError(error) bool
 	}
 
 	// Session is the interface for interacting with the database.
@@ -73,6 +74,7 @@ type (
 		Query(string, ...interface{})
 		WithContext(context.Context) Batch
 		WithTimestamp(int64) Batch
+		Consistency(Consistency) Batch
 	}
 
 	// Iter is the interface for executing and iterating over all resulting rows.
@@ -113,5 +115,6 @@ type (
 		Consistency           Consistency
 		SerialConsistency     SerialConsistency
 		Timeout               time.Duration
+		ConnectTimeout        time.Duration
 	}
 )

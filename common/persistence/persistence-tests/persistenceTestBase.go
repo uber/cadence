@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -88,6 +89,7 @@ type (
 		Logger                    log.Logger
 		PayloadSerializer         persistence.PayloadSerializer
 		ConfigStoreManager        persistence.ConfigStoreManager
+		DynamicConfiguration      persistence.DynamicConfiguration
 	}
 
 	// TestBaseParams defines the input of TestBase
@@ -95,6 +97,7 @@ type (
 		DefaultTestCluster    testcluster.PersistenceTestCluster
 		VisibilityTestCluster testcluster.PersistenceTestCluster
 		ClusterMetadata       cluster.Metadata
+		DynamicConfiguration  persistence.DynamicConfiguration
 	}
 
 	// TestTransferTaskIDGenerator helper
@@ -113,12 +116,14 @@ func NewTestBaseFromParams(params TestBaseParams) TestBase {
 	if err != nil {
 		panic(err)
 	}
+
 	return TestBase{
 		DefaultTestCluster:    params.DefaultTestCluster,
 		VisibilityTestCluster: params.VisibilityTestCluster,
 		ClusterMetadata:       params.ClusterMetadata,
 		PayloadSerializer:     persistence.NewPayloadSerializer(),
 		Logger:                logger,
+		DynamicConfiguration:  params.DynamicConfiguration,
 	}
 }
 
@@ -129,13 +134,18 @@ func NewTestBaseWithNoSQL(options *TestBaseOptions) TestBase {
 	}
 	testCluster := nosql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.ProtoVersion, "")
 	metadata := options.ClusterMetadata
-	if metadata == nil {
-		metadata = cluster.GetTestClusterMetadata(false, false)
+	if metadata.GetCurrentClusterName() == "" {
+		metadata = cluster.GetTestClusterMetadata(false)
+	}
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
+		DynamicConfiguration:  dc,
 	}
 	return NewTestBaseFromParams(params)
 }
@@ -147,13 +157,18 @@ func NewTestBaseWithSQL(options *TestBaseOptions) TestBase {
 	}
 	testCluster := sql.NewTestCluster(options.DBPluginName, options.DBName, options.DBUsername, options.DBPassword, options.DBHost, options.DBPort, options.SchemaDir)
 	metadata := options.ClusterMetadata
-	if metadata == nil {
-		metadata = cluster.GetTestClusterMetadata(false, false)
+	if metadata.GetCurrentClusterName() == "" {
+		metadata = cluster.GetTestClusterMetadata(false)
+	}
+	dc := persistence.DynamicConfiguration{
+		EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
+		EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
 	}
 	params := TestBaseParams{
 		DefaultTestCluster:    testCluster,
 		VisibilityTestCluster: testCluster,
 		ClusterMetadata:       metadata,
+		DynamicConfiguration:  dc,
 	}
 	return NewTestBaseFromParams(params)
 }
@@ -181,7 +196,7 @@ func (s *TestBase) Setup() {
 	cfg := s.DefaultTestCluster.Config()
 	scope := tally.NewTestScope(service.History, make(map[string]string))
 	metricsClient := metrics.NewClient(scope, service.GetMetricsServiceIdx(service.History, s.Logger))
-	factory := client.NewFactory(&cfg, nil, clusterName, metricsClient, s.Logger)
+	factory := client.NewFactory(&cfg, nil, clusterName, metricsClient, s.Logger, &s.DynamicConfiguration)
 
 	s.TaskMgr, err = factory.NewTaskManager()
 	s.fatalOnError("NewTaskManager", err)
@@ -321,6 +336,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 				DomainID:                    domainID,
 				WorkflowID:                  workflowExecution.GetWorkflowID(),
 				RunID:                       workflowExecution.GetRunID(),
+				FirstExecutionRunID:         workflowExecution.GetRunID(),
 				TaskList:                    taskList,
 				WorkflowTypeName:            wType,
 				WorkflowTimeout:             wTimeout,
@@ -395,6 +411,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 				DomainID:                    domainID,
 				WorkflowID:                  workflowExecution.GetWorkflowID(),
 				RunID:                       workflowExecution.GetRunID(),
+				FirstExecutionRunID:         workflowExecution.GetRunID(),
 				ParentDomainID:              parentDomainID,
 				ParentWorkflowID:            parentExecution.GetWorkflowID(),
 				ParentRunID:                 parentExecution.GetRunID(),
@@ -427,7 +444,8 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 			TimerTasks:       timerTasks,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
+		RangeID:    s.ShardInfo.RangeID,
+		DomainName: s.DomainManager.GetName(),
 	})
 
 	return response, err
@@ -516,6 +534,7 @@ func (s *TestBase) ContinueAsNewExecution(
 				DomainID:                    updatedInfo.DomainID,
 				WorkflowID:                  newExecution.GetWorkflowID(),
 				RunID:                       newExecution.GetRunID(),
+				FirstExecutionRunID:         updatedInfo.FirstExecutionRunID,
 				TaskList:                    updatedInfo.TaskList,
 				WorkflowTypeName:            updatedInfo.WorkflowTypeName,
 				WorkflowTimeout:             updatedInfo.WorkflowTimeout,
@@ -540,6 +559,8 @@ func (s *TestBase) ContinueAsNewExecution(
 		},
 		RangeID:  s.ShardInfo.RangeID,
 		Encoding: pickRandomEncoding(),
+		//To DO: next PR for UpdateWorkflowExecution
+		//DomainName: s.DomainManager.GetName(),
 	}
 	req.UpdateWorkflowMutation.ExecutionInfo.State = persistence.WorkflowStateCompleted
 	req.UpdateWorkflowMutation.ExecutionInfo.CloseStatus = persistence.WorkflowCloseStatusContinuedAsNew
@@ -612,6 +633,8 @@ func (s *TestBase) UpdateWorkflowExecutionAndFinish(
 			VersionHistories:    versionHistories,
 		},
 		Encoding: pickRandomEncoding(),
+		//To DO: next PR for UpdateWorkflowExecution
+		//DomainName: s.DomainManager.GetName(),
 	})
 	return err
 }

@@ -100,8 +100,6 @@ const (
 	SystemLocalDomainName = "cadence-system"
 	// SystemDomainRetentionDays is retention config for all cadence system workflows
 	SystemDomainRetentionDays = 7
-	// DefaultAdminOperationToken is the default dynamic config value for AdminOperationToken
-	DefaultAdminOperationToken = "CadenceTeamONLY"
 	// BatcherDomainID is domain id for batcher local domain
 	BatcherDomainID = "3116607e-419b-4783-85fc-47726a4c3fe9"
 	// BatcherLocalDomainName is domain name for batcher workflows running in local cluster
@@ -219,3 +217,45 @@ const MemoKeyForOperator = "operator"
 
 // ReservedTaskListPrefix is the required naming prefix for any task list partition other than partition 0
 const ReservedTaskListPrefix = "/__cadence_sys/"
+
+type (
+	// VisibilityOperation is an enum that represents visibility message types
+	VisibilityOperation string
+)
+
+// Enum for visibility message type
+const (
+	RecordStarted          VisibilityOperation = "RecordStarted"
+	RecordClosed           VisibilityOperation = "RecordClosed"
+	UpsertSearchAttributes VisibilityOperation = "UpsertSearchAttributes"
+)
+
+const (
+	numBitsPerLevel = 3
+
+	// NoPriority is the value returned if no priority is ever assigned to the task
+	NoPriority = -1
+)
+
+const (
+	// HighPriorityClass is the priority class for high priority tasks
+	HighPriorityClass = iota << numBitsPerLevel
+	// DefaultPriorityClass is the priority class for default priority tasks
+	DefaultPriorityClass
+	// LowPriorityClass is the priority class for low priority tasks
+	LowPriorityClass
+)
+
+const (
+	// HighPrioritySubclass is the priority subclass for high priority tasks
+	HighPrioritySubclass = iota
+	// DefaultPrioritySubclass is the priority subclass for high priority tasks
+	DefaultPrioritySubclass
+	// LowPrioritySubclass is the priority subclass for high priority tasks
+	LowPrioritySubclass
+)
+
+const (
+	// DefaultHistoryMaxAutoResetPoints is the default maximum number for auto reset points
+	DefaultHistoryMaxAutoResetPoints = 20
+)

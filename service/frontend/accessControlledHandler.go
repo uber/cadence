@@ -31,7 +31,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-var errUnauthorized = &types.BadRequestError{Message: "Request unauthorized."}
+var errUnauthorized = &types.AccessDeniedError{Message: "Request unauthorized."}
 
 // AccessControlledWorkflowHandler frontend handler wrapper for authentication and authorization
 type AccessControlledWorkflowHandler struct {
@@ -597,6 +597,26 @@ func (a *AccessControlledWorkflowHandler) RespondQueryTaskCompleted(
 	request *types.RespondQueryTaskCompletedRequest,
 ) error {
 	return a.frontendHandler.RespondQueryTaskCompleted(ctx, request)
+}
+
+// RestartWorkflowExecution API call
+func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (*types.RestartWorkflowExecutionResponse, error) {
+	scope := a.getMetricsScopeWithDomain(metrics.FrontendRestartWorkflowExecutionScope, request)
+
+	attr := &authorization.Attributes{
+		APIName:    "RestartWorkflowExecution",
+		DomainName: request.GetDomain(),
+		Permission: authorization.PermissionWrite,
+	}
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	if err != nil {
+		return nil, err
+	}
+	if !isAuthorized {
+		return nil, errUnauthorized
+	}
+
+	return a.frontendHandler.RestartWorkflowExecution(ctx, request)
 }
 
 // ScanWorkflowExecutions API call

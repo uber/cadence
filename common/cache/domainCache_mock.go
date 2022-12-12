@@ -32,138 +32,30 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockDomainCache is a mock of DomainCache interface
+// MockDomainCache is a mock of DomainCache interface.
 type MockDomainCache struct {
 	ctrl     *gomock.Controller
 	recorder *MockDomainCacheMockRecorder
 }
 
-// MockDomainCacheMockRecorder is the mock recorder for MockDomainCache
+// MockDomainCacheMockRecorder is the mock recorder for MockDomainCache.
 type MockDomainCacheMockRecorder struct {
 	mock *MockDomainCache
 }
 
-// NewMockDomainCache creates a new mock instance
+// NewMockDomainCache creates a new mock instance.
 func NewMockDomainCache(ctrl *gomock.Controller) *MockDomainCache {
 	mock := &MockDomainCache{ctrl: ctrl}
 	mock.recorder = &MockDomainCacheMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDomainCache) EXPECT() *MockDomainCacheMockRecorder {
 	return m.recorder
 }
 
-// Start mocks base method
-func (m *MockDomainCache) Start() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Start")
-}
-
-// Start indicates an expected call of Start
-func (mr *MockDomainCacheMockRecorder) Start() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockDomainCache)(nil).Start))
-}
-
-// Stop mocks base method
-func (m *MockDomainCache) Stop() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Stop")
-}
-
-// Stop indicates an expected call of Stop
-func (mr *MockDomainCacheMockRecorder) Stop() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockDomainCache)(nil).Stop))
-}
-
-// RegisterDomainChangeCallback mocks base method
-func (m *MockDomainCache) RegisterDomainChangeCallback(shard int, initialNotificationVersion int64, prepareCallback PrepareCallbackFn, callback CallbackFn) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RegisterDomainChangeCallback", shard, initialNotificationVersion, prepareCallback, callback)
-}
-
-// RegisterDomainChangeCallback indicates an expected call of RegisterDomainChangeCallback
-func (mr *MockDomainCacheMockRecorder) RegisterDomainChangeCallback(shard, initialNotificationVersion, prepareCallback, callback interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterDomainChangeCallback", reflect.TypeOf((*MockDomainCache)(nil).RegisterDomainChangeCallback), shard, initialNotificationVersion, prepareCallback, callback)
-}
-
-// UnregisterDomainChangeCallback mocks base method
-func (m *MockDomainCache) UnregisterDomainChangeCallback(shard int) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "UnregisterDomainChangeCallback", shard)
-}
-
-// UnregisterDomainChangeCallback indicates an expected call of UnregisterDomainChangeCallback
-func (mr *MockDomainCacheMockRecorder) UnregisterDomainChangeCallback(shard interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnregisterDomainChangeCallback", reflect.TypeOf((*MockDomainCache)(nil).UnregisterDomainChangeCallback), shard)
-}
-
-// GetDomain mocks base method
-func (m *MockDomainCache) GetDomain(name string) (*DomainCacheEntry, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDomain", name)
-	ret0, _ := ret[0].(*DomainCacheEntry)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDomain indicates an expected call of GetDomain
-func (mr *MockDomainCacheMockRecorder) GetDomain(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomain", reflect.TypeOf((*MockDomainCache)(nil).GetDomain), name)
-}
-
-// GetDomainByID mocks base method
-func (m *MockDomainCache) GetDomainByID(id string) (*DomainCacheEntry, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDomainByID", id)
-	ret0, _ := ret[0].(*DomainCacheEntry)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDomainByID indicates an expected call of GetDomainByID
-func (mr *MockDomainCacheMockRecorder) GetDomainByID(id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainByID", reflect.TypeOf((*MockDomainCache)(nil).GetDomainByID), id)
-}
-
-// GetDomainID mocks base method
-func (m *MockDomainCache) GetDomainID(name string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDomainID", name)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDomainID indicates an expected call of GetDomainID
-func (mr *MockDomainCacheMockRecorder) GetDomainID(name interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainID", reflect.TypeOf((*MockDomainCache)(nil).GetDomainID), name)
-}
-
-// GetDomainName mocks base method
-func (m *MockDomainCache) GetDomainName(id string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDomainName", id)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetDomainName indicates an expected call of GetDomainName
-func (mr *MockDomainCacheMockRecorder) GetDomainName(id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainName", reflect.TypeOf((*MockDomainCache)(nil).GetDomainName), id)
-}
-
-// GetAllDomain mocks base method
+// GetAllDomain mocks base method.
 func (m *MockDomainCache) GetAllDomain() map[string]*DomainCacheEntry {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllDomain")
@@ -171,13 +63,13 @@ func (m *MockDomainCache) GetAllDomain() map[string]*DomainCacheEntry {
 	return ret0
 }
 
-// GetAllDomain indicates an expected call of GetAllDomain
+// GetAllDomain indicates an expected call of GetAllDomain.
 func (mr *MockDomainCacheMockRecorder) GetAllDomain() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllDomain", reflect.TypeOf((*MockDomainCache)(nil).GetAllDomain))
 }
 
-// GetCacheSize mocks base method
+// GetCacheSize mocks base method.
 func (m *MockDomainCache) GetCacheSize() (int64, int64) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCacheSize")
@@ -186,23 +78,116 @@ func (m *MockDomainCache) GetCacheSize() (int64, int64) {
 	return ret0, ret1
 }
 
-// GetCacheSize indicates an expected call of GetCacheSize
+// GetCacheSize indicates an expected call of GetCacheSize.
 func (mr *MockDomainCacheMockRecorder) GetCacheSize() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCacheSize", reflect.TypeOf((*MockDomainCache)(nil).GetCacheSize))
 }
 
-// GetActiveDomainByID mocks base method
-func (m *MockDomainCache) GetActiveDomainByID(id string) (*DomainCacheEntry, error) {
+// GetDomain mocks base method.
+func (m *MockDomainCache) GetDomain(name string) (*DomainCacheEntry, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetActiveDomainByID", id)
+	ret := m.ctrl.Call(m, "GetDomain", name)
 	ret0, _ := ret[0].(*DomainCacheEntry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetActiveDomainByID indicates an expected call of GetActiveDomainByID
-func (mr *MockDomainCacheMockRecorder) GetActiveDomainByID(id interface{}) *gomock.Call {
+// GetDomain indicates an expected call of GetDomain.
+func (mr *MockDomainCacheMockRecorder) GetDomain(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActiveDomainByID", reflect.TypeOf((*MockDomainCache)(nil).GetActiveDomainByID), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomain", reflect.TypeOf((*MockDomainCache)(nil).GetDomain), name)
+}
+
+// GetDomainByID mocks base method.
+func (m *MockDomainCache) GetDomainByID(id string) (*DomainCacheEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainByID", id)
+	ret0, _ := ret[0].(*DomainCacheEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainByID indicates an expected call of GetDomainByID.
+func (mr *MockDomainCacheMockRecorder) GetDomainByID(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainByID", reflect.TypeOf((*MockDomainCache)(nil).GetDomainByID), id)
+}
+
+// GetDomainID mocks base method.
+func (m *MockDomainCache) GetDomainID(name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainID", name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainID indicates an expected call of GetDomainID.
+func (mr *MockDomainCacheMockRecorder) GetDomainID(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainID", reflect.TypeOf((*MockDomainCache)(nil).GetDomainID), name)
+}
+
+// GetDomainName mocks base method.
+func (m *MockDomainCache) GetDomainName(id string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainName", id)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainName indicates an expected call of GetDomainName.
+func (mr *MockDomainCacheMockRecorder) GetDomainName(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainName", reflect.TypeOf((*MockDomainCache)(nil).GetDomainName), id)
+}
+
+// RegisterDomainChangeCallback mocks base method.
+func (m *MockDomainCache) RegisterDomainChangeCallback(shard int, initialNotificationVersion int64, prepareCallback PrepareCallbackFn, callback CallbackFn) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RegisterDomainChangeCallback", shard, initialNotificationVersion, prepareCallback, callback)
+}
+
+// RegisterDomainChangeCallback indicates an expected call of RegisterDomainChangeCallback.
+func (mr *MockDomainCacheMockRecorder) RegisterDomainChangeCallback(shard, initialNotificationVersion, prepareCallback, callback interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterDomainChangeCallback", reflect.TypeOf((*MockDomainCache)(nil).RegisterDomainChangeCallback), shard, initialNotificationVersion, prepareCallback, callback)
+}
+
+// Start mocks base method.
+func (m *MockDomainCache) Start() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Start")
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockDomainCacheMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockDomainCache)(nil).Start))
+}
+
+// Stop mocks base method.
+func (m *MockDomainCache) Stop() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop.
+func (mr *MockDomainCacheMockRecorder) Stop() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockDomainCache)(nil).Stop))
+}
+
+// UnregisterDomainChangeCallback mocks base method.
+func (m *MockDomainCache) UnregisterDomainChangeCallback(shard int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UnregisterDomainChangeCallback", shard)
+}
+
+// UnregisterDomainChangeCallback indicates an expected call of UnregisterDomainChangeCallback.
+func (mr *MockDomainCacheMockRecorder) UnregisterDomainChangeCallback(shard interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnregisterDomainChangeCallback", reflect.TypeOf((*MockDomainCache)(nil).UnregisterDomainChangeCallback), shard)
 }

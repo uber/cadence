@@ -98,7 +98,7 @@ func newDB(xdbs []*sqlx.DB, tx *sqlx.Tx, dbShardID int, numDBShards int) (*db, e
 }
 
 // BeginTx starts a new transaction and returns a reference to the Tx object
-func (pdb *db) BeginTx(dbShardID int, ctx context.Context) (sqlplugin.Tx, error) {
+func (pdb *db) BeginTx(ctx context.Context, dbShardID int) (sqlplugin.Tx, error) {
 	xtx, err := pdb.driver.BeginTxx(ctx, dbShardID, nil)
 	if err != nil {
 		return nil, err
@@ -134,4 +134,9 @@ func (pdb *db) SupportsTTL() bool {
 // MaxAllowedTTL returns the max allowed ttl Postgres supports
 func (pdb *db) MaxAllowedTTL() (*time.Duration, error) {
 	return nil, sqlplugin.ErrTTLNotSupported
+}
+
+// SupportsTTL returns weather Postgre supports Asynchronous transaction
+func (pdb *db) SupportsAsyncTransaction() bool {
+	return false
 }

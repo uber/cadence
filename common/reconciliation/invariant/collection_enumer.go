@@ -70,8 +70,8 @@ func CollectionString(s string) (Collection, error) {
 	if val, ok := _CollectionNameToValueMap[s]; ok {
 		return val, nil
 	}
-	s = strings.ToLower(s)
-	if val, ok := _CollectionNameToValueMap[s]; ok {
+
+	if val, ok := _CollectionNameToValueMap[strings.ToLower(s)]; ok {
 		return val, nil
 	}
 	return 0, fmt.Errorf("%s does not belong to Collection values", s)

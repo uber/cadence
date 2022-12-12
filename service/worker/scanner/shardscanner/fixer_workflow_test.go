@@ -30,6 +30,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/reconciliation/invariant"
 	"github.com/uber/cadence/common/reconciliation/store"
@@ -97,6 +98,7 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params FixShardActivityParams,
+				cache cache.DomainCache,
 			) invariant.Manager {
 				return nil
 			},
@@ -109,6 +111,7 @@ func (s *fixerWorkflowSuite) TestNewFixerHooks() {
 				ctx context.Context,
 				retryer persistence.Retryer,
 				params FixShardActivityParams,
+				cache cache.DomainCache,
 			) invariant.Manager {
 				return nil
 			},

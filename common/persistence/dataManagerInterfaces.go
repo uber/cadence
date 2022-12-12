@@ -266,6 +266,11 @@ type (
 		Msg string
 	}
 
+	// DBUnavailableError is returned when the database is unavailable, could be for various reasons.
+	DBUnavailableError struct {
+		Msg string
+	}
+
 	// TransactionSizeLimitError is returned when the transaction size is too large
 	TransactionSizeLimitError struct {
 		Msg string
@@ -297,6 +302,7 @@ type (
 		DomainID                           string
 		WorkflowID                         string
 		RunID                              string
+		FirstExecutionRunID                string
 		ParentDomainID                     string
 		ParentWorkflowID                   string
 		ParentRunID                        string
@@ -864,6 +870,8 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot WorkflowSnapshot
+
+		DomainName string
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest
@@ -873,8 +881,9 @@ type (
 
 	// GetWorkflowExecutionRequest is used to retrieve the info of a workflow execution
 	GetWorkflowExecutionRequest struct {
-		DomainID  string
-		Execution types.WorkflowExecution
+		DomainID   string
+		Execution  types.WorkflowExecution
+		DomainName string
 	}
 
 	// GetWorkflowExecutionResponse is the response to GetworkflowExecutionRequest
@@ -887,6 +896,7 @@ type (
 	GetCurrentExecutionRequest struct {
 		DomainID   string
 		WorkflowID string
+		DomainName string
 	}
 
 	// ListCurrentExecutionsRequest is request to ListCurrentExecutions
@@ -904,6 +914,7 @@ type (
 	// IsWorkflowExecutionExistsRequest is used to check if the concrete execution exists
 	IsWorkflowExecutionExistsRequest struct {
 		DomainID   string
+		DomainName string
 		WorkflowID string
 		RunID      string
 	}
@@ -951,6 +962,8 @@ type (
 		NewWorkflowSnapshot *WorkflowSnapshot
 
 		Encoding common.EncodingType // optional binary encoding type
+
+		DomainName string
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run
@@ -969,6 +982,8 @@ type (
 		CurrentWorkflowMutation *WorkflowMutation
 
 		Encoding common.EncodingType // optional binary encoding type
+
+		DomainName string
 	}
 
 	// WorkflowEvents is used as generic workflow history events transaction container
@@ -1037,6 +1052,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// DeleteCurrentWorkflowExecutionRequest is used to delete the current workflow execution
@@ -1044,6 +1060,7 @@ type (
 		DomainID   string
 		WorkflowID string
 		RunID      string
+		DomainName string
 	}
 
 	// GetTransferTasksRequest is used to read tasks from the transfer task queue
@@ -1145,6 +1162,7 @@ type (
 	PutReplicationTaskToDLQRequest struct {
 		SourceClusterName string
 		TaskInfo          *ReplicationTaskInfo
+		DomainName        string
 	}
 
 	// GetReplicationTasksFromDLQRequest is used to get replication tasks from dlq
@@ -1206,6 +1224,7 @@ type (
 	// LeaseTaskListRequest is used to request lease of a task list
 	LeaseTaskListRequest struct {
 		DomainID     string
+		DomainName   string
 		TaskList     string
 		TaskType     int
 		TaskListKind int
@@ -1220,6 +1239,7 @@ type (
 	// UpdateTaskListRequest is used to update task list implementation information
 	UpdateTaskListRequest struct {
 		TaskListInfo *TaskListInfo
+		DomainName   string
 	}
 
 	// UpdateTaskListResponse is the response to UpdateTaskList
@@ -1241,6 +1261,7 @@ type (
 	// DeleteTaskListRequest contains the request params needed to invoke DeleteTaskList API
 	DeleteTaskListRequest struct {
 		DomainID     string
+		DomainName   string
 		TaskListName string
 		TaskListType int
 		RangeID      int64
@@ -1250,6 +1271,7 @@ type (
 	CreateTasksRequest struct {
 		TaskListInfo *TaskListInfo
 		Tasks        []*CreateTaskInfo
+		DomainName   string
 	}
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
@@ -1271,6 +1293,7 @@ type (
 		ReadLevel    int64  // range exclusive
 		MaxReadLevel *int64 // optional: range inclusive when specified
 		BatchSize    int
+		DomainName   string
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests
@@ -1280,8 +1303,9 @@ type (
 
 	// CompleteTaskRequest is used to complete a task
 	CompleteTaskRequest struct {
-		TaskList *TaskListInfo
-		TaskID   int64
+		TaskList   *TaskListInfo
+		TaskID     int64
+		DomainName string
 	}
 
 	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
@@ -1291,6 +1315,7 @@ type (
 		TaskType     int
 		TaskID       int64 // Tasks less than or equal to this ID will be completed
 		Limit        int   // Limit on the max number of tasks that can be completed. Required param
+		DomainName   string
 	}
 
 	// CompleteTasksLessThanResponse is the response of CompleteTasksLessThan
@@ -1515,12 +1540,15 @@ type (
 		Encoding common.EncodingType
 		// The shard to get history node data
 		ShardID *int
+
+		//DomainName to get metrics created with the domain
+		DomainName string
 	}
 
 	// AppendHistoryNodesResponse is a response to AppendHistoryNodesRequest
 	AppendHistoryNodesResponse struct {
-		// the size of the event data that has been appended
-		Size int
+		// The data blob that was persisted to database
+		DataBlob DataBlob
 	}
 
 	// ReadHistoryBranchRequest is used to read a history branch
@@ -1538,6 +1566,8 @@ type (
 		NextPageToken []byte
 		// The shard to get history branch data
 		ShardID *int
+
+		DomainName string
 	}
 
 	// ReadHistoryBranchResponse is the response to ReadHistoryBranchRequest
@@ -1592,6 +1622,8 @@ type (
 		Info string
 		// The shard to get history branch data
 		ShardID *int
+		//DomainName to create metrics for Domain Cost Attribution
+		DomainName string
 	}
 
 	// ForkHistoryBranchResponse is the response to ForkHistoryBranchRequest
@@ -1616,6 +1648,8 @@ type (
 		BranchToken []byte
 		// The shard to delete history branch data
 		ShardID *int
+		//DomainName to generate metrics for Domain Cost Attribution
+		DomainName string
 	}
 
 	// GetHistoryTreeRequest is used to retrieve branch info of a history tree
@@ -1626,6 +1660,8 @@ type (
 		ShardID *int
 		// optional: can provide treeID via branchToken if treeID is empty
 		BranchToken []byte
+		//DomainName to create metrics
+		DomainName string
 	}
 
 	// HistoryBranchDetail contains detailed information of a branch
@@ -1859,6 +1895,10 @@ func (e *WorkflowExecutionAlreadyStartedError) Error() string {
 }
 
 func (e *TimeoutError) Error() string {
+	return e.Msg
+}
+
+func (e *DBUnavailableError) Error() string {
 	return e.Msg
 }
 

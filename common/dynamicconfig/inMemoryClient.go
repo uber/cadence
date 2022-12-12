@@ -48,98 +48,95 @@ func (mc *inMemoryClient) SetValue(key Key, value interface{}) {
 	mc.globalValues[key] = value
 }
 
-func (mc *inMemoryClient) GetValue(key Key, defaultValue interface{}) (interface{}, error) {
+func (mc *inMemoryClient) GetValue(key Key) (interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[key]; ok {
 		return val, nil
 	}
-	return defaultValue, NotFoundError
+	return key.DefaultValue(), NotFoundError
 }
 
-func (mc *inMemoryClient) GetValueWithFilters(
-	name Key, filters map[Filter]interface{}, defaultValue interface{},
-) (interface{}, error) {
+func (mc *inMemoryClient) GetValueWithFilters(name Key, filters map[Filter]interface{}) (interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
-	return mc.GetValue(name, defaultValue)
+	return mc.GetValue(name)
 }
 
-func (mc *inMemoryClient) GetIntValue(name Key, filters map[Filter]interface{}, defaultValue int) (int, error) {
+func (mc *inMemoryClient) GetIntValue(name IntKey, filters map[Filter]interface{}) (int, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(int), nil
 	}
-	return defaultValue, NotFoundError
+	return name.DefaultInt(), NotFoundError
 }
 
-func (mc *inMemoryClient) GetFloatValue(name Key, filters map[Filter]interface{}, defaultValue float64) (float64, error) {
+func (mc *inMemoryClient) GetFloatValue(name FloatKey, filters map[Filter]interface{}) (float64, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(float64), nil
 	}
-	return defaultValue, NotFoundError
+	return name.DefaultFloat(), NotFoundError
 }
 
-func (mc *inMemoryClient) GetBoolValue(name Key, filters map[Filter]interface{}, defaultValue bool) (bool, error) {
+func (mc *inMemoryClient) GetBoolValue(name BoolKey, filters map[Filter]interface{}) (bool, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(bool), nil
 	}
-	return defaultValue, NotFoundError
+	return name.DefaultBool(), NotFoundError
 }
 
-func (mc *inMemoryClient) GetStringValue(name Key, filters map[Filter]interface{}, defaultValue string) (string, error) {
+func (mc *inMemoryClient) GetStringValue(name StringKey, filters map[Filter]interface{}) (string, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(string), nil
 	}
-	return defaultValue, NotFoundError
+	return name.DefaultString(), NotFoundError
 }
 
-func (mc *inMemoryClient) GetMapValue(
-	name Key, filters map[Filter]interface{}, defaultValue map[string]interface{},
-) (map[string]interface{}, error) {
+func (mc *inMemoryClient) GetMapValue(name MapKey, filters map[Filter]interface{}) (map[string]interface{}, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(map[string]interface{}), nil
 	}
-	return defaultValue, NotFoundError
+	return name.DefaultMap(), NotFoundError
 }
 
-func (mc *inMemoryClient) GetDurationValue(
-	name Key, filters map[Filter]interface{}, defaultValue time.Duration,
-) (time.Duration, error) {
+func (mc *inMemoryClient) GetDurationValue(name DurationKey, filters map[Filter]interface{}) (time.Duration, error) {
 	mc.RLock()
 	defer mc.RUnlock()
 
 	if val, ok := mc.globalValues[name]; ok {
 		return val.(time.Duration), nil
 	}
-	return defaultValue, NotFoundError
+	return name.DefaultDuration(), NotFoundError
 }
 
 func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
+	if err := ValidateKeyValuePair(key, value); err != nil {
+		return err
+	}
 	mc.SetValue(key, value)
 	return nil
 }
 
 func (mc *inMemoryClient) RestoreValue(name Key, filters map[Filter]interface{}) error {
-	return errors.New("not supported for file based client")
+	return errors.New("not supported for in-memory client")
 }
 
 func (mc *inMemoryClient) ListValue(name Key) ([]*types.DynamicConfigEntry, error) {
-	return nil, errors.New("not supported for file based client")
+	return nil, errors.New("not supported for in-memory client")
 }

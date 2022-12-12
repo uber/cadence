@@ -47,8 +47,9 @@ type (
 			attempt int64,
 			scheduleTimestamp int64,
 			originalScheduledTimestamp int64,
+			bypassTaskGeneration bool,
 		) (*DecisionInfo, error)
-		ReplicateTransientDecisionTaskScheduled() (*DecisionInfo, error)
+		ReplicateTransientDecisionTaskScheduled() error
 		ReplicateDecisionTaskStartedEvent(
 			decision *DecisionInfo,
 			version int64,
@@ -134,6 +135,7 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskScheduledEven
 	attempt int64,
 	scheduleTimestamp int64,
 	originalScheduledTimestamp int64,
+	bypassTaskGeneration bool,
 ) (*DecisionInfo, error) {
 
 	// set workflow state to running, since decision is scheduled
@@ -162,12 +164,18 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskScheduledEven
 	}
 
 	m.UpdateDecision(decision)
+
+	if !bypassTaskGeneration {
+		if err := m.msb.taskGenerator.GenerateDecisionScheduleTasks(decision.ScheduleID); err != nil {
+			return nil, err
+		}
+	}
 	return decision, nil
 }
 
-func (m *mutableStateDecisionTaskManagerImpl) ReplicateTransientDecisionTaskScheduled() (*DecisionInfo, error) {
+func (m *mutableStateDecisionTaskManagerImpl) ReplicateTransientDecisionTaskScheduled() error {
 	if m.HasPendingDecision() || m.msb.GetExecutionInfo().DecisionAttempt == 0 {
-		return nil, nil
+		return nil
 	}
 
 	// the schedule ID for this decision is guaranteed to be wrong
@@ -193,7 +201,8 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateTransientDecisionTaskSche
 	}
 
 	m.UpdateDecision(decision)
-	return decision, nil
+
+	return m.msb.taskGenerator.GenerateDecisionScheduleTasks(decision.ScheduleID)
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskStartedEvent(
@@ -238,7 +247,7 @@ func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskStartedEvent(
 	}
 
 	m.UpdateDecision(decision)
-	return decision, nil
+	return decision, m.msb.taskGenerator.GenerateDecisionStartTasks(scheduleID)
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) ReplicateDecisionTaskCompletedEvent(
@@ -397,7 +406,7 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 		m.msb.executionInfo.DecisionAttempt = 0
 	}
 
-	decision, err := m.ReplicateDecisionTaskScheduledEvent(
+	return m.ReplicateDecisionTaskScheduledEvent(
 		m.msb.GetCurrentVersion(),
 		scheduleID,
 		taskList,
@@ -405,21 +414,8 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEventAsHea
 		m.msb.executionInfo.DecisionAttempt,
 		scheduleTime,
 		originalScheduledTimestamp,
+		bypassTaskGeneration,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO merge active & passive task generation
-	if !bypassTaskGeneration {
-		if err := m.msb.taskGenerator.GenerateDecisionScheduleTasks(
-			scheduleID,
-		); err != nil {
-			return nil, err
-		}
-	}
-
-	return decision, nil
 }
 
 func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskScheduledEvent(
@@ -504,12 +500,6 @@ func (m *mutableStateDecisionTaskManagerImpl) AddDecisionTaskStartedEvent(
 	}
 
 	decision, err := m.ReplicateDecisionTaskStartedEvent(decision, m.msb.GetCurrentVersion(), scheduleID, startedID, requestID, startTime)
-	// TODO merge active & passive task generation
-	if err := m.msb.taskGenerator.GenerateDecisionStartTasks(
-		scheduleID,
-	); err != nil {
-		return nil, nil, err
-	}
 	return event, decision, err
 }
 

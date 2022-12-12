@@ -22,8 +22,8 @@ package cluster
 
 import (
 	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
+	commonMetrics "github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/service"
 )
 
@@ -87,32 +87,44 @@ var (
 			RPCTransport:           TestClusterXDCTransport,
 		},
 	}
+
+	// TestActiveClusterMetadata is metadata for an active cluster
+	TestActiveClusterMetadata = NewMetadata(
+		TestFailoverVersionIncrement,
+		TestCurrentClusterName,
+		TestCurrentClusterName,
+		TestAllClusterInfo,
+		func(d string) bool { return false },
+		commonMetrics.NewNoopMetricsClient(),
+		loggerimpl.NewNopLogger(),
+	)
+
+	// TestPassiveClusterMetadata is metadata for a passive cluster
+	TestPassiveClusterMetadata = NewMetadata(
+		TestFailoverVersionIncrement,
+		TestCurrentClusterName,
+		TestAlternativeClusterName,
+		TestAllClusterInfo,
+		func(d string) bool { return false },
+		commonMetrics.NewNoopMetricsClient(),
+		loggerimpl.NewNopLogger(),
+	)
 )
 
 // GetTestClusterMetadata return an cluster metadata instance, which is initialized
-func GetTestClusterMetadata(enableGlobalDomain bool, isPrimaryCluster bool) Metadata {
+func GetTestClusterMetadata(isPrimaryCluster bool) Metadata {
 	primaryClusterName := TestCurrentClusterName
 	if !isPrimaryCluster {
 		primaryClusterName = TestAlternativeClusterName
 	}
 
-	if enableGlobalDomain {
-		return NewMetadata(
-			loggerimpl.NewNopLogger(),
-			dynamicconfig.GetBoolPropertyFn(true),
-			TestFailoverVersionIncrement,
-			primaryClusterName,
-			TestCurrentClusterName,
-			TestAllClusterInfo,
-		)
-	}
-
 	return NewMetadata(
-		loggerimpl.NewNopLogger(),
-		dynamicconfig.GetBoolPropertyFn(false),
 		TestFailoverVersionIncrement,
+		primaryClusterName,
 		TestCurrentClusterName,
-		TestCurrentClusterName,
-		TestSingleDCClusterInfo,
+		TestAllClusterInfo,
+		func(d string) bool { return false },
+		commonMetrics.NewNoopMetricsClient(),
+		loggerimpl.NewNopLogger(),
 	)
 }

@@ -51,6 +51,14 @@ func NewGenericClient(
 	}
 }
 
+type GenericBulkableRequestType int
+
+const (
+	BulkableIndexRequest GenericBulkableRequestType = iota
+	BulkableDeleteRequest
+	BulkableCreateRequest
+)
+
 type (
 	// GenericClient is a generic interface for all versions of ElasticSearch clients
 	GenericClient interface {
@@ -175,8 +183,8 @@ type (
 		ID          string
 		VersionType string
 		Version     int64
-		// true means it's delete, otherwise it's a index request
-		IsDelete bool
+		// request types can be index, delete or create
+		RequestType GenericBulkableRequestType
 		// should be nil if IsDelete is true
 		Doc interface{}
 	}
@@ -225,6 +233,7 @@ type (
 		TaskList      string
 		IsCron        bool
 		NumClusters   int16
+		UpdateTime    int64
 		Attr          map[string]interface{}
 	}
 

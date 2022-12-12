@@ -29,7 +29,7 @@ import (
 
 var (
 	// TestVersion is the workflow version for test
-	TestVersion = int64(1234)
+	TestVersion = cluster.TestCurrentClusterInitialFailoverVersion + (cluster.TestFailoverVersionIncrement * 5)
 	// TestDomainID is the domainID for test
 	TestDomainID = "deadbeef-0123-4567-890a-bcdef0123456"
 	// TestDomainName is the domainName for test
@@ -56,14 +56,13 @@ var (
 	TestRunID = "0d00698f-08e1-4d36-a3e2-3bf109f5d2d6"
 
 	// TestClusterMetadata is the cluster metadata for test
-	TestClusterMetadata = cluster.GetTestClusterMetadata(true, true)
+	TestClusterMetadata = cluster.GetTestClusterMetadata(true)
 
 	// TestLocalDomainEntry is the local domain cache entry for test
 	TestLocalDomainEntry = cache.NewLocalDomainCacheEntryForTest(
 		&persistence.DomainInfo{ID: TestDomainID, Name: TestDomainName},
 		&persistence.DomainConfig{Retention: 1},
 		cluster.TestCurrentClusterName,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalDomainEntry is the global domain cache entry for test
@@ -82,7 +81,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalParentDomainEntry is the global parent domain cache entry for test
@@ -97,7 +95,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalTargetDomainEntry is the global target domain cache entry for test
@@ -112,7 +109,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalRemoteTargetDomainEntry is the global target domain cache entry for test
@@ -127,7 +123,6 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 
 	// TestGlobalChildDomainEntry is the global child domain cache entry for test
@@ -142,6 +137,5 @@ var (
 			},
 		},
 		TestVersion,
-		TestClusterMetadata,
 	)
 )

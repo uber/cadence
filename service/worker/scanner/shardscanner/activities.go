@@ -177,7 +177,7 @@ func scanShard(
 		ctx.Hooks.Iterator(activityCtx, pr, params),
 		resources.GetBlobstoreClient(),
 		params.BlobstoreFlushThreshold,
-		ctx.Hooks.Manager(activityCtx, pr, params),
+		ctx.Hooks.Manager(activityCtx, pr, params, resources.GetDomainCache()),
 		func() { activity.RecordHeartbeat(activityCtx, heartbeatDetails) },
 		scope,
 		resources.GetDomainCache(),
@@ -368,7 +368,7 @@ func fixShard(
 	fixer := NewFixer(
 		activityCtx,
 		shardID,
-		ctx.Hooks.InvariantManager(activityCtx, pr, params),
+		ctx.Hooks.InvariantManager(activityCtx, pr, params, resource.GetDomainCache()),
 		ctx.Hooks.Iterator(activityCtx, resource.GetBlobstoreClient(), corruptedKeys, params),
 		resource.GetBlobstoreClient(),
 		params.ResolvedFixerWorkflowConfig.BlobstoreFlushThreshold,

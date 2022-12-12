@@ -36,30 +36,30 @@ import (
 	execution "github.com/uber/cadence/service/history/execution"
 )
 
-// MockEventsReapplier is a mock of EventsReapplier interface
+// MockEventsReapplier is a mock of EventsReapplier interface.
 type MockEventsReapplier struct {
 	ctrl     *gomock.Controller
 	recorder *MockEventsReapplierMockRecorder
 }
 
-// MockEventsReapplierMockRecorder is the mock recorder for MockEventsReapplier
+// MockEventsReapplierMockRecorder is the mock recorder for MockEventsReapplier.
 type MockEventsReapplierMockRecorder struct {
 	mock *MockEventsReapplier
 }
 
-// NewMockEventsReapplier creates a new mock instance
+// NewMockEventsReapplier creates a new mock instance.
 func NewMockEventsReapplier(ctrl *gomock.Controller) *MockEventsReapplier {
 	mock := &MockEventsReapplier{ctrl: ctrl}
 	mock.recorder = &MockEventsReapplierMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockEventsReapplier) EXPECT() *MockEventsReapplierMockRecorder {
 	return m.recorder
 }
 
-// ReapplyEvents mocks base method
+// ReapplyEvents mocks base method.
 func (m *MockEventsReapplier) ReapplyEvents(ctx context.Context, msBuilder execution.MutableState, historyEvents []*types.HistoryEvent, runID string) ([]*types.HistoryEvent, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReapplyEvents", ctx, msBuilder, historyEvents, runID)
@@ -68,7 +68,7 @@ func (m *MockEventsReapplier) ReapplyEvents(ctx context.Context, msBuilder execu
 	return ret0, ret1
 }
 
-// ReapplyEvents indicates an expected call of ReapplyEvents
+// ReapplyEvents indicates an expected call of ReapplyEvents.
 func (mr *MockEventsReapplierMockRecorder) ReapplyEvents(ctx, msBuilder, historyEvents, runID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReapplyEvents", reflect.TypeOf((*MockEventsReapplier)(nil).ReapplyEvents), ctx, msBuilder, historyEvents, runID)

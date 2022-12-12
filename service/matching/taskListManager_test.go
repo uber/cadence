@@ -318,7 +318,6 @@ func TestAddTaskStandby(t *testing.T) {
 			},
 		},
 		1234,
-		cluster.GetTestClusterMetadata(true, true),
 	)
 	mockDomainCache := tlm.domainCache.(*cache.MockDomainCache)
 	mockDomainCache.EXPECT().GetDomainByID(domainID).Return(testStandbyDomainEntry, nil).AnyTimes()

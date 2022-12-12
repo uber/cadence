@@ -34,7 +34,6 @@ import (
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -80,10 +79,6 @@ func (s *crossClusterTargetTaskExecutorSuite) SetupTest() {
 	s.mockDomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestTargetDomainID).Return(constants.TestGlobalTargetDomainEntry, nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainByID(constants.TestRemoteTargetDomainID).Return(constants.TestGlobalRemoteTargetDomainEntry, nil).AnyTimes()
-	mockClusterMetadata := s.mockShard.Resource.ClusterMetadata
-	mockClusterMetadata.EXPECT().GetCurrentClusterName().Return(cluster.TestCurrentClusterName).AnyTimes()
-	mockClusterMetadata.EXPECT().GetAllClusterInfo().Return(cluster.TestAllClusterInfo).AnyTimes()
-	mockClusterMetadata.EXPECT().IsGlobalDomainEnabled().Return(true).AnyTimes()
 
 	s.executor = NewCrossClusterTargetTaskExecutor(s.mockShard, s.mockShard.GetLogger(), config)
 }
@@ -332,10 +327,10 @@ func (s *crossClusterTargetTaskExecutorSuite) testApplyParentPolicyTaskWithFailu
 				Domain: "some random domain name",
 				WorkflowExecution: &types.WorkflowExecution{
 					WorkflowID: "some random workflow id",
-					RunID:      "some random run id",
 				},
-				Identity:  "history-service",
-				RequestID: "",
+				Identity:            "history-service",
+				RequestID:           "",
+				FirstExecutionRunID: "some random run id",
 			},
 		}
 	}
@@ -455,7 +450,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 				func(_ context.Context, request *types.HistoryRequestCancelWorkflowExecutionRequest, option ...yarpc.CallOption) error {
 					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
 					s.Equal(childAttr.ChildWorkflowID, request.GetCancelRequest().GetWorkflowExecution().GetWorkflowID())
-					s.Equal(childAttr.ChildRunID, request.GetCancelRequest().GetWorkflowExecution().GetRunID())
+					s.Equal(childAttr.ChildRunID, request.GetCancelRequest().GetFirstExecutionRunID())
 					s.True(request.GetChildWorkflowOnly())
 					s.Equal(taskInfo.GetWorkflowID(), request.GetExternalWorkflowExecution().GetWorkflowID())
 					s.Equal(taskInfo.GetRunID(), request.GetExternalWorkflowExecution().GetRunID())
@@ -466,7 +461,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestApplyParentClosePolicyTask_Suc
 				func(_ context.Context, request *types.HistoryTerminateWorkflowExecutionRequest, option ...yarpc.CallOption) error {
 					s.Equal(childAttr.ChildDomainID, request.GetDomainUUID())
 					s.Equal(childAttr.ChildWorkflowID, request.GetTerminateRequest().GetWorkflowExecution().GetWorkflowID())
-					s.Equal(childAttr.ChildRunID, request.GetTerminateRequest().GetWorkflowExecution().GetRunID())
+					s.Equal(childAttr.ChildRunID, request.GetTerminateRequest().GetFirstExecutionRunID())
 					s.True(request.GetChildWorkflowOnly())
 					s.Equal(taskInfo.GetWorkflowID(), request.GetExternalWorkflowExecution().GetWorkflowID())
 					s.Equal(taskInfo.GetRunID(), request.GetExternalWorkflowExecution().GetRunID())

@@ -220,6 +220,11 @@ func (g grpcHandler) RespondQueryTaskCompleted(ctx context.Context, request *api
 	return &apiv1.RespondQueryTaskCompletedResponse{}, proto.FromError(err)
 }
 
+func (g grpcHandler) RestartWorkflowExecution(ctx context.Context, request *apiv1.RestartWorkflowExecutionRequest) (*apiv1.RestartWorkflowExecutionResponse, error) {
+	response, err := g.h.RestartWorkflowExecution(ctx, proto.ToRestartWorkflowExecutionRequest(request))
+	return proto.FromRestartWorkflowExecutionResponse(response), proto.FromError(err)
+}
+
 func (g grpcHandler) ScanWorkflowExecutions(ctx context.Context, request *apiv1.ScanWorkflowExecutionsRequest) (*apiv1.ScanWorkflowExecutionsResponse, error) {
 	response, err := g.h.ScanWorkflowExecutions(ctx, proto.ToScanWorkflowExecutionsRequest(request))
 	return proto.FromScanWorkflowExecutionsResponse(response), proto.FromError(err)

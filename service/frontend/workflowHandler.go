@@ -50,7 +50,6 @@ import (
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 const (
@@ -69,6 +68,15 @@ const (
 
 var _ Handler = (*WorkflowHandler)(nil)
 
+// ratelimitType differentiates between the three categories of ratelimiters
+type ratelimitType int
+
+const (
+	ratelimitTypeUser ratelimitType = iota + 1
+	ratelimitTypeWorker
+	ratelimitTypeVisibility
+)
+
 type (
 	// WorkflowHandler - Thrift handler interface for workflow service
 	WorkflowHandler struct {
@@ -79,6 +87,7 @@ type (
 		tokenSerializer           common.TaskTokenSerializer
 		userRateLimiter           quotas.Policy
 		workerRateLimiter         quotas.Policy
+		visibilityRateLimiter     quotas.Policy
 		config                    *Config
 		versionChecker            client.VersionChecker
 		domainHandler             domain.Handler
@@ -128,6 +137,8 @@ var (
 	errInvalidExecutionStartToCloseTimeoutSeconds = &types.BadRequestError{Message: "A valid ExecutionStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidTaskStartToCloseTimeoutSeconds      = &types.BadRequestError{Message: "A valid TaskStartToCloseTimeoutSeconds is not set on request."}
 	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
+	errInvalidJitterStartSeconds                  = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (negative)."}
+	errInvalidJitterStartSeconds2                 = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (larger than cron duration)."}
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
@@ -180,6 +191,17 @@ func NewWorkflowHandler(
 					service.Frontend,
 					config.GlobalDomainWorkerRPS.AsFloat64(domain),
 					config.MaxDomainWorkerRPSPerInstance.AsFloat64(domain),
+					resource.GetMembershipResolver(),
+				))
+			}),
+		),
+		visibilityRateLimiter: quotas.NewMultiStageRateLimiter(
+			quotas.NewDynamicRateLimiter(config.VisibilityRPS.AsFloat64()),
+			quotas.NewCollection(func(domain string) quotas.Limiter {
+				return quotas.NewDynamicRateLimiter(quotas.PerMemberDynamic(
+					service.Frontend,
+					config.GlobalDomainVisibilityRPS.AsFloat64(domain),
+					config.MaxDomainVisibilityRPSPerInstance.AsFloat64(domain),
 					resource.GetMembershipResolver(),
 				))
 			}),
@@ -263,7 +285,7 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendRegisterDomainScope)
 	defer sw.Stop()
@@ -308,7 +330,7 @@ func (wh *WorkflowHandler) ListDomains(
 	ctx context.Context,
 	listRequest *types.ListDomainsRequest,
 ) (response *types.ListDomainsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendListDomainsScope)
 	defer sw.Stop()
@@ -337,7 +359,7 @@ func (wh *WorkflowHandler) DescribeDomain(
 	ctx context.Context,
 	describeRequest *types.DescribeDomainRequest,
 ) (response *types.DescribeDomainResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendDescribeDomainScope)
 	defer sw.Stop()
@@ -387,52 +409,86 @@ func (wh *WorkflowHandler) UpdateDomain(
 	ctx context.Context,
 	updateRequest *types.UpdateDomainRequest,
 ) (resp *types.UpdateDomainResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendUpdateDomainScope)
 	defer sw.Stop()
 
+	domainName := ""
+	if updateRequest != nil {
+		domainName = updateRequest.GetName()
+	}
+
+	logger := wh.GetLogger().WithTags(
+		tag.WorkflowDomainName(domainName),
+		tag.OperationName("DomainUpdate"))
+
+	if updateRequest == nil {
+		logger.Error("Nil domain update request.",
+			tag.Error(errRequestNotSet))
+		return nil, errRequestNotSet
+	}
+
+	isFailover := isFailoverRequest(updateRequest)
+	isGraceFailover := isGraceFailoverRequest(updateRequest)
+	logger.Info(fmt.Sprintf(
+		"Domain Update requested. isFailover: %v, isGraceFailover: %v, Request: %#v.",
+		isFailover,
+		isGraceFailover,
+		updateRequest))
+
 	if wh.isShuttingDown() {
+		logger.Error("Won't apply the domain update since workflowHandler is shutting down.",
+			tag.Error(errShuttingDown))
 		return nil, errShuttingDown
 	}
 
 	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		logger.Error("Won't apply the domain update since client version is not supported.",
+			tag.Error(err))
 		return nil, wh.error(err, scope)
 	}
 
-	if updateRequest == nil {
-		return nil, errRequestNotSet
-	}
-
 	// don't require permission for failover request
-	if !isFailoverRequest(updateRequest) {
-		if err := checkPermission(wh.config, updateRequest.SecurityToken); err != nil {
+	if isFailover {
+		// reject the failover if the cluster is in lockdown
+		if err := checkFailOverPermission(wh.config, updateRequest.GetName()); err != nil {
+			logger.Error("Domain failover request rejected since domain is in lockdown.",
+				tag.Error(err))
 			return nil, err
 		}
 	} else {
-		// reject the failover if the cluster is in lockdown
-		if err := checkFailOverPermission(wh.config, updateRequest.Name); err != nil {
+		if err := checkPermission(wh.config, updateRequest.SecurityToken); err != nil {
+			logger.Error("Domain update request rejected due to failing permissions.",
+				tag.Error(err))
 			return nil, err
 		}
 	}
 
-	if isGraceFailoverRequest(updateRequest) {
+	if isGraceFailover {
 		if err := wh.checkOngoingFailover(
 			ctx,
 			&updateRequest.Name,
 		); err != nil {
+			logger.Error("Graceful domain failover request failed. Not able to check ongoing failovers.",
+				tag.Error(err))
 			return nil, err
 		}
 	}
 
 	if updateRequest.GetName() == "" {
+		logger.Error("Domain not set on request.",
+			tag.Error(errDomainNotSet))
 		return nil, errDomainNotSet
 	}
 	// TODO: call remote clusters to verify domain data
 	resp, err := wh.domainHandler.UpdateDomain(ctx, updateRequest)
 	if err != nil {
+		logger.Error("Domain update operation failed.",
+			tag.Error(err))
 		return resp, wh.error(err, scope)
 	}
+	logger.Info("Domain update operation succeeded.")
 	return resp, err
 }
 
@@ -440,7 +496,7 @@ func (wh *WorkflowHandler) UpdateDomain(
 // it cannot be used to start new workflow executions.  Existing workflow executions will continue to run on
 // deprecated domains.
 func (wh *WorkflowHandler) DeprecateDomain(ctx context.Context, deprecateRequest *types.DeprecateDomainRequest) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendDeprecateDomainScope)
 	defer sw.Stop()
@@ -477,7 +533,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	ctx context.Context,
 	pollRequest *types.PollForActivityTaskRequest,
 ) (resp *types.PollForActivityTaskResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	callTime := time.Now()
 
@@ -541,7 +597,7 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(errIdentityTooLong, scope, tags...)
 	}
 
-	if ok := wh.allow(false, pollRequest); !ok {
+	if ok := wh.allow(ratelimitTypeWorker, pollRequest); !ok {
 		// pollers exponentially back off up to 10s
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
@@ -586,7 +642,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	ctx context.Context,
 	pollRequest *types.PollForDecisionTaskRequest,
 ) (resp *types.PollForDecisionTaskResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	callTime := time.Now()
 
@@ -661,7 +717,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if ok := wh.allow(false, pollRequest); !ok {
+	if ok := wh.allow(ratelimitTypeWorker, pollRequest); !ok {
 		// pollers exponentially back off up to 10s
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
@@ -752,7 +808,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 	ctx context.Context,
 	heartbeatRequest *types.RecordActivityTaskHeartbeatRequest,
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRecordActivityTaskHeartbeatScope)
 
@@ -797,7 +853,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeat(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -851,7 +907,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 	ctx context.Context,
 	heartbeatRequest *types.RecordActivityTaskHeartbeatByIDRequest,
 ) (resp *types.RecordActivityTaskHeartbeatResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRecordActivityTaskHeartbeatByIDScope, heartbeatRequest)
 	defer sw.Stop()
@@ -880,7 +936,7 @@ func (wh *WorkflowHandler) RecordActivityTaskHeartbeatByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, heartbeatRequest)
+	wh.allow(ratelimitTypeWorker, heartbeatRequest)
 
 	wh.GetLogger().Debug("Received RecordActivityTaskHeartbeatByID")
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
@@ -966,7 +1022,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 	ctx context.Context,
 	completeRequest *types.RespondActivityTaskCompletedRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondActivityTaskCompletedScope)
 
@@ -1010,7 +1066,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompleted(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1075,7 +1131,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 	ctx context.Context,
 	completeRequest *types.RespondActivityTaskCompletedByIDRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRespondActivityTaskCompletedByIDScope, completeRequest)
 	defer sw.Stop()
@@ -1104,7 +1160,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCompletedByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, completeRequest)
+	wh.allow(ratelimitTypeWorker, completeRequest)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1200,7 +1256,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 	ctx context.Context,
 	failedRequest *types.RespondActivityTaskFailedRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondActivityTaskFailedScope)
 
@@ -1244,7 +1300,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailed(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1297,7 +1353,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 	ctx context.Context,
 	failedRequest *types.RespondActivityTaskFailedByIDRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRespondActivityTaskFailedByIDScope, failedRequest)
 	defer sw.Stop()
@@ -1326,7 +1382,7 @@ func (wh *WorkflowHandler) RespondActivityTaskFailedByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, failedRequest)
+	wh.allow(ratelimitTypeWorker, failedRequest)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1411,7 +1467,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 	ctx context.Context,
 	cancelRequest *types.RespondActivityTaskCanceledRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondActivityTaskCanceledScope)
 
@@ -1457,7 +1513,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceled(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1522,7 +1578,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 	ctx context.Context,
 	cancelRequest *types.RespondActivityTaskCanceledByIDRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRespondActivityTaskCanceledScope, cancelRequest)
 	defer sw.Stop()
@@ -1551,7 +1607,7 @@ func (wh *WorkflowHandler) RespondActivityTaskCanceledByID(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, cancelRequest)
+	wh.allow(ratelimitTypeWorker, cancelRequest)
 
 	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
 	if err != nil {
@@ -1647,7 +1703,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 	ctx context.Context,
 	completeRequest *types.RespondDecisionTaskCompletedRequest,
 ) (resp *types.RespondDecisionTaskCompletedResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondDecisionTaskCompletedScope)
 
@@ -1691,7 +1747,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskCompleted(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1757,7 +1813,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 	ctx context.Context,
 	failedRequest *types.RespondDecisionTaskFailedRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondDecisionTaskFailedScope)
 
@@ -1801,7 +1857,7 @@ func (wh *WorkflowHandler) RespondDecisionTaskFailed(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	tags := getDomainWfIDRunIDTags(domainName, &types.WorkflowExecution{
 		WorkflowID: taskToken.WorkflowID,
@@ -1853,7 +1909,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 	ctx context.Context,
 	completeRequest *types.RespondQueryTaskCompletedRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendRespondQueryTaskCompletedScope)
 
@@ -1897,7 +1953,7 @@ func (wh *WorkflowHandler) RespondQueryTaskCompleted(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, dw)
+	wh.allow(ratelimitTypeWorker, dw)
 
 	sizeLimitError := wh.config.BlobSizeLimitError(domainName)
 	sizeLimitWarn := wh.config.BlobSizeLimitWarn(domainName)
@@ -1946,7 +2002,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	ctx context.Context,
 	startRequest *types.StartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendStartWorkflowExecutionScope, startRequest)
 	defer sw.Stop()
@@ -1973,7 +2029,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, startRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, startRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2050,6 +2106,24 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(errInvalidDelayStartSeconds, scope, tags...)
 	}
 
+	if startRequest.GetJitterStartSeconds() < 0 {
+		return nil, wh.error(errInvalidJitterStartSeconds, scope, tags...)
+	}
+
+	jitter := startRequest.GetJitterStartSeconds()
+	cron := startRequest.GetCronSchedule()
+	if jitter > 0 && cron != "" {
+		// Calculate the cron duration and ensure that jitter is not greater than the cron duration,
+		// because that would be confusing to users.
+
+		// Request using start/end time zero value, which will get us an exact answer (i.e. its not in the
+		// middle of a minute)
+		backoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(cron, time.Time{}, time.Time{}, jitter)
+		if jitter > backoffSeconds {
+			return nil, wh.error(errInvalidJitterStartSeconds2, scope, tags...)
+		}
+	}
+
 	if startRequest.GetRequestID() == "" {
 		return nil, wh.error(errRequestIDNotSet, scope, tags...)
 	}
@@ -2112,7 +2186,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 	ctx context.Context,
 	getRequest *types.GetWorkflowExecutionHistoryRequest,
 ) (resp *types.GetWorkflowExecutionHistoryResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetWorkflowExecutionHistoryScope, getRequest)
 	defer sw.Stop()
@@ -2137,7 +2211,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, getRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, getRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2287,6 +2361,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				ctx,
 				scope,
 				domainID,
+				domainName,
 				*execution,
 				firstEventID,
 				nextEventID,
@@ -2300,6 +2375,7 @@ func (wh *WorkflowHandler) GetWorkflowExecutionHistory(
 				ctx,
 				scope,
 				domainID,
+				domainName,
 				*execution,
 				firstEventID,
 				nextEventID,
@@ -2384,7 +2460,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 	ctx context.Context,
 	signalRequest *types.SignalWorkflowExecutionRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	ctx = wh.withSignalName(ctx, signalRequest.GetDomain(), signalRequest.GetSignalName())
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWorkflowExecutionScope, signalRequest)
@@ -2410,7 +2486,7 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, signalRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, signalRequest); !ok {
 		return wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2500,7 +2576,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	ctx context.Context,
 	signalWithStartRequest *types.SignalWithStartWorkflowExecutionRequest,
 ) (resp *types.StartWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendSignalWithStartWorkflowExecutionScope, signalWithStartRequest)
 	defer sw.Stop()
@@ -2527,7 +2603,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, signalWithStartRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, signalWithStartRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2680,7 +2756,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 	ctx context.Context,
 	terminateRequest *types.TerminateWorkflowExecutionRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendTerminateWorkflowExecutionScope, terminateRequest)
 	defer sw.Stop()
@@ -2705,7 +2781,7 @@ func (wh *WorkflowHandler) TerminateWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, terminateRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, terminateRequest); !ok {
 		return wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2735,7 +2811,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 	ctx context.Context,
 	resetRequest *types.ResetWorkflowExecutionRequest,
 ) (resp *types.ResetWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendResetWorkflowExecutionScope, resetRequest)
 	defer sw.Stop()
@@ -2760,7 +2836,7 @@ func (wh *WorkflowHandler) ResetWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, resetRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, resetRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2789,7 +2865,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 	ctx context.Context,
 	cancelRequest *types.RequestCancelWorkflowExecutionRequest,
 ) (retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRequestCancelWorkflowExecutionScope, cancelRequest)
 	defer sw.Stop()
@@ -2814,7 +2890,7 @@ func (wh *WorkflowHandler) RequestCancelWorkflowExecution(
 		return wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, cancelRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, cancelRequest); !ok {
 		return wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -2843,7 +2919,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 	ctx context.Context,
 	listRequest *types.ListOpenWorkflowExecutionsRequest,
 ) (resp *types.ListOpenWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListOpenWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
@@ -2864,7 +2940,7 @@ func (wh *WorkflowHandler) ListOpenWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -2960,7 +3036,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 	ctx context.Context,
 	listRequest *types.ListArchivedWorkflowExecutionsRequest,
 ) (resp *types.ListArchivedWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListArchivedWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
@@ -2981,7 +3057,7 @@ func (wh *WorkflowHandler) ListArchivedWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3052,7 +3128,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 	ctx context.Context,
 	listRequest *types.ListClosedWorkflowExecutionsRequest,
 ) (resp *types.ListClosedWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListClosedWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
@@ -3073,7 +3149,7 @@ func (wh *WorkflowHandler) ListClosedWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3192,7 +3268,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 	ctx context.Context,
 	listRequest *types.ListWorkflowExecutionsRequest,
 ) (resp *types.ListWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
@@ -3213,7 +3289,7 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeVisibility, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3255,12 +3331,77 @@ func (wh *WorkflowHandler) ListWorkflowExecutions(
 	return resp, nil
 }
 
+// RestartWorkflowExecution - retrieves info for an existing workflow then restarts it
+func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request *types.RestartWorkflowExecutionRequest) (resp *types.RestartWorkflowExecutionResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
+
+	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendRestartWorkflowExecutionScope, request)
+	defer sw.Stop()
+
+	if wh.isShuttingDown() {
+		return nil, errShuttingDown
+	}
+
+	if err := wh.versionChecker.ClientSupported(ctx, wh.config.EnableClientVersionCheck()); err != nil {
+		return nil, wh.error(err, scope)
+	}
+
+	if request == nil {
+		return nil, wh.error(errRequestNotSet, scope)
+	}
+
+	domainName := request.GetDomain()
+	wfExecution := request.GetWorkflowExecution()
+	tags := getDomainWfIDRunIDTags(domainName, wfExecution)
+
+	if request.GetDomain() == "" {
+		return nil, wh.error(errDomainNotSet, scope, tags...)
+	}
+
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
+		return nil, wh.error(createServiceBusyError(), scope, tags...)
+	}
+
+	if err := validateExecution(wfExecution); err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	domainID, err := wh.GetDomainCache().GetDomainID(domainName)
+	if err != nil {
+		return nil, wh.error(err, scope, tags...)
+	}
+
+	history, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
+		Domain: domainName,
+		Execution: &types.WorkflowExecution{
+			WorkflowID: wfExecution.WorkflowID,
+			RunID:      wfExecution.RunID,
+		},
+		SkipArchival: true,
+	})
+	if err != nil {
+		return nil, wh.error(errHistoryNotFound, scope, tags...)
+	}
+	startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
+		domainName, request.Identity, wfExecution.WorkflowID)
+	startResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(
+		domainID, startRequest, time.Now()))
+	resp = &types.RestartWorkflowExecutionResponse{
+		RunID: startResp.RunID,
+	}
+	if err != nil {
+		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
+	}
+
+	return resp, nil
+}
+
 // ScanWorkflowExecutions - retrieves info for large amount of workflow executions in a domain without order
 func (wh *WorkflowHandler) ScanWorkflowExecutions(
 	ctx context.Context,
 	listRequest *types.ListWorkflowExecutionsRequest,
 ) (resp *types.ListWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendScanWorkflowExecutionsScope, listRequest)
 	defer sw.Stop()
@@ -3281,7 +3422,7 @@ func (wh *WorkflowHandler) ScanWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, listRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, listRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3328,7 +3469,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 	ctx context.Context,
 	countRequest *types.CountWorkflowExecutionsRequest,
 ) (resp *types.CountWorkflowExecutionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendCountWorkflowExecutionsScope, countRequest)
 	defer sw.Stop()
@@ -3349,7 +3490,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, countRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, countRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3382,7 +3523,7 @@ func (wh *WorkflowHandler) CountWorkflowExecutions(
 
 // GetSearchAttributes return valid indexed keys
 func (wh *WorkflowHandler) GetSearchAttributes(ctx context.Context) (resp *types.GetSearchAttributesResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendGetSearchAttributesScope)
 	defer sw.Stop()
@@ -3407,7 +3548,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 	ctx context.Context,
 	resetRequest *types.ResetStickyTaskListRequest,
 ) (resp *types.ResetStickyTaskListResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendResetStickyTaskListScope, resetRequest)
 	defer sw.Stop()
@@ -3434,7 +3575,7 @@ func (wh *WorkflowHandler) ResetStickyTaskList(
 
 	// Count the request in the host RPS,
 	// but we still accept it even if RPS is exceeded
-	wh.allow(false, resetRequest)
+	wh.allow(ratelimitTypeWorker, resetRequest)
 
 	if err := validateExecution(wfExecution); err != nil {
 		return nil, wh.error(err, scope, tags...)
@@ -3460,7 +3601,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 	ctx context.Context,
 	queryRequest *types.QueryWorkflowRequest,
 ) (resp *types.QueryWorkflowResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendQueryWorkflowScope, queryRequest)
 	defer sw.Stop()
@@ -3485,7 +3626,7 @@ func (wh *WorkflowHandler) QueryWorkflow(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, queryRequest); !ok {
+	if ok := wh.allow(ratelimitTypeUser, queryRequest); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -3542,7 +3683,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 	ctx context.Context,
 	request *types.DescribeWorkflowExecutionRequest,
 ) (resp *types.DescribeWorkflowExecutionResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendDescribeWorkflowExecutionScope, request)
 	defer sw.Stop()
@@ -3567,7 +3708,7 @@ func (wh *WorkflowHandler) DescribeWorkflowExecution(
 		return nil, wh.error(errDomainNotSet, scope, tags...)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
@@ -3599,7 +3740,7 @@ func (wh *WorkflowHandler) DescribeTaskList(
 	ctx context.Context,
 	request *types.DescribeTaskListRequest,
 ) (resp *types.DescribeTaskListResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendDescribeTaskListScope, request)
 	defer sw.Stop()
@@ -3620,7 +3761,7 @@ func (wh *WorkflowHandler) DescribeTaskList(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3653,7 +3794,7 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 	ctx context.Context,
 	request *types.ListTaskListPartitionsRequest,
 ) (resp *types.ListTaskListPartitionsResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendListTaskListPartitionsScope, request)
 	defer sw.Stop()
@@ -3670,7 +3811,7 @@ func (wh *WorkflowHandler) ListTaskListPartitions(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3690,7 +3831,7 @@ func (wh *WorkflowHandler) GetTaskListsByDomain(
 	ctx context.Context,
 	request *types.GetTaskListsByDomainRequest,
 ) (resp *types.GetTaskListsByDomainResponse, retError error) {
-	defer log.CapturePanic(wh.GetLogger(), &retError)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfileWithDomain(ctx, metrics.FrontendGetTaskListsByDomainScope, request)
 	defer sw.Stop()
@@ -3707,7 +3848,7 @@ func (wh *WorkflowHandler) GetTaskListsByDomain(
 		return nil, wh.error(errDomainNotSet, scope)
 	}
 
-	if ok := wh.allow(true, request); !ok {
+	if ok := wh.allow(ratelimitTypeUser, request); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -3722,7 +3863,7 @@ func (wh *WorkflowHandler) RefreshWorkflowTasks(
 	ctx context.Context,
 	request *types.RefreshWorkflowTasksRequest,
 ) (err error) {
-	defer log.CapturePanic(wh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &err) }()
 	scope, sw := wh.startRequestProfile(ctx, metrics.AdminRefreshWorkflowTasksScope)
 	defer sw.Stop()
 
@@ -3751,6 +3892,7 @@ func (wh *WorkflowHandler) getRawHistory(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
+	domainName string,
 	execution types.WorkflowExecution,
 	firstEventID int64,
 	nextEventID int64,
@@ -3769,6 +3911,7 @@ func (wh *WorkflowHandler) getRawHistory(
 		PageSize:      int(pageSize),
 		NextPageToken: nextPageToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -3817,6 +3960,7 @@ func (wh *WorkflowHandler) getHistory(
 	ctx context.Context,
 	scope metrics.Scope,
 	domainID string,
+	domainName string,
 	execution types.WorkflowExecution,
 	firstEventID, nextEventID int64,
 	pageSize int32,
@@ -3837,6 +3981,7 @@ func (wh *WorkflowHandler) getHistory(
 		PageSize:      int(pageSize),
 		NextPageToken: nextPageToken,
 		ShardID:       common.IntPtr(shardID),
+		DomainName:    domainName,
 	})
 
 	if err != nil {
@@ -4062,6 +4207,7 @@ func (wh *WorkflowHandler) createPollForDecisionTaskResponse(
 			ctx,
 			scope,
 			domainID,
+			domainName,
 			*matchingResp.WorkflowExecution,
 			firstEventID,
 			nextEventID,
@@ -4208,17 +4354,14 @@ func (wh *WorkflowHandler) checkOngoingFailover(
 	domainName *string,
 ) error {
 
-	clusterMetadata := wh.GetClusterMetadata()
-	respChan := make(chan *types.DescribeDomainResponse, len(clusterMetadata.GetAllClusterInfo()))
+	enabledClusters := wh.GetClusterMetadata().GetEnabledClusterInfo()
+	respChan := make(chan *types.DescribeDomainResponse, len(enabledClusters))
 
 	g := &errgroup.Group{}
-	for clusterName, cluster := range clusterMetadata.GetAllClusterInfo() {
-		if !cluster.Enabled {
-			continue
-		}
+	for clusterName := range enabledClusters {
 		frontendClient := wh.GetRemoteFrontendClient(clusterName)
 		g.Go(func() (e error) {
-			defer log.CapturePanic(wh.GetLogger(), &e)
+			defer func() { log.CapturePanic(recover(), wh.GetLogger(), &e) }()
 
 			resp, _ := frontendClient.DescribeDomain(ctx, &types.DescribeDomainRequest{Name: domainName})
 			respChan <- resp
@@ -4322,35 +4465,42 @@ func (wh *WorkflowHandler) getArchivedHistory(
 func (wh *WorkflowHandler) convertIndexedKeyToThrift(keys map[string]interface{}) map[string]types.IndexedValueType {
 	converted := make(map[string]types.IndexedValueType)
 	for k, v := range keys {
-		converted[k] = thrift.ToIndexedValueType(common.ConvertIndexedValueTypeToThriftType(v, wh.GetLogger()))
+		converted[k] = common.ConvertIndexedValueTypeToInternalType(v, wh.GetLogger())
 	}
 	return converted
 }
 
 func (wh *WorkflowHandler) isListRequestPageSizeTooLarge(pageSize int32, domain string) bool {
-	return wh.config.EnableReadVisibilityFromES(domain) &&
+	return common.IsAdvancedVisibilityReadingEnabled(wh.config.EnableReadVisibilityFromES(domain), wh.config.IsAdvancedVisConfigExist) &&
 		pageSize > int32(wh.config.ESIndexMaxResultWindow())
 }
 
-func (wh *WorkflowHandler) allow(isUserEndpoint bool, d domainGetter) bool {
+func (wh *WorkflowHandler) allow(requestType ratelimitType, d domainGetter) bool {
 	domain := ""
 	if d != nil {
 		domain = d.GetDomain()
 	}
-	if isUserEndpoint {
+	switch requestType {
+	case ratelimitTypeUser:
 		return wh.userRateLimiter.Allow(quotas.Info{Domain: domain})
+	case ratelimitTypeWorker:
+		return wh.workerRateLimiter.Allow(quotas.Info{Domain: domain})
+	case ratelimitTypeVisibility:
+		return wh.visibilityRateLimiter.Allow(quotas.Info{Domain: domain})
+	default:
+		wh.GetLogger().Fatal("coding error, unrecognized request ratelimit type value", tag.Value(requestType))
+		panic("unreachable")
 	}
-	return wh.workerRateLimiter.Allow(quotas.Info{Domain: domain})
 }
 
 // GetClusterInfo return information about cadence deployment
 func (wh *WorkflowHandler) GetClusterInfo(
 	ctx context.Context,
 ) (resp *types.ClusterInfo, err error) {
-	defer log.CapturePanic(wh.GetLogger(), &err)
+	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &err) }()
 
 	scope := wh.getDefaultScope(ctx, metrics.FrontendClientGetClusterInfoScope)
-	if ok := wh.allow(true, nil); !ok {
+	if ok := wh.allow(ratelimitTypeUser, nil); !ok {
 		return nil, wh.error(createServiceBusyError(), scope)
 	}
 
@@ -4451,4 +4601,31 @@ func (wh *WorkflowHandler) normalizeVersionedErrors(ctx context.Context, err err
 	default:
 		return err
 	}
+}
+func constructRestartWorkflowRequest(w *types.WorkflowExecutionStartedEventAttributes, domain string, identity string, workflowID string) *types.StartWorkflowExecutionRequest {
+
+	startRequest := &types.StartWorkflowExecutionRequest{
+		RequestID:  uuid.New(),
+		Domain:     domain,
+		WorkflowID: workflowID,
+		WorkflowType: &types.WorkflowType{
+			Name: w.WorkflowType.Name,
+		},
+		TaskList: &types.TaskList{
+			Name: w.TaskList.Name,
+		},
+		Input:                               w.Input,
+		ExecutionStartToCloseTimeoutSeconds: w.ExecutionStartToCloseTimeoutSeconds,
+		TaskStartToCloseTimeoutSeconds:      w.TaskStartToCloseTimeoutSeconds,
+		Identity:                            identity,
+		WorkflowIDReusePolicy:               types.WorkflowIDReusePolicyTerminateIfRunning.Ptr(),
+	}
+	startRequest.CronSchedule = w.CronSchedule
+	startRequest.RetryPolicy = w.RetryPolicy
+	startRequest.DelayStartSeconds = w.FirstDecisionTaskBackoffSeconds
+	startRequest.Header = w.Header
+	startRequest.Memo = w.Memo
+	startRequest.SearchAttributes = w.SearchAttributes
+
+	return startRequest
 }

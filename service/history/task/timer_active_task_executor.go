@@ -27,12 +27,10 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
-	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
-	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/config"
 	"github.com/uber/cadence/service/history/execution"
@@ -171,7 +169,7 @@ Loop:
 				// overwrite the context here as scan history may take a long time to complete
 				// ctx will also be used by other operations like updateWorkflow
 				ctx = scanWorkflowCtx
-				resurrectedTimer, err = t.getResurrectedTimer(ctx, mutableState)
+				resurrectedTimer, err = execution.GetResurrectedTimers(ctx, t.shard, mutableState)
 				if err != nil {
 					t.logger.Error("Timer resurrection check failed", tag.Error(err))
 					return err
@@ -294,7 +292,7 @@ Loop:
 				// overwrite the context here as scan history may take a long time to complete
 				// ctx will also be used by other operations like updateWorkflow
 				ctx = scanWorkflowCtx
-				resurrectedActivity, err = t.getResurrectedActivity(ctx, mutableState)
+				resurrectedActivity, err = execution.GetResurrectedActivities(ctx, t.shard, mutableState)
 				if err != nil {
 					t.logger.Error("Activity resurrection check failed", tag.Error(err))
 					return err
@@ -651,7 +649,9 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		}
 		continueAsNewInitiator = types.ContinueAsNewInitiatorCronSchedule
 	}
-	if backoffInterval == backoff.NoBackoff {
+	// ignore event id
+	isCanceled, _ := mutableState.IsCancelRequested()
+	if isCanceled || backoffInterval == backoff.NoBackoff {
 		if err := timeoutWorkflow(mutableState, eventBatchFirstEventID); err != nil {
 			return err
 		}
@@ -682,6 +682,7 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		Header:                              startAttributes.Header,
 		Memo:                                startAttributes.Memo,
 		SearchAttributes:                    startAttributes.SearchAttributes,
+		JitterStartSeconds:                  startAttributes.JitterStartSeconds,
 	}
 	newMutableState, err := retryWorkflow(
 		ctx,
@@ -710,142 +711,6 @@ func (t *timerActiveTaskExecutor) executeWorkflowTimeoutTask(
 		),
 		newMutableState,
 	)
-}
-
-func (t *timerActiveTaskExecutor) getResurrectedTimer(
-	ctx context.Context,
-	mutableState execution.MutableState,
-) (map[string]struct{}, error) {
-	// 1. find min timer startedID for all pending timers
-	pendingTimerInfos := mutableState.GetPendingTimerInfos()
-	minTimerStartedID := common.EndEventID
-	for _, timerInfo := range pendingTimerInfos {
-		minTimerStartedID = common.MinInt64(minTimerStartedID, timerInfo.StartedID)
-	}
-
-	// 2. scan history from minTimerStartedID and see if any
-	// TimerFiredEvent or TimerCancelledEvent matches pending timer
-	// NOTE: since we can't read from middle of an events batch,
-	// history returned by persistence layer won't actually start
-	// from minTimerStartedID, but start from the batch whose nodeID is
-	// larger than minTimerStartedID.
-	// This is ok since the event types we are interested in must in batches
-	// later than the timer started events.
-	resurrectedTimer := make(map[string]struct{})
-	branchToken, err := mutableState.GetCurrentBranchToken()
-	if err != nil {
-		return nil, err
-	}
-
-	iter := collection.NewPagingIterator(t.getHistoryPaginationFn(
-		ctx,
-		minTimerStartedID,
-		mutableState.GetNextEventID(),
-		branchToken,
-	))
-	for iter.HasNext() {
-		item, err := iter.Next()
-		if err != nil {
-			return nil, err
-		}
-		event := item.(*types.HistoryEvent)
-		var timerID string
-		switch event.GetEventType() {
-		case types.EventTypeTimerFired:
-			timerID = event.TimerFiredEventAttributes.TimerID
-		case types.EventTypeTimerCanceled:
-			timerID = event.TimerCanceledEventAttributes.TimerID
-		}
-		if _, ok := pendingTimerInfos[timerID]; ok && timerID != "" {
-			resurrectedTimer[timerID] = struct{}{}
-		}
-	}
-	return resurrectedTimer, nil
-}
-
-func (t *timerActiveTaskExecutor) getResurrectedActivity(
-	ctx context.Context,
-	mutableState execution.MutableState,
-) (map[int64]struct{}, error) {
-	// 1. find min activity scheduledID for all pending activities
-	pendingActivityInfos := mutableState.GetPendingActivityInfos()
-	minActivityScheduledID := common.EndEventID
-	for _, activityInfo := range pendingActivityInfos {
-		minActivityScheduledID = common.MinInt64(minActivityScheduledID, activityInfo.ScheduleID)
-	}
-
-	// 2. scan history from minActivityScheduledID and see if any
-	// activity termination events matches pending activity
-	// NOTE: since we can't read from middle of an events batch,
-	// history returned by persistence layer won't actually start
-	// from minActivityScheduledID, but start from the batch whose nodeID is
-	// larger than minActivityScheduledID.
-	// This is ok since the event types we are interested in must in batches
-	// later than the activity scheduled events.
-	resurrectedActivity := make(map[int64]struct{})
-	branchToken, err := mutableState.GetCurrentBranchToken()
-	if err != nil {
-		return nil, err
-	}
-
-	iter := collection.NewPagingIterator(t.getHistoryPaginationFn(
-		ctx,
-		minActivityScheduledID,
-		mutableState.GetNextEventID(),
-		branchToken,
-	))
-	for iter.HasNext() {
-		item, err := iter.Next()
-		if err != nil {
-			return nil, err
-		}
-		event := item.(*types.HistoryEvent)
-		var scheduledID int64
-		switch event.GetEventType() {
-		case types.EventTypeActivityTaskCompleted:
-			scheduledID = event.ActivityTaskCompletedEventAttributes.ScheduledEventID
-		case types.EventTypeActivityTaskFailed:
-			scheduledID = event.ActivityTaskFailedEventAttributes.ScheduledEventID
-		case types.EventTypeActivityTaskTimedOut:
-			scheduledID = event.ActivityTaskTimedOutEventAttributes.ScheduledEventID
-		case types.EventTypeActivityTaskCanceled:
-			scheduledID = event.ActivityTaskCanceledEventAttributes.ScheduledEventID
-		}
-		if _, ok := pendingActivityInfos[scheduledID]; ok && scheduledID != 0 {
-			resurrectedActivity[scheduledID] = struct{}{}
-		}
-	}
-	return resurrectedActivity, nil
-}
-
-func (t *timerActiveTaskExecutor) getHistoryPaginationFn(
-	ctx context.Context,
-	firstEventID int64,
-	nextEventID int64,
-	branchToken []byte,
-) collection.PaginationFn {
-	return func(token []byte) ([]interface{}, []byte, error) {
-		historyEvents, _, token, _, err := persistenceutils.PaginateHistory(
-			ctx,
-			t.shard.GetHistoryManager(),
-			false,
-			branchToken,
-			firstEventID,
-			nextEventID,
-			token,
-			execution.NDCDefaultPageSize,
-			common.IntPtr(t.shard.GetShardID()),
-		)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		var items []interface{}
-		for _, event := range historyEvents {
-			items = append(items, event)
-		}
-		return items, token, nil
-	}
 }
 
 func (t *timerActiveTaskExecutor) updateWorkflowExecution(

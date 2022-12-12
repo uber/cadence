@@ -49,6 +49,9 @@ const (
 	CadenceServiceName = "cadence-frontend"
 	// CanaryServiceName is the default service name for cadence canary
 	CanaryServiceName = "cadence-canary"
+	// CrossClusterCanaryModeFull is a canary testing mode which tests all permutations of
+	// the cross-cluster/domain feature
+	CrossClusterCanaryModeFull = "test-all"
 )
 
 type (
@@ -63,9 +66,11 @@ type (
 
 	// Canary contains the configuration for canary tests
 	Canary struct {
-		Domains  []string `yaml:"domains"`
-		Excludes []string `yaml:"excludes"`
-		Cron     Cron     `yaml:"cron"`
+		CrossClusterTestMode string   `yaml:"crossClusterTestMode"`
+		CanaryDomainClusters []string `yaml:"canaryDomainClusters"` // the clusters to set for each domain
+		Domains              []string `yaml:"domains"`
+		Excludes             []string `yaml:"excludes"`
+		Cron                 Cron     `yaml:"cron"`
 	}
 
 	// Cron contains configuration for the cron workflow for canary

@@ -31,6 +31,7 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -83,11 +84,12 @@ func CurrentExecutionManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
+	domainCache cache.DomainCache,
 ) invariant.Manager {
 	var ivs []invariant.Invariant
 	collections := ParseCollections(params.ScannerConfig)
 	for _, fn := range CurrentExecutionType.ToInvariants(collections) {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, domainCache))
 	}
 	return invariant.NewInvariantManager(ivs)
 }
@@ -108,10 +110,10 @@ func CurrentFixerWorkflow(
 func CurrentExecutionConfig(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 
-	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory, true)() {
+	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionHistory)() {
 		res[invariant.CollectionHistory.String()] = strconv.FormatBool(true)
 	}
-	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionMutableState, true)() {
+	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerInvariantCollectionMutableState)() {
 		res[invariant.CollectionMutableState.String()] = strconv.FormatBool(true)
 	}
 
@@ -134,13 +136,13 @@ func CurrentExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.S
 		FixerWFTypeName:   CurrentExecutionsFixerWFTypeName,
 		DynamicCollection: dc,
 		DynamicParams: shardscanner.DynamicParams{
-			ScannerEnabled:          dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerEnabled, false),
-			FixerEnabled:            dc.GetBoolProperty(dynamicconfig.CurrentExecutionFixerEnabled, false),
-			Concurrency:             dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerConcurrency, 25),
-			PageSize:                dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerPersistencePageSize, 1000),
-			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerBlobstoreFlushThreshold, 100),
-			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerActivityBatchSize, 25),
-			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.CurrentExecutionFixerDomainAllow, false),
+			ScannerEnabled:          dc.GetBoolProperty(dynamicconfig.CurrentExecutionsScannerEnabled),
+			FixerEnabled:            dc.GetBoolProperty(dynamicconfig.CurrentExecutionFixerEnabled),
+			Concurrency:             dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerConcurrency),
+			PageSize:                dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerPersistencePageSize),
+			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerBlobstoreFlushThreshold),
+			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.CurrentExecutionsScannerActivityBatchSize),
+			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.CurrentExecutionFixerDomainAllow),
 		},
 		ScannerHooks: CurrentExecutionsHooks,
 		FixerHooks:   CurrentExecutionFixerHooks,

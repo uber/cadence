@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/testflags"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -46,6 +48,7 @@ type ServerSuite struct {
 }
 
 func TestServerSuite(t *testing.T) {
+	testflags.RequireCassandra(t)
 	suite.Run(t, new(ServerSuite))
 }
 

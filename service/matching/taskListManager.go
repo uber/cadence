@@ -52,10 +52,11 @@ var (
 
 type (
 	addTaskParams struct {
-		execution     *types.WorkflowExecution
-		taskInfo      *persistence.TaskInfo
-		source        types.TaskSource
-		forwardedFrom string
+		execution                *types.WorkflowExecution
+		taskInfo                 *persistence.TaskInfo
+		source                   types.TaskSource
+		forwardedFrom            string
+		activityTaskDispatchInfo *types.ActivityTaskDispatchInfo
 	}
 
 	taskListManager interface {
@@ -77,6 +78,7 @@ type (
 		DispatchQueryTask(ctx context.Context, taskID string, request *types.MatchingQueryWorkflowRequest) (*types.QueryWorkflowResponse, error)
 		CancelPoller(pollerID string)
 		GetAllPollerInfo() []*types.PollerInfo
+		HasPollerAfter(accessTime time.Time) bool
 		// DescribeTaskList returns information about the target tasklist
 		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
@@ -141,8 +143,11 @@ func newTaskListManager(
 		normalTaskListKind := types.TaskListKindNormal
 		taskListKind = &normalTaskListKind
 	}
-
-	db := newTaskListDB(e.taskManager, taskList.domainID, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
+	domainName, err := e.domainCache.GetDomainName(taskList.domainID)
+	if err != nil {
+		return nil, err
+	}
+	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
 
 	tlMgr := &taskListManagerImpl{
 		domainCache:   e.domainCache,
@@ -176,7 +181,7 @@ func newTaskListManager(
 	)
 	tlMgr.pollerHistory = newPollerHistory(func() {
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
-			float64(len(tlMgr.pollerHistory.getAllPollerInfo())))
+			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
@@ -238,7 +243,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 
 		isForwarded := params.forwardedFrom != ""
 
-		if domainEntry.GetDomainNotActiveErr() != nil {
+		if _, err := domainEntry.IsActiveIn(c.engine.clusterMetadata.GetCurrentClusterName()); err != nil {
 			// standby task, only persist when task is not forwarded from child partition
 			syncMatch = false
 			if isForwarded {
@@ -253,6 +258,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		syncMatch, err = c.trySyncMatch(ctx, params)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
+		}
+		if params.activityTaskDispatchInfo != nil {
+			return false, errRemoteSyncMatchFailed
 		}
 
 		if isForwarded {
@@ -338,6 +346,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	identity, ok := ctx.Value(identityKey).(string)
 	if ok && identity != "" {
 		c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+		defer func() {
+			// to update timestamp of this poller when long poll ends
+			c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+		}()
 	}
 
 	domainEntry, err := c.domainCache.GetDomainByID(c.taskListID.domainID)
@@ -352,7 +364,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	// value. Last poller wins if different pollers provide different values
 	c.matcher.UpdateRatelimit(maxDispatchPerSecond)
 
-	if domainEntry.GetDomainNotActiveErr() != nil {
+	if _, err := domainEntry.IsActiveIn(c.engine.clusterMetadata.GetCurrentClusterName()); err != nil {
 		return c.matcher.PollForQuery(childCtx)
 	}
 
@@ -361,7 +373,20 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes
 func (c *taskListManagerImpl) GetAllPollerInfo() []*types.PollerInfo {
-	return c.pollerHistory.getAllPollerInfo()
+	return c.pollerHistory.getPollerInfo(time.Time{})
+}
+
+// HasPollerAfter checks if there is any poller after a timestamp
+func (c *taskListManagerImpl) HasPollerAfter(accessTime time.Time) bool {
+	inflightPollerCount := 0
+	c.outstandingPollsLock.Lock()
+	inflightPollerCount = len(c.outstandingPollsMap)
+	c.outstandingPollsLock.Unlock()
+	if inflightPollerCount > 0 {
+		return true
+	}
+	recentPollers := c.pollerHistory.getPollerInfo(accessTime)
+	return len(recentPollers) > 0
 }
 
 func (c *taskListManagerImpl) CancelPoller(pollerID string) {
@@ -528,15 +553,25 @@ func (c *taskListManagerImpl) executeWithRetry(
 }
 
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true)
+	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
 	childCtx := ctx
 	cancel := func() {}
+	waitTime := maxSyncMatchWaitTime
+	if params.activityTaskDispatchInfo != nil {
+		waitTime = c.engine.config.ActivityTaskSyncMatchWaitTime(params.activityTaskDispatchInfo.WorkflowDomain)
+	}
 	if !task.isForwarded() {
 		// when task is forwarded from another matching host, we trust the context as is
 		// otherwise, we override to limit the amount of time we can block on sync match
-		childCtx, cancel = c.newChildContext(ctx, maxSyncMatchWaitTime, time.Second)
+		childCtx, cancel = c.newChildContext(ctx, waitTime, time.Second)
 	}
-	matched, err := c.matcher.Offer(childCtx, task)
+	var matched bool
+	var err error
+	if params.activityTaskDispatchInfo != nil {
+		matched, err = c.matcher.offerOrTimeout(childCtx, task)
+	} else {
+		matched, err = c.matcher.Offer(childCtx, task)
+	}
 	cancel()
 	return matched, err
 }

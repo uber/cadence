@@ -753,11 +753,12 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 			minNodeID = br.BeginNodeID
 		}
 	}
-
+	domainName := s.DomainManager.GetName()
 	op := func() error {
 		err := s.HistoryV2Mgr.DeleteHistoryBranch(ctx, &p.DeleteHistoryBranchRequest{
 			BranchToken: branchToken,
 			ShardID:     common.IntPtr(s.ShardInfo.ShardID),
+			DomainName:  domainName,
 		})
 		return err
 	}
@@ -776,9 +777,11 @@ func (s *HistoryV2PersistenceSuite) deleteHistoryBranch(ctx context.Context, bra
 
 // persistence helper
 func (s *HistoryV2PersistenceSuite) descTreeByToken(ctx context.Context, br []byte) []*workflow.HistoryBranch {
+	domainName := s.DomainManager.GetName()
 	resp, err := s.HistoryV2Mgr.GetHistoryTree(ctx, &p.GetHistoryTreeRequest{
 		BranchToken: br,
 		ShardID:     common.IntPtr(s.ShardInfo.ShardID),
+		DomainName:  domainName,
 	})
 	s.Nil(err)
 	return resp.Branches
@@ -804,6 +807,7 @@ func (s *HistoryV2PersistenceSuite) readWithError(ctx context.Context, branch []
 
 	// use small page size to enforce pagination
 	randPageSize := 2
+	domainName := s.DomainManager.GetName()
 	res := make([]*types.HistoryEvent, 0)
 	token := []byte{}
 	for {
@@ -814,6 +818,7 @@ func (s *HistoryV2PersistenceSuite) readWithError(ctx context.Context, branch []
 			PageSize:      randPageSize,
 			NextPageToken: token,
 			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
+			DomainName:    domainName,
 		})
 		if err != nil {
 			return nil, err
@@ -853,7 +858,7 @@ func (s *HistoryV2PersistenceSuite) appendNewBranchAndFirstNode(ctx context.Cont
 func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, events []*types.HistoryEvent, txnID int64, isNewBranch bool, branchInfo string) error {
 
 	var resp *p.AppendHistoryNodesResponse
-
+	domainName := s.DomainManager.GetName()
 	op := func() error {
 		var err error
 		resp, err = s.HistoryV2Mgr.AppendHistoryNodes(ctx, &p.AppendHistoryNodesRequest{
@@ -864,6 +869,7 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 			TransactionID: txnID,
 			Encoding:      pickRandomEncoding(),
 			ShardID:       common.IntPtr(s.ShardInfo.ShardID),
+			DomainName:    domainName,
 		})
 		return err
 	}
@@ -871,7 +877,7 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 	if err := throttleRetry.Do(ctx, op); err != nil {
 		return err
 	}
-	s.True(resp.Size > 0)
+	s.True(len(resp.DataBlob.Data) > 0)
 
 	return nil
 }
@@ -880,7 +886,7 @@ func (s *HistoryV2PersistenceSuite) append(ctx context.Context, branch []byte, e
 func (s *HistoryV2PersistenceSuite) fork(ctx context.Context, forkBranch []byte, forkNodeID int64) ([]byte, error) {
 
 	bi := []byte{}
-
+	domainName := s.DomainManager.GetName()
 	op := func() error {
 		var err error
 		resp, err := s.HistoryV2Mgr.ForkHistoryBranch(ctx, &p.ForkHistoryBranchRequest{
@@ -888,6 +894,7 @@ func (s *HistoryV2PersistenceSuite) fork(ctx context.Context, forkBranch []byte,
 			ForkNodeID:      forkNodeID,
 			Info:            testForkRunID,
 			ShardID:         common.IntPtr(s.ShardInfo.ShardID),
+			DomainName:      domainName,
 		})
 		if resp != nil {
 			bi = resp.NewBranchToken

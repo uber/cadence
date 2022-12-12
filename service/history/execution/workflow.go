@@ -26,7 +26,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -55,7 +54,6 @@ type (
 	}
 
 	workflowImpl struct {
-		domainCache     cache.DomainCache
 		clusterMetadata cluster.Metadata
 
 		ctx          context.Context
@@ -68,7 +66,6 @@ type (
 // NewWorkflow creates a new NDC workflow
 func NewWorkflow(
 	ctx context.Context,
-	domainCache cache.DomainCache,
 	clusterMetadata cluster.Metadata,
 	context Context,
 	mutableState MutableState,
@@ -77,7 +74,6 @@ func NewWorkflow(
 
 	return &workflowImpl{
 		ctx:             ctx,
-		domainCache:     domainCache,
 		clusterMetadata: clusterMetadata,
 
 		context:      context,
@@ -219,11 +215,12 @@ func (r *workflowImpl) FlushBufferedEvents() error {
 		}
 	}
 
-	return r.failDecision(lastWriteVersion)
+	return r.failDecision(lastWriteVersion, true)
 }
 
 func (r *workflowImpl) failDecision(
 	lastWriteVersion int64,
+	scheduleNewDecision bool,
 ) error {
 
 	// do not persist the change right now, NDC requires transaction
@@ -236,22 +233,13 @@ func (r *workflowImpl) failDecision(
 		return nil
 	}
 
-	if _, err := r.mutableState.AddDecisionTaskFailedEvent(
-		decision.ScheduleID,
-		decision.StartedID,
-		types.DecisionTaskFailedCauseFailoverCloseDecision,
-		nil,
-		IdentityHistoryService,
-		"",
-		"",
-		"",
-		"",
-		0,
-	); err != nil {
+	if err := FailDecision(r.mutableState, decision, types.DecisionTaskFailedCauseFailoverCloseDecision); err != nil {
 		return err
 	}
-
-	return r.mutableState.FlushBufferedEvents()
+	if scheduleNewDecision {
+		return ScheduleDecision(r.mutableState)
+	}
+	return nil
 }
 
 func (r *workflowImpl) terminateWorkflow(
@@ -260,7 +248,7 @@ func (r *workflowImpl) terminateWorkflow(
 ) error {
 
 	eventBatchFirstEventID := r.GetMutableState().GetNextEventID()
-	if err := r.failDecision(lastWriteVersion); err != nil {
+	if err := r.failDecision(lastWriteVersion, false); err != nil {
 		return err
 	}
 

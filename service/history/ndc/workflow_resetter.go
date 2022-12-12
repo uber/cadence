@@ -182,7 +182,7 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 	baseVersionHistories := mutableState.GetVersionHistories()
 	if baseVersionHistories != nil {
 
-		index, err := baseVersionHistories.FindFirstVersionHistoryIndexByItem(
+		_, baseVersionHistory, err := baseVersionHistories.FindFirstVersionHistoryByItem(
 			persistence.NewVersionHistoryItem(baseLastEventID, baseLastEventVersion),
 		)
 		if err != nil {
@@ -201,10 +201,6 @@ func (r *workflowResetterImpl) getBaseBranchToken(
 			)
 		}
 
-		baseVersionHistory, err := baseVersionHistories.GetVersionHistory(index)
-		if err != nil {
-			return nil, err
-		}
 		branchToken = baseVersionHistory.GetBranchToken()
 	}
 	return branchToken, nil
@@ -218,6 +214,10 @@ func (r *workflowResetterImpl) getResetBranchToken(
 
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
+	domainName, err := r.shard.GetDomainCache().GetDomainName(r.domainID)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := r.historyV2Manager.ForkHistoryBranch(
 		ctx,
 		&persistence.ForkHistoryBranchRequest{
@@ -225,6 +225,7 @@ func (r *workflowResetterImpl) getResetBranchToken(
 			ForkNodeID:      baseLastEventID + 1,
 			Info:            persistence.BuildHistoryGarbageCleanupInfo(r.domainID, r.workflowID, r.newRunID),
 			ShardID:         common.IntPtr(shardID),
+			DomainName:      domainName,
 		},
 	)
 	if err != nil {

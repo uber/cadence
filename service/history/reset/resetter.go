@@ -283,7 +283,6 @@ func (r *workflowResetterImpl) persistToDB(
 		return err
 	}
 
-	resetHistorySize := int64(0)
 	if len(resetWorkflowEventsSeq) != 1 {
 		return &types.InternalServiceError{
 			Message: "there should be EXACTLY one batch of events for reset",
@@ -291,7 +290,7 @@ func (r *workflowResetterImpl) persistToDB(
 	}
 
 	// reset workflow with decision task failed or timed out
-	resetHistorySize, err = resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
+	resetWorkflowHistory, err := resetWorkflow.GetContext().PersistNonStartWorkflowBatchEvents(ctx, resetWorkflowEventsSeq[0])
 	if err != nil {
 		return err
 	}
@@ -299,7 +298,7 @@ func (r *workflowResetterImpl) persistToDB(
 	return resetWorkflow.GetContext().CreateWorkflowExecution(
 		ctx,
 		resetWorkflowSnapshot,
-		resetHistorySize,
+		resetWorkflowHistory,
 		persistence.CreateWorkflowModeContinueAsNew,
 		currentRunID,
 		currentLastWriteVersion,
@@ -366,7 +365,6 @@ func (r *workflowResetterImpl) replayResetWorkflow(
 	resetContext.SetHistorySize(resetHistorySize)
 	return execution.NewWorkflow(
 		ctx,
-		r.domainCache,
 		r.clusterMetadata,
 		resetContext,
 		resetMutableState,
@@ -416,11 +414,16 @@ func (r *workflowResetterImpl) forkAndGenerateBranchToken(
 ) ([]byte, error) {
 	// fork a new history branch
 	shardID := r.shard.GetShardID()
+	domainName, err := r.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, err
+	}
 	resp, err := r.historyV2Mgr.ForkHistoryBranch(ctx, &persistence.ForkHistoryBranchRequest{
 		ForkBranchToken: forkBranchToken,
 		ForkNodeID:      forkNodeID,
 		Info:            persistence.BuildHistoryGarbageCleanupInfo(domainID, workflowID, resetRunID),
 		ShardID:         common.IntPtr(shardID),
+		DomainName:      domainName,
 	})
 	if err != nil {
 		return nil, err
@@ -537,12 +540,13 @@ func (r *workflowResetterImpl) reapplyWorkflowEvents(
 		// and the decision task is the latest event in the workflow.
 		return "", nil
 	}
-
+	domainID := mutableState.GetExecutionInfo().DomainID
 	iter := collection.NewPagingIterator(r.getPaginationFn(
 		ctx,
 		firstEventID,
 		nextEventID,
 		branchToken,
+		domainID,
 	))
 
 	var nextRunID string
@@ -596,6 +600,7 @@ func (r *workflowResetterImpl) getPaginationFn(
 	firstEventID int64,
 	nextEventID int64,
 	branchToken []byte,
+	domainID string,
 ) collection.PaginationFn {
 
 	return func(paginationToken []byte) ([]interface{}, []byte, error) {
@@ -610,6 +615,8 @@ func (r *workflowResetterImpl) getPaginationFn(
 			paginationToken,
 			execution.NDCDefaultPageSize,
 			common.IntPtr(r.shard.GetShardID()),
+			domainID,
+			r.domainCache,
 		)
 		if err != nil {
 			return nil, nil, err

@@ -21,7 +21,6 @@
 package client
 
 import (
-	"fmt"
 	"time"
 
 	"go.uber.org/yarpc/api/transport"
@@ -31,8 +30,8 @@ import (
 	"github.com/uber/cadence/.gen/go/history/historyserviceclient"
 	"github.com/uber/cadence/.gen/go/matching/matchingserviceclient"
 
+	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
-	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
 	historyv1 "github.com/uber/cadence/.gen/proto/history/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
 
@@ -116,24 +115,15 @@ func (cf *rpcClientFactory) NewHistoryClientWithTimeout(timeout time.Duration) (
 
 	peerResolver := history.NewPeerResolver(cf.numberOfHistoryShards, cf.resolver, namedPort)
 
-	supportedMessageSize := cf.rpcFactory.GetMaxMessageSize()
-	maxSizeConfig := cf.dynConfig.GetIntProperty(dynamicconfig.GRPCMaxSizeInByte, supportedMessageSize)
-	if maxSizeConfig() > supportedMessageSize {
-		return nil, fmt.Errorf(
-			"GRPCMaxSizeInByte dynamic config value %v is larger than supported value %v",
-			maxSizeConfig(),
-			supportedMessageSize,
-		)
-	}
 	client := history.NewClient(
 		cf.numberOfHistoryShards,
-		maxSizeConfig,
+		cf.rpcFactory.GetMaxMessageSize(),
 		timeout,
 		rawClient,
 		peerResolver,
 		cf.logger,
 	)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.HistoryErrorInjectionRate)(); errorRate != 0 {
 		client = history.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
@@ -166,7 +156,7 @@ func (cf *rpcClientFactory) NewMatchingClientWithTimeout(
 		peerResolver,
 		matching.NewLoadBalancer(domainIDToName, cf.dynConfig),
 	)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.MatchingErrorInjectionRate)(); errorRate != 0 {
 		client = matching.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
@@ -189,7 +179,7 @@ func (cf *rpcClientFactory) NewAdminClientWithTimeoutAndConfig(
 	}
 
 	client = admin.NewClient(timeout, largeTimeout, client)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.AdminErrorInjectionRate)(); errorRate != 0 {
 		client = admin.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {
@@ -216,7 +206,7 @@ func (cf *rpcClientFactory) NewFrontendClientWithTimeoutAndConfig(
 	}
 
 	client = frontend.NewClient(timeout, longPollTimeout, client)
-	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate, 0)(); errorRate != 0 {
+	if errorRate := cf.dynConfig.GetFloat64Property(dynamicconfig.FrontendErrorInjectionRate)(); errorRate != 0 {
 		client = frontend.NewErrorInjectionClient(client, errorRate, cf.logger)
 	}
 	if cf.metricsClient != nil {

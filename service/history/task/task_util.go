@@ -245,10 +245,6 @@ func verifyTaskVersion(
 	task interface{},
 ) (bool, error) {
 
-	if !shard.GetService().GetClusterMetadata().IsGlobalDomainEnabled() {
-		return true, nil
-	}
-
 	// the first return value is whether this task is valid for further processing
 	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {

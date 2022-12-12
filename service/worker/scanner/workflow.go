@@ -138,7 +138,7 @@ func HistoryScavengerActivity(
 			res.GetLogger().Error("Failed to recover from last heartbeat, start over from beginning", tag.Error(err))
 		}
 	}
-
+	cache := res.GetDomainCache()
 	scavenger := history.NewScavenger(
 		res.GetHistoryManager(),
 		rps,
@@ -147,6 +147,7 @@ func HistoryScavengerActivity(
 		res.GetMetricsClient(),
 		res.GetLogger(),
 		ctx.cfg.MaxWorkflowRetentionInDays,
+		cache,
 	)
 	return scavenger.Run(activityCtx)
 }
@@ -166,6 +167,7 @@ func TaskListScavengerActivity(
 		res.GetMetricsClient(),
 		res.GetLogger(),
 		&ctx.cfg.TaskListScannerOptions,
+		res.GetDomainCache(),
 	)
 
 	res.GetLogger().Info("Starting task list scavenger")

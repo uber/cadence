@@ -538,6 +538,7 @@ type (
 		Encoding         string
 		IsCron           bool
 		NumClusters      int16
+		UpdateTime       time.Time
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that
@@ -801,6 +802,7 @@ type (
 		// The follow provide information about the underlying sql crud implementation
 		SupportsTTL() bool
 		MaxAllowedTTL() (*time.Duration, error)
+		SupportsAsyncTransaction() bool
 	}
 
 	// adminCRUD defines admin operations for CLI and test suites
@@ -833,7 +835,7 @@ type (
 		ErrorChecker
 
 		GetTotalNumDBShards() int
-		BeginTx(dbShardID int, ctx context.Context) (Tx, error)
+		BeginTx(ctx context.Context, dbShardID int) (Tx, error)
 		PluginName() string
 		Close() error
 	}

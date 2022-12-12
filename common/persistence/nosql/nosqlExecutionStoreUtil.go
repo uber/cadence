@@ -622,6 +622,11 @@ func (d *nosqlExecutionStore) prepareUpdateWorkflowExecutionTxn(
 		executionInfo.InitiatedID = emptyInitiatedID
 	}
 
+	// TODO: remove this logic once all workflows before 0.26.x are completed
+	if executionInfo.FirstExecutionRunID == "" {
+		executionInfo.FirstExecutionRunID = emptyRunID
+	}
+
 	executionInfo.CompletionEvent = executionInfo.CompletionEvent.ToNilSafeDataBlob()
 	executionInfo.AutoResetPoints = executionInfo.AutoResetPoints.ToNilSafeDataBlob()
 	// TODO also need to set the start / current / last write version
@@ -653,6 +658,11 @@ func (d *nosqlExecutionStore) prepareCreateWorkflowExecutionTxn(
 		executionInfo.ParentWorkflowID = ""
 		executionInfo.ParentRunID = emptyRunID
 		executionInfo.InitiatedID = emptyInitiatedID
+	}
+
+	// TODO: remove this logic once all workflows before 0.26.x are completed
+	if executionInfo.FirstExecutionRunID == "" {
+		executionInfo.FirstExecutionRunID = emptyRunID
 	}
 
 	if executionInfo.StartTimestamp.IsZero() {

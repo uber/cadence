@@ -1,5 +1,7 @@
 canary:
   domains: ["cadence-canary"]
+  crossClusterTestMode: "test-all"
+  canaryDomainClusters: ["cluster0", "cluster1", "cluster2"]
   excludes: ["workflow.searchAttributes", "workflow.batch", "workflow.archival.history", "workflow.archival.visibility"]
 
 cadence:

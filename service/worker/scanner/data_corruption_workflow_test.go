@@ -128,14 +128,13 @@ func (s *dataCorruptionWorkflowTestSuite) TestExecutionFixerActivity_Success() {
 	mockResource.ExecutionMgr.On("DeleteWorkflowExecution", mock.Anything, mock.Anything).Return(nil)
 	mockResource.ExecutionMgr.On("DeleteCurrentWorkflowExecution", mock.Anything, mock.Anything).Return(nil)
 	mockResource.HistoryMgr.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(&p.ReadHistoryBranchResponse{}, nil)
-
 	ctx := context.WithValue(context.Background(), contextKey(testWorkflowName), scannerContext{resource: mockResource})
 	env.SetTestTimeout(time.Second * 5)
 	env.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: ctx,
 	})
 	tlScavengerHBInterval = time.Millisecond * 10
-
+	mockResource.DomainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
 	_, err := env.ExecuteActivity(ExecutionFixerActivity, fixList)
 	s.NoError(err)
 }

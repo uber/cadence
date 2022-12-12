@@ -162,7 +162,7 @@ func TestWorkflowLoad(t *testing.T) {
 
 			mockDomainCache := mockShard.Resource.DomainCache
 			mockDomainCache.EXPECT().GetDomainByID(constants.TestLocalDomainEntry.GetInfo().ID).Return(constants.TestLocalDomainEntry, nil)
-			mockDomainCache.EXPECT().GetDomainName(constants.TestLocalDomainEntry.GetInfo().ID).Return(constants.TestLocalDomainEntry.GetInfo().Name, nil)
+			mockDomainCache.EXPECT().GetDomainName(constants.TestLocalDomainEntry.GetInfo().ID).Return(constants.TestLocalDomainEntry.GetInfo().Name, nil).AnyTimes()
 
 			tc.mockSetupFn(mockShard)
 
@@ -171,6 +171,7 @@ func TestWorkflowLoad(t *testing.T) {
 				execution.NewCache(mockShard),
 				mockShard.Resource.ExecutionMgr,
 				constants.TestDomainID,
+				constants.TestDomainName,
 				constants.TestWorkflowID,
 				tc.runID,
 			)

@@ -71,7 +71,7 @@ func Test_RenderTable(t *testing.T) {
 			expectOutput: "" +
 				"        STRING        | INTEGER | BOOL  |   TIME   |    MAP     |  SLICE   \n" +
 				"  text                |     123 | true  | 03:04:05 | A:AA, B:BB | 1, 2, 3  \n" +
-				"  ...g long long long |     456 | false | 13:14:15 |            |          \n",
+				"  .../ string this is |     456 | false | 13:14:15 |            |          \n",
 		},
 		{
 			name: "a slice with rendering options",
@@ -80,7 +80,7 @@ func Test_RenderTable(t *testing.T) {
 			expectOutput: "" +
 				"        STRING        | INTEGER | BOOL  |         TIME         |    MAP      \n" +
 				"  text                |     123 | true  | 2000-01-02T03:04:05Z | A:AA, B:BB  \n" +
-				"  ...g long long long |     456 | false | 2000-11-12T13:14:15Z |             \n",
+				"  .../ string this is |     456 | false | 2000-11-12T13:14:15Z |             \n",
 		},
 		{
 			name:      "non-struct element",
@@ -136,7 +136,7 @@ func Test_RenderTemplate(t *testing.T) {
 			expectOutput: "" +
 				"        STRING        | INTEGER | BOOL  |   TIME   |    MAP     |  SLICE   \n" +
 				"  text                |     123 | true  | 03:04:05 | A:AA, B:BB | 1, 2, 3  \n" +
-				"  ...g long long long |     456 | false | 13:14:15 |            |          \n",
+				"  .../ string this is |     456 | false | 13:14:15 |            |          \n",
 		},
 		{
 			name:      "invalid template",
@@ -179,10 +179,10 @@ var testTable = []testRow{
 		SliceField:  []int{1, 2, 3},
 	},
 	{
-		StringField: "long long long long long long",
+		StringField: "very long/ string this is",
 		IntField:    456,
 		BoolField:   false,
-		TimeField:   time.Date(2000, 11, 12, 13, 14, 15, 16, time.Local),
+		TimeField:   time.Date(2000, 11, 12, 13, 14, 15, 16, time.FixedZone("UTC+3", 0)),
 		MapField:    nil,
 		SliceField:  nil,
 	},

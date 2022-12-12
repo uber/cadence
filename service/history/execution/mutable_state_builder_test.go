@@ -26,6 +26,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pborman/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/uber-go/tally"
@@ -95,12 +96,23 @@ func (s *mutableStateSuite) SetupTest() {
 	s.testScope = s.mockShard.Resource.MetricsScope
 	s.logger = s.mockShard.GetLogger()
 
+	s.mockShard.Resource.DomainCache.EXPECT().GetDomainID(constants.TestDomainName).Return(constants.TestDomainID, nil).AnyTimes()
+
 	s.msBuilder = newMutableStateBuilder(s.mockShard, s.logger, constants.TestLocalDomainEntry)
 }
 
 func (s *mutableStateSuite) TearDownTest() {
 	s.controller.Finish()
 	s.mockShard.Finish(s.T())
+}
+
+func (s *mutableStateSuite) TestErrorReturnedWhenSchedulingTooManyPendingActivities() {
+	for i := 0; i < s.msBuilder.config.PendingActivitiesCountLimitError(); i++ {
+		s.msBuilder.pendingActivityInfoIDs[int64(i)] = &persistence.ActivityInfo{}
+	}
+
+	_, _, _, _, _, err := s.msBuilder.AddActivityTaskScheduledEvent(nil, 1, &types.ScheduleActivityTaskDecisionAttributes{}, false)
+	assert.Equal(s.T(), "Too many pending activities", err.Error())
 }
 
 func (s *mutableStateSuite) TestTransientDecisionCompletionFirstBatchReplicated_ReplicateDecisionCompleted() {
@@ -604,6 +616,7 @@ func (s *mutableStateSuite) TestTransientDecisionTaskStart_CurrentVersionChanged
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
 		0,
 		0,
+		false,
 	)
 	s.NoError(err)
 	s.NotNil(di)
@@ -707,6 +720,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		execution,
 		uuid.New(),
 		workflowStartEvent,
+		false,
 	)
 	s.Nil(err)
 
@@ -719,6 +733,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		decisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
 		0,
 		0,
+		false,
 	)
 	s.Nil(err)
 	s.NotNil(di)
@@ -770,6 +785,7 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 		newDecisionScheduleEvent.DecisionTaskScheduledEventAttributes.GetAttempt(),
 		0,
 		0,
+		false,
 	)
 	s.Nil(err)
 	s.NotNil(di)
@@ -785,6 +801,14 @@ func (s *mutableStateSuite) prepareTransientDecisionCompletionFirstBatchReplicat
 	s.NotNil(di)
 
 	return newDecisionScheduleEvent, newDecisionStartedEvent
+}
+
+func (s *mutableStateSuite) TestLoad_BackwardsCompatibility() {
+	mutableState := s.buildWorkflowMutableState()
+
+	s.msBuilder.Load(mutableState)
+
+	s.Equal(constants.TestDomainID, s.msBuilder.pendingChildExecutionInfoIDs[81].DomainID)
 }
 
 func (s *mutableStateSuite) TestUpdateCurrentVersion_WorkflowOpen() {
@@ -825,7 +849,6 @@ func (s *mutableStateSuite) newDomainCacheEntry() *cache.DomainCacheEntry {
 		&persistence.DomainReplicationConfig{},
 		1,
 		nil,
-		nil,
 	)
 }
 
@@ -860,7 +883,7 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 	activityInfos := map[int64]*persistence.ActivityInfo{
 		5: {
 			Version:                failoverVersion,
-			ScheduleID:             int64(90),
+			ScheduleID:             int64(5),
 			ScheduledTime:          time.Now(),
 			StartedID:              common.EmptyEventID,
 			StartedTime:            time.Now(),
@@ -890,6 +913,16 @@ func (s *mutableStateSuite) buildWorkflowMutableState() *persistence.WorkflowMut
 			StartedID:             common.EmptyEventID,
 			CreateRequestID:       uuid.New(),
 			DomainID:              constants.TestDomainID,
+			WorkflowTypeName:      "code.uber.internal/test/foobar",
+		},
+		81: {
+			Version:               failoverVersion,
+			InitiatedID:           80,
+			InitiatedEventBatchID: 20,
+			InitiatedEvent:        &types.HistoryEvent{},
+			StartedID:             common.EmptyEventID,
+			CreateRequestID:       uuid.New(),
+			DomainNameDEPRECATED:  constants.TestDomainName,
 			WorkflowTypeName:      "code.uber.internal/test/foobar",
 		},
 	}

@@ -32,8 +32,10 @@ import (
 // executions store, and stores workflow execution records for visibility
 // purposes.
 
-type (
+// ErrVisibilityOperationNotSupported is an error which indicates that operation is not supported in selected persistence
+var ErrVisibilityOperationNotSupported = &types.BadRequestError{Message: "Operation is not supported. Please use ElasticSearch"}
 
+type (
 	// RecordWorkflowExecutionStartedRequest is used to add a record of a newly
 	// started execution
 	RecordWorkflowExecutionStartedRequest struct {
@@ -49,6 +51,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    int64 // unit is unix nano, consistent with start/execution timestamp, same in other requests
 		SearchAttributes   map[string][]byte
 	}
 
@@ -70,7 +73,17 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
+	}
+
+	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
+	RecordWorkflowExecutionUninitializedRequest struct {
+		DomainUUID       string
+		Domain           string
+		Execution        types.WorkflowExecution
+		WorkflowTypeName string
+		UpdateTimestamp  int64
 	}
 
 	// UpsertWorkflowExecutionRequest is used to upsert workflow execution
@@ -87,6 +100,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
 	}
 
@@ -172,6 +186,7 @@ type (
 	// VisibilityDeleteWorkflowExecutionRequest contains the request params for DeleteWorkflowExecution call
 	VisibilityDeleteWorkflowExecutionRequest struct {
 		DomainID   string
+		Domain     string
 		RunID      string
 		WorkflowID string
 		TaskID     int64
@@ -185,6 +200,7 @@ type (
 		GetName() string
 		RecordWorkflowExecutionStarted(ctx context.Context, request *RecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(ctx context.Context, request *RecordWorkflowExecutionClosedRequest) error
+		RecordWorkflowExecutionUninitialized(ctx context.Context, request *RecordWorkflowExecutionUninitializedRequest) error
 		UpsertWorkflowExecution(ctx context.Context, request *UpsertWorkflowExecutionRequest) error
 		ListOpenWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutions(ctx context.Context, request *ListWorkflowExecutionsRequest) (*ListWorkflowExecutionsResponse, error)
@@ -201,11 +217,6 @@ type (
 		GetClosedWorkflowExecution(ctx context.Context, request *GetClosedWorkflowExecutionRequest) (*GetClosedWorkflowExecutionResponse, error)
 	}
 )
-
-// NewOperationNotSupportErrorForVis create error for operation not support in visibility
-func NewOperationNotSupportErrorForVis() error {
-	return &types.BadRequestError{Message: "Operation not support. Please use on ElasticSearch"}
-}
 
 // IsNopUpsertWorkflowRequest return whether upsert request should be no-op
 func IsNopUpsertWorkflowRequest(request *InternalUpsertWorkflowExecutionRequest) bool {

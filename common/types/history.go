@@ -34,34 +34,10 @@ func (v *DescribeMutableStateRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetExecution is an internal getter (TBD...)
-func (v *DescribeMutableStateRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-	return
-}
-
 // DescribeMutableStateResponse is an internal type (TBD...)
 type DescribeMutableStateResponse struct {
 	MutableStateInCache    string `json:"mutableStateInCache,omitempty"`
 	MutableStateInDatabase string `json:"mutableStateInDatabase,omitempty"`
-}
-
-// GetMutableStateInCache is an internal getter (TBD...)
-func (v *DescribeMutableStateResponse) GetMutableStateInCache() (o string) {
-	if v != nil {
-		return v.MutableStateInCache
-	}
-	return
-}
-
-// GetMutableStateInDatabase is an internal getter (TBD...)
-func (v *DescribeMutableStateResponse) GetMutableStateInDatabase() (o string) {
-	if v != nil {
-		return v.MutableStateInDatabase
-	}
-	return
 }
 
 // HistoryDescribeWorkflowExecutionRequest is an internal type (TBD...)
@@ -74,14 +50,6 @@ type HistoryDescribeWorkflowExecutionRequest struct {
 func (v *HistoryDescribeWorkflowExecutionRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetRequest is an internal getter (TBD...)
-func (v *HistoryDescribeWorkflowExecutionRequest) GetRequest() (o *DescribeWorkflowExecutionRequest) {
-	if v != nil && v.Request != nil {
-		return v.Request
 	}
 	return
 }
@@ -111,14 +79,6 @@ func (v *DomainFilter) GetReverseMatch() (o bool) {
 // EventAlreadyStartedError is an internal type (TBD...)
 type EventAlreadyStartedError struct {
 	Message string `json:"message,required"`
-}
-
-// GetMessage is an internal getter (TBD...)
-func (v *EventAlreadyStartedError) GetMessage() (o string) {
-	if v != nil {
-		return v.Message
-	}
-	return
 }
 
 // FailoverMarkerToken is an internal type (TBD...)
@@ -159,26 +119,10 @@ func (v *GetMutableStateRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetExecution is an internal getter (TBD...)
-func (v *GetMutableStateRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-	return
-}
-
 // GetExpectedNextEventID is an internal getter (TBD...)
 func (v *GetMutableStateRequest) GetExpectedNextEventID() (o int64) {
 	if v != nil {
 		return v.ExpectedNextEventID
-	}
-	return
-}
-
-// GetCurrentBranchToken is an internal getter (TBD...)
-func (v *GetMutableStateRequest) GetCurrentBranchToken() (o []byte) {
-	if v != nil && v.CurrentBranchToken != nil {
-		return v.CurrentBranchToken
 	}
 	return
 }
@@ -205,22 +149,6 @@ type GetMutableStateResponse struct {
 	IsStickyTaskListEnabled              bool               `json:"isStickyTaskListEnabled,omitempty"`
 }
 
-// GetExecution is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-	return
-}
-
-// GetWorkflowType is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetWorkflowType() (o *WorkflowType) {
-	if v != nil && v.WorkflowType != nil {
-		return v.WorkflowType
-	}
-	return
-}
-
 // GetNextEventID is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetNextEventID() (o int64) {
 	if v != nil {
@@ -237,34 +165,10 @@ func (v *GetMutableStateResponse) GetPreviousStartedEventID() (o int64) {
 	return
 }
 
-// GetLastFirstEventID is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetLastFirstEventID() (o int64) {
-	if v != nil {
-		return v.LastFirstEventID
-	}
-	return
-}
-
-// GetTaskList is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetTaskList() (o *TaskList) {
-	if v != nil && v.TaskList != nil {
-		return v.TaskList
-	}
-	return
-}
-
 // GetStickyTaskList is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetStickyTaskList() (o *TaskList) {
 	if v != nil && v.StickyTaskList != nil {
 		return v.StickyTaskList
-	}
-	return
-}
-
-// GetClientLibraryVersion is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetClientLibraryVersion() (o string) {
-	if v != nil {
-		return v.ClientLibraryVersion
 	}
 	return
 }
@@ -301,26 +205,10 @@ func (v *GetMutableStateResponse) GetStickyTaskListScheduleToStartTimeout() (o i
 	return
 }
 
-// GetEventStoreVersion is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetEventStoreVersion() (o int32) {
-	if v != nil {
-		return v.EventStoreVersion
-	}
-	return
-}
-
 // GetCurrentBranchToken is an internal getter (TBD...)
 func (v *GetMutableStateResponse) GetCurrentBranchToken() (o []byte) {
 	if v != nil && v.CurrentBranchToken != nil {
 		return v.CurrentBranchToken
-	}
-	return
-}
-
-// GetWorkflowState is an internal getter (TBD...)
-func (v *GetMutableStateResponse) GetWorkflowState() (o int32) {
-	if v != nil && v.WorkflowState != nil {
-		return *v.WorkflowState
 	}
 	return
 }
@@ -370,14 +258,6 @@ type ParentExecutionInfo struct {
 	InitiatedID int64              `json:"initiatedId,omitempty"`
 }
 
-// GetDomainUUID is an internal getter (TBD...)
-func (v *ParentExecutionInfo) GetDomainUUID() (o string) {
-	if v != nil {
-		return v.DomainUUID
-	}
-	return
-}
-
 // GetDomain is an internal getter (TBD...)
 func (v *ParentExecutionInfo) GetDomain() (o string) {
 	if v != nil {
@@ -394,14 +274,6 @@ func (v *ParentExecutionInfo) GetExecution() (o *WorkflowExecution) {
 	return
 }
 
-// GetInitiatedID is an internal getter (TBD...)
-func (v *ParentExecutionInfo) GetInitiatedID() (o int64) {
-	if v != nil {
-		return v.InitiatedID
-	}
-	return
-}
-
 // PollMutableStateRequest is an internal type (TBD...)
 type PollMutableStateRequest struct {
 	DomainUUID          string             `json:"domainUUID,omitempty"`
@@ -414,30 +286,6 @@ type PollMutableStateRequest struct {
 func (v *PollMutableStateRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetExecution is an internal getter (TBD...)
-func (v *PollMutableStateRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-	return
-}
-
-// GetExpectedNextEventID is an internal getter (TBD...)
-func (v *PollMutableStateRequest) GetExpectedNextEventID() (o int64) {
-	if v != nil {
-		return v.ExpectedNextEventID
-	}
-	return
-}
-
-// GetCurrentBranchToken is an internal getter (TBD...)
-func (v *PollMutableStateRequest) GetCurrentBranchToken() (o []byte) {
-	if v != nil && v.CurrentBranchToken != nil {
-		return v.CurrentBranchToken
 	}
 	return
 }
@@ -461,22 +309,6 @@ type PollMutableStateResponse struct {
 	WorkflowCloseState                   *int32             `json:"workflowCloseState,omitempty"`
 }
 
-// GetExecution is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-	return
-}
-
-// GetWorkflowType is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetWorkflowType() (o *WorkflowType) {
-	if v != nil && v.WorkflowType != nil {
-		return v.WorkflowType
-	}
-	return
-}
-
 // GetNextEventID is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetNextEventID() (o int64) {
 	if v != nil {
@@ -485,90 +317,10 @@ func (v *PollMutableStateResponse) GetNextEventID() (o int64) {
 	return
 }
 
-// GetPreviousStartedEventID is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetPreviousStartedEventID() (o int64) {
-	if v != nil && v.PreviousStartedEventID != nil {
-		return *v.PreviousStartedEventID
-	}
-	return
-}
-
 // GetLastFirstEventID is an internal getter (TBD...)
 func (v *PollMutableStateResponse) GetLastFirstEventID() (o int64) {
 	if v != nil {
 		return v.LastFirstEventID
-	}
-	return
-}
-
-// GetTaskList is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetTaskList() (o *TaskList) {
-	if v != nil && v.TaskList != nil {
-		return v.TaskList
-	}
-	return
-}
-
-// GetStickyTaskList is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetStickyTaskList() (o *TaskList) {
-	if v != nil && v.StickyTaskList != nil {
-		return v.StickyTaskList
-	}
-	return
-}
-
-// GetClientLibraryVersion is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetClientLibraryVersion() (o string) {
-	if v != nil {
-		return v.ClientLibraryVersion
-	}
-	return
-}
-
-// GetClientFeatureVersion is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetClientFeatureVersion() (o string) {
-	if v != nil {
-		return v.ClientFeatureVersion
-	}
-	return
-}
-
-// GetClientImpl is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetClientImpl() (o string) {
-	if v != nil {
-		return v.ClientImpl
-	}
-	return
-}
-
-// GetStickyTaskListScheduleToStartTimeout is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetStickyTaskListScheduleToStartTimeout() (o int32) {
-	if v != nil && v.StickyTaskListScheduleToStartTimeout != nil {
-		return *v.StickyTaskListScheduleToStartTimeout
-	}
-	return
-}
-
-// GetCurrentBranchToken is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetCurrentBranchToken() (o []byte) {
-	if v != nil && v.CurrentBranchToken != nil {
-		return v.CurrentBranchToken
-	}
-	return
-}
-
-// GetVersionHistories is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetVersionHistories() (o *VersionHistories) {
-	if v != nil && v.VersionHistories != nil {
-		return v.VersionHistories
-	}
-	return
-}
-
-// GetWorkflowState is an internal getter (TBD...)
-func (v *PollMutableStateResponse) GetWorkflowState() (o int32) {
-	if v != nil && v.WorkflowState != nil {
-		return *v.WorkflowState
 	}
 	return
 }
@@ -624,14 +376,6 @@ func (v *ProcessingQueueState) GetDomainFilter() (o *DomainFilter) {
 // ProcessingQueueStates is an internal type (TBD...)
 type ProcessingQueueStates struct {
 	StatesByCluster map[string][]*ProcessingQueueState `json:"statesByCluster,omitempty"`
-}
-
-// GetStatesByCluster is an internal getter (TBD...)
-func (v *ProcessingQueueStates) GetStatesByCluster() (o map[string][]*ProcessingQueueState) {
-	if v != nil && v.StatesByCluster != nil {
-		return v.StatesByCluster
-	}
-	return
 }
 
 // HistoryQueryWorkflowRequest is an internal type (TBD...)
@@ -705,14 +449,6 @@ func (v *HistoryRecordActivityTaskHeartbeatRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetHeartbeatRequest is an internal getter (TBD...)
-func (v *HistoryRecordActivityTaskHeartbeatRequest) GetHeartbeatRequest() (o *RecordActivityTaskHeartbeatRequest) {
-	if v != nil && v.HeartbeatRequest != nil {
-		return v.HeartbeatRequest
-	}
-	return
-}
-
 // RecordActivityTaskStartedRequest is an internal type (TBD...)
 type RecordActivityTaskStartedRequest struct {
 	DomainUUID        string                      `json:"domainUUID,omitempty"`
@@ -727,14 +463,6 @@ type RecordActivityTaskStartedRequest struct {
 func (v *RecordActivityTaskStartedRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetWorkflowExecution is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedRequest) GetWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.WorkflowExecution != nil {
-		return v.WorkflowExecution
 	}
 	return
 }
@@ -763,14 +491,6 @@ func (v *RecordActivityTaskStartedRequest) GetRequestID() (o string) {
 	return
 }
 
-// GetPollRequest is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedRequest) GetPollRequest() (o *PollForActivityTaskRequest) {
-	if v != nil && v.PollRequest != nil {
-		return v.PollRequest
-	}
-	return
-}
-
 // RecordActivityTaskStartedResponse is an internal type (TBD...)
 type RecordActivityTaskStartedResponse struct {
 	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
@@ -780,22 +500,6 @@ type RecordActivityTaskStartedResponse struct {
 	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
 	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
-}
-
-// GetScheduledEvent is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedResponse) GetScheduledEvent() (o *HistoryEvent) {
-	if v != nil && v.ScheduledEvent != nil {
-		return v.ScheduledEvent
-	}
-	return
-}
-
-// GetStartedTimestamp is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedResponse) GetStartedTimestamp() (o int64) {
-	if v != nil && v.StartedTimestamp != nil {
-		return *v.StartedTimestamp
-	}
-	return
 }
 
 // GetAttempt is an internal getter (TBD...)
@@ -814,30 +518,6 @@ func (v *RecordActivityTaskStartedResponse) GetScheduledTimestampOfThisAttempt()
 	return
 }
 
-// GetHeartbeatDetails is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedResponse) GetHeartbeatDetails() (o []byte) {
-	if v != nil && v.HeartbeatDetails != nil {
-		return v.HeartbeatDetails
-	}
-	return
-}
-
-// GetWorkflowType is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedResponse) GetWorkflowType() (o *WorkflowType) {
-	if v != nil && v.WorkflowType != nil {
-		return v.WorkflowType
-	}
-	return
-}
-
-// GetWorkflowDomain is an internal getter (TBD...)
-func (v *RecordActivityTaskStartedResponse) GetWorkflowDomain() (o string) {
-	if v != nil {
-		return v.WorkflowDomain
-	}
-	return
-}
-
 // RecordChildExecutionCompletedRequest is an internal type (TBD...)
 type RecordChildExecutionCompletedRequest struct {
 	DomainUUID         string             `json:"domainUUID,omitempty"`
@@ -851,38 +531,6 @@ type RecordChildExecutionCompletedRequest struct {
 func (v *RecordChildExecutionCompletedRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetWorkflowExecution is an internal getter (TBD...)
-func (v *RecordChildExecutionCompletedRequest) GetWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.WorkflowExecution != nil {
-		return v.WorkflowExecution
-	}
-	return
-}
-
-// GetInitiatedID is an internal getter (TBD...)
-func (v *RecordChildExecutionCompletedRequest) GetInitiatedID() (o int64) {
-	if v != nil {
-		return v.InitiatedID
-	}
-	return
-}
-
-// GetCompletedExecution is an internal getter (TBD...)
-func (v *RecordChildExecutionCompletedRequest) GetCompletedExecution() (o *WorkflowExecution) {
-	if v != nil && v.CompletedExecution != nil {
-		return v.CompletedExecution
-	}
-	return
-}
-
-// GetCompletionEvent is an internal getter (TBD...)
-func (v *RecordChildExecutionCompletedRequest) GetCompletionEvent() (o *HistoryEvent) {
-	if v != nil && v.CompletionEvent != nil {
-		return v.CompletionEvent
 	}
 	return
 }
@@ -905,14 +553,6 @@ func (v *RecordDecisionTaskStartedRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetWorkflowExecution is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedRequest) GetWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.WorkflowExecution != nil {
-		return v.WorkflowExecution
-	}
-	return
-}
-
 // GetScheduleID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetScheduleID() (o int64) {
 	if v != nil {
@@ -921,26 +561,10 @@ func (v *RecordDecisionTaskStartedRequest) GetScheduleID() (o int64) {
 	return
 }
 
-// GetTaskID is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedRequest) GetTaskID() (o int64) {
-	if v != nil {
-		return v.TaskID
-	}
-	return
-}
-
 // GetRequestID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedRequest) GetRequestID() (o string) {
 	if v != nil {
 		return v.RequestID
-	}
-	return
-}
-
-// GetPollRequest is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedRequest) GetPollRequest() (o *PollForDecisionTaskRequest) {
-	if v != nil && v.PollRequest != nil {
-		return v.PollRequest
 	}
 	return
 }
@@ -963,14 +587,6 @@ type RecordDecisionTaskStartedResponse struct {
 	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
 }
 
-// GetWorkflowType is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetWorkflowType() (o *WorkflowType) {
-	if v != nil && v.WorkflowType != nil {
-		return v.WorkflowType
-	}
-	return
-}
-
 // GetPreviousStartedEventID is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetPreviousStartedEventID() (o int64) {
 	if v != nil && v.PreviousStartedEventID != nil {
@@ -987,22 +603,6 @@ func (v *RecordDecisionTaskStartedResponse) GetScheduledEventID() (o int64) {
 	return
 }
 
-// GetStartedEventID is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetStartedEventID() (o int64) {
-	if v != nil {
-		return v.StartedEventID
-	}
-	return
-}
-
-// GetNextEventID is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetNextEventID() (o int64) {
-	if v != nil {
-		return v.NextEventID
-	}
-	return
-}
-
 // GetAttempt is an internal getter (TBD...)
 func (v *RecordDecisionTaskStartedResponse) GetAttempt() (o int64) {
 	if v != nil {
@@ -1011,82 +611,10 @@ func (v *RecordDecisionTaskStartedResponse) GetAttempt() (o int64) {
 	return
 }
 
-// GetStickyExecutionEnabled is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetStickyExecutionEnabled() (o bool) {
-	if v != nil {
-		return v.StickyExecutionEnabled
-	}
-	return
-}
-
-// GetDecisionInfo is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetDecisionInfo() (o *TransientDecisionInfo) {
-	if v != nil && v.DecisionInfo != nil {
-		return v.DecisionInfo
-	}
-	return
-}
-
-// GetWorkflowExecutionTaskList is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetWorkflowExecutionTaskList() (o *TaskList) {
-	if v != nil && v.WorkflowExecutionTaskList != nil {
-		return v.WorkflowExecutionTaskList
-	}
-	return
-}
-
-// GetEventStoreVersion is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetEventStoreVersion() (o int32) {
-	if v != nil {
-		return v.EventStoreVersion
-	}
-	return
-}
-
-// GetBranchToken is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetBranchToken() (o []byte) {
-	if v != nil && v.BranchToken != nil {
-		return v.BranchToken
-	}
-	return
-}
-
-// GetScheduledTimestamp is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetScheduledTimestamp() (o int64) {
-	if v != nil && v.ScheduledTimestamp != nil {
-		return *v.ScheduledTimestamp
-	}
-	return
-}
-
-// GetStartedTimestamp is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetStartedTimestamp() (o int64) {
-	if v != nil && v.StartedTimestamp != nil {
-		return *v.StartedTimestamp
-	}
-	return
-}
-
-// GetQueries is an internal getter (TBD...)
-func (v *RecordDecisionTaskStartedResponse) GetQueries() (o map[string]*WorkflowQuery) {
-	if v != nil && v.Queries != nil {
-		return v.Queries
-	}
-	return
-}
-
 // HistoryRefreshWorkflowTasksRequest is an internal type (TBD...)
 type HistoryRefreshWorkflowTasksRequest struct {
 	DomainUIID string                       `json:"domainUIID,omitempty"`
 	Request    *RefreshWorkflowTasksRequest `json:"request,omitempty"`
-}
-
-// GetDomainUIID is an internal getter (TBD...)
-func (v *HistoryRefreshWorkflowTasksRequest) GetDomainUIID() (o string) {
-	if v != nil {
-		return v.DomainUIID
-	}
-	return
 }
 
 // GetRequest is an internal getter (TBD...)
@@ -1108,14 +636,6 @@ type RemoveSignalMutableStateRequest struct {
 func (v *RemoveSignalMutableStateRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetWorkflowExecution is an internal getter (TBD...)
-func (v *RemoveSignalMutableStateRequest) GetWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.WorkflowExecution != nil {
-		return v.WorkflowExecution
 	}
 	return
 }
@@ -1145,38 +665,6 @@ func (v *ReplicateEventsV2Request) GetDomainUUID() (o string) {
 	return
 }
 
-// GetWorkflowExecution is an internal getter (TBD...)
-func (v *ReplicateEventsV2Request) GetWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.WorkflowExecution != nil {
-		return v.WorkflowExecution
-	}
-	return
-}
-
-// GetVersionHistoryItems is an internal getter (TBD...)
-func (v *ReplicateEventsV2Request) GetVersionHistoryItems() (o []*VersionHistoryItem) {
-	if v != nil && v.VersionHistoryItems != nil {
-		return v.VersionHistoryItems
-	}
-	return
-}
-
-// GetEvents is an internal getter (TBD...)
-func (v *ReplicateEventsV2Request) GetEvents() (o *DataBlob) {
-	if v != nil && v.Events != nil {
-		return v.Events
-	}
-	return
-}
-
-// GetNewRunEvents is an internal getter (TBD...)
-func (v *ReplicateEventsV2Request) GetNewRunEvents() (o *DataBlob) {
-	if v != nil && v.NewRunEvents != nil {
-		return v.NewRunEvents
-	}
-	return
-}
-
 // HistoryRequestCancelWorkflowExecutionRequest is an internal type (TBD...)
 type HistoryRequestCancelWorkflowExecutionRequest struct {
 	DomainUUID                string                                 `json:"domainUUID,omitempty"`
@@ -1198,14 +686,6 @@ func (v *HistoryRequestCancelWorkflowExecutionRequest) GetDomainUUID() (o string
 func (v *HistoryRequestCancelWorkflowExecutionRequest) GetCancelRequest() (o *RequestCancelWorkflowExecutionRequest) {
 	if v != nil && v.CancelRequest != nil {
 		return v.CancelRequest
-	}
-	return
-}
-
-// GetExternalInitiatedEventID is an internal getter (TBD...)
-func (v *HistoryRequestCancelWorkflowExecutionRequest) GetExternalInitiatedEventID() (o int64) {
-	if v != nil && v.ExternalInitiatedEventID != nil {
-		return *v.ExternalInitiatedEventID
 	}
 	return
 }
@@ -1240,14 +720,6 @@ func (v *HistoryResetStickyTaskListRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetExecution is an internal getter (TBD...)
-func (v *HistoryResetStickyTaskListRequest) GetExecution() (o *WorkflowExecution) {
-	if v != nil && v.Execution != nil {
-		return v.Execution
-	}
-	return
-}
-
 // HistoryResetStickyTaskListResponse is an internal type (TBD...)
 type HistoryResetStickyTaskListResponse struct {
 }
@@ -1266,14 +738,6 @@ func (v *HistoryResetWorkflowExecutionRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetResetRequest is an internal getter (TBD...)
-func (v *HistoryResetWorkflowExecutionRequest) GetResetRequest() (o *ResetWorkflowExecutionRequest) {
-	if v != nil && v.ResetRequest != nil {
-		return v.ResetRequest
-	}
-	return
-}
-
 // HistoryRespondActivityTaskCanceledRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskCanceledRequest struct {
 	DomainUUID    string                              `json:"domainUUID,omitempty"`
@@ -1284,14 +748,6 @@ type HistoryRespondActivityTaskCanceledRequest struct {
 func (v *HistoryRespondActivityTaskCanceledRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetCancelRequest is an internal getter (TBD...)
-func (v *HistoryRespondActivityTaskCanceledRequest) GetCancelRequest() (o *RespondActivityTaskCanceledRequest) {
-	if v != nil && v.CancelRequest != nil {
-		return v.CancelRequest
 	}
 	return
 }
@@ -1310,14 +766,6 @@ func (v *HistoryRespondActivityTaskCompletedRequest) GetDomainUUID() (o string) 
 	return
 }
 
-// GetCompleteRequest is an internal getter (TBD...)
-func (v *HistoryRespondActivityTaskCompletedRequest) GetCompleteRequest() (o *RespondActivityTaskCompletedRequest) {
-	if v != nil && v.CompleteRequest != nil {
-		return v.CompleteRequest
-	}
-	return
-}
-
 // HistoryRespondActivityTaskFailedRequest is an internal type (TBD...)
 type HistoryRespondActivityTaskFailedRequest struct {
 	DomainUUID    string                            `json:"domainUUID,omitempty"`
@@ -1328,14 +776,6 @@ type HistoryRespondActivityTaskFailedRequest struct {
 func (v *HistoryRespondActivityTaskFailedRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetFailedRequest is an internal getter (TBD...)
-func (v *HistoryRespondActivityTaskFailedRequest) GetFailedRequest() (o *RespondActivityTaskFailedRequest) {
-	if v != nil && v.FailedRequest != nil {
-		return v.FailedRequest
 	}
 	return
 }
@@ -1368,22 +808,6 @@ type HistoryRespondDecisionTaskCompletedResponse struct {
 	ActivitiesToDispatchLocally map[string]*ActivityLocalDispatchInfo `json:"activitiesToDispatchLocally,omitempty"`
 }
 
-// GetStartedResponse is an internal getter (TBD...)
-func (v *HistoryRespondDecisionTaskCompletedResponse) GetStartedResponse() (o *RecordDecisionTaskStartedResponse) {
-	if v != nil && v.StartedResponse != nil {
-		return v.StartedResponse
-	}
-	return
-}
-
-// GetActivitiesToDispatchLocally is an internal getter (TBD...)
-func (v *HistoryRespondDecisionTaskCompletedResponse) GetActivitiesToDispatchLocally() (o map[string]*ActivityLocalDispatchInfo) {
-	if v != nil && v.ActivitiesToDispatchLocally != nil {
-		return v.ActivitiesToDispatchLocally
-	}
-	return
-}
-
 // HistoryRespondDecisionTaskFailedRequest is an internal type (TBD...)
 type HistoryRespondDecisionTaskFailedRequest struct {
 	DomainUUID    string                            `json:"domainUUID,omitempty"`
@@ -1394,14 +818,6 @@ type HistoryRespondDecisionTaskFailedRequest struct {
 func (v *HistoryRespondDecisionTaskFailedRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetFailedRequest is an internal getter (TBD...)
-func (v *HistoryRespondDecisionTaskFailedRequest) GetFailedRequest() (o *RespondDecisionTaskFailedRequest) {
-	if v != nil && v.FailedRequest != nil {
-		return v.FailedRequest
 	}
 	return
 }
@@ -1421,34 +837,10 @@ func (v *ScheduleDecisionTaskRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetWorkflowExecution is an internal getter (TBD...)
-func (v *ScheduleDecisionTaskRequest) GetWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.WorkflowExecution != nil {
-		return v.WorkflowExecution
-	}
-	return
-}
-
-// GetIsFirstDecision is an internal getter (TBD...)
-func (v *ScheduleDecisionTaskRequest) GetIsFirstDecision() (o bool) {
-	if v != nil {
-		return v.IsFirstDecision
-	}
-	return
-}
-
 // ShardOwnershipLostError is an internal type (TBD...)
 type ShardOwnershipLostError struct {
 	Message string `json:"message,omitempty"`
 	Owner   string `json:"owner,omitempty"`
-}
-
-// GetMessage is an internal getter (TBD...)
-func (v *ShardOwnershipLostError) GetMessage() (o string) {
-	if v != nil {
-		return v.Message
-	}
-	return
 }
 
 // GetOwner is an internal getter (TBD...)
@@ -1473,14 +865,6 @@ func (v *HistorySignalWithStartWorkflowExecutionRequest) GetDomainUUID() (o stri
 	return
 }
 
-// GetSignalWithStartRequest is an internal getter (TBD...)
-func (v *HistorySignalWithStartWorkflowExecutionRequest) GetSignalWithStartRequest() (o *SignalWithStartWorkflowExecutionRequest) {
-	if v != nil && v.SignalWithStartRequest != nil {
-		return v.SignalWithStartRequest
-	}
-	return
-}
-
 // HistorySignalWorkflowExecutionRequest is an internal type (TBD...)
 type HistorySignalWorkflowExecutionRequest struct {
 	DomainUUID                string                          `json:"domainUUID,omitempty"`
@@ -1493,22 +877,6 @@ type HistorySignalWorkflowExecutionRequest struct {
 func (v *HistorySignalWorkflowExecutionRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
-	}
-	return
-}
-
-// GetSignalRequest is an internal getter (TBD...)
-func (v *HistorySignalWorkflowExecutionRequest) GetSignalRequest() (o *SignalWorkflowExecutionRequest) {
-	if v != nil && v.SignalRequest != nil {
-		return v.SignalRequest
-	}
-	return
-}
-
-// GetExternalWorkflowExecution is an internal getter (TBD...)
-func (v *HistorySignalWorkflowExecutionRequest) GetExternalWorkflowExecution() (o *WorkflowExecution) {
-	if v != nil && v.ExternalWorkflowExecution != nil {
-		return v.ExternalWorkflowExecution
 	}
 	return
 }
@@ -1543,22 +911,6 @@ func (v *HistoryStartWorkflowExecutionRequest) GetDomainUUID() (o string) {
 	return
 }
 
-// GetStartRequest is an internal getter (TBD...)
-func (v *HistoryStartWorkflowExecutionRequest) GetStartRequest() (o *StartWorkflowExecutionRequest) {
-	if v != nil && v.StartRequest != nil {
-		return v.StartRequest
-	}
-	return
-}
-
-// GetParentExecutionInfo is an internal getter (TBD...)
-func (v *HistoryStartWorkflowExecutionRequest) GetParentExecutionInfo() (o *ParentExecutionInfo) {
-	if v != nil && v.ParentExecutionInfo != nil {
-		return v.ParentExecutionInfo
-	}
-	return
-}
-
 // GetAttempt is an internal getter (TBD...)
 func (v *HistoryStartWorkflowExecutionRequest) GetAttempt() (o int32) {
 	if v != nil {
@@ -1571,38 +923,6 @@ func (v *HistoryStartWorkflowExecutionRequest) GetAttempt() (o int32) {
 func (v *HistoryStartWorkflowExecutionRequest) GetExpirationTimestamp() (o int64) {
 	if v != nil && v.ExpirationTimestamp != nil {
 		return *v.ExpirationTimestamp
-	}
-	return
-}
-
-// GetContinueAsNewInitiator is an internal getter (TBD...)
-func (v *HistoryStartWorkflowExecutionRequest) GetContinueAsNewInitiator() (o *ContinueAsNewInitiator) {
-	if v != nil && v.ContinueAsNewInitiator != nil {
-		return v.ContinueAsNewInitiator
-	}
-	return
-}
-
-// GetContinuedFailureReason is an internal getter (TBD...)
-func (v *HistoryStartWorkflowExecutionRequest) GetContinuedFailureReason() (o string) {
-	if v != nil && v.ContinuedFailureReason != nil {
-		return *v.ContinuedFailureReason
-	}
-	return
-}
-
-// GetContinuedFailureDetails is an internal getter (TBD...)
-func (v *HistoryStartWorkflowExecutionRequest) GetContinuedFailureDetails() (o []byte) {
-	if v != nil && v.ContinuedFailureDetails != nil {
-		return v.ContinuedFailureDetails
-	}
-	return
-}
-
-// GetLastCompletionResult is an internal getter (TBD...)
-func (v *HistoryStartWorkflowExecutionRequest) GetLastCompletionResult() (o []byte) {
-	if v != nil && v.LastCompletionResult != nil {
-		return v.LastCompletionResult
 	}
 	return
 }

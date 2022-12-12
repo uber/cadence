@@ -84,9 +84,9 @@ Also use `docker-compose -f ./docker/dev/cassandra.yml down` to stop and clean u
 ### 3. Schema installation 
 Based on the above dependency setup, you also need to install the schemas. 
 
-* If you use `cassandra.yml` then run `make install-schema` to install Casandra schemas
-* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Casandra & ElasticSearch schemas
-* If you use `cassandra-opensearch-kafka.yml` then run `make install-schema && make install-schema-opensearch` to install Casandra & ElasticSearch schemas 
+* If you use `cassandra.yml` then run `make install-schema` to install Cassandra schemas
+* If you use `cassandra-esv7-kafka.yml` then run `make install-schema && make install-schema-es-v7` to install Cassandra & ElasticSearch schemas
+* If you use `cassandra-opensearch-kafka.yml` then run `make install-schema && make install-schema-es-opensearch` to install Cassandra & OpenSearch schemas 
 * If you use `mysql.yml` then run `install-schema-mysql` to install MySQL schemas
 * If you use `postgres.yml` then run `install-schema-postgres` to install Postgres schemas
 * `mysql-esv7-kafka.yml` can be used for single MySQL + ElasticSearch or multiple MySQL + ElasticSearch mode
@@ -214,6 +214,12 @@ go test -v <path> -run <TestSuite> -testify.m <TestSpercificTaskName>
 # example:
 go test -v github.com/uber/cadence/common/persistence/persistence-tests -run TestVisibilitySamplingSuite -testify.m TestListClosedWorkflowExecutions
 ```
+
+## IDL Changes
+
+If you make changes in the idls submodule and want to test them locally, you can easily do that by using go mod to use the local idls directory instead of github.com/uber/cadence-idl. Temporarily add the following to the bottom of go.mod:
+
+```replace github.com/uber/cadence-idl => ./idls```
 
 ## Pull Requests
 After all the preparation you are about to write code and make a Pull Request for the issue.

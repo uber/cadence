@@ -77,6 +77,10 @@ func getDBFlags() []cli.Flag {
 			Name:  FlagDBRegion,
 			Usage: "persistence region",
 		},
+		cli.IntFlag{
+			Name:  FlagDBShard,
+			Usage: "number of db shards in a sharded SQL database",
+		},
 		cli.StringFlag{
 			Name:  FlagUsername,
 			Usage: "persistence username",
@@ -223,6 +227,9 @@ func initPersistenceFactory(c *cli.Context) client.Factory {
 		cfg.ClusterGroupMetadata.CurrentClusterName,
 		metrics.NewNoopMetricsClient(),
 		log.NewNoop(),
+		&persistence.DynamicConfiguration{
+			EnableSQLAsyncTransaction: dynamicconfig.GetBoolPropertyFn(false),
+		},
 	)
 }
 
@@ -297,6 +304,9 @@ func overrideSQLDataStore(c *cli.Context, cfg *config.SQL) {
 
 	if c.IsSet(FlagDBType) || cfg.PluginName == "" {
 		cfg.PluginName = c.String(FlagDBType)
+	}
+	if c.IsSet(FlagDBShard) || cfg.NumShards == 0 {
+		cfg.NumShards = c.Int(FlagDBShard)
 	}
 	if c.IsSet(FlagUsername) || cfg.User == "" {
 		cfg.User = c.String(FlagUsername)

@@ -164,6 +164,7 @@ type (
 		GetName() string
 		RecordWorkflowExecutionStarted(ctx context.Context, request *InternalRecordWorkflowExecutionStartedRequest) error
 		RecordWorkflowExecutionClosed(ctx context.Context, request *InternalRecordWorkflowExecutionClosedRequest) error
+		RecordWorkflowExecutionUninitialized(ctx context.Context, request *InternalRecordWorkflowExecutionUninitializedRequest) error
 		UpsertWorkflowExecution(ctx context.Context, request *InternalUpsertWorkflowExecutionRequest) error
 		ListOpenWorkflowExecutions(ctx context.Context, request *InternalListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
 		ListClosedWorkflowExecutions(ctx context.Context, request *InternalListWorkflowExecutionsRequest) (*InternalListWorkflowExecutionsResponse, error)
@@ -272,6 +273,7 @@ type (
 		DomainID                           string
 		WorkflowID                         string
 		RunID                              string
+		FirstExecutionRunID                string
 		ParentDomainID                     string
 		ParentWorkflowID                   string
 		ParentRunID                        string
@@ -643,6 +645,7 @@ type (
 		TaskList         string
 		IsCron           bool
 		NumClusters      int16
+		UpdateTime       time.Time
 		SearchAttributes map[string]interface{}
 	}
 
@@ -698,6 +701,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    time.Time
 		SearchAttributes   map[string][]byte
 	}
 
@@ -719,6 +723,16 @@ type (
 		RetentionPeriod    time.Duration
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    time.Time
+	}
+
+	// InternalRecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
+	InternalRecordWorkflowExecutionUninitializedRequest struct {
+		DomainUUID       string
+		WorkflowID       string
+		RunID            string
+		WorkflowTypeName string
+		UpdateTimestamp  time.Time
 	}
 
 	// InternalUpsertWorkflowExecutionRequest is request to UpsertWorkflowExecution
@@ -735,6 +749,7 @@ type (
 		TaskList           string
 		IsCron             bool
 		NumClusters        int16
+		UpdateTimestamp    time.Time
 		SearchAttributes   map[string][]byte
 	}
 

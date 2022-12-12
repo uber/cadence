@@ -31,6 +31,7 @@ import (
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/blobstore"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/pagination"
 	"github.com/uber/cadence/common/persistence"
@@ -75,7 +76,7 @@ func ConcreteFixerWorkflow(
 	return wf.Start(ctx)
 }
 
-//ConcreteExecutionHooks provides hooks for concrete executions scanner
+// ConcreteExecutionHooks provides hooks for concrete executions scanner
 func ConcreteExecutionHooks() *shardscanner.ScannerHooks {
 	h, err := shardscanner.NewScannerHooks(ScannerManager, ScannerIterator)
 	if err != nil {
@@ -100,13 +101,14 @@ func ScannerManager(
 	ctx context.Context,
 	pr persistence.Retryer,
 	params shardscanner.ScanShardActivityParams,
+	domainCache cache.DomainCache,
 ) invariant.Manager {
 
 	collections := ParseCollections(params.ScannerConfig)
 
 	var ivs []invariant.Invariant
 	for _, fn := range ConcreteExecutionType.ToInvariants(collections) {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, domainCache))
 	}
 
 	return invariant.NewInvariantManager(ivs)
@@ -129,14 +131,14 @@ func FixerIterator(ctx context.Context, client blobstore.Client, keys store.Keys
 }
 
 // FixerManager provides invariant manager for concrete execution fixer.
-func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixShardActivityParams) invariant.Manager {
+func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixShardActivityParams, domainCache cache.DomainCache) invariant.Manager {
 	var ivs []invariant.Invariant
 	var collections []invariant.Collection
 
 	collections = append(collections, invariant.CollectionHistory, invariant.CollectionMutableState)
 
 	for _, fn := range ConcreteExecutionType.ToInvariants(collections) {
-		ivs = append(ivs, fn(pr))
+		ivs = append(ivs, fn(pr, domainCache))
 	}
 	return invariant.NewInvariantManager(ivs)
 }
@@ -145,10 +147,10 @@ func FixerManager(_ context.Context, pr persistence.Retryer, _ shardscanner.FixS
 func ConcreteExecutionConfig(ctx shardscanner.Context) shardscanner.CustomScannerConfig {
 	res := shardscanner.CustomScannerConfig{}
 
-	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionHistory, true)() {
+	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionHistory)() {
 		res[invariant.CollectionHistory.String()] = strconv.FormatBool(true)
 	}
-	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionMutableState, true)() {
+	if ctx.Config.DynamicCollection.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerInvariantCollectionMutableState)() {
 		res[invariant.CollectionMutableState.String()] = strconv.FormatBool(true)
 	}
 
@@ -161,13 +163,13 @@ func ConcreteExecutionScannerConfig(dc *dynamicconfig.Collection) *shardscanner.
 		ScannerWFTypeName: ConcreteExecutionsScannerWFTypeName,
 		FixerWFTypeName:   ConcreteExecutionsFixerWFTypeName,
 		DynamicParams: shardscanner.DynamicParams{
-			ScannerEnabled:          dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled, false),
-			FixerEnabled:            dc.GetBoolProperty(dynamicconfig.ConcreteExecutionFixerEnabled, false),
-			Concurrency:             dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerConcurrency, 25),
-			PageSize:                dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerPersistencePageSize, 1000),
-			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerBlobstoreFlushThreshold, 100),
-			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerActivityBatchSize, 25),
-			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ConcreteExecutionFixerDomainAllow, false),
+			ScannerEnabled:          dc.GetBoolProperty(dynamicconfig.ConcreteExecutionsScannerEnabled),
+			FixerEnabled:            dc.GetBoolProperty(dynamicconfig.ConcreteExecutionFixerEnabled),
+			Concurrency:             dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerConcurrency),
+			PageSize:                dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerPersistencePageSize),
+			BlobstoreFlushThreshold: dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerBlobstoreFlushThreshold),
+			ActivityBatchSize:       dc.GetIntProperty(dynamicconfig.ConcreteExecutionsScannerActivityBatchSize),
+			AllowDomain:             dc.GetBoolPropertyFilteredByDomain(dynamicconfig.ConcreteExecutionFixerDomainAllow),
 		},
 		DynamicCollection: dc,
 		ScannerHooks:      ConcreteExecutionHooks,

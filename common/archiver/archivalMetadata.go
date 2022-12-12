@@ -55,7 +55,8 @@ type (
 	archivalConfig struct {
 		staticClusterStatus  ArchivalStatus
 		dynamicClusterStatus dynamicconfig.StringPropertyFn
-		enableRead           dynamicconfig.BoolPropertyFn
+		staticEnableRead     bool
+		dynamicEnableRead    dynamicconfig.BoolPropertyFn
 		domainDefaultStatus  types.ArchivalStatus
 		domainDefaultURI     string
 	}
@@ -85,16 +86,18 @@ func NewArchivalMetadata(
 ) ArchivalMetadata {
 	historyConfig := NewArchivalConfig(
 		historyStatus,
-		dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus, historyStatus),
-		dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival, historyReadEnabled),
+		dc.GetStringProperty(dynamicconfig.HistoryArchivalStatus),
+		historyReadEnabled,
+		dc.GetBoolProperty(dynamicconfig.EnableReadFromHistoryArchival),
 		domainDefaults.History.Status,
 		domainDefaults.History.URI,
 	)
 
 	visibilityConfig := NewArchivalConfig(
 		visibilityStatus,
-		dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus, visibilityStatus),
-		dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival, visibilityReadEnabled),
+		dc.GetStringProperty(dynamicconfig.VisibilityArchivalStatus),
+		visibilityReadEnabled,
+		dc.GetBoolProperty(dynamicconfig.EnableReadFromVisibilityArchival),
 		domainDefaults.Visibility.Status,
 		domainDefaults.Visibility.URI,
 	)
@@ -117,7 +120,8 @@ func (metadata *archivalMetadata) GetVisibilityConfig() ArchivalConfig {
 func NewArchivalConfig(
 	staticClusterStatusStr string,
 	dynamicClusterStatus dynamicconfig.StringPropertyFn,
-	enableRead dynamicconfig.BoolPropertyFn,
+	staticEnableRead bool,
+	dynamicEnableRead dynamicconfig.BoolPropertyFn,
 	domainDefaultStatusStr string,
 	domainDefaultURI string,
 ) ArchivalConfig {
@@ -133,7 +137,8 @@ func NewArchivalConfig(
 	return &archivalConfig{
 		staticClusterStatus:  staticClusterStatus,
 		dynamicClusterStatus: dynamicClusterStatus,
-		enableRead:           enableRead,
+		staticEnableRead:     staticEnableRead,
+		dynamicEnableRead:    dynamicEnableRead,
 		domainDefaultStatus:  domainDefaultStatus,
 		domainDefaultURI:     domainDefaultURI,
 	}
@@ -144,7 +149,8 @@ func NewDisabledArchvialConfig() ArchivalConfig {
 	return &archivalConfig{
 		staticClusterStatus:  ArchivalDisabled,
 		dynamicClusterStatus: nil,
-		enableRead:           nil,
+		staticEnableRead:     false,
+		dynamicEnableRead:    nil,
 		domainDefaultStatus:  types.ArchivalStatusDisabled,
 		domainDefaultURI:     "",
 	}
@@ -177,7 +183,7 @@ func (a *archivalConfig) ReadEnabled() bool {
 	if !a.ClusterConfiguredForArchival() {
 		return false
 	}
-	return a.enableRead()
+	return a.staticEnableRead && a.dynamicEnableRead()
 }
 
 func (a *archivalConfig) GetDomainDefaultStatus() types.ArchivalStatus {

@@ -34,6 +34,10 @@ var retryForeverPolicy = newRetryForeverPolicy()
 func (s *Scavenger) completeTasks(info *p.TaskListInfo, taskID int64, limit int) (int, error) {
 	var resp *p.CompleteTasksLessThanResponse
 	var err error
+	domainName, errorDomain := s.cache.GetDomainName(info.DomainID)
+	if errorDomain != nil {
+		return 0, errorDomain
+	}
 	err = s.retryForever(func() error {
 		resp, err = s.db.CompleteTasksLessThan(s.ctx, &p.CompleteTasksLessThanRequest{
 			DomainID:     info.DomainID,
@@ -41,6 +45,7 @@ func (s *Scavenger) completeTasks(info *p.TaskListInfo, taskID int64, limit int)
 			TaskType:     info.TaskType,
 			TaskID:       taskID,
 			Limit:        limit,
+			DomainName:   domainName,
 		})
 		return err
 	})
@@ -64,10 +69,15 @@ func (s *Scavenger) getOrphanTasks(limit int) (*p.GetOrphanTasksResponse, error)
 
 func (s *Scavenger) completeTask(info *p.TaskListInfo, taskid int64) error {
 	var err error
+	domainName, errorDomain := s.cache.GetDomainName(info.DomainID)
+	if errorDomain != nil {
+		return errorDomain
+	}
 	err = s.retryForever(func() error {
 		err = s.db.CompleteTask(s.ctx, &p.CompleteTaskRequest{
-			TaskList: info,
-			TaskID:   taskid,
+			TaskList:   info,
+			TaskID:     taskid,
+			DomainName: domainName,
 		})
 		return err
 	})
@@ -77,13 +87,18 @@ func (s *Scavenger) completeTask(info *p.TaskListInfo, taskid int64) error {
 func (s *Scavenger) getTasks(info *p.TaskListInfo, batchSize int) (*p.GetTasksResponse, error) {
 	var err error
 	var resp *p.GetTasksResponse
+	domainName, errorDomain := s.cache.GetDomainName(info.DomainID)
+	if errorDomain != nil {
+		return nil, errorDomain
+	}
 	err = s.retryForever(func() error {
 		resp, err = s.db.GetTasks(s.ctx, &p.GetTasksRequest{
-			DomainID:  info.DomainID,
-			TaskList:  info.Name,
-			TaskType:  info.TaskType,
-			ReadLevel: -1, // get the first N tasks sorted by taskID
-			BatchSize: batchSize,
+			DomainID:   info.DomainID,
+			TaskList:   info.Name,
+			TaskType:   info.TaskType,
+			ReadLevel:  -1, // get the first N tasks sorted by taskID
+			BatchSize:  batchSize,
+			DomainName: domainName,
 		})
 		return err
 	})
@@ -104,12 +119,17 @@ func (s *Scavenger) listTaskList(pageSize int, pageToken []byte) (*p.ListTaskLis
 }
 
 func (s *Scavenger) deleteTaskList(info *p.TaskListInfo) error {
+	domainName, errorDomain := s.cache.GetDomainName(info.DomainID)
+	if errorDomain != nil {
+		return errorDomain
+	}
 	op := func() error {
 		return s.db.DeleteTaskList(s.ctx, &p.DeleteTaskListRequest{
 			DomainID:     info.DomainID,
 			TaskListName: info.Name,
 			TaskListType: info.TaskType,
 			RangeID:      info.RangeID,
+			DomainName:   domainName,
 		})
 	}
 	// retry only on service busy errors

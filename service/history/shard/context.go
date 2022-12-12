@@ -110,7 +110,7 @@ type (
 		CreateWorkflowExecution(ctx context.Context, request *persistence.CreateWorkflowExecutionRequest) (*persistence.CreateWorkflowExecutionResponse, error)
 		UpdateWorkflowExecution(ctx context.Context, request *persistence.UpdateWorkflowExecutionRequest) (*persistence.UpdateWorkflowExecutionResponse, error)
 		ConflictResolveWorkflowExecution(ctx context.Context, request *persistence.ConflictResolveWorkflowExecutionRequest) (*persistence.ConflictResolveWorkflowExecutionResponse, error)
-		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution types.WorkflowExecution) (int, error)
+		AppendHistoryV2Events(ctx context.Context, request *persistence.AppendHistoryNodesRequest, domainID string, execution types.WorkflowExecution) (*persistence.AppendHistoryNodesResponse, error)
 
 		ReplicateFailoverMarkers(ctx context.Context, markers []*persistence.FailoverMarkerTask) error
 		AddingPendingFailoverMarker(*types.FailoverMarkerAttributes) error
@@ -175,12 +175,7 @@ var (
 	ErrShardClosed = errors.New("shard closed")
 )
 
-var (
-	errMaxAttemptsExceeded = errors.New("maximum attempts exceeded to update history")
-)
-
 const (
-	conditionalRetryCount = 5
 	// transfer/cross cluster diff/lag is in terms of taskID, which is calculated based on shard rangeID
 	// on shard movement, taskID will increase by around 1 million
 	logWarnTransferLevelDiff    = 3000000 // 3 million
@@ -623,70 +618,56 @@ func (s *contextImpl) CreateWorkflowExecution(
 	); err != nil {
 		return nil, err
 	}
-	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-Create_Loop:
-	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
-		if s.isClosed() {
-			return nil, ErrShardClosed
-		}
-		currentRangeID := s.getRangeID()
-		request.RangeID = currentRangeID
-
-		response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
-		if err != nil {
-			switch err.(type) {
-			case *types.WorkflowExecutionAlreadyStartedError,
-				*persistence.WorkflowExecutionAlreadyStartedError,
-				*persistence.CurrentWorkflowConditionFailedError,
-				*types.ServiceBusyError,
-				*persistence.TimeoutError,
-				*types.LimitExceededError:
-				// No special handling required for these errors
-			case *persistence.ShardOwnershipLostError:
-				{
-					// RangeID might have been renewed by the same host while this update was in flight
-					// Retry the operation if we still have the shard ownership
-					if currentRangeID != s.getRangeID() {
-						continue Create_Loop
-					} else {
-						// Shard is stolen, trigger shutdown of history engine
-						s.logger.Warn(
-							"Closing shard: CreateWorkflowExecution failed due to stolen shard.",
-							tag.ShardID(s.GetShardID()),
-							tag.Error(err),
-						)
-						s.closeShard()
-						return nil, err
-					}
-				}
-			default:
-				{
-					// We have no idea if the write failed or will eventually make it to
-					// persistence. Increment RangeID to guarantee that subsequent reads
-					// will either see that write, or know for certain that it failed.
-					// This allows the callers to reliably check the outcome by performing
-					// a read.
-					err1 := s.renewRangeLocked(false)
-					if err1 != nil {
-						// At this point we have no choice but to unload the shard, so that it
-						// gets a new RangeID when it's reloaded.
-						s.logger.Warn(
-							"Closing shard: CreateWorkflowExecution failed due to unknown error.",
-							tag.ShardID(s.GetShardID()),
-							tag.Error(err),
-						)
-						s.closeShard()
-						break Create_Loop
-					}
-				}
-			}
-		}
-
-		return response, err
+	if s.isClosed() {
+		return nil, ErrShardClosed
 	}
+	currentRangeID := s.getRangeID()
+	request.RangeID = currentRangeID
 
-	return nil, errMaxAttemptsExceeded
+	response, err := s.executionManager.CreateWorkflowExecution(ctx, request)
+	switch err.(type) {
+	case nil:
+		// Update MaxReadLevel if write to DB succeeds
+		s.updateMaxReadLevelLocked(transferMaxReadLevel)
+		return response, nil
+	case *types.WorkflowExecutionAlreadyStartedError,
+		*persistence.WorkflowExecutionAlreadyStartedError,
+		*persistence.CurrentWorkflowConditionFailedError,
+		*types.ServiceBusyError:
+		// No special handling required for these errors
+		// We know write to DB fails if these errors are returned
+		return nil, err
+	case *persistence.ShardOwnershipLostError:
+		{
+			// Shard is stolen, trigger shutdown of history engine
+			s.logger.Warn(
+				"Closing shard: CreateWorkflowExecution failed due to stolen shard.",
+				tag.Error(err),
+			)
+			s.closeShard()
+			return nil, err
+		}
+	default:
+		{
+			// We have no idea if the write failed or will eventually make it to
+			// persistence. Increment RangeID to guarantee that subsequent reads
+			// will either see that write, or know for certain that it failed.
+			// This allows the callers to reliably check the outcome by performing
+			// a read.
+			err1 := s.renewRangeLocked(false)
+			if err1 != nil {
+				// At this point we have no choice but to unload the shard, so that it
+				// gets a new RangeID when it's reloaded.
+				s.logger.Warn(
+					"Closing shard: CreateWorkflowExecution failed due to unknown error.",
+					tag.Error(err),
+				)
+				s.closeShard()
+			}
+			return nil, err
+		}
+	}
 }
 
 func (s *contextImpl) getDefaultEncoding(domainName string) common.EncodingType {
@@ -747,67 +728,54 @@ func (s *contextImpl) UpdateWorkflowExecution(
 			return nil, err
 		}
 	}
-	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-Update_Loop:
-	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
-		if s.isClosed() {
-			return nil, ErrShardClosed
-		}
-		currentRangeID := s.getRangeID()
-		request.RangeID = currentRangeID
-
-		resp, err := s.executionManager.UpdateWorkflowExecution(ctx, request)
-		if err != nil {
-			switch err.(type) {
-			case *persistence.ConditionFailedError,
-				*types.ServiceBusyError,
-				*types.LimitExceededError:
-				// No special handling required for these errors
-			case *persistence.ShardOwnershipLostError:
-				{
-					// RangeID might have been renewed by the same host while this update was in flight
-					// Retry the operation if we still have the shard ownership
-					if currentRangeID != s.getRangeID() {
-						continue Update_Loop
-					} else {
-						// Shard is stolen, trigger shutdown of history engine
-						s.logger.Warn(
-							"Closing shard: UpdateWorkflowExecution failed due to stolen shard.",
-							tag.ShardID(s.GetShardID()),
-							tag.Error(err),
-						)
-						s.closeShard()
-						break Update_Loop
-					}
-				}
-			default:
-				{
-					// We have no idea if the write failed or will eventually make it to
-					// persistence. Increment RangeID to guarantee that subsequent reads
-					// will either see that write, or know for certain that it failed.
-					// This allows the callers to reliably check the outcome by performing
-					// a read.
-					err1 := s.renewRangeLocked(false)
-					if err1 != nil {
-						// At this point we have no choice but to unload the shard, so that it
-						// gets a new RangeID when it's reloaded.
-						s.logger.Warn(
-							"Closing shard: UpdateWorkflowExecution failed due to unknown error.",
-							tag.ShardID(s.GetShardID()),
-							tag.Error(err),
-						)
-						s.closeShard()
-						break Update_Loop
-					}
-				}
-			}
-		}
-
-		return resp, err
+	if s.isClosed() {
+		return nil, ErrShardClosed
 	}
+	currentRangeID := s.getRangeID()
+	request.RangeID = currentRangeID
 
-	return nil, errMaxAttemptsExceeded
+	resp, err := s.executionManager.UpdateWorkflowExecution(ctx, request)
+	switch err.(type) {
+	case nil:
+		// Update MaxReadLevel if write to DB succeeds
+		s.updateMaxReadLevelLocked(transferMaxReadLevel)
+		return resp, nil
+	case *persistence.ConditionFailedError,
+		*types.ServiceBusyError:
+		// No special handling required for these errors
+		// We know write to DB fails if these errors are returned
+		return nil, err
+	case *persistence.ShardOwnershipLostError:
+		{
+			// Shard is stolen, trigger shutdown of history engine
+			s.logger.Warn(
+				"Closing shard: UpdateWorkflowExecution failed due to stolen shard.",
+				tag.Error(err),
+			)
+			s.closeShard()
+			return nil, err
+		}
+	default:
+		{
+			// We have no idea if the write failed or will eventually make it to
+			// persistence. Increment RangeID to guarantee that subsequent reads
+			// will either see that write, or know for certain that it failed.
+			// This allows the callers to reliably check the outcome by performing
+			// a read.
+			err1 := s.renewRangeLocked(false)
+			if err1 != nil {
+				// At this point we have no choice but to unload the shard, so that it
+				// gets a new RangeID when it's reloaded.
+				s.logger.Warn(
+					"Closing shard: UpdateWorkflowExecution failed due to unknown error.",
+					tag.Error(err),
+				)
+				s.closeShard()
+			}
+			return nil, err
+		}
+	}
 }
 
 func (s *contextImpl) ConflictResolveWorkflowExecution(
@@ -877,66 +845,55 @@ func (s *contextImpl) ConflictResolveWorkflowExecution(
 			return nil, err
 		}
 	}
-	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
-Conflict_Resolve_Loop:
-	for attempt := 0; attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
-		if s.isClosed() {
-			return nil, ErrShardClosed
-		}
-		currentRangeID := s.getRangeID()
-		request.RangeID = currentRangeID
-		resp, err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
-		if err != nil {
-			switch err.(type) {
-			case *persistence.ConditionFailedError,
-				*types.ServiceBusyError,
-				*types.LimitExceededError:
-				// No special handling required for these errors
-			case *persistence.ShardOwnershipLostError:
-				{
-					// RangeID might have been renewed by the same host while this update was in flight
-					// Retry the operation if we still have the shard ownership
-					if currentRangeID != s.getRangeID() {
-						continue Conflict_Resolve_Loop
-					} else {
-						// Shard is stolen, trigger shutdown of history engine
-						s.logger.Warn(
-							"Closing shard: ConflictResolveWorkflowExecution failed due to stolen shard.",
-							tag.ShardID(s.GetShardID()),
-							tag.Error(err),
-						)
-						s.closeShard()
-						break Conflict_Resolve_Loop
-					}
-				}
-			default:
-				{
-					// We have no idea if the write failed or will eventually make it to
-					// persistence. Increment RangeID to guarantee that subsequent reads
-					// will either see that write, or know for certain that it failed.
-					// This allows the callers to reliably check the outcome by performing
-					// a read.
-					err1 := s.renewRangeLocked(false)
-					if err1 != nil {
-						// At this point we have no choice but to unload the shard, so that it
-						// gets a new RangeID when it's reloaded.
-						s.logger.Warn(
-							"Closing shard: ConflictResolveWorkflowExecution failed due to unknown error.",
-							tag.ShardID(s.GetShardID()),
-							tag.Error(err),
-						)
-						s.closeShard()
-						break Conflict_Resolve_Loop
-					}
-				}
-			}
-		}
-
-		return resp, err
+	if s.isClosed() {
+		return nil, ErrShardClosed
 	}
-
-	return nil, errMaxAttemptsExceeded
+	currentRangeID := s.getRangeID()
+	request.RangeID = currentRangeID
+	resp, err := s.executionManager.ConflictResolveWorkflowExecution(ctx, request)
+	switch err.(type) {
+	case nil:
+		// Update MaxReadLevel if write to DB succeeds
+		s.updateMaxReadLevelLocked(transferMaxReadLevel)
+		return resp, nil
+	case *persistence.ConditionFailedError,
+		*types.ServiceBusyError:
+		// No special handling required for these errors
+		// We know write to DB fails if these errors are returned
+		return nil, err
+	case *persistence.ShardOwnershipLostError:
+		{
+			// RangeID might have been renewed by the same host while this update was in flight
+			// Retry the operation if we still have the shard ownership
+			// Shard is stolen, trigger shutdown of history engine
+			s.logger.Warn(
+				"Closing shard: ConflictResolveWorkflowExecution failed due to stolen shard.",
+				tag.Error(err),
+			)
+			s.closeShard()
+			return nil, err
+		}
+	default:
+		{
+			// We have no idea if the write failed or will eventually make it to
+			// persistence. Increment RangeID to guarantee that subsequent reads
+			// will either see that write, or know for certain that it failed.
+			// This allows the callers to reliably check the outcome by performing
+			// a read.
+			err1 := s.renewRangeLocked(false)
+			if err1 != nil {
+				// At this point we have no choice but to unload the shard, so that it
+				// gets a new RangeID when it's reloaded.
+				s.logger.Warn(
+					"Closing shard: ConflictResolveWorkflowExecution failed due to unknown error.",
+					tag.Error(err),
+				)
+				s.closeShard()
+			}
+			return nil, err
+		}
+	}
 }
 
 func (s *contextImpl) ensureMinContextTimeout(
@@ -960,21 +917,21 @@ func (s *contextImpl) AppendHistoryV2Events(
 	request *persistence.AppendHistoryNodesRequest,
 	domainID string,
 	execution types.WorkflowExecution,
-) (int, error) {
+) (*persistence.AppendHistoryNodesResponse, error) {
 	if s.isClosed() {
-		return 0, ErrShardClosed
+		return nil, ErrShardClosed
 	}
 
 	domainName, err := s.GetDomainCache().GetDomainName(domainID)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	// NOTE: do not use generateNextTransferTaskIDLocked since
 	// generateNextTransferTaskIDLocked is not guarded by lock
 	transactionID, err := s.GenerateTransferTaskID()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	request.Encoding = s.getDefaultEncoding(domainName)
@@ -995,9 +952,9 @@ func (s *contextImpl) AppendHistoryV2Events(
 	}()
 	resp, err0 := s.GetHistoryManager().AppendHistoryNodes(ctx, request)
 	if resp != nil {
-		size = resp.Size
+		size = len(resp.DataBlob.Data)
 	}
-	return size, err0
+	return resp, err0
 }
 
 func (s *contextImpl) GetConfig() *config.Config {
@@ -1073,36 +1030,26 @@ func (s *contextImpl) renewRangeLocked(isStealing bool) error {
 	}
 
 	var err error
-	var attempt int32
-Retry_Loop:
-	for attempt = 0; attempt < conditionalRetryCount; attempt++ {
-		if s.isClosed() {
-			err = ErrShardClosed
-			break Retry_Loop
-		}
-		err = s.GetShardManager().UpdateShard(context.Background(), &persistence.UpdateShardRequest{
-			ShardInfo:       updatedShardInfo,
-			PreviousRangeID: s.shardInfo.RangeID})
-		switch err.(type) {
-		case nil:
-			break Retry_Loop
-		case *persistence.ShardOwnershipLostError:
-			// Shard is stolen, trigger history engine shutdown
-			s.logger.Warn(
-				"Closing shard: renewRangeLocked failed due to stolen shard.",
-				tag.ShardID(s.GetShardID()),
-				tag.Error(err),
-				tag.Attempt(attempt),
-			)
-			s.closeShard()
-			break Retry_Loop
-		default:
-			s.logger.Warn("UpdateShard failed with an unknown error.",
-				tag.Error(err),
-				tag.ShardRangeID(updatedShardInfo.RangeID),
-				tag.PreviousShardRangeID(s.shardInfo.RangeID),
-				tag.Attempt(attempt))
-		}
+	if s.isClosed() {
+		return ErrShardClosed
+	}
+	err = s.GetShardManager().UpdateShard(context.Background(), &persistence.UpdateShardRequest{
+		ShardInfo:       updatedShardInfo,
+		PreviousRangeID: s.shardInfo.RangeID})
+	switch err.(type) {
+	case nil:
+	case *persistence.ShardOwnershipLostError:
+		// Shard is stolen, trigger history engine shutdown
+		s.logger.Warn(
+			"Closing shard: renewRangeLocked failed due to stolen shard.",
+			tag.Error(err),
+		)
+		s.closeShard()
+	default:
+		s.logger.Warn("UpdateShard failed with an unknown error.",
+			tag.Error(err),
+			tag.ShardRangeID(updatedShardInfo.RangeID),
+			tag.PreviousShardRangeID(s.shardInfo.RangeID))
 	}
 	if err != nil {
 		// Failure in updating shard to grab new RangeID
@@ -1110,8 +1057,7 @@ Retry_Loop:
 			tag.StoreOperationUpdateShard,
 			tag.Error(err),
 			tag.ShardRangeID(updatedShardInfo.RangeID),
-			tag.PreviousShardRangeID(s.shardInfo.RangeID),
-			tag.Attempt(attempt))
+			tag.PreviousShardRangeID(s.shardInfo.RangeID))
 		return err
 	}
 
@@ -1123,7 +1069,6 @@ Retry_Loop:
 	s.shardInfo = updatedShardInfo
 
 	s.logger.Info("Range updated for shardID",
-		tag.ShardID(s.shardInfo.ShardID),
 		tag.ShardRangeID(s.shardInfo.RangeID),
 		tag.Number(s.transferSequenceNumber),
 		tag.NextNumber(s.maxTransferSequenceNumber))
@@ -1171,7 +1116,6 @@ func (s *contextImpl) persistShardInfoLocked(
 		if _, ok := err.(*persistence.ShardOwnershipLostError); ok {
 			s.logger.Warn(
 				"Closing shard: updateShardInfoLocked failed due to stolen shard.",
-				tag.ShardID(s.GetShardID()),
 				tag.Error(err),
 			)
 			s.closeShard()
@@ -1296,16 +1240,19 @@ func (s *contextImpl) allocateTaskIDsLocked(
 	); err != nil {
 		return err
 	}
-	if err := s.allocateTransferIDsLocked(
-		replicationTasks,
-		transferMaxReadLevel,
-	); err != nil {
-		return err
-	}
-	return s.allocateTimerIDsLocked(
+	if err := s.allocateTimerIDsLocked(
 		domainEntry,
 		workflowID,
 		timerTasks,
+	); err != nil {
+		return err
+	}
+
+	// Ensure that task IDs for replication tasks are generated last.
+	// This allows optimizing replication by checking whether there no potential tasks to read.
+	return s.allocateTransferIDsLocked(
+		replicationTasks,
+		transferMaxReadLevel,
 	)
 }
 
@@ -1426,40 +1373,34 @@ func (s *contextImpl) ReplicateFailoverMarkers(
 	); err != nil {
 		return err
 	}
-	defer s.updateMaxReadLevelLocked(transferMaxReadLevel)
 
 	var err error
-Retry_Loop:
-	for attempt := int32(0); attempt < conditionalRetryCount && ctx.Err() == nil; attempt++ {
-		if s.isClosed() {
-			return ErrShardClosed
-		}
-		err = s.executionManager.CreateFailoverMarkerTasks(
-			ctx,
-			&persistence.CreateFailoverMarkersRequest{
-				RangeID: s.getRangeID(),
-				Markers: markers,
-			},
+	if s.isClosed() {
+		return ErrShardClosed
+	}
+	err = s.executionManager.CreateFailoverMarkerTasks(
+		ctx,
+		&persistence.CreateFailoverMarkersRequest{
+			RangeID: s.getRangeID(),
+			Markers: markers,
+		},
+	)
+	switch err.(type) {
+	case nil:
+		// Update MaxReadLevel if write to DB succeeds
+		s.updateMaxReadLevelLocked(transferMaxReadLevel)
+	case *persistence.ShardOwnershipLostError:
+		// do not retry on ShardOwnershipLostError
+		s.logger.Warn(
+			"Closing shard: ReplicateFailoverMarkers failed due to stolen shard.",
+			tag.Error(err),
 		)
-		switch err.(type) {
-		case nil:
-			break Retry_Loop
-		case *persistence.ShardOwnershipLostError:
-			// do not retry on ShardOwnershipLostError
-			s.logger.Warn(
-				"Closing shard: ReplicateFailoverMarkers failed due to stolen shard.",
-				tag.ShardID(s.GetShardID()),
-				tag.Error(err),
-			)
-			s.closeShard()
-			break Retry_Loop
-		default:
-			s.logger.Error(
-				"Failed to insert the failover marker into replication queue.",
-				tag.Error(err),
-				tag.Attempt(attempt),
-			)
-		}
+		s.closeShard()
+	default:
+		s.logger.Error(
+			"Failed to insert the failover marker into replication queue.",
+			tag.Error(err),
+		)
 	}
 	return err
 }
@@ -1473,7 +1414,8 @@ func (s *contextImpl) AddingPendingFailoverMarker(
 		return err
 	}
 	// domain is active, the marker is expired
-	if domainEntry.IsDomainActive() || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
+	isActive, _ := domainEntry.IsActiveIn(s.GetClusterMetadata().GetCurrentClusterName())
+	if isActive || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
 		s.logger.Info("Skipped out-of-date failover marker", tag.WorkflowDomainName(domainEntry.GetInfo().Name))
 		return nil
 	}
@@ -1495,7 +1437,8 @@ func (s *contextImpl) ValidateAndUpdateFailoverMarkers() ([]*types.FailoverMarke
 			s.RUnlock()
 			return nil, err
 		}
-		if domainEntry.IsDomainActive() || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
+		isActive, _ := domainEntry.IsActiveIn(s.GetClusterMetadata().GetCurrentClusterName())
+		if isActive || domainEntry.GetFailoverVersion() > marker.GetFailoverVersion() {
 			completedFailoverMarkers[marker] = struct{}{}
 		}
 	}
@@ -1570,7 +1513,7 @@ func acquireShard(
 	)
 	err := throttleRetry.Do(context.Background(), getShard)
 	if err != nil {
-		shardItem.logger.Error("Fail to acquire shard.", tag.ShardID(shardItem.shardID), tag.Error(err))
+		shardItem.logger.Error("Fail to acquire shard.", tag.Error(err))
 		return nil, err
 	}
 
@@ -1581,11 +1524,7 @@ func acquireShard(
 	// initialize the cluster current time to be the same as ack level
 	remoteClusterCurrentTime := make(map[string]time.Time)
 	timerMaxReadLevelMap := make(map[string]time.Time)
-	for clusterName, info := range shardItem.GetClusterMetadata().GetAllClusterInfo() {
-		if !info.Enabled {
-			continue
-		}
-
+	for clusterName := range shardItem.GetClusterMetadata().GetEnabledClusterInfo() {
 		if clusterName != shardItem.GetClusterMetadata().GetCurrentClusterName() {
 			if currentTime, ok := shardInfo.ClusterTimerAckLevel[clusterName]; ok {
 				remoteClusterCurrentTime[clusterName] = currentTime
@@ -1646,6 +1585,7 @@ func acquireShard(
 		context.config,
 		context.logger,
 		context.Resource.GetMetricsClient(),
+		shardItem.GetDomainCache(),
 	)
 
 	context.logger.Debug(fmt.Sprintf("Global event cache mode: %v", context.config.EventsCacheGlobalEnable()))

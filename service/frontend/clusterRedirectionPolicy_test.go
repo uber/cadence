@@ -33,7 +33,6 @@ import (
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -60,8 +59,7 @@ type (
 		alternativeClusterName string
 		mockConfig             *Config
 
-		mockClusterMetadata *mocks.ClusterMetadata
-		policy              *selectedOrAllAPIsForwardingRedirectionPolicy
+		policy *selectedOrAllAPIsForwardingRedirectionPolicy
 	}
 )
 
@@ -140,15 +138,13 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) SetupTest() {
 	),
 		0,
 		false,
-		false,
 	)
-	s.mockClusterMetadata = &mocks.ClusterMetadata{}
-	s.mockClusterMetadata.On("IsGlobalDomainEnabled").Return(true)
 	s.policy = newSelectedOrAllAPIsForwardingPolicy(
 		s.currentClusterName,
 		s.mockConfig,
 		s.mockDomainCache,
 		false,
+		selectedAPIsForwardingRedirectionPolicyAPIAllowlist,
 		"",
 	)
 }
@@ -351,7 +347,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupLocalDomain() {
 		&persistence.DomainInfo{ID: s.domainID, Name: s.domainName},
 		&persistence.DomainConfig{Retention: 1},
 		cluster.TestCurrentClusterName,
-		nil,
 	)
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(domainEntry, nil).AnyTimes()
@@ -374,7 +369,6 @@ func (s *selectedAPIsForwardingRedirectionPolicySuite) setupGlobalDomainWithTwoR
 			},
 		},
 		1234, // not used
-		nil,
 	)
 
 	s.mockDomainCache.EXPECT().GetDomainByID(s.domainID).Return(domainEntry, nil).AnyTimes()

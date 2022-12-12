@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -36,9 +37,6 @@ import (
 )
 
 const (
-	DefaultScannerGetOrphanTasksPageSize          = 1000
-	DefaultScannerMaxTasksProcessedPerTasklistJob = 256
-
 	executorMaxDeferredTasks = 10000
 	taskListBatchSize        = 32 // maximum number of task list we process concurrently
 	taskBatchSize            = 16
@@ -50,6 +48,7 @@ type (
 	Scavenger struct {
 		ctx                      context.Context
 		db                       p.TaskManager
+		cache                    cache.DomainCache
 		executor                 executor.Executor
 		scope                    metrics.Scope
 		logger                   log.Logger
@@ -102,19 +101,20 @@ type (
 // returned object. Calling the Start() method will result in one
 // complete iteration over all of the task lists in the system. For
 // each task list, the scavenger will attempt
-//  - deletion of expired tasks in the task lists
-//  - deletion of task list itself, if there are no tasks and the task list hasn't been updated for a grace period
+//   - deletion of expired tasks in the task lists
+//   - deletion of task list itself, if there are no tasks and the task list hasn't been updated for a grace period
 //
 // The scavenger will retry on all persistence errors infinitely and will only stop under
 // two conditions
-//  - either all task lists are processed successfully (or)
-//  - Stop() method is called to stop the scavenger
+//   - either all task lists are processed successfully (or)
+//   - Stop() method is called to stop the scavenger
 func NewScavenger(
 	ctx context.Context,
 	db p.TaskManager,
 	metricsClient metrics.Client,
 	logger log.Logger,
 	opts *Options,
+	cache cache.DomainCache,
 ) *Scavenger {
 	taskExecutor := executor.NewFixedSizePoolExecutor(
 		taskListBatchSize,
@@ -137,7 +137,7 @@ func NewScavenger(
 	getOrphanTasksPageSize := opts.GetOrphanTasksPageSizeFn
 	if getOrphanTasksPageSize == nil {
 		getOrphanTasksPageSize = func(opts ...dynamicconfig.FilterOption) int {
-			return DefaultScannerGetOrphanTasksPageSize
+			return dynamicconfig.ScannerGetOrphanTasksPageSize.DefaultInt()
 		}
 	}
 
@@ -151,7 +151,7 @@ func NewScavenger(
 	maxTasksPerJobFn := opts.MaxTasksPerJobFn
 	if maxTasksPerJobFn == nil {
 		maxTasksPerJobFn = func(opts ...dynamicconfig.FilterOption) int {
-			return DefaultScannerMaxTasksProcessedPerTasklistJob
+			return dynamicconfig.ScannerMaxTasksProcessedPerTasklistJob.DefaultInt()
 		}
 	}
 
@@ -159,10 +159,10 @@ func NewScavenger(
 	if pollInterval == 0 {
 		pollInterval = time.Minute
 	}
-
 	return &Scavenger{
 		ctx:                      ctx,
 		db:                       db,
+		cache:                    cache,
 		scope:                    metricsClient.Scope(metrics.TaskListScavengerScope),
 		logger:                   logger,
 		stopC:                    make(chan struct{}),

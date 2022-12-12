@@ -45,9 +45,36 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 	"github.com/uber/cadence/service/history/execution"
 )
+
+// RestartWorkflow restarts a workflow execution
+func RestartWorkflow(c *cli.Context) {
+	wfClient := getWorkflowClient(c)
+
+	domain := getRequiredGlobalOption(c, FlagDomain)
+	wid := getRequiredOption(c, FlagWorkflowID)
+	rid := c.String(FlagRunID)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+	resp, err := wfClient.RestartWorkflowExecution(
+		ctx,
+		&types.RestartWorkflowExecutionRequest{
+			Domain: domain,
+			WorkflowExecution: &types.WorkflowExecution{
+				WorkflowID: wid,
+				RunID:      rid,
+			}, Identity: getCliIdentity(),
+		},
+	)
+
+	if err != nil {
+		ErrorAndExit("Restart workflow failed.", err)
+	} else {
+		fmt.Printf("Restarted Workflow Id: %s, run Id: %s\n", wid, resp.GetRunID())
+	}
+}
 
 // ShowHistory shows the history of given workflow execution based on workflowID and runID.
 func ShowHistory(c *cli.Context) {
@@ -306,6 +333,10 @@ func constructStartWorkflowRequest(c *cli.Context) *types.StartWorkflowExecution
 		startRequest.DelayStartSeconds = common.Int32Ptr(int32(c.Int(DelayStartSeconds)))
 	}
 
+	if c.IsSet(JitterStartSeconds) {
+		startRequest.JitterStartSeconds = common.Int32Ptr(int32(c.Int(JitterStartSeconds)))
+	}
+
 	headerFields := processHeader(c)
 	if len(headerFields) != 0 {
 		startRequest.Header = &types.Header{Fields: headerFields}
@@ -479,6 +510,7 @@ func CancelWorkflow(c *cli.Context) {
 	domain := getRequiredGlobalOption(c, FlagDomain)
 	wid := getRequiredOption(c, FlagWorkflowID)
 	rid := c.String(FlagRunID)
+	reason := c.String(FlagReason)
 
 	ctx, cancel := newContext(c)
 	defer cancel()
@@ -492,6 +524,7 @@ func CancelWorkflow(c *cli.Context) {
 				RunID:      rid,
 			},
 			Identity: getCliIdentity(),
+			Cause:    reason,
 		},
 	)
 	if err != nil {
@@ -574,6 +607,7 @@ func constructSignalWithStartWorkflowRequest(c *cli.Context) *types.SignalWithSt
 		SignalName:                          getRequiredOption(c, FlagName),
 		SignalInput:                         []byte(processJSONInputSignal(c)),
 		DelayStartSeconds:                   startRequest.DelayStartSeconds,
+		JitterStartSeconds:                  startRequest.JitterStartSeconds,
 	}
 }
 
@@ -930,7 +964,7 @@ func convertSearchAttributesToMapOfInterface(searchAttributes *types.SearchAttri
 	indexedFields := searchAttributes.GetIndexedFields()
 	for k, v := range indexedFields {
 		valueType := validKeys[k]
-		deserializedValue, err := common.DeserializeSearchAttributeValue(v, thrift.FromIndexedValueType(valueType))
+		deserializedValue, err := common.DeserializeSearchAttributeValue(v, valueType)
 		if err != nil {
 			ErrorAndExit("Error deserializing search attribute value", err)
 		}

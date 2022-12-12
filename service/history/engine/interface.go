@@ -26,8 +26,8 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+	hcommon "github.com/uber/cadence/service/history/common"
 	"github.com/uber/cadence/service/history/events"
 )
 
@@ -80,8 +80,9 @@ type (
 		DescribeCrossClusterQueue(ctx context.Context, clusterName string) (*types.DescribeQueueResponse, error)
 
 		NotifyNewHistoryEvent(event *events.Notification)
-		NotifyNewTransferTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
-		NotifyNewTimerTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
-		NotifyNewCrossClusterTasks(executionInfo *persistence.WorkflowExecutionInfo, tasks []persistence.Task)
+		NotifyNewTransferTasks(info *hcommon.NotifyTaskInfo)
+		NotifyNewTimerTasks(info *hcommon.NotifyTaskInfo)
+		NotifyNewCrossClusterTasks(info *hcommon.NotifyTaskInfo)
+		NotifyNewReplicationTasks(info *hcommon.NotifyTaskInfo)
 	}
 )
