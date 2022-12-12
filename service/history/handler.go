@@ -24,6 +24,7 @@ package history
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -1145,10 +1146,26 @@ func (h *handlerImpl) SignalWithStartWorkflowExecution(
 	}
 
 	resp, err2 := engine.SignalWithStartWorkflowExecution(ctx, wrappedRequest)
-	if err2 != nil {
+	if err2 == nil {
+		return resp, nil
+	}
+	// Two simultaneous SignalWithStart requests might try to start a workflow at the same time.
+	// This can result in one of the requests failing with one of two possible errors:
+	//    1) If it is a brand new WF ID, one of the requests can fail with WorkflowExecutionAlreadyStartedError
+	//       (createMode is persistence.CreateWorkflowModeBrandNew)
+	//    2) If it an already existing WF ID, one of the requests can fail with a CurrentWorkflowConditionFailedError
+	//       (createMode is persisetence.CreateWorkflowModeWorkflowIDReuse)
+	// If either error occurs, just go ahead and retry. It should succeed on the subsequent attempt.
+	var e1 *persistence.WorkflowExecutionAlreadyStartedError
+	var e2 *persistence.CurrentWorkflowConditionFailedError
+	if !errors.As(err2, &e1) && !errors.As(err2, &e2) {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
 
+	resp, err2 = engine.SignalWithStartWorkflowExecution(ctx, wrappedRequest)
+	if err2 != nil {
+		return nil, h.error(err2, scope, domainID, workflowID)
+	}
 	return resp, nil
 }
 

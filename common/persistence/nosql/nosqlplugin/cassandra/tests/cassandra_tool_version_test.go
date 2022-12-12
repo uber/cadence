@@ -28,8 +28,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/testflags"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -39,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	cassandra_db "github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"github.com/uber/cadence/environment"
+	"github.com/uber/cadence/testflags"
 	"github.com/uber/cadence/tools/cassandra"
 )
 
@@ -106,7 +105,7 @@ func (s *VersionTestSuite) TestCheckCompatibleVersion() {
 		{"2.0", "1.0", "version mismatch", false},
 		{"1.0", "1.0", "", false},
 		{"1.0", "2.0", "", false},
-		{"1.0", "abc", "unable to read schema version keyspace/database", false},
+		{"1.0", "abc", "reading schema version: unconfigured table schema_version", false},
 	}
 	for _, flag := range flags {
 		s.runCheckCompatibleVersion(flag.expectedVersion, flag.actualVersion, flag.errStr, flag.expectedFail)
