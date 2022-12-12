@@ -145,7 +145,7 @@ func (client *CqlClientImpl) DropDatabase(name string) error {
 	return client.DropKeyspace(name)
 }
 
-// createNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
+// CreateNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
 func (client *CqlClientImpl) CreateKeyspace(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
 }
@@ -187,7 +187,7 @@ func (client *CqlClientImpl) ReadSchemaVersion() (string, error) {
 	return version, nil
 }
 
-// UpdateShemaVersion updates the schema version for the Keyspace
+// UpdateSchemaVersion updates the schema version for the Keyspace
 func (client *CqlClientImpl) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
 	query := client.session.Query(writeSchemaVersionCQL, client.cfg.Keyspace, time.Now(), newVersion, minCompatibleVersion)
 	return query.Exec()
