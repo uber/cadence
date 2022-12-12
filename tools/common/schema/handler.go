@@ -22,6 +22,7 @@ package schema
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/urfave/cli"
 )
@@ -35,7 +36,7 @@ func VerifyCompatibleVersion(
 
 	version, err := db.ReadSchemaVersion()
 	if err != nil {
-		return fmt.Errorf("unable to read schema version keyspace/database: %s error: %v", dbName, err.Error())
+		return fmt.Errorf("reading schema version keyspace/database: %q, error: %w", dbName, err)
 	}
 	// In most cases, the versions should match. However if after a schema upgrade there is a code
 	// rollback, the code version (expected version) would fall lower than the actual version in
@@ -86,7 +87,11 @@ func Update(cli *cli.Context, db SchemaClient) error {
 
 func newUpdateConfig(cli *cli.Context) (*UpdateConfig, error) {
 	config := new(UpdateConfig)
-	config.SchemaDir = cli.String(CLIOptSchemaDir)
+	schemaDir := cli.String(CLIOptSchemaDir)
+	if len(schemaDir) == 0 {
+		return nil, NewConfigError("missing " + flag(CLIOptSchemaDir) + " argument ")
+	}
+	config.SchemaFS = os.DirFS(schemaDir)
 	config.IsDryRun = cli.Bool(CLIOptDryrun)
 	config.TargetVersion = cli.String(CLIOptTargetVersion)
 
@@ -129,8 +134,8 @@ func validateSetupConfig(config *SetupConfig) error {
 }
 
 func validateUpdateConfig(config *UpdateConfig) error {
-	if len(config.SchemaDir) == 0 {
-		return NewConfigError("missing " + flag(CLIOptSchemaDir) + " argument ")
+	if config.SchemaFS == nil {
+		return NewConfigError("schema file system is not set")
 	}
 	if len(config.TargetVersion) > 0 {
 		ver, err := parseValidateVersion(config.TargetVersion)
