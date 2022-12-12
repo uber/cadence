@@ -28,7 +28,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"io/fs"
 	"log"
 	"sort"
 	"strings"
@@ -190,7 +191,7 @@ func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
 
 	config := task.config
 
-	verDirs, err := readSchemaDir(config.SchemaDir, currVer, config.TargetVersion)
+	verDirs, err := readSchemaDir(config.SchemaFS, currVer, config.TargetVersion)
 	if err != nil {
 		return nil, fmt.Errorf("error listing schema dir:%v", err.Error())
 	}
@@ -199,9 +200,7 @@ func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
 
 	for _, vd := range verDirs {
 
-		dirPath := config.SchemaDir + "/" + vd
-
-		m, e := readManifest(dirPath)
+		m, e := readManifest(config.SchemaFS, vd)
 		if e != nil {
 			return nil, fmt.Errorf("error processing manifest for version %v:%v", vd, e.Error())
 		}
@@ -217,7 +216,7 @@ func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
 				vd, m.CurrVersion)
 		}
 
-		stmts, e := task.parseSQLStmts(dirPath, m)
+		stmts, e := task.parseSQLStmts(vd, m)
 		if e != nil {
 			return nil, e
 		}
@@ -243,7 +242,11 @@ func (task *UpdateTask) parseSQLStmts(dir string, manifest *manifest) ([]string,
 
 	for _, file := range manifest.SchemaUpdateCqlFiles {
 		path := dir + "/" + file
-		stmts, err := ParseFile(path)
+		f, err := task.config.SchemaFS.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("error opening file %v, err=%v", path, err)
+		}
+		stmts, err := ParseFile(f)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing file %v, err=%v", path, err)
 		}
@@ -273,15 +276,19 @@ func validateCQLStmts(stmts []string) error {
 	return nil
 }
 
-func readManifest(dirPath string) (*manifest, error) {
-
-	filePath := dirPath + "/" + manifestFileName
-	jsonStr, err := ioutil.ReadFile(filePath)
+func readManifest(fileSystem fs.FS, subdir string) (*manifest, error) {
+	fsys, err := fs.Sub(fileSystem, subdir)
 	if err != nil {
 		return nil, err
 	}
-
-	jsonBlob := []byte(jsonStr)
+	file, err := fsys.Open(manifestFileName)
+	if err != nil {
+		return nil, err
+	}
+	jsonBlob, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
 
 	var manifest manifest
 	err = json.Unmarshal(jsonBlob, &manifest)
@@ -322,12 +329,11 @@ func readManifest(dirPath string) (*manifest, error) {
 // this method has an assumption that the subdirs containing the
 // schema changes will be of the form vx.x, where x.x is the version
 // returns error when
-//   - startVer <= endVer
+//   - startVer >= endVer
 //   - endVer is empty and no subdirs have version >= startVer
 //   - endVer is non-empty and subdir with version == endVer is not found
-func readSchemaDir(dir string, startVer string, endVer string) ([]string, error) {
-
-	subdirs, err := ioutil.ReadDir(dir)
+func readSchemaDir(fileSystem fs.FS, startVer string, endVer string) ([]string, error) {
+	subdirs, err := fs.ReadDir(fileSystem, ".")
 	if err != nil {
 		return nil, err
 	}

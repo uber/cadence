@@ -21,7 +21,6 @@
 package cassandra
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -73,8 +72,6 @@ type (
 		TLS                   *config.TLS
 	}
 )
-
-var errGetSchemaVersion = errors.New("failed to get current schema version from cassandra")
 
 const (
 	DefaultTimeout        = 30 // Timeout in seconds
@@ -148,12 +145,12 @@ func (client *CqlClientImpl) DropDatabase(name string) error {
 	return client.DropKeyspace(name)
 }
 
-// createKeyspace creates a cassandra Keyspace if it doesn't exist
+// createNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
 func (client *CqlClientImpl) CreateKeyspace(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
 }
 
-// createNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
+// CreateNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
 func (client *CqlClientImpl) CreateNTSKeyspace(name string, datacenter string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createNTSKeyspaceCQL, name, datacenter, client.nReplicas))
 }
@@ -181,8 +178,8 @@ func (client *CqlClientImpl) ReadSchemaVersion() (string, error) {
 	iter := query.Iter()
 	var version string
 	if !iter.Scan(&version) {
-		iter.Close()
-		return "", errGetSchemaVersion
+		err := iter.Close()
+		return "", fmt.Errorf("reading schema version: %w", err)
 	}
 	if err := iter.Close(); err != nil {
 		return "", err

@@ -21,6 +21,7 @@
 package schema
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -83,19 +84,19 @@ func (s *HandlerTestSuite) TestValidateUpdateConfig() {
 	config := new(UpdateConfig)
 	s.assertValidateUpdateFails(config)
 
-	config.SchemaDir = "/tmp"
+	config.SchemaFS = os.DirFS("/tmp")
 	config.TargetVersion = "abc"
 	s.assertValidateUpdateFails(config)
 
-	config.SchemaDir = "/tmp"
+	config.SchemaFS = os.DirFS("/tmp")
 	config.TargetVersion = ""
 	s.assertValidateUpdateSucceeds(config)
 
-	config.SchemaDir = "/tmp"
+	config.SchemaFS = os.DirFS("/tmp")
 	config.TargetVersion = "1.2"
 	s.assertValidateUpdateSucceeds(config)
 
-	config.SchemaDir = "/tmp"
+	config.SchemaFS = os.DirFS("/tmp")
 	config.TargetVersion = "v1.2"
 	s.assertValidateUpdateSucceeds(config)
 	s.Equal("1.2", config.TargetVersion)
