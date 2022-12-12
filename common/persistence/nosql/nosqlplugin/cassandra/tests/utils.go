@@ -28,7 +28,7 @@ import (
 // NOTE: change this when moving the test files around during refactoring
 const rootRelativePath = "../../../../../../"
 
-func NewTestCQLClient(keyspace string) (*cassandra.CqlClient, error) {
+func NewTestCQLClient(keyspace string) (cassandra.CqlClient, error) {
 	return cassandra.NewCQLClient(&cassandra.CQLClientConfig{
 		Hosts:                 environment.GetCassandraAddress(),
 		Port:                  cassandra.DefaultCassandraPort,
