@@ -55,12 +55,12 @@ type (
 		md5                  string
 	}
 
-	// changeSet represents all the changes
+	// ChangeSet represents all the changes
 	// corresponding to a single schema version
-	changeSet struct {
-		version  string
+	ChangeSet struct {
+		Version  string
 		manifest *manifest
-		cqlStmts []string
+		CqlStmts []string
 	}
 
 	// byVersion is a comparator type
@@ -104,7 +104,7 @@ func (task *UpdateTask) Run() error {
 		return fmt.Errorf("error reading current schema version:%v", err.Error())
 	}
 
-	updates, err := task.buildChangeSet(currVer)
+	updates, err := task.BuildChangeSet(currVer)
 	if err != nil {
 		return err
 	}
@@ -115,8 +115,8 @@ func (task *UpdateTask) Run() error {
 			log.Println("Found zero updates to run")
 		}
 		for _, upd := range updates {
-			log.Printf("DryRun of updating to version: %s, manifest: %s \n", upd.version, upd.manifest)
-			for _, stmt := range upd.cqlStmts {
+			log.Printf("DryRun of updating to version: %s, manifest: %s \n", upd.Version, upd.manifest)
+			for _, stmt := range upd.CqlStmts {
 				log.Printf("DryRun query:%s \n", stmt)
 			}
 		}
@@ -131,7 +131,7 @@ func (task *UpdateTask) Run() error {
 	return nil
 }
 
-func (task *UpdateTask) executeUpdates(currVer string, updates []changeSet) error {
+func (task *UpdateTask) executeUpdates(currVer string, updates []ChangeSet) error {
 
 	if len(updates) == 0 {
 		log.Printf("found zero updates from current version %v", currVer)
@@ -141,7 +141,7 @@ func (task *UpdateTask) executeUpdates(currVer string, updates []changeSet) erro
 	for _, cs := range updates {
 		csStart := time.Now()
 
-		err := task.execCQLStmts(cs.version, cs.cqlStmts)
+		err := task.execCQLStmts(cs.Version, cs.CqlStmts)
 		if err != nil {
 			return err
 		}
@@ -150,8 +150,8 @@ func (task *UpdateTask) executeUpdates(currVer string, updates []changeSet) erro
 			return err
 		}
 
-		log.Printf("Schema updated from %v to %v, elapsed %v\n", currVer, cs.version, time.Since(csStart))
-		currVer = cs.version
+		log.Printf("Schema updated from %v to %v, elapsed %v\n", currVer, cs.Version, time.Since(csStart))
+		currVer = cs.Version
 	}
 
 	log.Printf("All schema changes completed in %v\n", time.Since(updStart))
@@ -172,9 +172,9 @@ func (task *UpdateTask) execCQLStmts(ver string, stmts []string) error {
 	return nil
 }
 
-func (task *UpdateTask) updateSchemaVersion(oldVer string, cs *changeSet) error {
+func (task *UpdateTask) updateSchemaVersion(oldVer string, cs *ChangeSet) error {
 
-	err := task.db.UpdateSchemaVersion(cs.version, cs.manifest.MinCompatibleVersion)
+	err := task.db.UpdateSchemaVersion(cs.Version, cs.manifest.MinCompatibleVersion)
 	if err != nil {
 		return fmt.Errorf("failed to update schema_version table, err=%v", err.Error())
 	}
@@ -187,7 +187,7 @@ func (task *UpdateTask) updateSchemaVersion(oldVer string, cs *changeSet) error 
 	return nil
 }
 
-func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
+func (task *UpdateTask) BuildChangeSet(currVer string) ([]ChangeSet, error) {
 
 	config := task.config
 
@@ -196,7 +196,7 @@ func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
 		return nil, fmt.Errorf("error listing schema dir:%v", err.Error())
 	}
 
-	var result []changeSet
+	var result []ChangeSet
 
 	for _, vd := range verDirs {
 
@@ -226,10 +226,10 @@ func (task *UpdateTask) buildChangeSet(currVer string) ([]changeSet, error) {
 			return nil, fmt.Errorf("error processing version %v:%v", vd, e.Error())
 		}
 
-		cs := changeSet{}
+		cs := ChangeSet{}
 		cs.manifest = m
-		cs.cqlStmts = stmts
-		cs.version = m.CurrVersion
+		cs.CqlStmts = stmts
+		cs.Version = m.CurrVersion
 		result = append(result, cs)
 	}
 
