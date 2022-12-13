@@ -46,9 +46,9 @@ type (
 		Close()
 		ListTables() ([]string, error)
 		listTypes() ([]string, error)
-		dropTable(name string) error
-		dropType(name string) error
-		dropAllTablesTypes() error
+		DropTable(name string) error
+		DropType(name string) error
+		DropAllTablesTypes() error
 	}
 
 	CqlClientImpl struct {
@@ -161,7 +161,7 @@ func (client *CqlClientImpl) DropKeyspace(name string) error {
 }
 
 func (client *CqlClientImpl) DropAllTables() error {
-	return client.dropAllTablesTypes()
+	return client.DropAllTablesTypes()
 }
 
 // CreateSchemaVersionTables sets up the schema version tables
@@ -243,26 +243,26 @@ func (client *CqlClientImpl) listTypes() ([]string, error) {
 	return names, nil
 }
 
-// dropTable drops a given table from the Keyspace
-func (client *CqlClientImpl) dropTable(name string) error {
+// DropTable drops a given table from the Keyspace
+func (client *CqlClientImpl) DropTable(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf("DROP TABLE %v", name))
 }
 
-// dropType drops a given type from the Keyspace
-func (client *CqlClientImpl) dropType(name string) error {
+// DropType drops a given type from the Keyspace
+func (client *CqlClientImpl) DropType(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf("DROP TYPE %v", name))
 }
 
-// dropAllTablesTypes deletes all tables/types in the
+// DropAllTablesTypes deletes all tables/types in the
 // Keyspace without deleting the Keyspace
-func (client *CqlClientImpl) dropAllTablesTypes() error {
+func (client *CqlClientImpl) DropAllTablesTypes() error {
 	tables, err := client.ListTables()
 	if err != nil {
 		return err
 	}
 	log.Printf("Dropping following tables: %v\n", tables)
 	for _, table := range tables {
-		err1 := client.dropTable(table)
+		err1 := client.DropTable(table)
 		if err1 != nil {
 			log.Printf("Error dropping table %v, err=%v\n", table, err1)
 		}
@@ -277,7 +277,7 @@ func (client *CqlClientImpl) dropAllTablesTypes() error {
 	for i := 0; i < numOfTypes && len(types) > 0; i++ {
 		var erroredTypes []string
 		for _, t := range types {
-			err = client.dropType(t)
+			err = client.DropType(t)
 			if err != nil {
 				log.Printf("Error dropping type %v, err=%v\n", t, err)
 				erroredTypes = append(erroredTypes, t)
