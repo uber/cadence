@@ -59,7 +59,7 @@ type (
 	// corresponding to a single schema version
 	ChangeSet struct {
 		Version  string
-		Manifest *manifest
+		manifest *manifest
 		CqlStmts []string
 	}
 
@@ -115,7 +115,7 @@ func (task *UpdateTask) Run() error {
 			log.Println("Found zero updates to run")
 		}
 		for _, upd := range updates {
-			log.Printf("DryRun of updating to version: %s, manifest: %s \n", upd.Version, upd.Manifest)
+			log.Printf("DryRun of updating to version: %s, manifest: %s \n", upd.Version, upd.manifest)
 			for _, stmt := range upd.CqlStmts {
 				log.Printf("DryRun query:%s \n", stmt)
 			}
@@ -174,12 +174,12 @@ func (task *UpdateTask) execCQLStmts(ver string, stmts []string) error {
 
 func (task *UpdateTask) updateSchemaVersion(oldVer string, cs *ChangeSet) error {
 
-	err := task.db.UpdateSchemaVersion(cs.Version, cs.Manifest.MinCompatibleVersion)
+	err := task.db.UpdateSchemaVersion(cs.Version, cs.manifest.MinCompatibleVersion)
 	if err != nil {
 		return fmt.Errorf("failed to update schema_version table, err=%v", err.Error())
 	}
 
-	err = task.db.WriteSchemaUpdateLog(oldVer, cs.Manifest.CurrVersion, cs.Manifest.md5, cs.Manifest.Description)
+	err = task.db.WriteSchemaUpdateLog(oldVer, cs.manifest.CurrVersion, cs.manifest.md5, cs.manifest.Description)
 	if err != nil {
 		return fmt.Errorf("failed to add entry to schema_update_history, err=%v", err.Error())
 	}
@@ -227,7 +227,7 @@ func (task *UpdateTask) BuildChangeSet(currVer string) ([]ChangeSet, error) {
 		}
 
 		cs := ChangeSet{}
-		cs.Manifest = m
+		cs.manifest = m
 		cs.CqlStmts = stmts
 		cs.Version = m.CurrVersion
 		result = append(result, cs)
