@@ -86,7 +86,7 @@ var (
 )
 
 // NewUpdateSchemaTask returns a new instance of UpdateTask
-func newUpdateSchemaTask(db SchemaClient, config *UpdateConfig) *UpdateTask {
+func NewUpdateSchemaTask(db SchemaClient, config *UpdateConfig) *UpdateTask {
 	return &UpdateTask{
 		db:     db,
 		config: config,
