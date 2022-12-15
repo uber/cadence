@@ -228,7 +228,7 @@ func (client *CqlClientImpl) ListTables() ([]string, error) {
 	return names, nil
 }
 
-// ListTypes lists the User defined types in a Keyspace
+// ListTypes lists the User defined types in a Keyspace.
 func (client *CqlClientImpl) ListTypes() ([]string, error) {
 	qry := client.session.Query(listTypesCQL, client.cfg.Keyspace)
 	iter := qry.Iter()
