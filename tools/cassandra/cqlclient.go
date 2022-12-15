@@ -45,7 +45,7 @@ type (
 		ExecDDLQuery(stmt string, args ...interface{}) error
 		Close()
 		ListTables() ([]string, error)
-		listTypes() ([]string, error)
+		ListTypes() ([]string, error)
 		DropTable(name string) error
 		DropType(name string) error
 		DropAllTablesTypes() error
@@ -228,8 +228,8 @@ func (client *CqlClientImpl) ListTables() ([]string, error) {
 	return names, nil
 }
 
-// listTypes lists the User defined types in a Keyspace
-func (client *CqlClientImpl) listTypes() ([]string, error) {
+// ListTypes lists the User defined types in a Keyspace
+func (client *CqlClientImpl) ListTypes() ([]string, error) {
 	qry := client.session.Query(listTypesCQL, client.cfg.Keyspace)
 	iter := qry.Iter()
 	var names []string
@@ -268,7 +268,7 @@ func (client *CqlClientImpl) DropAllTablesTypes() error {
 		}
 	}
 
-	types, err := client.listTypes()
+	types, err := client.ListTypes()
 	if err != nil {
 		return err
 	}
