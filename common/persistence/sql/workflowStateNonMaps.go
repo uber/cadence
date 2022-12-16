@@ -58,13 +58,13 @@ func updateSignalsRequested(
 		}
 	}
 
-	for _, deldeleteSignalRequestID := range deleteSignalRequestIDs {
+	if len(deleteSignalRequestIDs) > 0 {
 		if _, err := tx.DeleteFromSignalsRequestedSets(ctx, &sqlplugin.SignalsRequestedSetsFilter{
 			ShardID:    int64(shardID),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
-			SignalID:   common.StringPtr(deldeleteSignalRequestID),
+			SignalIDs:  deleteSignalRequestIDs,
 		}); err != nil {
 			return convertCommonErrors(tx, "updateSignalsRequested", "Failed to execute delete query.", err)
 		}
