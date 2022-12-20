@@ -206,7 +206,7 @@ func (f *taskFetcherImpl) fetchTasks() {
 				// and replication task processor is per shard
 				// during shard movement, duplicated requests can appear
 				// if shard moved from this host, to this host.
-				f.logger.Error("Get replication task request already exist for shard.")
+				f.logger.Error("Get replication task request already exist for shard.", tag.ShardID(int(request.token.GetShardID())))
 				close(req.respChan)
 			}
 			requestByShard[request.token.GetShardID()] = request
