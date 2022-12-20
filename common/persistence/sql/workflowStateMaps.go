@@ -105,13 +105,13 @@ func updateActivityInfos(
 		}
 	}
 
-	for _, deleteInfo := range deleteInfos {
+	if len(deleteInfos) > 0 {
 		if _, err := tx.DeleteFromActivityInfoMaps(ctx, &sqlplugin.ActivityInfoMapsFilter{
-			ShardID:    int64(shardID),
-			DomainID:   domainID,
-			WorkflowID: workflowID,
-			RunID:      runID,
-			ScheduleID: &deleteInfo,
+			ShardID:     int64(shardID),
+			DomainID:    domainID,
+			WorkflowID:  workflowID,
+			RunID:       runID,
+			ScheduleIDs: deleteInfos,
 		}); err != nil {
 			return convertCommonErrors(tx, "updateActivityInfos", "Failed to execute delete query.", err)
 		}
@@ -251,13 +251,13 @@ func updateTimerInfos(
 		}
 	}
 
-	for _, deleteInfo := range deleteInfos {
+	if len(deleteInfos) > 0 {
 		if _, err := tx.DeleteFromTimerInfoMaps(ctx, &sqlplugin.TimerInfoMapsFilter{
 			ShardID:    int64(shardID),
 			DomainID:   domainID,
 			WorkflowID: workflowID,
 			RunID:      runID,
-			TimerID:    &deleteInfo,
+			TimerIDs:   deleteInfos,
 		}); err != nil {
 			return convertCommonErrors(tx, "updateTimerInfos", "Failed to execute delete query.", err)
 		}
@@ -379,13 +379,13 @@ func updateChildExecutionInfos(
 		}
 	}
 
-	for _, deleteInfo := range deleteInfos {
+	if len(deleteInfos) > 0 {
 		if _, err := tx.DeleteFromChildExecutionInfoMaps(ctx, &sqlplugin.ChildExecutionInfoMapsFilter{
-			ShardID:     int64(shardID),
-			DomainID:    domainID,
-			WorkflowID:  workflowID,
-			RunID:       runID,
-			InitiatedID: common.Int64Ptr(deleteInfo),
+			ShardID:      int64(shardID),
+			DomainID:     domainID,
+			WorkflowID:   workflowID,
+			RunID:        runID,
+			InitiatedIDs: deleteInfos,
 		}); err != nil {
 			return convertCommonErrors(tx, "updateChildExecutionInfos", "Failed to execute delete query.", err)
 		}
@@ -504,13 +504,13 @@ func updateRequestCancelInfos(
 		}
 	}
 
-	for _, deleteInfo := range deleteInfos {
+	if len(deleteInfos) > 0 {
 		if _, err := tx.DeleteFromRequestCancelInfoMaps(ctx, &sqlplugin.RequestCancelInfoMapsFilter{
-			ShardID:     int64(shardID),
-			DomainID:    domainID,
-			WorkflowID:  workflowID,
-			RunID:       runID,
-			InitiatedID: common.Int64Ptr(deleteInfo),
+			ShardID:      int64(shardID),
+			DomainID:     domainID,
+			WorkflowID:   workflowID,
+			RunID:        runID,
+			InitiatedIDs: deleteInfos,
 		}); err != nil {
 			return convertCommonErrors(tx, "updateRequestCancelInfos", "Failed to execute delete query.", err)
 		}
@@ -618,13 +618,13 @@ func updateSignalInfos(
 		}
 	}
 
-	for _, deleteInfo := range deleteInfos {
+	if len(deleteInfos) > 0 {
 		if _, err := tx.DeleteFromSignalInfoMaps(ctx, &sqlplugin.SignalInfoMapsFilter{
-			ShardID:     int64(shardID),
-			DomainID:    domainID,
-			WorkflowID:  workflowID,
-			RunID:       runID,
-			InitiatedID: common.Int64Ptr(deleteInfo),
+			ShardID:      int64(shardID),
+			DomainID:     domainID,
+			WorkflowID:   workflowID,
+			RunID:        runID,
+			InitiatedIDs: deleteInfos,
 		}); err != nil {
 			return convertCommonErrors(tx, "updateSignalInfos", "Failed to execute delete query.", err)
 		}
