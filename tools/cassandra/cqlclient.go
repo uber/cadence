@@ -31,7 +31,27 @@ import (
 )
 
 type (
-	CqlClient struct {
+	CqlClient interface {
+		CreateDatabase(name string) error
+		DropDatabase(name string) error
+		CreateKeyspace(name string) error
+		CreateNTSKeyspace(name string, datacenter string) error
+		DropKeyspace(name string) error
+		DropAllTables() error
+		CreateSchemaVersionTables() error
+		ReadSchemaVersion() (string, error)
+		UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error
+		WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error
+		ExecDDLQuery(stmt string, args ...interface{}) error
+		Close()
+		ListTables() ([]string, error)
+		ListTypes() ([]string, error)
+		DropTable(name string) error
+		DropType(name string) error
+		DropAllTablesTypes() error
+	}
+
+	CqlClientImpl struct {
 		nReplicas int
 		session   gocql.Session
 		cfg       *CQLClientConfig
@@ -89,13 +109,13 @@ const (
 		`WITH replication = { 'class' : 'NetworkTopologyStrategy', '%v' : %v};`
 )
 
-var _ schema.SchemaClient = (*CqlClient)(nil)
+var _ schema.SchemaClient = (*CqlClientImpl)(nil)
 
 // NewCQLClient returns a new instance of CQLClient
-func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
+func NewCQLClient(cfg *CQLClientConfig) (CqlClient, error) {
 	var err error
 
-	cqlClient := new(CqlClient)
+	cqlClient := new(CqlClientImpl)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
 	cqlClient.session, err = gocql.GetRegisteredClient().CreateSession(gocql.ClusterConfig{
@@ -117,35 +137,35 @@ func NewCQLClient(cfg *CQLClientConfig) (*CqlClient, error) {
 	return cqlClient, nil
 }
 
-func (client *CqlClient) CreateDatabase(name string) error {
+func (client *CqlClientImpl) CreateDatabase(name string) error {
 	return client.CreateKeyspace(name)
 }
 
-func (client *CqlClient) DropDatabase(name string) error {
+func (client *CqlClientImpl) DropDatabase(name string) error {
 	return client.DropKeyspace(name)
 }
 
-// CreateKeyspace creates a cassandra Keyspace if it doesn't exist
-func (client *CqlClient) CreateKeyspace(name string) error {
+// CreateNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
+func (client *CqlClientImpl) CreateKeyspace(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createKeyspaceCQL, name, client.nReplicas))
 }
 
 // CreateNTSKeyspace creates a cassandra Keyspace if it doesn't exist using network topology strategy
-func (client *CqlClient) CreateNTSKeyspace(name string, datacenter string) error {
+func (client *CqlClientImpl) CreateNTSKeyspace(name string, datacenter string) error {
 	return client.ExecDDLQuery(fmt.Sprintf(createNTSKeyspaceCQL, name, datacenter, client.nReplicas))
 }
 
 // DropKeyspace drops a Keyspace
-func (client *CqlClient) DropKeyspace(name string) error {
+func (client *CqlClientImpl) DropKeyspace(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf("DROP KEYSPACE %v", name))
 }
 
-func (client *CqlClient) DropAllTables() error {
-	return client.dropAllTablesTypes()
+func (client *CqlClientImpl) DropAllTables() error {
+	return client.DropAllTablesTypes()
 }
 
 // CreateSchemaVersionTables sets up the schema version tables
-func (client *CqlClient) CreateSchemaVersionTables() error {
+func (client *CqlClientImpl) CreateSchemaVersionTables() error {
 	if err := client.ExecDDLQuery(createSchemaVersionTableCQL); err != nil {
 		return err
 	}
@@ -153,7 +173,7 @@ func (client *CqlClient) CreateSchemaVersionTables() error {
 }
 
 // ReadSchemaVersion returns the current schema version for the Keyspace
-func (client *CqlClient) ReadSchemaVersion() (string, error) {
+func (client *CqlClientImpl) ReadSchemaVersion() (string, error) {
 	query := client.session.Query(readSchemaVersionCQL, client.cfg.Keyspace)
 	iter := query.Iter()
 	var version string
@@ -168,13 +188,13 @@ func (client *CqlClient) ReadSchemaVersion() (string, error) {
 }
 
 // UpdateSchemaVersion updates the schema version for the Keyspace
-func (client *CqlClient) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
+func (client *CqlClientImpl) UpdateSchemaVersion(newVersion string, minCompatibleVersion string) error {
 	query := client.session.Query(writeSchemaVersionCQL, client.cfg.Keyspace, time.Now(), newVersion, minCompatibleVersion)
 	return query.Exec()
 }
 
 // WriteSchemaUpdateLog adds an entry to the schema update history table
-func (client *CqlClient) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
+func (client *CqlClientImpl) WriteSchemaUpdateLog(oldVersion string, newVersion string, manifestMD5 string, desc string) error {
 	now := time.Now().UTC()
 	query := client.session.Query(writeSchemaUpdateHistoryCQL)
 	query.Bind(now.Year(), int(now.Month()), now, oldVersion, newVersion, manifestMD5, desc)
@@ -182,19 +202,19 @@ func (client *CqlClient) WriteSchemaUpdateLog(oldVersion string, newVersion stri
 }
 
 // ExecDDLQuery executes a cql statement
-func (client *CqlClient) ExecDDLQuery(stmt string, args ...interface{}) error {
+func (client *CqlClientImpl) ExecDDLQuery(stmt string, args ...interface{}) error {
 	return client.session.Query(stmt, args...).Exec()
 }
 
 // Close closes the cql client
-func (client *CqlClient) Close() {
+func (client *CqlClientImpl) Close() {
 	if client.session != nil {
 		client.session.Close()
 	}
 }
 
 // ListTables lists the table names in a Keyspace
-func (client *CqlClient) ListTables() ([]string, error) {
+func (client *CqlClientImpl) ListTables() ([]string, error) {
 	query := client.session.Query(listTablesCQL, client.cfg.Keyspace)
 	iter := query.Iter()
 	var names []string
@@ -208,8 +228,8 @@ func (client *CqlClient) ListTables() ([]string, error) {
 	return names, nil
 }
 
-// listTypes lists the User defined types in a Keyspace
-func (client *CqlClient) listTypes() ([]string, error) {
+// ListTypes lists the User defined types in a Keyspace.
+func (client *CqlClientImpl) ListTypes() ([]string, error) {
 	qry := client.session.Query(listTypesCQL, client.cfg.Keyspace)
 	iter := qry.Iter()
 	var names []string
@@ -223,32 +243,32 @@ func (client *CqlClient) listTypes() ([]string, error) {
 	return names, nil
 }
 
-// dropTable drops a given table from the Keyspace
-func (client *CqlClient) dropTable(name string) error {
+// DropTable drops a given table from the Keyspace
+func (client *CqlClientImpl) DropTable(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf("DROP TABLE %v", name))
 }
 
-// dropType drops a given type from the Keyspace
-func (client *CqlClient) dropType(name string) error {
+// DropType drops a given type from the Keyspace
+func (client *CqlClientImpl) DropType(name string) error {
 	return client.ExecDDLQuery(fmt.Sprintf("DROP TYPE %v", name))
 }
 
-// dropAllTablesTypes deletes all tables/types in the
+// DropAllTablesTypes deletes all tables/types in the
 // Keyspace without deleting the Keyspace
-func (client *CqlClient) dropAllTablesTypes() error {
+func (client *CqlClientImpl) DropAllTablesTypes() error {
 	tables, err := client.ListTables()
 	if err != nil {
 		return err
 	}
 	log.Printf("Dropping following tables: %v\n", tables)
 	for _, table := range tables {
-		err1 := client.dropTable(table)
+		err1 := client.DropTable(table)
 		if err1 != nil {
 			log.Printf("Error dropping table %v, err=%v\n", table, err1)
 		}
 	}
 
-	types, err := client.listTypes()
+	types, err := client.ListTypes()
 	if err != nil {
 		return err
 	}
@@ -257,7 +277,7 @@ func (client *CqlClient) dropAllTablesTypes() error {
 	for i := 0; i < numOfTypes && len(types) > 0; i++ {
 		var erroredTypes []string
 		for _, t := range types {
-			err = client.dropType(t)
+			err = client.DropType(t)
 			if err != nil {
 				log.Printf("Error dropping type %v, err=%v\n", t, err)
 				erroredTypes = append(erroredTypes, t)

@@ -37,7 +37,7 @@ import (
 type (
 	SetupSchemaTestSuite struct {
 		test.SetupSchemaTestBase
-		client *cassandra.CqlClient
+		client cassandra.CqlClient
 	}
 )
 
