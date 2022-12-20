@@ -22,6 +22,7 @@ package persistenceutils
 
 import (
 	"context"
+	"errors"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
@@ -125,6 +126,10 @@ func PaginateHistory(
 	if byBatch {
 		response, err := historyV2Mgr.ReadHistoryBranchByBatch(ctx, req)
 		if err != nil {
+			var e *types.EntityNotExistsError
+			if errors.As(err, &e) {
+				return nil, nil, nil, 0, nil
+			}
 			return nil, nil, nil, 0, err
 		}
 
@@ -136,6 +141,10 @@ func PaginateHistory(
 	} else {
 		response, err := historyV2Mgr.ReadHistoryBranch(ctx, req)
 		if err != nil {
+			var e *types.EntityNotExistsError
+			if errors.As(err, &e) {
+				return nil, nil, nil, 0, nil
+			}
 			return nil, nil, nil, 0, err
 		}
 
