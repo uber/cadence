@@ -73,7 +73,7 @@ func UpdateFromConfig(config *UpdateConfig, db SchemaClient) error {
 	if err := validateUpdateConfig(config); err != nil {
 		return err
 	}
-	return newUpdateSchemaTask(db, config).Run()
+	return NewUpdateSchemaTask(db, config).Run()
 }
 
 // Update updates the schema for the specified database
@@ -82,7 +82,7 @@ func Update(cli *cli.Context, db SchemaClient) error {
 	if err != nil {
 		return err
 	}
-	return newUpdateSchemaTask(db, cfg).Run()
+	return NewUpdateSchemaTask(db, cfg).Run()
 }
 
 func newUpdateConfig(cli *cli.Context) (*UpdateConfig, error) {

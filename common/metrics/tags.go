@@ -51,6 +51,7 @@ const (
 	transport              = "transport"
 	caller                 = "caller"
 	signalName             = "signalName"
+	workflowVersion        = "workflow_version"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -199,4 +200,9 @@ func SignalNameTag(value string) Tag {
 // SignalNameAllTag returns a new SignalName tag with all value
 func SignalNameAllTag() Tag {
 	return metricWithUnknown(signalName, allValue)
+}
+
+// WorkflowVersionTag returns a new WorkflowVersion tag
+func WorkflowVersionTag(value string) Tag {
+	return metricWithUnknown(workflowVersion, value)
 }

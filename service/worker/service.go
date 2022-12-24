@@ -172,6 +172,7 @@ func NewConfig(params *resource.Params) *Config {
 			ESAnalyzerBufferWaitTime:                 dc.GetDurationPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerBufferWaitTime),
 			ESAnalyzerMinNumWorkflowsForAvg:          dc.GetIntPropertyFilteredByWorkflowType(dynamicconfig.ESAnalyzerMinNumWorkflowsForAvg),
 			ESAnalyzerWorkflowDurationWarnThresholds: dc.GetStringProperty(dynamicconfig.ESAnalyzerWorkflowDurationWarnThresholds),
+			ESAnalyzerWorkflowVersionDomains:         dc.GetStringProperty(dynamicconfig.ESAnalyzerWorkflowVersionMetricDomains),
 		},
 		WatchdogConfig: &watchdog.Config{
 			CorruptWorkflowWatchdogPause: dc.GetBoolProperty(dynamicconfig.CorruptWorkflowWatchdogPause),
@@ -291,7 +292,6 @@ func (s *Service) startESAnalyzer() {
 		s.params.ESClient,
 		s.params.ESConfig,
 		s.GetLogger(),
-		s.GetMetricsClient(),
 		s.params.MetricScope,
 		s.Resource,
 		s.GetDomainCache(),
