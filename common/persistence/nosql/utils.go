@@ -51,7 +51,7 @@ func convertCommonErrors(
 
 	if errChecker.IsDBUnavailableError(err) {
 		return &p.DBUnavailableError{
-			Msg: fmt.Sprintf("#{operation} operation failed. Error: #{err}"),
+			Msg: fmt.Sprintf("%v operation failed. Error: %v", operation, err),
 		}
 	}
 

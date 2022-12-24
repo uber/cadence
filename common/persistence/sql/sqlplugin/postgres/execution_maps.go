@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/uber/cadence/common/persistence/sql/sqlplugin"
 )
 
@@ -56,11 +58,11 @@ ON CONFLICT (shard_id, domain_id, workflow_id, run_id, %[4]v) DO UPDATE
 	// %[2]v is the name of the key
 	deleteKeyInMapQueryTemplate = `DELETE FROM %[1]v
 WHERE
-shard_id = $1 AND
-domain_id = $2 AND
-workflow_id = $3 AND
-run_id = $4 AND
-%[2]v = $5`
+shard_id = ? AND
+domain_id = ? AND
+workflow_id = ? AND
+run_id = ? AND
+%[2]v IN ( ? )`
 
 	// %[1]v is the name of the table
 	// %[2]v is the name of the key
@@ -89,11 +91,11 @@ ON CONFLICT (shard_id, domain_id, workflow_id, run_id, signal_id) DO NOTHING`
 
 	deleteSignalsRequestedSetQuery = `DELETE FROM signals_requested_sets
 WHERE
-shard_id = $1 AND
-domain_id = $2 AND
-workflow_id = $3 AND
-run_id = $4 AND
-signal_id = $5`
+shard_id = ? AND
+domain_id = ? AND
+workflow_id = ? AND
+run_id = ? AND
+signal_id IN ( ? )`
 
 	getSignalsRequestedSetQuery = `SELECT signal_id FROM signals_requested_sets WHERE
 shard_id = $1 AND
@@ -187,8 +189,12 @@ func (pdb *db) SelectFromActivityInfoMaps(ctx context.Context, filter *sqlplugin
 // DeleteFromActivityInfoMaps deletes one or more rows from activity_info_maps table
 func (pdb *db) DeleteFromActivityInfoMaps(ctx context.Context, filter *sqlplugin.ActivityInfoMapsFilter) (sql.Result, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
-	if filter.ScheduleID != nil {
-		return pdb.driver.ExecContext(ctx, dbShardID, deleteKeyInActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.ScheduleID)
+	if len(filter.ScheduleIDs) > 0 {
+		query, args, err := sqlx.In(deleteKeyInActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, filter.ScheduleIDs)
+		if err != nil {
+			return nil, err
+		}
+		return pdb.driver.ExecContext(ctx, dbShardID, sqlx.Rebind(sqlx.BindType(PluginName), query), args...)
 	}
 	return pdb.driver.ExecContext(ctx, dbShardID, deleteActivityInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
@@ -233,8 +239,12 @@ func (pdb *db) SelectFromTimerInfoMaps(ctx context.Context, filter *sqlplugin.Ti
 // DeleteFromTimerInfoMaps deletes one or more rows from timer_info_maps table
 func (pdb *db) DeleteFromTimerInfoMaps(ctx context.Context, filter *sqlplugin.TimerInfoMapsFilter) (sql.Result, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
-	if filter.TimerID != nil {
-		return pdb.driver.ExecContext(ctx, dbShardID, deleteKeyInTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.TimerID)
+	if len(filter.TimerIDs) > 0 {
+		query, args, err := sqlx.In(deleteKeyInTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, filter.TimerIDs)
+		if err != nil {
+			return nil, err
+		}
+		return pdb.driver.ExecContext(ctx, dbShardID, sqlx.Rebind(sqlx.BindType(PluginName), query), args...)
 	}
 	return pdb.driver.ExecContext(ctx, dbShardID, deleteTimerInfoMapSQLQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
@@ -279,8 +289,12 @@ func (pdb *db) SelectFromChildExecutionInfoMaps(ctx context.Context, filter *sql
 // DeleteFromChildExecutionInfoMaps deletes one or more rows from child_execution_info_maps table
 func (pdb *db) DeleteFromChildExecutionInfoMaps(ctx context.Context, filter *sqlplugin.ChildExecutionInfoMapsFilter) (sql.Result, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
-	if filter.InitiatedID != nil {
-		return pdb.driver.ExecContext(ctx, dbShardID, deleteKeyInChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+	if len(filter.InitiatedIDs) > 0 {
+		query, args, err := sqlx.In(deleteKeyInChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, filter.InitiatedIDs)
+		if err != nil {
+			return nil, err
+		}
+		return pdb.driver.ExecContext(ctx, dbShardID, sqlx.Rebind(sqlx.BindType(PluginName), query), args...)
 	}
 	return pdb.driver.ExecContext(ctx, dbShardID, deleteChildExecutionInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
@@ -325,8 +339,12 @@ func (pdb *db) SelectFromRequestCancelInfoMaps(ctx context.Context, filter *sqlp
 // DeleteFromRequestCancelInfoMaps deletes one or more rows from request_cancel_info_maps table
 func (pdb *db) DeleteFromRequestCancelInfoMaps(ctx context.Context, filter *sqlplugin.RequestCancelInfoMapsFilter) (sql.Result, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
-	if filter.InitiatedID != nil {
-		return pdb.driver.ExecContext(ctx, dbShardID, deleteKeyInRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+	if len(filter.InitiatedIDs) > 0 {
+		query, args, err := sqlx.In(deleteKeyInRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, filter.InitiatedIDs)
+		if err != nil {
+			return nil, err
+		}
+		return pdb.driver.ExecContext(ctx, dbShardID, sqlx.Rebind(sqlx.BindType(PluginName), query), args...)
 	}
 	return pdb.driver.ExecContext(ctx, dbShardID, deleteRequestCancelInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
@@ -371,8 +389,12 @@ func (pdb *db) SelectFromSignalInfoMaps(ctx context.Context, filter *sqlplugin.S
 // DeleteFromSignalInfoMaps deletes one or more rows from signal_info_maps table
 func (pdb *db) DeleteFromSignalInfoMaps(ctx context.Context, filter *sqlplugin.SignalInfoMapsFilter) (sql.Result, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
-	if filter.InitiatedID != nil {
-		return pdb.driver.ExecContext(ctx, dbShardID, deleteKeyInSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.InitiatedID)
+	if len(filter.InitiatedIDs) > 0 {
+		query, args, err := sqlx.In(deleteKeyInSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, filter.InitiatedIDs)
+		if err != nil {
+			return nil, err
+		}
+		return pdb.driver.ExecContext(ctx, dbShardID, sqlx.Rebind(sqlx.BindType(PluginName), query), args...)
 	}
 	return pdb.driver.ExecContext(ctx, dbShardID, deleteSignalInfoMapQry, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }
@@ -403,8 +425,12 @@ func (pdb *db) SelectFromSignalsRequestedSets(ctx context.Context, filter *sqlpl
 // DeleteFromSignalsRequestedSets deletes one or more rows from signals_requested_sets table
 func (pdb *db) DeleteFromSignalsRequestedSets(ctx context.Context, filter *sqlplugin.SignalsRequestedSetsFilter) (sql.Result, error) {
 	dbShardID := sqlplugin.GetDBShardIDFromHistoryShardID(int(filter.ShardID), pdb.GetTotalNumDBShards())
-	if filter.SignalID != nil {
-		return pdb.driver.ExecContext(ctx, dbShardID, deleteSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, *filter.SignalID)
+	if len(filter.SignalIDs) > 0 {
+		query, args, err := sqlx.In(deleteSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID, filter.SignalIDs)
+		if err != nil {
+			return nil, err
+		}
+		return pdb.driver.ExecContext(ctx, dbShardID, sqlx.Rebind(sqlx.BindType(PluginName), query), args...)
 	}
 	return pdb.driver.ExecContext(ctx, dbShardID, deleteAllSignalsRequestedSetQuery, filter.ShardID, filter.DomainID, filter.WorkflowID, filter.RunID)
 }

@@ -1306,6 +1306,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow() {
 	sRequest.SignalName = signalName
 	sRequest.SignalInput = signalInput
 	sRequest.WorkflowID = id
+	sRequest.RequestID = uuid.New()
 
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
@@ -1333,6 +1334,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow() {
 	sRequest.SignalName = signalName
 	sRequest.SignalInput = signalInput
 	sRequest.WorkflowID = id
+	sRequest.RequestID = uuid.New()
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
 	s.NotNil(resp.GetRunID())
@@ -1522,6 +1524,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	// test policy WorkflowIDReusePolicyAllowDuplicateFailedOnly
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicateFailedOnly
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	sRequest.RequestID = uuid.New()
 	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	cancel()
 	s.Nil(resp)
@@ -1532,6 +1535,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 	// test policy WorkflowIDReusePolicyAllowDuplicate
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicate
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	sRequest.RequestID = uuid.New()
 	resp, err = s.engine.SignalWithStartWorkflowExecution(ctx, sRequest)
 	cancel()
 	s.Nil(err)
@@ -1554,6 +1558,7 @@ func (s *IntegrationSuite) TestSignalWithStartWorkflow_IDReusePolicy() {
 
 	// test policy WorkflowIDReusePolicyAllowDuplicateFailedOnly success start
 	wfIDReusePolicy = types.WorkflowIDReusePolicyAllowDuplicateFailedOnly
+	sRequest.RequestID = uuid.New()
 	resp, err = s.engine.SignalWithStartWorkflowExecution(createContext(), sRequest)
 	s.Nil(err)
 	s.NotEmpty(resp.GetRunID())

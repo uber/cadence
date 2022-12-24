@@ -75,7 +75,7 @@ func verifyCompatibleVersion(
 	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
 	// should be gone and we can use constant at that time
 	if ds.NoSQL.PluginName != "cassandra" {
-		return fmt.Errorf("unknown NoSQL plugin name: %v", ds.NoSQL.PluginName)
+		return fmt.Errorf("unknown NoSQL plugin name: %q", ds.NoSQL.PluginName)
 	}
 
 	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
@@ -100,7 +100,7 @@ func CheckCompatibleVersion(
 		ProtoVersion:          cfg.ProtoVersion,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to create CQL Client: %v", err.Error())
+		return fmt.Errorf("creating CQL client: %w", err)
 	}
 	defer client.Close()
 
