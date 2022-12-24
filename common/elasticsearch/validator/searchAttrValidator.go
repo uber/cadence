@@ -77,7 +77,12 @@ func (sv *SearchAttributesValidator) ValidateSearchAttributes(input *types.Searc
 	}
 
 	totalSize := 0
-	validateAttr := sv.enableQueryAttributeValidation()
+
+	validateAttrFn := sv.enableQueryAttributeValidation
+	validateAttr := true
+	if validateAttrFn != nil {
+		validateAttr = validateAttrFn()
+	}
 	validAttr := sv.validSearchAttributes()
 	for key, val := range fields {
 		if validateAttr {
