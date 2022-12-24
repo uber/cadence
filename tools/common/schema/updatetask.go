@@ -85,8 +85,8 @@ var (
 	whitelistedCQLPrefixes = [4]string{"CREATE", "ALTER", "INSERT", "DROP"}
 )
 
-// NewUpdateSchemaTask returns a new instance of UpdateTask
-func newUpdateSchemaTask(db SchemaClient, config *UpdateConfig) *UpdateTask {
+// NewUpdateSchemaTask returns a new instance of UpdateTask.
+func NewUpdateSchemaTask(db SchemaClient, config *UpdateConfig) *UpdateTask {
 	return &UpdateTask{
 		db:     db,
 		config: config,

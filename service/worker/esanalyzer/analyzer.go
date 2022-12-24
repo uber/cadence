@@ -40,7 +40,6 @@ import (
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/service/worker/workercommon"
 )
@@ -53,7 +52,6 @@ type (
 		clientBean          client.Bean
 		esClient            es.GenericClient
 		logger              log.Logger
-		scopedMetricClient  metrics.Scope
 		tallyScope          tally.Scope
 		visibilityIndexName string
 		resource            resource.Resource
@@ -74,6 +72,7 @@ type (
 		ESAnalyzerBufferWaitTime                 dynamicconfig.DurationPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerMinNumWorkflowsForAvg          dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerWorkflowDurationWarnThresholds dynamicconfig.StringPropertyFn
+		ESAnalyzerWorkflowVersionDomains         dynamicconfig.StringPropertyFn
 	}
 )
 
@@ -87,7 +86,6 @@ func New(
 	esClient es.GenericClient,
 	esConfig *config.ElasticSearchConfig,
 	logger log.Logger,
-	metricsClient metrics.Client,
 	tallyScope tally.Scope,
 	resource resource.Resource,
 	domainCache cache.DomainCache,
@@ -99,17 +97,12 @@ func New(
 		clientBean:          clientBean,
 		esClient:            esClient,
 		logger:              logger,
-		scopedMetricClient:  getScopedMetricsClient(metricsClient),
 		tallyScope:          tallyScope,
 		visibilityIndexName: esConfig.Indices[common.VisibilityAppName],
 		resource:            resource,
 		domainCache:         domainCache,
 		config:              config,
 	}
-}
-
-func getScopedMetricsClient(metricsClient metrics.Client) metrics.Scope {
-	return metricsClient.Scope(metrics.ESAnalyzerScope)
 }
 
 // Start starts the scanner
