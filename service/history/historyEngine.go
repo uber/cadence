@@ -706,9 +706,21 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		signalWithStartRequest,
 	)
 	if err != nil {
+		if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) {
+			//delete the uninitialized workflow execution record since it failed to start the workflow
+			//uninitialized record is used to find wfs that didn't make a progress or stuck during the start process
+			if errVisibility := e.visibilityMgr.DeleteWorkflowExecution(ctx, &persistence.VisibilityDeleteWorkflowExecutionRequest{
+				DomainID:   domainID,
+				Domain:     domain,
+				RunID:      workflowExecution.RunID,
+				WorkflowID: workflowID,
+			}); errVisibility != nil {
+				e.logger.Error("Failed to delete uninitialized workflow execution record", tag.Error(errVisibility))
+			}
+		}
+
 		return nil, err
 	}
-
 	wfContext := execution.NewContext(domainID, workflowExecution, e.shard, e.executionManager, e.logger)
 
 	newWorkflow, newWorkflowEventsSeq, err := curMutableState.CloseTransactionAsSnapshot(

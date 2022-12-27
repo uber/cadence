@@ -350,6 +350,24 @@ func (p *visibilityMetricsClient) DeleteWorkflowExecution(
 	return err
 }
 
+func (p *visibilityMetricsClient) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
+
+	scopeWithDomainTag := p.metricClient.Scope(metrics.ElasticsearchDeleteWorkflowExecutionsScope, metrics.DomainTag(request.Domain))
+	scopeWithDomainTag.IncCounter(metrics.ElasticsearchRequestsPerDomain)
+	sw := scopeWithDomainTag.StartTimer(metrics.ElasticsearchLatencyPerDomain)
+	err := p.persistence.DeleteWorkflowExecution(ctx, request)
+	sw.Stop()
+
+	if err != nil {
+		p.updateErrorMetric(scopeWithDomainTag, metrics.ElasticsearchDeleteWorkflowExecutionsScope, err)
+	}
+
+	return err
+}
+
 func (p *visibilityMetricsClient) updateErrorMetric(scopeWithDomainTag metrics.Scope, scope int, err error) {
 
 	switch err.(type) {

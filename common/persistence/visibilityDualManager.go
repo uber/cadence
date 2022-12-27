@@ -140,6 +140,21 @@ func (v *visibilityDualManager) DeleteWorkflowExecution(
 	)
 }
 
+func (v *visibilityDualManager) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	return v.chooseVisibilityManagerForWrite(
+		ctx,
+		func() error {
+			return v.dbVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
+		},
+		func() error {
+			return v.esVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
+		},
+	)
+}
+
 func (v *visibilityDualManager) UpsertWorkflowExecution(
 	ctx context.Context,
 	request *UpsertWorkflowExecutionRequest,
