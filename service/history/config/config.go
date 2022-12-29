@@ -244,6 +244,7 @@ type Config struct {
 	PendingActivityValidationEnabled dynamicconfig.BoolPropertyFn
 
 	// ValidSearchAttributes is legal indexed keys that can be used in list APIs
+	EnableQueryAttributeValidation    dynamicconfig.BoolPropertyFn
 	ValidSearchAttributes             dynamicconfig.MapPropertyFn
 	SearchAttributesNumberOfKeysLimit dynamicconfig.IntPropertyFnWithDomainFilter
 	SearchAttributesSizeOfValueLimit  dynamicconfig.IntPropertyFnWithDomainFilter

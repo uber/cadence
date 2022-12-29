@@ -46,6 +46,7 @@ func (s *searchAttributesValidatorSuite) TestValidateSearchAttributes() {
 	sizeOfTotalLimit := 20
 
 	validator := NewSearchAttributesValidator(log.NewNoop(),
+		dynamicconfig.GetBoolPropertyFn(true),
 		dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
 		dynamicconfig.GetIntPropertyFilteredByDomain(numOfKeysLimit),
 		dynamicconfig.GetIntPropertyFilteredByDomain(sizeOfValueLimit),

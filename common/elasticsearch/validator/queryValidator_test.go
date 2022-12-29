@@ -131,7 +131,8 @@ func TestValidateQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.msg, func(t *testing.T) {
 			validSearchAttr := dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys())
-			qv := NewQueryValidator(validSearchAttr)
+			validateSearchAttr := dynamicconfig.GetBoolPropertyFn(true)
+			qv := NewQueryValidator(validSearchAttr, validateSearchAttr)
 			validated, err := qv.ValidateQuery(tt.query)
 			if err != nil {
 				assert.Equal(t, tt.err, err.Error())
