@@ -44,14 +44,14 @@ require (
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver v1.7.3
-	go.uber.org/atomic v1.7.0
+	go.uber.org/atomic v1.10.0
 	go.uber.org/cadence v0.19.0
 	go.uber.org/config v1.4.0
-	go.uber.org/fx v1.13.1
+	go.uber.org/fx v1.18.2
 	go.uber.org/multierr v1.6.0
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.58.0
-	go.uber.org/zap v1.13.0
+	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
@@ -72,7 +72,7 @@ require (
 	github.com/DataDog/zstd v1.4.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/apache/thrift v0.13.0 // indirect
-	github.com/benbjohnson/clock v0.0.0-20161215174838-7dc76406b6d3 // indirect
+	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
@@ -127,7 +127,7 @@ require (
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.opencensus.io v0.22.5 // indirect
-	go.uber.org/dig v1.10.0 // indirect
+	go.uber.org/dig v1.15.0 // indirect
 	go.uber.org/net/metrics v1.3.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
