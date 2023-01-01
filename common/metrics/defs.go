@@ -729,6 +729,8 @@ const (
 	DomainReplicationQueueScope
 	// ClusterMetadataScope is used for the cluster metadata
 	ClusterMetadataScope
+	// HotShardRateLimit scope
+	RateLimterHotShardScope
 
 	NumCommonScopes
 )
@@ -1831,6 +1833,7 @@ const (
 	PersistenceErrDBUnavailableCounter
 	PersistenceSampledCounter
 	PersistenceEmptyResponseCounter
+	HotShardRateLimitTriggered
 
 	PersistenceRequestsPerDomain
 	PersistenceFailuresPerDomain
