@@ -79,6 +79,7 @@ func newAttrValidator(
 		logger:        logger,
 		searchAttributesValidator: validator.NewSearchAttributesValidator(
 			logger,
+			config.EnableQueryAttributeValidation,
 			config.ValidSearchAttributes,
 			config.SearchAttributesNumberOfKeysLimit,
 			config.SearchAttributesSizeOfValueLimit,
