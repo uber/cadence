@@ -89,7 +89,9 @@ func (d *detector) Check(now time.Time, workflowID string, dim ...string) bool {
 	if ok && existingCount > d.limit {
 		d.log.Warn("hot-shard detected", tag.WorkflowID(workflowID), tag.Dynamic("entries", dim))
 		d.metrics.IncCounter(metrics.HotShardRateLimitTriggered, 1)
-		go d.sampleAndCheck(now, hashedIdentifier, workflowID, dim)
+		// keep adding to counter
+		d.sampleAndCheck(now, hashedIdentifier, workflowID, dim)
+		// but return the result with certainty
 		return true
 	}
 	return d.sampleAndCheck(now, hashedIdentifier, workflowID, dim)
