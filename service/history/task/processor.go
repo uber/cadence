@@ -25,6 +25,9 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
+
+	hot_shard "github.com/uber/cadence/common/hot-shard"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -49,11 +52,12 @@ type (
 		hostScheduler    task.Scheduler
 		shardSchedulers  map[shard.Context]task.Scheduler
 
-		status        int32
-		options       *schedulerOptions
-		shardOptions  *schedulerOptions
-		logger        log.Logger
-		metricsClient metrics.Client
+		status           int32
+		options          *schedulerOptions
+		shardOptions     *schedulerOptions
+		logger           log.Logger
+		metricsClient    metrics.Client
+		hotShardDetector hot_shard.Detector
 	}
 )
 
@@ -68,6 +72,13 @@ func NewProcessor(
 	logger log.Logger,
 	metricsClient metrics.Client,
 ) (Processor, error) {
+
+	hotshardDetector := hot_shard.NewDetector(logger, metricsClient, hot_shard.Options{
+		Limit:      config.HotShardDetectionLimit(),
+		WindowSize: config.HotShardWindowDuration(),
+		SampleRate: config.HotShardSampleRate(),
+	})
+
 	options, err := newSchedulerOptions(
 		config.TaskSchedulerType(),
 		config.TaskSchedulerQueueSize(),
@@ -107,6 +118,7 @@ func NewProcessor(
 		shardOptions:     shardOptions,
 		logger:           logger,
 		metricsClient:    metricsClient,
+		hotShardDetector: hotshardDetector,
 	}, nil
 }
 
@@ -162,6 +174,8 @@ func (p *processorImpl) Submit(
 		return err
 	}
 
+	p.hotShardDetector.Check(time.Now(), task.GetWorkflowID(), task.GetDomainID())
+
 	submitted, err := p.hostScheduler.TrySubmit(task)
 	if err != nil {
 		return err
@@ -187,6 +201,8 @@ func (p *processorImpl) Submit(
 func (p *processorImpl) TrySubmit(
 	task Task,
 ) (bool, error) {
+	p.hotShardDetector.Check(time.Now(), task.GetWorkflowID(), task.GetDomainID())
+
 	if err := p.priorityAssigner.Assign(task); err != nil {
 		return false, err
 	}

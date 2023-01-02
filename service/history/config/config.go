@@ -170,6 +170,11 @@ type Config struct {
 	CrossClusterSourceProcessorMaxRedispatchQueueSize             dynamicconfig.IntPropertyFn
 	CrossClusterSourceProcessorMaxPendingTaskSize                 dynamicconfig.IntPropertyFn
 
+	// HotShard rate-limiter detector
+	HotShardDetectionLimit dynamicconfig.IntPropertyFn
+	HotShardWindowDuration dynamicconfig.DurationPropertyFn
+	HotShardSampleRate     dynamicconfig.FloatPropertyFn
+
 	// CrossClusterTargetTaskProcessor settings
 	CrossClusterTargetProcessorMaxPendingTasks            dynamicconfig.IntPropertyFn
 	CrossClusterTargetProcessorMaxRetryCount              dynamicconfig.IntPropertyFn
@@ -454,6 +459,10 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		CrossClusterFetcherServiceBusyBackoffInterval: dc.GetDurationProperty(dynamicconfig.CrossClusterFetcherServiceBusyBackoffInterval),
 		CrossClusterFetcherErrorBackoffInterval:       dc.GetDurationProperty(dynamicconfig.CrossClusterFetcherErrorBackoffInterval),
 		CrossClusterFetcherJitterCoefficient:          dc.GetFloat64Property(dynamicconfig.CrossClusterFetcherJitterCoefficient),
+
+		HotShardSampleRate:     dc.GetFloat64Property(dynamicconfig.HotShardSampleRate),
+		HotShardWindowDuration: dc.GetDurationProperty(dynamicconfig.HotShardWindowDuration),
+		HotShardDetectionLimit: dc.GetIntProperty(dynamicconfig.HotShardDetectionLimit),
 
 		ReplicatorTaskDeleteBatchSize:          dc.GetIntProperty(dynamicconfig.ReplicatorTaskDeleteBatchSize),
 		ReplicatorReadTaskMaxRetryCount:        dc.GetIntProperty(dynamicconfig.ReplicatorReadTaskMaxRetryCount),

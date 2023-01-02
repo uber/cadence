@@ -1,14 +1,38 @@
-package hot_shard
+// The MIT License (MIT)
+
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+package hotshard
 
 import (
-	"github.com/dgryski/go-farm"
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	"math/rand"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dgryski/go-farm"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 )
 
 // Options for Hotshard rate-limiter
@@ -22,9 +46,9 @@ type Options struct {
 	SampleRate            float64       // how frequently to sample input check events as a percentage expressed as a value between 0-1 (Default: 0.001)
 }
 
-// HotShardDetector is a fixed size cache which samples inputs to see if they're being
+// Detector is a fixed size cache which samples inputs to see if they're being
 // seen frequently, and, if they have been, to flag them.
-type HotShardDetector interface {
+type Detector interface {
 	// Check is a syncronous method which samples the workflows it is given
 	// and checks (at the sample rate) if the workflows are a hot-shard over the window period.
 	// Returns true when the hot-shard is detected.
@@ -47,7 +71,7 @@ type detector struct {
 	windowStartTime       time.Time
 	limit                 int
 	log                   log.Logger
-	scope                 metrics.Client
+	metrics               metrics.Client
 	sampleRate            float64
 	totalHashmapSizeLimit int
 }
@@ -63,6 +87,8 @@ func (d *detector) Check(now time.Time, workflowID string, dim ...string) bool {
 	// if the value has been seen before, and we know it's over limit don't sample this, reply immediately that
 	// we've seen this value before
 	if ok && existingCount > d.limit {
+		d.log.Warn("hot-shard detected", tag.WorkflowID(workflowID), tag.Dynamic("entries", dim))
+		d.metrics.IncCounter(metrics.HotShardRateLimitTriggered, 1)
 		go d.sampleAndCheck(now, hashedIdentifier, workflowID, dim)
 		return true
 	}
@@ -70,6 +96,12 @@ func (d *detector) Check(now time.Time, workflowID string, dim ...string) bool {
 }
 
 func (d *detector) sampleAndCheck(now time.Time, hashedIdentifier uint64, workflowID string, dim []string) bool {
+	defer func() {
+		if r := recover(); r != nil {
+			d.log.Error("Unexpected panic in hot-shard-detector", tag.Dynamic("panic", r))
+		}
+	}()
+
 	if !d.shouldSample() {
 		return false
 	}
@@ -103,8 +135,6 @@ func (d *detector) sampleAndCheck(now time.Time, hashedIdentifier uint64, workfl
 
 	d.windowCount[hashedIdentifier] = existingCount + 1
 	if d.windowCount[hashedIdentifier] > d.limit {
-		d.log.Warn("hot-shard detected", tag.WorkflowID(workflowID), tag.Dynamic("entries", dim))
-		d.scope.IncCounter(metrics.HotShardRateLimitTriggered, 1)
 		return true
 	}
 	return false
@@ -112,7 +142,7 @@ func (d *detector) sampleAndCheck(now time.Time, hashedIdentifier uint64, workfl
 
 // NewDetector creates a hotshard detector with reasonable defaults. The default values should catch
 // (approximately) hot-shard values at a rate greater than 1000 per minute
-func NewDetector(log log.Logger, scope metrics.Client, options Options) HotShardDetector {
+func NewDetector(log log.Logger, metricsClient metrics.Client, options Options) Detector {
 	var sampleRate float64
 	if options.SampleRate != 0.0 {
 		sampleRate = options.SampleRate
@@ -147,7 +177,7 @@ func NewDetector(log log.Logger, scope metrics.Client, options Options) HotShard
 		windowSize:            window,
 		windowCount:           make(map[uint64]int),
 		log:                   log,
-		scope:                 scope,
+		metrics:               metricsClient,
 		sampleRate:            sampleRate,
 		sb:                    strings.Builder{},
 		totalHashmapSizeLimit: totalSizeLimit,

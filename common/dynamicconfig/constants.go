@@ -830,7 +830,23 @@ const (
 	// Default value: 500*1024
 	// Allowed filters: N/A
 	TimerProcessorHistoryArchivalSizeLimit
-
+	// HotShardDetectionLimit Is the threshold beyond which a record identified will be considered a 'hot' shard and
+	// warnings and potentially some prioritization will occur. This needs to be moved in concert with the window
+	// threshold and sample rate: If the sample rate is increased, so to this limit needs to be increased proportionally
+	// since it's an absolute value upon which a count is compared against.
+	//
+	// The math is approximately thus:
+	// given:
+	//  - a sample rate of say, 0.01,
+	//  - a processing of 1k entries per minute
+	//  - a window sample of 1 minute
+	//  - a hot-shard detection-limit of 10
+	//
+	// A workflow will be identified as a hot-shard being checked 1000 times or more:(10 > samples_per_minute * 0.01)
+	// KeyName: system.HotShardDetectionLimit
+	// Value type: Int
+	// Default value: 10
+	HotShardDetectionLimit
 	// TransferTaskBatchSize is batch size for transferQueueProcessor
 	// KeyName: history.transferTaskBatchSize
 	// Value type: Int
@@ -1882,6 +1898,7 @@ const (
 	// Default value: 0.15
 	// Allowed filters: N/A
 	CrossClusterFetcherJitterCoefficient
+
 	// ReplicationTaskProcessorCleanupJitterCoefficient is the jitter for cleanup timer
 	// KeyName: history.ReplicationTaskProcessorCleanupJitterCoefficient
 	// Value type: Float64
@@ -1946,6 +1963,11 @@ const (
 	// Default value: N/A
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
+	// HotShardSampleRate is the value, expressed as a value between 0-1 as a percentage of values sampled
+	// KeyName: system.HotShardSampleRate
+	// Value type: Float64
+	// Default value: 0.005
+	HotShardSampleRate
 
 	// LastFloatKey must be the last one in this const group
 	LastFloatKey
@@ -2434,6 +2456,12 @@ const (
 	// Value type: Duration
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
+	// HotShardWindowDuration is the window over which to measure for hot-shards. Needs to be adjusted on conjunction
+	// with the sample rate else you'll get nonsense results
+	// KeyName: system.HotShardWindowDuration
+	// Value type: Duration
+	// Default value: 1m
+	HotShardWindowDuration
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -3371,6 +3399,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering",
 		DefaultValue: 60,
 	},
+	HotShardDetectionLimit: DynamicInt{
+		KeyName:      "system.HotShardDetectionLimit",
+		Description:  "the number of entries that are the processed within a sample window before being flagged as 'hot'. Multiplied against the sample rate.",
+		DefaultValue: 5,
+	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
@@ -3902,6 +3935,11 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 		Description:  "WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival",
 		DefaultValue: 0.002,
 	},
+	HotShardSampleRate: DynamicFloat{
+		KeyName:      "system.HotShardSampleRate",
+		Description:  "The probability any particular sample in the detector will be checked",
+		DefaultValue: 0.005,
+	},
 }
 
 var StringKeys = map[StringKey]DynamicString{
@@ -4307,6 +4345,11 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
 		Description:  "ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck",
 		DefaultValue: time.Minute * 30,
+	},
+	HotShardWindowDuration: DynamicDuration{
+		KeyName:      "system.HotShardWindowDuration",
+		Description:  "The duration of analysis for a hot-shard",
+		DefaultValue: time.Minute,
 	},
 }
 
