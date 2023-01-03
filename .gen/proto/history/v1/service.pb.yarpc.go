@@ -633,10 +633,10 @@ type FxHistoryAPIYARPCClientResult struct {
 // NewFxHistoryAPIYARPCClient provides a HistoryAPIYARPCClient
 // to an Fx application using the given name for routing.
 //
-//  fx.Provide(
-//    historyv1.NewFxHistoryAPIYARPCClient("service-name"),
-//    ...
-//  )
+//	fx.Provide(
+//	  historyv1.NewFxHistoryAPIYARPCClient("service-name"),
+//	  ...
+//	)
 func NewFxHistoryAPIYARPCClient(name string, options ...protobuf.ClientOption) interface{} {
 	return func(params FxHistoryAPIYARPCClientParams) FxHistoryAPIYARPCClientResult {
 		cc := params.Provider.ClientConfig(name)
@@ -682,10 +682,10 @@ type FxHistoryAPIYARPCProceduresResult struct {
 // NewFxHistoryAPIYARPCProcedures provides HistoryAPIYARPCServer procedures to an Fx application.
 // It expects a HistoryAPIYARPCServer to be present in the container.
 //
-//  fx.Provide(
-//    historyv1.NewFxHistoryAPIYARPCProcedures(),
-//    ...
-//  )
+//	fx.Provide(
+//	  historyv1.NewFxHistoryAPIYARPCProcedures(),
+//	  ...
+//	)
 func NewFxHistoryAPIYARPCProcedures() interface{} {
 	return func(params FxHistoryAPIYARPCProceduresParams) FxHistoryAPIYARPCProceduresResult {
 		return FxHistoryAPIYARPCProceduresResult{
@@ -693,12 +693,18 @@ func NewFxHistoryAPIYARPCProcedures() interface{} {
 				Server:      params.Server,
 				AnyResolver: params.AnyResolver,
 			}),
-			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "uber.cadence.history.v1.HistoryAPI",
-				FileDescriptors: yarpcFileDescriptorClosurefee8ff76963a38ed,
-			},
+			ReflectionMeta: HistoryAPIReflectionMeta,
 		}
 	}
+}
+
+// HistoryAPIReflectionMeta is the reflection server metadata
+// required for using the gRPC reflection protocol with YARPC.
+//
+// See https://github.com/grpc/grpc/blob/master/doc/server-reflection.md.
+var HistoryAPIReflectionMeta = reflection.ServerMeta{
+	ServiceName:     "uber.cadence.history.v1.HistoryAPI",
+	FileDescriptors: yarpcFileDescriptorClosurefee8ff76963a38ed,
 }
 
 type _HistoryAPIYARPCCaller struct {

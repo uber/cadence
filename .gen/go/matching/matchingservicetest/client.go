@@ -51,8 +51,8 @@ type _MockClientRecorder struct {
 
 // Build a new mock client for service MatchingService.
 //
-// 	mockCtrl := gomock.NewController(t)
-// 	client := matchingservicetest.NewMockClient(mockCtrl)
+//	mockCtrl := gomock.NewController(t)
+//	client := matchingservicetest.NewMockClient(mockCtrl)
 //
 // Use EXPECT() to set expectations on the mock.
 func NewMockClient(ctrl *gomock.Controller) *MockClient {
@@ -71,8 +71,8 @@ func (m *MockClient) EXPECT() *_MockClientRecorder {
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().AddActivityTask(gomock.Any(), ...).Return(...)
-// 	... := client.AddActivityTask(...)
+//	client.EXPECT().AddActivityTask(gomock.Any(), ...).Return(...)
+//	... := client.AddActivityTask(...)
 func (m *MockClient) AddActivityTask(
 	ctx context.Context,
 	_AddRequest *matching.AddActivityTaskRequest,
@@ -102,8 +102,8 @@ func (mr *_MockClientRecorder) AddActivityTask(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().AddDecisionTask(gomock.Any(), ...).Return(...)
-// 	... := client.AddDecisionTask(...)
+//	client.EXPECT().AddDecisionTask(gomock.Any(), ...).Return(...)
+//	... := client.AddDecisionTask(...)
 func (m *MockClient) AddDecisionTask(
 	ctx context.Context,
 	_AddRequest *matching.AddDecisionTaskRequest,
@@ -133,8 +133,8 @@ func (mr *_MockClientRecorder) AddDecisionTask(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().CancelOutstandingPoll(gomock.Any(), ...).Return(...)
-// 	... := client.CancelOutstandingPoll(...)
+//	client.EXPECT().CancelOutstandingPoll(gomock.Any(), ...).Return(...)
+//	... := client.CancelOutstandingPoll(...)
 func (m *MockClient) CancelOutstandingPoll(
 	ctx context.Context,
 	_Request *matching.CancelOutstandingPollRequest,
@@ -164,8 +164,8 @@ func (mr *_MockClientRecorder) CancelOutstandingPoll(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().DescribeTaskList(gomock.Any(), ...).Return(...)
-// 	... := client.DescribeTaskList(...)
+//	client.EXPECT().DescribeTaskList(gomock.Any(), ...).Return(...)
+//	... := client.DescribeTaskList(...)
 func (m *MockClient) DescribeTaskList(
 	ctx context.Context,
 	_Request *matching.DescribeTaskListRequest,
@@ -197,8 +197,8 @@ func (mr *_MockClientRecorder) DescribeTaskList(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().GetTaskListsByDomain(gomock.Any(), ...).Return(...)
-// 	... := client.GetTaskListsByDomain(...)
+//	client.EXPECT().GetTaskListsByDomain(gomock.Any(), ...).Return(...)
+//	... := client.GetTaskListsByDomain(...)
 func (m *MockClient) GetTaskListsByDomain(
 	ctx context.Context,
 	_Request *shared.GetTaskListsByDomainRequest,
@@ -230,8 +230,8 @@ func (mr *_MockClientRecorder) GetTaskListsByDomain(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().ListTaskListPartitions(gomock.Any(), ...).Return(...)
-// 	... := client.ListTaskListPartitions(...)
+//	client.EXPECT().ListTaskListPartitions(gomock.Any(), ...).Return(...)
+//	... := client.ListTaskListPartitions(...)
 func (m *MockClient) ListTaskListPartitions(
 	ctx context.Context,
 	_Request *matching.ListTaskListPartitionsRequest,
@@ -263,8 +263,8 @@ func (mr *_MockClientRecorder) ListTaskListPartitions(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().PollForActivityTask(gomock.Any(), ...).Return(...)
-// 	... := client.PollForActivityTask(...)
+//	client.EXPECT().PollForActivityTask(gomock.Any(), ...).Return(...)
+//	... := client.PollForActivityTask(...)
 func (m *MockClient) PollForActivityTask(
 	ctx context.Context,
 	_PollRequest *matching.PollForActivityTaskRequest,
@@ -296,8 +296,8 @@ func (mr *_MockClientRecorder) PollForActivityTask(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().PollForDecisionTask(gomock.Any(), ...).Return(...)
-// 	... := client.PollForDecisionTask(...)
+//	client.EXPECT().PollForDecisionTask(gomock.Any(), ...).Return(...)
+//	... := client.PollForDecisionTask(...)
 func (m *MockClient) PollForDecisionTask(
 	ctx context.Context,
 	_PollRequest *matching.PollForDecisionTaskRequest,
@@ -329,8 +329,8 @@ func (mr *_MockClientRecorder) PollForDecisionTask(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().QueryWorkflow(gomock.Any(), ...).Return(...)
-// 	... := client.QueryWorkflow(...)
+//	client.EXPECT().QueryWorkflow(gomock.Any(), ...).Return(...)
+//	... := client.QueryWorkflow(...)
 func (m *MockClient) QueryWorkflow(
 	ctx context.Context,
 	_QueryRequest *matching.QueryWorkflowRequest,
@@ -362,8 +362,8 @@ func (mr *_MockClientRecorder) QueryWorkflow(
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
 //
-// 	client.EXPECT().RespondQueryTaskCompleted(gomock.Any(), ...).Return(...)
-// 	... := client.RespondQueryTaskCompleted(...)
+//	client.EXPECT().RespondQueryTaskCompleted(gomock.Any(), ...).Return(...)
+//	... := client.RespondQueryTaskCompleted(...)
 func (m *MockClient) RespondQueryTaskCompleted(
 	ctx context.Context,
 	_Request *matching.RespondQueryTaskCompletedRequest,
