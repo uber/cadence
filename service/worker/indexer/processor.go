@@ -285,6 +285,9 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[s
 }
 
 func (p *indexProcessor) isValidFieldToES(field string) bool {
+	if !p.config.EnableQueryAttributeValidation() {
+		return true
+	}
 	if _, ok := p.config.ValidSearchAttributes()[field]; ok {
 		return true
 	}

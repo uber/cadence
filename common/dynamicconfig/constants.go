@@ -1417,6 +1417,12 @@ const (
 	// Default value: false
 	// Allowed filters: DomainName
 	FrontendEmitSignalNameMetricsTag
+	// EnableQueryAttributeValidation enables validation of queries' search attributes against the dynamic config whitelist
+	// Keyname: frontend.enableQueryAttributeValidation
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: N/A
+	EnableQueryAttributeValidation
 
 	// key for matching
 
@@ -2004,6 +2010,11 @@ const (
 	// Value type: string [{"DomainName":"<domain>", "WorkflowType":"<workflowType>", "Threshold":"<duration>", "Refresh":<shouldRefresh>, "MaxNumWorkflows":<maxNumber>}]
 	// Default value: ""
 	ESAnalyzerWorkflowDurationWarnThresholds
+	// ESAnalyzerWorkflowVersionMetricDomains defines the domains we want to emit wf version metrics on
+	// KeyName: worker.ESAnalyzerWorkflowVersionMetricDomains
+	// Value type: string ["test-domain","test-domain2"]
+	// Default value: ""
+	ESAnalyzerWorkflowVersionMetricDomains
 
 	// LastStringKey must be the last one in this const group
 	LastStringKey
@@ -3469,6 +3480,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "FrontendEmitSignalNameMetricsTag enables emitting signal name tag in metrics in frontend client",
 		DefaultValue: false,
 	},
+	EnableQueryAttributeValidation: DynamicBool{
+		KeyName:      "frontend.enableQueryAttributeValidation",
+		Description:  "EnableQueryAttributeValidation enables validation of queries' search attributes against the dynamic config whitelist",
+		DefaultValue: true,
+	},
 	MatchingEnableSyncMatch: DynamicBool{
 		KeyName:      "matching.enableSyncMatch",
 		Description:  "MatchingEnableSyncMatch is to enable sync match",
@@ -3943,6 +3959,11 @@ var StringKeys = map[StringKey]DynamicString{
 	ESAnalyzerWorkflowDurationWarnThresholds: DynamicString{
 		KeyName:      "worker.ESAnalyzerWorkflowDurationWarnThresholds",
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the warning execution thresholds for workflow types",
+		DefaultValue: "",
+	},
+	ESAnalyzerWorkflowVersionMetricDomains: DynamicString{
+		KeyName:      "worker.ESAnalyzerWorkflowVersionMetricDomains",
+		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
 	},
 }

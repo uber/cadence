@@ -35,13 +35,17 @@ import (
 
 // VisibilityQueryValidator for sql query validation
 type VisibilityQueryValidator struct {
-	validSearchAttributes dynamicconfig.MapPropertyFn
+	validSearchAttributes          dynamicconfig.MapPropertyFn
+	enableQueryAttributeValidation dynamicconfig.BoolPropertyFn
 }
 
 // NewQueryValidator create VisibilityQueryValidator
-func NewQueryValidator(validSearchAttributes dynamicconfig.MapPropertyFn) *VisibilityQueryValidator {
+func NewQueryValidator(
+	validSearchAttributes dynamicconfig.MapPropertyFn,
+	enableQueryAttributeValidation dynamicconfig.BoolPropertyFn) *VisibilityQueryValidator {
 	return &VisibilityQueryValidator{
-		validSearchAttributes: validSearchAttributes,
+		validSearchAttributes:          validSearchAttributes,
+		enableQueryAttributeValidation: enableQueryAttributeValidation,
 	}
 }
 
@@ -198,7 +202,10 @@ func (qv *VisibilityQueryValidator) validateOrderByExpr(orderBy sqlparser.OrderB
 
 // isValidSearchAttributes return true if key is registered
 func (qv *VisibilityQueryValidator) isValidSearchAttributes(key string) bool {
-	validAttr := qv.validSearchAttributes()
-	_, isValidKey := validAttr[key]
-	return isValidKey
+	if qv.enableQueryAttributeValidation() {
+		validAttr := qv.validSearchAttributes()
+		_, isValidKey := validAttr[key]
+		return isValidKey
+	}
+	return true
 }
