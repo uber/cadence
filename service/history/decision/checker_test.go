@@ -91,6 +91,7 @@ func (s *attrValidatorSuite) SetupTest() {
 		MarkerNameMaxLength:               dynamicconfig.GetIntPropertyFilteredByDomain(1000),
 		TimerIDMaxLength:                  dynamicconfig.GetIntPropertyFilteredByDomain(1000),
 		ValidSearchAttributes:             dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+		EnableQueryAttributeValidation:    dynamicconfig.GetBoolPropertyFn(true),
 		SearchAttributesNumberOfKeysLimit: dynamicconfig.GetIntPropertyFilteredByDomain(100),
 		SearchAttributesSizeOfValueLimit:  dynamicconfig.GetIntPropertyFilteredByDomain(2 * 1024),
 		SearchAttributesTotalSizeLimit:    dynamicconfig.GetIntPropertyFilteredByDomain(40 * 1024),
