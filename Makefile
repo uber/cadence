@@ -651,9 +651,8 @@ install-schema-es-v7:
 	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 
 install-schema-es-v6:
-	export ES_SCHEMA_FILE=./schema/elasticsearch/v6/visibility/index_template.json
-	curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$(ES_SCHEMA_FILE)"
-	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
+	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v6/visibility/index_settings.json
+	curl -X PUT "http://127.0.0.1:9200/_mapping/_doc?pretty&include_type_name=true" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v6/visibility/index_mapping_doc.json
 
 install-schema-es-opensearch:
 	export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
