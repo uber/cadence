@@ -87,6 +87,8 @@ type (
 		ThriftHostNameAndPort string `yaml:"host"`
 		// gRPC host name and port
 		GRPCHostNameAndPort string `yaml:"address"`
+		// TLS cert file if TLS is enabled on the Cadence server
+		TLSCAFile string `yaml:"tlsCaFile"`
 	}
 )
 

@@ -25,12 +25,20 @@ import (
 	"sync"
 	"time"
 
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
+
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
+	"go.uber.org/yarpc/peer"
+	"go.uber.org/yarpc/peer/hostport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/credentials"
 
 	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
@@ -59,10 +67,30 @@ func NewCanaryRunner(cfg *Config) (Runnable, error) {
 	var dispatcher *yarpc.Dispatcher
 	var runtimeContext *RuntimeContext
 	if cfg.Cadence.GRPCHostNameAndPort != "" {
+		var outbounds transport.Outbounds
+		if cfg.Cadence.TLSCAFile != "" {
+			caCert, err := ioutil.ReadFile(cfg.Cadence.TLSCAFile)
+			if err != nil {
+				logger.Fatal("Failed to load server CA certificate", zap.Error(err))
+			}
+			caCertPool := x509.NewCertPool()
+			if !caCertPool.AppendCertsFromPEM(caCert) {
+				logger.Fatal("Failed to add server CA certificate", zap.Error(err))
+			}
+			tlsConfig := tls.Config{
+				RootCAs: caCertPool,
+			}
+			tlsCreds := credentials.NewTLS(&tlsConfig)
+			grpcTransport := grpc.NewTransport()
+			tlsChooser := peer.NewSingle(hostport.Identify(cfg.Cadence.GRPCHostNameAndPort), grpcTransport.NewDialer(grpc.DialerCredentials(tlsCreds)))
+			outbounds = transport.Outbounds{Unary: grpcTransport.NewOutbound(tlsChooser)}
+		} else {
+			outbounds = transport.Outbounds{Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.GRPCHostNameAndPort)}
+		}
 		dispatcher = yarpc.NewDispatcher(yarpc.Config{
 			Name: CanaryServiceName,
 			Outbounds: yarpc.Outbounds{
-				cfg.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(cfg.Cadence.GRPCHostNameAndPort)},
+				cfg.Cadence.ServiceName: outbounds,
 			},
 		})
 		clientConfig := dispatcher.ClientConfig(cfg.Cadence.ServiceName)
