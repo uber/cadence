@@ -646,17 +646,15 @@ install-schema-postgres: cadence-sql-tool
 	./cadence-sql-tool -p 5432 -u postgres -pw cadence --pl postgres --db cadence_visibility update-schema -d ./schema/postgres/visibility/versioned
 
 install-schema-es-v7:
-	export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
-	curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$(ES_SCHEMA_FILE)"
+	curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v7/visibility/index_template.json
 	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 
 install-schema-es-v6:
-	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v6/visibility/index_settings.json
-	curl -X PUT "http://127.0.0.1:9200/_mapping/_doc?pretty&include_type_name=true" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v6/visibility/index_mapping_doc.json
+	curl -X PUT "http://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v6/visibility/index_template.json
+	curl -X PUT "http://127.0.0.1:9200/cadence-visibility-dev"
 
 install-schema-es-opensearch:
-	export ES_SCHEMA_FILE=./schema/elasticsearch/v7/visibility/index_template.json
-	curl -X PUT "https://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' --data-binary "@$(ES_SCHEMA_FILE)" -u admin:admin --insecure
+	curl -X PUT "https://127.0.0.1:9200/_template/cadence-visibility-template" -H 'Content-Type: application/json' -d @./schema/elasticsearch/v7/visibility/index_template.json -u admin:admin --insecure
 	curl -X PUT "https://127.0.0.1:9200/cadence-visibility-dev" -u admin:admin --insecure
 
 start: bins
