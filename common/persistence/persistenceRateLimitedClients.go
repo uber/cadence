@@ -929,6 +929,16 @@ func (p *visibilityRateLimitedPersistenceClient) DeleteWorkflowExecution(
 	return p.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
+func (p *visibilityRateLimitedPersistenceClient) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	if ok := p.rateLimiter.Allow(); !ok {
+		return ErrPersistenceLimitExceeded
+	}
+	return p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
+}
+
 func (p *visibilityRateLimitedPersistenceClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,

@@ -1713,6 +1713,30 @@ func (p *visibilityErrorInjectionPersistenceClient) DeleteWorkflowExecution(
 	return persistenceErr
 }
 
+func (p *visibilityErrorInjectionPersistenceClient) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	fakeErr := generateFakeError(p.errorRate)
+
+	var persistenceErr error
+	var forwardCall bool
+	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
+		persistenceErr = p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
+	}
+
+	if fakeErr != nil {
+		p.logger.Error(msgInjectedFakeErr,
+			tag.StoreOperationVisibilityDeleteWorkflowExecution,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.StoreError(persistenceErr),
+		)
+		return fakeErr
+	}
+	return persistenceErr
+}
+
 func (p *visibilityErrorInjectionPersistenceClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,

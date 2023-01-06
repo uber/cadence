@@ -1254,6 +1254,16 @@ func (p *visibilityPersistenceClient) DeleteWorkflowExecution(
 	return p.call(metrics.PersistenceVisibilityDeleteWorkflowExecutionScope, op)
 }
 
+func (p *visibilityPersistenceClient) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	op := func() error {
+		return p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
+	}
+	return p.call(metrics.PersistenceVisibilityDeleteUninitializedWorkflowExecutionScope, op)
+}
+
 func (p *visibilityPersistenceClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,

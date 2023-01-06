@@ -281,6 +281,13 @@ func (v *visibilityManagerImpl) DeleteWorkflowExecution(
 	return v.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
+func (v *visibilityManagerImpl) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	return v.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
+}
+
 func (v *visibilityManagerImpl) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,
