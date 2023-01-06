@@ -706,7 +706,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 		signalWithStartRequest,
 	)
 	if err != nil {
-		if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) {
+		if e.shard.GetConfig().EnableRecordWorkflowExecutionUninitialized(domainEntry.GetInfo().Name) && e.visibilityMgr != nil {
 			//delete the uninitialized workflow execution record since it failed to start the workflow
 			//uninitialized record is used to find wfs that didn't make a progress or stuck during the start process
 			if errVisibility := e.visibilityMgr.DeleteWorkflowExecution(ctx, &persistence.VisibilityDeleteWorkflowExecutionRequest{
