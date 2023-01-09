@@ -182,7 +182,7 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
 	)
 	esRaw := `
 {
-  "took": 198,
+  "took": 642,
   "timed_out": false,
   "_shards": {
     "total": 20,
@@ -191,28 +191,74 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
     "failed": 0
   },
   "hits": {
-    "total": 7438,
+    "total": 4588,
     "max_score": 0,
     "hits": [
 
     ]
   },
   "aggregations": {
-    "WorkflowVersions": {
+    "wftypes": {
       "doc_count_error_upper_bound": 0,
       "sum_other_doc_count": 0,
       "buckets": [
         {
-          "key": "max_fare_05dc2382-1",
-          "doc_count": 7436
+          "key": "CourierUpdateWorkflow",
+          "doc_count": 4539,
+          "versions": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+
+            ]
+          }
         },
         {
-          "key": "finalize_order_delay_329c8aef-1",
-          "doc_count": 7275
+          "key": "UpdateTipWorkflow",
+          "doc_count": 33,
+          "versions": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+              {
+                "key": "update tip efp flow-1",
+                "doc_count": 3
+              }
+            ]
+          }
         },
         {
-          "key": "timeout_duration_a71dbec7-1",
-          "doc_count": 2
+          "key": "RoboCourierWorkflow",
+          "doc_count": 12,
+          "versions": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+
+            ]
+          }
+        },
+        {
+          "key": "ImproveDropoffPinWorkflow",
+          "doc_count": 2,
+          "versions": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+
+            ]
+          }
+        },
+        {
+          "key": "OrderStateUpdatedWorkflow",
+          "doc_count": 2,
+          "versions": {
+            "doc_count_error_upper_bound": 0,
+            "sum_other_doc_count": 0,
+            "buckets": [
+
+            ]
+          }
         }
       ]
     }

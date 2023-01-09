@@ -35,10 +35,11 @@ import (
 )
 
 const (
-	workflowVersionAggKey       = "WorkflowVersions"
+	workflowTypesAggKey         = "wftypes"
 	domainTag                   = "domain"
 	workflowVersionTag          = "workflowVersion"
 	workflowVersionCountMetrics = "workflow_version_count"
+	workflowTypeTag             = "workflowType"
 
 	// workflow constants
 	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
@@ -51,13 +52,19 @@ type (
 	Workflow struct {
 		analyzer *Analyzer
 	}
-
+	EsAggregateCount struct {
+		AggregateKey   string `json:"key"`
+		AggregateCount int64  `json:"doc_count"`
+	}
 	DomainWorkflowVersionCount struct {
-		WorkflowVersions []WorkflowVersionCount `json:"buckets"`
+		WorkflowTypes []WorkflowTypeCount `json:"buckets"`
+	}
+	WorkflowTypeCount struct {
+		EsAggregateCount
+		WorkflowVersions WorkflowVersionCount `json:"versions"`
 	}
 	WorkflowVersionCount struct {
-		WorkflowVersion string `json:"key"`
-		NumWorkflows    int64  `json:"doc_count"`
+		WorkflowVersions []EsAggregateCount `json:"buckets"`
 	}
 )
 
@@ -116,37 +123,35 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf(`
-    {
-      "size": 0,
-      "query": {
-        "bool": {
-          "must": [
-            {
-              "exists": {
-                "field": "Attr.CadenceChangeVersion"
-              }
-            },
-            {
-                "match": {
-                    "DomainID": "%s"
+{
+    "aggs" : {
+        "wftypes" : {
+            "terms" : { "field" : "WorkflowType"},
+            "aggs": {
+                "versions": {
+                    "terms" : { "field" : "Attr.CadenceChangeVersion"}
                 }
             }
-          ],
-          "must_not":{
-              "exists":{
-                  "field": "CloseTime"
-              }
-          }
         }
-      },
-        "aggs": {
-            "WorkflowVersions": {
-              "terms": {
-                "field": "Attr.CadenceChangeVersion"
-              }
-            }
-         }
-    }
+    },
+    "query": {
+        "bool": {
+            "must_not": {
+                "exists": {
+                    "field": "CloseTime"
+                }
+            },
+            "must": [
+                {
+                    "match" : {
+                        "DomainID" : "%s"
+                    }
+                }
+            ]
+        }
+    },
+    "size": 0
+}
     `, domain.GetInfo().ID), nil
 }
 
@@ -178,7 +183,7 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				)
 				return err
 			}
-			agg, foundAggregation := response.Aggregations[workflowVersionAggKey]
+			agg, foundAggregation := response.Aggregations[workflowTypesAggKey]
 
 			if !foundAggregation {
 				logger.Error("ElasticSearch error: aggregation failed.",
@@ -200,10 +205,12 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				)
 				return err
 			}
-			for _, workflowVersion := range domainWorkflowVersionCount.WorkflowVersions {
-				w.analyzer.tallyScope.Tagged(
-					map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.WorkflowVersion},
-				).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.NumWorkflows))
+			for _, workflowType := range domainWorkflowVersionCount.WorkflowTypes {
+				for _, workflowVersion := range workflowType.WorkflowVersions.WorkflowVersions {
+					w.analyzer.tallyScope.Tagged(
+						map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.AggregateKey, workflowTypeTag: workflowType.AggregateKey},
+					).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.AggregateCount))
+				}
 			}
 		}
 	}
