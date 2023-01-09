@@ -271,7 +271,6 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
 	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
 		&rawEs, nil).Times(1)
 	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowVersionMetrics)
-
 	s.NoError(err)
 
 }
