@@ -422,6 +422,7 @@ func (m *historyV2ManagerImpl) readRawHistoryBranch(
 	if err != nil {
 		return nil, nil, 0, nil, err
 	}
+	// TODO: consider if it's possible to remove this branch
 	if len(resp.History) == 0 && len(request.NextPageToken) == 0 {
 		return nil, nil, 0, nil, &types.EntityNotExistsError{Message: "Workflow execution history not found."}
 	}

@@ -282,6 +282,13 @@ func (p *visibilitySamplingClient) DeleteWorkflowExecution(
 	return p.persistence.DeleteWorkflowExecution(ctx, request)
 }
 
+func (p *visibilitySamplingClient) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	return p.persistence.DeleteUninitializedWorkflowExecution(ctx, request)
+}
+
 func (p *visibilitySamplingClient) ListWorkflowExecutions(
 	ctx context.Context,
 	request *ListWorkflowExecutionsByQueryRequest,

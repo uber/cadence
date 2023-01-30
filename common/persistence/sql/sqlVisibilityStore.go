@@ -302,6 +302,14 @@ func (s *sqlVisibilityStore) DeleteWorkflowExecution(
 	return nil
 }
 
+func (s *sqlVisibilityStore) DeleteUninitializedWorkflowExecution(
+	ctx context.Context,
+	request *p.VisibilityDeleteWorkflowExecutionRequest,
+) error {
+	// temporary: not implemented, only implemented for ES
+	return nil
+}
+
 func (s *sqlVisibilityStore) ListWorkflowExecutions(
 	_ context.Context,
 	_ *p.ListWorkflowExecutionsByQueryRequest,
