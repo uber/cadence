@@ -1,6 +1,6 @@
 version: '3'
 services:
   cadence-bench:
-    image: ubercadence/cadence-bench:master
+    image: ubercadence/cadence-bench:0.25.0
     volumes:
       - ./config/bench:/etc/cadence-bench/config/bench
