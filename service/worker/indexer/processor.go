@@ -276,7 +276,7 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field, domai
 				attr[k] = p.decodeSearchAttrBinary(v.GetBinaryData(), k)
 			}
 		default:
-			// must be bug in code and bad deployment, check data sent from producer
+			// there must be bug in code and bad deployment, check data sent from producer
 			p.logger.Fatal("Unknown field type")
 		}
 	}
