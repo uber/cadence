@@ -2306,9 +2306,9 @@ func (h *handlerImpl) createHotShardDetectionCache() {
 	go h.findHotShards(h.config.HotShardDetectionAnalyzerInterval())
 }
 
-func (h *handlerImpl) incrementShardRequest(shardId int, workflowId string, domainId string) {
+func (h *handlerImpl) incrementShardRequest(shardID int, workflowID string, domainID string) {
 	//first cache
-	atomic.AddInt64(h.hotShardDetectionCache.shardRequests.shardRequests[shardId], int64(1))
+	atomic.AddInt64(h.hotShardDetectionCache.shardRequests.shardRequests[shardID], int64(1))
 	//TODO second cache and check if hot and output log
 }
 
