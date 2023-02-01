@@ -2338,6 +2338,7 @@ func (h *handlerImpl) analyzeHotShardCache() {
 		}
 	}
 	averageNumberOfRequests := float64(totalRequests / numberOfShardsManaged)
+	h.GetLogger().Info(fmt.Sprintf("Average number of requests per shard is %v", averageNumberOfRequests))
 	for i := 0; i < len(h.hotShardDetectionCache.shardRequests.shardRequests); i++ {
 		// for testing remove or lower to debug later
 		if *h.hotShardDetectionCache.shardRequests.shardRequests[i] > 0 {
