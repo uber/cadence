@@ -2240,7 +2240,6 @@ const (
 	FailoverMarkerCallbackCount
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
-
 	NumberOfHotShardsCount
 
 	NumHistoryMetrics
@@ -2501,7 +2500,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
-		NumberOfHotShardsCount:                                    {metricName: "number_of_hot_shards", metricType: Gauge},
 
 		// per task list common metrics
 
@@ -2836,6 +2834,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CrossClusterTasksCount:                                       {metricName: "cross_cluster_tasks_count", metricType: Timer},
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
+		NumberOfHotShardsCount:                                       {metricName: "number_of_hot_shards", metricType: Gauge},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
