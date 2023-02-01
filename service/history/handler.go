@@ -2340,7 +2340,9 @@ func (h *handlerImpl) analyzeHotShardCache() {
 	averageNumberOfRequests := float64(totalRequests / numberOfShardsManaged)
 	for i := 0; i < len(h.hotShardDetectionCache.shardRequests.shardRequests); i++ {
 		// for testing remove or lower to debug later
-		h.GetLogger().Info(fmt.Sprintf("Shard-id has %v number of requests in the last cycle", *h.hotShardDetectionCache.shardRequests.shardRequests[i]))
+		if *h.hotShardDetectionCache.shardRequests.shardRequests[i] > 0 {
+			h.GetLogger().Info(fmt.Sprintf("Shard-id %d has %v number of requests in the last cycle", i, *h.hotShardDetectionCache.shardRequests.shardRequests[i]))
+		}
 		if float64(*h.hotShardDetectionCache.shardRequests.shardRequests[i]) > averageNumberOfRequests*h.config.HotShardDetectionHotThreshold() {
 			h.hotShardDetectionCache.shardRequests.hotShards[i] = true
 			numberOfHotShards++
