@@ -232,7 +232,7 @@ func (p *indexProcessor) addMessageToES(indexMsg *indexer.Message, kafkaMsg mess
 }
 
 func (p *indexProcessor) generateESDoc(msg *indexer.Message, keyToKafkaMsg string) map[string]interface{} {
-	doc := p.dumpFieldsToMap(msg.Fields)
+	doc := p.dumpFieldsToMap(msg.Fields, msg.GetDomainID())
 	fulfillDoc(doc, msg, keyToKafkaMsg)
 	return doc
 }
@@ -247,12 +247,12 @@ func (p *indexProcessor) decodeSearchAttrBinary(bytes []byte, key string) interf
 	return val
 }
 
-func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[string]interface{} {
+func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field, domainID string) map[string]interface{} {
 	doc := make(map[string]interface{})
 	attr := make(map[string]interface{})
 	for k, v := range fields {
 		if !p.isValidFieldToES(k) {
-			p.logger.Error("Unregistered field.", tag.ESField(k))
+			p.logger.Error("Unregistered field.", tag.ESField(k), tag.WorkflowDomainID(domainID))
 			p.metricsClient.IncCounter(metrics.IndexProcessorScope, metrics.IndexProcessorCorruptedData)
 			continue
 		}
@@ -276,7 +276,7 @@ func (p *indexProcessor) dumpFieldsToMap(fields map[string]*indexer.Field) map[s
 				attr[k] = p.decodeSearchAttrBinary(v.GetBinaryData(), k)
 			}
 		default:
-			// must be bug in code and bad deployment, check data sent from producer
+			// there must be bug in code and bad deployment, check data sent from producer
 			p.logger.Fatal("Unknown field type")
 		}
 	}
