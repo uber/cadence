@@ -1952,6 +1952,11 @@ const (
 	// Default value: N/A
 	// TODO: https://github.com/uber/cadence/issues/3861
 	WorkerBlobIntegrityCheckProbability
+	// HotShardDetectionHotThreshold the threshold greater than average that is considered hot
+	// KeyName: history.HotShardDetectionHotThreshold
+	// Value type: Float64
+	// Default value: 2.0
+	HotShardDetectionHotThreshold
 
 	// LastFloatKey must be the last one in this const group
 	LastFloatKey
@@ -2440,6 +2445,11 @@ const (
 	// Value type: Duration
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
+	// HotShardDetectionAnalyzerInterval how often we want to check if there are hotshards
+	// KeyName: history.HotShardDetectionAnalyzerInterval
+	// Value type: Duration
+	// Default value: 5 minutes
+	HotShardDetectionAnalyzerInterval
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -3913,6 +3923,11 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 		Description:  "WorkerBlobIntegrityCheckProbability controls the probability of running an integrity check for any given archival",
 		DefaultValue: 0.002,
 	},
+	HotShardDetectionHotThreshold: DynamicFloat{
+		KeyName:      "history.HotShardDetectionHotThreshold",
+		Description:  "HotShardDetectionHotThreshold is the interval to check if there are hot shards",
+		DefaultValue: 2.0,
+	},
 }
 
 var StringKeys = map[StringKey]DynamicString{
@@ -4318,6 +4333,11 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
 		Description:  "ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck",
 		DefaultValue: time.Minute * 30,
+	},
+	HotShardDetectionAnalyzerInterval: DynamicDuration{
+		KeyName:      "history.HotShardDetectionAnalyzerInterval",
+		Description:  "HotShardDetectionAnalyzerInterval is the interval to check if there are hot shards",
+		DefaultValue: time.Minute * 5,
 	},
 }
 

@@ -70,7 +70,7 @@ func (s *handlerSuite) SetupTest() {
 	s.mockEngine = engine.NewMockEngine(s.controller)
 	s.mockShardController.EXPECT().GetEngineForShard(gomock.Any()).Return(s.mockEngine, nil).AnyTimes()
 
-	s.handler = NewHandler(s.mockResource, config.NewForTest()).(*handlerImpl)
+	s.handler = NewHandler(s.mockResource, config.NewForTestByShardNumber(10)).(*handlerImpl)
 	s.handler.controller = s.mockShardController
 	s.handler.startWG.Done()
 }
@@ -122,6 +122,39 @@ func (s *handlerSuite) TestRespondCrossClusterTaskCompleted_NoNewTask() {
 	s.testRespondCrossClusterTaskCompleted(false)
 }
 
+func (s *handlerSuite) TestHotShardDetection() {
+	s.handler.createHotShardDetectionCache()
+	s.handler.incrementShardRequest(0, "test-id", "test-id")
+	s.handler.incrementShardRequest(0, "test-id", "test-id")
+	s.handler.incrementShardRequest(0, "test-id", "test-id")
+	s.handler.incrementShardRequest(0, "test-id", "test-id")
+	s.handler.incrementShardRequest(0, "test-id", "test-id")
+	s.handler.incrementShardRequest(1, "test-id", "test-id")
+	s.handler.incrementShardRequest(2, "test-id", "test-id")
+	s.handler.analyzeHotShardCache()
+	//check that shard 0 is a hotshard
+	s.Suite.True(s.handler.hotShardDetectionCache.shardRequests.hotShards[0])
+	for i := 0; i < len(s.handler.hotShardDetectionCache.shardRequests.shardRequests); i++ {
+		// check requests are 0'd out
+		s.Suite.Equal(int64(0), *s.handler.hotShardDetectionCache.shardRequests.shardRequests[i])
+	}
+}
+func (s *handlerSuite) TestHotShardDetection_NoHotShards() {
+	s.handler.createHotShardDetectionCache()
+	s.handler.incrementShardRequest(0, "test-id", "test-id")
+	s.handler.incrementShardRequest(1, "test-id", "test-id")
+	s.handler.incrementShardRequest(2, "test-id", "test-id")
+	s.handler.incrementShardRequest(3, "test-id", "test-id")
+	s.handler.incrementShardRequest(4, "test-id", "test-id")
+	s.handler.incrementShardRequest(5, "test-id", "test-id")
+	s.handler.incrementShardRequest(6, "test-id", "test-id")
+	s.handler.analyzeHotShardCache()
+	//check that there are no hotshards
+	for i := 0; i < len(s.handler.hotShardDetectionCache.shardRequests.hotShards); i++ {
+		s.Suite.False(s.handler.hotShardDetectionCache.shardRequests.hotShards[i])
+	}
+}
+
 func (s *handlerSuite) testRespondCrossClusterTaskCompleted(
 	fetchNewTask bool,
 ) {
@@ -141,7 +174,6 @@ func (s *handlerSuite) testRespondCrossClusterTaskCompleted(
 	response, err := s.handler.RespondCrossClusterTasksCompleted(context.Background(), request)
 	s.NoError(err)
 	s.NotNil(response)
-
 	if !fetchNewTask {
 		s.Empty(response.Tasks)
 	} else {

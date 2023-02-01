@@ -316,6 +316,10 @@ type Config struct {
 	// Debugging configurations
 	EnableDebugMode             bool // note that this value is initialized once on service start
 	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
+
+	// HotShard detection stuff
+	HotShardDetectionAnalyzerInterval dynamicconfig.DurationPropertyFn
+	HotShardDetectionHotThreshold     dynamicconfig.FloatPropertyFn // how many times greater than average that is considered hot
 }
 
 // New returns new service config with default values
@@ -552,6 +556,9 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
 		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+
+		HotShardDetectionAnalyzerInterval: dc.GetDurationProperty(dynamicconfig.HotShardDetectionAnalyzerInterval),
+		HotShardDetectionHotThreshold:     dc.GetFloat64Property(dynamicconfig.HotShardDetectionHotThreshold),
 	}
 
 	return cfg

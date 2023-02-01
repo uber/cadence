@@ -128,6 +128,20 @@ type (
 		replicationTaskFetchers  replication.TaskFetchers
 		queueTaskProcessor       task.Processor
 		failoverCoordinator      failover.Coordinator
+		hotShardDetectionCache   hotShardDetectionCache
+	}
+	hotShardDetectionCache struct {
+		shardRequests    hotShardRequestCounter
+		shutDownAnalyzer chan struct{}
+	}
+	hotShardRequestCounter struct {
+		shardRequests []*int64
+		shardBuckets  map[int][]*hotShardBucketRequestCounter
+		hotShards     []bool
+	}
+	hotShardBucketRequestCounter struct {
+		shardBuckets []*int64
+		hotBuckets   []bool
 	}
 )
 
@@ -158,7 +172,6 @@ func NewHandler(
 		tokenSerializer: common.NewJSONTaskTokenSerializer(),
 		rateLimiter:     quotas.NewDynamicRateLimiter(config.RPS.AsFloat64()),
 	}
-
 	// prevent us from trying to serve requests before shard controller is started and ready
 	handler.startWG.Add(1)
 	return handler
@@ -234,11 +247,15 @@ func (h *handlerImpl) Start() {
 
 	h.controller.Start()
 
+	h.createHotShardDetectionCache()
+
 	h.startWG.Done()
+
 }
 
 // Stop stops the handler
 func (h *handlerImpl) Stop() {
+	close(h.hotShardDetectionCache.shutDownAnalyzer)
 	h.prepareToShutDown()
 	h.crossClusterTaskFetchers.Stop()
 	h.replicationTaskFetchers.Stop()
@@ -334,6 +351,8 @@ func (h *handlerImpl) RecordActivityTaskHeartbeat(
 	}
 
 	response, err2 := engine.RecordActivityTaskHeartbeat(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -380,6 +399,8 @@ func (h *handlerImpl) RecordActivityTaskStarted(
 	}
 
 	response, err2 := engine.RecordActivityTaskStarted(ctx, recordRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -436,6 +457,8 @@ func (h *handlerImpl) RecordDecisionTaskStarted(
 	}
 
 	response, err2 := engine.RecordDecisionTaskStarted(ctx, recordRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -483,6 +506,8 @@ func (h *handlerImpl) RespondActivityTaskCompleted(
 	}
 
 	err2 := engine.RespondActivityTaskCompleted(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -530,6 +555,8 @@ func (h *handlerImpl) RespondActivityTaskFailed(
 	}
 
 	err2 := engine.RespondActivityTaskFailed(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -577,6 +604,8 @@ func (h *handlerImpl) RespondActivityTaskCanceled(
 	}
 
 	err2 := engine.RespondActivityTaskCanceled(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -633,6 +662,8 @@ func (h *handlerImpl) RespondDecisionTaskCompleted(
 	}
 
 	response, err2 := engine.RespondDecisionTaskCompleted(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -699,6 +730,8 @@ func (h *handlerImpl) RespondDecisionTaskFailed(
 	}
 
 	err2 := engine.RespondDecisionTaskFailed(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -735,6 +768,8 @@ func (h *handlerImpl) StartWorkflowExecution(
 	}
 
 	response, err2 := engine.StartWorkflowExecution(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -911,6 +946,8 @@ func (h *handlerImpl) DescribeMutableState(
 	}
 
 	resp, err2 := engine.DescribeMutableState(ctx, request)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -946,6 +983,8 @@ func (h *handlerImpl) GetMutableState(
 	}
 
 	resp, err2 := engine.GetMutableState(ctx, getRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -981,6 +1020,8 @@ func (h *handlerImpl) PollMutableState(
 	}
 
 	resp, err2 := engine.PollMutableState(ctx, getRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -1016,6 +1057,8 @@ func (h *handlerImpl) DescribeWorkflowExecution(
 	}
 
 	resp, err2 := engine.DescribeWorkflowExecution(ctx, request)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -1061,6 +1104,8 @@ func (h *handlerImpl) RequestCancelWorkflowExecution(
 	}
 
 	err2 := engine.RequestCancelWorkflowExecution(ctx, request)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1102,6 +1147,8 @@ func (h *handlerImpl) SignalWorkflowExecution(
 	}
 
 	err2 := engine.SignalWorkflowExecution(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1163,6 +1210,8 @@ func (h *handlerImpl) SignalWithStartWorkflowExecution(
 	}
 
 	resp, err2 = engine.SignalWithStartWorkflowExecution(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -1203,6 +1252,8 @@ func (h *handlerImpl) RemoveSignalMutableState(
 	}
 
 	err2 := engine.RemoveSignalMutableState(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1244,6 +1295,8 @@ func (h *handlerImpl) TerminateWorkflowExecution(
 	}
 
 	err2 := engine.TerminateWorkflowExecution(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1285,6 +1338,8 @@ func (h *handlerImpl) ResetWorkflowExecution(
 	}
 
 	resp, err2 := engine.ResetWorkflowExecution(ctx, wrappedRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -1323,6 +1378,8 @@ func (h *handlerImpl) QueryWorkflow(
 	}
 
 	resp, err2 := engine.QueryWorkflow(ctx, request)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return nil, h.error(err2, scope, domainID, workflowID)
 	}
@@ -1370,6 +1427,8 @@ func (h *handlerImpl) ScheduleDecisionTask(
 	}
 
 	err2 := engine.ScheduleDecisionTask(ctx, request)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1415,6 +1474,8 @@ func (h *handlerImpl) RecordChildExecutionCompleted(
 	}
 
 	err2 := engine.RecordChildExecutionCompleted(ctx, request)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1460,6 +1521,8 @@ func (h *handlerImpl) ResetStickyTaskList(
 	}
 
 	resp, err = engine.ResetStickyTaskList(ctx, resetRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err != nil {
 		return nil, h.error(err, scope, domainID, workflowID)
 	}
@@ -1500,6 +1563,8 @@ func (h *handlerImpl) ReplicateEventsV2(
 	}
 
 	err2 := engine.ReplicateEventsV2(ctx, replicateRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err2 != nil {
 		return h.error(err2, scope, domainID, workflowID)
 	}
@@ -1589,6 +1654,8 @@ func (h *handlerImpl) SyncActivity(
 	}
 
 	err = engine.SyncActivity(ctx, syncActivityRequest)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err != nil {
 		return h.error(err, scope, domainID, workflowID)
 	}
@@ -1779,6 +1846,8 @@ func (h *handlerImpl) ReapplyEvents(
 	}
 
 	execution := request.GetRequest().GetWorkflowExecution()
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
+
 	if err := engine.ReapplyEvents(
 		ctx,
 		request.GetDomainUUID(),
@@ -1937,6 +2006,7 @@ func (h *handlerImpl) RefreshWorkflowTasks(
 			RunID:      execution.RunID,
 		},
 	)
+	h.incrementShardRequest(h.config.GetShardID(workflowID), workflowID, domainID)
 
 	if err != nil {
 		return h.error(err, scope, domainID, workflowID)
@@ -2215,4 +2285,74 @@ func validateTaskToken(token *common.TaskToken) error {
 		return errRunIDNotValid
 	}
 	return nil
+}
+
+func (h *handlerImpl) createHotShardDetectionCache() {
+	shardRequestCounter := make([]*int64, h.config.NumberOfShards)
+	bucketRequestCounter := make(map[int][]*hotShardBucketRequestCounter)
+	for i := 0; i < len(shardRequestCounter); i++ {
+		shardRequestCounter[i] = common.Int64Ptr(0)
+		// set to nil for now to optimize memory create on first request if still nil
+		bucketRequestCounter[i] = nil
+	}
+	h.hotShardDetectionCache = hotShardDetectionCache{
+		shardRequests: hotShardRequestCounter{
+			shardRequests: shardRequestCounter,
+			shardBuckets:  bucketRequestCounter,
+			hotShards:     make([]bool, h.config.NumberOfShards),
+		},
+		shutDownAnalyzer: make(chan struct{}),
+	}
+	go h.findHotShards(h.config.HotShardDetectionAnalyzerInterval())
+}
+
+func (h *handlerImpl) incrementShardRequest(shardId int, workflowId string, domainId string) {
+	//first cache
+	atomic.AddInt64(h.hotShardDetectionCache.shardRequests.shardRequests[shardId], int64(1))
+	//TODO second cache and check if hot and output log
+}
+
+func (h *handlerImpl) findHotShards(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+
+	for {
+		select {
+		case <-ticker.C:
+			h.analyzeHotShardCache()
+		case <-h.hotShardDetectionCache.shutDownAnalyzer:
+			return
+		}
+	}
+}
+
+func (h *handlerImpl) analyzeHotShardCache() {
+	numberOfShardsManaged := int64(0)
+	numberOfHotShards := 0
+	totalRequests := int64(0)
+	for i := 0; i < len(h.hotShardDetectionCache.shardRequests.shardRequests); i++ {
+		// check for not zero, shards not managed will always be 0
+		// keep track of total shards we manage, since this can change need to check every time
+		if *h.hotShardDetectionCache.shardRequests.shardRequests[i] != 0 {
+			totalRequests += *h.hotShardDetectionCache.shardRequests.shardRequests[i]
+			numberOfShardsManaged++
+		}
+	}
+	averageNumberOfRequests := float64(totalRequests / numberOfShardsManaged)
+	for i := 0; i < len(h.hotShardDetectionCache.shardRequests.shardRequests); i++ {
+		// for testing remove or lower to debug later
+		h.GetLogger().Info(fmt.Sprintf("Shard-id has %v number of requests in the last cycle", *h.hotShardDetectionCache.shardRequests.shardRequests[i]))
+		if float64(*h.hotShardDetectionCache.shardRequests.shardRequests[i]) > averageNumberOfRequests*h.config.HotShardDetectionHotThreshold() {
+			h.hotShardDetectionCache.shardRequests.hotShards[i] = true
+			numberOfHotShards++
+			h.GetLogger().Info("Found hot shard", tag.ShardID(i),
+				tag.Dynamic("number-of-requests", *h.hotShardDetectionCache.shardRequests.shardRequests[i]))
+			// set back to 0 for the next iteration
+			atomic.SwapInt64(h.hotShardDetectionCache.shardRequests.shardRequests[i], int64(0))
+		} else {
+			// if not hot set to false
+			h.hotShardDetectionCache.shardRequests.hotShards[i] = false
+			atomic.SwapInt64(h.hotShardDetectionCache.shardRequests.shardRequests[i], int64(0))
+		}
+	}
+	h.GetMetricsClient().Scope(metrics.HotShardDetectionScope).UpdateGauge(metrics.NumberOfHotShardsCount, float64(numberOfHotShards))
 }

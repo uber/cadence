@@ -1153,6 +1153,8 @@ const (
 	HistoryReplicationV2TaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
 	SyncActivityTaskScope
+	// HotShardDetectionScope is the scope used for hot shard detection
+	HotShardDetectionScope
 
 	NumHistoryScopes
 )
@@ -1744,6 +1746,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FailoverMarkerScope:                                             {operation: "FailoverMarker"},
 		HistoryReplicationV2TaskScope:                                   {operation: "HistoryReplicationV2Task"},
 		SyncActivityTaskScope:                                           {operation: "SyncActivityTask"},
+		HotShardDetectionScope:                                          {operation: "HotShardDetection"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -2238,6 +2241,8 @@ const (
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
 
+	NumberOfHotShardsCount
+
 	NumHistoryMetrics
 )
 
@@ -2496,6 +2501,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		VisibilityArchiveSuccessCount:                             {metricName: "visibility_archiver_archive_success", metricType: Counter},
 		MatchingClientForwardedCounter:                            {metricName: "forwarded", metricType: Counter},
 		MatchingClientInvalidTaskListName:                         {metricName: "invalid_task_list_name", metricType: Counter},
+		NumberOfHotShardsCount:                                    {metricName: "number_of_hot_shards", metricType: Gauge},
 
 		// per task list common metrics
 
