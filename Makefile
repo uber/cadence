@@ -468,8 +468,8 @@ clean: ## Clean build products
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
 	$(if \
-		$(filter $(BIN)/fake-codegen, $(wildcard $(BIN)/*)), \
-		$(warning fake build tools may exist, delete the $(BIN) folder to get real ones if desired),)
+		$(wildcard $(STABLE_BIN)/*), \
+		$(warning usually-stable build tools still exist, delete the $(STABLE_BIN) folder to rebuild them),)
 
 # v----- not yet cleaned up -----v
 
