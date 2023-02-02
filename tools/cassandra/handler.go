@@ -66,19 +66,31 @@ func verifyCompatibleVersion(
 	ds config.DataStore,
 	expectedCassandraVersion string,
 ) error {
-	if ds.NoSQL == nil {
-		// not using nosql
-		return nil
+	if ds.NoSQL != nil {
+		return verifyPluginVersion(ds.NoSQL, expectedCassandraVersion)
+	}
+	if ds.ShardedNoSQL != nil {
+		for shardName, connection := range ds.ShardedNoSQL.Connections {
+			err := verifyPluginVersion(connection.NoSQLPlugin, expectedCassandraVersion)
+			if err != nil {
+				return fmt.Errorf("Failed to verify version for DB shard: %v. Error: %v", shardName, err.Error())
+			}
+		}
 	}
 
+	// not using nosql
+	return nil
+}
+
+func verifyPluginVersion(plugin *config.NoSQL, expectedCassandraVersion string) error {
 	// Use hardcoded instead of constant because of cycle dependency issue.
 	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
 	// should be gone and we can use constant at that time
-	if ds.NoSQL.PluginName != "cassandra" {
-		return fmt.Errorf("unknown NoSQL plugin name: %q", ds.NoSQL.PluginName)
+	if plugin.PluginName != "cassandra" {
+		return fmt.Errorf("unknown NoSQL plugin name: %q", plugin.PluginName)
 	}
 
-	return CheckCompatibleVersion(*ds.NoSQL, expectedCassandraVersion)
+	return CheckCompatibleVersion(*plugin, expectedCassandraVersion)
 }
 
 // CheckCompatibleVersion check the version compatibility
