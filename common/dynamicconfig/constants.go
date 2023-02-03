@@ -1955,7 +1955,7 @@ const (
 	// HotShardDetectionHotThreshold the threshold greater than average that is considered hot
 	// KeyName: history.HotShardDetectionHotThreshold
 	// Value type: Float64
-	// Default value: 2.0
+	// Default value: 5.0
 	HotShardDetectionHotThreshold
 
 	// LastFloatKey must be the last one in this const group
@@ -3926,7 +3926,7 @@ var FloatKeys = map[FloatKey]DynamicFloat{
 	HotShardDetectionHotThreshold: DynamicFloat{
 		KeyName:      "history.HotShardDetectionHotThreshold",
 		Description:  "HotShardDetectionHotThreshold is the interval to check if there are hot shards",
-		DefaultValue: 2.0,
+		DefaultValue: 5.0,
 	},
 }
 
