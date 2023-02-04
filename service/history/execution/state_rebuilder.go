@@ -124,6 +124,9 @@ func (r *stateRebuilderImpl) Rebuild(
 	}
 
 	// need to specially handling the first batch, to initialize mutable state & state builder
+	if !iter.HasNext() {
+		return nil, 0, fmt.Errorf("Attempting to build history state but the iterator has found no history")
+	}
 	batch, err := iter.Next()
 	if err != nil {
 		return nil, 0, err
