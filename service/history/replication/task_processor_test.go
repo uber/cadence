@@ -23,6 +23,8 @@ package replication
 import (
 	"context"
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
 
@@ -317,4 +319,14 @@ func (f fakeTaskFetcher) GetRequestChan() chan<- *request {
 }
 func (f fakeTaskFetcher) GetRateLimiter() *quotas.DynamicRateLimiter {
 	return f.rateLimiter
+}
+
+func TestPanicHandling(t *testing.T) {
+	processor := taskProcessorImpl{
+		logger: loggerimpl.NewNopLogger(),
+	}
+	assert.NotPanics(t, func() {
+		// this will panic with NPEs
+		processor.processReplicationTasks()
+	})
 }

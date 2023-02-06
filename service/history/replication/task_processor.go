@@ -175,41 +175,50 @@ func (p *taskProcessorImpl) Stop() {
 }
 
 func (p *taskProcessorImpl) processorLoop() {
-	defer func() {
-		p.logger.Debug("Closing replication task processor.", tag.ReadLevel(p.lastRetrievedMessageID))
-	}()
-
-Loop:
 	for {
-		// for each iteration, do close check first
-		select {
-		case <-p.done:
-			p.logger.Debug("ReplicationTaskProcessor shutting down.")
-			return
-		default:
-		}
-
-		respChan := p.sendFetchMessageRequest()
-
-		select {
-		case response, ok := <-respChan:
-			if !ok {
-				p.logger.Debug("Fetch replication messages chan closed.")
-				continue Loop
-			}
-
-			p.logger.Debug("Got fetch replication messages response.",
-				tag.ReadLevel(response.GetLastRetrievedMessageID()),
-				tag.Bool(response.GetHasMore()),
-				tag.Counter(len(response.GetReplicationTasks())),
-			)
-
-			p.taskProcessingStartWait()
-			p.processResponse(response)
-		case <-p.done:
-			return
+		stopping := p.processReplicationTasks()
+		if stopping {
+			break
 		}
 	}
+}
+
+func (p *taskProcessorImpl) processReplicationTasks() (stopping bool) {
+	defer func() {
+		e := recover()
+		if e != nil {
+			p.logger.Error("A panic was encountered in replication task processing", tag.Dynamic("error", e))
+		}
+	}()
+	// for each iteration, do close check first
+	select {
+	case <-p.done:
+		p.logger.Debug("ReplicationTaskProcessor shutting down.")
+		return false
+	default:
+	}
+
+	respChan := p.sendFetchMessageRequest()
+
+	select {
+	case response, ok := <-respChan:
+		if !ok {
+			p.logger.Debug("Fetch replication messages chan closed.")
+			return false
+		}
+
+		p.logger.Debug("Got fetch replication messages response.",
+			tag.ReadLevel(response.GetLastRetrievedMessageID()),
+			tag.Bool(response.GetHasMore()),
+			tag.Counter(len(response.GetReplicationTasks())),
+		)
+
+		p.taskProcessingStartWait()
+		p.processResponse(response)
+	case <-p.done:
+		return true
+	}
+	return false
 }
 
 func (p *taskProcessorImpl) cleanupReplicationTaskLoop() {
