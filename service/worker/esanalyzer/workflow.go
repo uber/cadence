@@ -40,6 +40,7 @@ const (
 	workflowVersionTag          = "workflowVersion"
 	workflowVersionCountMetrics = "workflow_version_count"
 	workflowTypeTag             = "workflowType"
+	workflowTypeCountMetrics    = "workflow_type_count"
 
 	// workflow constants
 	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
@@ -206,6 +207,9 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 				return err
 			}
 			for _, workflowType := range domainWorkflowVersionCount.WorkflowTypes {
+				w.analyzer.tallyScope.Tagged(
+					map[string]string{domainTag: domainName, workflowTypeTag: workflowType.AggregateKey},
+				).Gauge(workflowTypeCountMetrics).Update(float64(workflowType.AggregateCount))
 				for _, workflowVersion := range workflowType.WorkflowVersions.WorkflowVersions {
 					w.analyzer.tallyScope.Tagged(
 						map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.AggregateKey, workflowTypeTag: workflowType.AggregateKey},

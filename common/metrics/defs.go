@@ -2239,6 +2239,7 @@ const (
 	FailoverMarkerCallbackCount
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
+	WorkflowTypeCount
 
 	NumHistoryMetrics
 )
@@ -2834,6 +2835,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CrossClusterTasksCount:                                       {metricName: "cross_cluster_tasks_count", metricType: Timer},
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
+		WorkflowTypeCount:                                            {metricName: "workflow_type_count", metricType: Gauge},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
