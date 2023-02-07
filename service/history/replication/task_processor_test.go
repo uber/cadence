@@ -23,10 +23,12 @@ package replication
 import (
 	"context"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/uber/cadence/common/log/loggerimpl"
 
 	"go.uber.org/yarpc"
 
