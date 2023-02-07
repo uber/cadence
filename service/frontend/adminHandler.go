@@ -242,7 +242,8 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
 	err = adh.params.DynamicConfig.UpdateValue(dc.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
-		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
+		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Yeah this is failing, err: %v", err)}, scope)
+		//adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
 
 	// update elasticsearch mapping, new added field will not be able to remove or update
@@ -1544,7 +1545,7 @@ func (adh *adminHandlerImpl) validatePaginationToken(
 
 // startRequestProfile initiates recording of request metrics
 func (adh *adminHandlerImpl) startRequestProfile(ctx context.Context, scope int) (metrics.Scope, metrics.Stopwatch) {
-	metricsScope := adh.GetMetricsClient().Scope(scope).Tagged(metrics.GetContextTags(ctx)...)
+	metricsScope := adh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag()).Tagged(metrics.GetContextTags(ctx)...)
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw
