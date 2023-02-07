@@ -882,7 +882,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 ) (resp *types.DescribeClusterResponse, retError error) {
 
 	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
-	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
+	scope, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeClusterScope)
 	defer sw.Stop()
 
 	// expose visibility store backend and if advanced options are available
