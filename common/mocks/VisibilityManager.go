@@ -376,3 +376,17 @@ func (_m *VisibilityManager) UpsertWorkflowExecution(ctx context.Context, reques
 
 	return r0
 }
+
+// DeleteUninitializedWorkflowExecution provides a mock function with given fields: ctx, request
+func (_m *VisibilityManager) DeleteUninitializedWorkflowExecution(ctx context.Context, request *persistence.VisibilityDeleteWorkflowExecutionRequest) error {
+	ret := _m.Called(ctx, request)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *persistence.VisibilityDeleteWorkflowExecutionRequest) error); ok {
+		r0 = rf(ctx, request)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
