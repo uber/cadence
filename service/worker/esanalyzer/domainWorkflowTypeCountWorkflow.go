@@ -107,7 +107,7 @@ func (w *Workflow) getDomainWorkflowTypeCountQuery(domainName string) (string, e
 {
     "aggs" : {
         "wftypes" : {
-            "terms" : { "field" : "WorkflowType"},
+            "terms" : { "field" : "WorkflowType"}
         }
     },
     "query": {
