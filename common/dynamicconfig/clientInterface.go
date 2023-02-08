@@ -29,10 +29,10 @@ import (
 )
 
 const (
-	DynamicConfigConfigStoreClient = "configstore"
-	DynamicConfigFileBasedClient   = "filebased"
-	DynamicConfigInMemoryClient    = "memory"
-	DynamicConfigNopClient         = "nop"
+	ConfigStoreClient = "configstore"
+	FileBasedClient   = "filebased"
+	InMemoryClient    = "memory"
+	NopClient         = "nop"
 )
 
 // Client allows fetching values from a dynamic configuration system NOTE: This does not have async
