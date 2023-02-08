@@ -78,7 +78,7 @@ func initDomainWorkflowTypeCountWorkflow(a *Analyzer) {
 	)
 }
 
-// workflowFunc queries ElasticSearch for information and do something with it
+// emitWorkflowTypeCount queries ElasticSearch for workflow count per type and emit metrics
 func (w *Workflow) emitWorkflowTypeCount(ctx workflow.Context) error {
 	if w.analyzer.config.ESAnalyzerPause() {
 		logger := workflow.GetLogger(ctx)
