@@ -123,6 +123,7 @@ func New(
 func (a *Analyzer) Start() error {
 	ctx := context.Background()
 	a.StartWorkflow(ctx)
+	ctx = context.Background()
 	a.StartDomainWFTypeCountWorkflow(ctx)
 
 	workerOpts := worker.Options{
