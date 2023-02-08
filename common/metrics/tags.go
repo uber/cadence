@@ -81,7 +81,7 @@ func metricWithUnknown(key, value string) Tag {
 	return simpleMetric{key: key, value: value}
 }
 
-func ShardIdTag(shardIDStr string) Tag {
+func ShardIDTag(shardIDStr string) Tag {
 	return metricWithUnknown(shardID, shardIDStr)
 }
 

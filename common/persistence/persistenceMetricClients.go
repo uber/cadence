@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common/config"
@@ -292,9 +293,9 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, m
 	}
 }
 
-func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIdTag metrics.Tag) error {
+func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIDTag metrics.Tag) error {
 	domainMetricsScope := p.metricClient.Scope(scope, domainTag)
-	shardMetricsScope := p.metricClient.Scope(scope, shardIdTag)
+	shardMetricsScope := p.metricClient.Scope(scope, shardIDTag)
 
 	domainMetricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
 	shardMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
@@ -441,7 +442,7 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIdTag(string(p.GetShardID())))
+	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 	if err != nil {
 		return nil, err
 	}
