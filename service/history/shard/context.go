@@ -681,7 +681,6 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	if s.isClosed() {
 		return nil, ErrShardClosed
 	}
-
 	ctx, cancel, err := s.ensureMinContextTimeout(ctx)
 	if err != nil {
 		return nil, err

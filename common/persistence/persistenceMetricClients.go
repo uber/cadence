@@ -292,6 +292,29 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, m
 	}
 }
 
+func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIdTag metrics.Tag) error {
+	domainMetricsScope := p.metricClient.Scope(scope, domainTag)
+	shardMetricsScope := p.metricClient.Scope(scope, shardIdTag)
+
+	domainMetricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
+	shardMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
+
+	before := time.Now()
+	err := op()
+	duration := time.Since(before)
+
+	domainMetricsScope.RecordTimer(metrics.PersistenceLatencyPerDomain, duration)
+	shardMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
+
+	if p.enableLatencyHistogramMetrics {
+		domainMetricsScope.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
+	}
+	if err != nil {
+		p.updateErrorMetricPerDomain(scope, err, domainMetricsScope)
+	}
+	return err
+}
+
 func (p *persistenceMetricsClientBase) call(scope int, op func() error, tags ...metrics.Tag) error {
 	metricsScope := p.metricClient.Scope(scope, tags...)
 	if len(tags) > 0 {
@@ -418,7 +441,7 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIdTag(string(p.GetShardID())))
 	if err != nil {
 		return nil, err
 	}
