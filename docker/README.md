@@ -109,6 +109,31 @@ docker-compose down
 docker-compose up
 ```
 
+DIY: Troubleshooting docker builds
+----------------------------------
+
+Note that Docker has been making changes to its build system, and the new system is currently missing some capabilities
+that the old one had, and makes major changes to how you control it.
+When searching for workarounds, make sure you are looking at modern answers, and consider specifically searching for
+"buildkit" solutions.  
+You can also disable buildkit explicitly with `DOCKER_BUILDKIT=0 docker build ...`.
+
+For output limiting (e.g. `[output clipped ...]` messages), or for anything that requires changing buildkit environment
+variables or other options, start a new builder and use it to build with:
+```
+# create a new builder with your options
+docker buildx create ...
+# which will print out a name, use it in the build step.
+
+# now use the exact same command as normal, but it prepends `buildx` and adds a builder flag.
+docker buildx build . -t ubercadence/<imageName>:YOUR_TAG --builder <that_builder_name>
+```
+
+For output limiting (e.g. `[output clipped ...]` messages), you can fix this with some buildkit env variables:
+```
+docker buildx create --driver-opt env.BUILDKIT_STEP_LOG_MAX_SIZE=-1 --driver-opt env.BUILDKIT_STEP_LOG_MAX_SPEED=-1
+```
+
 DIY: Running a custom cadence server locally alongside cadence requirements
 ---------------------------------------------------------------------------
 If you want to test out a custom-built cadence server, while running all the normal cadence dependencies, there's a simple workflow to do that:
