@@ -73,10 +73,24 @@ type (
 		ESAnalyzerMinNumWorkflowsForAvg          dynamicconfig.IntPropertyFnWithWorkflowTypeFilter
 		ESAnalyzerWorkflowDurationWarnThresholds dynamicconfig.StringPropertyFn
 		ESAnalyzerWorkflowVersionDomains         dynamicconfig.StringPropertyFn
+		ESAnalyzerWorkflowTypeDomains            dynamicconfig.StringPropertyFn
+	}
+
+	Workflow struct {
+		analyzer *Analyzer
+	}
+
+	EsAggregateCount struct {
+		AggregateKey   string `json:"key"`
+		AggregateCount int64  `json:"doc_count"`
 	}
 )
 
-const startUpDelay = time.Second * 10
+const (
+	taskListName = "cadence-sys-es-analyzer"
+
+	startUpDelay = time.Second * 10
+)
 
 // New returns a new instance as daemon
 func New(
@@ -109,6 +123,7 @@ func New(
 func (a *Analyzer) Start() error {
 	ctx := context.Background()
 	a.StartWorkflow(ctx)
+	a.StartDomainWFTypeCountWorkflow(ctx)
 
 	workerOpts := worker.Options{
 		MetricsScope:              a.tallyScope,
@@ -122,6 +137,7 @@ func (a *Analyzer) Start() error {
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
 	initWorkflow(a)
+	initDomainWorkflowTypeCountWorkflow(a)
 	go workercommon.StartWorkflowWithRetry(esanalyzerWFTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
 		_, err := client.StartWorkflow(ctx, wfOptions, esanalyzerWFTypeName)
 		switch err.(type) {
@@ -129,6 +145,20 @@ func (a *Analyzer) StartWorkflow(ctx context.Context) {
 			return nil
 		default:
 			a.logger.Error("Failed to start ElasticSearch Analyzer", tag.Error(err))
+			return err
+		}
+	})
+}
+
+func (a *Analyzer) StartDomainWFTypeCountWorkflow(ctx context.Context) {
+	initDomainWorkflowTypeCountWorkflow(a)
+	go workercommon.StartWorkflowWithRetry(domainWFTypeCountWorkflowTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
+		_, err := client.StartWorkflow(ctx, domainWfTypeCountStartOptions, domainWFTypeCountWorkflowTypeName)
+		switch err.(type) {
+		case *shared.WorkflowExecutionAlreadyStartedError:
+			return nil
+		default:
+			a.logger.Error("Failed to start domain wf type count workflow", tag.Error(err))
 			return err
 		}
 	})
