@@ -137,7 +137,6 @@ func (a *Analyzer) Start() error {
 
 func (a *Analyzer) StartWorkflow(ctx context.Context) {
 	initWorkflow(a)
-	initDomainWorkflowTypeCountWorkflow(a)
 	go workercommon.StartWorkflowWithRetry(esanalyzerWFTypeName, startUpDelay, a.resource, func(client cclient.Client) error {
 		_, err := client.StartWorkflow(ctx, wfOptions, esanalyzerWFTypeName)
 		switch err.(type) {
