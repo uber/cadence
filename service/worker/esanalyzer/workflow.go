@@ -123,6 +123,7 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// exclude uninitialized workflow executions by checking whether record has start time field
 	return fmt.Sprintf(`
 {
     "aggs" : {
@@ -147,7 +148,12 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
                     "match" : {
                         "DomainID" : "%s"
                     }
-                }
+                },
+				{
+					"exists": {
+						"field": "StartTime" 
+					}
+				}
             ]
         }
     },
