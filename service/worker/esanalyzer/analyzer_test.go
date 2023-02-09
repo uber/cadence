@@ -159,6 +159,14 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		s.workflow.emitWorkflowVersionMetrics,
 		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
 	)
+
+	s.workflowEnv.RegisterWorkflowWithOptions(
+		s.workflow.emitWorkflowTypeCount,
+		workflow.RegisterOptions{Name: domainWFTypeCountWorkflowTypeName})
+	s.activityEnv.RegisterActivityWithOptions(
+		s.workflow.emitWorkflowTypeCountMetrics,
+		activity.RegisterOptions{Name: emitDomainWorkflowTypeCountMetricsActivity},
+	)
 }
 
 func (s *esanalyzerWorkflowTestSuite) TearDownTest() {
@@ -271,6 +279,67 @@ func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowVersionMetricsActivity() {
 	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
 		&rawEs, nil).Times(1)
 	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowVersionMetrics)
+	s.NoError(err)
+
+}
+
+func (s *esanalyzerWorkflowTestSuite) TestEmitWorkflowTypeCountMetricsActivity() {
+	s.config.ESAnalyzerWorkflowTypeDomains = dynamicconfig.GetStringPropertyFn(
+		fmt.Sprintf(`["%s"]`, s.DomainName),
+	)
+	esRaw := `
+{
+  "took": 642,
+  "timed_out": false,
+  "_shards": {
+    "total": 20,
+    "successful": 20,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": 4588,
+    "max_score": 0,
+    "hits": [
+
+    ]
+  },
+  "aggregations": {
+    "wftypes": {
+      "doc_count_error_upper_bound": 0,
+      "sum_other_doc_count": 0,
+      "buckets": [
+        {
+          "key": "CourierUpdateWorkflow",
+          "doc_count": 4539
+        },
+        {
+          "key": "UpdateTipWorkflow",
+          "doc_count": 33
+        },
+        {
+          "key": "RoboCourierWorkflow",
+          "doc_count": 12
+        },
+        {
+          "key": "ImproveDropoffPinWorkflow",
+          "doc_count": 2
+        },
+        {
+          "key": "OrderStateUpdatedWorkflow",
+          "doc_count": 2
+        }
+      ]
+    }
+  }
+}
+	`
+	var rawEs elasticsearch.RawResponse
+	err := json.Unmarshal([]byte(esRaw), &rawEs)
+	s.NoError(err)
+	s.mockESClient.On("SearchRaw", mock.Anything, mock.Anything, mock.Anything).Return(
+		&rawEs, nil).Times(1)
+	_, err = s.activityEnv.ExecuteActivity(s.workflow.emitWorkflowTypeCountMetrics)
 	s.NoError(err)
 
 }
