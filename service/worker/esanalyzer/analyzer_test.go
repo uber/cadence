@@ -155,6 +155,10 @@ func (s *esanalyzerWorkflowTestSuite) SetupTest() {
 		s.workflow.emitWorkflowVersionMetrics,
 		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
 	)
+	s.activityEnv.RegisterActivityWithOptions(
+		s.workflow.emitWorkflowVersionMetrics,
+		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
+	)
 
 	s.workflowEnv.RegisterWorkflowWithOptions(
 		s.workflow.emitWorkflowTypeCount,
