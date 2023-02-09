@@ -204,7 +204,7 @@ func (p *taskProcessorImpl) processReplicationTasks() (stopping bool) {
 	case response, ok := <-respChan:
 		if !ok {
 			p.logger.Debug("Fetch replication messages chan closed.")
-			return false
+			return true
 		}
 
 		p.logger.Debug("Got fetch replication messages response.",
