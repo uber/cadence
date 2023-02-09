@@ -194,7 +194,7 @@ func (p *taskProcessorImpl) processReplicationTasks() (stopping bool) {
 	select {
 	case <-p.done:
 		p.logger.Debug("ReplicationTaskProcessor shutting down.")
-		return false
+		return true
 	default:
 	}
 
