@@ -242,8 +242,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	// update dynamic config. Until the DB based dynamic config is implemented, we shouldn't fail the updating.
 	err = adh.params.DynamicConfig.UpdateValue(dc.ValidSearchAttributes, currentValidAttr)
 	if err != nil {
-		return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Yeah this is failing, err: %v", err)}, scope)
-		//adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
+		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment. Please ignore this warn if this is in a real Cluster, because you dynamicconfig MUST be updated separately")
 	}
 
 	// update elasticsearch mapping, new added field will not be able to remove or update
