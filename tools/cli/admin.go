@@ -1285,5 +1285,14 @@ func newAdminConfigStoreCommands() []cli.Command {
 				AdminListDynamicConfig(c)
 			},
 		},
+		{
+			Name:    "describe",
+			Aliases: []string{"d"},
+			Usage:   "Describe all available configuration values",
+			Flags:   []cli.Flag{getFormatFlag()},
+			Action: func(c *cli.Context) {
+				AdminDescribeDynamicConfig(c)
+			},
+		},
 	}
 }
