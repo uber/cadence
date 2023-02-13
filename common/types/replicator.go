@@ -130,14 +130,14 @@ const (
 
 // DomainTaskAttributes is an internal type (TBD...)
 type DomainTaskAttributes struct {
-	DomainOperation         *DomainOperation                `json:"domainOperation,omitempty"`
-	ID                      string                          `json:"id,omitempty"`
-	Info                    *DomainInfo                     `json:"info,omitempty"`
-	Config                  *DomainConfiguration            `json:"config,omitempty"`
-	ReplicationConfig       *DomainReplicationConfiguration `json:"replicationConfig,omitempty"`
-	ConfigVersion           int64                           `json:"configVersion,omitempty"`
-	FailoverVersion         int64                           `json:"failoverVersion,omitempty"`
-	PreviousFailoverVersion int64                           `json:"previousFailoverVersion,omitempty"`
+	DomainOperation         *DomainOperation
+	ID                      string
+	Info                    *DomainInfo
+	Config                  *DomainConfiguration
+	ReplicationConfig       *DomainReplicationConfiguration
+	ConfigVersion           int64
+	FailoverVersion         int64
+	PreviousFailoverVersion int64
 }
 
 // GetDomainOperation is an internal getter (TBD...)
@@ -190,9 +190,9 @@ func (v *DomainTaskAttributes) GetPreviousFailoverVersion() (o int64) {
 
 // FailoverMarkerAttributes is an internal type (TBD...)
 type FailoverMarkerAttributes struct {
-	DomainID        string `json:"domainID,omitempty"`
-	FailoverVersion int64  `json:"failoverVersion,omitempty"`
-	CreationTime    *int64 `json:"creationTime,omitempty"`
+	DomainID        string
+	FailoverVersion int64
+	CreationTime    *int64
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -221,12 +221,12 @@ func (v *FailoverMarkerAttributes) GetCreationTime() (o int64) {
 
 // FailoverMarkers is an internal type (TBD...)
 type FailoverMarkers struct {
-	FailoverMarkers []*FailoverMarkerAttributes `json:"failoverMarkers,omitempty"`
+	FailoverMarkers []*FailoverMarkerAttributes
 }
 
 // GetDLQReplicationMessagesRequest is an internal type (TBD...)
 type GetDLQReplicationMessagesRequest struct {
-	TaskInfos []*ReplicationTaskInfo `json:"taskInfos,omitempty"`
+	TaskInfos []*ReplicationTaskInfo
 }
 
 // GetTaskInfos is an internal getter (TBD...)
@@ -239,14 +239,14 @@ func (v *GetDLQReplicationMessagesRequest) GetTaskInfos() (o []*ReplicationTaskI
 
 // GetDLQReplicationMessagesResponse is an internal type (TBD...)
 type GetDLQReplicationMessagesResponse struct {
-	ReplicationTasks []*ReplicationTask `json:"replicationTasks,omitempty"`
+	ReplicationTasks []*ReplicationTask
 }
 
 // GetDomainReplicationMessagesRequest is an internal type (TBD...)
 type GetDomainReplicationMessagesRequest struct {
-	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
-	ClusterName            string `json:"clusterName,omitempty"`
+	LastRetrievedMessageID *int64
+	LastProcessedMessageID *int64
+	ClusterName            string
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
@@ -275,13 +275,13 @@ func (v *GetDomainReplicationMessagesRequest) GetClusterName() (o string) {
 
 // GetDomainReplicationMessagesResponse is an internal type (TBD...)
 type GetDomainReplicationMessagesResponse struct {
-	Messages *ReplicationMessages `json:"messages,omitempty"`
+	Messages *ReplicationMessages
 }
 
 // GetReplicationMessagesRequest is an internal type (TBD...)
 type GetReplicationMessagesRequest struct {
-	Tokens      []*ReplicationToken `json:"tokens,omitempty"`
-	ClusterName string              `json:"clusterName,omitempty"`
+	Tokens      []*ReplicationToken
+	ClusterName string
 }
 
 // GetClusterName is an internal getter (TBD...)
@@ -294,7 +294,7 @@ func (v *GetReplicationMessagesRequest) GetClusterName() (o string) {
 
 // GetReplicationMessagesResponse is an internal type (TBD...)
 type GetReplicationMessagesResponse struct {
-	MessagesByShard map[int32]*ReplicationMessages `json:"messagesByShard,omitempty"`
+	MessagesByShard map[int32]*ReplicationMessages
 }
 
 // GetMessagesByShard is an internal getter (TBD...)
@@ -307,12 +307,12 @@ func (v *GetReplicationMessagesResponse) GetMessagesByShard() (o map[int32]*Repl
 
 // HistoryTaskV2Attributes is an internal type (TBD...)
 type HistoryTaskV2Attributes struct {
-	DomainID            string                `json:"domainId,omitempty"`
-	WorkflowID          string                `json:"workflowId,omitempty"`
-	RunID               string                `json:"runId,omitempty"`
-	VersionHistoryItems []*VersionHistoryItem `json:"versionHistoryItems,omitempty"`
-	Events              *DataBlob             `json:"events,omitempty"`
-	NewRunEvents        *DataBlob             `json:"newRunEvents,omitempty"`
+	DomainID            string
+	WorkflowID          string
+	RunID               string
+	VersionHistoryItems []*VersionHistoryItem
+	Events              *DataBlob
+	NewRunEvents        *DataBlob
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -385,12 +385,12 @@ type HistoryCountDLQMessagesResponse struct {
 
 // MergeDLQMessagesRequest is an internal type (TBD...)
 type MergeDLQMessagesRequest struct {
-	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               int32    `json:"shardID,omitempty"`
-	SourceCluster         string   `json:"sourceCluster,omitempty"`
-	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
-	MaximumPageSize       int32    `json:"maximumPageSize,omitempty"`
-	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
+	Type                  *DLQType
+	ShardID               int32
+	SourceCluster         string
+	InclusiveEndMessageID *int64
+	MaximumPageSize       int32
+	NextPageToken         []byte
 }
 
 // GetType is an internal getter (TBD...)
@@ -443,15 +443,15 @@ func (v *MergeDLQMessagesRequest) GetNextPageToken() (o []byte) {
 
 // MergeDLQMessagesResponse is an internal type (TBD...)
 type MergeDLQMessagesResponse struct {
-	NextPageToken []byte `json:"nextPageToken,omitempty"`
+	NextPageToken []byte
 }
 
 // PurgeDLQMessagesRequest is an internal type (TBD...)
 type PurgeDLQMessagesRequest struct {
-	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               int32    `json:"shardID,omitempty"`
-	SourceCluster         string   `json:"sourceCluster,omitempty"`
-	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
+	Type                  *DLQType
+	ShardID               int32
+	SourceCluster         string
+	InclusiveEndMessageID *int64
 }
 
 // GetType is an internal getter (TBD...)
@@ -488,12 +488,12 @@ func (v *PurgeDLQMessagesRequest) GetInclusiveEndMessageID() (o int64) {
 
 // ReadDLQMessagesRequest is an internal type (TBD...)
 type ReadDLQMessagesRequest struct {
-	Type                  *DLQType `json:"type,omitempty"`
-	ShardID               int32    `json:"shardID,omitempty"`
-	SourceCluster         string   `json:"sourceCluster,omitempty"`
-	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
-	MaximumPageSize       int32    `json:"maximumPageSize,omitempty"`
-	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
+	Type                  *DLQType
+	ShardID               int32
+	SourceCluster         string
+	InclusiveEndMessageID *int64
+	MaximumPageSize       int32
+	NextPageToken         []byte
 }
 
 // GetType is an internal getter (TBD...)
@@ -546,18 +546,18 @@ func (v *ReadDLQMessagesRequest) GetNextPageToken() (o []byte) {
 
 // ReadDLQMessagesResponse is an internal type (TBD...)
 type ReadDLQMessagesResponse struct {
-	Type                 *DLQType               `json:"type,omitempty"`
-	ReplicationTasks     []*ReplicationTask     `json:"replicationTasks,omitempty"`
-	ReplicationTasksInfo []*ReplicationTaskInfo `json:"replicationTasksInfo,omitempty"`
-	NextPageToken        []byte                 `json:"nextPageToken,omitempty"`
+	Type                 *DLQType
+	ReplicationTasks     []*ReplicationTask
+	ReplicationTasksInfo []*ReplicationTaskInfo
+	NextPageToken        []byte
 }
 
 // ReplicationMessages is an internal type (TBD...)
 type ReplicationMessages struct {
-	ReplicationTasks       []*ReplicationTask `json:"replicationTasks,omitempty"`
-	LastRetrievedMessageID int64              `json:"lastRetrievedMessageId,omitempty"`
-	HasMore                bool               `json:"hasMore,omitempty"`
-	SyncShardStatus        *SyncShardStatus   `json:"syncShardStatus,omitempty"`
+	ReplicationTasks       []*ReplicationTask
+	LastRetrievedMessageID int64
+	HasMore                bool
+	SyncShardStatus        *SyncShardStatus
 }
 
 // GetReplicationTasks is an internal getter (TBD...)
@@ -594,14 +594,14 @@ func (v *ReplicationMessages) GetSyncShardStatus() (o *SyncShardStatus) {
 
 // ReplicationTask is an internal type (TBD...)
 type ReplicationTask struct {
-	TaskType                      *ReplicationTaskType           `json:"taskType,omitempty"`
-	SourceTaskID                  int64                          `json:"sourceTaskId,omitempty"`
-	DomainTaskAttributes          *DomainTaskAttributes          `json:"domainTaskAttributes,omitempty"`
-	SyncShardStatusTaskAttributes *SyncShardStatusTaskAttributes `json:"syncShardStatusTaskAttributes,omitempty"`
-	SyncActivityTaskAttributes    *SyncActivityTaskAttributes    `json:"syncActivityTaskAttributes,omitempty"`
-	HistoryTaskV2Attributes       *HistoryTaskV2Attributes       `json:"historyTaskV2Attributes,omitempty"`
-	FailoverMarkerAttributes      *FailoverMarkerAttributes      `json:"failoverMarkerAttributes,omitempty"`
-	CreationTime                  *int64                         `json:"creationTime,omitempty"`
+	TaskType                      *ReplicationTaskType
+	SourceTaskID                  int64
+	DomainTaskAttributes          *DomainTaskAttributes
+	SyncShardStatusTaskAttributes *SyncShardStatusTaskAttributes
+	SyncActivityTaskAttributes    *SyncActivityTaskAttributes
+	HistoryTaskV2Attributes       *HistoryTaskV2Attributes
+	FailoverMarkerAttributes      *FailoverMarkerAttributes
+	CreationTime                  *int64
 }
 
 // GetTaskType is an internal getter (TBD...)
@@ -662,15 +662,15 @@ func (v *ReplicationTask) GetCreationTime() (o int64) {
 
 // ReplicationTaskInfo is an internal type (TBD...)
 type ReplicationTaskInfo struct {
-	DomainID     string `json:"domainID,omitempty"`
-	WorkflowID   string `json:"workflowID,omitempty"`
-	RunID        string `json:"runID,omitempty"`
-	TaskType     int16  `json:"taskType,omitempty"`
-	TaskID       int64  `json:"taskID,omitempty"`
-	Version      int64  `json:"version,omitempty"`
-	FirstEventID int64  `json:"firstEventID,omitempty"`
-	NextEventID  int64  `json:"nextEventID,omitempty"`
-	ScheduledID  int64  `json:"scheduledID,omitempty"`
+	DomainID     string
+	WorkflowID   string
+	RunID        string
+	TaskType     int16
+	TaskID       int64
+	Version      int64
+	FirstEventID int64
+	NextEventID  int64
+	ScheduledID  int64
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -833,9 +833,9 @@ const (
 
 // ReplicationToken is an internal type (TBD...)
 type ReplicationToken struct {
-	ShardID                int32 `json:"shardID,omitempty"`
-	LastRetrievedMessageID int64 `json:"lastRetrievedMessageId,omitempty"`
-	LastProcessedMessageID int64 `json:"lastProcessedMessageId,omitempty"`
+	ShardID                int32
+	LastRetrievedMessageID int64
+	LastProcessedMessageID int64
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -864,21 +864,21 @@ func (v *ReplicationToken) GetLastProcessedMessageID() (o int64) {
 
 // SyncActivityTaskAttributes is an internal type (TBD...)
 type SyncActivityTaskAttributes struct {
-	DomainID           string          `json:"domainId,omitempty"`
-	WorkflowID         string          `json:"workflowId,omitempty"`
-	RunID              string          `json:"runId,omitempty"`
-	Version            int64           `json:"version,omitempty"`
-	ScheduledID        int64           `json:"scheduledId,omitempty"`
-	ScheduledTime      *int64          `json:"scheduledTime,omitempty"`
-	StartedID          int64           `json:"startedId,omitempty"`
-	StartedTime        *int64          `json:"startedTime,omitempty"`
-	LastHeartbeatTime  *int64          `json:"lastHeartbeatTime,omitempty"`
-	Details            []byte          `json:"details,omitempty"`
-	Attempt            int32           `json:"attempt,omitempty"`
-	LastFailureReason  *string         `json:"lastFailureReason,omitempty"`
-	LastWorkerIdentity string          `json:"lastWorkerIdentity,omitempty"`
-	LastFailureDetails []byte          `json:"lastFailureDetails,omitempty"`
-	VersionHistory     *VersionHistory `json:"versionHistory,omitempty"`
+	DomainID           string
+	WorkflowID         string
+	RunID              string
+	Version            int64
+	ScheduledID        int64
+	ScheduledTime      *int64
+	StartedID          int64
+	StartedTime        *int64
+	LastHeartbeatTime  *int64
+	Details            []byte
+	Attempt            int32
+	LastFailureReason  *string
+	LastWorkerIdentity string
+	LastFailureDetails []byte
+	VersionHistory     *VersionHistory
 }
 
 // GetDomainID is an internal getter (TBD...)
@@ -963,7 +963,7 @@ func (v *SyncActivityTaskAttributes) GetVersionHistory() (o *VersionHistory) {
 
 // SyncShardStatus is an internal type (TBD...)
 type SyncShardStatus struct {
-	Timestamp *int64 `json:"timestamp,omitempty"`
+	Timestamp *int64
 }
 
 // GetTimestamp is an internal getter (TBD...)
@@ -976,7 +976,7 @@ func (v *SyncShardStatus) GetTimestamp() (o int64) {
 
 // SyncShardStatusTaskAttributes is an internal type (TBD...)
 type SyncShardStatusTaskAttributes struct {
-	SourceCluster string `json:"sourceCluster,omitempty"`
-	ShardID       int64  `json:"shardId,omitempty"`
-	Timestamp     *int64 `json:"timestamp,omitempty"`
+	SourceCluster string
+	ShardID       int64
+	Timestamp     *int64
 }
