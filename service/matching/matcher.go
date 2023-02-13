@@ -47,8 +47,8 @@ type TaskMatcher struct {
 	limiter *quotas.RateLimiter
 
 	fwdr          *Forwarder
-	scope         func() metrics.Scope // domain metric scope
-	numPartitions func() int           // number of task list partitions
+	scope         metrics.Scope // domain metric scope
+	numPartitions func() int    // number of task list partitions
 }
 
 const (
@@ -61,12 +61,12 @@ var errTasklistThrottled = errors.New("cannot add to tasklist, limit exceeded")
 // newTaskMatcher returns an task matcher instance. The returned instance can be
 // used by task producers and consumers to find a match. Both sync matches and non-sync
 // matches should use this implementation
-func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scopeFunc func() metrics.Scope) *TaskMatcher {
+func newTaskMatcher(config *taskListConfig, fwdr *Forwarder, scope metrics.Scope) *TaskMatcher {
 	dPtr := _defaultTaskDispatchRPS
 	limiter := quotas.NewRateLimiter(&dPtr, _defaultTaskDispatchRPSTTL, config.MinTaskThrottlingBurstSize())
 	return &TaskMatcher{
 		limiter:       limiter,
-		scope:         scopeFunc,
+		scope:         scope,
 		fwdr:          fwdr,
 		taskC:         make(chan *InternalTask),
 		queryTaskC:    make(chan *InternalTask),
@@ -109,7 +109,7 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 	if !task.isForwarded() {
 		rsv, err = tm.ratelimit(ctx)
 		if err != nil {
-			tm.scope().IncCounter(metrics.SyncThrottlePerTaskListCounter)
+			tm.scope.IncCounter(metrics.SyncThrottlePerTaskListCounter)
 			return false, err
 		}
 	}
@@ -317,16 +317,16 @@ func (tm *TaskMatcher) pollOrForward(
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
-			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case task := <-queryTaskC:
-		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
-		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case <-ctx.Done():
-		tm.scope().IncCounter(metrics.PollTimeoutPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		return nil, ErrNoTasks
 	case token := <-tm.fwdrPollReqTokenC():
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
@@ -346,16 +346,16 @@ func (tm *TaskMatcher) poll(
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
-			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case task := <-queryTaskC:
-		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
-		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case <-ctx.Done():
-		tm.scope().IncCounter(metrics.PollTimeoutPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		return nil, ErrNoTasks
 	}
 }
@@ -368,13 +368,13 @@ func (tm *TaskMatcher) pollNonBlocking(
 	select {
 	case task := <-taskC:
 		if task.responseC != nil {
-			tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+			tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
 		}
-		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	case task := <-queryTaskC:
-		tm.scope().IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
-		tm.scope().IncCounter(metrics.PollSuccessPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessWithSyncPerTaskListCounter)
+		tm.scope.IncCounter(metrics.PollSuccessPerTaskListCounter)
 		return task, nil
 	default:
 		return nil, ErrNoTasks
