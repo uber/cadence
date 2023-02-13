@@ -28,15 +28,15 @@ import (
 
 // AddActivityTaskRequest is an internal type (TBD...)
 type AddActivityTaskRequest struct {
-	DomainUUID                    string                    `json:"domainUUID,omitempty"`
-	Execution                     *WorkflowExecution        `json:"execution,omitempty"`
-	SourceDomainUUID              string                    `json:"sourceDomainUUID,omitempty"`
-	TaskList                      *TaskList                 `json:"taskList,omitempty"`
-	ScheduleID                    int64                     `json:"scheduleId,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32                    `json:"scheduleToStartTimeoutSeconds,omitempty"`
-	Source                        *TaskSource               `json:"source,omitempty"`
-	ForwardedFrom                 string                    `json:"forwardedFrom,omitempty"`
-	ActivityTaskDispatchInfo      *ActivityTaskDispatchInfo `json:"activityTaskDispatchInfo,omitempty"`
+	DomainUUID                    string
+	Execution                     *WorkflowExecution
+	SourceDomainUUID              string
+	TaskList                      *TaskList
+	ScheduleID                    int64
+	ScheduleToStartTimeoutSeconds *int32
+	Source                        *TaskSource
+	ForwardedFrom                 string
+	ActivityTaskDispatchInfo      *ActivityTaskDispatchInfo
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -105,24 +105,24 @@ func (v *AddActivityTaskRequest) GetForwardedFrom() (o string) {
 
 // ActivityTaskDispatchInfo is an internal type (TBD...)
 type ActivityTaskDispatchInfo struct {
-	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
-	StartedTimestamp                *int64        `json:"startedTimestamp,omitempty"`
-	Attempt                         *int64        `json:"attempt,omitempty"`
-	ScheduledTimestampOfThisAttempt *int64        `json:"scheduledTimestampOfThisAttempt,omitempty"`
-	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
-	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
-	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
+	ScheduledEvent                  *HistoryEvent
+	StartedTimestamp                *int64
+	Attempt                         *int64
+	ScheduledTimestampOfThisAttempt *int64
+	HeartbeatDetails                []byte
+	WorkflowType                    *WorkflowType
+	WorkflowDomain                  string
 }
 
 // AddDecisionTaskRequest is an internal type (TBD...)
 type AddDecisionTaskRequest struct {
-	DomainUUID                    string             `json:"domainUUID,omitempty"`
-	Execution                     *WorkflowExecution `json:"execution,omitempty"`
-	TaskList                      *TaskList          `json:"taskList,omitempty"`
-	ScheduleID                    int64              `json:"scheduleId,omitempty"`
-	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
-	Source                        *TaskSource        `json:"source,omitempty"`
-	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
+	DomainUUID                    string
+	Execution                     *WorkflowExecution
+	TaskList                      *TaskList
+	ScheduleID                    int64
+	ScheduleToStartTimeoutSeconds *int32
+	Source                        *TaskSource
+	ForwardedFrom                 string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -183,10 +183,10 @@ func (v *AddDecisionTaskRequest) GetForwardedFrom() (o string) {
 
 // CancelOutstandingPollRequest is an internal type (TBD...)
 type CancelOutstandingPollRequest struct {
-	DomainUUID   string    `json:"domainUUID,omitempty"`
-	TaskListType *int32    `json:"taskListType,omitempty"`
-	TaskList     *TaskList `json:"taskList,omitempty"`
-	PollerID     string    `json:"pollerID,omitempty"`
+	DomainUUID   string
+	TaskListType *int32
+	TaskList     *TaskList
+	PollerID     string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -223,8 +223,8 @@ func (v *CancelOutstandingPollRequest) GetPollerID() (o string) {
 
 // MatchingDescribeTaskListRequest is an internal type (TBD...)
 type MatchingDescribeTaskListRequest struct {
-	DomainUUID  string                   `json:"domainUUID,omitempty"`
-	DescRequest *DescribeTaskListRequest `json:"descRequest,omitempty"`
+	DomainUUID  string
+	DescRequest *DescribeTaskListRequest
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -245,8 +245,8 @@ func (v *MatchingDescribeTaskListRequest) GetDescRequest() (o *DescribeTaskListR
 
 // MatchingListTaskListPartitionsRequest is an internal type (TBD...)
 type MatchingListTaskListPartitionsRequest struct {
-	Domain   string    `json:"domain,omitempty"`
-	TaskList *TaskList `json:"taskList,omitempty"`
+	Domain   string
+	TaskList *TaskList
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -267,7 +267,7 @@ func (v *MatchingListTaskListPartitionsRequest) GetTaskList() (o *TaskList) {
 
 // MatchingGetTaskListsByDomainRequest is an internal type (TBD...)
 type MatchingGetTaskListsByDomainRequest struct {
-	Domain string `json:"domain,omitempty"`
+	Domain string
 }
 
 // GetDomainName is an internal getter (TBD...)
@@ -280,10 +280,10 @@ func (v *MatchingGetTaskListsByDomainRequest) GetDomain() (o string) {
 
 // MatchingPollForActivityTaskRequest is an internal type (TBD...)
 type MatchingPollForActivityTaskRequest struct {
-	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      string                      `json:"pollerID,omitempty"`
-	PollRequest   *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
-	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
+	DomainUUID    string
+	PollerID      string
+	PollRequest   *PollForActivityTaskRequest
+	ForwardedFrom string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -320,10 +320,10 @@ func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 
 // MatchingPollForDecisionTaskRequest is an internal type (TBD...)
 type MatchingPollForDecisionTaskRequest struct {
-	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      string                      `json:"pollerID,omitempty"`
-	PollRequest   *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
-	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
+	DomainUUID    string
+	PollerID      string
+	PollRequest   *PollForDecisionTaskRequest
+	ForwardedFrom string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -360,23 +360,23 @@ func (v *MatchingPollForDecisionTaskRequest) GetForwardedFrom() (o string) {
 
 // MatchingPollForDecisionTaskResponse is an internal type (TBD...)
 type MatchingPollForDecisionTaskResponse struct {
-	TaskToken                 []byte                    `json:"taskToken,omitempty"`
-	WorkflowExecution         *WorkflowExecution        `json:"workflowExecution,omitempty"`
-	WorkflowType              *WorkflowType             `json:"workflowType,omitempty"`
-	PreviousStartedEventID    *int64                    `json:"previousStartedEventId,omitempty"`
-	StartedEventID            int64                     `json:"startedEventId,omitempty"`
-	Attempt                   int64                     `json:"attempt,omitempty"`
-	NextEventID               int64                     `json:"nextEventId,omitempty"`
-	BacklogCountHint          int64                     `json:"backlogCountHint,omitempty"`
-	StickyExecutionEnabled    bool                      `json:"stickyExecutionEnabled,omitempty"`
-	Query                     *WorkflowQuery            `json:"query,omitempty"`
-	DecisionInfo              *TransientDecisionInfo    `json:"decisionInfo,omitempty"`
-	WorkflowExecutionTaskList *TaskList                 `json:"WorkflowExecutionTaskList,omitempty"`
-	EventStoreVersion         int32                     `json:"eventStoreVersion,omitempty"`
-	BranchToken               []byte                    `json:"branchToken,omitempty"`
-	ScheduledTimestamp        *int64                    `json:"scheduledTimestamp,omitempty"`
-	StartedTimestamp          *int64                    `json:"startedTimestamp,omitempty"`
-	Queries                   map[string]*WorkflowQuery `json:"queries,omitempty"`
+	TaskToken                 []byte
+	WorkflowExecution         *WorkflowExecution
+	WorkflowType              *WorkflowType
+	PreviousStartedEventID    *int64
+	StartedEventID            int64
+	Attempt                   int64
+	NextEventID               int64
+	BacklogCountHint          int64
+	StickyExecutionEnabled    bool
+	Query                     *WorkflowQuery
+	DecisionInfo              *TransientDecisionInfo
+	WorkflowExecutionTaskList *TaskList
+	EventStoreVersion         int32
+	BranchToken               []byte
+	ScheduledTimestamp        *int64
+	StartedTimestamp          *int64
+	Queries                   map[string]*WorkflowQuery
 }
 
 // GetWorkflowExecution is an internal getter (TBD...)
@@ -421,10 +421,10 @@ func (v *MatchingPollForDecisionTaskResponse) GetBranchToken() (o []byte) {
 
 // MatchingQueryWorkflowRequest is an internal type (TBD...)
 type MatchingQueryWorkflowRequest struct {
-	DomainUUID    string                `json:"domainUUID,omitempty"`
-	TaskList      *TaskList             `json:"taskList,omitempty"`
-	QueryRequest  *QueryWorkflowRequest `json:"queryRequest,omitempty"`
-	ForwardedFrom string                `json:"forwardedFrom,omitempty"`
+	DomainUUID    string
+	TaskList      *TaskList
+	QueryRequest  *QueryWorkflowRequest
+	ForwardedFrom string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -461,10 +461,10 @@ func (v *MatchingQueryWorkflowRequest) GetForwardedFrom() (o string) {
 
 // MatchingRespondQueryTaskCompletedRequest is an internal type (TBD...)
 type MatchingRespondQueryTaskCompletedRequest struct {
-	DomainUUID       string                            `json:"domainUUID,omitempty"`
-	TaskList         *TaskList                         `json:"taskList,omitempty"`
-	TaskID           string                            `json:"taskID,omitempty"`
-	CompletedRequest *RespondQueryTaskCompletedRequest `json:"completedRequest,omitempty"`
+	DomainUUID       string
+	TaskList         *TaskList
+	TaskID           string
+	CompletedRequest *RespondQueryTaskCompletedRequest
 }
 
 // GetDomainUUID is an internal getter (TBD...)
