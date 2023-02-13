@@ -22,8 +22,8 @@ package types
 
 // AddSearchAttributeRequest is an internal type (TBD...)
 type AddSearchAttributeRequest struct {
-	SearchAttribute map[string]IndexedValueType `json:"searchAttribute,omitempty"`
-	SecurityToken   string                      `json:"securityToken,omitempty"`
+	SearchAttribute map[string]IndexedValueType
+	SecurityToken   string
 }
 
 // GetSearchAttribute is an internal getter (TBD...)
@@ -36,15 +36,15 @@ func (v *AddSearchAttributeRequest) GetSearchAttribute() (o map[string]IndexedVa
 
 // DescribeClusterResponse is an internal type (TBD...)
 type DescribeClusterResponse struct {
-	SupportedClientVersions *SupportedClientVersions    `json:"supportedClientVersions,omitempty"`
-	MembershipInfo          *MembershipInfo             `json:"membershipInfo,omitempty"`
-	PersistenceInfo         map[string]*PersistenceInfo `json:"persistenceInfo,omitempty"`
+	SupportedClientVersions *SupportedClientVersions
+	MembershipInfo          *MembershipInfo
+	PersistenceInfo         map[string]*PersistenceInfo
 }
 
 // AdminDescribeWorkflowExecutionRequest is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionRequest struct {
-	Domain    string             `json:"domain,omitempty"`
-	Execution *WorkflowExecution `json:"execution,omitempty"`
+	Domain    string
+	Execution *WorkflowExecution
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -57,10 +57,10 @@ func (v *AdminDescribeWorkflowExecutionRequest) GetDomain() (o string) {
 
 // AdminDescribeWorkflowExecutionResponse is an internal type (TBD...)
 type AdminDescribeWorkflowExecutionResponse struct {
-	ShardID                string `json:"shardId,omitempty"`
-	HistoryAddr            string `json:"historyAddr,omitempty"`
-	MutableStateInCache    string `json:"mutableStateInCache,omitempty"`
-	MutableStateInDatabase string `json:"mutableStateInDatabase,omitempty"`
+	ShardID                string
+	HistoryAddr            string
+	MutableStateInCache    string
+	MutableStateInDatabase string
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -81,14 +81,14 @@ func (v *AdminDescribeWorkflowExecutionResponse) GetMutableStateInDatabase() (o 
 
 // GetWorkflowExecutionRawHistoryV2Request is an internal type (TBD...)
 type GetWorkflowExecutionRawHistoryV2Request struct {
-	Domain            string             `json:"domain,omitempty"`
-	Execution         *WorkflowExecution `json:"execution,omitempty"`
-	StartEventID      *int64             `json:"startEventId,omitempty"`
-	StartEventVersion *int64             `json:"startEventVersion,omitempty"`
-	EndEventID        *int64             `json:"endEventId,omitempty"`
-	EndEventVersion   *int64             `json:"endEventVersion,omitempty"`
-	MaximumPageSize   int32              `json:"maximumPageSize,omitempty"`
-	NextPageToken     []byte             `json:"nextPageToken,omitempty"`
+	Domain            string
+	Execution         *WorkflowExecution
+	StartEventID      *int64
+	StartEventVersion *int64
+	EndEventID        *int64
+	EndEventVersion   *int64
+	MaximumPageSize   int32
+	NextPageToken     []byte
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -141,9 +141,9 @@ func (v *GetWorkflowExecutionRawHistoryV2Request) GetMaximumPageSize() (o int32)
 
 // GetWorkflowExecutionRawHistoryV2Response is an internal type (TBD...)
 type GetWorkflowExecutionRawHistoryV2Response struct {
-	NextPageToken  []byte          `json:"nextPageToken,omitempty"`
-	HistoryBatches []*DataBlob     `json:"historyBatches,omitempty"`
-	VersionHistory *VersionHistory `json:"versionHistory,omitempty"`
+	NextPageToken  []byte
+	HistoryBatches []*DataBlob
+	VersionHistory *VersionHistory
 }
 
 // GetHistoryBatches is an internal getter (TBD...)
@@ -164,46 +164,46 @@ func (v *GetWorkflowExecutionRawHistoryV2Response) GetVersionHistory() (o *Versi
 
 // HostInfo is an internal type (TBD...)
 type HostInfo struct {
-	Identity string `json:"Identity,omitempty"`
+	Identity string
 }
 
 // MembershipInfo is an internal type (TBD...)
 type MembershipInfo struct {
-	CurrentHost      *HostInfo   `json:"currentHost,omitempty"`
-	ReachableMembers []string    `json:"reachableMembers,omitempty"`
-	Rings            []*RingInfo `json:"rings,omitempty"`
+	CurrentHost      *HostInfo
+	ReachableMembers []string
+	Rings            []*RingInfo
 }
 
 // PersistenceSetting is used to expose persistence engine settings
 type PersistenceSetting struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Key   string
+	Value string
 }
 
 // PersistenceFeature is used to expose store specific feature.
 // Feature can be cadence or store specific.
 type PersistenceFeature struct {
-	Key     string `json:"key"`
-	Enabled bool   `json:"enabled"`
+	Key     string
+	Enabled bool
 }
 
 // PersistenceInfo is used to expose store configuration
 type PersistenceInfo struct {
-	Backend  string                `json:"backend"`
-	Settings []*PersistenceSetting `json:"settings,omitempty"`
-	Features []*PersistenceFeature `json:"features,omitempty"`
+	Backend  string
+	Settings []*PersistenceSetting
+	Features []*PersistenceFeature
 }
 
 // ResendReplicationTasksRequest is an internal type (TBD...)
 type ResendReplicationTasksRequest struct {
-	DomainID      string `json:"domainID,omitempty"`
-	WorkflowID    string `json:"workflowID,omitempty"`
-	RunID         string `json:"runID,omitempty"`
-	RemoteCluster string `json:"remoteCluster,omitempty"`
-	StartEventID  *int64 `json:"startEventID,omitempty"`
-	StartVersion  *int64 `json:"startVersion,omitempty"`
-	EndEventID    *int64 `json:"endEventID,omitempty"`
-	EndVersion    *int64 `json:"endVersion,omitempty"`
+	DomainID      string
+	WorkflowID    string
+	RunID         string
+	RemoteCluster string
+	StartEventID  *int64
+	StartVersion  *int64
+	EndEventID    *int64
+	EndVersion    *int64
 }
 
 // GetWorkflowID is an internal getter (TBD...)
@@ -232,35 +232,35 @@ func (v *ResendReplicationTasksRequest) GetRemoteCluster() (o string) {
 
 // RingInfo is an internal type (TBD...)
 type RingInfo struct {
-	Role        string      `json:"role,omitempty"`
-	MemberCount int32       `json:"memberCount,omitempty"`
-	Members     []*HostInfo `json:"members,omitempty"`
+	Role        string
+	MemberCount int32
+	Members     []*HostInfo
 }
 
 type GetDynamicConfigRequest struct {
-	ConfigName string                 `json:"configName,omitempty"`
-	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+	ConfigName string
+	Filters    []*DynamicConfigFilter
 }
 
 type GetDynamicConfigResponse struct {
-	Value *DataBlob `json:"value,omitempty"`
+	Value *DataBlob
 }
 
 type UpdateDynamicConfigRequest struct {
-	ConfigName   string                `json:"configName,omitempty"`
-	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
+	ConfigName   string
+	ConfigValues []*DynamicConfigValue
 }
 
 type RestoreDynamicConfigRequest struct {
-	ConfigName string                 `json:"configName,omitempty"`
-	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+	ConfigName string
+	Filters    []*DynamicConfigFilter
 }
 
 // AdminDeleteWorkflowRequest is an internal type (TBD...)
 type AdminDeleteWorkflowRequest struct {
-	Domain     string             `json:"domain,omitempty"`
-	Execution  *WorkflowExecution `json:"execution,omitempty"`
-	SkipErrors bool               `json:"skipErrors,omitempty"`
+	Domain     string
+	Execution  *WorkflowExecution
+	SkipErrors bool
 }
 
 func (v *AdminDeleteWorkflowRequest) GetDomain() (o string) {
@@ -286,18 +286,18 @@ func (v *AdminDeleteWorkflowRequest) GetSkipErrors() (o bool) {
 }
 
 type AdminDeleteWorkflowResponse struct {
-	HistoryDeleted    bool `json:"historyDeleted,omitempty"`
-	ExecutionsDeleted bool `json:"executionsDeleted,omitempty"`
-	VisibilityDeleted bool `json:"visibilityDeleted,omitempty"`
+	HistoryDeleted    bool
+	ExecutionsDeleted bool
+	VisibilityDeleted bool
 }
 
 type AdminMaintainWorkflowRequest = AdminDeleteWorkflowRequest
 type AdminMaintainWorkflowResponse = AdminDeleteWorkflowResponse
 
 type ListDynamicConfigRequest struct {
-	ConfigName string `json:"configName,omitempty"`
+	ConfigName string
 }
 
 type ListDynamicConfigResponse struct {
-	Entries []*DynamicConfigEntry `json:"entries,omitempty"`
+	Entries []*DynamicConfigEntry
 }
