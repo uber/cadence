@@ -1541,7 +1541,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessRecordWorkflowStartedTask()
 		s.mockVisibilityMgr.On(
 			"RecordWorkflowExecutionUninitialized",
 			mock.Anything,
-			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now()),
+			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now(), 1234),
 		).Once().Return(nil)
 	}
 	s.mockVisibilityMgr.On(
@@ -1835,6 +1835,7 @@ func createRecordWorkflowExecutionUninitializedRequest(
 	transferTask Task,
 	mutableState execution.MutableState,
 	updateTime time.Time,
+	shardID int64,
 ) *persistence.RecordWorkflowExecutionUninitializedRequest {
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 	workflowExecution := types.WorkflowExecution{
@@ -1847,5 +1848,6 @@ func createRecordWorkflowExecutionUninitializedRequest(
 		Execution:        workflowExecution,
 		WorkflowTypeName: executionInfo.WorkflowTypeName,
 		UpdateTimestamp:  updateTime.UnixNano(),
+		ShardID:          shardID,
 	}
 }
