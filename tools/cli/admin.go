@@ -47,6 +47,16 @@ func newAdminWorkflowCommands() []cli.Command {
 					Name:  FlagBranchID,
 					Usage: "BranchID",
 				},
+				cli.Int64Flag{
+					Name:  FlagMinEventID,
+					Value: 1,
+					Usage: "MinEventID",
+				},
+				cli.Int64Flag{
+					Name:  FlagMaxEventID,
+					Value: 10000,
+					Usage: "MaxEventID",
+				},
 				cli.StringFlag{
 					Name:  FlagOutputFilenameWithAlias,
 					Usage: "output file",

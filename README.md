@@ -9,6 +9,8 @@ You can implement your workflows with one of our client libraries.
 The [Go](https://github.com/uber-go/cadence-client) and [Java](https://github.com/uber-java/cadence-client) libraries are officially maintained by the Cadence team, 
 while the [Python](https://github.com/firdaus/cadence-python) and [Ruby](https://github.com/coinbase/cadence-ruby) client libraries are developed by the community.
 
+You can also use [iWF](https://github.com/indeedeng/iwf) as a DSL framework on top of Cadence. 
+
 See Maxim's talk at [Data@Scale Conference](https://atscaleconference.com/videos/cadence-microservice-architecture-beyond-requestreply) for an architectural overview of Cadence.
 
 Visit [cadenceworkflow.io](https://cadenceworkflow.io) to learn more about Cadence. Join us in [Cadence Documentation](https://github.com/uber/cadence-docs) project. Feel free to raise an Issue or Pull Request there.

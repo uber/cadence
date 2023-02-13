@@ -2015,6 +2015,11 @@ const (
 	// Value type: string ["test-domain","test-domain2"]
 	// Default value: ""
 	ESAnalyzerWorkflowVersionMetricDomains
+	// ESAnalyzerWorkflowTypeMetricDomains defines the domains we want to emit wf type metrics on
+	// KeyName: worker.ESAnalyzerWorkflowTypeMetricDomains
+	// Value type: string ["test-domain","test-domain2"]
+	// Default value: ""
+	ESAnalyzerWorkflowTypeMetricDomains
 
 	// LastStringKey must be the last one in this const group
 	LastStringKey
@@ -3963,6 +3968,11 @@ var StringKeys = map[StringKey]DynamicString{
 	},
 	ESAnalyzerWorkflowVersionMetricDomains: DynamicString{
 		KeyName:      "worker.ESAnalyzerWorkflowVersionMetricDomains",
+		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
+		DefaultValue: "",
+	},
+	ESAnalyzerWorkflowTypeMetricDomains: DynamicString{
+		KeyName:      "worker.ESAnalyzerWorkflowTypeMetricDomains",
 		Description:  "ESAnalyzerWorkflowDurationWarnThresholds defines the domains we want to emit wf version metrics on",
 		DefaultValue: "",
 	},
