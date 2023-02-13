@@ -236,10 +236,12 @@ func (t *taskImpl) HandleErr(
 			t.attempt++
 			if t.attempt > t.criticalRetryCount() {
 				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(t.attempt))
-				t.logger.Error("Critical error processing task, retrying.",
+				t.logger.Error("Critical error processing task, retrying.", // TODO: there might be more. If there is, do the same thing
 					tag.Error(err),
 					tag.OperationCritical,
+					// fixme!!! Add a new tag attempt into TaskType.log the attempt
 					tag.TaskType(t.GetTaskType()),
+					tag.AttemptCount(t.GetAttempt()),
 				)
 			}
 		}
