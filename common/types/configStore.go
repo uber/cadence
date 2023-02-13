@@ -21,21 +21,21 @@
 package types
 
 type DynamicConfigBlob struct {
-	SchemaVersion int64                 `json:"schemaVersion,omitempty"`
-	Entries       []*DynamicConfigEntry `json:"entries,omitempty"`
+	SchemaVersion int64
+	Entries       []*DynamicConfigEntry
 }
 
 type DynamicConfigEntry struct {
-	Name   string                `json:"name,omitempty"`
-	Values []*DynamicConfigValue `json:"values,omitempty"`
+	Name   string
+	Values []*DynamicConfigValue
 }
 
 type DynamicConfigValue struct {
-	Value   *DataBlob              `json:"value,omitempty"`
-	Filters []*DynamicConfigFilter `json:"filters,omitempty"`
+	Value   *DataBlob
+	Filters []*DynamicConfigFilter
 }
 
 type DynamicConfigFilter struct {
-	Name  string    `json:"name,omitempty"`
-	Value *DataBlob `json:"value,omitempty"`
+	Name  string
+	Value *DataBlob
 }
