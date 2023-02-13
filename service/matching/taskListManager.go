@@ -188,15 +188,10 @@ func newTaskListManager(
 func (c *taskListManagerImpl) Start() error {
 	defer c.startWG.Done()
 
-	// Make sure to grab the range first before starting task writer, as it needs the range to initialize maxReadLevel
-	state, err := c.renewLeaseWithRetry()
-	if err != nil {
+	if err := c.taskWriter.Start(); err != nil {
 		c.Stop()
 		return err
 	}
-
-	c.taskAckManager.SetAckLevel(state.ackLevel)
-	c.taskWriter.Start(c.rangeIDToTaskIDBlock(state.rangeID))
 	c.taskReader.Start()
 
 	return nil
@@ -398,7 +393,7 @@ func (c *taskListManagerImpl) DescribeTaskList(includeTaskListStatus bool) *type
 		return response
 	}
 
-	taskIDBlock := c.rangeIDToTaskIDBlock(c.db.RangeID())
+	taskIDBlock := rangeIDToTaskIDBlock(c.db.RangeID(), c.config.RangeSize)
 	response.TaskListStatus = &types.TaskListStatus{
 		ReadLevel:        c.taskAckManager.GetReadLevel(),
 		AckLevel:         c.taskAckManager.GetAckLevel(),
@@ -423,7 +418,7 @@ func (c *taskListManagerImpl) String() string {
 	rangeID := c.db.RangeID()
 	fmt.Fprintf(buf, " task list %v\n", c.taskListID.name)
 	fmt.Fprintf(buf, "RangeID=%v\n", rangeID)
-	fmt.Fprintf(buf, "TaskIDBlock=%+v\n", c.rangeIDToTaskIDBlock(rangeID))
+	fmt.Fprintf(buf, "TaskIDBlock=%+v\n", rangeIDToTaskIDBlock(rangeID, c.config.RangeSize))
 	fmt.Fprintf(buf, "AckLevel=%v\n", c.taskAckManager.GetAckLevel())
 	fmt.Fprintf(buf, "MaxReadLevel=%v\n", c.taskAckManager.GetReadLevel())
 
@@ -467,46 +462,6 @@ func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error
 	}
 	ackLevel := c.taskAckManager.AckItem(task.TaskID)
 	c.taskGC.Run(ackLevel)
-}
-
-func (c *taskListManagerImpl) renewLeaseWithRetry() (taskListState, error) {
-	var newState taskListState
-	op := func() (err error) {
-		newState, err = c.db.RenewLease()
-		return
-	}
-	c.scope.IncCounter(metrics.LeaseRequestPerTaskListCounter)
-	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(persistence.IsTransientError),
-	)
-	err := throttleRetry.Do(context.Background(), op)
-	if err != nil {
-		c.scope.IncCounter(metrics.LeaseFailurePerTaskListCounter)
-		c.engine.unloadTaskList(c.taskListID)
-		return newState, err
-	}
-	return newState, nil
-}
-
-func (c *taskListManagerImpl) rangeIDToTaskIDBlock(rangeID int64) taskIDBlock {
-	return taskIDBlock{
-		start: (rangeID-1)*c.config.RangeSize + 1,
-		end:   rangeID * c.config.RangeSize,
-	}
-}
-
-func (c *taskListManagerImpl) allocTaskIDBlock(prevBlockEnd int64) (taskIDBlock, error) {
-	currBlock := c.rangeIDToTaskIDBlock(c.db.RangeID())
-	if currBlock.end != prevBlockEnd {
-		return taskIDBlock{},
-			fmt.Errorf("allocTaskIDBlock: invalid state: prevBlockEnd:%v != currTaskIDBlock:%+v", prevBlockEnd, currBlock)
-	}
-	state, err := c.renewLeaseWithRetry()
-	if err != nil {
-		return taskIDBlock{}, err
-	}
-	return c.rangeIDToTaskIDBlock(state.rangeID), nil
 }
 
 // Retry operation on transient error. On rangeID update by another process calls c.Stop().
@@ -609,4 +564,11 @@ func getTaskListTypeTag(taskListType int) metrics.Tag {
 
 func createServiceBusyError(msg string) *types.ServiceBusyError {
 	return &types.ServiceBusyError{Message: msg}
+}
+
+func rangeIDToTaskIDBlock(rangeID, rangeSize int64) taskIDBlock {
+	return taskIDBlock{
+		start: (rangeID-1)*rangeSize + 1,
+		end:   rangeID * rangeSize,
+	}
 }
