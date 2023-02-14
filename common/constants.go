@@ -185,8 +185,6 @@ const (
 const (
 	// DefaultESAnalyzerPause controls if we want to dynamically pause the analyzer
 	DefaultESAnalyzerPause = false
-	// DefaultCorruptWorkflowWatchdogPause controls if we want to dynamically pause the watchdog
-	DefaultCorruptWorkflowWatchdogPause = false
 	// DefaultESAnalyzerTimeWindow controls how many days to go back for ElasticSearch Analyzer
 	DefaultESAnalyzerTimeWindow = time.Hour * 24 * 30
 	// DefaultESAnalyzerMaxNumDomains controls how many domains to check
