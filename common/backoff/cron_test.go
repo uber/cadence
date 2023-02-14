@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,11 +61,12 @@ func TestCron(t *testing.T) {
 			if tt.endTime != "" {
 				end, _ = time.Parse(time.RFC3339, tt.endTime)
 			}
-			err := ValidateSchedule(tt.cron)
+			sched, err := ValidateSchedule(tt.cron)
 			if tt.result != NoBackoff {
 				assert.NoError(t, err)
 			}
-			backoff := GetBackoffForNextSchedule(tt.cron, start, end, 0)
+			backoff, err := GetBackoffForNextSchedule(sched, start, end, 0)
+			require.NoError(t, err)
 			assert.Equal(t, tt.result, backoff, "The cron spec is %s and the expected result is %s", tt.cron, tt.result)
 		})
 	}
@@ -102,11 +105,12 @@ func TestCronWithJitterStart(t *testing.T) {
 
 			start, _ := time.Parse(time.RFC3339, tt.startTime)
 			end := start
-			err := ValidateSchedule(tt.cron)
+			sched, err := ValidateSchedule(tt.cron)
 			if tt.expectedResultSeconds != NoBackoff {
 				assert.NoError(t, err)
 			}
-			backoff := GetBackoffForNextSchedule(tt.cron, start, end, tt.jitterStartSeconds)
+			backoff, err := GetBackoffForNextSchedule(sched, start, end, tt.jitterStartSeconds)
+			require.NoError(t, err)
 			fmt.Printf("Backoff time for test %d = %v\n", idx, backoff)
 			delta := time.Duration(tt.jitterStartSeconds) * time.Second
 			expectedResultTime := start.Add(tt.expectedResultSeconds)
@@ -123,7 +127,8 @@ func TestCronWithJitterStart(t *testing.T) {
 			for i := 1; i < caseCount; i++ {
 				startTime := expectedResultTime
 
-				backoff := GetBackoffForNextSchedule(tt.cron, startTime, startTime, tt.jitterStartSeconds)
+				backoff, err := GetBackoffForNextSchedule(sched, startTime, startTime, tt.jitterStartSeconds)
+				require.NoError(t, err)
 				expectedResultTime := startTime.Add(tt.expectedResultSeconds2)
 				backoffTime := startTime.Add(backoff)
 				assert.WithinDuration(t, expectedResultTime, backoffTime, delta,

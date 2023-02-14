@@ -129,7 +129,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestExecute_InvalidTargetDomain() 
 func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartChildSuccess() {
 	task := s.getTestStartChildExecutionTask(processingStateInitialized, nil)
 
-	historyReq := createTestChildWorkflowExecutionRequest(
+	historyReq, err := createTestChildWorkflowExecutionRequest(
 		constants.TestDomainName,
 		constants.TestTargetDomainName,
 		task.GetInfo().(*persistence.CrossClusterTaskInfo),
@@ -137,11 +137,12 @@ func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartC
 		task.request.StartChildExecutionAttributes.GetRequestID(),
 		s.mockShard.GetTimeSource().Now(),
 	)
+	require.NoError(s.T(), err)
 	targetRunID := "random target runID"
 	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).
 		Return(&types.StartWorkflowExecutionResponse{RunID: targetRunID}, nil).Times(1)
 
-	err := s.executor.Execute(task, true)
+	err = s.executor.Execute(task, true)
 	s.NoError(err)
 
 	s.Equal(task.GetTaskID(), task.response.GetTaskID())
@@ -154,7 +155,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartC
 func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartChildFailed() {
 	task := s.getTestStartChildExecutionTask(processingStateInitialized, nil)
 
-	historyReq := createTestChildWorkflowExecutionRequest(
+	historyReq, err := createTestChildWorkflowExecutionRequest(
 		constants.TestDomainName,
 		constants.TestTargetDomainName,
 		task.GetInfo().(*persistence.CrossClusterTaskInfo),
@@ -162,10 +163,11 @@ func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartC
 		task.request.StartChildExecutionAttributes.GetRequestID(),
 		s.mockShard.GetTimeSource().Now(),
 	)
+	require.NoError(s.T(), err)
 	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).
 		Return(nil, &types.WorkflowExecutionAlreadyStartedError{}).Times(1)
 
-	err := s.executor.Execute(task, true)
+	err = s.executor.Execute(task, true)
 	s.NoError(err)
 
 	s.Equal(task.GetTaskID(), task.response.GetTaskID())

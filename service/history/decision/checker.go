@@ -755,7 +755,7 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		return err
 	}
 
-	if err := backoff.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
+	if _, err := backoff.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
 		return err
 	}
 
