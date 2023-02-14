@@ -35,64 +35,51 @@ import (
 )
 
 const (
-	workflowTypesAggKey         = "wftypes"
-	domainTag                   = "domain"
-	workflowVersionTag          = "workflowVersion"
-	workflowVersionCountMetrics = "workflow_version_count"
-	workflowTypeTag             = "workflowType"
+	workflowTypeCountMetrics = "workflow_type_count"
 
 	// workflow constants
-	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
-	esanalyzerWFTypeName               = "cadence-sys-es-analyzer-workflow"
-	emitWorkflowVersionMetricsActivity = "cadence-sys-es-analyzer-emit-workflow-version-metrics"
+	domainWFTypeCountWorkflowID                = "cadence-sys-tl-esanalyzer-domain-wf-type-count"
+	domainWFTypeCountWorkflowTypeName          = "cadence-sys-es-analyzer-domain-wf-type-count-workflow"
+	emitDomainWorkflowTypeCountMetricsActivity = "cadence-sys-es-analyzer-emit-domain-workflow-type-count-metrics"
 )
 
 type (
-	DomainWorkflowVersionCount struct {
-		WorkflowTypes []WorkflowTypeCount `json:"buckets"`
-	}
-	WorkflowTypeCount struct {
-		EsAggregateCount
-		WorkflowVersions WorkflowVersionCount `json:"versions"`
-	}
-	WorkflowVersionCount struct {
-		WorkflowVersions []EsAggregateCount `json:"buckets"`
+	DomainWorkflowTypeCount struct {
+		WorkflowTypes []EsAggregateCount `json:"buckets"`
 	}
 )
 
 var (
-	retryPolicy = cadence.RetryPolicy{
-		InitialInterval:    10 * time.Second,
-		BackoffCoefficient: 1.7,
-		MaximumInterval:    5 * time.Minute,
-		ExpirationInterval: 10 * time.Minute,
-	}
-
-	getWorkflowMetricsOptions = workflow.ActivityOptions{
+	workflowActivityOptions = workflow.ActivityOptions{
 		ScheduleToStartTimeout: time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
-		RetryPolicy:            &retryPolicy,
+		RetryPolicy: &cadence.RetryPolicy{
+			InitialInterval:    10 * time.Second,
+			BackoffCoefficient: 1.7,
+			MaximumInterval:    5 * time.Minute,
+			ExpirationInterval: 10 * time.Minute,
+		},
 	}
 
-	wfOptions = cclient.StartWorkflowOptions{
-		ID:                           esAnalyzerWFID,
+	domainWfTypeCountStartOptions = cclient.StartWorkflowOptions{
+		ID:                           domainWFTypeCountWorkflowID,
 		TaskList:                     taskListName,
-		ExecutionStartToCloseTimeout: 10 * time.Minute,
-		CronSchedule:                 "*/10 * * * *",
+		ExecutionStartToCloseTimeout: 5 * time.Minute,
+		CronSchedule:                 "*/5 * * * *",
 	}
 )
 
-func initWorkflow(a *Analyzer) {
+func initDomainWorkflowTypeCountWorkflow(a *Analyzer) {
 	w := Workflow{analyzer: a}
-	workflow.RegisterWithOptions(w.workflowFunc, workflow.RegisterOptions{Name: esanalyzerWFTypeName})
+	workflow.RegisterWithOptions(w.emitWorkflowTypeCount, workflow.RegisterOptions{Name: domainWFTypeCountWorkflowTypeName})
 	activity.RegisterWithOptions(
-		w.emitWorkflowVersionMetrics,
-		activity.RegisterOptions{Name: emitWorkflowVersionMetricsActivity},
+		w.emitWorkflowTypeCountMetrics,
+		activity.RegisterOptions{Name: emitDomainWorkflowTypeCountMetricsActivity},
 	)
 }
 
-// workflowFunc queries ElasticSearch for information and do something with it
-func (w *Workflow) workflowFunc(ctx workflow.Context) error {
+// emitWorkflowTypeCount queries ElasticSearch for workflow count per type and emit metrics
+func (w *Workflow) emitWorkflowTypeCount(ctx workflow.Context) error {
 	if w.analyzer.config.ESAnalyzerPause() {
 		logger := workflow.GetLogger(ctx)
 		logger.Info("Skipping ESAnalyzer execution cycle since it was paused")
@@ -100,8 +87,8 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 	}
 	var err error
 	err = workflow.ExecuteActivity(
-		workflow.WithActivityOptions(ctx, getWorkflowMetricsOptions),
-		emitWorkflowVersionMetricsActivity,
+		workflow.WithActivityOptions(ctx, workflowActivityOptions),
+		emitDomainWorkflowTypeCountMetricsActivity,
 	).Get(ctx, &err)
 	if err != nil {
 		return err
@@ -109,21 +96,18 @@ func (w *Workflow) workflowFunc(ctx workflow.Context) error {
 	return nil
 }
 
-func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
+// get open workflows count per workflow type for specified domain
+func (w *Workflow) getDomainWorkflowTypeCountQuery(domainName string) (string, error) {
 	domain, err := w.analyzer.domainCache.GetDomain(domainName)
 	if err != nil {
 		return "", err
 	}
+	// exclude uninitialized workflow executions by checking whether record has start time field
 	return fmt.Sprintf(`
 {
     "aggs" : {
         "wftypes" : {
-            "terms" : { "field" : "WorkflowType"},
-            "aggs": {
-                "versions": {
-                    "terms" : { "field" : "Attr.CadenceChangeVersion"}
-                }
-            }
+            "terms" : { "field" : "WorkflowType"}
         }
     },
     "query": {
@@ -138,7 +122,12 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
                     "match" : {
                         "DomainID" : "%s"
                     }
-                }
+                },
+				{
+					"exists": {
+						"field": "StartTime" 
+					}
+				}
             ]
         }
     },
@@ -147,30 +136,30 @@ func (w *Workflow) getWorkflowVersionQuery(domainName string) (string, error) {
     `, domain.GetInfo().ID), nil
 }
 
-// emitWorkflowVersionMetrics is an activity that emits the running WF versions of a domain
-func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
+// emitWorkflowTypeCountMetrics is an activity that emits the running workflow type counts of a domain
+func (w *Workflow) emitWorkflowTypeCountMetrics(ctx context.Context) error {
 	logger := activity.GetLogger(ctx)
 	var workflowMetricDomainNames []string
-	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowVersionDomains()
+	workflowMetricDomains := w.analyzer.config.ESAnalyzerWorkflowTypeDomains()
 	if len(workflowMetricDomains) > 0 {
 		err := json.Unmarshal([]byte(workflowMetricDomains), &workflowMetricDomainNames)
 		if err != nil {
 			return err
 		}
 		for _, domainName := range workflowMetricDomainNames {
-			wfVersionEsQuery, err := w.getWorkflowVersionQuery(domainName)
+			wfTypeCountEsQuery, err := w.getDomainWorkflowTypeCountQuery(domainName)
 			if err != nil {
-				logger.Error("Failed to get ElasticSearch query to find workflow version Info",
+				logger.Error("Failed to get ElasticSearch query to find domain workflow type Info",
 					zap.Error(err),
 					zap.String("DomainName", domainName),
 				)
 				return err
 			}
-			response, err := w.analyzer.esClient.SearchRaw(ctx, w.analyzer.visibilityIndexName, wfVersionEsQuery)
+			response, err := w.analyzer.esClient.SearchRaw(ctx, w.analyzer.visibilityIndexName, wfTypeCountEsQuery)
 			if err != nil {
-				logger.Error("Failed to query ElasticSearch to find workflow version Info",
+				logger.Error("Failed to query ElasticSearch to find workflow type count Info",
 					zap.Error(err),
-					zap.String("VisibilityQuery", wfVersionEsQuery),
+					zap.String("VisibilityQuery", wfTypeCountEsQuery),
 					zap.String("DomainName", domainName),
 				)
 				return err
@@ -182,27 +171,25 @@ func (w *Workflow) emitWorkflowVersionMetrics(ctx context.Context) error {
 					zap.Error(err),
 					zap.String("Aggregation", string(agg)),
 					zap.String("DomainName", domainName),
-					zap.String("VisibilityQuery", wfVersionEsQuery),
+					zap.String("VisibilityQuery", wfTypeCountEsQuery),
 				)
 				return err
 			}
-			var domainWorkflowVersionCount DomainWorkflowVersionCount
-			err = json.Unmarshal(agg, &domainWorkflowVersionCount)
+			var domainWorkflowTypeCount DomainWorkflowTypeCount
+			err = json.Unmarshal(agg, &domainWorkflowTypeCount)
 			if err != nil {
 				logger.Error("ElasticSearch error parsing aggregation.",
 					zap.Error(err),
 					zap.String("Aggregation", string(agg)),
 					zap.String("DomainName", domainName),
-					zap.String("VisibilityQuery", wfVersionEsQuery),
+					zap.String("VisibilityQuery", wfTypeCountEsQuery),
 				)
 				return err
 			}
-			for _, workflowType := range domainWorkflowVersionCount.WorkflowTypes {
-				for _, workflowVersion := range workflowType.WorkflowVersions.WorkflowVersions {
-					w.analyzer.tallyScope.Tagged(
-						map[string]string{domainTag: domainName, workflowVersionTag: workflowVersion.AggregateKey, workflowTypeTag: workflowType.AggregateKey},
-					).Gauge(workflowVersionCountMetrics).Update(float64(workflowVersion.AggregateCount))
-				}
+			for _, workflowType := range domainWorkflowTypeCount.WorkflowTypes {
+				w.analyzer.tallyScope.Tagged(
+					map[string]string{domainTag: domainName, workflowTypeTag: workflowType.AggregateKey},
+				).Gauge(workflowTypeCountMetrics).Update(float64(workflowType.AggregateCount))
 			}
 		}
 	}
