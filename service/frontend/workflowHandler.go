@@ -2070,8 +2070,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
-		return nil, wh.error(err, scope, tags...)
+	if startRequest.GetCronSchedule() != "" {
+		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
+			return nil, wh.error(err, scope, tags...)
+		}
 	}
 
 	wh.GetLogger().Debug(
@@ -2707,8 +2709,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if _, err := backoff.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
-		return nil, wh.error(err, scope, tags...)
+	if signalWithStartRequest.GetCronSchedule() != "" {
+		if _, err := backoff.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
+			return nil, wh.error(err, scope, tags...)
+		}
 	}
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
