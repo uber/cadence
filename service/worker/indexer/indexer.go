@@ -42,6 +42,7 @@ import (
 
 const (
 	versionTypeExternal = "external"
+	processorName       = "visibility-processor"
 )
 
 var (
@@ -93,7 +94,7 @@ func NewIndexer(
 ) *Indexer {
 	logger = logger.WithTags(tag.ComponentIndexer)
 
-	esProcessor, err := newESProcessor(config, esClient, logger, metricsClient)
+	esProcessor, err := newESProcessor(processorName, config, esClient, logger, metricsClient)
 	if err != nil {
 		logger.Fatal("Index ES processor state changed", tag.LifeCycleStartFailed, tag.Error(err))
 	}

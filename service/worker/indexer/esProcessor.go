@@ -30,16 +30,12 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
+	"github.com/uber/cadence/common/definition"
 	es "github.com/uber/cadence/common/elasticsearch"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-)
-
-const (
-	kafkaKey      = "kafkaKey"
-	processorName = "visibility-processor"
 )
 
 const (
@@ -67,6 +63,7 @@ type (
 
 // newESProcessor creates new ESProcessor
 func newESProcessor(
+	name string,
 	config *Config,
 	client es.GenericClient,
 	logger log.Logger,
@@ -80,7 +77,7 @@ func newESProcessor(
 	}
 
 	params := &es.BulkProcessorParameters{
-		Name:          processorName,
+		Name:          name,
 		NumOfWorkers:  config.ESProcessorNumOfWorkers(),
 		BulkActions:   config.ESProcessorBulkActions(),
 		BulkSize:      config.ESProcessorBulkSize(),
@@ -234,10 +231,10 @@ func (p *ESProcessorImpl) retrieveKafkaKey(request es.GenericBulkableRequest) st
 			return ""
 		}
 
-		k, ok := body[kafkaKey]
+		k, ok := body[definition.KafkaKey]
 		if !ok {
 			// must be bug in code and bad deployment, check processor that add es requests
-			panic("kafkaKey not found")
+			panic(definition.KafkaKey + " not found")
 		}
 		key, ok = k.(string)
 		if !ok {

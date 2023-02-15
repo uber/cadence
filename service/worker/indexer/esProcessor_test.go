@@ -28,8 +28,6 @@ import (
 
 	"go.uber.org/zap/zaptest"
 
-	"github.com/uber/cadence/common/metrics/mocks"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
@@ -43,6 +41,7 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	msgMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/metrics/mocks"
 )
 
 type esProcessorSuite struct {
@@ -120,7 +119,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		s.NotNil(input.AfterFunc)
 		return true
 	})).Return(&esMocks.GenericBulkProcessor{}, nil).Once()
-	processor, err := newESProcessor(config, s.mockESClient, processorName, s.esProcessor.logger, metrics.NewNoopMetricsClient())
+	processor, err := newESProcessor(processorName, config, s.mockESClient, s.esProcessor.logger, metrics.NewNoopMetricsClient())
 	s.NoError(err)
 
 	s.NotNil(processor.mapToKafkaMsg)
