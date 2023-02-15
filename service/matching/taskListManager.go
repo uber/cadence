@@ -110,10 +110,9 @@ type (
 		// prevent tasks being dispatched to zombie pollers.
 		outstandingPollsLock sync.Mutex
 		outstandingPollsMap  map[string]context.CancelFunc
-
-		shutdownCh chan struct{}  // Delivers stop to the pump that populates taskBuffer
-		startWG    sync.WaitGroup // ensures that background processes do not start until setup is ready
-		stopped    int32
+		shutdownCh           chan struct{}  // Delivers stop to the pump that populates taskBuffer
+		startWG              sync.WaitGroup // ensures that background processes do not start until setup is ready
+		stopped              int32
 	}
 )
 
@@ -476,12 +475,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 
 	throttleRetry := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(func(err error) bool {
-			if _, ok := err.(*persistence.ConditionFailedError); ok {
-				return false
-			}
-			return persistence.IsTransientError(err)
-		}),
+		backoff.WithRetryableError(persistence.IsTransientError),
 	)
 	err = throttleRetry.Do(context.Background(), op)
 
