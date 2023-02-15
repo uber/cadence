@@ -40,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -290,56 +289,6 @@ func convertV6ErrorToGenericError(err error) *GenericError {
 		Status:  status,
 		Details: err,
 	}
-}
-
-func (v *v6BulkProcessor) RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, metricsClient metrics.Client) string {
-	req, err := request.Source()
-	if err != nil {
-		logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
-		metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-		return ""
-	}
-
-	var key string
-	if len(req) == 2 { // index or update requests
-		var body map[string]interface{}
-		if err := json.Unmarshal([]byte(req[1]), &body); err != nil {
-			logger.Error("Unmarshal index request body err.", tag.Error(err))
-			metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-			return ""
-		}
-
-		k, ok := body[KafkaKey]
-		if !ok {
-			// must be bug in code and bad deployment, check processor that add es requests
-			panic("KafkaKey not found")
-		}
-		key, ok = k.(string)
-		if !ok {
-			// must be bug in code and bad deployment, check processor that add es requests
-			panic("KafkaKey is not string")
-		}
-	} else { // delete requests
-		var body map[string]map[string]interface{}
-		if err := json.Unmarshal([]byte(req[0]), &body); err != nil {
-			logger.Error("Unmarshal delete request body err.", tag.Error(err))
-			metricsClient.IncCounter(metrics.ESProcessorScope, metrics.ESProcessorCorruptedData)
-			return ""
-		}
-
-		opMap, ok := body["delete"]
-		if !ok {
-			// must be bug, check if dependency changed
-			panic("delete key not found in request")
-		}
-		k, ok := opMap["_id"]
-		if !ok {
-			// must be bug in code and bad deployment, check processor that add es requests
-			panic("_id not found in request opMap")
-		}
-		key, _ = k.(string)
-	}
-	return key
 }
 
 func (c *elasticV6) SearchForOneClosedExecution(

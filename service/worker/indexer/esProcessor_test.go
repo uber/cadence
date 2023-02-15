@@ -26,13 +26,15 @@ import (
 	"testing"
 	"time"
 
+	"go.uber.org/zap/zaptest"
+
+	"github.com/uber/cadence/common/metrics/mocks"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
@@ -41,22 +43,21 @@ import (
 	"github.com/uber/cadence/common/log/loggerimpl"
 	msgMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
-	mmocks "github.com/uber/cadence/common/metrics/mocks"
 )
 
 type esProcessorSuite struct {
 	suite.Suite
-	esProcessor       *esProcessorImpl
+	esProcessor       *ESProcessorImpl
 	mockBulkProcessor *esMocks.GenericBulkProcessor
-	mockMetricClient  *mmocks.Client
 	mockESClient      *esMocks.GenericClient
+	mockScope         *mocks.Scope
 }
 
 var (
 	testIndex     = "test-index"
 	testType      = elasticsearch.GetESDocType()
 	testID        = "test-doc-id"
-	testStopWatch = metrics.NopStopwatch()
+	testStopWatch = metrics.NoopScope(metrics.ESProcessorScope).StartTimer(metrics.ESProcessorProcessMsgLatency)
 	testScope     = metrics.ESProcessorScope
 	testMetric    = metrics.ESProcessorProcessMsgLatency
 )
@@ -77,20 +78,18 @@ func (s *esProcessorSuite) SetupTest() {
 		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
-	s.mockMetricClient = &mmocks.Client{}
 	s.mockBulkProcessor = &esMocks.GenericBulkProcessor{}
+	zapLogger := zaptest.NewLogger(s.T())
+	s.mockScope = &mocks.Scope{}
 
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-
-	p := &esProcessorImpl{
-		config:        config,
-		logger:        loggerimpl.NewLogger(zapLogger),
-		metricsClient: s.mockMetricClient,
-		msgEncoder:    codec.NewThriftRWEncoder(),
+	p := &ESProcessorImpl{
+		config:     config,
+		logger:     loggerimpl.NewLogger(zapLogger),
+		scope:      s.mockScope,
+		msgEncoder: defaultEncoder,
 	}
 	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
-	p.processor = s.mockBulkProcessor
+	p.bulkProcessor = s.mockBulkProcessor
 
 	s.esProcessor = p
 
@@ -99,7 +98,6 @@ func (s *esProcessorSuite) SetupTest() {
 
 func (s *esProcessorSuite) TearDownTest() {
 	s.mockBulkProcessor.AssertExpectations(s.T())
-	s.mockMetricClient.AssertExpectations(s.T())
 	s.mockESClient.AssertExpectations(s.T())
 }
 
@@ -110,7 +108,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
-	processorName := "test-processor"
+	processorName := "test-bulkProcessor"
 
 	s.mockESClient.On("RunBulkProcessor", mock.Anything, mock.MatchedBy(func(input *es.BulkProcessorParameters) bool {
 		s.Equal(processorName, input.Name)
@@ -122,7 +120,7 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		s.NotNil(input.AfterFunc)
 		return true
 	})).Return(&esMocks.GenericBulkProcessor{}, nil).Once()
-	processor, err := newESProcessorAndStart(config, s.mockESClient, processorName, s.esProcessor.logger, &mmocks.Client{}, codec.NewThriftRWEncoder())
+	processor, err := newESProcessor(config, s.mockESClient, processorName, s.esProcessor.logger, metrics.NewNoopMetricsClient())
 	s.NoError(err)
 
 	s.NotNil(processor.mapToKafkaMsg)
@@ -141,14 +139,14 @@ func (s *esProcessorSuite) TestAdd() {
 	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
 
 	s.mockBulkProcessor.On("Add", request).Return().Once()
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 	mockKafkaMsg.AssertExpectations(s.T())
 
 	// handle duplicate
 	mockKafkaMsg.On("Ack").Return(nil).Once()
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 	mockKafkaMsg.AssertExpectations(s.T())
@@ -160,7 +158,7 @@ func (s *esProcessorSuite) TestAdd_ConcurrentAdd() {
 	key := "test-key"
 
 	addFunc := func(wg *sync.WaitGroup) {
-		s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+		s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 		s.esProcessor.Add(request, key, mockKafkaMsg)
 		wg.Done()
 	}
@@ -181,6 +179,8 @@ func (s *esProcessorSuite) TestBulkAfterActionX() {
 	testKey := "testKey"
 	request := &esMocks.GenericBulkableRequest{}
 	request.On("String").Return("")
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
+
 	requests := []es.GenericBulkableRequest{request}
 
 	mSuccess := map[string]*es.GenericBulkResponseItem{
@@ -202,7 +202,6 @@ func (s *esProcessorSuite) TestBulkAfterActionX() {
 	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Ack").Return(nil).Once()
-	s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
@@ -212,6 +211,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	testKey := "testKey"
 	request := &esMocks.GenericBulkableRequest{}
 	request.On("String").Return("")
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
 	requests := []es.GenericBulkableRequest{request}
 
 	mFailed := map[string]*es.GenericBulkResponseItem{
@@ -239,7 +239,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	mockKafkaMsg.On("Value").Return(payload).Once()
-	s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
+	//s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
@@ -249,6 +249,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 	testKey := "testKey"
 	request := &esMocks.GenericBulkableRequest{}
 	request.On("String").Return("")
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
 	requests := []es.GenericBulkableRequest{request}
 
 	mFailed := map[string]*es.GenericBulkResponseItem{
@@ -276,8 +277,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	mockKafkaMsg.On("Value").Return(payload).Once()
-	s.mockMetricClient.On("IncCounter", metrics.ESProcessorScope, metrics.ESProcessorFailures).Once()
-	s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
+	s.mockScope.On("IncCounter", metrics.ESProcessorFailures).Once()
 	s.esProcessor.bulkAfterAction(0, requests, response, &es.GenericError{Details: fmt.Errorf("some error")})
 }
 
@@ -288,7 +288,7 @@ func (s *esProcessorSuite) TestAckKafkaMsg() {
 
 	request := &es.GenericBulkableAddRequest{}
 	mockKafkaMsg := &msgMocks.Message{}
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.mockBulkProcessor.On("Add", request).Return().Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
@@ -307,7 +307,7 @@ func (s *esProcessorSuite) TestNackKafkaMsg() {
 	request := &es.GenericBulkableAddRequest{}
 	mockKafkaMsg := &msgMocks.Message{}
 	s.mockBulkProcessor.On("Add", request).Return().Once()
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 

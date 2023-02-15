@@ -41,8 +41,6 @@ const (
 	VisibilityOperation = "VisibilityOperation"
 	UpdateTime          = "UpdateTime"
 	ShardID             = "ShardID"
-
-	KafkaKey = "KafkaKey"
 )
 
 // Supported field types
