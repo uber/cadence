@@ -138,7 +138,6 @@ func (handler *taskHandlerImpl) handleDecisions(
 
 	var results []*decisionResult
 	for _, decision := range decisions {
-
 		result, err := handler.handleDecisionWithResult(ctx, decision)
 		if err != nil || handler.stopProcessing {
 			return nil, err
@@ -214,12 +213,10 @@ func (handler *taskHandlerImpl) handleDecisionScheduleActivity(
 	ctx context.Context,
 	attr *types.ScheduleActivityTaskDecisionAttributes,
 ) (*decisionResult, error) {
-
 	handler.metricsClient.IncCounter(
 		metrics.HistoryRespondDecisionTaskCompletedScope,
 		metrics.DecisionTypeScheduleActivityCounter,
 	)
-
 	executionInfo := handler.mutableState.GetExecutionInfo()
 	domainID := executionInfo.DomainID
 	targetDomainID := domainID
