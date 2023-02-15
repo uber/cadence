@@ -1484,6 +1484,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 		s.NoError(err)
 		s.NotNil(result)
+		s.NotEqual(emptyPollForActivityTaskResponse, result)
 		if len(result.TaskToken) == 0 {
 			s.logger.Debug("empty poll returned")
 			continue

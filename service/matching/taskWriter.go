@@ -67,6 +67,7 @@ type (
 		logger         log.Logger
 		scope          metrics.Scope
 		stopCh         chan struct{} // shutdown signal for all routines in this class
+		throttleRetry  *backoff.ThrottleRetry
 	}
 )
 
@@ -84,6 +85,10 @@ func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
 		appendCh:       make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
 		logger:         tlMgr.logger,
 		scope:          tlMgr.scope,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 	}
 }
 
@@ -183,11 +188,7 @@ func (w *taskWriter) renewLeaseWithRetry() (taskListState, error) {
 		return
 	}
 	w.scope.IncCounter(metrics.LeaseRequestPerTaskListCounter)
-	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(persistence.IsTransientError),
-	)
-	err := throttleRetry.Do(context.Background(), op)
+	err := w.throttleRetry.Do(context.Background(), op)
 	if err != nil {
 		w.scope.IncCounter(metrics.LeaseFailurePerTaskListCounter)
 		w.tlMgr.Stop()
