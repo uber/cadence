@@ -83,6 +83,7 @@ type (
 		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
 		GetTaskListKind() types.TaskListKind
+		TaskListID() *taskListID
 	}
 
 	// Single task list in memory state
@@ -204,7 +205,7 @@ func (c *taskListManagerImpl) Stop() {
 	close(c.shutdownCh)
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
-	c.engine.removeTaskListManager(c.taskListID)
+	c.engine.removeTaskListManager(c)
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
 }
 
@@ -426,6 +427,10 @@ func (c *taskListManagerImpl) String() string {
 
 func (c *taskListManagerImpl) GetTaskListKind() types.TaskListKind {
 	return c.taskListKind
+}
+
+func (c *taskListManagerImpl) TaskListID() *taskListID {
+	return c.taskListID
 }
 
 // completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
