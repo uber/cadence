@@ -519,7 +519,7 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
-) *types.HistoryStartWorkflowExecutionRequest {
+) (*types.HistoryStartWorkflowExecutionRequest, error) {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
 		DomainUUID:   domainID,
 		StartRequest: startRequest,
@@ -530,8 +530,12 @@ func CreateHistoryStartWorkflowRequest(
 	firstDecisionTaskBackoffSeconds := delayStartSeconds
 	if len(startRequest.GetCronSchedule()) > 0 {
 		delayedStartTime := now.Add(time.Second * time.Duration(delayStartSeconds))
-		firstDecisionTaskBackoffSeconds = backoff.GetBackoffForNextScheduleInSeconds(
+		var err error
+		firstDecisionTaskBackoffSeconds, err = backoff.GetBackoffForNextScheduleInSeconds(
 			startRequest.GetCronSchedule(), delayedStartTime, delayedStartTime, jitterStartSeconds)
+		if err != nil {
+			return nil, err
+		}
 
 		// backoff seconds was calculated based on delayed start time, so we need to
 		// add the delayStartSeconds to that backoff.
@@ -550,7 +554,7 @@ func CreateHistoryStartWorkflowRequest(
 		histRequest.ExpirationTimestamp = Int64Ptr(deadline.Round(time.Millisecond).UnixNano())
 	}
 
-	return histRequest
+	return histRequest, nil
 }
 
 // CheckEventBlobSizeLimit checks if a blob data exceeds limits. It logs a warning if it exceeds warnLimit,

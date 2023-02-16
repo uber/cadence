@@ -2070,8 +2070,10 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
-		return nil, wh.error(err, scope, tags...)
+	if startRequest.GetCronSchedule() != "" {
+		if _, err := backoff.ValidateSchedule(startRequest.GetCronSchedule()); err != nil {
+			return nil, wh.error(err, scope, tags...)
+		}
 	}
 
 	wh.GetLogger().Debug(
@@ -2122,7 +2124,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 		// Request using start/end time zero value, which will get us an exact answer (i.e. its not in the
 		// middle of a minute)
-		backoffSeconds := backoff.GetBackoffForNextScheduleInSeconds(cron, time.Time{}, time.Time{}, jitter)
+		backoffSeconds, err := backoff.GetBackoffForNextScheduleInSeconds(cron, time.Time{}, time.Time{}, jitter)
+		if err != nil {
+			tags = append(tags, tag.WorkflowCronSchedule(cron))
+			return nil, wh.error(err, scope, tags...)
+		}
 		if jitter > backoffSeconds {
 			return nil, wh.error(errInvalidJitterStartSeconds2, scope, tags...)
 		}
@@ -2175,8 +2181,11 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
-	historyRequest := common.CreateHistoryStartWorkflowRequest(
+	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
 		domainID, startRequest, time.Now())
+	if err != nil {
+		return nil, err
+	}
 
 	resp, err = wh.GetHistoryClient().StartWorkflowExecution(ctx, historyRequest)
 	if err != nil {
@@ -2700,8 +2709,10 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
-	if err := backoff.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
-		return nil, wh.error(err, scope, tags...)
+	if signalWithStartRequest.GetCronSchedule() != "" {
+		if _, err := backoff.ValidateSchedule(signalWithStartRequest.GetCronSchedule()); err != nil {
+			return nil, wh.error(err, scope, tags...)
+		}
 	}
 
 	if err := wh.searchAttributesValidator.ValidateSearchAttributes(signalWithStartRequest.SearchAttributes, domainName); err != nil {
@@ -3388,13 +3399,16 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 	}
 	startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
 		domainName, request.Identity, wfExecution.WorkflowID)
-	startResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, common.CreateHistoryStartWorkflowRequest(
-		domainID, startRequest, time.Now()))
-	resp = &types.RestartWorkflowExecutionResponse{
-		RunID: startResp.RunID,
+	req, err := common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now())
+	if err != nil {
+		return nil, err
 	}
+	startResp, err := wh.GetHistoryClient().StartWorkflowExecution(ctx, req)
 	if err != nil {
 		return nil, wh.normalizeVersionedErrors(ctx, wh.error(err, scope, tags...))
+	}
+	resp = &types.RestartWorkflowExecutionResponse{
+		RunID: startResp.RunID,
 	}
 
 	return resp, nil

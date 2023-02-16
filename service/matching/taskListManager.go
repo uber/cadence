@@ -83,6 +83,7 @@ type (
 		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
 		GetTaskListKind() types.TaskListKind
+		TaskListID() *taskListID
 	}
 
 	// Single task list in memory state
@@ -110,10 +111,9 @@ type (
 		// prevent tasks being dispatched to zombie pollers.
 		outstandingPollsLock sync.Mutex
 		outstandingPollsMap  map[string]context.CancelFunc
-
-		shutdownCh chan struct{}  // Delivers stop to the pump that populates taskBuffer
-		startWG    sync.WaitGroup // ensures that background processes do not start until setup is ready
-		stopped    int32
+		shutdownCh           chan struct{}  // Delivers stop to the pump that populates taskBuffer
+		startWG              sync.WaitGroup // ensures that background processes do not start until setup is ready
+		stopped              int32
 	}
 )
 
@@ -205,7 +205,7 @@ func (c *taskListManagerImpl) Stop() {
 	close(c.shutdownCh)
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
-	c.engine.removeTaskListManager(c.taskListID)
+	c.engine.removeTaskListManager(c)
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
 }
 
@@ -429,6 +429,10 @@ func (c *taskListManagerImpl) GetTaskListKind() types.TaskListKind {
 	return c.taskListKind
 }
 
+func (c *taskListManagerImpl) TaskListID() *taskListID {
+	return c.taskListID
+}
+
 // completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
 // here. As part of completion:
 //   - task is deleted from the database when err is nil
@@ -476,12 +480,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 
 	throttleRetry := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(func(err error) bool {
-			if _, ok := err.(*persistence.ConditionFailedError); ok {
-				return false
-			}
-			return persistence.IsTransientError(err)
-		}),
+		backoff.WithRetryableError(persistence.IsTransientError),
 	)
 	err = throttleRetry.Do(context.Background(), op)
 
