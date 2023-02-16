@@ -23,9 +23,9 @@ package rpc
 import (
 	"context"
 	"io"
-	"regexp"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
@@ -145,12 +145,7 @@ type HeaderForwardingMiddleware struct {
 	//
 	// There are no default rules, so by default no headers are copied.
 	// To include headers by default, Add with a permissive regex and then remove specific ones.
-	Rules []HeaderRule
-}
-
-type HeaderRule struct {
-	Add   bool
-	Match *regexp.Regexp
+	Rules []config.HeaderRule
 }
 
 func (m *HeaderForwardingMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {

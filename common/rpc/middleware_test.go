@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common/config"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpctest"
 
@@ -122,7 +123,7 @@ func TestHeaderForwardingMiddleware(t *testing.T) {
 	t.Run("default rules", func(t *testing.T) {
 		t.Parallel()
 		m := HeaderForwardingMiddleware{
-			Rules: []HeaderRule{
+			Rules: []config.HeaderRule{
 				// default
 				{
 					Add:   true,
@@ -151,7 +152,7 @@ func TestHeaderForwardingMiddleware(t *testing.T) {
 	t.Run("can exclude inbound headers", func(t *testing.T) {
 		t.Parallel()
 		m := HeaderForwardingMiddleware{
-			Rules: []HeaderRule{
+			Rules: []config.HeaderRule{
 				// add by default, earlier tests ensure this works
 				{
 					Add:   true,

@@ -89,6 +89,10 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 	if err != nil {
 		return Params{}, err
 	}
+	if len(forwardingRules) == 0 {
+		// not set, load from static config
+		forwardingRules = config.HeaderForwardingRules
+	}
 
 	return Params{
 		ServiceName:     serviceName,
@@ -113,13 +117,13 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 	}, nil
 }
 
-func getForwardingRules(dc *dynamicconfig.Collection) ([]HeaderRule, error) {
-	var forwardingRules []HeaderRule
+func getForwardingRules(dc *dynamicconfig.Collection) ([]config.HeaderRule, error) {
+	var forwardingRules []config.HeaderRule
 	dynForwarding := dc.GetListProperty(dynamicconfig.HeaderForwardingRules)()
 	if len(dynForwarding) > 0 {
 		for _, f := range dynForwarding {
 			switch v := f.(type) {
-			case HeaderRule: // default or correctly typed value
+			case config.HeaderRule: // default or correctly typed value
 				forwardingRules = append(forwardingRules, v)
 			case map[string]interface{}: // loaded from generic deserialization, compatible with encoding/json
 				add, aok := v["Add"].(bool)
@@ -131,7 +135,7 @@ func getForwardingRules(dc *dynamicconfig.Collection) ([]HeaderRule, error) {
 				if err != nil {
 					return nil, fmt.Errorf("invalid match regex in header forwarding rule: %q, err: %w", m, err)
 				}
-				forwardingRules = append(forwardingRules, HeaderRule{
+				forwardingRules = append(forwardingRules, config.HeaderRule{
 					Add:   add,
 					Match: r,
 				})

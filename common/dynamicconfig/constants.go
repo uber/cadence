@@ -4424,7 +4424,7 @@ var ListKeys = map[ListKey]DynamicList{
 		DefaultValue: []interface{}{
 			// historical behavior: include literally everything.
 			// this alone is quite problematic, and is strongly recommended against.
-			map[string]interface{}{
+			map[string]interface{}{ // config imports dynamicconfig, sadly
 				"Add":   true,
 				"Match": "",
 			},
