@@ -132,7 +132,7 @@ func (m *overrideCallerMiddleware) Call(ctx context.Context, request *transport.
 // For a more in-depth logic review if it becomes needed, check:
 //   - How Go's ReverseProxy deals with headers, e.g. per-protocol and a list of exclusions: https://cs.opensource.google/go/go/+/refs/tags/go1.20.1:src/net/http/httputil/reverseproxy.go;l=332
 //   - HTTP's spec for headers, namely how duplicates and Connection work: https://www.rfc-editor.org/rfc/rfc9110.html#name-header-fields
-//   - Many browsers prefer first-value wins for unexpected duplicates: https://bugzilla.mozilla.org/show_bug.cgi?id=376756
+//   - Many browsers prefer first-value-wins for unexpected duplicates: https://bugzilla.mozilla.org/show_bug.cgi?id=376756
 //   - But there are MANY map-like implementations that choose last-value wins, and this mismatch is a source of frequent security problems.
 //   - YARPC's `With` only retains the last call's value: https://github.com/yarpc/yarpc-go/blob/8ccd79a2ca696150213faac1d35011c5be52e5fb/api/transport/header.go#L69-L77
 //   - Go's MIMEHeader's Get (used by YARPC) only returns the first value, and does not join duplicates: https://pkg.go.dev/net/textproto#MIMEHeader.Get
