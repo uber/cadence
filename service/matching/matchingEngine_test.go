@@ -1584,7 +1584,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	s.matchingEngine.config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(2)
 	// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 	// on enqueuing a task to task buffer
-	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(time.Microsecond)
+	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	testCases := []struct {
 		batchSize          int
