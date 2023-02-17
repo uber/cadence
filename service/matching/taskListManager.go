@@ -23,6 +23,7 @@ package matching
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -83,6 +84,7 @@ type (
 		DescribeTaskList(includeTaskListStatus bool) *types.DescribeTaskListResponse
 		String() string
 		GetTaskListKind() types.TaskListKind
+		TaskListID() *taskListID
 	}
 
 	// Single task list in memory state
@@ -110,10 +112,9 @@ type (
 		// prevent tasks being dispatched to zombie pollers.
 		outstandingPollsLock sync.Mutex
 		outstandingPollsMap  map[string]context.CancelFunc
-
-		shutdownCh chan struct{}  // Delivers stop to the pump that populates taskBuffer
-		startWG    sync.WaitGroup // ensures that background processes do not start until setup is ready
-		stopped    int32
+		shutdownCh           chan struct{}  // Delivers stop to the pump that populates taskBuffer
+		startWG              sync.WaitGroup // ensures that background processes do not start until setup is ready
+		stopped              int32
 	}
 )
 
@@ -202,11 +203,26 @@ func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
 	}
+	c.engine.removeTaskListManager(c)
 	close(c.shutdownCh)
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
-	c.engine.removeTaskListManager(c.taskListID)
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
+}
+
+func (c *taskListManagerImpl) handleErr(err error) error {
+	var e *persistence.ConditionFailedError
+	if errors.As(err, &e) {
+		// This indicates the task list may have moved to another host.
+		c.scope.IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
+		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
+		c.Stop()
+		if c.taskListKind == types.TaskListKindSticky {
+			// TODO: we don't see this error in our logs, we might be able to remove this error
+			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
+		}
+	}
+	return err
 }
 
 // AddTask adds a task to the task list. This method will first attempt a synchronous
@@ -429,6 +445,10 @@ func (c *taskListManagerImpl) GetTaskListKind() types.TaskListKind {
 	return c.taskListKind
 }
 
+func (c *taskListManagerImpl) TaskListID() *taskListID {
+	return c.taskListID
+}
+
 // completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
 // here. As part of completion:
 //   - task is deleted from the database when err is nil
@@ -476,23 +496,9 @@ func (c *taskListManagerImpl) executeWithRetry(
 
 	throttleRetry := backoff.NewThrottleRetry(
 		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(func(err error) bool {
-			if _, ok := err.(*persistence.ConditionFailedError); ok {
-				return false
-			}
-			return persistence.IsTransientError(err)
-		}),
+		backoff.WithRetryableError(persistence.IsTransientError),
 	)
-	err = throttleRetry.Do(context.Background(), op)
-
-	if _, ok := err.(*persistence.ConditionFailedError); ok {
-		c.scope.IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
-		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
-		c.Stop()
-		if c.taskListKind == types.TaskListKindSticky {
-			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
-		}
-	}
+	err = c.handleErr(throttleRetry.Do(context.Background(), op))
 	return
 }
 
