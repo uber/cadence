@@ -23,6 +23,7 @@ package matching
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -202,11 +203,26 @@ func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
 	}
+	c.engine.removeTaskListManager(c)
 	close(c.shutdownCh)
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
-	c.engine.removeTaskListManager(c)
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
+}
+
+func (c *taskListManagerImpl) handleErr(err error) error {
+	var e *persistence.ConditionFailedError
+	if errors.As(err, &e) {
+		// This indicates the task list may have moved to another host.
+		c.scope.IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
+		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
+		c.Stop()
+		if c.taskListKind == types.TaskListKindSticky {
+			// TODO: we don't see this error in our logs, we might be able to remove this error
+			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
+		}
+	}
+	return err
 }
 
 // AddTask adds a task to the task list. This method will first attempt a synchronous
@@ -482,16 +498,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 		backoff.WithRetryableError(persistence.IsTransientError),
 	)
-	err = throttleRetry.Do(context.Background(), op)
-
-	if _, ok := err.(*persistence.ConditionFailedError); ok {
-		c.scope.IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
-		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
-		c.Stop()
-		if c.taskListKind == types.TaskListKindSticky {
-			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
-		}
-	}
+	err = c.handleErr(throttleRetry.Do(context.Background(), op))
 	return
 }
 

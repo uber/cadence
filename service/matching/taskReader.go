@@ -62,6 +62,7 @@ type (
 		logger              log.Logger
 		scope               metrics.Scope
 		throttleRetry       *backoff.ThrottleRetry
+		handleErr           func(error) error
 	}
 )
 
@@ -84,6 +85,7 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		taskBuffer: make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
 		logger:     tlMgr.logger,
 		scope:      tlMgr.scope,
+		handleErr:  tlMgr.handleErr,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -179,16 +181,10 @@ getTasksPumpLoop:
 			}
 		case <-updateAckTimer.C:
 			{
-				err := tr.persistAckLevel()
-				if err != nil {
-					if _, ok := err.(*persistence.ConditionFailedError); ok {
-						// This indicates the task list may have moved to another host.
-						tr.tlMgr.Stop()
-					} else {
-						tr.logger.Error("Persistent store operation failure",
-							tag.StoreOperationUpdateTaskList,
-							tag.Error(err))
-					}
+				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
+					tr.logger.Error("Persistent store operation failure",
+						tag.StoreOperationUpdateTaskList,
+						tag.Error(err))
 					// keep going as saving ack is not critical
 				}
 				tr.Signal() // periodically signal pump to check persistence for tasks
