@@ -3289,9 +3289,7 @@ func getStartRequest(
 		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
-
-	return startRequest, nil
+	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(

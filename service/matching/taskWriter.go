@@ -67,6 +67,8 @@ type (
 		logger         log.Logger
 		scope          metrics.Scope
 		stopCh         chan struct{} // shutdown signal for all routines in this class
+		throttleRetry  *backoff.ThrottleRetry
+		handleErr      func(error) error
 	}
 )
 
@@ -84,6 +86,11 @@ func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
 		appendCh:       make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
 		logger:         tlMgr.logger,
 		scope:          tlMgr.scope,
+		handleErr:      tlMgr.handleErr,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 	}
 }
 
@@ -183,11 +190,7 @@ func (w *taskWriter) renewLeaseWithRetry() (taskListState, error) {
 		return
 	}
 	w.scope.IncCounter(metrics.LeaseRequestPerTaskListCounter)
-	throttleRetry := backoff.NewThrottleRetry(
-		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
-		backoff.WithRetryableError(persistence.IsTransientError),
-	)
-	err := throttleRetry.Do(context.Background(), op)
+	err := w.throttleRetry.Do(context.Background(), op)
 	if err != nil {
 		w.scope.IncCounter(metrics.LeaseFailurePerTaskListCounter)
 		w.tlMgr.Stop()
@@ -226,23 +229,15 @@ writerLoop:
 				}
 
 				r, err := w.db.CreateTasks(tasks)
-				switch err.(type) {
-				case nil:
-					// Do nothing
-				case *persistence.ConditionFailedError:
-					// Stop and reload task list manager
-					w.tlMgr.Stop()
-				default:
+				err = w.handleErr(err)
+				if err != nil {
 					w.logger.Error("Persistent store operation failure",
 						tag.StoreOperationCreateTasks,
 						tag.Error(err),
-						tag.WorkflowTaskListName(w.taskListID.name),
-						tag.WorkflowTaskListType(w.taskListID.taskType),
 						tag.Number(taskIDs[0]),
 						tag.NextNumber(taskIDs[batchSize-1]),
 					)
 				}
-
 				// Update the maxReadLevel after the writes are completed.
 				if maxReadLevel > 0 {
 					atomic.StoreInt64(&w.maxReadLevel, maxReadLevel)

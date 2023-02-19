@@ -1202,7 +1202,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 			taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 			event, err = mutableState.GetChildExecutionInitiatedEvent(context.Background(), taskInfo.ScheduleID)
 			s.NoError(err)
-			historyReq := createTestChildWorkflowExecutionRequest(
+			historyReq, err := createTestChildWorkflowExecutionRequest(
 				s.domainName,
 				s.childDomainName,
 				taskInfo,
@@ -1210,6 +1210,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 				childInfo.CreateRequestID,
 				s.mockShard.GetTimeSource().Now(),
 			)
+			require.NoError(s.T(), err)
 			s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).Return(&types.StartWorkflowExecutionResponse{RunID: childExecution.RunID}, nil).Times(1)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -1241,7 +1242,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 			taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
 			event, err = mutableState.GetChildExecutionInitiatedEvent(context.Background(), taskInfo.ScheduleID)
 			s.NoError(err)
-			historyReq := createTestChildWorkflowExecutionRequest(
+			historyReq, err := createTestChildWorkflowExecutionRequest(
 				s.domainName,
 				s.childDomainName,
 				taskInfo,
@@ -1249,6 +1250,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 				childInfo.CreateRequestID,
 				s.mockShard.GetTimeSource().Now(),
 			)
+			require.NoError(s.T(), err)
 			s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).Return(nil, &types.WorkflowExecutionAlreadyStartedError{}).Times(1)
 			s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&persistence.AppendHistoryNodesResponse{}, nil).Once()
 			s.mockExecutionMgr.On("UpdateWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.UpdateWorkflowExecutionResponse{MutableStateUpdateSessionStats: &persistence.MutableStateUpdateSessionStats{}}, nil).Once()
@@ -1760,7 +1762,7 @@ func createTestChildWorkflowExecutionRequest(
 	attributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
 	requestID string,
 	now time.Time,
-) *types.HistoryStartWorkflowExecutionRequest {
+) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
 	workflowExecution := types.WorkflowExecution{
 		WorkflowID: taskInfo.WorkflowID,
@@ -1787,11 +1789,14 @@ func createTestChildWorkflowExecutionRequest(
 		InitiatedID: taskInfo.ScheduleID,
 	}
 
-	historyStartReq := common.CreateHistoryStartWorkflowRequest(
+	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(
 		taskInfo.TargetDomainID, frontendStartReq, now)
+	if err != nil {
+		return nil, err
+	}
 
 	historyStartReq.ParentExecutionInfo = parentInfo
-	return historyStartReq
+	return historyStartReq, nil
 }
 
 func createUpsertWorkflowSearchAttributesRequest(
