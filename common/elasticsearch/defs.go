@@ -40,6 +40,7 @@ const (
 	NumClusters         = "NumClusters"
 	VisibilityOperation = "VisibilityOperation"
 	UpdateTime          = "UpdateTime"
+	ShardID             = "ShardID"
 
 	KafkaKey = "KafkaKey"
 )

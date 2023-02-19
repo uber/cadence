@@ -792,7 +792,7 @@ func (s *transferStandbyTaskExecutorSuite) TestProcessRecordWorkflowStartedTask(
 		s.mockVisibilityMgr.On(
 			"RecordWorkflowExecutionUninitialized",
 			mock.Anything,
-			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now()),
+			createRecordWorkflowExecutionUninitializedRequest(transferTask, mutableState, s.mockShard.GetTimeSource().Now(), 1234),
 		).Once().Return(nil)
 	}
 	s.mockVisibilityMgr.On(
