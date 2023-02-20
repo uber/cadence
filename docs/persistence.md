@@ -127,7 +127,6 @@ persistence:
         Password: "password"
         keyspace: "cadence"           -- Name of the cassandra keyspace
         datacenter: "us-east-1a"      -- Cassandra datacenter filter to limit queries to a single dc (optional)
-        maxQPS: 1000                  -- MaxQPS to cassandra from a single cadence sub-system on one host (optional)
         maxConns: 2                   -- Number of tcp conns to cassandra server (single sub-system on one host) (optional)
 ```
 
@@ -152,7 +151,6 @@ persistence:
         maxConns: 20                   -- max number of connections to sql server from one host (optional)
         maxIdleConns: 20               -- max number of idle conns to sql server from one host (optional)
         maxConnLifetime: "1h"          -- max connection lifetime before it is discarded (optional)
-        maxQPS: 1000                   -- max qps to sql server from one host (optional)
         connectAttributes:             -- custom dsn attributes, map of key-value pairs
           tx_isolation: "READ-COMMITTED"   -- required only for mysql 5.6 and below, optional otherwise
 ```
