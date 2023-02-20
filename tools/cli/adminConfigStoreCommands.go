@@ -148,7 +148,7 @@ func AdminUpdateDynamicConfig(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to update dynamic config value", err)
 	}
-	fmt.Printf("Dynamic Config %s updated\n", dcName)
+	fmt.Printf("Dynamic Config %q updated with %s \n", dcName, dcValues)
 }
 
 // AdminRestoreDynamicConfig removes values of specified dynamic config parameter matching specified filter
@@ -175,7 +175,7 @@ func AdminRestoreDynamicConfig(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("Failed to restore dynamic config value", err)
 	}
-	fmt.Printf("Dynamic Config %s restored\n", dcName)
+	fmt.Printf("Dynamic Config %q restored\n", dcName)
 }
 
 // AdminListDynamicConfig lists all values associated with specified dynamic config parameter or all values for all dc parameter if none is specified.
