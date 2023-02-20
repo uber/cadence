@@ -22,6 +22,7 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -1218,17 +1219,18 @@ func newAdminRebalanceCommands() []cli.Command {
 func newAdminConfigStoreCommands() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "get-dynamic-config",
-			Aliases: []string{"getdc", "g"},
+			Name:    "get",
+			Aliases: []string{"g"},
 			Usage:   "Get Dynamic Config Value",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  FlagDynamicConfigName,
-					Usage: "Name of Dynamic Config parameter to get value of",
+					Name:     FlagDynamicConfigName,
+					Usage:    "Name of Dynamic Config parameter to get value of",
+					Required: true,
 				},
 				cli.StringSliceFlag{
 					Name:  FlagDynamicConfigFilter,
-					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
+					Usage: fmt.Sprintf(`Optional. Can be specified multiple times for multiple filters. ex: --%s '{"Name":"domainName","Value":"global-samples-domain"}'`, FlagDynamicConfigFilter),
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1236,17 +1238,19 @@ func newAdminConfigStoreCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "update-dynamic-config",
-			Aliases: []string{"updc", "u"},
+			Name:    "update",
+			Aliases: []string{"u"},
 			Usage:   "Update Dynamic Config Value",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  FlagDynamicConfigName,
-					Usage: "Name of Dynamic Config parameter to update value of",
+					Name:     FlagDynamicConfigName,
+					Usage:    "Name of Dynamic Config parameter to update value of",
+					Required: true,
 				},
 				cli.StringSliceFlag{
-					Name:  FlagDynamicConfigValue,
-					Usage: `Optional. Can be specified multiple times for multiple values. ex: --dynamic-config-value '{"Value":true,"Filters":[]}'`,
+					Name:     FlagDynamicConfigValue,
+					Usage:    fmt.Sprintf(`Can be specified multiple times for multiple values. ex: --%s '{"Value":true,"Filters":[]}'`, FlagDynamicConfigValue),
+					Required: true,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1254,17 +1258,18 @@ func newAdminConfigStoreCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "restore-dynamic-config",
-			Aliases: []string{"resdc", "r"},
+			Name:    "restore",
+			Aliases: []string{"r"},
 			Usage:   "Restore Dynamic Config Value",
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  FlagDynamicConfigName,
-					Usage: "Name of Dynamic Config parameter to restore",
+					Name:     FlagDynamicConfigName,
+					Usage:    "Name of Dynamic Config parameter to restore",
+					Required: true,
 				},
 				cli.StringSliceFlag{
 					Name:  FlagDynamicConfigFilter,
-					Usage: `Optional. Can be specified multiple times for multiple filters. ex: --dynamic-config-filter '{"Name":"domainName","Value":"global-samples-domain"}'`,
+					Usage: fmt.Sprintf(`Optional. Can be specified multiple times for multiple filters. ex: --%s '{"Name":"domainName","Value":"global-samples-domain"}'`, FlagDynamicConfigFilter),
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -1272,8 +1277,8 @@ func newAdminConfigStoreCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "list-dynamic-config",
-			Aliases: []string{"listdc", "l"},
+			Name:    "list",
+			Aliases: []string{"l"},
 			Usage:   "List Dynamic Config Value",
 			Flags:   []cli.Flag{},
 			Action: func(c *cli.Context) {
