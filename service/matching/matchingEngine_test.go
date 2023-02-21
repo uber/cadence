@@ -1478,11 +1478,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 	// stop all goroutines that read / write tasks in the background
 	// remainder of this test works with the in-memory buffer
-	if !atomic.CompareAndSwapInt32(&tlMgr.stopped, 0, 1) {
-		return
-	}
-	close(tlMgr.shutdownCh)
-	tlMgr.taskWriter.Stop()
+	tlMgr.Stop()
 
 	// SetReadLevel should NEVER be called without updating ackManager.outstandingTasks
 	// This is only for unit test purpose
@@ -1530,8 +1526,6 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	s.Nil(err)
 	s.True(0 < len(tasks) && len(tasks) <= rangeSize)
 	s.True(isReadBatchDone)
-
-	tlMgr.engine.removeTaskListManager(tlMgr)
 }
 
 func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {

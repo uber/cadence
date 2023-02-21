@@ -55,7 +55,6 @@ type (
 
 	// taskWriter writes tasks sequentially to persistence
 	taskWriter struct {
-		tlMgr          *taskListManagerImpl
 		db             *taskListDB
 		config         *taskListConfig
 		taskListID     *taskListID
@@ -69,6 +68,7 @@ type (
 		stopCh         chan struct{} // shutdown signal for all routines in this class
 		throttleRetry  *backoff.ThrottleRetry
 		handleErr      func(error) error
+		onFatalErr     func()
 	}
 )
 
@@ -77,7 +77,6 @@ var errShutdown = errors.New("task list shutting down")
 
 func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
 	return &taskWriter{
-		tlMgr:          tlMgr,
 		db:             tlMgr.db,
 		config:         tlMgr.config,
 		taskListID:     tlMgr.taskListID,
@@ -87,6 +86,7 @@ func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
 		logger:         tlMgr.logger,
 		scope:          tlMgr.scope,
 		handleErr:      tlMgr.handleErr,
+		onFatalErr:     tlMgr.Stop,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -193,7 +193,7 @@ func (w *taskWriter) renewLeaseWithRetry() (taskListState, error) {
 	err := w.throttleRetry.Do(context.Background(), op)
 	if err != nil {
 		w.scope.IncCounter(metrics.LeaseFailurePerTaskListCounter)
-		w.tlMgr.Stop()
+		w.onFatalErr()
 		return newState, err
 	}
 	return newState, nil
