@@ -53,6 +53,7 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    int64 // unit is unix nano, consistent with start/execution timestamp, same in other requests
 		SearchAttributes   map[string][]byte
+		ShardID            int64
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
@@ -75,6 +76,7 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
+		ShardID            int64
 	}
 
 	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
@@ -84,6 +86,7 @@ type (
 		Execution        types.WorkflowExecution
 		WorkflowTypeName string
 		UpdateTimestamp  int64
+		ShardID          int64
 	}
 
 	// UpsertWorkflowExecutionRequest is used to upsert workflow execution
@@ -102,6 +105,7 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
+		ShardID            int64
 	}
 
 	// ListWorkflowExecutionsRequest is used to list executions in a domain
