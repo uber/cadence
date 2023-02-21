@@ -29,11 +29,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/uber/cadence/common/config"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 )
 
