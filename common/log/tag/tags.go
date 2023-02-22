@@ -459,9 +459,9 @@ func Bool(b bool) Tag {
 
 /* Tags for logging manual access */
 
-// Caller returns tag for caller (the name of the service making this request)
-func Caller(callerName string) Tag {
-	return newStringTag("caller", callerName)
+// RequestCaller returns tag for caller (the name of the service making this request)
+func RequestCaller(callerName string) Tag {
+	return newStringTag("request-caller", callerName)
 }
 
 // ActorID returns tag for the actor ID
