@@ -1,5 +1,7 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
-//
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,22 +9,23 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package matching
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -31,6 +34,7 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -95,6 +99,7 @@ type (
 		engine         *matchingEngineImpl
 		taskWriter     *taskWriter
 		taskReader     *taskReader // reads tasks from db and async matches it with poller
+		liveness       *liveness
 		taskGC         *taskGC
 		taskAckManager messaging.AckManager // tracks ackLevel for delivered messages
 		matcher        *TaskMatcher         // for matching a task producer with a poller
@@ -172,6 +177,7 @@ func newTaskListManager(
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
+	tlMgr.liveness = newLiveness(clock.NewRealTimeSource(), taskListConfig.IdleTasklistCheckInterval(), tlMgr.Stop)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
 	var fwdr *Forwarder
@@ -188,6 +194,7 @@ func newTaskListManager(
 func (c *taskListManagerImpl) Start() error {
 	defer c.startWG.Done()
 
+	c.liveness.Start()
 	if err := c.taskWriter.Start(); err != nil {
 		c.Stop()
 		return err
@@ -202,11 +209,27 @@ func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
 	}
+	c.engine.removeTaskListManager(c)
 	close(c.shutdownCh)
+	c.liveness.Stop()
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
-	c.engine.removeTaskListManager(c)
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
+}
+
+func (c *taskListManagerImpl) handleErr(err error) error {
+	var e *persistence.ConditionFailedError
+	if errors.As(err, &e) {
+		// This indicates the task list may have moved to another host.
+		c.scope.IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
+		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
+		c.Stop()
+		if c.taskListKind == types.TaskListKindSticky {
+			// TODO: we don't see this error in our logs, we might be able to remove this error
+			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
+		}
+	}
+	return err
 }
 
 // AddTask adds a task to the task list. This method will first attempt a synchronous
@@ -214,6 +237,10 @@ func (c *taskListManagerImpl) Stop() {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams) (bool, error) {
 	c.startWG.Wait()
+	if params.forwardedFrom == "" {
+		// request sent by history service
+		c.liveness.markAlive(time.Now())
+	}
 	var syncMatch bool
 	_, err := c.executeWithRetry(func() (interface{}, error) {
 		if err := ctx.Err(); err != nil {
@@ -296,6 +323,7 @@ func (c *taskListManagerImpl) GetTask(
 	ctx context.Context,
 	maxDispatchPerSecond *float64,
 ) (*InternalTask, error) {
+	c.liveness.markAlive(time.Now())
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, err
@@ -482,16 +510,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 		backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 		backoff.WithRetryableError(persistence.IsTransientError),
 	)
-	err = throttleRetry.Do(context.Background(), op)
-
-	if _, ok := err.(*persistence.ConditionFailedError); ok {
-		c.scope.IncCounter(metrics.ConditionFailedErrorPerTaskListCounter)
-		c.logger.Debug("Stopping task list due to persistence condition failure.", tag.Error(err))
-		c.Stop()
-		if c.taskListKind == types.TaskListKindSticky {
-			err = &types.InternalServiceError{Message: common.StickyTaskConditionFailedErrorMsg}
-		}
-	}
+	err = c.handleErr(throttleRetry.Do(context.Background(), op))
 	return
 }
 
