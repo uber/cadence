@@ -465,7 +465,7 @@ func Caller(callerName string) Tag {
 }
 
 // ActorID returns tag for the actor ID
-func ActorID(actorId string) Tag {
+func ActorID(actorID string) Tag {
 	return newStringTag("actor-id", actorId)
 }
 
