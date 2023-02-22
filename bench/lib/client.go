@@ -23,6 +23,7 @@ package lib
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/.gen/go/shared"
@@ -59,7 +60,9 @@ func (client CadenceClient) CreateDomain(name string, desc string, owner string)
 		EmitMetric:                             &emitMetric,
 		IsGlobalDomain:                         &isGlobalDomain,
 	}
-	err := client.Register(context.Background(), req)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := client.Register(ctx, req)
 	if err != nil {
 		if _, ok := err.(*shared.DomainAlreadyExistsError); !ok {
 			return err

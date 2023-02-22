@@ -5,7 +5,7 @@ bench:
 
 cadence:
   service: "cadence-frontend"
-  host: "127.0.0.1:7933"
+  host: "${CADENCE_FRONTEND_ADDRESS:127.0.0.1:7933}"
 
 metrics:
   statsd: ~
