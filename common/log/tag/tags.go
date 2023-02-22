@@ -452,6 +452,21 @@ func Bool(b bool) Tag {
 	return newBoolTag("bool", b)
 }
 
+// Caller returns tag for caller (the name of the service making this request)
+func Caller(callerName string) Tag {
+	return newStringTag("caller", callerName)
+}
+
+// ActorID returns tag for the actor ID
+func ActorID(actorId String) Tag {
+	return newStringTag("actor-id", actorId)
+}
+
+// HandlerCall returns tag for the API name of a request
+func HandlerCall(handlerCall string) Tag {
+	return newStringTag("handler-call", handlerCall)
+}
+
 // history engine shard
 
 // ShardID returns tag for ShardID
