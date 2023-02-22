@@ -466,7 +466,7 @@ func Caller(callerName string) Tag {
 
 // ActorID returns tag for the actor ID
 func ActorID(actorID string) Tag {
-	return newStringTag("actor-id", actorId)
+	return newStringTag("actor-id", actorID)
 }
 
 // HandlerCall returns tag for the API name of a request
