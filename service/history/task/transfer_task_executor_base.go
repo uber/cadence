@@ -188,6 +188,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTimeUnixNano,
 		SearchAttributes:   searchAttributes,
+		ShardID:            int64(t.shard.GetShardID()),
 	}
 
 	if t.config.EnableRecordWorkflowExecutionUninitialized(domain) {
@@ -200,6 +201,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 			},
 			WorkflowTypeName: workflowTypeName,
 			UpdateTimestamp:  updateTimeUnixNano,
+			ShardID:          int64(t.shard.GetShardID()),
 		}
 		if err := t.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
 			t.logger.Error("Failed to record uninitialized workflow execution", tag.Error(err))
@@ -253,6 +255,7 @@ func (t *transferTaskExecutorBase) upsertWorkflowExecution(
 		NumClusters:        numClusters,
 		SearchAttributes:   searchAttributes,
 		UpdateTimestamp:    updateTimeUnixNano,
+		ShardID:            int64(t.shard.GetShardID()),
 	}
 
 	return t.visibilityMgr.UpsertWorkflowExecution(ctx, request)
@@ -326,6 +329,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			IsCron:             isCron,
 			UpdateTimestamp:    updateTimeUnixNano,
 			NumClusters:        numClusters,
+			ShardID:            int64(t.shard.GetShardID()),
 		}); err != nil {
 			return err
 		}

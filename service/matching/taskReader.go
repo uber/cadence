@@ -1,5 +1,7 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
-//
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,25 +9,29 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package matching
 
 import (
 	"context"
 	"runtime"
+	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
@@ -35,9 +41,15 @@ var epochStartTime = time.Unix(0, 0)
 
 type (
 	taskReader struct {
-		taskBuffer chan *persistence.TaskInfo // tasks loaded from persistence
-		notifyC    chan struct{}              // Used as signal to notify pump of new tasks
-		tlMgr      *taskListManagerImpl
+		taskBuffer     chan *persistence.TaskInfo // tasks loaded from persistence
+		notifyC        chan struct{}              // Used as signal to notify pump of new tasks
+		tlMgr          *taskListManagerImpl
+		taskListID     *taskListID
+		config         *taskListConfig
+		db             *taskListDB
+		taskWriter     *taskWriter
+		taskGC         *taskGC
+		taskAckManager messaging.AckManager
 		// The cancel objects are to cancel the ratelimiter Wait in dispatchBufferedTasks. The ideal
 		// approach is to use request-scoped contexts and use a unique one for each call to Wait. However
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
@@ -48,6 +60,11 @@ type (
 		// separate shutdownC needed for dispatchTasks go routine to allow
 		// getTasksPump to be stopped without stopping dispatchTasks in unit tests
 		dispatcherShutdownC chan struct{}
+		stopped             int64 // set to 1 if the reader is stopped or is shutting down
+		logger              log.Logger
+		scope               metrics.Scope
+		throttleRetry       *backoff.ThrottleRetry
+		handleErr           func(error) error
 	}
 )
 
@@ -55,6 +72,12 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &taskReader{
 		tlMgr:               tlMgr,
+		taskListID:          tlMgr.taskListID,
+		config:              tlMgr.config,
+		db:                  tlMgr.db,
+		taskWriter:          tlMgr.taskWriter,
+		taskGC:              tlMgr.taskGC,
+		taskAckManager:      tlMgr.taskAckManager,
 		cancelCtx:           ctx,
 		cancelFunc:          cancel,
 		notifyC:             make(chan struct{}, 1),
@@ -62,6 +85,13 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		// we always dequeue the head of the buffer and try to dispatch it to a poller
 		// so allocate one less than desired target buffer size
 		taskBuffer: make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
+		logger:     tlMgr.logger,
+		scope:      tlMgr.scope,
+		handleErr:  tlMgr.handleErr,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 	}
 }
 
@@ -72,8 +102,16 @@ func (tr *taskReader) Start() {
 }
 
 func (tr *taskReader) Stop() {
-	tr.cancelFunc()
-	close(tr.dispatcherShutdownC)
+	if atomic.CompareAndSwapInt64(&tr.stopped, 0, 1) {
+		tr.cancelFunc()
+		close(tr.dispatcherShutdownC)
+		if err := tr.persistAckLevel(); err != nil {
+			tr.logger.Error("Persistent store operation failure",
+				tag.StoreOperationUpdateTaskList,
+				tag.Error(err))
+		}
+		tr.taskGC.RunNow(tr.taskAckManager.GetAckLevel())
+	}
 }
 
 func (tr *taskReader) Signal() {
@@ -99,12 +137,12 @@ dispatchLoop:
 					break
 				}
 				if err == context.Canceled {
-					tr.tlMgr.logger.Info("Tasklist manager context is cancelled, shutting down")
+					tr.logger.Info("Tasklist manager context is cancelled, shutting down")
 					break dispatchLoop
 				}
 				// this should never happen unless there is a bug - don't drop the task
-				tr.tlMgr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
-				tr.tlMgr.logger.Error("taskReader: unexpected error dispatching task", tag.Error(err))
+				tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
+				tr.logger.Error("taskReader: unexpected error dispatching task", tag.Error(err))
 				runtime.Gosched()
 			}
 		case <-tr.dispatcherShutdownC:
@@ -114,12 +152,10 @@ dispatchLoop:
 }
 
 func (tr *taskReader) getTasksPump() {
-	tr.tlMgr.startWG.Wait()
 	defer close(tr.taskBuffer)
 
-	updateAckTimer := time.NewTimer(tr.tlMgr.config.UpdateAckInterval())
-	checkIdleTaskListTimer := time.NewTimer(tr.tlMgr.config.IdleTasklistCheckInterval())
-	lastTimeWriteTask := time.Time{}
+	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
+	defer updateAckTimer.Stop()
 getTasksPumpLoop:
 	for {
 		select {
@@ -127,8 +163,6 @@ getTasksPumpLoop:
 			break getTasksPumpLoop
 		case <-tr.notifyC:
 			{
-				lastTimeWriteTask = time.Now()
-
 				tasks, readLevel, isReadBatchDone, err := tr.getTaskBatch()
 				if err != nil {
 					tr.Signal() // re-enqueue the event
@@ -137,14 +171,14 @@ getTasksPumpLoop:
 				}
 
 				if len(tasks) == 0 {
-					tr.tlMgr.taskAckManager.SetReadLevel(readLevel)
+					tr.taskAckManager.SetReadLevel(readLevel)
 					if !isReadBatchDone {
 						tr.Signal()
 					}
 					continue getTasksPumpLoop
 				}
 
-				if !tr.addTasksToBuffer(tasks, lastTimeWriteTask, checkIdleTaskListTimer) {
+				if !tr.addTasksToBuffer(tasks) {
 					break getTasksPumpLoop
 				}
 				// There maybe more tasks. We yield now, but signal pump to check again later.
@@ -152,51 +186,38 @@ getTasksPumpLoop:
 			}
 		case <-updateAckTimer.C:
 			{
-				err := tr.persistAckLevel()
-				if err != nil {
-					if _, ok := err.(*persistence.ConditionFailedError); ok {
-						// This indicates the task list may have moved to another host.
-						tr.tlMgr.Stop()
-					} else {
-						tr.tlMgr.logger.Error("Persistent store operation failure",
-							tag.StoreOperationUpdateTaskList,
-							tag.Error(err))
-					}
+				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
+					tr.logger.Error("Persistent store operation failure",
+						tag.StoreOperationUpdateTaskList,
+						tag.Error(err))
 					// keep going as saving ack is not critical
 				}
 				tr.Signal() // periodically signal pump to check persistence for tasks
-				updateAckTimer = time.NewTimer(tr.tlMgr.config.UpdateAckInterval())
-			}
-		case <-checkIdleTaskListTimer.C:
-			{
-				if tr.isIdle(lastTimeWriteTask) {
-					tr.handleIdleTimeout()
-					break getTasksPumpLoop
-				}
-				checkIdleTaskListTimer = time.NewTimer(tr.tlMgr.config.IdleTasklistCheckInterval())
+				updateAckTimer = time.NewTimer(tr.config.UpdateAckInterval())
 			}
 		}
-		scope := tr.tlMgr.scope.Tagged(getTaskListTypeTag(tr.tlMgr.taskListID.taskType))
-		scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.tlMgr.taskAckManager.GetBacklogCount()))
+		scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType))
+		scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.taskAckManager.GetBacklogCount()))
 	}
 
-	updateAckTimer.Stop()
-	checkIdleTaskListTimer.Stop()
 }
 
 func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
-	response, err := tr.tlMgr.executeWithRetry(func() (interface{}, error) {
-		return tr.tlMgr.db.GetTasks(readLevel, maxReadLevel, tr.tlMgr.config.GetTasksBatchSize())
-	})
+	var response *persistence.GetTasksResponse
+	op := func() (err error) {
+		response, err = tr.db.GetTasks(readLevel, maxReadLevel, tr.config.GetTasksBatchSize())
+		return
+	}
+	err := tr.throttleRetry.Do(context.Background(), op)
 	if err != nil {
-		tr.tlMgr.logger.Error("Persistent store operation failure",
+		tr.logger.Error("Persistent store operation failure",
 			tag.StoreOperationGetTasks,
 			tag.Error(err),
-			tag.WorkflowTaskListName(tr.tlMgr.taskListID.name),
-			tag.WorkflowTaskListType(tr.tlMgr.taskListID.taskType))
+			tag.WorkflowTaskListName(tr.taskListID.name),
+			tag.WorkflowTaskListType(tr.taskListID.taskType))
 		return nil, err
 	}
-	return response.(*persistence.GetTasksResponse).Tasks, err
+	return response.Tasks, nil
 }
 
 // Returns a batch of tasks from persistence starting form current read level.
@@ -204,12 +225,12 @@ func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64)
 // Also return a bool to indicate whether read is finished
 func (tr *taskReader) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
 	var tasks []*persistence.TaskInfo
-	readLevel := tr.tlMgr.taskAckManager.GetReadLevel()
-	maxReadLevel := tr.tlMgr.taskWriter.GetMaxReadLevel()
+	readLevel := tr.taskAckManager.GetReadLevel()
+	maxReadLevel := tr.taskWriter.GetMaxReadLevel()
 
 	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
 	for i := 0; i < 10 && readLevel < maxReadLevel; i++ {
-		upper := readLevel + tr.tlMgr.config.RangeSize
+		upper := readLevel + tr.config.RangeSize
 		if upper > maxReadLevel {
 			upper = maxReadLevel
 		}
@@ -230,49 +251,32 @@ func (tr *taskReader) isTaskExpired(t *persistence.TaskInfo, now time.Time) bool
 	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
 }
 
-func (tr *taskReader) isIdle(lastWriteTime time.Time) bool {
-	return !tr.isTaskAddedRecently(lastWriteTime) && len(tr.tlMgr.GetAllPollerInfo()) == 0
-}
-
-func (tr *taskReader) handleIdleTimeout() {
-	tr.persistAckLevel() //nolint:errcheck
-	tr.tlMgr.taskGC.RunNow(tr.tlMgr.taskAckManager.GetAckLevel())
-	tr.tlMgr.Stop()
-}
-
-func (tr *taskReader) addTasksToBuffer(
-	tasks []*persistence.TaskInfo, lastWriteTime time.Time, idleTimer *time.Timer) bool {
+func (tr *taskReader) addTasksToBuffer(tasks []*persistence.TaskInfo) bool {
 	now := time.Now()
 	for _, t := range tasks {
 		if tr.isTaskExpired(t, now) {
-			tr.tlMgr.scope.IncCounter(metrics.ExpiredTasksPerTaskListCounter)
+			tr.scope.IncCounter(metrics.ExpiredTasksPerTaskListCounter)
 			// Also increment readLevel for expired tasks otherwise it could result in
 			// looping over the same tasks if all tasks read in the batch are expired
-			tr.tlMgr.taskAckManager.SetReadLevel(t.TaskID)
+			tr.taskAckManager.SetReadLevel(t.TaskID)
 			continue
 		}
-		if !tr.addSingleTaskToBuffer(t, lastWriteTime, idleTimer) {
+		if !tr.addSingleTaskToBuffer(t) {
 			return false // we are shutting down the task list
 		}
 	}
 	return true
 }
 
-func (tr *taskReader) addSingleTaskToBuffer(
-	task *persistence.TaskInfo, lastWriteTime time.Time, idleTimer *time.Timer) bool {
-	err := tr.tlMgr.taskAckManager.ReadItem(task.TaskID)
+func (tr *taskReader) addSingleTaskToBuffer(task *persistence.TaskInfo) bool {
+	err := tr.taskAckManager.ReadItem(task.TaskID)
 	if err != nil {
-		tr.tlMgr.logger.Fatal("critical bug when adding item to ackManager")
+		tr.logger.Fatal("critical bug when adding item to ackManager", tag.Error(err))
 	}
 	for {
 		select {
 		case tr.taskBuffer <- task:
 			return true
-		case <-idleTimer.C:
-			if tr.isIdle(lastWriteTime) {
-				tr.handleIdleTimeout()
-				return false
-			}
 		case <-tr.tlMgr.shutdownCh:
 			return false
 		}
@@ -280,16 +284,19 @@ func (tr *taskReader) addSingleTaskToBuffer(
 }
 
 func (tr *taskReader) persistAckLevel() error {
-	ackLevel := tr.tlMgr.taskAckManager.GetAckLevel()
-	maxReadLevel := tr.tlMgr.taskWriter.GetMaxReadLevel()
-	scope := tr.tlMgr.scope.Tagged(getTaskListTypeTag(tr.tlMgr.taskListID.taskType))
-	// note: this metrics is only an estimation for the lag. taskID in DB may not be continuous,
-	// especially when task list ownership changes.
-	scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
+	ackLevel := tr.taskAckManager.GetAckLevel()
+	if ackLevel >= 0 {
+		maxReadLevel := tr.taskWriter.GetMaxReadLevel()
+		scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType))
+		// note: this metrics is only an estimation for the lag. taskID in DB may not be continuous,
+		// especially when task list ownership changes.
+		scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
 
-	return tr.tlMgr.db.UpdateState(ackLevel)
+		return tr.db.UpdateState(ackLevel)
+	}
+	return nil
 }
 
 func (tr *taskReader) isTaskAddedRecently(lastAddTime time.Time) bool {
-	return time.Since(lastAddTime) <= tr.tlMgr.config.MaxTasklistIdleTime()
+	return time.Since(lastAddTime) <= tr.config.MaxTasklistIdleTime()
 }

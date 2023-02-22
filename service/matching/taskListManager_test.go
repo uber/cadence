@@ -114,7 +114,7 @@ func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 		},
 	}
 
-	require.True(t, tlm.taskReader.addTasksToBuffer(tasks, time.Now(), time.NewTimer(time.Minute)))
+	require.True(t, tlm.taskReader.addTasksToBuffer(tasks))
 	require.Equal(t, int64(0), tlm.taskAckManager.GetAckLevel())
 	require.Equal(t, int64(12), tlm.taskAckManager.GetReadLevel())
 
@@ -130,7 +130,7 @@ func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 			Expiry:      time.Now().Add(time.Hour),
 			CreatedTime: time.Now().Add(time.Minute),
 		},
-	}, time.Now(), time.NewTimer(time.Minute)))
+	}))
 	require.Equal(t, int64(0), tlm.taskAckManager.GetAckLevel())
 	require.Equal(t, int64(14), tlm.taskAckManager.GetReadLevel())
 }
@@ -236,6 +236,7 @@ func TestDescribeTaskList(t *testing.T) {
 
 func tlMgrStartWithoutNotifyEvent(tlm *taskListManagerImpl) {
 	// mimic tlm.Start() but avoid calling notifyEvent
+	tlm.liveness.Start()
 	tlm.startWG.Done()
 	go tlm.taskReader.dispatchBufferedTasks()
 	go tlm.taskReader.getTasksPump()
@@ -256,20 +257,42 @@ func TestCheckIdleTaskList(t *testing.T) {
 
 	// Active poll-er
 	tlm = createTestTaskListManagerWithConfig(controller, cfg)
-	tlm.pollerHistory.updatePollerInfo(pollerIdentity("test-poll"), nil)
-	require.Equal(t, 1, len(tlm.GetAllPollerInfo()))
 	tlMgrStartWithoutNotifyEvent(tlm)
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(8 * time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Microsecond)
+	_, _ = tlm.GetTask(ctx, nil)
+	cancel()
+	time.Sleep(6 * time.Millisecond)
 	require.Equal(t, int32(0), tlm.stopped)
 	tlm.Stop()
 	require.Equal(t, int32(1), tlm.stopped)
 
 	// Active adding task
+	domainID := uuid.New()
+	workflowID := "some random workflowID"
+	runID := "some random runID"
+
+	addTaskParam := addTaskParams{
+		execution: &types.WorkflowExecution{
+			WorkflowID: workflowID,
+			RunID:      runID,
+		},
+		taskInfo: &persistence.TaskInfo{
+			DomainID:               domainID,
+			WorkflowID:             workflowID,
+			RunID:                  runID,
+			ScheduleID:             2,
+			ScheduleToStartTimeout: 5,
+			CreatedTime:            time.Now(),
+		},
+	}
 	tlm = createTestTaskListManagerWithConfig(controller, cfg)
-	require.Equal(t, 0, len(tlm.GetAllPollerInfo()))
 	tlMgrStartWithoutNotifyEvent(tlm)
-	tlm.taskReader.Signal()
-	time.Sleep(20 * time.Millisecond)
+	time.Sleep(8 * time.Millisecond)
+	ctx, cancel = context.WithTimeout(context.Background(), time.Microsecond)
+	_, _ = tlm.AddTask(ctx, addTaskParam)
+	cancel()
+	time.Sleep(6 * time.Millisecond)
 	require.Equal(t, int32(0), tlm.stopped)
 	tlm.Stop()
 	require.Equal(t, int32(1), tlm.stopped)

@@ -121,6 +121,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 	request.NumClusters = 2
 	memoBytes := []byte(`test bytes`)
 	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+	request.ShardID = 1234
 
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -136,6 +137,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		s.Equal(indexer.VisibilityOperationRecordStarted, *input.VisibilityOperation)
+		s.Equal(request.ShardID, fields[es.ShardID].GetIntData())
 		return true
 	})).Return(nil).Once()
 
@@ -185,6 +187,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 	request.IsCron = false
 	request.NumClusters = 2
 	request.UpdateTimestamp = time.Unix(0, int64(213))
+	request.ShardID = 1234
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
 		s.Equal(request.DomainUUID, input.GetDomainID())
@@ -203,6 +206,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		s.Equal(indexer.VisibilityOperationRecordClosed, *input.VisibilityOperation)
 		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
+		s.Equal(request.ShardID, fields[es.ShardID].GetIntData())
 		return true
 	})).Return(nil).Once()
 
@@ -242,6 +246,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 	request.RunID = "rid"
 	request.WorkflowTypeName = "wfType"
 	request.UpdateTimestamp = time.Unix(0, int64(213))
+	request.ShardID = 1234
 
 	s.mockProducer.On("Publish", mock.Anything, mock.MatchedBy(func(input *indexer.Message) bool {
 		fields := input.Fields
@@ -250,6 +255,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionUninitialized() {
 		s.Equal(request.RunID, input.GetRunID())
 		s.Equal(request.WorkflowTypeName, fields[es.WorkflowType].GetStringData())
 		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
+		s.Equal(request.ShardID, fields[es.ShardID].GetIntData())
 		return true
 	})).Return(nil).Once()
 
