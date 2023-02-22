@@ -1286,12 +1286,12 @@ func newAdminConfigStoreCommands() []cli.Command {
 			},
 		},
 		{
-			Name:    "describe",
-			Aliases: []string{"d"},
-			Usage:   "Describe all available configuration values",
+			Name:    "listall",
+			Aliases: []string{"la"},
+			Usage:   "List all available configuration keys",
 			Flags:   []cli.Flag{getFormatFlag()},
 			Action: func(c *cli.Context) {
-				AdminDescribeDynamicConfig(c)
+				AdminListConfigKeys(c)
 			},
 		},
 	}

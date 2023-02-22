@@ -212,8 +212,8 @@ func AdminListDynamicConfig(c *cli.Context) {
 	}
 }
 
-// AdminDescribeDynamicConfig lists all available dynamic config keys with description and default value
-func AdminDescribeDynamicConfig(c *cli.Context) {
+// AdminListConfigKeys lists all available dynamic config keys with description and default value
+func AdminListConfigKeys(c *cli.Context) {
 
 	type ConfigRow struct {
 		Name        string      `header:"Name" json:"name"`
