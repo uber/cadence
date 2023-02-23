@@ -113,6 +113,15 @@ func GetKeyFromKeyName(keyName string) (Key, error) {
 	return keyVal, nil
 }
 
+// GetAllKeys returns a copy of all configuration keys with all details
+func GetAllKeys() map[string]Key {
+	result := make(map[string]Key, len(_keyNames))
+	for k, v := range _keyNames {
+		result[k] = v
+	}
+	return result
+}
+
 func ValidateKeyValuePair(key Key, value interface{}) error {
 	err := fmt.Errorf("key value pair mismatch, key type: %T, value type: %T", key, value)
 	switch key.(type) {

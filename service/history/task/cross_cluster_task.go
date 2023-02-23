@@ -359,11 +359,7 @@ func (t *crossClusterSourceTask) HandleErr(
 			if attempt > t.maxRetryCount {
 				t.scope.RecordTimer(metrics.TaskAttemptTimerPerDomain, time.Duration(attempt))
 				t.logger.Error("Critical error processing task, retrying.",
-					tag.Error(err),
-					tag.OperationCritical,
-					tag.TaskType(t.GetTaskType()),
-					tag.AttemptCount(t.GetAttempt()),
-				)
+					tag.Error(err), tag.OperationCritical, tag.TaskType(t.GetTaskType()))
 			}
 		}
 	}()
