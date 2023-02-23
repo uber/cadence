@@ -23,10 +23,13 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
-	"github.com/urfave/cli"
-
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/urfave/cli"
 )
 
 type cliEntry struct {
@@ -207,6 +210,37 @@ func AdminListDynamicConfig(c *cli.Context) {
 		}
 		prettyPrintJSONObject(cliEntries)
 	}
+}
+
+// AdminListConfigKeys lists all available dynamic config keys with description and default value
+func AdminListConfigKeys(c *cli.Context) {
+
+	type ConfigRow struct {
+		Name        string      `header:"Name" json:"name"`
+		Description string      `header:"Description" json:"description"`
+		Default     interface{} `header:"Default value" json:"default"`
+	}
+
+	var rows []ConfigRow
+
+	for name, k := range dynamicconfig.GetAllKeys() {
+		rows = append(rows, ConfigRow{
+			Name:        name,
+			Description: k.Description(),
+			Default:     k.DefaultValue(),
+		})
+	}
+	// sorting config key names alphabetically
+	sort.SliceStable(rows, func(i, j int) bool {
+		return rows[i].Name < rows[j].Name
+	})
+
+	Render(c, rows, RenderOptions{
+		DefaultTemplate: templateTable,
+		Color:           true,
+		Border:          true,
+		ColumnAlignment: []int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_LEFT, tablewriter.ALIGN_RIGHT}},
+	)
 }
 
 func convertToInputEntry(dcEntry *types.DynamicConfigEntry) (*cliEntry, error) {
