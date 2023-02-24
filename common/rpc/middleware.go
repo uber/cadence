@@ -25,6 +25,7 @@ import (
 	"io"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 
 	"go.uber.org/cadence/worker"
@@ -122,19 +123,56 @@ func (m *overrideCallerMiddleware) Call(ctx context.Context, request *transport.
 }
 
 // HeaderForwardingMiddleware forwards headers from current inbound RPC call that is being handled to new outbound calls being made.
-// If new value for the same header key is provided in the outbound request, keep it instead.
-type HeaderForwardingMiddleware struct{}
+// As this does NOT differentiate between transports or purposes, it generally assumes we are not acting as a true proxy,
+// so things like content lengths and encodings should not be forwarded - they will be provided by the outbound RPC library as needed.
+//
+// Duplicated headers retain the first value only, matching how browsers and Go (afaict) generally behave.
+//
+// This uses overly-simplified rules for choosing which headers are forwarded and which are not, intended to be lightly configurable.
+// For a more in-depth logic review if it becomes needed, check:
+//   - How Go's ReverseProxy deals with headers, e.g. per-protocol and a list of exclusions: https://cs.opensource.google/go/go/+/refs/tags/go1.20.1:src/net/http/httputil/reverseproxy.go;l=332
+//   - HTTP's spec for headers, namely how duplicates and Connection work: https://www.rfc-editor.org/rfc/rfc9110.html#name-header-fields
+//   - Many browsers prefer first-value-wins for unexpected duplicates: https://bugzilla.mozilla.org/show_bug.cgi?id=376756
+//   - But there are MANY map-like implementations that choose last-value wins, and this mismatch is a source of frequent security problems.
+//   - YARPC's `With` only retains the last call's value: https://github.com/yarpc/yarpc-go/blob/8ccd79a2ca696150213faac1d35011c5be52e5fb/api/transport/header.go#L69-L77
+//   - Go's MIMEHeader's Get (used by YARPC) only returns the first value, and does not join duplicates: https://pkg.go.dev/net/textproto#MIMEHeader.Get
+//
+// There is likely no correct choice, as it depends on the recipients' behavior.
+// If we need to support more complex logic, it's likely worth jumping to a fully-controllable thing.
+// Middle-grounds will probably just need to be changed again later.
+type HeaderForwardingMiddleware struct {
+	// Rules are applied in order to add or remove headers by regex.
+	//
+	// There are no default rules, so by default no headers are copied.
+	// To include headers by default, Add with a permissive regex and then remove specific ones.
+	Rules []config.HeaderRule
+}
 
 func (m *HeaderForwardingMiddleware) Call(ctx context.Context, request *transport.Request, out transport.UnaryOutbound) (*transport.Response, error) {
-	if inboundCall := yarpc.CallFromContext(ctx); inboundCall != nil && request != nil {
+	if inboundCall := yarpc.CallFromContext(ctx); inboundCall != nil {
 		outboundHeaders := request.Headers
-		for _, key := range inboundCall.HeaderNames() {
-			if _, exists := outboundHeaders.Get(key); !exists {
-				value := inboundCall.Header(key)
-				outboundHeaders = outboundHeaders.With(key, value)
+		pending := make(map[string][]string, len(inboundCall.HeaderNames()))
+		names := inboundCall.HeaderNames()
+		for _, rule := range m.Rules {
+			for _, key := range names {
+				if !rule.Match.MatchString(key) {
+					continue
+				}
+				if _, ok := outboundHeaders.Get(key); ok {
+					continue // do not overwrite existing headers
+				}
+				if rule.Add {
+					pending[key] = append(pending[key], inboundCall.Header(key))
+				} else {
+					delete(pending, key)
+				}
 			}
 		}
-		request.Headers = outboundHeaders
+		for k, vs := range pending {
+			// yarpc's Headers.With keeps the LAST value, but we (and browsers) prefer the FIRST,
+			// and we do not canonicalize duplicates.
+			request.Headers = request.Headers.With(k, vs[0])
+		}
 	}
 
 	return out.Call(ctx, request)
