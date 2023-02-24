@@ -1285,5 +1285,14 @@ func newAdminConfigStoreCommands() []cli.Command {
 				AdminListDynamicConfig(c)
 			},
 		},
+		{
+			Name:    "listall",
+			Aliases: []string{"la"},
+			Usage:   "List all available configuration keys",
+			Flags:   []cli.Flag{getFormatFlag()},
+			Action: func(c *cli.Context) {
+				AdminListConfigKeys(c)
+			},
+		},
 	}
 }

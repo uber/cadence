@@ -240,7 +240,6 @@ func (t *taskImpl) HandleErr(
 					tag.Error(err),
 					tag.OperationCritical,
 					tag.TaskType(t.GetTaskType()),
-					tag.AttemptCount(t.GetAttempt()),
 				)
 			}
 		}
