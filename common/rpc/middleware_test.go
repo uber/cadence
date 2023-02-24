@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,6 +33,7 @@ import (
 	"go.uber.org/yarpc/yarpctest"
 
 	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/metrics"
 )
 
@@ -94,6 +96,7 @@ func TestHeaderForwardingMiddleware(t *testing.T) {
 	inboundHeaders := map[string]string{
 		"key-a": "inbound-value-a",
 		"key-b": "inbound-value-b",
+		"key-x": "inbound-value-x",
 	}
 	outboundHeaders := map[string]string{
 		"key-b": "outbound-value-b",
@@ -103,24 +106,70 @@ func TestHeaderForwardingMiddleware(t *testing.T) {
 		"key-a": "inbound-value-a",
 		"key-b": "outbound-value-b",
 		"key-c": "outbound-value-c",
+		"key-x": "inbound-value-x",
+	}
+	combinedHeadersWithoutX := map[string]string{
+		"key-a": "inbound-value-a",
+		"key-b": "outbound-value-b",
+		"key-c": "outbound-value-c",
 	}
 
-	ctx := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{Headers: inboundHeaders})
-	request := transport.Request{Headers: transport.HeadersFromMap(outboundHeaders)}
+	ctxWithInbound := yarpctest.ContextWithCall(context.Background(), &yarpctest.Call{Headers: inboundHeaders})
+	makeRequest := func() *transport.Request {
+		// request and headers are mutated by Call, so we must not share data
+		return &transport.Request{Headers: transport.HeadersFromMap(outboundHeaders)}
+	}
 
-	m := HeaderForwardingMiddleware{}
-	// No ongoing inbound call -> keep existing outbound headers
-	_, err := m.Call(context.Background(), &request, &fakeOutbound{verify: func(r *transport.Request) {
-		assert.Equal(t, outboundHeaders, r.Headers.Items())
-	}})
-	assert.NoError(t, err)
+	t.Run("default rules", func(t *testing.T) {
+		t.Parallel()
+		m := HeaderForwardingMiddleware{
+			Rules: []config.HeaderRule{
+				// default
+				{
+					Add:   true,
+					Match: regexp.MustCompile(""),
+				},
+			},
+		}
+		t.Run("no inbound makes no changes", func(t *testing.T) {
+			t.Parallel()
+			// No ongoing inbound call -> keep existing outbound headers
+			_, err := m.Call(context.Background(), makeRequest(), &fakeOutbound{verify: func(r *transport.Request) {
+				assert.Equal(t, outboundHeaders, r.Headers.Items())
+			}})
+			assert.NoError(t, err)
+		})
 
-	// With ongoing inbound call -> forward inbound headers not present in the request
-	_, err = m.Call(ctx, &request, &fakeOutbound{verify: func(r *transport.Request) {
-		assert.Equal(t, combinedHeaders, r.Headers.Items())
-	}})
-	assert.NoError(t, err)
-
+		t.Run("inbound headers merge missing", func(t *testing.T) {
+			t.Parallel()
+			// With ongoing inbound call -> forward inbound headers not present in the request
+			_, err := m.Call(ctxWithInbound, makeRequest(), &fakeOutbound{verify: func(r *transport.Request) {
+				assert.Equal(t, combinedHeaders, r.Headers.Items())
+			}})
+			assert.NoError(t, err)
+		})
+	})
+	t.Run("can exclude inbound headers", func(t *testing.T) {
+		t.Parallel()
+		m := HeaderForwardingMiddleware{
+			Rules: []config.HeaderRule{
+				// add by default, earlier tests ensure this works
+				{
+					Add:   true,
+					Match: regexp.MustCompile(""),
+				},
+				// remove X
+				{
+					Add:   false,
+					Match: regexp.MustCompile("(?i)Key-x"),
+				},
+			},
+		}
+		_, err := m.Call(ctxWithInbound, makeRequest(), &fakeOutbound{verify: func(r *transport.Request) {
+			assert.Equal(t, combinedHeadersWithoutX, r.Headers.Items())
+		}})
+		assert.NoError(t, err)
+	})
 }
 
 type fakeHandler struct {

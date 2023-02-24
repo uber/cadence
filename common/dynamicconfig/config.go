@@ -170,6 +170,9 @@ type IntPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType st
 // DurationPropertyFnWithDomainFilter is a wrapper to get duration property from dynamic config with domain as filter
 type DurationPropertyFnWithWorkflowTypeFilter func(domainName string, workflowType string) time.Duration
 
+// ListPropertyFn is a wrapper to get a list property from dynamic config
+type ListPropertyFn func(opts ...FilterOption) []interface{}
+
 // GetProperty gets a interface property and returns defaultValue if property is not found
 func (c *Collection) GetProperty(key Key) PropertyFn {
 	return func() interface{} {
@@ -554,6 +557,22 @@ func (c *Collection) GetBoolPropertyFilteredByTaskListInfo(key BoolKey) BoolProp
 			return key.DefaultBool()
 		}
 		c.logValue(key, filters, val, key.DefaultValue(), boolCompareEquals)
+		return val
+	}
+}
+
+func (c *Collection) GetListProperty(key ListKey) ListPropertyFn {
+	return func(opts ...FilterOption) []interface{} {
+		filters := c.toFilterMap(opts...)
+		val, err := c.client.GetListValue(
+			key,
+			filters,
+		)
+		if err != nil {
+			c.logError(key, filters, err)
+			return key.DefaultList()
+		}
+		c.logValue(key, filters, val, key.DefaultValue(), reflect.DeepEqual)
 		return val
 	}
 }
