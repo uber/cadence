@@ -87,7 +87,7 @@ func NewPermission(permission string) Permission {
 
 // Authorizer is an interface for authorization
 type Authorizer interface {
-	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
+	Authorize(ctx context.Context, attributes *Attributes, auditInfo AuditInfo) (Result, error)
 }
 
 func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {
@@ -96,4 +96,8 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 		return nil, fmt.Errorf("invalid private key path %s", privateKey)
 	}
 	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
+}
+
+type AuditInfo interface {
+	ToAuditInfo() string
 }

@@ -822,7 +822,7 @@ func (a *AccessControlledWorkflowHandler) UpdateDomain(
 		DomainName: request.GetName(),
 		Permission: authorization.PermissionAdmin,
 	}
-	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
+	isAuthorized, err := a.isAuthorized(ctx, attr, scope, request)
 	if err != nil {
 		return nil, err
 	}
@@ -837,11 +837,12 @@ func (a *AccessControlledWorkflowHandler) isAuthorized(
 	ctx context.Context,
 	attr *authorization.Attributes,
 	scope metrics.Scope,
+	auditInfo authorization.AuditInfo,
 ) (bool, error) {
 	sw := scope.StartTimer(metrics.CadenceAuthorizationLatency)
 	defer sw.Stop()
 
-	result, err := a.authorizer.Authorize(ctx, attr)
+	result, err := a.authorizer.Authorize(ctx, attr, auditInfo)
 	if err != nil {
 		scope.IncCounter(metrics.CadenceErrAuthorizeFailedCounter)
 		return false, err
