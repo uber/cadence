@@ -21,8 +21,9 @@
 package loggerimpl
 
 import (
-	"go.uber.org/cadence/workflow"
 	"math/rand"
+
+	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
