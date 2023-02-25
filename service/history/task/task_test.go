@@ -82,6 +82,8 @@ func (s *taskSuite) SetupTest() {
 	s.mockTaskInfo.EXPECT().GetDomainID().Return(constants.TestDomainID).AnyTimes()
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
+	s.mockTaskInfo.EXPECT().GetTaskType().Return(123)
+
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.maxRetryCount = dynamicconfig.GetIntPropertyFn(10)
 }
@@ -193,6 +195,10 @@ func (s *taskSuite) TestHandleErr_UnknownErr() {
 	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
+
+	// make sure it will go into the defer function.
+	// in this case, make it 0 < attempt < stickyTaskMaxRetryCount
+	taskBase.attempt = 10
 
 	err := errors.New("some random error")
 	s.Equal(err, taskBase.HandleErr(err))
