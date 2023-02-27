@@ -82,8 +82,6 @@ func (s *taskSuite) SetupTest() {
 	s.mockTaskInfo.EXPECT().GetDomainID().Return(constants.TestDomainID).AnyTimes()
 	s.mockShard.Resource.DomainCache.EXPECT().GetDomainName(constants.TestDomainID).Return(constants.TestDomainName, nil).AnyTimes()
 
-	s.mockTaskInfo.EXPECT().GetTaskType().Return(123)
-
 	s.logger = loggerimpl.NewLoggerForTest(s.Suite)
 	s.maxRetryCount = dynamicconfig.GetIntPropertyFn(10)
 }
@@ -195,6 +193,11 @@ func (s *taskSuite) TestHandleErr_UnknownErr() {
 	taskBase := s.newTestTask(func(task Info) (bool, error) {
 		return true, nil
 	}, nil)
+
+	// need to mock a return value for function GetTaskType
+	// if don't do, there'll be an error when code goes into the defer function:
+	// Unexpected call: because: there are no expected calls of the method "GetTaskType" for that receiver
+	s.mockTaskInfo.EXPECT().GetTaskType().Return(123)
 
 	// make sure it will go into the defer function.
 	// in this case, make it 0 < attempt < stickyTaskMaxRetryCount
