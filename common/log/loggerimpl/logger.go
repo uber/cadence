@@ -22,6 +22,7 @@ package loggerimpl
 
 import (
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"runtime"
 
@@ -148,5 +149,13 @@ func (lg *loggerImpl) WithTags(tags ...tag.Tag) log.Logger {
 	return &loggerImpl{
 		zapLogger: zapLogger,
 		skip:      lg.skip,
+	}
+}
+
+func (lg *loggerImpl) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
+	if rand.Intn(sampleRate) == 0 {
+		msg = setDefaultMsg(msg)
+		fields := lg.buildFieldsWithCallat(tags)
+		lg.zapLogger.Info(msg, fields...)
 	}
 }
