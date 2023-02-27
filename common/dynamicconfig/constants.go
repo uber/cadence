@@ -1341,6 +1341,12 @@ const (
 	// Default value: 1 (no jittering)
 	WorkflowDeletionJitterRange
 
+	// SampleLoggingRate defines the rate we want sampled logs to be logged at
+	// KeyName: system.SampleLoggingRate
+	// Value type: Int
+	// Default value: 100
+	SampleLoggingRate
+
 	// LastIntKey must be the last one in this const group
 	LastIntKey
 )
@@ -3437,6 +3443,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.workflowDeletionJitterRange",
 		Description:  "WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering",
 		DefaultValue: 60,
+	},
+	SampleLoggingRate: DynamicInt{
+		KeyName:      "system.sampleLoggingRate",
+		Description:  "The rate for which sampled logs are logged at. 100 means 1/100 is logged",
+		DefaultValue: 100,
 	},
 }
 

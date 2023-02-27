@@ -21,6 +21,7 @@
 package loggerimpl
 
 import (
+	"math/rand"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common/dynamicconfig"
@@ -97,6 +98,14 @@ func (tl *throttledLogger) Fatal(msg string, tags ...tag.Tag) {
 	tl.rateLimit(func() {
 		tl.log.Fatal(msg, tags...)
 	})
+}
+
+func (tl *throttledLogger) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
+	if rand.Intn(sampleRate) == 0 {
+		tl.rateLimit(func() {
+			tl.log.Info(msg, tags...)
+		})
+	}
 }
 
 // Return a logger with the specified key-value pairs set, to be included in a subsequent normal logging call
