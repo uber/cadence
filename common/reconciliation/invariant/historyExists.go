@@ -24,6 +24,7 @@ package invariant
 
 import (
 	"context"
+	"fmt"
 
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -69,7 +70,8 @@ func (h *historyExists) Check(
 		}
 	}
 	domainID := concreteExecution.GetDomainID()
-	domainName, errorDomainName := h.dc.GetDomainName(domainID)
+	domain, errorDomainName := h.dc.GetDomainByID(domainID)
+	domainName := domain.GetInfo().Name
 	if errorDomainName != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -78,7 +80,15 @@ func (h *historyExists) Check(
 			InfoDetails:     errorDomainName.Error(),
 		}
 	}
-
+	if domain.GetInfo().Status == 1 {
+		return CheckResult{
+			CheckResultType: CheckResultTypeCorrupted,
+			InvariantName:   h.Name(),
+			Info:            "failed to check: domain is deprecated",
+			InfoDetails: fmt.Sprintf("domain has been deprecated. DomainID: %v, DomainName: %v",
+				domainName, domainID),
+		}
+	}
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,
 		MinEventID:    c.FirstEventID,
