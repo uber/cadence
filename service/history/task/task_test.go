@@ -194,9 +194,10 @@ func (s *taskSuite) TestHandleErr_UnknownErr() {
 		return true, nil
 	}, nil)
 
-	// need to mock a return value for function GetTaskType
-	// if don't do, there'll be an error when code goes into the defer function:
+	// Need to mock a return value for function GetTaskType
+	// If don't do, there'll be an error when code goes into the defer function:
 	// Unexpected call: because: there are no expected calls of the method "GetTaskType" for that receiver
+	// But can't put it in the setup function since it may cause other errors
 	s.mockTaskInfo.EXPECT().GetTaskType().Return(123)
 
 	// make sure it will go into the defer function.
