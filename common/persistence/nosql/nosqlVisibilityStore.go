@@ -85,7 +85,6 @@ func (v *nosqlVisibilityStore) RecordWorkflowExecutionStarted(
 			IsCron:        request.IsCron,
 			NumClusters:   request.NumClusters,
 			UpdateTime:    request.UpdateTimestamp,
-			ShardID:       request.ShardID,
 		},
 	})
 	if err != nil {

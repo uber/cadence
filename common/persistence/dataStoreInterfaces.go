@@ -648,7 +648,6 @@ type (
 		NumClusters      int16
 		UpdateTime       time.Time
 		SearchAttributes map[string]interface{}
-		ShardID          int16
 	}
 
 	// InternalListWorkflowExecutionsResponse is response from ListWorkflowExecutions
@@ -705,7 +704,7 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    time.Time
 		SearchAttributes   map[string][]byte
-		ShardID            int16
+		ShardID            int64
 	}
 
 	// InternalRecordWorkflowExecutionClosedRequest is request to RecordWorkflowExecutionClosed
@@ -727,7 +726,7 @@ type (
 		IsCron             bool
 		NumClusters        int16
 		UpdateTimestamp    time.Time
-		ShardID            int16
+		ShardID            int64
 	}
 
 	// InternalRecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution

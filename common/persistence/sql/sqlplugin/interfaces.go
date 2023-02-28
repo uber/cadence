@@ -539,7 +539,6 @@ type (
 		IsCron           bool
 		NumClusters      int16
 		UpdateTime       time.Time
-		ShardID          int16
 	}
 
 	// VisibilityFilter contains the column names within executions_visibility table that

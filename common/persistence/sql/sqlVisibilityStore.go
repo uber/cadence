@@ -78,7 +78,6 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionStarted(
 		IsCron:           request.IsCron,
 		NumClusters:      request.NumClusters,
 		UpdateTime:       request.UpdateTimestamp,
-		ShardID:          request.ShardID,
 	})
 
 	if err != nil {
@@ -107,7 +106,6 @@ func (s *sqlVisibilityStore) RecordWorkflowExecutionClosed(
 		IsCron:           request.IsCron,
 		NumClusters:      request.NumClusters,
 		UpdateTime:       request.UpdateTimestamp,
-		ShardID:          request.ShardID,
 	})
 	if err != nil {
 		return convertCommonErrors(s.db, "RecordWorkflowExecutionClosed", "", err)
@@ -347,7 +345,6 @@ func (s *sqlVisibilityStore) rowToInfo(row *sqlplugin.VisibilityRow) *p.Internal
 		NumClusters:   row.NumClusters,
 		Memo:          p.NewDataBlob(row.Memo, common.EncodingType(row.Encoding)),
 		UpdateTime:    row.UpdateTime,
-		ShardID:       row.ShardID,
 	}
 	if row.CloseStatus != nil {
 		status := workflow.WorkflowExecutionCloseStatus(*row.CloseStatus)
