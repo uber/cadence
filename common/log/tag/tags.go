@@ -163,6 +163,11 @@ func BlobSizeViolationOperation(operation string) Tag {
 	return newStringTag("blob-size-violation-operation", operation)
 }
 
+// WorkflowCronSchedule returns a tag to report a workflow's cron schedule
+func WorkflowCronSchedule(schedule string) Tag {
+	return newStringTag("wf-cron-schedule", schedule)
+}
+
 // domain related
 
 // WorkflowDomainID returns tag for WorkflowDomainID
@@ -450,6 +455,23 @@ func NextNumber(n int64) Tag {
 // Bool returns tag for Bool
 func Bool(b bool) Tag {
 	return newBoolTag("bool", b)
+}
+
+/* Tags for logging manual access */
+
+// RequestCaller returns tag for caller (the name of the service making this request)
+func RequestCaller(callerName string) Tag {
+	return newStringTag("request-caller", callerName)
+}
+
+// ActorID returns tag for the actor ID
+func ActorID(actorID string) Tag {
+	return newStringTag("actor-id", actorID)
+}
+
+// HandlerCall returns tag for the API name of a request
+func HandlerCall(handlerCall string) Tag {
+	return newStringTag("handler-call", handlerCall)
 }
 
 // history engine shard

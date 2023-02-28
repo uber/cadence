@@ -111,6 +111,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		0,                                  // will not be used
 		0,                                  // will not be used
 		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
+		request.ShardID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -139,6 +140,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixNano(),
+		request.ShardID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -154,6 +156,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionUninitialized(
 		request.RunID,
 		request.WorkflowTypeName,
 		request.UpdateTimestamp.UnixNano(),
+		request.ShardID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -182,6 +185,7 @@ func (v *esVisibilityStore) UpsertWorkflowExecution(
 		0, // will not be used
 		0, // will not be used
 		request.UpdateTimestamp.UnixNano(),
+		request.ShardID,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -791,7 +795,8 @@ func createVisibilityMessage(
 	endTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
 	historyLength int64, // close execution
-	updateTimeUnixNano int64, // update execution
+	updateTimeUnixNano int64, // update execution,
+	shardID int64,
 ) *indexer.Message {
 	msgType := indexer.MessageTypeIndex
 
@@ -803,6 +808,7 @@ func createVisibilityMessage(
 		es.IsCron:        {Type: &es.FieldTypeBool, BoolData: common.BoolPtr(isCron)},
 		es.NumClusters:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(int64(NumClusters))},
 		es.UpdateTime:    {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
+		es.ShardID:       {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(shardID)},
 	}
 
 	if len(memo) != 0 {
@@ -864,11 +870,13 @@ func getVisibilityMessageForUninitializedWorkflow(
 	rid string,
 	workflowTypeName string,
 	updateTimeUnixNano int64, // update execution
+	shardID int64,
 ) *indexer.Message {
 	msgType := indexer.MessageTypeCreate
 	fields := map[string]*indexer.Field{
 		es.WorkflowType: {Type: &es.FieldTypeString, StringData: common.StringPtr(workflowTypeName)},
 		es.UpdateTime:   {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(updateTimeUnixNano)},
+		es.ShardID:      {Type: &es.FieldTypeInt, IntData: common.Int64Ptr(shardID)},
 	}
 
 	msg := &indexer.Message{

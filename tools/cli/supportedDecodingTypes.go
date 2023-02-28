@@ -34,6 +34,7 @@ import (
 var decodingTypes = map[string]codec.ThriftObject{
 	"shared.History":                 &shared.History{},
 	"shared.HistoryEvent":            &shared.HistoryEvent{},
+	"shared.HistoryBranch":           &shared.HistoryBranch{},
 	"shared.Memo":                    &shared.Memo{},
 	"shared.ResetPoints":             &shared.ResetPoints{},
 	"shared.BadBinaries":             &shared.BadBinaries{},

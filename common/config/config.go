@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/uber-go/tally/m3"
@@ -72,6 +73,13 @@ type (
 		Blobstore Blobstore `yaml:"blobstore"`
 		// Authorization is the config for setting up authorization
 		Authorization Authorization `yaml:"authorization"`
+		// HeaderForwardingRules defines which inbound headers to include or exclude on outbound calls
+		HeaderForwardingRules []HeaderRule `yaml:"headerForwardingRules"`
+	}
+
+	HeaderRule struct {
+		Add   bool // if false, matching headers are removed if previously matched.
+		Match *regexp.Regexp
 	}
 
 	Authorization struct {
