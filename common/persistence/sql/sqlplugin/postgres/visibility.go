@@ -51,7 +51,7 @@ const (
 			  encoding = excluded.encoding,
 				is_cron = excluded.is_cron,
 				num_clusters = excluded.num_clusters,
-				update_time = excluded.update_time
+				update_time = excluded.update_time,
 				shard_id = excluded.shard_id`
 
 	// RunID condition is needed for correct pagination
