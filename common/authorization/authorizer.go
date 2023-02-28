@@ -58,6 +58,7 @@ type (
 		WorkflowType *types.WorkflowType
 		TaskList     *types.TaskList
 		Permission   Permission
+		AuditInfo    AuditInfo
 	}
 
 	// Result is result from authority.
@@ -87,7 +88,7 @@ func NewPermission(permission string) Permission {
 
 // Authorizer is an interface for authorization
 type Authorizer interface {
-	Authorize(ctx context.Context, attributes *Attributes, auditInfo AuditInfo) (Result, error)
+	Authorize(ctx context.Context, attributes *Attributes) (Result, error)
 }
 
 func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvider, error) {

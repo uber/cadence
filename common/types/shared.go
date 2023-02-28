@@ -6513,7 +6513,9 @@ type UpdateDomainRequest struct {
 }
 
 func (v *UpdateDomainRequest) ToAuditInfo() string {
-	return "Needs implementation"
+	var request UpdateDomainRequest = *v // need to filter PII info in some request
+	res := fmt.Sprintf("%#v", request)
+	return res
 }
 
 // GetName is an internal getter (TBD...)
