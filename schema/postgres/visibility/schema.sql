@@ -14,6 +14,7 @@ CREATE TABLE executions_visibility (
   is_cron              BOOLEAN DEFAULT false NOT NULL,
   num_clusters         INTEGER NULL,
   update_time          TIMESTAMP NULL,
+  shard_id             INTEGER NULL,
 
   PRIMARY KEY  (domain_id, run_id)
 );
