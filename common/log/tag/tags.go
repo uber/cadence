@@ -591,8 +591,8 @@ func Attempt(attempt int32) Tag {
 }
 
 // AttemptCount returns tag for AttemptCount
-func AttemptCount(attemptCount int64) Tag {
-	return newInt64("attempt-count", attemptCount)
+func AttemptCount(attemptCount int) Tag {
+	return newInt("attempt-count", attemptCount)
 }
 
 // AttemptStart returns tag for AttemptStart
