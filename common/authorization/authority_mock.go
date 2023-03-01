@@ -70,3 +70,40 @@ func (mr *MockAuthorizerMockRecorder) Authorize(ctx, attributes interface{}) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorize", reflect.TypeOf((*MockAuthorizer)(nil).Authorize), ctx, attributes)
 }
+
+// MockManualRequestBody is a mock of ManualRequestBody interface.
+type MockManualRequestBody struct {
+	ctrl     *gomock.Controller
+	recorder *MockManualRequestBodyMockRecorder
+}
+
+// MockManualRequestBodyMockRecorder is the mock recorder for MockManualRequestBody.
+type MockManualRequestBodyMockRecorder struct {
+	mock *MockManualRequestBody
+}
+
+// NewMockManualRequestBody creates a new mock instance.
+func NewMockManualRequestBody(ctrl *gomock.Controller) *MockManualRequestBody {
+	mock := &MockManualRequestBody{ctrl: ctrl}
+	mock.recorder = &MockManualRequestBodyMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockManualRequestBody) EXPECT() *MockManualRequestBodyMockRecorder {
+	return m.recorder
+}
+
+// BodyToString mocks base method.
+func (m *MockManualRequestBody) BodyToString() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BodyToString")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// BodyToString indicates an expected call of BodyToString.
+func (mr *MockManualRequestBodyMockRecorder) BodyToString() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BodyToString", reflect.TypeOf((*MockManualRequestBody)(nil).BodyToString))
+}
