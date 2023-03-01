@@ -53,7 +53,7 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    int64 // unit is unix nano, consistent with start/execution timestamp, same in other requests
 		SearchAttributes   map[string][]byte
-		ShardID            int64
+		ShardID            int16
 	}
 
 	// RecordWorkflowExecutionClosedRequest is used to add a record of a newly
@@ -76,7 +76,7 @@ type (
 		NumClusters        int16
 		UpdateTimestamp    int64
 		SearchAttributes   map[string][]byte
-		ShardID            int64
+		ShardID            int16
 	}
 
 	// RecordWorkflowExecutionUninitializedRequest is used to add a record of a newly uninitialized execution
