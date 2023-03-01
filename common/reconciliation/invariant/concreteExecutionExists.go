@@ -76,7 +76,6 @@ func (c *concreteExecutionExists) Check(
 	}
 	domainID := currentExecution.GetDomainID()
 	domain, errorDomainName := c.cache.GetDomainByID(domainID)
-	domainName := domain.GetInfo().Name
 	if errorDomainName != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -85,7 +84,8 @@ func (c *concreteExecutionExists) Check(
 			InfoDetails:     errorDomainName.Error(),
 		}
 	}
-	if domain.GetInfo().Status == 1 {
+	domainName := domain.GetInfo().Name
+	if domain.GetInfo().Status == deprecatedDomainStatus {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   c.Name(),

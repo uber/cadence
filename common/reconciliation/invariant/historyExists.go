@@ -35,6 +35,7 @@ import (
 
 const (
 	historyPageSize = 1
+	deprecatedDomainStatus
 )
 
 type (
@@ -71,7 +72,6 @@ func (h *historyExists) Check(
 	}
 	domainID := concreteExecution.GetDomainID()
 	domain, errorDomainName := h.dc.GetDomainByID(domainID)
-	domainName := domain.GetInfo().Name
 	if errorDomainName != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
@@ -80,7 +80,8 @@ func (h *historyExists) Check(
 			InfoDetails:     errorDomainName.Error(),
 		}
 	}
-	if domain.GetInfo().Status == 1 {
+	domainName := domain.GetInfo().Name
+	if domain.GetInfo().Status == deprecatedDomainStatus {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   h.Name(),
