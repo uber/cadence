@@ -73,9 +73,10 @@ func (a *AccessControlledWorkflowHandler) CountWorkflowExecutions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendCountWorkflowExecutionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "CountWorkflowExecutions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "CountWorkflowExecutions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -97,9 +98,10 @@ func (a *AccessControlledWorkflowHandler) DeprecateDomain(
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendDeprecateDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
-		APIName:    "DeprecateDomain",
-		DomainName: request.GetName(),
-		Permission: authorization.PermissionAdmin,
+		APIName:     "DeprecateDomain",
+		DomainName:  request.GetName(),
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -121,9 +123,10 @@ func (a *AccessControlledWorkflowHandler) DescribeDomain(
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendDescribeDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
-		APIName:    "DescribeDomain",
-		DomainName: request.GetName(),
-		Permission: authorization.PermissionRead,
+		APIName:     "DescribeDomain",
+		DomainName:  request.GetName(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -145,9 +148,10 @@ func (a *AccessControlledWorkflowHandler) DescribeTaskList(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendDescribeTaskListScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "DescribeTaskList",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "DescribeTaskList",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -168,9 +172,10 @@ func (a *AccessControlledWorkflowHandler) DescribeWorkflowExecution(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendDescribeWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "DescribeWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "DescribeWorkflowExecution",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -199,9 +204,10 @@ func (a *AccessControlledWorkflowHandler) GetWorkflowExecutionHistory(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendGetWorkflowExecutionHistoryScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "GetWorkflowExecutionHistory",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "GetWorkflowExecutionHistory",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -223,9 +229,10 @@ func (a *AccessControlledWorkflowHandler) ListArchivedWorkflowExecutions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListArchivedWorkflowExecutionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ListArchivedWorkflowExecutions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "ListArchivedWorkflowExecutions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -247,9 +254,10 @@ func (a *AccessControlledWorkflowHandler) ListClosedWorkflowExecutions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListClosedWorkflowExecutionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ListClosedWorkflowExecutions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "ListClosedWorkflowExecutions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -271,8 +279,9 @@ func (a *AccessControlledWorkflowHandler) ListDomains(
 	scope := a.GetMetricsClient().Scope(metrics.FrontendListDomainsScope)
 
 	attr := &authorization.Attributes{
-		APIName:    "ListDomains",
-		Permission: authorization.PermissionAdmin,
+		APIName:     "ListDomains",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -294,9 +303,10 @@ func (a *AccessControlledWorkflowHandler) ListOpenWorkflowExecutions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListOpenWorkflowExecutionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ListOpenWorkflowExecutions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "ListOpenWorkflowExecutions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -318,9 +328,10 @@ func (a *AccessControlledWorkflowHandler) ListWorkflowExecutions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListWorkflowExecutionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ListWorkflowExecutions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "ListWorkflowExecutions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -342,10 +353,11 @@ func (a *AccessControlledWorkflowHandler) PollForActivityTask(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendPollForActivityTaskScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "PollForActivityTask",
-		DomainName: request.GetDomain(),
-		TaskList:   request.TaskList,
-		Permission: authorization.PermissionWrite,
+		APIName:     "PollForActivityTask",
+		DomainName:  request.GetDomain(),
+		TaskList:    request.TaskList,
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -367,10 +379,11 @@ func (a *AccessControlledWorkflowHandler) PollForDecisionTask(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendPollForDecisionTaskScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "PollForDecisionTask",
-		DomainName: request.GetDomain(),
-		TaskList:   request.TaskList,
-		Permission: authorization.PermissionWrite,
+		APIName:     "PollForDecisionTask",
+		DomainName:  request.GetDomain(),
+		TaskList:    request.TaskList,
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -392,9 +405,10 @@ func (a *AccessControlledWorkflowHandler) QueryWorkflow(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendQueryWorkflowScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "QueryWorkflow",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "QueryWorkflow",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -440,9 +454,10 @@ func (a *AccessControlledWorkflowHandler) RegisterDomain(
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendRegisterDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
-		APIName:    "RegisterDomain",
-		DomainName: request.GetName(),
-		Permission: authorization.PermissionAdmin,
+		APIName:     "RegisterDomain",
+		DomainName:  request.GetName(),
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -464,9 +479,10 @@ func (a *AccessControlledWorkflowHandler) RequestCancelWorkflowExecution(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendRequestCancelWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "RequestCancelWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "RequestCancelWorkflowExecution",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -488,9 +504,10 @@ func (a *AccessControlledWorkflowHandler) ResetStickyTaskList(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendResetStickyTaskListScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ResetStickyTaskList",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "ResetStickyTaskList",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -512,9 +529,10 @@ func (a *AccessControlledWorkflowHandler) ResetWorkflowExecution(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendResetWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ResetWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "ResetWorkflowExecution",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -604,9 +622,10 @@ func (a *AccessControlledWorkflowHandler) RestartWorkflowExecution(ctx context.C
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendRestartWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "RestartWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "RestartWorkflowExecution",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -628,9 +647,10 @@ func (a *AccessControlledWorkflowHandler) ScanWorkflowExecutions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendScanWorkflowExecutionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ScanWorkflowExecutions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "ScanWorkflowExecutions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -656,6 +676,7 @@ func (a *AccessControlledWorkflowHandler) SignalWithStartWorkflowExecution(
 		DomainName:   request.GetDomain(),
 		Permission:   authorization.PermissionWrite,
 		WorkflowType: request.WorkflowType,
+		RequestBody:  request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -677,9 +698,10 @@ func (a *AccessControlledWorkflowHandler) SignalWorkflowExecution(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendSignalWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "SignalWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "SignalWorkflowExecution",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -705,6 +727,7 @@ func (a *AccessControlledWorkflowHandler) StartWorkflowExecution(
 		DomainName:   request.GetDomain(),
 		Permission:   authorization.PermissionWrite,
 		WorkflowType: request.WorkflowType,
+		RequestBody:  request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -726,9 +749,10 @@ func (a *AccessControlledWorkflowHandler) TerminateWorkflowExecution(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendTerminateWorkflowExecutionScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "TerminateWorkflowExecution",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "TerminateWorkflowExecution",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -750,9 +774,10 @@ func (a *AccessControlledWorkflowHandler) ListTaskListPartitions(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendListTaskListPartitionsScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "ListTaskListPartitions",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "ListTaskListPartitions",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -774,9 +799,10 @@ func (a *AccessControlledWorkflowHandler) GetTaskListsByDomain(
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendGetTaskListsByDomainScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "GetTaskListsByDomain",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionRead,
+		APIName:     "GetTaskListsByDomain",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionRead,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -794,9 +820,10 @@ func (a *AccessControlledWorkflowHandler) RefreshWorkflowTasks(ctx context.Conte
 	scope := a.getMetricsScopeWithDomain(metrics.FrontendRefreshWorkflowTasksScope, request)
 
 	attr := &authorization.Attributes{
-		APIName:    "RefreshWorkflowTasks",
-		DomainName: request.GetDomain(),
-		Permission: authorization.PermissionWrite,
+		APIName:     "RefreshWorkflowTasks",
+		DomainName:  request.GetDomain(),
+		Permission:  authorization.PermissionWrite,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {
@@ -818,10 +845,10 @@ func (a *AccessControlledWorkflowHandler) UpdateDomain(
 	scope := a.getMetricsScopeWithDomainName(metrics.FrontendUpdateDomainScope, request.GetName())
 
 	attr := &authorization.Attributes{
-		APIName:    "UpdateDomain",
-		DomainName: request.GetName(),
-		Permission: authorization.PermissionAdmin,
-		AuditInfo:  request,
+		APIName:     "UpdateDomain",
+		DomainName:  request.GetName(),
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 	isAuthorized, err := a.isAuthorized(ctx, attr, scope)
 	if err != nil {

@@ -625,6 +625,10 @@ type CloseShardRequest struct {
 	ShardID int32 `json:"shardID,omitempty"`
 }
 
+func (v *CloseShardRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetShardID is an internal getter (TBD...)
 func (v *CloseShardRequest) GetShardID() (o int32) {
 	if v != nil {
@@ -786,6 +790,10 @@ func (v *ContinueAsNewWorkflowExecutionDecisionAttributes) GetSearchAttributes()
 type CountWorkflowExecutionsRequest struct {
 	Domain string `json:"domain,omitempty"`
 	Query  string `json:"query,omitempty"`
+}
+
+func (v *CountWorkflowExecutionsRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1447,6 +1455,10 @@ type DeprecateDomainRequest struct {
 	SecurityToken string `json:"securityToken,omitempty"`
 }
 
+func (v *DeprecateDomainRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetName is an internal getter (TBD...)
 func (v *DeprecateDomainRequest) GetName() (o string) {
 	if v != nil {
@@ -1459,6 +1471,10 @@ func (v *DeprecateDomainRequest) GetName() (o string) {
 type DescribeDomainRequest struct {
 	Name *string `json:"name,omitempty"`
 	UUID *string `json:"uuid,omitempty"`
+}
+
+func (v *DescribeDomainRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -1526,10 +1542,18 @@ type DescribeHistoryHostRequest struct {
 	ExecutionForHost *WorkflowExecution `json:"executionForHost,omitempty"`
 }
 
+func (v *DescribeHistoryHostRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // DescribeShardDistributionRequest is an internal type (TBD...)
 type DescribeShardDistributionRequest struct {
 	PageSize int32 `json:"pageSize,omitempty"`
 	PageID   int32 `json:"pageID,omitempty"`
+}
+
+func (v *DescribeShardDistributionRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetHostAddress is an internal getter (TBD...)
@@ -1570,6 +1594,10 @@ type DescribeQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
+func (v *DescribeQueueRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetShardID is an internal getter (TBD...)
 func (v *DescribeQueueRequest) GetShardID() (o int32) {
 	if v != nil {
@@ -1605,6 +1633,10 @@ type DescribeTaskListRequest struct {
 	TaskList              *TaskList     `json:"taskList,omitempty"`
 	TaskListType          *TaskListType `json:"taskListType,omitempty"`
 	IncludeTaskListStatus bool          `json:"includeTaskListStatus,omitempty"`
+}
+
+func (v *DescribeTaskListRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1665,6 +1697,10 @@ func (v *DescribeTaskListResponse) GetTaskListStatus() (o *TaskListStatus) {
 type DescribeWorkflowExecutionRequest struct {
 	Domain    string             `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
+}
+
+func (v *DescribeWorkflowExecutionRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -2427,6 +2463,10 @@ type GetWorkflowExecutionHistoryRequest struct {
 	SkipArchival           bool                    `json:"skipArchival,omitempty"`
 }
 
+func (v *GetWorkflowExecutionHistoryRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *GetWorkflowExecutionHistoryRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3152,6 +3192,10 @@ type ListArchivedWorkflowExecutionsRequest struct {
 	Query         string `json:"query,omitempty"`
 }
 
+func (v *ListArchivedWorkflowExecutionsRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *ListArchivedWorkflowExecutionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3201,6 +3245,10 @@ type ListClosedWorkflowExecutionsRequest struct {
 	StatusFilter    *WorkflowExecutionCloseStatus `json:"statusFilter,omitempty"`
 }
 
+func (v *ListClosedWorkflowExecutionsRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *ListClosedWorkflowExecutionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3245,6 +3293,10 @@ type ListDomainsRequest struct {
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 }
 
+func (v *ListDomainsRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetPageSize is an internal getter (TBD...)
 func (v *ListDomainsRequest) GetPageSize() (o int32) {
 	if v != nil {
@@ -3285,6 +3337,10 @@ type ListOpenWorkflowExecutionsRequest struct {
 	TypeFilter      *WorkflowTypeFilter      `json:"typeFilter,omitempty"`
 }
 
+func (v *ListOpenWorkflowExecutionsRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *ListOpenWorkflowExecutionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3321,6 +3377,10 @@ type ListTaskListPartitionsRequest struct {
 	TaskList *TaskList `json:"taskList,omitempty"`
 }
 
+func (v *ListTaskListPartitionsRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *ListTaskListPartitionsRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3338,6 +3398,10 @@ type ListTaskListPartitionsResponse struct {
 // GetTaskListsByDomainRequest is an internal type (TBD...)
 type GetTaskListsByDomainRequest struct {
 	Domain string `json:"domain,omitempty"`
+}
+
+func (v *GetTaskListsByDomainRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3376,6 +3440,10 @@ type ListWorkflowExecutionsRequest struct {
 	PageSize      int32  `json:"pageSize,omitempty"`
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 	Query         string `json:"query,omitempty"`
+}
+
+func (v *ListWorkflowExecutionsRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3768,6 +3836,10 @@ type PollForActivityTaskRequest struct {
 	TaskListMetadata *TaskListMetadata `json:"taskListMetadata,omitempty"`
 }
 
+func (v *PollForActivityTaskRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *PollForActivityTaskRequest) GetDomain() (o string) {
 	if v != nil {
@@ -3826,6 +3898,10 @@ type PollForDecisionTaskRequest struct {
 	TaskList       *TaskList `json:"taskList,omitempty"`
 	Identity       string    `json:"identity,omitempty"`
 	BinaryChecksum string    `json:"binaryChecksum,omitempty"`
+}
+
+func (v *PollForDecisionTaskRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4181,6 +4257,10 @@ type QueryWorkflowRequest struct {
 	QueryConsistencyLevel *QueryConsistencyLevel `json:"queryConsistencyLevel,omitempty"`
 }
 
+func (v *QueryWorkflowRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *QueryWorkflowRequest) GetDomain() (o string) {
 	if v != nil {
@@ -4248,6 +4328,10 @@ type ReapplyEventsRequest struct {
 	DomainName        string             `json:"domainName,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	Events            *DataBlob          `json:"events,omitempty"`
+}
+
+func (v *ReapplyEventsRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomainName is an internal getter (TBD...)
@@ -4323,6 +4407,10 @@ type RecordActivityTaskHeartbeatRequest struct {
 	Identity  string `json:"identity,omitempty"`
 }
 
+func (v *RecordActivityTaskHeartbeatRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // RecordActivityTaskHeartbeatResponse is an internal type (TBD...)
 type RecordActivityTaskHeartbeatResponse struct {
 	CancelRequested bool `json:"cancelRequested,omitempty"`
@@ -4347,6 +4435,10 @@ func (v *RecordMarkerDecisionAttributes) GetMarkerName() (o string) {
 type RefreshWorkflowTasksRequest struct {
 	Domain    string             `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
+}
+
+func (v *RefreshWorkflowTasksRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4381,6 +4473,10 @@ type RegisterDomainRequest struct {
 	HistoryArchivalURI                     string                             `json:"historyArchivalURI,omitempty"`
 	VisibilityArchivalStatus               *ArchivalStatus                    `json:"visibilityArchivalStatus,omitempty"`
 	VisibilityArchivalURI                  string                             `json:"visibilityArchivalURI,omitempty"`
+}
+
+func (v *RegisterDomainRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -4476,6 +4572,10 @@ type RemoveTaskRequest struct {
 	TaskID              int64  `json:"taskID,omitempty"`
 	VisibilityTimestamp *int64 `json:"visibilityTimestamp,omitempty"`
 	ClusterName         string `json:"clusterName,omitempty"`
+}
+
+func (v *RemoveTaskRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -4648,6 +4748,10 @@ type RequestCancelWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
+func (v *RequestCancelWorkflowExecutionRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *RequestCancelWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -4750,6 +4854,10 @@ type ResetQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
+func (v *ResetQueueRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetShardID is an internal getter (TBD...)
 func (v *ResetQueueRequest) GetShardID() (o int32) {
 	if v != nil {
@@ -4780,6 +4888,10 @@ type ResetStickyTaskListRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
+func (v *ResetStickyTaskListRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *ResetStickyTaskListRequest) GetDomain() (o string) {
 	if v != nil {
@@ -4808,6 +4920,10 @@ type ResetWorkflowExecutionRequest struct {
 	DecisionFinishEventID int64              `json:"decisionFinishEventId,omitempty"`
 	RequestID             string             `json:"requestId,omitempty"`
 	SkipSignalReapply     bool               `json:"skipSignalReapply,omitempty"`
+}
+
+func (v *ResetWorkflowExecutionRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5572,6 +5688,29 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
+func (v *SignalWithStartWorkflowExecutionRequest) BodyToString() string {
+	requestMap := map[string]string{
+		"Domain":                              v.Domain,
+		"WorkflowID":                          v.WorkflowID,
+		"WorkflowType":                        StructToString(*v.WorkflowType),
+		"TaskList":                            StructToString(*v.TaskList),
+		"ExecutionStartToCloseTimeoutSeconds": string(*v.ExecutionStartToCloseTimeoutSeconds),
+		"TaskStartToCloseTimeoutSeconds":      string(*v.TaskStartToCloseTimeoutSeconds),
+		"Identity":                            v.Identity,
+		"RequestID":                           v.RequestID,
+		"WorkflowIDReusePolicy":               StructToString(*v.WorkflowIDReusePolicy),
+		"SignalName":                          v.SignalName,
+		"SignalInput":                         StructToString(v.SignalInput),
+		"Control":                             StructToString(v.Control),
+		"RetryPolicy":                         StructToString(*v.RetryPolicy),
+		"CronSchedule":                        v.CronSchedule,
+		"Header":                              StructToString(*v.Header),
+		"DelayStartSeconds":                   string(*v.DelayStartSeconds),
+		"JitterStartSeconds":                  string(*v.JitterStartSeconds),
+	}
+	return fmt.Sprintf("%#v", requestMap)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *SignalWithStartWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -5677,6 +5816,18 @@ type SignalWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 	RequestID         string             `json:"requestId,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
+}
+
+func (v *SignalWorkflowExecutionRequest) BodyToString() string {
+	requestMap := map[string]string{
+		"Domain":            v.Domain,
+		"WorkflowExecution": StructToString(*v.WorkflowExecution),
+		"SignalName":        v.SignalName,
+		"Identity":          v.Identity,
+		"RequestID":         v.RequestID,
+		"Control":           string(v.Control),
+	}
+	return fmt.Sprintf("%#v", requestMap)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5925,6 +6076,10 @@ type RestartWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 }
 
+func (v *RestartWorkflowExecutionRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *RestartWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -5960,6 +6115,26 @@ type StartWorkflowExecutionRequest struct {
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
+}
+
+func (v *StartWorkflowExecutionRequest) BodyToString() string {
+	requestMap := map[string]string{
+		"Domain":                              v.Domain,
+		"WorkflowID":                          v.WorkflowID,
+		"WorkflowType":                        StructToString(*v.WorkflowType),
+		"TaskList":                            StructToString(*v.TaskList),
+		"ExecutionStartToCloseTimeoutSeconds": string(*v.ExecutionStartToCloseTimeoutSeconds),
+		"TaskStartToCloseTimeoutSeconds":      string(*v.TaskStartToCloseTimeoutSeconds),
+		"Identity":                            v.Identity,
+		"RequestID":                           v.RequestID,
+		"WorkflowIDReusePolicy":               StructToString(*v.WorkflowIDReusePolicy),
+		"RetryPolicy":                         StructToString(*v.RetryPolicy),
+		"CronSchedule":                        v.CronSchedule,
+		"Header":                              StructToString(*v.Header),
+		"DelayStartSeconds":                   string(*v.DelayStartSeconds),
+		"JitterStartSeconds":                  string(*v.JitterStartSeconds),
+	}
+	return StructToString(requestMap)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6312,6 +6487,10 @@ type TerminateWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
+func (v *TerminateWorkflowExecutionRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetDomain is an internal getter (TBD...)
 func (v *TerminateWorkflowExecutionRequest) GetDomain() (o string) {
 	if v != nil {
@@ -6512,10 +6691,8 @@ type UpdateDomainRequest struct {
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
 
-func (v *UpdateDomainRequest) ToAuditInfo() string {
-	var request UpdateDomainRequest = *v // need to filter PII info in some request
-	res := fmt.Sprintf("%#v", request)
-	return res
+func (v *UpdateDomainRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -7785,6 +7962,10 @@ type GetCrossClusterTasksRequest struct {
 	TargetCluster string  `json:"targetCluster,omitempty"`
 }
 
+func (v *GetCrossClusterTasksRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetShardIDs is an internal getter (TBD...)
 func (v *GetCrossClusterTasksRequest) GetShardIDs() (o []int32) {
 	if v != nil && v.ShardIDs != nil {
@@ -7847,4 +8028,8 @@ type RespondCrossClusterTasksCompletedResponse struct {
 // StickyWorkerUnavailableError is an internal type (TBD...)
 type StickyWorkerUnavailableError struct {
 	Message string `json:"message,required"`
+}
+
+func StructToString(object any) string {
+	return fmt.Sprintf("%#v", object)
 }

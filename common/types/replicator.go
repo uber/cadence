@@ -229,6 +229,10 @@ type GetDLQReplicationMessagesRequest struct {
 	TaskInfos []*ReplicationTaskInfo `json:"taskInfos,omitempty"`
 }
 
+func (v *GetDLQReplicationMessagesRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetTaskInfos is an internal getter (TBD...)
 func (v *GetDLQReplicationMessagesRequest) GetTaskInfos() (o []*ReplicationTaskInfo) {
 	if v != nil && v.TaskInfos != nil {
@@ -247,6 +251,10 @@ type GetDomainReplicationMessagesRequest struct {
 	LastRetrievedMessageID *int64 `json:"lastRetrievedMessageId,omitempty"`
 	LastProcessedMessageID *int64 `json:"lastProcessedMessageId,omitempty"`
 	ClusterName            string `json:"clusterName,omitempty"`
+}
+
+func (v *GetDomainReplicationMessagesRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
@@ -282,6 +290,10 @@ type GetDomainReplicationMessagesResponse struct {
 type GetReplicationMessagesRequest struct {
 	Tokens      []*ReplicationToken `json:"tokens,omitempty"`
 	ClusterName string              `json:"clusterName,omitempty"`
+}
+
+func (v *GetReplicationMessagesRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetClusterName is an internal getter (TBD...)
@@ -393,6 +405,10 @@ type MergeDLQMessagesRequest struct {
 	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
 }
 
+func (v *MergeDLQMessagesRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetType is an internal getter (TBD...)
 func (v *MergeDLQMessagesRequest) GetType() (o DLQType) {
 	if v != nil && v.Type != nil {
@@ -454,6 +470,10 @@ type PurgeDLQMessagesRequest struct {
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 }
 
+func (v *PurgeDLQMessagesRequest) BodyToString() string {
+	return StructToString(*v)
+}
+
 // GetType is an internal getter (TBD...)
 func (v *PurgeDLQMessagesRequest) GetType() (o DLQType) {
 	if v != nil && v.Type != nil {
@@ -494,6 +514,10 @@ type ReadDLQMessagesRequest struct {
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 	MaximumPageSize       int32    `json:"maximumPageSize,omitempty"`
 	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
+}
+
+func (v *ReadDLQMessagesRequest) BodyToString() string {
+	return StructToString(*v)
 }
 
 // GetType is an internal getter (TBD...)

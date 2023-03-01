@@ -474,6 +474,11 @@ func HandlerCall(handlerCall string) Tag {
 	return newStringTag("handler-call", handlerCall)
 }
 
+// RequestBody returns the tag for the API request body
+func RequestBody(requestBody string) Tag {
+	return newStringTag("request-body", requestBody)
+}
+
 // history engine shard
 
 // ShardID returns tag for ShardID
