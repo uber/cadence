@@ -8030,6 +8030,6 @@ type StickyWorkerUnavailableError struct {
 	Message string `json:"message,required"`
 }
 
-func StructToString(object any) string {
+func StructToString(object interface{}) string {
 	return fmt.Sprintf("%#v", object)
 }
