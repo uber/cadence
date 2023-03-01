@@ -5689,26 +5689,47 @@ type SignalWithStartWorkflowExecutionRequest struct {
 }
 
 func (v *SignalWithStartWorkflowExecutionRequest) BodyToString() string {
-	requestMap := map[string]string{
-		"Domain":                              v.Domain,
-		"WorkflowID":                          v.WorkflowID,
-		"WorkflowType":                        StructToString(*v.WorkflowType),
-		"TaskList":                            StructToString(*v.TaskList),
-		"ExecutionStartToCloseTimeoutSeconds": string(*v.ExecutionStartToCloseTimeoutSeconds),
-		"TaskStartToCloseTimeoutSeconds":      string(*v.TaskStartToCloseTimeoutSeconds),
-		"Identity":                            v.Identity,
-		"RequestID":                           v.RequestID,
-		"WorkflowIDReusePolicy":               StructToString(*v.WorkflowIDReusePolicy),
-		"SignalName":                          v.SignalName,
-		"SignalInput":                         StructToString(v.SignalInput),
-		"Control":                             StructToString(v.Control),
-		"RetryPolicy":                         StructToString(*v.RetryPolicy),
-		"CronSchedule":                        v.CronSchedule,
-		"Header":                              StructToString(*v.Header),
-		"DelayStartSeconds":                   string(*v.DelayStartSeconds),
-		"JitterStartSeconds":                  string(*v.JitterStartSeconds),
+	cloneRequest := SignalWithStartWorkflowExecutionRequest{
+		Domain:       v.Domain,
+		WorkflowID:   v.WorkflowID,
+		SignalName:   v.SignalName,
+		Identity:     v.Identity,
+		RequestID:    v.RequestID,
+		CronSchedule: v.CronSchedule,
 	}
-	return fmt.Sprintf("%#v", requestMap)
+	// deep copy the value within pointers
+	cloneWorkflowType := *v.WorkflowType
+	cloneRequest.WorkflowType = &cloneWorkflowType
+
+	cloneTaskList := *v.TaskList
+	cloneRequest.TaskList = &cloneTaskList
+
+	cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
+	cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
+
+	cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
+	cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
+
+	cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
+	cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
+
+	cloneRetryPolicy := *v.RetryPolicy
+	cloneRequest.RetryPolicy = &cloneRetryPolicy
+
+	cloneHeader := *v.Header
+	cloneRequest.Header = &cloneHeader
+
+	cloneDelayStartSeconds := *v.DelayStartSeconds
+	cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
+
+	cloneJitterStartSeconds := *v.JitterStartSeconds
+	cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
+
+	// deep copy arrays
+	cloneRequest.Control = append(cloneRequest.Control, v.Control...)
+	cloneRequest.SignalInput = append(cloneRequest.SignalInput, v.SignalInput...)
+
+	return StructToString(cloneRequest)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5819,15 +5840,19 @@ type SignalWorkflowExecutionRequest struct {
 }
 
 func (v *SignalWorkflowExecutionRequest) BodyToString() string {
-	requestMap := map[string]string{
-		"Domain":            v.Domain,
-		"WorkflowExecution": StructToString(*v.WorkflowExecution),
-		"SignalName":        v.SignalName,
-		"Identity":          v.Identity,
-		"RequestID":         v.RequestID,
-		"Control":           string(v.Control),
+	cloneSignalWorkflowExecutionRequest := SignalWorkflowExecutionRequest{
+		Domain:     v.Domain,
+		SignalName: v.SignalName,
+		Identity:   v.Identity,
+		RequestID:  v.RequestID,
 	}
-	return fmt.Sprintf("%#v", requestMap)
+	// deep copy the value within a pointer
+	cloneWorkFlowExecution := *v.WorkflowExecution
+	cloneSignalWorkflowExecutionRequest.WorkflowExecution = &cloneWorkFlowExecution
+	// deep copy an array
+	cloneSignalWorkflowExecutionRequest.Control = append(cloneSignalWorkflowExecutionRequest.Control, v.Control...)
+
+	return StructToString(cloneSignalWorkflowExecutionRequest)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6118,23 +6143,42 @@ type StartWorkflowExecutionRequest struct {
 }
 
 func (v *StartWorkflowExecutionRequest) BodyToString() string {
-	requestMap := map[string]string{
-		"Domain":                              v.Domain,
-		"WorkflowID":                          v.WorkflowID,
-		"WorkflowType":                        StructToString(*v.WorkflowType),
-		"TaskList":                            StructToString(*v.TaskList),
-		"ExecutionStartToCloseTimeoutSeconds": string(*v.ExecutionStartToCloseTimeoutSeconds),
-		"TaskStartToCloseTimeoutSeconds":      string(*v.TaskStartToCloseTimeoutSeconds),
-		"Identity":                            v.Identity,
-		"RequestID":                           v.RequestID,
-		"WorkflowIDReusePolicy":               StructToString(*v.WorkflowIDReusePolicy),
-		"RetryPolicy":                         StructToString(*v.RetryPolicy),
-		"CronSchedule":                        v.CronSchedule,
-		"Header":                              StructToString(*v.Header),
-		"DelayStartSeconds":                   string(*v.DelayStartSeconds),
-		"JitterStartSeconds":                  string(*v.JitterStartSeconds),
+	cloneRequest := StartWorkflowExecutionRequest{
+		Domain:       v.Domain,
+		WorkflowID:   v.WorkflowID,
+		Identity:     v.Identity,
+		RequestID:    v.RequestID,
+		CronSchedule: v.CronSchedule,
 	}
-	return StructToString(requestMap)
+	// deep copy the value within pointers
+	cloneWorkflowType := *v.WorkflowType
+	cloneRequest.WorkflowType = &cloneWorkflowType
+
+	cloneTaskList := *v.TaskList
+	cloneRequest.TaskList = &cloneTaskList
+
+	cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
+	cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
+
+	cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
+	cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
+
+	cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
+	cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
+
+	cloneRetryPolicy := *v.RetryPolicy
+	cloneRequest.RetryPolicy = &cloneRetryPolicy
+
+	cloneHeader := *v.Header
+	cloneRequest.Header = &cloneHeader
+
+	cloneDelayStartSeconds := *v.DelayStartSeconds
+	cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
+
+	cloneJitterStartSeconds := *v.JitterStartSeconds
+	cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
+
+	return StructToString(cloneRequest)
 }
 
 // GetDomain is an internal getter (TBD...)
