@@ -118,6 +118,21 @@ func (mr *MockClientMockRecorder) GetIntValue(name, filters interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIntValue", reflect.TypeOf((*MockClient)(nil).GetIntValue), name, filters)
 }
 
+// GetListValue mocks base method.
+func (m *MockClient) GetListValue(name ListKey, filters map[Filter]interface{}) ([]interface{}, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetListValue", name, filters)
+	ret0, _ := ret[0].([]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetListValue indicates an expected call of GetListValue.
+func (mr *MockClientMockRecorder) GetListValue(name, filters interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetListValue", reflect.TypeOf((*MockClient)(nil).GetListValue), name, filters)
+}
+
 // GetMapValue mocks base method.
 func (m *MockClient) GetMapValue(name MapKey, filters map[Filter]interface{}) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()

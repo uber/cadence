@@ -69,22 +69,25 @@ type cacheEntry struct {
 
 // NewConfigStoreClient creates a config store client
 func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Persistence, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
-	if err := validateClientConfig(clientCfg); err != nil {
-		logger.Error("Invalid Client Config Values, Using Default Values")
-		clientCfg = defaultConfigValues
-	}
-
 	if persistenceCfg == nil {
 		return nil, errors.New("persistence cfg is nil")
-	} else if persistenceCfg.DefaultStore != "cass-default" {
-		return nil, fmt.Errorf("persistence cfg default store is not Cassandra")
-	} else if store, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]; !ok {
-		return nil, errors.New("persistence cfg datastores missing Cassandra")
-	} else if store.NoSQL == nil {
+	}
+
+	store, ok := persistenceCfg.DataStores[persistenceCfg.DefaultStore]
+	if !ok {
+		return nil, errors.New("default persistence config missing")
+	}
+
+	if store.NoSQL == nil {
 		return nil, errors.New("NoSQL struct is nil")
 	}
 
-	client, err := newConfigStoreClient(clientCfg, persistenceCfg.DataStores[persistenceCfg.DefaultStore].NoSQL, logger, doneCh)
+	if err := validateClientConfig(clientCfg); err != nil {
+		logger.Warn("invalid ClientConfig values, using default values")
+		clientCfg = defaultConfigValues
+	}
+
+	client, err := newConfigStoreClient(clientCfg, store.NoSQL, logger, doneCh)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +237,17 @@ func (csc *configStoreClient) GetDurationValue(name dc.DurationKey, filters map[
 	}
 
 	return durVal, nil
+}
+func (csc *configStoreClient) GetListValue(name dc.ListKey, filters map[dc.Filter]interface{}) ([]interface{}, error) {
+	defaultValue := name.DefaultList()
+	val, err := csc.getValueWithFilters(name, filters, defaultValue)
+	if err != nil {
+		return defaultValue, err
+	}
+	if listVal, ok := val.([]interface{}); ok {
+		return listVal, nil
+	}
+	return defaultValue, errors.New("value type is not list")
 }
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
@@ -522,7 +536,7 @@ func (csc *configStoreClient) storeValues(snapshot *persistence.DynamicConfigSna
 		schemaVersion: snapshot.Values.SchemaVersion,
 		dcEntries:     dcEntryMap,
 	})
-	csc.logger.Info("Updated dynamic config")
+	csc.logger.Debug("Updated dynamic config")
 	return nil
 }
 
