@@ -67,12 +67,19 @@ type (
 		DefaultValue map[string]interface{}
 	}
 
+	DynamicList struct {
+		KeyName      string
+		Description  string
+		DefaultValue []interface{}
+	}
+
 	IntKey      int
 	BoolKey     int
 	FloatKey    int
 	StringKey   int
 	DurationKey int
 	MapKey      int
+	ListKey     int
 
 	Key interface {
 		String() string
@@ -102,6 +109,9 @@ func ListAllProductionKeys() []Key {
 	for i := TestGetMapPropertyKey + 1; i < LastMapKey; i++ {
 		result = append(result, i)
 	}
+	for i := TestGetListPropertyKey + 1; i < LastListKey; i++ {
+		result = append(result, i)
+	}
 	return result
 }
 
@@ -111,6 +121,15 @@ func GetKeyFromKeyName(keyName string) (Key, error) {
 		return nil, fmt.Errorf("invalid dynamic config key name: %s", keyName)
 	}
 	return keyVal, nil
+}
+
+// GetAllKeys returns a copy of all configuration keys with all details
+func GetAllKeys() map[string]Key {
+	result := make(map[string]Key, len(_keyNames))
+	for k, v := range _keyNames {
+		result[k] = v
+	}
+	return result
 }
 
 func ValidateKeyValuePair(key Key, value interface{}) error {
@@ -138,6 +157,10 @@ func ValidateKeyValuePair(key Key, value interface{}) error {
 		}
 	case MapKey:
 		if _, ok := value.(map[string]interface{}); !ok {
+			return err
+		}
+	case ListKey:
+		if _, ok := value.([]interface{}); !ok {
 			return err
 		}
 	default:
@@ -240,6 +263,22 @@ func (k MapKey) DefaultValue() interface{} {
 
 func (k MapKey) DefaultMap() map[string]interface{} {
 	return MapKeys[k].DefaultValue
+}
+
+func (k ListKey) String() string {
+	return ListKeys[k].KeyName
+}
+
+func (k ListKey) Description() string {
+	return ListKeys[k].Description
+}
+
+func (k ListKey) DefaultValue() interface{} {
+	return ListKeys[k].DefaultValue
+}
+
+func (k ListKey) DefaultList() []interface{} {
+	return ListKeys[k].DefaultValue
 }
 
 // UnlimitedRPS represents an integer to use for "unlimited" RPS values.
@@ -1301,6 +1340,12 @@ const (
 	// Value type: Int
 	// Default value: 1 (no jittering)
 	WorkflowDeletionJitterRange
+
+	// SampleLoggingRate defines the rate we want sampled logs to be logged at
+	// KeyName: system.SampleLoggingRate
+	// Value type: Int
+	// Default value: 100
+	SampleLoggingRate
 
 	// LastIntKey must be the last one in this const group
 	LastIntKey
@@ -2499,6 +2544,23 @@ const (
 	LastMapKey
 )
 
+const (
+	UnknownListKey ListKey = iota
+	TestGetListPropertyKey
+
+	// HeaderForwardingRules defines which headers are forwarded from inbound calls to outbound.
+	// This value is only loaded at startup.
+	//
+	// Regexes and header names are used as-is, you are strongly encouraged to use `(?i)` to make your regex case-insensitive.
+	//
+	// KeyName: admin.HeaderForwardingRules
+	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
+	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
+	HeaderForwardingRules
+
+	LastListKey
+)
+
 var IntKeys = map[IntKey]DynamicInt{
 	TestGetIntPropertyKey: DynamicInt{
 		KeyName:      "testGetIntPropertyKey",
@@ -3381,6 +3443,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.workflowDeletionJitterRange",
 		Description:  "WorkflowDeletionJitterRange defines the duration in minutes for workflow close tasks jittering",
 		DefaultValue: 60,
+	},
+	SampleLoggingRate: DynamicInt{
+		KeyName:      "system.sampleLoggingRate",
+		Description:  "The rate for which sampled logs are logged at. 100 means 1/100 is logged",
+		DefaultValue: 100,
 	},
 }
 
@@ -4368,6 +4435,23 @@ var MapKeys = map[MapKey]DynamicMap{
 	},
 }
 
+var ListKeys = map[ListKey]DynamicList{
+	HeaderForwardingRules: {
+		KeyName: "admin.HeaderForwardingRules", // make a new scope for global?
+		Description: "Only loaded at startup.  " +
+			"A list of rpc.HeaderRule values that define which headers to include or exclude for all requests, applied in order.  " +
+			"Regexes and header names are used as-is, you are strongly encouraged to use `(?i)` to make your regex case-insensitive.",
+		DefaultValue: []interface{}{
+			// historical behavior: include literally everything.
+			// this alone is quite problematic, and is strongly recommended against.
+			map[string]interface{}{ // config imports dynamicconfig, sadly
+				"Add":   true,
+				"Match": "",
+			},
+		},
+	},
+}
+
 var _keyNames map[string]Key
 
 func init() {
@@ -4401,6 +4485,10 @@ func init() {
 		_keyNames[v.KeyName] = k
 	}
 	for k, v := range MapKeys {
+		panicIfKeyInvalid(v.KeyName, k)
+		_keyNames[v.KeyName] = k
+	}
+	for k, v := range ListKeys {
 		panicIfKeyInvalid(v.KeyName, k)
 		_keyNames[v.KeyName] = k
 	}

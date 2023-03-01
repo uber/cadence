@@ -188,6 +188,18 @@ func (fc *fileBasedClient) GetDurationValue(name DurationKey, filters map[Filter
 	return durationVal, nil
 }
 
+func (fc *fileBasedClient) GetListValue(name ListKey, filters map[Filter]interface{}) ([]interface{}, error) {
+	defaultValue := name.DefaultList()
+	val, err := fc.getValueWithFilters(name, filters, defaultValue)
+	if err != nil {
+		return defaultValue, err
+	}
+	if listVal, ok := val.([]interface{}); ok {
+		return listVal, nil
+	}
+	return defaultValue, fmt.Errorf("value type is not list but is: %T", val)
+}
+
 func (fc *fileBasedClient) UpdateValue(name Key, value interface{}) error {
 	if err := ValidateKeyValuePair(name, value); err != nil {
 		return err

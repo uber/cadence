@@ -238,6 +238,17 @@ func (csc *configStoreClient) GetDurationValue(name dc.DurationKey, filters map[
 
 	return durVal, nil
 }
+func (csc *configStoreClient) GetListValue(name dc.ListKey, filters map[dc.Filter]interface{}) ([]interface{}, error) {
+	defaultValue := name.DefaultList()
+	val, err := csc.getValueWithFilters(name, filters, defaultValue)
+	if err != nil {
+		return defaultValue, err
+	}
+	if listVal, ok := val.([]interface{}); ok {
+		return listVal, nil
+	}
+	return defaultValue, errors.New("value type is not list")
+}
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
 	dcValues, ok := value.([]*types.DynamicConfigValue)

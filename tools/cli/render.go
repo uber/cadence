@@ -58,6 +58,9 @@ type RenderOptions struct {
 	// Border specified whether to render table border
 	Border bool
 
+	// Custom, per column alignment
+	ColumnAlignment []int
+
 	// Color will use coloring characters while printing table
 	Color bool
 
@@ -166,6 +169,9 @@ func RenderTable(w io.Writer, data interface{}, opts RenderOptions) error {
 	table.SetBorder(opts.Border)
 	table.SetColumnSeparator("|")
 	table.SetHeaderLine(opts.Border)
+	if opts.ColumnAlignment != nil {
+		table.SetColumnAlignment(opts.ColumnAlignment)
+	}
 
 	for r := 0; r < slice.Len(); r++ {
 		var row []string

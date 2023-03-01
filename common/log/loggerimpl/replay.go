@@ -21,6 +21,8 @@
 package loggerimpl
 
 import (
+	"math/rand"
+
 	"go.uber.org/cadence/workflow"
 
 	"github.com/uber/cadence/common/log"
@@ -88,6 +90,15 @@ func (r *replayLogger) Fatal(msg string, tags ...tag.Tag) {
 		return
 	}
 	r.logger.Fatal(msg, tags...)
+}
+
+func (r *replayLogger) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
+	if rand.Intn(sampleRate) == 0 {
+		if workflow.IsReplaying(r.ctx) && !r.enableLogInReplay {
+			return
+		}
+		r.logger.Info(msg, tags...)
+	}
 }
 
 func (r *replayLogger) WithTags(tags ...tag.Tag) log.Logger {
