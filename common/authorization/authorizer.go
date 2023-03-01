@@ -58,7 +58,7 @@ type (
 		WorkflowType *types.WorkflowType
 		TaskList     *types.TaskList
 		Permission   Permission
-		RequestBody  RequestBody
+		RequestBody  ManualRequestBody
 	}
 
 	// Result is result from authority.
@@ -99,6 +99,6 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
 }
 
-type RequestBody interface {
+type ManualRequestBody interface {
 	BodyToString() string
 }
