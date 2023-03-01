@@ -89,7 +89,7 @@ func (c *concreteExecutionExists) Check(
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   c.Name(),
-			Info:            "failed to check: domain is deprecated",
+			Info:            "domain is deprecated",
 			InfoDetails: fmt.Sprintf("domain has been deprecated. DomainID: %v, DomainName: %v",
 				domainName, domainID),
 		}

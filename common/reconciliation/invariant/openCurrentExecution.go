@@ -71,12 +71,24 @@ func (o *openCurrentExecution) Check(
 			InvariantName:   o.Name(),
 		}
 	}
-	domainName, err := o.dc.GetDomainName(concreteExecution.DomainID)
-	if err != nil {
+	domainID := concreteExecution.GetDomainID()
+	domain, errorDomainName := o.dc.GetDomainByID(domainID)
+	if errorDomainName != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   o.Name(),
-			Info:            "failed to fetch Domain Name",
+			Info:            "failed to fetch Domain",
+			InfoDetails:     errorDomainName.Error(),
+		}
+	}
+	domainName := domain.GetInfo().Name
+	if domain.GetInfo().Status == deprecatedDomainStatus {
+		return CheckResult{
+			CheckResultType: CheckResultTypeCorrupted,
+			InvariantName:   o.Name(),
+			Info:            "domain is deprecated",
+			InfoDetails: fmt.Sprintf("domain has been deprecated. DomainID: %v, DomainName: %v",
+				domainName, domainID),
 		}
 	}
 	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{

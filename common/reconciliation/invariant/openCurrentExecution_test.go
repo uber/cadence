@@ -25,6 +25,7 @@ package invariant
 import (
 	"context"
 	"errors"
+	"github.com/uber/cadence/service/history/constants"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -179,6 +180,7 @@ func (s *OpenCurrentExecutionSuite) TestCheck() {
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getConcreteResp, tc.getConcreteErr)
 		execManager.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(tc.getCurrentResp, tc.getCurrentErr)
 		domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
+		domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 		o := NewOpenCurrentExecution(persistence.NewPersistenceRetryer(execManager, nil, c2.CreatePersistenceRetryPolicy()), domainCache)
 		s.Equal(tc.expectedResult, o.Check(context.Background(), tc.execution))
 	}
