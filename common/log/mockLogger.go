@@ -56,6 +56,11 @@ func (_m *MockLogger) Fatal(msg string, tags ...tag.Tag) {
 	_m.Called(msg, tags)
 }
 
+// SampleInfo provides a mock function with given fields: msg, sampleRate, tags
+func (_m *MockLogger) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {
+	_m.Called(msg, tags)
+}
+
 // WithTags provides a mock function with given fields: tags
 func (_m *MockLogger) WithTags(tags ...tag.Tag) Logger {
 	ret := _m.Called(tags)

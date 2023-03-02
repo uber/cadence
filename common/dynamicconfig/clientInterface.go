@@ -47,6 +47,7 @@ type Client interface {
 	GetStringValue(name StringKey, filters map[Filter]interface{}) (string, error)
 	GetMapValue(name MapKey, filters map[Filter]interface{}) (map[string]interface{}, error)
 	GetDurationValue(name DurationKey, filters map[Filter]interface{}) (time.Duration, error)
+	GetListValue(name ListKey, filters map[Filter]interface{}) ([]interface{}, error)
 	// UpdateValue takes value as map and updates by overriding. It doesn't support update with filters.
 	UpdateValue(name Key, value interface{}) error
 	RestoreValue(name Key, filters map[Filter]interface{}) error
