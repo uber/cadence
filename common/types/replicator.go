@@ -229,7 +229,7 @@ type GetDLQReplicationMessagesRequest struct {
 	TaskInfos []*ReplicationTaskInfo `json:"taskInfos,omitempty"`
 }
 
-func (v *GetDLQReplicationMessagesRequest) BodyToString() string {
+func (v *GetDLQReplicationMessagesRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -253,7 +253,7 @@ type GetDomainReplicationMessagesRequest struct {
 	ClusterName            string `json:"clusterName,omitempty"`
 }
 
-func (v *GetDomainReplicationMessagesRequest) BodyToString() string {
+func (v *GetDomainReplicationMessagesRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -292,7 +292,7 @@ type GetReplicationMessagesRequest struct {
 	ClusterName string              `json:"clusterName,omitempty"`
 }
 
-func (v *GetReplicationMessagesRequest) BodyToString() string {
+func (v *GetReplicationMessagesRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -405,7 +405,7 @@ type MergeDLQMessagesRequest struct {
 	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
 }
 
-func (v *MergeDLQMessagesRequest) BodyToString() string {
+func (v *MergeDLQMessagesRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -470,7 +470,7 @@ type PurgeDLQMessagesRequest struct {
 	InclusiveEndMessageID *int64   `json:"inclusiveEndMessageID,omitempty"`
 }
 
-func (v *PurgeDLQMessagesRequest) BodyToString() string {
+func (v *PurgeDLQMessagesRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -516,7 +516,7 @@ type ReadDLQMessagesRequest struct {
 	NextPageToken         []byte   `json:"nextPageToken,omitempty"`
 }
 
-func (v *ReadDLQMessagesRequest) BodyToString() string {
+func (v *ReadDLQMessagesRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 

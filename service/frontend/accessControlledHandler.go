@@ -761,6 +761,7 @@ func (a *AccessControlledWorkflowHandler) SignalWithStartWorkflowExecution(
 	}
 
 	if isManual(ctx) {
+		// The Authorizer plugin should use this request body while logging requests to avoid revealing private information
 		attr.RequestBody = request
 	}
 
@@ -790,6 +791,7 @@ func (a *AccessControlledWorkflowHandler) SignalWorkflowExecution(
 	}
 
 	if isManual(ctx) {
+		// The Authorizer plugin should use this request body while logging requests to avoid revealing private information
 		attr.RequestBody = request
 	}
 
@@ -820,6 +822,7 @@ func (a *AccessControlledWorkflowHandler) StartWorkflowExecution(
 	}
 
 	if isManual(ctx) {
+		// The Authorizer plugin should use this request body while logging requests to avoid revealing private information
 		attr.RequestBody = request
 	}
 
@@ -1023,6 +1026,9 @@ func (a *AccessControlledWorkflowHandler) getMetricsScopeWithDomainName(
 	return a.GetMetricsClient().Scope(scope).Tagged(metrics.DomainTag(domainName))
 }
 
+// TODO: we should probably validate all the callers
+// isManual checkw if an access is manual. If it is not,
+// we will not store filtered request body into Attribute for auditing
 func isManual(ctx context.Context) bool {
 	callContext := yarpc.CallFromContext(ctx)
 	caller := callContext.Caller()

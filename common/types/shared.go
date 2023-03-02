@@ -625,7 +625,7 @@ type CloseShardRequest struct {
 	ShardID int32 `json:"shardID,omitempty"`
 }
 
-func (v *CloseShardRequest) BodyToString() string {
+func (v *CloseShardRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -792,7 +792,7 @@ type CountWorkflowExecutionsRequest struct {
 	Query  string `json:"query,omitempty"`
 }
 
-func (v *CountWorkflowExecutionsRequest) BodyToString() string {
+func (v *CountWorkflowExecutionsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1455,7 +1455,7 @@ type DeprecateDomainRequest struct {
 	SecurityToken string `json:"securityToken,omitempty"`
 }
 
-func (v *DeprecateDomainRequest) BodyToString() string {
+func (v *DeprecateDomainRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1473,7 +1473,7 @@ type DescribeDomainRequest struct {
 	UUID *string `json:"uuid,omitempty"`
 }
 
-func (v *DescribeDomainRequest) BodyToString() string {
+func (v *DescribeDomainRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1542,7 +1542,7 @@ type DescribeHistoryHostRequest struct {
 	ExecutionForHost *WorkflowExecution `json:"executionForHost,omitempty"`
 }
 
-func (v *DescribeHistoryHostRequest) BodyToString() string {
+func (v *DescribeHistoryHostRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1552,7 +1552,7 @@ type DescribeShardDistributionRequest struct {
 	PageID   int32 `json:"pageID,omitempty"`
 }
 
-func (v *DescribeShardDistributionRequest) BodyToString() string {
+func (v *DescribeShardDistributionRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1594,7 +1594,7 @@ type DescribeQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
-func (v *DescribeQueueRequest) BodyToString() string {
+func (v *DescribeQueueRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1635,7 +1635,7 @@ type DescribeTaskListRequest struct {
 	IncludeTaskListStatus bool          `json:"includeTaskListStatus,omitempty"`
 }
 
-func (v *DescribeTaskListRequest) BodyToString() string {
+func (v *DescribeTaskListRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -1699,7 +1699,7 @@ type DescribeWorkflowExecutionRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *DescribeWorkflowExecutionRequest) BodyToString() string {
+func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -2463,7 +2463,7 @@ type GetWorkflowExecutionHistoryRequest struct {
 	SkipArchival           bool                    `json:"skipArchival,omitempty"`
 }
 
-func (v *GetWorkflowExecutionHistoryRequest) BodyToString() string {
+func (v *GetWorkflowExecutionHistoryRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3192,7 +3192,7 @@ type ListArchivedWorkflowExecutionsRequest struct {
 	Query         string `json:"query,omitempty"`
 }
 
-func (v *ListArchivedWorkflowExecutionsRequest) BodyToString() string {
+func (v *ListArchivedWorkflowExecutionsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3245,7 +3245,7 @@ type ListClosedWorkflowExecutionsRequest struct {
 	StatusFilter    *WorkflowExecutionCloseStatus `json:"statusFilter,omitempty"`
 }
 
-func (v *ListClosedWorkflowExecutionsRequest) BodyToString() string {
+func (v *ListClosedWorkflowExecutionsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3293,7 +3293,7 @@ type ListDomainsRequest struct {
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 }
 
-func (v *ListDomainsRequest) BodyToString() string {
+func (v *ListDomainsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3337,7 +3337,7 @@ type ListOpenWorkflowExecutionsRequest struct {
 	TypeFilter      *WorkflowTypeFilter      `json:"typeFilter,omitempty"`
 }
 
-func (v *ListOpenWorkflowExecutionsRequest) BodyToString() string {
+func (v *ListOpenWorkflowExecutionsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3377,7 +3377,7 @@ type ListTaskListPartitionsRequest struct {
 	TaskList *TaskList `json:"taskList,omitempty"`
 }
 
-func (v *ListTaskListPartitionsRequest) BodyToString() string {
+func (v *ListTaskListPartitionsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3400,7 +3400,7 @@ type GetTaskListsByDomainRequest struct {
 	Domain string `json:"domain,omitempty"`
 }
 
-func (v *GetTaskListsByDomainRequest) BodyToString() string {
+func (v *GetTaskListsByDomainRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3442,7 +3442,7 @@ type ListWorkflowExecutionsRequest struct {
 	Query         string `json:"query,omitempty"`
 }
 
-func (v *ListWorkflowExecutionsRequest) BodyToString() string {
+func (v *ListWorkflowExecutionsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3836,7 +3836,7 @@ type PollForActivityTaskRequest struct {
 	TaskListMetadata *TaskListMetadata `json:"taskListMetadata,omitempty"`
 }
 
-func (v *PollForActivityTaskRequest) BodyToString() string {
+func (v *PollForActivityTaskRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -3900,7 +3900,7 @@ type PollForDecisionTaskRequest struct {
 	BinaryChecksum string    `json:"binaryChecksum,omitempty"`
 }
 
-func (v *PollForDecisionTaskRequest) BodyToString() string {
+func (v *PollForDecisionTaskRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4257,7 +4257,7 @@ type QueryWorkflowRequest struct {
 	QueryConsistencyLevel *QueryConsistencyLevel `json:"queryConsistencyLevel,omitempty"`
 }
 
-func (v *QueryWorkflowRequest) BodyToString() string {
+func (v *QueryWorkflowRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4330,7 +4330,7 @@ type ReapplyEventsRequest struct {
 	Events            *DataBlob          `json:"events,omitempty"`
 }
 
-func (v *ReapplyEventsRequest) BodyToString() string {
+func (v *ReapplyEventsRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4407,7 +4407,7 @@ type RecordActivityTaskHeartbeatRequest struct {
 	Identity  string `json:"identity,omitempty"`
 }
 
-func (v *RecordActivityTaskHeartbeatRequest) BodyToString() string {
+func (v *RecordActivityTaskHeartbeatRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4437,7 +4437,7 @@ type RefreshWorkflowTasksRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *RefreshWorkflowTasksRequest) BodyToString() string {
+func (v *RefreshWorkflowTasksRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4475,7 +4475,7 @@ type RegisterDomainRequest struct {
 	VisibilityArchivalURI                  string                             `json:"visibilityArchivalURI,omitempty"`
 }
 
-func (v *RegisterDomainRequest) BodyToString() string {
+func (v *RegisterDomainRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4574,7 +4574,7 @@ type RemoveTaskRequest struct {
 	ClusterName         string `json:"clusterName,omitempty"`
 }
 
-func (v *RemoveTaskRequest) BodyToString() string {
+func (v *RemoveTaskRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4748,7 +4748,7 @@ type RequestCancelWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
-func (v *RequestCancelWorkflowExecutionRequest) BodyToString() string {
+func (v *RequestCancelWorkflowExecutionRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4854,7 +4854,7 @@ type ResetQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
-func (v *ResetQueueRequest) BodyToString() string {
+func (v *ResetQueueRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4888,7 +4888,7 @@ type ResetStickyTaskListRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *ResetStickyTaskListRequest) BodyToString() string {
+func (v *ResetStickyTaskListRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -4922,7 +4922,7 @@ type ResetWorkflowExecutionRequest struct {
 	SkipSignalReapply     bool               `json:"skipSignalReapply,omitempty"`
 }
 
-func (v *ResetWorkflowExecutionRequest) BodyToString() string {
+func (v *ResetWorkflowExecutionRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -5688,7 +5688,8 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
-func (v *SignalWithStartWorkflowExecutionRequest) BodyToString() string {
+func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() string {
+	// making a deep copy of the struct for manually assigning attributes
 	cloneRequest := SignalWithStartWorkflowExecutionRequest{
 		Domain:       v.Domain,
 		WorkflowID:   v.WorkflowID,
@@ -5698,6 +5699,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) BodyToString() string {
 		CronSchedule: v.CronSchedule,
 	}
 	// deep copy the value within pointers
+	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
 	cloneWorkflowType := *v.WorkflowType
 	cloneRequest.WorkflowType = &cloneWorkflowType
 
@@ -5726,6 +5728,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) BodyToString() string {
 	cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
 
 	// deep copy arrays
+	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
 	cloneRequest.Control = append(cloneRequest.Control, v.Control...)
 	cloneRequest.SignalInput = append(cloneRequest.SignalInput, v.SignalInput...)
 
@@ -5839,7 +5842,8 @@ type SignalWorkflowExecutionRequest struct {
 	Control           []byte             `json:"control,omitempty"`
 }
 
-func (v *SignalWorkflowExecutionRequest) BodyToString() string {
+func (v *SignalWorkflowExecutionRequest) SerializeForLogging() string {
+	// making a deep copy of the struct for manually assigning attributes
 	cloneSignalWorkflowExecutionRequest := SignalWorkflowExecutionRequest{
 		Domain:     v.Domain,
 		SignalName: v.SignalName,
@@ -5847,9 +5851,12 @@ func (v *SignalWorkflowExecutionRequest) BodyToString() string {
 		RequestID:  v.RequestID,
 	}
 	// deep copy the value within a pointer
+	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
 	cloneWorkFlowExecution := *v.WorkflowExecution
 	cloneSignalWorkflowExecutionRequest.WorkflowExecution = &cloneWorkFlowExecution
+
 	// deep copy an array
+	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
 	cloneSignalWorkflowExecutionRequest.Control = append(cloneSignalWorkflowExecutionRequest.Control, v.Control...)
 
 	return StructToString(cloneSignalWorkflowExecutionRequest)
@@ -6101,7 +6108,7 @@ type RestartWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 }
 
-func (v *RestartWorkflowExecutionRequest) BodyToString() string {
+func (v *RestartWorkflowExecutionRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -6142,7 +6149,8 @@ type StartWorkflowExecutionRequest struct {
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
-func (v *StartWorkflowExecutionRequest) BodyToString() string {
+func (v *StartWorkflowExecutionRequest) SerializeForLogging() string {
+	// making a deep copy of the struct for manually assigning attributes
 	cloneRequest := StartWorkflowExecutionRequest{
 		Domain:       v.Domain,
 		WorkflowID:   v.WorkflowID,
@@ -6151,6 +6159,7 @@ func (v *StartWorkflowExecutionRequest) BodyToString() string {
 		CronSchedule: v.CronSchedule,
 	}
 	// deep copy the value within pointers
+	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
 	cloneWorkflowType := *v.WorkflowType
 	cloneRequest.WorkflowType = &cloneWorkflowType
 
@@ -6531,7 +6540,7 @@ type TerminateWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
-func (v *TerminateWorkflowExecutionRequest) BodyToString() string {
+func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -6735,7 +6744,7 @@ type UpdateDomainRequest struct {
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
 
-func (v *UpdateDomainRequest) BodyToString() string {
+func (v *UpdateDomainRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 
@@ -8006,7 +8015,7 @@ type GetCrossClusterTasksRequest struct {
 	TargetCluster string  `json:"targetCluster,omitempty"`
 }
 
-func (v *GetCrossClusterTasksRequest) BodyToString() string {
+func (v *GetCrossClusterTasksRequest) SerializeForLogging() string {
 	return StructToString(*v)
 }
 

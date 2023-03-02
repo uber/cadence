@@ -58,7 +58,7 @@ type (
 		WorkflowType *types.WorkflowType
 		TaskList     *types.TaskList
 		Permission   Permission
-		RequestBody  ManualRequestBody
+		RequestBody  FilteredRequestBody // request object except for data inputs (PII)
 	}
 
 	// Result is result from authority.
@@ -99,6 +99,7 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
 }
 
-type ManualRequestBody interface {
-	BodyToString() string
+// request object except for data inputs (PII)
+type FilteredRequestBody interface {
+	SerializeForLogging() string
 }

@@ -71,39 +71,39 @@ func (mr *MockAuthorizerMockRecorder) Authorize(ctx, attributes interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorize", reflect.TypeOf((*MockAuthorizer)(nil).Authorize), ctx, attributes)
 }
 
-// MockManualRequestBody is a mock of ManualRequestBody interface.
-type MockManualRequestBody struct {
+// MockFilteredRequestBody is a mock of FilteredRequestBody interface.
+type MockFilteredRequestBody struct {
 	ctrl     *gomock.Controller
-	recorder *MockManualRequestBodyMockRecorder
+	recorder *MockFilteredRequestBodyMockRecorder
 }
 
-// MockManualRequestBodyMockRecorder is the mock recorder for MockManualRequestBody.
-type MockManualRequestBodyMockRecorder struct {
-	mock *MockManualRequestBody
+// MockFilteredRequestBodyMockRecorder is the mock recorder for MockFilteredRequestBody.
+type MockFilteredRequestBodyMockRecorder struct {
+	mock *MockFilteredRequestBody
 }
 
-// NewMockManualRequestBody creates a new mock instance.
-func NewMockManualRequestBody(ctrl *gomock.Controller) *MockManualRequestBody {
-	mock := &MockManualRequestBody{ctrl: ctrl}
-	mock.recorder = &MockManualRequestBodyMockRecorder{mock}
+// NewMockFilteredRequestBody creates a new mock instance.
+func NewMockFilteredRequestBody(ctrl *gomock.Controller) *MockFilteredRequestBody {
+	mock := &MockFilteredRequestBody{ctrl: ctrl}
+	mock.recorder = &MockFilteredRequestBodyMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockManualRequestBody) EXPECT() *MockManualRequestBodyMockRecorder {
+func (m *MockFilteredRequestBody) EXPECT() *MockFilteredRequestBodyMockRecorder {
 	return m.recorder
 }
 
-// BodyToString mocks base method.
-func (m *MockManualRequestBody) BodyToString() string {
+// SerializeForLogging mocks base method.
+func (m *MockFilteredRequestBody) SerializeForLogging() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BodyToString")
+	ret := m.ctrl.Call(m, "SerializeForLogging")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// BodyToString indicates an expected call of BodyToString.
-func (mr *MockManualRequestBodyMockRecorder) BodyToString() *gomock.Call {
+// SerializeForLogging indicates an expected call of SerializeForLogging.
+func (mr *MockFilteredRequestBodyMockRecorder) SerializeForLogging() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BodyToString", reflect.TypeOf((*MockManualRequestBody)(nil).BodyToString))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializeForLogging", reflect.TypeOf((*MockFilteredRequestBody)(nil).SerializeForLogging))
 }
