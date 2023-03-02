@@ -293,12 +293,14 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, m
 	}
 }
 
-func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIDTag metrics.Tag) error {
+func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIDTag metrics.Tag, operation string) error {
 	domainMetricsScope := p.metricClient.Scope(scope, domainTag)
 	shardMetricsScope := p.metricClient.Scope(scope, shardIDTag)
 
 	domainMetricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
 	shardMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
+
+	p.logger.Info(operation + " is the called operation")
 
 	before := time.Now()
 	err := op()
@@ -442,7 +444,8 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op,
+		metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())), "updateworkflowexecution")
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +476,8 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op,
+		metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())), "deleteworkflowexecution")
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
@@ -483,7 +487,8 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	}
-	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op,
+		metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())), "deletecurrentworkflowexecution")
 }
 
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
