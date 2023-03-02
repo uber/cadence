@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -1157,10 +1158,15 @@ func (e *historyEngineImpl) QueryWorkflow(
 ) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
+	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong && !consistentQueryEnabled {
 		return nil, workflow.ErrConsistentQueryNotEnabled
+	}
+	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
+		scope.IncCounter(metrics.ConsistentQueryPerShard)
+		shardMetricScope.IncCounter(metrics.ConsistentQueryPerShard)
 	}
 
 	execution := *request.GetRequest().GetExecution()
