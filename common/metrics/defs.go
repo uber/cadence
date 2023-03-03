@@ -2813,7 +2813,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DirectQueryDispatchClearStickinessSuccessCount:               {metricName: "direct_query_dispatch_clear_stickiness_success", metricType: Counter},
 		DirectQueryDispatchTimeoutBeforeNonStickyCount:               {metricName: "direct_query_dispatch_timeout_before_non_sticky", metricType: Counter},
 		DecisionTaskQueryLatency:                                     {metricName: "decision_task_query_latency", metricType: Timer},
-		ConsistentQueryPerShard:									  {metricName: "consistent_query_per_shard", metricType: Counter},
+		ConsistentQueryPerShard:                                      {metricName: "consistent_query_per_shard", metricType: Counter},
 		ConsistentQueryTimeoutCount:                                  {metricName: "consistent_query_timeout", metricType: Counter},
 		QueryBeforeFirstDecisionCount:                                {metricName: "query_before_first_decision", metricType: Counter},
 		QueryBufferExceededCount:                                     {metricName: "query_buffer_exceeded", metricType: Counter},
