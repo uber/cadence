@@ -185,7 +185,7 @@ func newTaskListManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope)
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, nil)
 	tlMgr.startWG.Add(1)
 	return tlMgr, nil
 }
@@ -265,8 +265,9 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return r, err
 		}
 
+		isolationGroup := ""
 		// active task, try sync match first
-		syncMatch, err = c.trySyncMatch(ctx, params)
+		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
 		}
@@ -380,7 +381,8 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	return c.matcher.Poll(childCtx)
+	var isolationGroup string
+	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes
@@ -479,8 +481,8 @@ func (c *taskListManagerImpl) executeWithRetry(
 	return
 }
 
-func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, nil, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
+func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams, isolationGroup string) (bool, error) {
+	task := newInternalTask(params.taskInfo, nil, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo, isolationGroup)
 	childCtx := ctx
 	cancel := func() {}
 	waitTime := maxSyncMatchWaitTime
