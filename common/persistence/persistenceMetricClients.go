@@ -22,9 +22,10 @@ package persistence
 
 import (
 	"context"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common/dynamicconfig"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
