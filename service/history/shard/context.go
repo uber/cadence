@@ -735,8 +735,6 @@ func (s *contextImpl) UpdateWorkflowExecution(
 	request.RangeID = currentRangeID
 
 	resp, err := s.executionManager.UpdateWorkflowExecution(ctx, request)
-	s.logger.SampleInfo("Persistence UpdateWorkflowExecution called", s.config.SampleLoggingRate(),
-		tag.WorkflowDomainID(domainID), tag.WorkflowID(workflowID), tag.ShardID(s.shardID))
 	switch err.(type) {
 	case nil:
 		// Update MaxReadLevel if write to DB succeeds
