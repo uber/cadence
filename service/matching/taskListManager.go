@@ -185,7 +185,7 @@ func newTaskListManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope)
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, nil)
 	tlMgr.startWG.Add(1)
 	return tlMgr, nil
 }
@@ -380,7 +380,8 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	return c.matcher.Poll(childCtx)
+	var isolationGroup string
+	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes

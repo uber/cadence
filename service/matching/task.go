@@ -55,6 +55,7 @@ type (
 		responseC                chan error // non-nil only where there is a caller waiting for response (sync-match)
 		backlogCountHint         int64
 		activityTaskDispatchInfo *types.ActivityTaskDispatchInfo
+		isolationGroup           string
 	}
 )
 
