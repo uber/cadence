@@ -469,6 +469,11 @@ func ActorID(actorID string) Tag {
 	return newStringTag("actor-id", actorID)
 }
 
+// ActorEmail returns tag for the actor's email address
+func ActorEmail(actorEmail string) Tag {
+	return newStringTag("actor-email", actorEmail)
+}
+
 // HandlerCall returns tag for the API name of a request
 func HandlerCall(handlerCall string) Tag {
 	return newStringTag("handler-call", handlerCall)
