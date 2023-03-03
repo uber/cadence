@@ -95,11 +95,12 @@ func (m *MockFilteredRequestBody) EXPECT() *MockFilteredRequestBodyMockRecorder 
 }
 
 // SerializeForLogging mocks base method.
-func (m *MockFilteredRequestBody) SerializeForLogging() string {
+func (m *MockFilteredRequestBody) SerializeForLogging() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SerializeForLogging")
 	ret0, _ := ret[0].(string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // SerializeForLogging indicates an expected call of SerializeForLogging.

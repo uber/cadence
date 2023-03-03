@@ -101,5 +101,5 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 
 // request object except for data inputs (PII)
 type FilteredRequestBody interface {
-	SerializeForLogging() string
+	SerializeForLogging() (string, error)
 }
