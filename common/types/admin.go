@@ -26,7 +26,7 @@ type AddSearchAttributeRequest struct {
 	SecurityToken   string                      `json:"securityToken,omitempty"`
 }
 
-func (v *AddSearchAttributeRequest) SerializeForLogging() string {
+func (v *AddSearchAttributeRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -51,7 +51,7 @@ type AdminDescribeWorkflowExecutionRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *AdminDescribeWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *AdminDescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -99,7 +99,7 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 	NextPageToken     []byte             `json:"nextPageToken,omitempty"`
 }
 
-func (v *GetWorkflowExecutionRawHistoryV2Request) SerializeForLogging() string {
+func (v *GetWorkflowExecutionRawHistoryV2Request) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -218,7 +218,7 @@ type ResendReplicationTasksRequest struct {
 	EndVersion    *int64 `json:"endVersion,omitempty"`
 }
 
-func (v *ResendReplicationTasksRequest) SerializeForLogging() string {
+func (v *ResendReplicationTasksRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -258,7 +258,7 @@ type GetDynamicConfigRequest struct {
 	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
 }
 
-func (v *GetDynamicConfigRequest) SerializeForLogging() string {
+func (v *GetDynamicConfigRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -271,7 +271,7 @@ type UpdateDynamicConfigRequest struct {
 	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
 }
 
-func (v *UpdateDynamicConfigRequest) SerializeForLogging() string {
+func (v *UpdateDynamicConfigRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -280,7 +280,7 @@ type RestoreDynamicConfigRequest struct {
 	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
 }
 
-func (v *RestoreDynamicConfigRequest) SerializeForLogging() string {
+func (v *RestoreDynamicConfigRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -291,7 +291,7 @@ type AdminDeleteWorkflowRequest struct {
 	SkipErrors bool               `json:"skipErrors,omitempty"`
 }
 
-func (v *AdminDeleteWorkflowRequest) SerializeForLogging() string {
+func (v *AdminDeleteWorkflowRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -330,7 +330,7 @@ type ListDynamicConfigRequest struct {
 	ConfigName string `json:"configName,omitempty"`
 }
 
-func (v *ListDynamicConfigRequest) SerializeForLogging() string {
+func (v *ListDynamicConfigRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 

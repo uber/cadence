@@ -626,7 +626,7 @@ type CloseShardRequest struct {
 	ShardID int32 `json:"shardID,omitempty"`
 }
 
-func (v *CloseShardRequest) SerializeForLogging() string {
+func (v *CloseShardRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -793,7 +793,7 @@ type CountWorkflowExecutionsRequest struct {
 	Query  string `json:"query,omitempty"`
 }
 
-func (v *CountWorkflowExecutionsRequest) SerializeForLogging() string {
+func (v *CountWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1456,7 +1456,7 @@ type DeprecateDomainRequest struct {
 	SecurityToken string `json:"securityToken,omitempty"`
 }
 
-func (v *DeprecateDomainRequest) SerializeForLogging() string {
+func (v *DeprecateDomainRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1474,7 +1474,7 @@ type DescribeDomainRequest struct {
 	UUID *string `json:"uuid,omitempty"`
 }
 
-func (v *DescribeDomainRequest) SerializeForLogging() string {
+func (v *DescribeDomainRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1543,7 +1543,7 @@ type DescribeHistoryHostRequest struct {
 	ExecutionForHost *WorkflowExecution `json:"executionForHost,omitempty"`
 }
 
-func (v *DescribeHistoryHostRequest) SerializeForLogging() string {
+func (v *DescribeHistoryHostRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1553,7 +1553,7 @@ type DescribeShardDistributionRequest struct {
 	PageID   int32 `json:"pageID,omitempty"`
 }
 
-func (v *DescribeShardDistributionRequest) SerializeForLogging() string {
+func (v *DescribeShardDistributionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1595,7 +1595,7 @@ type DescribeQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
-func (v *DescribeQueueRequest) SerializeForLogging() string {
+func (v *DescribeQueueRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1636,7 +1636,7 @@ type DescribeTaskListRequest struct {
 	IncludeTaskListStatus bool          `json:"includeTaskListStatus,omitempty"`
 }
 
-func (v *DescribeTaskListRequest) SerializeForLogging() string {
+func (v *DescribeTaskListRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -1700,7 +1700,7 @@ type DescribeWorkflowExecutionRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -2464,7 +2464,7 @@ type GetWorkflowExecutionHistoryRequest struct {
 	SkipArchival           bool                    `json:"skipArchival,omitempty"`
 }
 
-func (v *GetWorkflowExecutionHistoryRequest) SerializeForLogging() string {
+func (v *GetWorkflowExecutionHistoryRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3193,7 +3193,7 @@ type ListArchivedWorkflowExecutionsRequest struct {
 	Query         string `json:"query,omitempty"`
 }
 
-func (v *ListArchivedWorkflowExecutionsRequest) SerializeForLogging() string {
+func (v *ListArchivedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3246,7 +3246,7 @@ type ListClosedWorkflowExecutionsRequest struct {
 	StatusFilter    *WorkflowExecutionCloseStatus `json:"statusFilter,omitempty"`
 }
 
-func (v *ListClosedWorkflowExecutionsRequest) SerializeForLogging() string {
+func (v *ListClosedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3294,7 +3294,7 @@ type ListDomainsRequest struct {
 	NextPageToken []byte `json:"nextPageToken,omitempty"`
 }
 
-func (v *ListDomainsRequest) SerializeForLogging() string {
+func (v *ListDomainsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3338,7 +3338,7 @@ type ListOpenWorkflowExecutionsRequest struct {
 	TypeFilter      *WorkflowTypeFilter      `json:"typeFilter,omitempty"`
 }
 
-func (v *ListOpenWorkflowExecutionsRequest) SerializeForLogging() string {
+func (v *ListOpenWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3378,7 +3378,7 @@ type ListTaskListPartitionsRequest struct {
 	TaskList *TaskList `json:"taskList,omitempty"`
 }
 
-func (v *ListTaskListPartitionsRequest) SerializeForLogging() string {
+func (v *ListTaskListPartitionsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3401,7 +3401,7 @@ type GetTaskListsByDomainRequest struct {
 	Domain string `json:"domain,omitempty"`
 }
 
-func (v *GetTaskListsByDomainRequest) SerializeForLogging() string {
+func (v *GetTaskListsByDomainRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3443,7 +3443,7 @@ type ListWorkflowExecutionsRequest struct {
 	Query         string `json:"query,omitempty"`
 }
 
-func (v *ListWorkflowExecutionsRequest) SerializeForLogging() string {
+func (v *ListWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3837,7 +3837,7 @@ type PollForActivityTaskRequest struct {
 	TaskListMetadata *TaskListMetadata `json:"taskListMetadata,omitempty"`
 }
 
-func (v *PollForActivityTaskRequest) SerializeForLogging() string {
+func (v *PollForActivityTaskRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -3901,7 +3901,7 @@ type PollForDecisionTaskRequest struct {
 	BinaryChecksum string    `json:"binaryChecksum,omitempty"`
 }
 
-func (v *PollForDecisionTaskRequest) SerializeForLogging() string {
+func (v *PollForDecisionTaskRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4258,7 +4258,7 @@ type QueryWorkflowRequest struct {
 	QueryConsistencyLevel *QueryConsistencyLevel `json:"queryConsistencyLevel,omitempty"`
 }
 
-func (v *QueryWorkflowRequest) SerializeForLogging() string {
+func (v *QueryWorkflowRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4331,7 +4331,7 @@ type ReapplyEventsRequest struct {
 	Events            *DataBlob          `json:"events,omitempty"`
 }
 
-func (v *ReapplyEventsRequest) SerializeForLogging() string {
+func (v *ReapplyEventsRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4408,7 +4408,7 @@ type RecordActivityTaskHeartbeatRequest struct {
 	Identity  string `json:"identity,omitempty"`
 }
 
-func (v *RecordActivityTaskHeartbeatRequest) SerializeForLogging() string {
+func (v *RecordActivityTaskHeartbeatRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4438,7 +4438,7 @@ type RefreshWorkflowTasksRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *RefreshWorkflowTasksRequest) SerializeForLogging() string {
+func (v *RefreshWorkflowTasksRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4476,7 +4476,7 @@ type RegisterDomainRequest struct {
 	VisibilityArchivalURI                  string                             `json:"visibilityArchivalURI,omitempty"`
 }
 
-func (v *RegisterDomainRequest) SerializeForLogging() string {
+func (v *RegisterDomainRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4575,7 +4575,7 @@ type RemoveTaskRequest struct {
 	ClusterName         string `json:"clusterName,omitempty"`
 }
 
-func (v *RemoveTaskRequest) SerializeForLogging() string {
+func (v *RemoveTaskRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4749,7 +4749,7 @@ type RequestCancelWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
-func (v *RequestCancelWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *RequestCancelWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4855,7 +4855,7 @@ type ResetQueueRequest struct {
 	Type        *int32 `json:"type,omitempty"`
 }
 
-func (v *ResetQueueRequest) SerializeForLogging() string {
+func (v *ResetQueueRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4889,7 +4889,7 @@ type ResetStickyTaskListRequest struct {
 	Execution *WorkflowExecution `json:"execution,omitempty"`
 }
 
-func (v *ResetStickyTaskListRequest) SerializeForLogging() string {
+func (v *ResetStickyTaskListRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -4923,7 +4923,7 @@ type ResetWorkflowExecutionRequest struct {
 	SkipSignalReapply     bool               `json:"skipSignalReapply,omitempty"`
 }
 
-func (v *ResetWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *ResetWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -5689,7 +5689,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
-func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	// making a deep copy of the struct for manually assigning attributes
 	cloneRequest := SignalWithStartWorkflowExecutionRequest{
 		Domain:       v.Domain,
@@ -5843,7 +5843,7 @@ type SignalWorkflowExecutionRequest struct {
 	Control           []byte             `json:"control,omitempty"`
 }
 
-func (v *SignalWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	// making a deep copy of the struct for manually assigning attributes
 	cloneSignalWorkflowExecutionRequest := SignalWorkflowExecutionRequest{
 		Domain:     v.Domain,
@@ -6109,7 +6109,7 @@ type RestartWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 }
 
-func (v *RestartWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *RestartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -6150,7 +6150,7 @@ type StartWorkflowExecutionRequest struct {
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
 }
 
-func (v *StartWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	// making a deep copy of the struct for manually assigning attributes
 	cloneRequest := StartWorkflowExecutionRequest{
 		Domain:       v.Domain,
@@ -6541,7 +6541,7 @@ type TerminateWorkflowExecutionRequest struct {
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
 }
 
-func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() string {
+func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -6745,7 +6745,7 @@ type UpdateDomainRequest struct {
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
 }
 
-func (v *UpdateDomainRequest) SerializeForLogging() string {
+func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -8016,7 +8016,7 @@ type GetCrossClusterTasksRequest struct {
 	TargetCluster string  `json:"targetCluster,omitempty"`
 }
 
-func (v *GetCrossClusterTasksRequest) SerializeForLogging() string {
+func (v *GetCrossClusterTasksRequest) SerializeForLogging() (string, error) {
 	return SerializeRequest(*v)
 }
 
@@ -8085,7 +8085,11 @@ type StickyWorkerUnavailableError struct {
 }
 
 // SerializeRequest Serialize an arbitrary request for logging
-func SerializeRequest(request interface{}) string {
-	res, _ := json.Marshal(request)
-	return string(res)
+func SerializeRequest(request interface{}) (string, error) {
+	res, err := json.Marshal(request)
+	if err != nil {
+		return "", err
+	}
+
+	return string(res), nil
 }
