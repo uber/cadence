@@ -316,6 +316,8 @@ type Config struct {
 	// Debugging configurations
 	EnableDebugMode             bool // note that this value is initialized once on service start
 	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
+
+	SampleLoggingRate dynamicconfig.IntPropertyFn
 }
 
 // New returns new service config with default values
@@ -552,6 +554,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 
 		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
 		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
+
+		SampleLoggingRate: dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
 	}
 
 	return cfg
