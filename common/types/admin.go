@@ -27,7 +27,7 @@ type AddSearchAttributeRequest struct {
 }
 
 func (v *AddSearchAttributeRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetSearchAttribute is an internal getter (TBD...)
@@ -52,7 +52,7 @@ type AdminDescribeWorkflowExecutionRequest struct {
 }
 
 func (v *AdminDescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -100,7 +100,7 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 }
 
 func (v *GetWorkflowExecutionRawHistoryV2Request) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -219,7 +219,7 @@ type ResendReplicationTasksRequest struct {
 }
 
 func (v *ResendReplicationTasksRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetWorkflowID is an internal getter (TBD...)
@@ -259,7 +259,7 @@ type GetDynamicConfigRequest struct {
 }
 
 func (v *GetDynamicConfigRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 type GetDynamicConfigResponse struct {
@@ -272,7 +272,7 @@ type UpdateDynamicConfigRequest struct {
 }
 
 func (v *UpdateDynamicConfigRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 type RestoreDynamicConfigRequest struct {
@@ -281,7 +281,7 @@ type RestoreDynamicConfigRequest struct {
 }
 
 func (v *RestoreDynamicConfigRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // AdminDeleteWorkflowRequest is an internal type (TBD...)
@@ -292,7 +292,7 @@ type AdminDeleteWorkflowRequest struct {
 }
 
 func (v *AdminDeleteWorkflowRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 func (v *AdminDeleteWorkflowRequest) GetDomain() (o string) {
@@ -331,7 +331,7 @@ type ListDynamicConfigRequest struct {
 }
 
 func (v *ListDynamicConfigRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 type ListDynamicConfigResponse struct {

@@ -230,7 +230,7 @@ type GetDLQReplicationMessagesRequest struct {
 }
 
 func (v *GetDLQReplicationMessagesRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetTaskInfos is an internal getter (TBD...)
@@ -254,7 +254,7 @@ type GetDomainReplicationMessagesRequest struct {
 }
 
 func (v *GetDomainReplicationMessagesRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetLastRetrievedMessageID is an internal getter (TBD...)
@@ -293,7 +293,7 @@ type GetReplicationMessagesRequest struct {
 }
 
 func (v *GetReplicationMessagesRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetClusterName is an internal getter (TBD...)
@@ -406,7 +406,7 @@ type MergeDLQMessagesRequest struct {
 }
 
 func (v *MergeDLQMessagesRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetType is an internal getter (TBD...)
@@ -471,7 +471,7 @@ type PurgeDLQMessagesRequest struct {
 }
 
 func (v *PurgeDLQMessagesRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetType is an internal getter (TBD...)
@@ -517,7 +517,7 @@ type ReadDLQMessagesRequest struct {
 }
 
 func (v *ReadDLQMessagesRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetType is an internal getter (TBD...)

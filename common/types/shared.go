@@ -627,7 +627,7 @@ type CloseShardRequest struct {
 }
 
 func (v *CloseShardRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -794,7 +794,7 @@ type CountWorkflowExecutionsRequest struct {
 }
 
 func (v *CountWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1457,7 +1457,7 @@ type DeprecateDomainRequest struct {
 }
 
 func (v *DeprecateDomainRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -1475,7 +1475,7 @@ type DescribeDomainRequest struct {
 }
 
 func (v *DescribeDomainRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -1544,7 +1544,7 @@ type DescribeHistoryHostRequest struct {
 }
 
 func (v *DescribeHistoryHostRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // DescribeShardDistributionRequest is an internal type (TBD...)
@@ -1554,7 +1554,7 @@ type DescribeShardDistributionRequest struct {
 }
 
 func (v *DescribeShardDistributionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetHostAddress is an internal getter (TBD...)
@@ -1596,7 +1596,7 @@ type DescribeQueueRequest struct {
 }
 
 func (v *DescribeQueueRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -1637,7 +1637,7 @@ type DescribeTaskListRequest struct {
 }
 
 func (v *DescribeTaskListRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -1701,7 +1701,7 @@ type DescribeWorkflowExecutionRequest struct {
 }
 
 func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -2465,7 +2465,7 @@ type GetWorkflowExecutionHistoryRequest struct {
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3194,7 +3194,7 @@ type ListArchivedWorkflowExecutionsRequest struct {
 }
 
 func (v *ListArchivedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3247,7 +3247,7 @@ type ListClosedWorkflowExecutionsRequest struct {
 }
 
 func (v *ListClosedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3295,7 +3295,7 @@ type ListDomainsRequest struct {
 }
 
 func (v *ListDomainsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetPageSize is an internal getter (TBD...)
@@ -3339,7 +3339,7 @@ type ListOpenWorkflowExecutionsRequest struct {
 }
 
 func (v *ListOpenWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3379,7 +3379,7 @@ type ListTaskListPartitionsRequest struct {
 }
 
 func (v *ListTaskListPartitionsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3402,7 +3402,7 @@ type GetTaskListsByDomainRequest struct {
 }
 
 func (v *GetTaskListsByDomainRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3444,7 +3444,7 @@ type ListWorkflowExecutionsRequest struct {
 }
 
 func (v *ListWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3838,7 +3838,7 @@ type PollForActivityTaskRequest struct {
 }
 
 func (v *PollForActivityTaskRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -3902,7 +3902,7 @@ type PollForDecisionTaskRequest struct {
 }
 
 func (v *PollForDecisionTaskRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4259,7 +4259,7 @@ type QueryWorkflowRequest struct {
 }
 
 func (v *QueryWorkflowRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4332,7 +4332,7 @@ type ReapplyEventsRequest struct {
 }
 
 func (v *ReapplyEventsRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomainName is an internal getter (TBD...)
@@ -4409,7 +4409,7 @@ type RecordActivityTaskHeartbeatRequest struct {
 }
 
 func (v *RecordActivityTaskHeartbeatRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // RecordActivityTaskHeartbeatResponse is an internal type (TBD...)
@@ -4439,7 +4439,7 @@ type RefreshWorkflowTasksRequest struct {
 }
 
 func (v *RefreshWorkflowTasksRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4477,7 +4477,7 @@ type RegisterDomainRequest struct {
 }
 
 func (v *RegisterDomainRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -4576,7 +4576,7 @@ type RemoveTaskRequest struct {
 }
 
 func (v *RemoveTaskRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -4750,7 +4750,7 @@ type RequestCancelWorkflowExecutionRequest struct {
 }
 
 func (v *RequestCancelWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4856,7 +4856,7 @@ type ResetQueueRequest struct {
 }
 
 func (v *ResetQueueRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetShardID is an internal getter (TBD...)
@@ -4890,7 +4890,7 @@ type ResetStickyTaskListRequest struct {
 }
 
 func (v *ResetStickyTaskListRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -4924,7 +4924,7 @@ type ResetWorkflowExecutionRequest struct {
 }
 
 func (v *ResetWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5691,7 +5691,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 
 func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	// making a deep copy of the struct for manually assigning attributes
-	cloneRequest := SignalWithStartWorkflowExecutionRequest{
+	cloneRequest := &SignalWithStartWorkflowExecutionRequest{
 		Domain:       v.Domain,
 		WorkflowID:   v.WorkflowID,
 		SignalName:   v.SignalName,
@@ -5845,7 +5845,7 @@ type SignalWorkflowExecutionRequest struct {
 
 func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	// making a deep copy of the struct for manually assigning attributes
-	cloneSignalWorkflowExecutionRequest := SignalWorkflowExecutionRequest{
+	cloneSignalWorkflowExecutionRequest := &SignalWorkflowExecutionRequest{
 		Domain:     v.Domain,
 		SignalName: v.SignalName,
 		Identity:   v.Identity,
@@ -6110,7 +6110,7 @@ type RestartWorkflowExecutionRequest struct {
 }
 
 func (v *RestartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6152,7 +6152,7 @@ type StartWorkflowExecutionRequest struct {
 
 func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	// making a deep copy of the struct for manually assigning attributes
-	cloneRequest := StartWorkflowExecutionRequest{
+	cloneRequest := &StartWorkflowExecutionRequest{
 		Domain:       v.Domain,
 		WorkflowID:   v.WorkflowID,
 		Identity:     v.Identity,
@@ -6542,7 +6542,7 @@ type TerminateWorkflowExecutionRequest struct {
 }
 
 func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6746,7 +6746,7 @@ type UpdateDomainRequest struct {
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetName is an internal getter (TBD...)
@@ -8017,7 +8017,7 @@ type GetCrossClusterTasksRequest struct {
 }
 
 func (v *GetCrossClusterTasksRequest) SerializeForLogging() (string, error) {
-	return SerializeRequest(*v)
+	return SerializeRequest(v)
 }
 
 // GetShardIDs is an internal getter (TBD...)
