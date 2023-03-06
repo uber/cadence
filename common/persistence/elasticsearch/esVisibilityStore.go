@@ -111,7 +111,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionStarted(
 		0,                                  // will not be used
 		0,                                  // will not be used
 		request.UpdateTimestamp.UnixNano(), // will be updated when workflow execution updates
-		request.ShardID,
+		int64(request.ShardID),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -140,7 +140,7 @@ func (v *esVisibilityStore) RecordWorkflowExecutionClosed(
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixNano(),
-		request.ShardID,
+		int64(request.ShardID),
 	)
 	return v.producer.Publish(ctx, msg)
 }

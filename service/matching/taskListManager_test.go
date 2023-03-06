@@ -47,7 +47,7 @@ func TestDeliverBufferTasks(t *testing.T) {
 
 	tests := []func(tlm *taskListManagerImpl){
 		func(tlm *taskListManagerImpl) { close(tlm.taskReader.taskBuffer) },
-		func(tlm *taskListManagerImpl) { close(tlm.taskReader.dispatcherShutdownC) },
+		func(tlm *taskListManagerImpl) { tlm.taskReader.cancelFunc() },
 		func(tlm *taskListManagerImpl) {
 			rps := 0.1
 			tlm.matcher.UpdateRatelimit(&rps)
@@ -160,17 +160,6 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 		logger.Fatal("error when createTestTaskListManager", tag.Error(err))
 	}
 	return tlMgr.(*taskListManagerImpl)
-}
-
-func TestIsTaskAddedRecently(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	tlm := createTestTaskListManager(controller)
-	require.True(t, tlm.taskReader.isTaskAddedRecently(time.Now()))
-	require.False(t, tlm.taskReader.isTaskAddedRecently(time.Now().Add(-tlm.config.MaxTasklistIdleTime())))
-	require.True(t, tlm.taskReader.isTaskAddedRecently(time.Now().Add(1*time.Second)))
-	require.False(t, tlm.taskReader.isTaskAddedRecently(time.Time{}))
 }
 
 func TestDescribeTaskList(t *testing.T) {
