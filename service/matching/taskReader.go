@@ -55,39 +55,39 @@ type (
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
 		// the shutdown channel. To optimize on efficiency, we instead create one and tag it on the struct
 		// so the cancel can be called directly on shutdown.
-		cancelCtx  context.Context
-		cancelFunc context.CancelFunc
-		// separate shutdownC needed for dispatchTasks go routine to allow
-		// getTasksPump to be stopped without stopping dispatchTasks in unit tests
-		dispatcherShutdownC chan struct{}
-		stopped             int64 // set to 1 if the reader is stopped or is shutting down
-		logger              log.Logger
-		scope               metrics.Scope
-		throttleRetry       *backoff.ThrottleRetry
-		handleErr           func(error) error
+		cancelCtx     context.Context
+		cancelFunc    context.CancelFunc
+		stopped       int64 // set to 1 if the reader is stopped or is shutting down
+		logger        log.Logger
+		scope         metrics.Scope
+		throttleRetry *backoff.ThrottleRetry
+		handleErr     func(error) error
+		onFatalErr    func()
+		dispatchTask  func(context.Context, *InternalTask) error
 	}
 )
 
 func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &taskReader{
-		tlMgr:               tlMgr,
-		taskListID:          tlMgr.taskListID,
-		config:              tlMgr.config,
-		db:                  tlMgr.db,
-		taskWriter:          tlMgr.taskWriter,
-		taskGC:              tlMgr.taskGC,
-		taskAckManager:      tlMgr.taskAckManager,
-		cancelCtx:           ctx,
-		cancelFunc:          cancel,
-		notifyC:             make(chan struct{}, 1),
-		dispatcherShutdownC: make(chan struct{}),
+		tlMgr:          tlMgr,
+		taskListID:     tlMgr.taskListID,
+		config:         tlMgr.config,
+		db:             tlMgr.db,
+		taskWriter:     tlMgr.taskWriter,
+		taskGC:         tlMgr.taskGC,
+		taskAckManager: tlMgr.taskAckManager,
+		cancelCtx:      ctx,
+		cancelFunc:     cancel,
+		notifyC:        make(chan struct{}, 1),
 		// we always dequeue the head of the buffer and try to dispatch it to a poller
 		// so allocate one less than desired target buffer size
-		taskBuffer: make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
-		logger:     tlMgr.logger,
-		scope:      tlMgr.scope,
-		handleErr:  tlMgr.handleErr,
+		taskBuffer:   make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
+		logger:       tlMgr.logger,
+		scope:        tlMgr.scope,
+		handleErr:    tlMgr.handleErr,
+		onFatalErr:   tlMgr.Stop,
+		dispatchTask: tlMgr.DispatchTask,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -104,7 +104,6 @@ func (tr *taskReader) Start() {
 func (tr *taskReader) Stop() {
 	if atomic.CompareAndSwapInt64(&tr.stopped, 0, 1) {
 		tr.cancelFunc()
-		close(tr.dispatcherShutdownC)
 		if err := tr.persistAckLevel(); err != nil {
 			tr.logger.Error("Persistent store operation failure",
 				tag.StoreOperationUpdateTaskList,
@@ -130,9 +129,9 @@ dispatchLoop:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
-			task := newInternalTask(taskInfo, tr.tlMgr.completeTask, types.TaskSourceDbBacklog, "", false, nil)
+			task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil)
 			for {
-				err := tr.tlMgr.DispatchTask(tr.cancelCtx, task)
+				err := tr.dispatchTask(tr.cancelCtx, task)
 				if err == nil {
 					break
 				}
@@ -145,7 +144,7 @@ dispatchLoop:
 				tr.logger.Error("taskReader: unexpected error dispatching task", tag.Error(err))
 				runtime.Gosched()
 			}
-		case <-tr.dispatcherShutdownC:
+		case <-tr.cancelCtx.Done():
 			break dispatchLoop
 		}
 	}
@@ -159,7 +158,7 @@ func (tr *taskReader) getTasksPump() {
 getTasksPumpLoop:
 	for {
 		select {
-		case <-tr.tlMgr.shutdownCh:
+		case <-tr.cancelCtx.Done():
 			break getTasksPumpLoop
 		case <-tr.notifyC:
 			{
@@ -277,7 +276,7 @@ func (tr *taskReader) addSingleTaskToBuffer(task *persistence.TaskInfo) bool {
 		select {
 		case tr.taskBuffer <- task:
 			return true
-		case <-tr.tlMgr.shutdownCh:
+		case <-tr.cancelCtx.Done():
 			return false
 		}
 	}
@@ -297,6 +296,35 @@ func (tr *taskReader) persistAckLevel() error {
 	return nil
 }
 
-func (tr *taskReader) isTaskAddedRecently(lastAddTime time.Time) bool {
-	return time.Since(lastAddTime) <= tr.config.MaxTasklistIdleTime()
+// completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
+// here. As part of completion:
+//   - task is deleted from the database when err is nil
+//   - new task is created and current task is deleted when err is not nil
+func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
+	if err != nil {
+		// failed to start the task.
+		// We cannot just remove it from persistence because then it will be lost.
+		// We handle this by writing the task back to persistence with a higher taskID.
+		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
+		// again the underlying reason for failing to start will be resolved.
+		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
+		// re-written to persistence frequently.
+		op := func() error {
+			wf := &types.WorkflowExecution{WorkflowID: task.WorkflowID, RunID: task.RunID}
+			_, err := tr.taskWriter.appendTask(wf, task)
+			return err
+		}
+		err = tr.throttleRetry.Do(context.Background(), op)
+		if err != nil {
+			// OK, we also failed to write to persistence.
+			// This should only happen in very extreme cases where persistence is completely down.
+			// We still can't lose the old task so we just unload the entire task list
+			tr.logger.Error("Failed to complete task", tag.Error(err))
+			tr.onFatalErr()
+			return
+		}
+		tr.Signal()
+	}
+	ackLevel := tr.taskAckManager.AckItem(task.TaskID)
+	tr.taskGC.Run(ackLevel)
 }
