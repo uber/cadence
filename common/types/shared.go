@@ -8085,6 +8085,7 @@ type StickyWorkerUnavailableError struct {
 }
 
 // SerializeRequest Serialize an arbitrary request for logging
+// pass in a pointer as a parameter to save space
 func SerializeRequest(request interface{}) (string, error) {
 	res, err := json.Marshal(request)
 	if err != nil {

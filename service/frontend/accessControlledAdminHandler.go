@@ -56,12 +56,9 @@ func NewAccessControlledAdminHandlerImpl(adminHandler AdminHandler, resource res
 
 func (a *AccessControlledWorkflowAdminHandler) AddSearchAttribute(ctx context.Context, request *types.AddSearchAttributeRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "AddSearchAttribute",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "AddSearchAttribute",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -77,12 +74,9 @@ func (a *AccessControlledWorkflowAdminHandler) AddSearchAttribute(ctx context.Co
 
 func (a *AccessControlledWorkflowAdminHandler) CloseShard(ctx context.Context, request *types.CloseShardRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "CloseShard",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "CloseShard",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -114,12 +108,9 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeCluster(ctx context.Conte
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeShardDistribution(ctx context.Context, request *types.DescribeShardDistributionRequest) (*types.DescribeShardDistributionResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "DescribeShardDistribution",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "DescribeShardDistribution",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -135,12 +126,9 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeShardDistribution(ctx con
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeHistoryHost(ctx context.Context, request *types.DescribeHistoryHostRequest) (*types.DescribeHistoryHostResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "DescribeHistoryHost",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "DescribeHistoryHost",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -156,12 +144,9 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeHistoryHost(ctx context.C
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeQueue(ctx context.Context, request *types.DescribeQueueRequest) (*types.DescribeQueueResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "DescribeQueue",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "DescribeQueue",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -177,12 +162,9 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeQueue(ctx context.Context
 
 func (a *AccessControlledWorkflowAdminHandler) DescribeWorkflowExecution(ctx context.Context, request *types.AdminDescribeWorkflowExecutionRequest) (*types.AdminDescribeWorkflowExecutionResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "DescribeWorkflowExecution",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "DescribeWorkflowExecution",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -198,12 +180,9 @@ func (a *AccessControlledWorkflowAdminHandler) DescribeWorkflowExecution(ctx con
 
 func (a *AccessControlledWorkflowAdminHandler) GetDLQReplicationMessages(ctx context.Context, request *types.GetDLQReplicationMessagesRequest) (*types.GetDLQReplicationMessagesResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "GetDLQReplicationMessages",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "GetDLQReplicationMessages",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -219,12 +198,9 @@ func (a *AccessControlledWorkflowAdminHandler) GetDLQReplicationMessages(ctx con
 
 func (a *AccessControlledWorkflowAdminHandler) GetDomainReplicationMessages(ctx context.Context, request *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "GetDomainReplicationMessages",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "GetDomainReplicationMessages",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -240,12 +216,9 @@ func (a *AccessControlledWorkflowAdminHandler) GetDomainReplicationMessages(ctx 
 
 func (a *AccessControlledWorkflowAdminHandler) GetReplicationMessages(ctx context.Context, request *types.GetReplicationMessagesRequest) (*types.GetReplicationMessagesResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "GetReplicationMessages",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "GetReplicationMessages",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -261,12 +234,9 @@ func (a *AccessControlledWorkflowAdminHandler) GetReplicationMessages(ctx contex
 
 func (a *AccessControlledWorkflowAdminHandler) GetWorkflowExecutionRawHistoryV2(ctx context.Context, request *types.GetWorkflowExecutionRawHistoryV2Request) (*types.GetWorkflowExecutionRawHistoryV2Response, error) {
 	attr := &authorization.Attributes{
-		APIName:    "GetWorkflowExecutionRawHistoryV2",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "GetWorkflowExecutionRawHistoryV2",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -282,12 +252,9 @@ func (a *AccessControlledWorkflowAdminHandler) GetWorkflowExecutionRawHistoryV2(
 
 func (a *AccessControlledWorkflowAdminHandler) MergeDLQMessages(ctx context.Context, request *types.MergeDLQMessagesRequest) (*types.MergeDLQMessagesResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "MergeDLQMessages",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "MergeDLQMessages",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -303,12 +270,9 @@ func (a *AccessControlledWorkflowAdminHandler) MergeDLQMessages(ctx context.Cont
 
 func (a *AccessControlledWorkflowAdminHandler) PurgeDLQMessages(ctx context.Context, request *types.PurgeDLQMessagesRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "PurgeDLQMessages",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "PurgeDLQMessages",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -324,12 +288,9 @@ func (a *AccessControlledWorkflowAdminHandler) PurgeDLQMessages(ctx context.Cont
 
 func (a *AccessControlledWorkflowAdminHandler) ReadDLQMessages(ctx context.Context, request *types.ReadDLQMessagesRequest) (*types.ReadDLQMessagesResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "ReadDLQMessages",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "ReadDLQMessages",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -345,12 +306,9 @@ func (a *AccessControlledWorkflowAdminHandler) ReadDLQMessages(ctx context.Conte
 
 func (a *AccessControlledWorkflowAdminHandler) ReapplyEvents(ctx context.Context, request *types.ReapplyEventsRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "ReapplyEvents",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "ReapplyEvents",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -366,12 +324,9 @@ func (a *AccessControlledWorkflowAdminHandler) ReapplyEvents(ctx context.Context
 
 func (a *AccessControlledWorkflowAdminHandler) RefreshWorkflowTasks(ctx context.Context, request *types.RefreshWorkflowTasksRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "RefreshWorkflowTasks",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "RefreshWorkflowTasks",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -387,12 +342,9 @@ func (a *AccessControlledWorkflowAdminHandler) RefreshWorkflowTasks(ctx context.
 
 func (a *AccessControlledWorkflowAdminHandler) RemoveTask(ctx context.Context, request *types.RemoveTaskRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "RemoveTask",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "RemoveTask",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -408,12 +360,9 @@ func (a *AccessControlledWorkflowAdminHandler) RemoveTask(ctx context.Context, r
 
 func (a *AccessControlledWorkflowAdminHandler) ResendReplicationTasks(ctx context.Context, request *types.ResendReplicationTasksRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "ResendReplicationTasks",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "ResendReplicationTasks",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -429,12 +378,9 @@ func (a *AccessControlledWorkflowAdminHandler) ResendReplicationTasks(ctx contex
 
 func (a *AccessControlledWorkflowAdminHandler) ResetQueue(ctx context.Context, request *types.ResetQueueRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "ResetQueue",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "ResetQueue",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -450,12 +396,9 @@ func (a *AccessControlledWorkflowAdminHandler) ResetQueue(ctx context.Context, r
 
 func (a *AccessControlledWorkflowAdminHandler) GetCrossClusterTasks(ctx context.Context, request *types.GetCrossClusterTasksRequest) (*types.GetCrossClusterTasksResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "GetCrossClusterTasks",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "GetCrossClusterTasks",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -471,12 +414,9 @@ func (a *AccessControlledWorkflowAdminHandler) GetCrossClusterTasks(ctx context.
 
 func (a *AccessControlledWorkflowAdminHandler) GetDynamicConfig(ctx context.Context, request *types.GetDynamicConfigRequest) (*types.GetDynamicConfigResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "GetDynamicConfig",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "GetDynamicConfig",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -492,12 +432,9 @@ func (a *AccessControlledWorkflowAdminHandler) GetDynamicConfig(ctx context.Cont
 
 func (a *AccessControlledWorkflowAdminHandler) UpdateDynamicConfig(ctx context.Context, request *types.UpdateDynamicConfigRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "UpdateDynamicConfig",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "UpdateDynamicConfig",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -513,12 +450,9 @@ func (a *AccessControlledWorkflowAdminHandler) UpdateDynamicConfig(ctx context.C
 
 func (a *AccessControlledWorkflowAdminHandler) RestoreDynamicConfig(ctx context.Context, request *types.RestoreDynamicConfigRequest) error {
 	attr := &authorization.Attributes{
-		APIName:    "RestoreDynamicConfig",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "RestoreDynamicConfig",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -534,12 +468,9 @@ func (a *AccessControlledWorkflowAdminHandler) RestoreDynamicConfig(ctx context.
 
 func (a *AccessControlledWorkflowAdminHandler) DeleteWorkflow(ctx context.Context, request *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "DeleteWorkflow",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "DeleteWorkflow",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -555,12 +486,9 @@ func (a *AccessControlledWorkflowAdminHandler) DeleteWorkflow(ctx context.Contex
 
 func (a *AccessControlledWorkflowAdminHandler) MaintainCorruptWorkflow(ctx context.Context, request *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "MaintainCorruptWorkflow",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "MaintainCorruptWorkflow",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)
@@ -576,12 +504,9 @@ func (a *AccessControlledWorkflowAdminHandler) MaintainCorruptWorkflow(ctx conte
 
 func (a *AccessControlledWorkflowAdminHandler) ListDynamicConfig(ctx context.Context, request *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error) {
 	attr := &authorization.Attributes{
-		APIName:    "ListDynamicConfig",
-		Permission: authorization.PermissionAdmin,
-	}
-
-	if isManual(ctx) {
-		attr.RequestBody = request
+		APIName:     "ListDynamicConfig",
+		Permission:  authorization.PermissionAdmin,
+		RequestBody: request,
 	}
 
 	isAuthorized, err := a.isAuthorized(ctx, attr)

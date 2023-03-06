@@ -99,7 +99,7 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
 }
 
-// request object except for data inputs (PII)
+// FilteredRequestBody request object except for data inputs (PII)
 type FilteredRequestBody interface {
 	SerializeForLogging() (string, error)
 }
