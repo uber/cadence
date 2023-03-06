@@ -23,8 +23,6 @@ package task
 import (
 	"context"
 
-	"github.com/uber/cadence/common/log/tag"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -232,8 +230,6 @@ func (t *timerTaskExecutorBase) deleteWorkflowExecution(
 		return err
 	}
 	op := func() error {
-		t.logger.SampleInfo("Persistence DeleteWorkflowExecution called", t.config.SampleLoggingRate(),
-			tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID), tag.ShardID(t.shard.GetShardID()))
 		return t.shard.GetExecutionManager().DeleteWorkflowExecution(ctx, &persistence.DeleteWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,
@@ -253,8 +249,6 @@ func (t *timerTaskExecutorBase) deleteCurrentWorkflowExecution(
 		return err
 	}
 	op := func() error {
-		t.logger.SampleInfo("Persistence DeleteCurrentWorkflowExecution called", t.config.SampleLoggingRate(),
-			tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID), tag.ShardID(t.shard.GetShardID()))
 		return t.shard.GetExecutionManager().DeleteCurrentWorkflowExecution(ctx, &persistence.DeleteCurrentWorkflowExecutionRequest{
 			DomainID:   task.DomainID,
 			WorkflowID: task.WorkflowID,

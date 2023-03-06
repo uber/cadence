@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/dynamicconfig"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,6 +39,7 @@ type (
 		metricClient                  metrics.Client
 		logger                        log.Logger
 		enableLatencyHistogramMetrics bool
+		sampleLoggingRate             dynamicconfig.IntPropertyFn
 	}
 
 	shardPersistenceClient struct {
@@ -112,6 +115,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 	metricClient metrics.Client,
 	logger log.Logger,
 	cfg *config.Persistence,
+	sampleLoggingRate dynamicconfig.IntPropertyFn,
 ) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence: persistence,
@@ -119,6 +123,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 			metricClient:                  metricClient,
 			logger:                        logger.WithTags(tag.ShardID(persistence.GetShardID())),
 			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
+			sampleLoggingRate:             sampleLoggingRate,
 		},
 	}
 }
@@ -442,6 +447,8 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
+	p.logger.SampleInfo("Persistence UpdateWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
 	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 	if err != nil {
 		return nil, err
@@ -473,6 +480,8 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
+	p.logger.SampleInfo("Persistence DeleteWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
 	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 }
 
@@ -483,6 +492,8 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	}
+	p.logger.SampleInfo("Persistence DeleteCurrentWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
 	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 }
 
