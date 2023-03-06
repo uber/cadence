@@ -1,0 +1,33 @@
+persistence:
+  advancedVisibilityStore: pinot-visibility
+  datastores:
+    pinot-visibility:
+      pinot:
+        version: "0.11.0"
+        url:
+          scheme: "http"
+          host: "127.0.0.1:2123"
+        indices:
+          visibility: cadence-visibility-dev
+
+kafka:
+  tls:
+    enabled: false
+  clusters:
+    test:
+      brokers:
+        - 127.0.0.1:9092
+  topics:
+    cadence-visibility-dev:
+      cluster: test
+    cadence-visibility-dev-dlq:
+      cluster: test
+  applications:
+    visibility:
+      topic: cadence-visibility-dev
+      dlq-topic: cadence-visibility-dev-dlq
+
+dynamicconfig:
+  client: filebased
+  filebased:
+    filepath: "config/dynamicconfig/development_es.yaml"

@@ -1,0 +1,75 @@
+{
+  "schemaName": "cadence-visibility-dev",
+  "primaryKeyColumns": ["DocID"],
+  "dimensionFieldSpecs": [
+    {
+      "name": "DocID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "DomainID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "WorkflowID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "RunID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "WorkflowType",
+      "dataType": "STRING"
+    },
+    {
+      "name": "CloseStatus",
+      "dataType": "INT"
+    },
+    {
+      "name": "HistoryLength",
+      "dataType": "INT"
+    },
+    {
+      "name": "KafkaKey",
+      "dataType": "STRING"
+    },
+    {
+      "name": "TaskList",
+      "dataType": "STRING"
+    },
+    {
+      "name": "IsCron",
+      "dataType": "BOOLEAN"
+    },
+    {
+      "name": "NumCluster",
+      "dataType": "INT"
+    },
+    {
+      "name": "ShardID",
+      "dataType": "INT"
+    }
+  ],
+  "dateTimeFieldSpecs": [{
+    "name": "StartTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "CloseTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "UpdateTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  },{
+    "name": "ExecutionTime",
+    "dataType": "LONG",
+    "format" : "1:MILLISECONDS:EPOCH",
+    "granularity": "1:MILLISECONDS"
+  }]
+}
