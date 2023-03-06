@@ -188,7 +188,7 @@ func (t *transferTaskExecutorBase) recordWorkflowStarted(
 		NumClusters:        numClusters,
 		UpdateTimestamp:    updateTimeUnixNano,
 		SearchAttributes:   searchAttributes,
-		ShardID:            int64(t.shard.GetShardID()),
+		ShardID:            int16(t.shard.GetShardID()),
 	}
 
 	if t.config.EnableRecordWorkflowExecutionUninitialized(domain) {
@@ -329,7 +329,7 @@ func (t *transferTaskExecutorBase) recordWorkflowClosed(
 			IsCron:             isCron,
 			UpdateTimestamp:    updateTimeUnixNano,
 			NumClusters:        numClusters,
-			ShardID:            int64(t.shard.GetShardID()),
+			ShardID:            int16(t.shard.GetShardID()),
 		}); err != nil {
 			return err
 		}

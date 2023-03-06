@@ -120,6 +120,7 @@ func (s *DBVisibilityPersistenceSuite) TestBasicVisibility() {
 		WorkflowTypeName: "visibility-workflow",
 		StartTimestamp:   startTime,
 		UpdateTimestamp:  0,
+		ShardID:          0,
 	}
 	err0 := s.VisibilityMgr.RecordWorkflowExecutionStarted(ctx, startReq)
 	s.Nil(err0)

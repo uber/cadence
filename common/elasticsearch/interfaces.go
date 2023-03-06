@@ -29,7 +29,6 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/metrics"
 	p "github.com/uber/cadence/common/persistence"
 )
 
@@ -138,7 +137,6 @@ type (
 		Close() error
 		Add(request *GenericBulkableAddRequest)
 		Flush() error
-		RetrieveKafkaKey(request GenericBulkableRequest, logger log.Logger, client metrics.Client) string
 	}
 
 	// BulkProcessorParameters holds all required and optional parameters for executing bulk service
