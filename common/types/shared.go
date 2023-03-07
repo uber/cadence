@@ -3835,6 +3835,7 @@ type PollForActivityTaskRequest struct {
 	TaskList         *TaskList         `json:"taskList,omitempty"`
 	Identity         string            `json:"identity,omitempty"`
 	TaskListMetadata *TaskListMetadata `json:"taskListMetadata,omitempty"`
+	PollerZone       string
 }
 
 func (v *PollForActivityTaskRequest) SerializeForLogging() (string, error) {
@@ -4256,6 +4257,7 @@ type QueryWorkflowRequest struct {
 	Query                 *WorkflowQuery         `json:"query,omitempty"`
 	QueryRejectCondition  *QueryRejectCondition  `json:"queryRejectCondition,omitempty"`
 	QueryConsistencyLevel *QueryConsistencyLevel `json:"queryConsistencyLevel,omitempty"`
+	Zone                  *string
 }
 
 func (v *QueryWorkflowRequest) SerializeForLogging() (string, error) {
@@ -5687,6 +5689,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
+	Zone                                *string
 }
 
 func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
@@ -5841,6 +5844,7 @@ type SignalWorkflowExecutionRequest struct {
 	Identity          string             `json:"identity,omitempty"`
 	RequestID         string             `json:"requestId,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
+	Zone              *string            `json:"zone,omitempty"`
 }
 
 func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
@@ -6148,6 +6152,7 @@ type StartWorkflowExecutionRequest struct {
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
+	Zone                                *string
 }
 
 func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
@@ -6539,6 +6544,7 @@ type TerminateWorkflowExecutionRequest struct {
 	Details             []byte             `json:"details,omitempty"`
 	Identity            string             `json:"identity,omitempty"`
 	FirstExecutionRunID string             `json:"first_execution_run_id,omitempty"`
+	Zone                *string
 }
 
 func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() (string, error) {

@@ -37,6 +37,7 @@ type AddActivityTaskRequest struct {
 	Source                        *TaskSource               `json:"source,omitempty"`
 	ForwardedFrom                 string                    `json:"forwardedFrom,omitempty"`
 	ActivityTaskDispatchInfo      *ActivityTaskDispatchInfo `json:"activityTaskDispatchInfo,omitempty"`
+	PartitionConfig               PartitionConfig
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -112,6 +113,7 @@ type ActivityTaskDispatchInfo struct {
 	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
 	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
+	PartitionConfig                 *PartitionConfig
 }
 
 // AddDecisionTaskRequest is an internal type (TBD...)
@@ -123,6 +125,7 @@ type AddDecisionTaskRequest struct {
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
+	PartitionConfig               *PartitionConfig
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -284,6 +287,7 @@ type MatchingPollForActivityTaskRequest struct {
 	PollerID      string                      `json:"pollerID,omitempty"`
 	PollRequest   *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
 	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
+	PollerZone    string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -324,6 +328,7 @@ type MatchingPollForDecisionTaskRequest struct {
 	PollerID      string                      `json:"pollerID,omitempty"`
 	PollRequest   *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
 	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
+	PollerZone    string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
