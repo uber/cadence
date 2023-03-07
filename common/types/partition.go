@@ -35,16 +35,27 @@ type ZoneName string
 type ZoneStatus int
 
 // PartitionConfig is a key/value based set of configuration for partitioning traffic. Intended to be a key/value pair
-// of data encoded in JSON or whatever encoding suits. This is intentionally opaque and to be passed blindly
-// to the partitioner of choice as it may contain business-specific types.
+// of data to be passed blindly to the partitioner implementation. The blind passing is so as to allow it to
+// contain business-specific types.
 //
 // Example of the intent:
-// partitionCfg := []byte(`{"wf-start-zone": "zone123", "userid: "1234", "weighting": 0.5}`)
+// partitionCfg := `{"wf-start-zone": "zone123", "userid: "1234", "weighting": 0.5}`
 // which, for example, may allow the partitioner to choose to split traffic based on where the workflow started, or
 // the user, or any arbitrary other configuration
-type PartitionConfig string
+type PartitionConfig map[string]string
 
 type ZonePartition struct {
 	Name   ZoneName
 	Status ZoneStatus
 }
+
+// ZoneConfiguration is a mapping, either globally or per-domain, of all the zones
+// and their various statuses. For example: This might be a global configuration persisted
+// in the config store and look like this:
+//
+//	ZoneConfiguration{
+//	  "zone1234": {Name: "zone1234", Status: ZoneStatusDrained},
+//	}
+//
+// Indicating that task processing isn't to occur within this zone anymore, but all others are ok.
+type ZoneConfiguration map[ZoneName]ZonePartition

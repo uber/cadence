@@ -1356,6 +1356,7 @@ type (
 		Description string
 		OwnerEmail  string
 		Data        map[string]string
+		ZoneConfig  types.ZoneConfiguration
 	}
 
 	// DomainConfig describes the domain configuration

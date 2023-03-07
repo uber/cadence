@@ -24,22 +24,29 @@ package partition
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
+
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
+const (
+	DefaultPartitionConfigWorkerZone = "worker-zone"
+	DefaultPartitionConfigRunID      = "wf-run-id"
+)
+
+// DefaultPartitionConfig is the open-source default Partition configuration
+// which ensures that workflows tarted in the same zone remain there
 type DefaultPartitionConfig struct {
-	WorkflowStartZone types.ZoneName `json:"wf-start-zone"`
-	RunID             string         `json:"run-id"`
+	WorkflowStartZone types.ZoneName
+	RunID             string
 }
 
 type DefaultPartitioner struct {
@@ -93,11 +100,7 @@ func (r *DefaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID s
 }
 
 func (r *DefaultPartitioner) GetTaskZone(ctx context.Context, DomainID string, key types.PartitionConfig) (*types.ZoneName, error) {
-	partitionData := DefaultPartitionConfig{}
-	err := json.Unmarshal([]byte(key), &partitionData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode partition config: %w", err)
-	}
+	partitionData := mapPartitionConfigToDefaultPartitionConfig(key)
 
 	isDrained, err := r.IsDrained(ctx, DomainID, partitionData.WorkflowStartZone)
 	if err != nil {
@@ -182,4 +185,13 @@ func pickZoneAfterDrain(zones []types.ZonePartition, wfConfig DefaultPartitionCo
 	}
 	hashv := farm.Hash32([]byte(wfConfig.RunID))
 	return availableZones[int(hashv)%len(availableZones)]
+}
+
+func mapPartitionConfigToDefaultPartitionConfig(config types.PartitionConfig) DefaultPartitionConfig {
+	zone, _ := config[DefaultPartitionConfigWorkerZone]
+	runID, _ := config[DefaultPartitionConfigRunID]
+	return DefaultPartitionConfig{
+		WorkflowStartZone: types.ZoneName(zone),
+		RunID:             runID,
+	}
 }
