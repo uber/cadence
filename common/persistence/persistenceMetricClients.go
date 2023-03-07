@@ -295,17 +295,19 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, m
 
 func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIDTag metrics.Tag) error {
 	domainMetricsScope := p.metricClient.Scope(scope, domainTag)
-	shardMetricsScope := p.metricClient.Scope(scope, shardIDTag)
+	shardOperationsMetricsScope := p.metricClient.Scope(scope, shardIDTag)
+	shardOverallMetricsScope := p.metricClient.Scope(metrics.PersistenceShardRequestCountScope, shardIDTag)
 
 	domainMetricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
-	shardMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
+	shardOperationsMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
+	shardOverallMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
 
 	before := time.Now()
 	err := op()
 	duration := time.Since(before)
 
 	domainMetricsScope.RecordTimer(metrics.PersistenceLatencyPerDomain, duration)
-	shardMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
+	shardOperationsMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
 
 	if p.enableLatencyHistogramMetrics {
 		domainMetricsScope.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
