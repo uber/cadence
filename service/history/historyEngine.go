@@ -1167,7 +1167,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
 		scope.IncCounter(metrics.ConsistentQueryPerShard)
 		shardMetricScope.IncCounter(metrics.ConsistentQueryPerShard)
-		e.logger.Info("testing consistent query per shard metric")
+		e.logger.SampleInfo("testing consistent query pershard", e.config.SampleLoggingRate(), tag.WorkflowID(request.GetRequest().Execution.WorkflowID))
 	}
 
 	execution := *request.GetRequest().GetExecution()
