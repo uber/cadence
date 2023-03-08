@@ -7860,6 +7860,7 @@ type CrossClusterStartChildExecutionRequestAttributes struct {
 	InitiatedEventID         int64                                                `json:"initiatedEventID,omitempty"`
 	InitiatedEventAttributes *StartChildWorkflowExecutionInitiatedEventAttributes `json:"initiatedEventAttributes,omitempty"`
 	TargetRunID              *string                                              `json:"targetRunID,omitempty"`
+	PartitionConfig          map[string]string
 }
 
 // GetRequestID is an internal getter (TBD...)
@@ -7882,6 +7883,14 @@ func (v *CrossClusterStartChildExecutionRequestAttributes) GetInitiatedEventAttr
 func (v *CrossClusterStartChildExecutionRequestAttributes) GetTargetRunID() (o string) {
 	if v != nil && v.TargetRunID != nil {
 		return *v.TargetRunID
+	}
+	return
+}
+
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
 	}
 	return
 }
