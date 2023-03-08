@@ -23,9 +23,9 @@
 package types
 
 const (
-	ZoneDrainStatusInvalid ZoneStatus = iota
-	ZoneDrainStatusHealthy
-	ZoneDrainStatusDrained
+	ZoneStatusInvalid ZoneStatus = iota
+	ZoneStatusHealthy
+	ZoneStatusDrained
 )
 
 // A ZoneName is a subdivision of a 'region', such as a subset of racks in a datacentre or a division of

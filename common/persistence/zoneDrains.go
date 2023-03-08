@@ -29,6 +29,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination zoneDrains_mock.go -self_package github.com/uber/cadence/common/persistence
+
 type GlobalZoneDrains interface {
 	GetClusterDrains(ctx context.Context) (types.ZoneConfiguration, error)
 	SetClusterDrains(ctx context.Context, partition types.ZonePartition) error

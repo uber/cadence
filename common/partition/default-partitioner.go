@@ -25,14 +25,11 @@ package partition
 import (
 	"context"
 	"fmt"
-	"sync"
-
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
@@ -43,72 +40,77 @@ const (
 )
 
 // DefaultPartitionConfig is the open-source default Partition configuration
-// which ensures that workflows tarted in the same zone remain there
+// for each workflow which ensures that workflows started in the same zone remain there.
 type DefaultPartitionConfig struct {
 	WorkflowStartZone types.ZoneName
 	RunID             string
 }
 
 type DefaultPartitioner struct {
-	config     Config
-	log        log.Logger
-	drainState ZoneState
-	mu         sync.RWMutex
+	config    Config
+	log       log.Logger
+	zoneState ZoneState
 }
 
 type DefaultZoneStateHandler struct {
+	log              log.Logger
 	domainCache      cache.DomainCache
 	globalZoneDrains persistence.GlobalZoneDrains
-	allZonesList     []types.ZoneName
-	log              log.Logger
 	config           Config
-	mu               sync.RWMutex
 }
 
-type Config struct {
-	zonalPartitioningEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-}
-
-func NewDefaultZoneStateWatcher(logger log.Logger, allZones []types.ZoneName, config Config) ZoneState {
+func NewDefaultZoneStateWatcher(
+	logger log.Logger,
+	domainCache cache.DomainCache,
+	config Config,
+	globalZoneDrains persistence.GlobalZoneDrains,
+) ZoneState {
 	return &DefaultZoneStateHandler{
-		log:          logger,
-		allZonesList: allZones,
-		config:       config,
+		log:              logger,
+		config:           config,
+		domainCache:      domainCache,
+		globalZoneDrains: globalZoneDrains,
 	}
 }
 
-func NewDefaultTaskResolver(logger log.Logger) Partitioner {
+func NewDefaultTaskResolver(
+	logger log.Logger,
+	zoneState ZoneState,
+	cfg Config,
+) Partitioner {
 	return &DefaultPartitioner{
-		log: logger,
+		log:       logger,
+		config:    cfg,
+		zoneState: zoneState,
 	}
 }
 
 func (r *DefaultPartitioner) IsDrained(ctx context.Context, domain string, zone types.ZoneName) (bool, error) {
-	state, err := r.drainState.Get(ctx, domain, zone)
+	state, err := r.zoneState.Get(ctx, domain, zone)
 	if err != nil {
 		return false, fmt.Errorf("could not determine if drained: %w", err)
 	}
-	return state.Status == types.ZoneDrainStatusDrained, nil
+	return state.Status == types.ZoneStatusDrained, nil
 }
 
 func (r *DefaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID string, zone types.ZoneName) (bool, error) {
-	state, err := r.drainState.GetByDomainID(ctx, domainID, zone)
+	state, err := r.zoneState.GetByDomainID(ctx, domainID, zone)
 	if err != nil {
 		return false, fmt.Errorf("could not determine if drained: %w", err)
 	}
-	return state.Status == types.ZoneDrainStatusDrained, nil
+	return state.Status == types.ZoneStatusDrained, nil
 }
 
-func (r *DefaultPartitioner) GetTaskZone(ctx context.Context, DomainID string, key types.PartitionConfig) (*types.ZoneName, error) {
+func (r *DefaultPartitioner) GetTaskZoneByDomainID(ctx context.Context, DomainID string, key types.PartitionConfig) (*types.ZoneName, error) {
 	partitionData := mapPartitionConfigToDefaultPartitionConfig(key)
 
-	isDrained, err := r.IsDrained(ctx, DomainID, partitionData.WorkflowStartZone)
+	isDrained, err := r.IsDrainedByDomainID(ctx, DomainID, partitionData.WorkflowStartZone)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine if a zone is drained: %w", err)
 	}
 
 	if isDrained {
-		zones, err := r.drainState.ListAll(ctx, DomainID)
+		zones, err := r.zoneState.ListAll(ctx, DomainID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list all zones: %w", err)
 		}
@@ -122,7 +124,7 @@ func (r *DefaultPartitioner) GetTaskZone(ctx context.Context, DomainID string, k
 func (z *DefaultZoneStateHandler) ListAll(ctx context.Context, domainID string) ([]types.ZonePartition, error) {
 	var out []types.ZonePartition
 
-	for _, zone := range z.allZonesList {
+	for _, zone := range z.config.allZones {
 		zoneData, err := z.Get(ctx, domainID, zone)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get zone during listing: %w", err)
@@ -146,7 +148,7 @@ func (z *DefaultZoneStateHandler) Get(ctx context.Context, domain string, zone t
 	if !z.config.zonalPartitioningEnabled(domain) {
 		return &types.ZonePartition{
 			Name:   zone,
-			Status: types.ZoneDrainStatusHealthy,
+			Status: types.ZoneStatusHealthy,
 		}, nil
 	}
 
@@ -155,7 +157,7 @@ func (z *DefaultZoneStateHandler) Get(ctx context.Context, domain string, zone t
 		return nil, fmt.Errorf("could not resolve domain in zone handler: %w", err)
 	}
 	cfg, ok := domainData.GetInfo().ZoneConfig[zone]
-	if ok && cfg.Status == types.ZoneDrainStatusDrained {
+	if ok && cfg.Status == types.ZoneStatusDrained {
 		return &cfg, nil
 	}
 
@@ -170,7 +172,7 @@ func (z *DefaultZoneStateHandler) Get(ctx context.Context, domain string, zone t
 
 	return &types.ZonePartition{
 		Name:   zone,
-		Status: types.ZoneDrainStatusHealthy,
+		Status: types.ZoneStatusHealthy,
 	}, nil
 }
 
@@ -179,7 +181,7 @@ func (z *DefaultZoneStateHandler) Get(ctx context.Context, domain string, zone t
 func pickZoneAfterDrain(zones []types.ZonePartition, wfConfig DefaultPartitionConfig) types.ZoneName {
 	var availableZones []types.ZoneName
 	for _, zone := range zones {
-		if zone.Status == types.ZoneDrainStatusHealthy {
+		if zone.Status == types.ZoneStatusHealthy {
 			availableZones = append(availableZones, zone.Name)
 		}
 	}

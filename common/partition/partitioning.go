@@ -22,18 +22,22 @@
 
 package partition
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination partitioning_mock.go -self_package github.com/uber/cadence/common/partition
+
 import (
 	"context"
+
+	"github.com/uber/cadence/common/dynamicconfig"
 
 	"github.com/uber/cadence/common/types"
 )
 
 type Partitioner interface {
-	// GetTaskZone gets where the task workflow should be executing. Largely used by Matching
+	// GetTaskZoneByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which zone to place the tasks in
-	GetTaskZone(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.ZoneName, error)
-	// IsDrained answers the question - is this particular zone drained, used by startWorkflow calls
-	// and similar sync frontend calls
+	GetTaskZoneByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.ZoneName, error)
+	// IsDrained answers the question - "is this particular zone drained?". Used by startWorkflow calls
+	// and similar sync frontend calls to make routing decisions
 	IsDrained(ctx context.Context, Domain string, Zone types.ZoneName) (bool, error)
 	IsDrainedByDomainID(ctx context.Context, DomainID string, Zone types.ZoneName) (bool, error)
 }
@@ -41,7 +45,15 @@ type Partitioner interface {
 type ZoneState interface {
 	// ListAll lists the status of all zones with respect to the particular domainID
 	ListAll(ctx context.Context, domainID string) ([]types.ZonePartition, error)
-	// Get returns the state of a particular zone
+	// Get returns the state of a particular zone from the point of view of the domain
+	// responsible for merging both global configuration and zone specific configuration, with domain
+	// configuration overriding the global configuration
 	Get(ctx context.Context, domain string, zone types.ZoneName) (*types.ZonePartition, error)
 	GetByDomainID(ctx context.Context, domainID string, zone types.ZoneName) (*types.ZonePartition, error)
+}
+
+// Config is the base configuration for the partitioning library
+type Config struct {
+	zonalPartitioningEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	allZones                 []types.ZoneName
 }
