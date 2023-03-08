@@ -87,7 +87,7 @@ func (o *openCurrentExecution) Check(
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   o.Name(),
 			Info:            "domain is not active",
-			InfoDetails: fmt.Sprintf("domain has been deprecated. DomainID: %v, DomainName: %v",
+			InfoDetails: fmt.Sprintf("domain is not active anymore. DomainID: %v, DomainName: %v",
 				domainName, domainID),
 		}
 	}

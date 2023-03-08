@@ -86,7 +86,7 @@ func (h *historyExists) Check(
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   h.Name(),
 			Info:            "domain is not active",
-			InfoDetails: fmt.Sprintf("domain has been deprecated. DomainID: %v, DomainName: %v",
+			InfoDetails: fmt.Sprintf("domain is not active anymore. DomainID: %v, DomainName: %v",
 				domainName, domainID),
 		}
 	}
