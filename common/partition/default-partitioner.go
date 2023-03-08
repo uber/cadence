@@ -43,7 +43,7 @@ const (
 )
 
 // DefaultPartitionConfig is the open-source default Partition configuration
-// which ensures that workflows tarted in the same zone remain there
+// which ensures that workflows started in the same zone remain there
 type DefaultPartitionConfig struct {
 	WorkflowStartZone types.ZoneName
 	RunID             string
