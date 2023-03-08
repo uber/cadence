@@ -71,24 +71,13 @@ func (o *openCurrentExecution) Check(
 			InvariantName:   o.Name(),
 		}
 	}
-	domainID := concreteExecution.GetDomainID()
-	domain, errorDomainName := o.dc.GetDomainByID(domainID)
-	if errorDomainName != nil {
+	domainName, err := o.dc.GetDomainName(concreteExecution.DomainID)
+	if err != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   o.Name(),
-			Info:            "failed to fetch Domain",
-			InfoDetails:     errorDomainName.Error(),
-		}
-	}
-	domainName := domain.GetInfo().Name
-	if domain.GetInfo().Status != DomainStatus {
-		return CheckResult{
-			CheckResultType: CheckResultTypeCorrupted,
-			InvariantName:   o.Name(),
-			Info:            "domain is not active",
-			InfoDetails: fmt.Sprintf("domain is not active anymore. DomainID: %v, DomainName: %v",
-				domainName, domainID),
+			Info:            "failed to fetch Domain Name",
+			InfoDetails:     err.Error(),
 		}
 	}
 	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{

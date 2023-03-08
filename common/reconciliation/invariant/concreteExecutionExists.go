@@ -74,24 +74,14 @@ func (c *concreteExecutionExists) Check(
 			return *runIDCheckResult
 		}
 	}
-	domainID := currentExecution.GetDomainID()
-	domain, errorDomainName := c.cache.GetDomainByID(domainID)
-	if errorDomainName != nil {
+
+	domainName, err := c.cache.GetDomainName(currentExecution.DomainID)
+	if err != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   c.Name(),
 			Info:            "Failed to fetch Domain",
-			InfoDetails:     errorDomainName.Error(),
-		}
-	}
-	domainName := domain.GetInfo().Name
-	if domain.GetInfo().Status != DomainStatus {
-		return CheckResult{
-			CheckResultType: CheckResultTypeCorrupted,
-			InvariantName:   c.Name(),
-			Info:            "domain is not active",
-			InfoDetails: fmt.Sprintf("domain is not active anymore. DomainID: %v, DomainName: %v",
-				domainName, domainID),
+			InfoDetails:     err.Error(),
 		}
 	}
 	concreteExecResp, concreteExecErr := c.pr.IsWorkflowExecutionExists(ctx, &persistence.IsWorkflowExecutionExistsRequest{

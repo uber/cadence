@@ -24,7 +24,6 @@ package invariant
 
 import (
 	"context"
-	"fmt"
 
 	c "github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -35,7 +34,6 @@ import (
 
 const (
 	historyPageSize = 1
-	DomainStatus    = 0
 )
 
 type (
@@ -71,23 +69,13 @@ func (h *historyExists) Check(
 		}
 	}
 	domainID := concreteExecution.GetDomainID()
-	domain, errorDomainName := h.dc.GetDomainByID(domainID)
+	domainName, errorDomainName := h.dc.GetDomainName(domainID)
 	if errorDomainName != nil {
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   h.Name(),
 			Info:            "failed to check: expected DomainName",
 			InfoDetails:     errorDomainName.Error(),
-		}
-	}
-	domainName := domain.GetInfo().Name
-	if domain.GetInfo().Status != DomainStatus {
-		return CheckResult{
-			CheckResultType: CheckResultTypeCorrupted,
-			InvariantName:   h.Name(),
-			Info:            "domain is not active",
-			InfoDetails: fmt.Sprintf("domain is not active anymore. DomainID: %v, DomainName: %v",
-				domainName, domainID),
 		}
 	}
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{

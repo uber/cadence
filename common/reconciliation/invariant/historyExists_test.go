@@ -37,7 +37,6 @@ import (
 	"github.com/uber/cadence/common/mocks"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/service/history/constants"
 )
 
 type HistoryExistsSuite struct {
@@ -141,7 +140,6 @@ func (s *HistoryExistsSuite) TestCheck() {
 		execManager.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(tc.getExecResp, tc.getExecErr)
 		historyManager.On("ReadHistoryBranch", mock.Anything, mock.Anything).Return(tc.getHistoryResp, tc.getHistoryErr)
 		domainCache.EXPECT().GetDomainName(gomock.Any()).Return("test-domain-name", nil).AnyTimes()
-		domainCache.EXPECT().GetDomainByID(gomock.Any()).Return(constants.TestGlobalDomainEntry, nil).AnyTimes()
 		i := NewHistoryExists(persistence.NewPersistenceRetryer(execManager, historyManager, c2.CreatePersistenceRetryPolicy()), domainCache)
 		result := i.Check(context.Background(), getOpenConcreteExecution())
 		s.Equal(tc.expectedResult, result)
