@@ -1650,7 +1650,7 @@ func (s *TestBase) RangeCompleteTimerTask(ctx context.Context, inclusiveBeginTim
 
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution, taskList string,
-	decisionScheduleID int64) (int64, error) {
+	decisionScheduleID int64, partitionConfig map[string]string) (int64, error) {
 	leaseResponse, err := s.TaskMgr.LeaseTaskList(ctx, &persistence.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
@@ -1669,11 +1669,12 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 			TaskID:    taskID,
 			Execution: workflowExecution,
 			Data: &persistence.TaskInfo{
-				DomainID:   domainID,
-				WorkflowID: workflowExecution.WorkflowID,
-				RunID:      workflowExecution.RunID,
-				TaskID:     taskID,
-				ScheduleID: decisionScheduleID,
+				DomainID:        domainID,
+				WorkflowID:      workflowExecution.WorkflowID,
+				RunID:           workflowExecution.RunID,
+				TaskID:          taskID,
+				ScheduleID:      decisionScheduleID,
+				PartitionConfig: partitionConfig,
 			},
 		},
 	}
@@ -1692,7 +1693,7 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 
 // CreateActivityTasks is a utility method to create tasks
 func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
-	activities map[int64]string) ([]int64, error) {
+	activities map[int64]string, partitionConfig map[string]string) ([]int64, error) {
 
 	taskLists := make(map[string]*persistence.TaskListInfo)
 	for _, tl := range activities {
@@ -1724,6 +1725,7 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 					TaskID:                 taskID,
 					ScheduleID:             activityScheduleID,
 					ScheduleToStartTimeout: defaultScheduleToStartTimeout,
+					PartitionConfig:        partitionConfig,
 				},
 			},
 		}

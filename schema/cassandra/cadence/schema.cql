@@ -256,7 +256,8 @@ CREATE TYPE task (
   workflow_id      text,
   run_id           uuid,
   schedule_id      bigint,
-  created_time     timestamp
+  created_time     timestamp,
+  partition_config map<text, text>
 );
 
 CREATE TYPE task_list (

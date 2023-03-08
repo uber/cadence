@@ -886,6 +886,7 @@ type (
 		ScheduleToStartTimeout time.Duration
 		Expiry                 time.Time
 		CreatedTime            time.Time
+		PartitionConfig        map[string]string
 	}
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest
