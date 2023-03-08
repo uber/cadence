@@ -176,6 +176,8 @@ func parseWorkflowExecutionInfo(
 			info.SearchAttributes = v.(map[string][]byte)
 		case "memo":
 			info.Memo = v.(map[string][]byte)
+		case "partition_config":
+			info.PartitionConfig = v.(map[string]string)
 		}
 	}
 	info.CompletionEvent = persistence.NewDataBlob(completionEventData, completionEventEncoding)
