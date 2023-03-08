@@ -82,6 +82,7 @@ const (
 		`expiration_seconds: ?, ` +
 		`search_attributes: ?, ` +
 		`memo: ? ` +
+		`partition_config: ? ` +
 		`}`
 
 	templateTransferTaskType = `{` +
