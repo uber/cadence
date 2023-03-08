@@ -80,7 +80,7 @@ func (c *concreteExecutionExists) Check(
 		return CheckResult{
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   c.Name(),
-			Info:            "Failed to fetch Domain",
+			Info:            "Failed to fetch Domain Name",
 			InfoDetails:     err.Error(),
 		}
 	}
