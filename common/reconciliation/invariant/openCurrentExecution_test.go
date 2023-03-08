@@ -25,8 +25,9 @@ package invariant
 import (
 	"context"
 	"errors"
-	"github.com/uber/cadence/service/history/constants"
 	"testing"
+
+	"github.com/uber/cadence/service/history/constants"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"

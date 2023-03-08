@@ -82,11 +82,11 @@ func (o *openCurrentExecution) Check(
 		}
 	}
 	domainName := domain.GetInfo().Name
-	if domain.GetInfo().Status == deprecatedDomainStatus {
+	if domain.GetInfo().Status != DomainStatus {
 		return CheckResult{
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   o.Name(),
-			Info:            "domain is deprecated",
+			Info:            "domain is not active",
 			InfoDetails: fmt.Sprintf("domain has been deprecated. DomainID: %v, DomainName: %v",
 				domainName, domainID),
 		}
