@@ -29,5 +29,4 @@ const (
 	CheckDataCorruptionWorkflowID                   = "check-data-corruption-workflow-id"
 	CheckDataCorruptionWorkflowTimeoutInSeconds     = 24 * 60 * 60
 	CheckDataCorruptionWorkflowTaskTimeoutInSeconds = 60
-	deprecatedDomainStatus                          = 1
 )
