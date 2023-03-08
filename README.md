@@ -93,3 +93,4 @@ The easiest way to get the schema tool is via homebrew.
 
 MIT License, please see [LICENSE](https://github.com/uber/cadence/blob/master/LICENSE) for details.
 
+.
