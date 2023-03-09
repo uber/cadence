@@ -22,12 +22,12 @@ package queue
 
 import (
 	"errors"
-	"github.com/uber/cadence/common/persistence"
 	"sync"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 	htask "github.com/uber/cadence/service/history/task"
