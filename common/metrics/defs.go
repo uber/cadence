@@ -301,6 +301,8 @@ const (
 	PersistenceFetchDynamicConfigScope
 	// PersistenceUpdateDynamicConfigScope tracks UpdateDynamicConfig calls made by service to persistence layer
 	PersistenceUpdateDynamicConfigScope
+	// PersistenceShardRequestCountScope tracks number of persistence calls made to each shard
+	PersistenceShardRequestCountScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -741,6 +743,8 @@ const (
 const (
 	// AdminDescribeHistoryHostScope is the metric scope for admin.AdminDescribeHistoryHostScope
 	AdminDescribeHistoryHostScope = iota + NumCommonScopes
+	// AdminDescribeClusterScope is the metric scope for admin.AdminDescribeClusterScope
+	AdminDescribeClusterScope
 	// AdminAddSearchAttributeScope is the metric scope for admin.AdminAddSearchAttributeScope
 	AdminAddSearchAttributeScope
 	// AdminDescribeWorkflowExecutionScope is the metric scope for admin.AdminDescribeWorkflowExecutionScope
@@ -1324,6 +1328,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetDLQSizeScope:                                     {operation: "GetDLQSize"},
 		PersistenceFetchDynamicConfigScope:                             {operation: "FetchDynamicConfig"},
 		PersistenceUpdateDynamicConfigScope:                            {operation: "UpdateDynamicConfig"},
+		PersistenceShardRequestCountScope:                              {operation: "ShardIdPersistenceRequest"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1549,6 +1554,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminMergeDLQMessagesScope:                  {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:               {operation: "DescribeHistoryHost"},
 		AdminDescribeShardDistributionScope:         {operation: "AdminShardList"},
+		AdminDescribeClusterScope:                   {operation: "DescribeCluster"},
 		AdminAddSearchAttributeScope:                {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:         {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:    {operation: "GetWorkflowExecutionRawHistory"},
@@ -1839,8 +1845,10 @@ const (
 	PersistenceEmptyResponseCounter
 
 	PersistenceRequestsPerDomain
+	PersistenceRequestsPerShard
 	PersistenceFailuresPerDomain
 	PersistenceLatencyPerDomain
+	PersistenceLatencyPerShard
 	PersistenceErrShardExistsCounterPerDomain
 	PersistenceErrShardOwnershipLostCounterPerDomain
 	PersistenceErrConditionFailedCounterPerDomain
@@ -2237,6 +2245,7 @@ const (
 	FailoverMarkerCallbackCount
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
+	WorkflowTypeCount
 
 	NumHistoryMetrics
 )
@@ -2417,8 +2426,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		PersistenceSampledCounter:                                    {metricName: "persistence_sampled", metricType: Counter},
 		PersistenceEmptyResponseCounter:                              {metricName: "persistence_empty_response", metricType: Counter},
 		PersistenceRequestsPerDomain:                                 {metricName: "persistence_requests_per_domain", metricRollupName: "persistence_requests", metricType: Counter},
+		PersistenceRequestsPerShard:                                  {metricName: "persistence_requests_per_shard", metricType: Counter},
 		PersistenceFailuresPerDomain:                                 {metricName: "persistence_errors_per_domain", metricRollupName: "persistence_errors", metricType: Counter},
 		PersistenceLatencyPerDomain:                                  {metricName: "persistence_latency_per_domain", metricRollupName: "persistence_latency", metricType: Timer},
+		PersistenceLatencyPerShard:                                   {metricName: "persistence_latency_per_shard", metricType: Timer},
 		PersistenceErrShardExistsCounterPerDomain:                    {metricName: "persistence_errors_shard_exists_per_domain", metricRollupName: "persistence_errors_shard_exists", metricType: Counter},
 		PersistenceErrShardOwnershipLostCounterPerDomain:             {metricName: "persistence_errors_shard_ownership_lost_per_domain", metricRollupName: "persistence_errors_shard_ownership_lost", metricType: Counter},
 		PersistenceErrConditionFailedCounterPerDomain:                {metricName: "persistence_errors_condition_failed_per_domain", metricRollupName: "persistence_errors_condition_failed", metricType: Counter},
@@ -2830,6 +2841,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CrossClusterTasksCount:                                       {metricName: "cross_cluster_tasks_count", metricType: Timer},
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
+		WorkflowTypeCount:                                            {metricName: "workflow_type_count", metricType: Gauge},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},

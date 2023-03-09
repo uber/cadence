@@ -26,6 +26,10 @@ type AddSearchAttributeRequest struct {
 	SecurityToken   string                      `json:"securityToken,omitempty"`
 }
 
+func (v *AddSearchAttributeRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
+}
+
 // GetSearchAttribute is an internal getter (TBD...)
 func (v *AddSearchAttributeRequest) GetSearchAttribute() (o map[string]IndexedValueType) {
 	if v != nil && v.SearchAttribute != nil {
@@ -45,6 +49,10 @@ type DescribeClusterResponse struct {
 type AdminDescribeWorkflowExecutionRequest struct {
 	Domain    string             `json:"domain,omitempty"`
 	Execution *WorkflowExecution `json:"execution,omitempty"`
+}
+
+func (v *AdminDescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -89,6 +97,10 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 	EndEventVersion   *int64             `json:"endEventVersion,omitempty"`
 	MaximumPageSize   int32              `json:"maximumPageSize,omitempty"`
 	NextPageToken     []byte             `json:"nextPageToken,omitempty"`
+}
+
+func (v *GetWorkflowExecutionRawHistoryV2Request) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -206,6 +218,10 @@ type ResendReplicationTasksRequest struct {
 	EndVersion    *int64 `json:"endVersion,omitempty"`
 }
 
+func (v *ResendReplicationTasksRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
+}
+
 // GetWorkflowID is an internal getter (TBD...)
 func (v *ResendReplicationTasksRequest) GetWorkflowID() (o string) {
 	if v != nil {
@@ -242,6 +258,10 @@ type GetDynamicConfigRequest struct {
 	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
 }
 
+func (v *GetDynamicConfigRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
+}
+
 type GetDynamicConfigResponse struct {
 	Value *DataBlob `json:"value,omitempty"`
 }
@@ -251,9 +271,17 @@ type UpdateDynamicConfigRequest struct {
 	ConfigValues []*DynamicConfigValue `json:"configValues,omitempty"`
 }
 
+func (v *UpdateDynamicConfigRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
+}
+
 type RestoreDynamicConfigRequest struct {
 	ConfigName string                 `json:"configName,omitempty"`
 	Filters    []*DynamicConfigFilter `json:"filters,omitempty"`
+}
+
+func (v *RestoreDynamicConfigRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
 }
 
 // AdminDeleteWorkflowRequest is an internal type (TBD...)
@@ -261,6 +289,10 @@ type AdminDeleteWorkflowRequest struct {
 	Domain     string             `json:"domain,omitempty"`
 	Execution  *WorkflowExecution `json:"execution,omitempty"`
 	SkipErrors bool               `json:"skipErrors,omitempty"`
+}
+
+func (v *AdminDeleteWorkflowRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
 }
 
 func (v *AdminDeleteWorkflowRequest) GetDomain() (o string) {
@@ -296,6 +328,10 @@ type AdminMaintainWorkflowResponse = AdminDeleteWorkflowResponse
 
 type ListDynamicConfigRequest struct {
 	ConfigName string `json:"configName,omitempty"`
+}
+
+func (v *ListDynamicConfigRequest) SerializeForLogging() (string, error) {
+	return SerializeRequest(v)
 }
 
 type ListDynamicConfigResponse struct {

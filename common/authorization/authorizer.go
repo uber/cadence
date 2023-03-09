@@ -58,6 +58,7 @@ type (
 		WorkflowType *types.WorkflowType
 		TaskList     *types.TaskList
 		Permission   Permission
+		RequestBody  FilteredRequestBody // request object except for data inputs (PII)
 	}
 
 	// Result is result from authority.
@@ -96,4 +97,9 @@ func GetAuthProviderClient(privateKey string) (clientworker.AuthorizationProvide
 		return nil, fmt.Errorf("invalid private key path %s", privateKey)
 	}
 	return clientworker.NewAdminJwtAuthorizationProvider(pk), nil
+}
+
+// FilteredRequestBody request object except for data inputs (PII)
+type FilteredRequestBody interface {
+	SerializeForLogging() (string, error)
 }

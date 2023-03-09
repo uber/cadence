@@ -1,5 +1,7 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
-//
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,16 +9,16 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package matching
 
@@ -173,6 +175,39 @@ func (s *matchingEngineSuite) TestPollForDecisionTasksEmptyResultWithShortContex
 	callContext, cancel := context.WithTimeout(context.Background(), shortContextTimeout)
 	defer cancel()
 	s.PollForTasksEmptyResultTest(callContext, persistence.TaskListTypeDecision)
+}
+
+func (s *matchingEngineSuite) TestOnlyUnloadMatchingInstance() {
+	taskListID := newTestTaskListID(
+		uuid.New(),
+		"makeToast",
+		persistence.TaskListTypeActivity)
+	tlKind := types.TaskListKindNormal
+	tlm, err := s.matchingEngine.getTaskListManager(taskListID, &tlKind)
+	s.Require().NoError(err)
+
+	tlm2, err := newTaskListManager(
+		s.matchingEngine,
+		taskListID, // same taskListID as above
+		&tlKind,
+		s.matchingEngine.config)
+	s.Require().NoError(err)
+
+	// try to unload a different tlm instance with the same taskListID
+	s.matchingEngine.unloadTaskList(tlm2)
+
+	got, err := s.matchingEngine.getTaskListManager(taskListID, &tlKind)
+	s.Require().NoError(err)
+	s.Require().Same(tlm, got,
+		"Unload call with non-matching taskListManager should not cause unload")
+
+	// this time unload the right tlm
+	s.matchingEngine.unloadTaskList(tlm)
+
+	got, err = s.matchingEngine.getTaskListManager(taskListID, &tlKind)
+	s.Require().NoError(err)
+	s.Require().NotSame(tlm, got,
+		"Unload call with matching incarnation should have caused unload")
 }
 
 func (s *matchingEngineSuite) TestPollForDecisionTasks() {
@@ -1443,11 +1478,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 	// stop all goroutines that read / write tasks in the background
 	// remainder of this test works with the in-memory buffer
-	if !atomic.CompareAndSwapInt32(&tlMgr.stopped, 0, 1) {
-		return
-	}
-	close(tlMgr.shutdownCh)
-	tlMgr.taskWriter.Stop()
+	tlMgr.Stop()
 
 	// SetReadLevel should NEVER be called without updating ackManager.outstandingTasks
 	// This is only for unit test purpose
@@ -1484,6 +1515,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 		s.NoError(err)
 		s.NotNil(result)
+		s.NotEqual(emptyPollForActivityTaskResponse, result)
 		if len(result.TaskToken) == 0 {
 			s.logger.Debug("empty poll returned")
 			continue
@@ -1494,8 +1526,6 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	s.Nil(err)
 	s.True(0 < len(tasks) && len(tasks) <= rangeSize)
 	s.True(isReadBatchDone)
-
-	tlMgr.engine.removeTaskListManager(tlMgr.taskListID)
 }
 
 func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
@@ -1548,7 +1578,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	s.matchingEngine.config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(2)
 	// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 	// on enqueuing a task to task buffer
-	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(time.Microsecond)
+	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	testCases := []struct {
 		batchSize          int

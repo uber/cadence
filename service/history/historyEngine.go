@@ -692,6 +692,7 @@ func (e *historyEngineImpl) startWorkflowHelper(
 			},
 			WorkflowTypeName: request.WorkflowType.Name,
 			UpdateTimestamp:  e.shard.GetTimeSource().Now().UnixNano(),
+			ShardID:          int64(e.shard.GetShardID()),
 		}
 
 		if err := e.visibilityMgr.RecordWorkflowExecutionUninitialized(ctx, uninitializedRequest); err != nil {
@@ -3288,9 +3289,7 @@ func getStartRequest(
 		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
-	startRequest := common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
-
-	return startRequest, nil
+	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
