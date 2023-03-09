@@ -755,8 +755,10 @@ func (v *attrValidator) validateStartChildExecutionAttributes(
 		return err
 	}
 
-	if err := backoff.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
-		return err
+	if attributes.GetCronSchedule() != "" {
+		if _, err := backoff.ValidateSchedule(attributes.GetCronSchedule()); err != nil {
+			return err
+		}
 	}
 
 	// Inherit tasklist from parent workflow execution if not provided on decision

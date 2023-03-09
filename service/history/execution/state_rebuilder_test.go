@@ -334,3 +334,45 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	), rebuildMutableState.GetVersionHistories())
 	s.Equal(rebuildMutableState.GetExecutionInfo().StartTimestamp, now)
 }
+
+func (s *stateRebuilderSuite) TestInvalidStateHandling() {
+	requestID := uuid.New()
+	version := int64(12)
+	lastEventID := int64(2)
+	branchToken := []byte("other random branch token")
+	targetBranchToken := []byte("some other random branch token")
+	now := time.Now()
+
+	targetDomainID := uuid.New()
+	targetDomainName := "other random domain name"
+	targetWorkflowID := "other random workflow ID"
+	targetRunID := uuid.New()
+
+	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(targetDomainName, nil).AnyTimes()
+	s.mockHistoryV2Mgr.On("ReadHistoryBranchByBatch", mock.Anything, mock.Anything).Return(nil, &types.EntityNotExistsError{}).Once()
+
+	s.mockDomainCache.EXPECT().GetDomainByID(targetDomainID).Return(cache.NewGlobalDomainCacheEntryForTest(
+		&persistence.DomainInfo{ID: targetDomainID, Name: targetDomainName},
+		&persistence.DomainConfig{},
+		&persistence.DomainReplicationConfig{
+			ActiveClusterName: cluster.TestCurrentClusterName,
+			Clusters: []*persistence.ClusterReplicationConfig{
+				{ClusterName: cluster.TestCurrentClusterName},
+				{ClusterName: cluster.TestAlternativeClusterName},
+			},
+		},
+		1234,
+	), nil).AnyTimes()
+
+	s.nDCStateRebuilder.Rebuild(
+		context.Background(),
+		now,
+		definition.NewWorkflowIdentifier(s.domainID, s.workflowID, s.runID),
+		branchToken,
+		lastEventID,
+		version,
+		definition.NewWorkflowIdentifier(targetDomainID, targetWorkflowID, targetRunID),
+		targetBranchToken,
+		requestID,
+	)
+}

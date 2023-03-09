@@ -39,7 +39,6 @@ type (
 		taskListKind int
 		taskType     int
 		rangeID      int64
-		ackLevel     int64
 		store        persistence.TaskManager
 		logger       log.Logger
 	}
@@ -94,9 +93,8 @@ func (db *taskListDB) RenewLease() (taskListState, error) {
 	if err != nil {
 		return taskListState{}, err
 	}
-	db.ackLevel = resp.TaskListInfo.AckLevel
 	db.rangeID = resp.TaskListInfo.RangeID
-	return taskListState{rangeID: db.rangeID, ackLevel: db.ackLevel}, nil
+	return taskListState{rangeID: db.rangeID, ackLevel: resp.TaskListInfo.AckLevel}, nil
 }
 
 // UpdateState updates the taskList state with the given value
@@ -114,9 +112,6 @@ func (db *taskListDB) UpdateState(ackLevel int64) error {
 		},
 		DomainName: db.domainName,
 	})
-	if err == nil {
-		db.ackLevel = ackLevel
-	}
 	return err
 }
 
@@ -129,9 +124,7 @@ func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persist
 			DomainID: db.domainID,
 			Name:     db.taskListName,
 			TaskType: db.taskType,
-			AckLevel: db.ackLevel,
 			RangeID:  db.rangeID,
-			Kind:     db.taskListKind,
 		},
 		Tasks:      tasks,
 		DomainName: db.domainName,

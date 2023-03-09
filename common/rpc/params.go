@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 
 	"github.com/uber/cadence/common/config"
@@ -84,6 +85,15 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		return Params{}, fmt.Errorf("public client outbound: %v", err)
 	}
 
+	forwardingRules, err := getForwardingRules(dc)
+	if err != nil {
+		return Params{}, err
+	}
+	if len(forwardingRules) == 0 {
+		// not set, load from static config
+		forwardingRules = config.HeaderForwardingRules
+	}
+
 	return Params{
 		ServiceName:     serviceName,
 		TChannelAddress: net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.Port))),
@@ -100,9 +110,41 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 			Unary: &InboundMetricsMiddleware{},
 		},
 		OutboundMiddleware: yarpc.OutboundMiddleware{
-			Unary: &HeaderForwardingMiddleware{},
+			Unary: &HeaderForwardingMiddleware{
+				Rules: forwardingRules,
+			},
 		},
 	}, nil
+}
+
+func getForwardingRules(dc *dynamicconfig.Collection) ([]config.HeaderRule, error) {
+	var forwardingRules []config.HeaderRule
+	dynForwarding := dc.GetListProperty(dynamicconfig.HeaderForwardingRules)()
+	if len(dynForwarding) > 0 {
+		for _, f := range dynForwarding {
+			switch v := f.(type) {
+			case config.HeaderRule: // default or correctly typed value
+				forwardingRules = append(forwardingRules, v)
+			case map[string]interface{}: // loaded from generic deserialization, compatible with encoding/json
+				add, aok := v["Add"].(bool)
+				m, mok := v["Match"].(string)
+				if !aok || !mok {
+					return nil, fmt.Errorf("invalid generic types for header forwarding rule: %#v", v)
+				}
+				r, err := regexp.Compile(m)
+				if err != nil {
+					return nil, fmt.Errorf("invalid match regex in header forwarding rule: %q, err: %w", m, err)
+				}
+				forwardingRules = append(forwardingRules, config.HeaderRule{
+					Add:   add,
+					Match: r,
+				})
+			default: // unknown
+				return nil, fmt.Errorf("unrecognized dynamic header forwarding type: %T", v)
+			}
+		}
+	}
+	return forwardingRules, nil
 }
 
 func getListenIP(config config.RPC) (net.IP, error) {

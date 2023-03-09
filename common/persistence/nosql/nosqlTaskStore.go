@@ -247,7 +247,13 @@ func (t *nosqlTaskStore) CreateTasks(
 		})
 	}
 
-	err := t.db.InsertTasks(ctx, tasks, toTaskListRow(request.TaskListInfo))
+	tasklistCondition := &nosqlplugin.TaskListRow{
+		DomainID:     request.TaskListInfo.DomainID,
+		TaskListName: request.TaskListInfo.Name,
+		TaskListType: request.TaskListInfo.TaskType,
+		RangeID:      request.TaskListInfo.RangeID,
+	}
+	err := t.db.InsertTasks(ctx, tasks, tasklistCondition)
 
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
@@ -261,18 +267,6 @@ func (t *nosqlTaskStore) CreateTasks(
 	}
 
 	return &p.CreateTasksResponse{}, nil
-}
-
-func toTaskListRow(info *p.TaskListInfo) *nosqlplugin.TaskListRow {
-	return &nosqlplugin.TaskListRow{
-		DomainID:        info.DomainID,
-		TaskListName:    info.Name,
-		TaskListType:    info.TaskType,
-		TaskListKind:    info.Kind,
-		RangeID:         info.RangeID,
-		AckLevel:        info.AckLevel,
-		LastUpdatedTime: info.LastUpdated,
-	}
 }
 
 func (t *nosqlTaskStore) GetTasks(

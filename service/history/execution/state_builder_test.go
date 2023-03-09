@@ -163,6 +163,8 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_No
 
 func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_WithCronSchedule() {
 	cronSchedule := "* * * * *"
+	parsedSchedule, err := backoff.ValidateSchedule(cronSchedule)
+	require.NoError(s.T(), err)
 	version := int64(1)
 	requestID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
@@ -177,12 +179,14 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 
 	now := time.Now()
 	evenType := types.EventTypeWorkflowExecutionStarted
+	next, err := backoff.GetBackoffForNextSchedule(parsedSchedule, now, now, 0)
+	require.NoError(s.T(), err)
 	startWorkflowAttribute := &types.WorkflowExecutionStartedEventAttributes{
 		ParentWorkflowDomainID: common.StringPtr(constants.TestParentDomainID),
 		ParentWorkflowDomain:   common.StringPtr(constants.TestParentDomainName),
 		Initiator:              types.ContinueAsNewInitiatorCronSchedule.Ptr(),
 		FirstDecisionTaskBackoffSeconds: common.Int32Ptr(
-			int32(backoff.GetBackoffForNextSchedule(cronSchedule, now, now, 0).Seconds()),
+			int32(next.Seconds()),
 		),
 	}
 
@@ -201,7 +205,7 @@ func (s *stateBuilderSuite) TestApplyEvents_EventTypeWorkflowExecutionStarted_Wi
 	s.mockMutableState.EXPECT().ClearStickyness().Times(1)
 	s.mockMutableState.EXPECT().SetHistoryTree(constants.TestRunID).Return(nil).Times(1)
 
-	_, err := s.stateBuilder.ApplyEvents(constants.TestDomainID, requestID, workflowExecution, s.toHistory(event), nil)
+	_, err = s.stateBuilder.ApplyEvents(constants.TestDomainID, requestID, workflowExecution, s.toHistory(event), nil)
 	s.Nil(err)
 }
 

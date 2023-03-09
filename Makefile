@@ -453,12 +453,13 @@ bins: $(BINS) ## Make all binaries
 
 tools: $(TOOLS)
 
-go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap
-	$Q echo "running go generate ./..., this takes almost 5 minutes..."
+go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## run go generate to regen mocks, enums, etc
+	$Q echo "running go generate ./..., this takes a minute or more..."
 	$Q # add our bins to PATH so `go generate` can find them
-	$Q $(BIN_PATH) go generate ./...
+	$Q $(BIN_PATH) go generate $(if $(verbose),-v) ./...
 	$Q echo "updating copyright headers"
 	$Q $(MAKE) --no-print-directory copyright
+	$Q $(MAKE) --no-print-directory fmt
 
 release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
