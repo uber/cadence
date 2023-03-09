@@ -121,7 +121,7 @@ type ActivityTaskDispatchInfo struct {
 	HeartbeatDetails                []byte        `json:"heartbeatDetails,omitempty"`
 	WorkflowType                    *WorkflowType `json:"workflowType,omitempty"`
 	WorkflowDomain                  string        `json:"workflowDomain,omitempty"`
-	PartitionConfig                 *PartitionConfig
+	PartitionConfig                 PartitionConfig
 }
 
 // AddDecisionTaskRequest is an internal type (TBD...)

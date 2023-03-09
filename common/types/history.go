@@ -855,7 +855,7 @@ func (v *ShardOwnershipLostError) GetOwner() (o string) {
 type HistorySignalWithStartWorkflowExecutionRequest struct {
 	DomainUUID             string                                   `json:"domainUUID,omitempty"`
 	SignalWithStartRequest *SignalWithStartWorkflowExecutionRequest `json:"signalWithStartRequest,omitempty"`
-	PartitionConfig        map[string]string
+	PartitionConfig        PartitionConfig
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -910,7 +910,7 @@ type HistoryStartWorkflowExecutionRequest struct {
 	ContinuedFailureDetails         []byte                         `json:"continuedFailureDetails,omitempty"`
 	LastCompletionResult            []byte                         `json:"lastCompletionResult,omitempty"`
 	FirstDecisionTaskBackoffSeconds *int32                         `json:"firstDecisionTaskBackoffSeconds,omitempty"`
-	PartitionConfig                 map[string]string
+	PartitionConfig                 PartitionConfig
 }
 
 // GetDomainUUID is an internal getter (TBD...)
