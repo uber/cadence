@@ -469,9 +469,19 @@ func ActorID(actorID string) Tag {
 	return newStringTag("actor-id", actorID)
 }
 
+// ActorEmail returns tag for the actor's email address
+func ActorEmail(actorEmail string) Tag {
+	return newStringTag("actor-email", actorEmail)
+}
+
 // HandlerCall returns tag for the API name of a request
 func HandlerCall(handlerCall string) Tag {
 	return newStringTag("handler-call", handlerCall)
+}
+
+// RequestBody returns the tag for the API request body
+func RequestBody(requestBody string) Tag {
+	return newStringTag("request-body", requestBody)
 }
 
 // history engine shard
@@ -591,8 +601,8 @@ func Attempt(attempt int32) Tag {
 }
 
 // AttemptCount returns tag for AttemptCount
-func AttemptCount(attemptCount int64) Tag {
-	return newInt64("attempt-count", attemptCount)
+func AttemptCount(attemptCount int) Tag {
+	return newInt("attempt-count", attemptCount)
 }
 
 // AttemptStart returns tag for AttemptStart

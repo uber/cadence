@@ -29,6 +29,7 @@ type (
 	DynamicConfiguration struct {
 		EnableSQLAsyncTransaction                dynamicconfig.BoolPropertyFn
 		EnableCassandraAllConsistencyLevelDelete dynamicconfig.BoolPropertyFn
+		PersistenceSampleLoggingRate             dynamicconfig.IntPropertyFn
 	}
 )
 
@@ -37,5 +38,6 @@ func NewDynamicConfiguration(dc *dynamicconfig.Collection) *DynamicConfiguration
 	return &DynamicConfiguration{
 		EnableSQLAsyncTransaction:                dc.GetBoolProperty(dynamicconfig.EnableSQLAsyncTransaction),
 		EnableCassandraAllConsistencyLevelDelete: dc.GetBoolProperty(dynamicconfig.EnableCassandraAllConsistencyLevelDelete),
+		PersistenceSampleLoggingRate:             dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
 	}
 }

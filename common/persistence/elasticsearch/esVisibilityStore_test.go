@@ -137,7 +137,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionStarted() {
 		s.Equal(request.IsCron, fields[es.IsCron].GetBoolData())
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		s.Equal(indexer.VisibilityOperationRecordStarted, *input.VisibilityOperation)
-		s.Equal(request.ShardID, fields[es.ShardID].GetIntData())
+		s.Equal((int64)(request.ShardID), fields[es.ShardID].GetIntData())
 		return true
 	})).Return(nil).Once()
 
@@ -206,7 +206,7 @@ func (s *ESVisibilitySuite) TestRecordWorkflowExecutionClosed() {
 		s.Equal((int64)(request.NumClusters), fields[es.NumClusters].GetIntData())
 		s.Equal(indexer.VisibilityOperationRecordClosed, *input.VisibilityOperation)
 		s.Equal(request.UpdateTimestamp.UnixNano(), fields[es.UpdateTime].GetIntData())
-		s.Equal(request.ShardID, fields[es.ShardID].GetIntData())
+		s.Equal((int64)(request.ShardID), fields[es.ShardID].GetIntData())
 		return true
 	})).Return(nil).Once()
 
