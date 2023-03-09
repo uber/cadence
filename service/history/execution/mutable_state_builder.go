@@ -1090,6 +1090,10 @@ func (e *mutableStateBuilder) GetCronBackoffDuration(
 	if len(info.CronSchedule) == 0 {
 		return backoff.NoBackoff, nil
 	}
+	sched, err := backoff.ValidateSchedule(info.CronSchedule)
+	if err != nil {
+		return backoff.NoBackoff, err
+	}
 	// TODO: decide if we can add execution time in execution info.
 	executionTime := e.executionInfo.StartTimestamp
 	// This only call when doing ContinueAsNew. At this point, the workflow should have a start event
@@ -1102,7 +1106,7 @@ func (e *mutableStateBuilder) GetCronBackoffDuration(
 		time.Duration(workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetFirstDecisionTaskBackoffSeconds()) * time.Second
 	executionTime = executionTime.Add(firstDecisionTaskBackoff)
 	jitterStartSeconds := workflowStartEvent.GetWorkflowExecutionStartedEventAttributes().GetJitterStartSeconds()
-	return backoff.GetBackoffForNextSchedule(info.CronSchedule, executionTime, e.timeSource.Now(), jitterStartSeconds), nil
+	return backoff.GetBackoffForNextSchedule(sched, executionTime, e.timeSource.Now(), jitterStartSeconds)
 }
 
 // GetSignalInfo get details about a signal request that is currently in progress.

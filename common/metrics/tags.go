@@ -52,6 +52,7 @@ const (
 	caller                 = "caller"
 	signalName             = "signalName"
 	workflowVersion        = "workflow_version"
+	shardID                = "shard_id"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -78,6 +79,10 @@ func metricWithUnknown(key, value string) Tag {
 		value = unknownValue
 	}
 	return simpleMetric{key: key, value: value}
+}
+
+func ShardIDTag(shardIDStr string) Tag {
+	return metricWithUnknown(shardID, shardIDStr)
 }
 
 // DomainTag returns a new domain tag. For timers, this also ensures that we

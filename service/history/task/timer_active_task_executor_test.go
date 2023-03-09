@@ -281,13 +281,13 @@ func (s *timerActiveTaskExecutorSuite) TestProcessUserTimerTimeout_Resurrected()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	nextPageToken := []byte{1, 2, 3}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
-		return req.MinEventID == startEvent1.ID && req.NextPageToken == nil
+		return req.MinEventID == 1 && req.NextPageToken == nil
 	})).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{startEvent1, startEvent2},
 		NextPageToken: nextPageToken,
 	}, nil).Once()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
-		return req.MinEventID == startEvent1.ID && bytes.Equal(req.NextPageToken, nextPageToken)
+		return req.MinEventID == 1 && bytes.Equal(req.NextPageToken, nextPageToken)
 	})).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{firedEvent1},
 		NextPageToken: nil,
@@ -742,13 +742,13 @@ func (s *timerActiveTaskExecutorSuite) TestProcessActivityTimeout_Resurrected() 
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
 	nextPageToken := []byte{1, 2, 3}
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
-		return req.MinEventID == scheduledEvent1.ID && req.NextPageToken == nil
+		return req.MinEventID == 1 && req.NextPageToken == nil
 	})).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{scheduledEvent1, scheduledEvent2, startedEvent1, completeEvent1},
 		NextPageToken: nextPageToken,
 	}, nil).Once()
 	s.mockHistoryV2Mgr.On("ReadHistoryBranch", mock.Anything, mock.MatchedBy(func(req *persistence.ReadHistoryBranchRequest) bool {
-		return req.MinEventID == scheduledEvent1.ID && bytes.Equal(req.NextPageToken, nextPageToken)
+		return req.MinEventID == 1 && bytes.Equal(req.NextPageToken, nextPageToken)
 	})).Return(&persistence.ReadHistoryBranchResponse{
 		HistoryEvents: []*types.HistoryEvent{scheduledEvent1, scheduledEvent2, startedEvent1, completeEvent1},
 		NextPageToken: nil,

@@ -39,7 +39,6 @@ import (
 )
 
 const (
-	maxEventID      = 9999
 	tableRenderSize = 10
 )
 
@@ -48,6 +47,8 @@ func AdminShowWorkflow(c *cli.Context) {
 	tid := c.String(FlagTreeID)
 	bid := c.String(FlagBranchID)
 	sid := c.Int(FlagShardID)
+	minEventID := c.Int64(FlagMinEventID)
+	maxEventID := c.Int64(FlagMaxEventID)
 	outputFileName := c.String(FlagOutputFilename)
 	domainName := c.String(FlagDomain)
 	ctx, cancel := newContext(c)
@@ -66,9 +67,9 @@ func AdminShowWorkflow(c *cli.Context) {
 		}
 		resp, err := histV2.ReadRawHistoryBranch(ctx, &persistence.ReadHistoryBranchRequest{
 			BranchToken: branchToken,
-			MinEventID:  1,
+			MinEventID:  minEventID,
 			MaxEventID:  maxEventID,
-			PageSize:    maxEventID,
+			PageSize:    int(maxEventID - minEventID + 1),
 			ShardID:     &sid,
 			DomainName:  domainName,
 		})

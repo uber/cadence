@@ -38,21 +38,17 @@ func GetResurrectedTimers(
 	shard shard.Context,
 	mutableState MutableState,
 ) (map[string]struct{}, error) {
-	// 1. find min timer startedID for all pending timers
+	// 1. check if there is any pending timer
 	pendingTimerInfos := mutableState.GetPendingTimerInfos()
-	minTimerStartedID := common.EndEventID
-	for _, timerInfo := range pendingTimerInfos {
-		minTimerStartedID = common.MinInt64(minTimerStartedID, timerInfo.StartedID)
+	if len(pendingTimerInfos) == 0 {
+		return map[string]struct{}{}, nil
 	}
 
-	// 2. scan history from minTimerStartedID and see if any
+	// 2. scan history from the beginning and see if any
 	// TimerFiredEvent or TimerCancelledEvent matches pending timer
-	// NOTE: since we can't read from middle of an events batch,
-	// history returned by persistence layer won't actually start
-	// from minTimerStartedID, but start from the batch whose nodeID is
-	// larger than minTimerStartedID.
-	// This is ok since the event types we are interested in must in batches
-	// later than the timer started events.
+	// NOTE: We can't read from the middle of events branch, because
+	// we don't know the last txn id of previous event from the middle.
+	// Reading from the middle could get invalid nodes with invalid txn ids.
 	resurrectedTimer := make(map[string]struct{})
 	branchToken, err := mutableState.GetCurrentBranchToken()
 	if err != nil {
@@ -62,7 +58,7 @@ func GetResurrectedTimers(
 	iter := collection.NewPagingIterator(getHistoryPaginationFn(
 		ctx,
 		shard,
-		minTimerStartedID,
+		1,
 		mutableState.GetNextEventID(),
 		branchToken,
 		domainID,
@@ -94,21 +90,17 @@ func GetResurrectedActivities(
 	shard shard.Context,
 	mutableState MutableState,
 ) (map[int64]struct{}, error) {
-	// 1. find min activity scheduledID for all pending activities
+	// 1. check if there is any pending activity
 	pendingActivityInfos := mutableState.GetPendingActivityInfos()
-	minActivityScheduledID := common.EndEventID
-	for _, activityInfo := range pendingActivityInfos {
-		minActivityScheduledID = common.MinInt64(minActivityScheduledID, activityInfo.ScheduleID)
+	if len(pendingActivityInfos) == 0 {
+		return map[int64]struct{}{}, nil
 	}
 
-	// 2. scan history from minActivityScheduledID and see if any
+	// 2. scan history from the beginning and see if any
 	// activity termination events matches pending activity
-	// NOTE: since we can't read from middle of an events batch,
-	// history returned by persistence layer won't actually start
-	// from minActivityScheduledID, but start from the batch whose nodeID is
-	// larger than minActivityScheduledID.
-	// This is ok since the event types we are interested in must in batches
-	// later than the activity scheduled events.
+	// NOTE: We can't read from the middle of events branch, because
+	// we don't know the last txn id of previous event from the middle.
+	// Reading from the middle could get invalid nodes with invalid txn ids.
 	resurrectedActivity := make(map[int64]struct{})
 	branchToken, err := mutableState.GetCurrentBranchToken()
 	if err != nil {
@@ -118,7 +110,7 @@ func GetResurrectedActivities(
 	iter := collection.NewPagingIterator(getHistoryPaginationFn(
 		ctx,
 		shard,
-		minActivityScheduledID,
+		1,
 		mutableState.GetNextEventID(),
 		branchToken,
 		domainID,

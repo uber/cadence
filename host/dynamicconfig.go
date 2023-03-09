@@ -148,6 +148,17 @@ func (d *dynamicClient) GetDurationValue(name dynamicconfig.DurationKey, filters
 	d.RUnlock()
 	return d.client.GetDurationValue(name, filters)
 }
+func (d *dynamicClient) GetListValue(name dynamicconfig.ListKey, filters map[dynamicconfig.Filter]interface{}) ([]interface{}, error) {
+	d.RLock()
+	if val, ok := d.overrides[name]; ok {
+		if listVal, ok := val.([]interface{}); ok {
+			d.RUnlock()
+			return listVal, nil
+		}
+	}
+	d.RUnlock()
+	return d.client.GetListValue(name, filters)
+}
 
 func (d *dynamicClient) UpdateValue(name dynamicconfig.Key, value interface{}) error {
 	if name == dynamicconfig.AdvancedVisibilityWritingMode { // override for es integration tests
@@ -172,6 +183,8 @@ func (d *dynamicClient) ListValue(name dynamicconfig.Key) ([]*types.DynamicConfi
 func (d *dynamicClient) RestoreValue(name dynamicconfig.Key, filters map[dynamicconfig.Filter]interface{}) error {
 	return d.client.RestoreValue(name, filters)
 }
+
+var _ dynamicconfig.Client = (*dynamicClient)(nil)
 
 // newIntegrationConfigClient - returns a dynamic config client for integration testing
 func newIntegrationConfigClient(client dynamicconfig.Client) *dynamicClient {

@@ -43,19 +43,11 @@ const (
 
 	// workflow constants
 	esAnalyzerWFID                     = "cadence-sys-tl-esanalyzer"
-	taskListName                       = "cadence-sys-es-analyzer"
 	esanalyzerWFTypeName               = "cadence-sys-es-analyzer-workflow"
 	emitWorkflowVersionMetricsActivity = "cadence-sys-es-analyzer-emit-workflow-version-metrics"
 )
 
 type (
-	Workflow struct {
-		analyzer *Analyzer
-	}
-	EsAggregateCount struct {
-		AggregateKey   string `json:"key"`
-		AggregateCount int64  `json:"doc_count"`
-	}
 	DomainWorkflowVersionCount struct {
 		WorkflowTypes []WorkflowTypeCount `json:"buckets"`
 	}
