@@ -415,6 +415,8 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
+	p.logger.SampleInfo("Persistence CreateWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
 	err := p.callWithDomainAndShardScope(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
 		metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 	if err != nil {
