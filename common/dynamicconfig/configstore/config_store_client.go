@@ -238,7 +238,7 @@ func (csc *configStoreClient) GetDurationValue(name dc.DurationKey, filters map[
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
 	dcValues, ok := value.([]*types.DynamicConfigValue)
-	if !ok {
+	if !ok && value != nil {
 		return errors.New("invalid value")
 	}
 	return csc.updateValue(name, dcValues, csc.config.UpdateRetryAttempts)
