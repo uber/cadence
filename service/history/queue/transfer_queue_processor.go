@@ -458,6 +458,10 @@ func newTransferQueueActiveProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
+		if notRegistered, err := isDomainNotRegistered(shard, task.DomainID); notRegistered && err == nil {
+			logger.Info("Domain is not in registered status, skip task in active transfer queue.", tag.WorkflowDomainID(task.DomainID), tag.Value(taskInfo))
+			return false, nil
+		}
 		return taskAllocator.VerifyActiveTask(task.DomainID, task)
 	}
 
@@ -513,6 +517,10 @@ func newTransferQueueStandbyProcessor(
 		task, ok := taskInfo.(*persistence.TransferTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
+		}
+		if notRegistered, err := isDomainNotRegistered(shard, task.DomainID); notRegistered && err == nil {
+			logger.Info("Domain is not in registered status, skip task in standby transfer queue.", tag.WorkflowDomainID(task.DomainID), tag.Value(taskInfo))
+			return false, nil
 		}
 		if task.TaskType == persistence.TransferTaskTypeCloseExecution ||
 			task.TaskType == persistence.TransferTaskTypeRecordWorkflowClosed {
@@ -595,6 +603,10 @@ func newTransferQueueFailoverProcessor(
 		task, ok := taskInfo.(*persistence.TransferTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
+		}
+		if notRegistered, err := isDomainNotRegistered(shardContext, task.DomainID); notRegistered && err == nil {
+			logger.Info("Domain is not in registered status, skip task in failover transfer queue.", tag.WorkflowDomainID(task.DomainID), tag.Value(taskInfo))
+			return false, nil
 		}
 		return taskAllocator.VerifyFailoverActiveTask(domainIDs, task.DomainID, task)
 	}
