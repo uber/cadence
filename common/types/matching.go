@@ -104,6 +104,14 @@ func (v *AddActivityTaskRequest) GetForwardedFrom() (o string) {
 	return
 }
 
+// GetPartitionConfig is an internal getter (TBD...)
+func (v *AddActivityTaskRequest) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
+	}
+	return
+}
+
 // ActivityTaskDispatchInfo is an internal type (TBD...)
 type ActivityTaskDispatchInfo struct {
 	ScheduledEvent                  *HistoryEvent `json:"scheduledEvent,omitempty"`
@@ -125,7 +133,7 @@ type AddDecisionTaskRequest struct {
 	ScheduleToStartTimeoutSeconds *int32             `json:"scheduleToStartTimeoutSeconds,omitempty"`
 	Source                        *TaskSource        `json:"source,omitempty"`
 	ForwardedFrom                 string             `json:"forwardedFrom,omitempty"`
-	PartitionConfig               *PartitionConfig
+	PartitionConfig               PartitionConfig
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -180,6 +188,14 @@ func (v *AddDecisionTaskRequest) GetSource() (o TaskSource) {
 func (v *AddDecisionTaskRequest) GetForwardedFrom() (o string) {
 	if v != nil {
 		return v.ForwardedFrom
+	}
+	return
+}
+
+// GetPartitionConfig is an internal getter (TBD...)
+func (v *AddDecisionTaskRequest) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
 	}
 	return
 }
@@ -283,11 +299,11 @@ func (v *MatchingGetTaskListsByDomainRequest) GetDomain() (o string) {
 
 // MatchingPollForActivityTaskRequest is an internal type (TBD...)
 type MatchingPollForActivityTaskRequest struct {
-	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      string                      `json:"pollerID,omitempty"`
-	PollRequest   *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
-	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
-	PollerZone    string
+	DomainUUID     string                      `json:"domainUUID,omitempty"`
+	PollerID       string                      `json:"pollerID,omitempty"`
+	PollRequest    *PollForActivityTaskRequest `json:"pollRequest,omitempty"`
+	ForwardedFrom  string                      `json:"forwardedFrom,omitempty"`
+	IsolationGroup string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -322,13 +338,21 @@ func (v *MatchingPollForActivityTaskRequest) GetForwardedFrom() (o string) {
 	return
 }
 
+// GetIsolatioonGroup is an internal getter (TBD...)
+func (v *MatchingPollForActivityTaskRequest) GetIsolationGroup() (o string) {
+	if v != nil {
+		return v.IsolationGroup
+	}
+	return
+}
+
 // MatchingPollForDecisionTaskRequest is an internal type (TBD...)
 type MatchingPollForDecisionTaskRequest struct {
-	DomainUUID    string                      `json:"domainUUID,omitempty"`
-	PollerID      string                      `json:"pollerID,omitempty"`
-	PollRequest   *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
-	ForwardedFrom string                      `json:"forwardedFrom,omitempty"`
-	PollerZone    string
+	DomainUUID     string                      `json:"domainUUID,omitempty"`
+	PollerID       string                      `json:"pollerID,omitempty"`
+	PollRequest    *PollForDecisionTaskRequest `json:"pollRequest,omitempty"`
+	ForwardedFrom  string                      `json:"forwardedFrom,omitempty"`
+	IsolationGroup string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -359,6 +383,14 @@ func (v *MatchingPollForDecisionTaskRequest) GetPollRequest() (o *PollForDecisio
 func (v *MatchingPollForDecisionTaskRequest) GetForwardedFrom() (o string) {
 	if v != nil {
 		return v.ForwardedFrom
+	}
+	return
+}
+
+// GetIsolatioonGroup is an internal getter (TBD...)
+func (v *MatchingPollForDecisionTaskRequest) GetIsolationGroup() (o string) {
+	if v != nil {
+		return v.IsolationGroup
 	}
 	return
 }
