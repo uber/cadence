@@ -202,9 +202,9 @@ func isDomainNotRegistered(shard shard.Context, domainID string) (bool, error) {
 		// unexpected error in finding a domain
 		return false, err
 	}
-	if info := domainEntry.GetInfo(); info == nil {
+	info := domainEntry.GetInfo()
+	if info == nil {
 		return false, errors.New("domain info is nil in cache")
-	} else {
-		return info.Status == persistence.DomainStatusDeprecated || info.Status == persistence.DomainStatusDeleted, nil
 	}
+	return info.Status == persistence.DomainStatusDeprecated || info.Status == persistence.DomainStatusDeleted, nil
 }
