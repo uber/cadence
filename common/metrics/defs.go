@@ -743,6 +743,8 @@ const (
 const (
 	// AdminDescribeHistoryHostScope is the metric scope for admin.AdminDescribeHistoryHostScope
 	AdminDescribeHistoryHostScope = iota + NumCommonScopes
+	// AdminDescribeClusterScope is the metric scope for admin.AdminDescribeClusterScope
+	AdminDescribeClusterScope
 	// AdminAddSearchAttributeScope is the metric scope for admin.AdminAddSearchAttributeScope
 	AdminAddSearchAttributeScope
 	// AdminDescribeWorkflowExecutionScope is the metric scope for admin.AdminDescribeWorkflowExecutionScope
@@ -1552,6 +1554,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminMergeDLQMessagesScope:                  {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:               {operation: "DescribeHistoryHost"},
 		AdminDescribeShardDistributionScope:         {operation: "AdminShardList"},
+		AdminDescribeClusterScope:                   {operation: "DescribeCluster"},
 		AdminAddSearchAttributeScope:                {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:         {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:    {operation: "GetWorkflowExecutionRawHistory"},

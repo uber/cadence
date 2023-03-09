@@ -284,7 +284,7 @@ func (a *AccessControlledWorkflowHandler) ListDomains(
 	request *types.ListDomainsRequest,
 ) (*types.ListDomainsResponse, error) {
 
-	scope := a.GetMetricsClient().Scope(metrics.FrontendListDomainsScope)
+	scope := a.GetMetricsClient().Scope(metrics.FrontendListDomainsScope).Tagged(metrics.DomainUnknownTag())
 
 	attr := &authorization.Attributes{
 		APIName:     "ListDomains",
