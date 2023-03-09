@@ -1,5 +1,7 @@
-// Copyright (c) 2017 Uber Technologies, Inc.
-//
+// Copyright (c) 2017-2020 Uber Technologies Inc.
+
+// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
@@ -7,16 +9,16 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 package matching
 
@@ -32,6 +34,8 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/clock"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -89,20 +93,21 @@ type (
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
-		taskListID     *taskListID
-		taskListKind   types.TaskListKind // sticky taskList has different process in persistence
-		config         *taskListConfig
-		db             *taskListDB
-		engine         *matchingEngineImpl
-		taskWriter     *taskWriter
-		taskReader     *taskReader // reads tasks from db and async matches it with poller
-		taskGC         *taskGC
-		taskAckManager messaging.AckManager // tracks ackLevel for delivered messages
-		matcher        *TaskMatcher         // for matching a task producer with a poller
-		domainCache    cache.DomainCache
-		logger         log.Logger
-		scope          metrics.Scope
-		domainName     string
+		taskListID      *taskListID
+		taskListKind    types.TaskListKind // sticky taskList has different process in persistence
+		config          *taskListConfig
+		db              *taskListDB
+		taskWriter      *taskWriter
+		taskReader      *taskReader // reads tasks from db and async matches it with poller
+		liveness        *liveness
+		taskGC          *taskGC
+		taskAckManager  messaging.AckManager // tracks ackLevel for delivered messages
+		matcher         *TaskMatcher         // for matching a task producer with a poller
+		clusterMetadata cluster.Metadata
+		domainCache     cache.DomainCache
+		logger          log.Logger
+		scope           metrics.Scope
+		domainName      string
 		// pollerHistory stores poller which poll from this tasklist in last few minutes
 		pollerHistory *pollerHistory
 		// outstandingPollsMap is needed to keep track of all outstanding pollers for a
@@ -112,9 +117,9 @@ type (
 		// prevent tasks being dispatched to zombie pollers.
 		outstandingPollsLock sync.Mutex
 		outstandingPollsMap  map[string]context.CancelFunc
-		shutdownCh           chan struct{}  // Delivers stop to the pump that populates taskBuffer
 		startWG              sync.WaitGroup // ensures that background processes do not start until setup is ready
 		stopped              int32
+		closeCallback        func(taskListManager)
 	}
 )
 
@@ -152,8 +157,7 @@ func newTaskListManager(
 
 	tlMgr := &taskListManagerImpl{
 		domainCache:         e.domainCache,
-		engine:              e,
-		shutdownCh:          make(chan struct{}),
+		clusterMetadata:     e.clusterMetadata,
 		taskListID:          taskList,
 		taskListKind:        *taskListKind,
 		logger:              e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
@@ -164,6 +168,7 @@ func newTaskListManager(
 		outstandingPollsMap: make(map[string]context.CancelFunc),
 		domainName:          domainName,
 		scope:               scope,
+		closeCallback:       e.removeTaskListManager,
 	}
 
 	taskListTypeMetricScope := tlMgr.scope.Tagged(
@@ -173,6 +178,7 @@ func newTaskListManager(
 		taskListTypeMetricScope.UpdateGauge(metrics.PollerPerTaskListCounter,
 			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
+	tlMgr.liveness = newLiveness(clock.NewRealTimeSource(), taskListConfig.IdleTasklistCheckInterval(), tlMgr.Stop)
 	tlMgr.taskWriter = newTaskWriter(tlMgr)
 	tlMgr.taskReader = newTaskReader(tlMgr)
 	var fwdr *Forwarder
@@ -189,6 +195,7 @@ func newTaskListManager(
 func (c *taskListManagerImpl) Start() error {
 	defer c.startWG.Done()
 
+	c.liveness.Start()
 	if err := c.taskWriter.Start(); err != nil {
 		c.Stop()
 		return err
@@ -203,8 +210,8 @@ func (c *taskListManagerImpl) Stop() {
 	if !atomic.CompareAndSwapInt32(&c.stopped, 0, 1) {
 		return
 	}
-	c.engine.removeTaskListManager(c)
-	close(c.shutdownCh)
+	c.closeCallback(c)
+	c.liveness.Stop()
 	c.taskWriter.Stop()
 	c.taskReader.Stop()
 	c.logger.Info("Task list manager state changed", tag.LifeCycleStopped)
@@ -230,6 +237,10 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams) (bool, error) {
 	c.startWG.Wait()
+	if params.forwardedFrom == "" {
+		// request sent by history service
+		c.liveness.markAlive(time.Now())
+	}
 	var syncMatch bool
 	_, err := c.executeWithRetry(func() (interface{}, error) {
 		if err := ctx.Err(); err != nil {
@@ -243,7 +254,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 
 		isForwarded := params.forwardedFrom != ""
 
-		if _, err := domainEntry.IsActiveIn(c.engine.clusterMetadata.GetCurrentClusterName()); err != nil {
+		if _, err := domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); err != nil {
 			// standby task, only persist when task is not forwarded from child partition
 			syncMatch = false
 			if isForwarded {
@@ -312,6 +323,7 @@ func (c *taskListManagerImpl) GetTask(
 	ctx context.Context,
 	maxDispatchPerSecond *float64,
 ) (*InternalTask, error) {
+	c.liveness.markAlive(time.Now())
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
 		return nil, err
@@ -364,7 +376,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	// value. Last poller wins if different pollers provide different values
 	c.matcher.UpdateRatelimit(maxDispatchPerSecond)
 
-	if _, err := domainEntry.IsActiveIn(c.engine.clusterMetadata.GetCurrentClusterName()); err != nil {
+	if _, err := domainEntry.IsActiveIn(c.clusterMetadata.GetCurrentClusterName()); err != nil {
 		return c.matcher.PollForQuery(childCtx)
 	}
 
@@ -449,41 +461,6 @@ func (c *taskListManagerImpl) TaskListID() *taskListID {
 	return c.taskListID
 }
 
-// completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
-// here. As part of completion:
-//   - task is deleted from the database when err is nil
-//   - new task is created and current task is deleted when err is not nil
-func (c *taskListManagerImpl) completeTask(task *persistence.TaskInfo, err error) {
-	if err != nil {
-		// failed to start the task.
-		// We cannot just remove it from persistence because then it will be lost.
-		// We handle this by writing the task back to persistence with a higher taskID.
-		// This will allow subsequent tasks to make progress, and hopefully by the time this task is picked-up
-		// again the underlying reason for failing to start will be resolved.
-		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
-		// re-written to persistence frequently.
-		_, err = c.executeWithRetry(func() (interface{}, error) {
-			wf := &types.WorkflowExecution{WorkflowID: task.WorkflowID, RunID: task.RunID}
-			return c.taskWriter.appendTask(wf, task)
-		})
-
-		if err != nil {
-			// OK, we also failed to write to persistence.
-			// This should only happen in very extreme cases where persistence is completely down.
-			// We still can't lose the old task so we just unload the entire task list
-			c.logger.Error("Failed to complete task",
-				tag.Error(err),
-				tag.WorkflowTaskListName(c.taskListID.name),
-				tag.WorkflowTaskListType(c.taskListID.taskType))
-			c.Stop()
-			return
-		}
-		c.taskReader.Signal()
-	}
-	ackLevel := c.taskAckManager.AckItem(task.TaskID)
-	c.taskGC.Run(ackLevel)
-}
-
 // Retry operation on transient error. On rangeID update by another process calls c.Stop().
 func (c *taskListManagerImpl) executeWithRetry(
 	operation func() (interface{}, error),
@@ -503,12 +480,12 @@ func (c *taskListManagerImpl) executeWithRetry(
 }
 
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, c.completeTask, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
+	task := newInternalTask(params.taskInfo, nil, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
 	childCtx := ctx
 	cancel := func() {}
 	waitTime := maxSyncMatchWaitTime
 	if params.activityTaskDispatchInfo != nil {
-		waitTime = c.engine.config.ActivityTaskSyncMatchWaitTime(params.activityTaskDispatchInfo.WorkflowDomain)
+		waitTime = c.config.ActivityTaskSyncMatchWaitTime(params.activityTaskDispatchInfo.WorkflowDomain)
 	}
 	if !task.isForwarded() {
 		// when task is forwarded from another matching host, we trust the context as is

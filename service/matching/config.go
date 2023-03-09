@@ -82,14 +82,15 @@ type (
 		forwarderConfig
 		EnableSyncMatch func() bool
 		// Time to hold a poll request before returning an empty response if there are no tasks
-		LongPollExpirationInterval func() time.Duration
-		RangeSize                  int64
-		GetTasksBatchSize          func() int
-		UpdateAckInterval          func() time.Duration
-		IdleTasklistCheckInterval  func() time.Duration
-		MaxTasklistIdleTime        func() time.Duration
-		MinTaskThrottlingBurstSize func() int
-		MaxTaskDeleteBatchSize     func() int
+		LongPollExpirationInterval    func() time.Duration
+		RangeSize                     int64
+		ActivityTaskSyncMatchWaitTime dynamicconfig.DurationPropertyFnWithDomainFilter
+		GetTasksBatchSize             func() int
+		UpdateAckInterval             func() time.Duration
+		IdleTasklistCheckInterval     func() time.Duration
+		MaxTasklistIdleTime           func() time.Duration
+		MinTaskThrottlingBurstSize    func() int
+		MaxTaskDeleteBatchSize        func() int
 		// taskWriter configuration
 		OutstandingTaskAppendsThreshold func() int
 		MaxTaskBatchSize                func() int
@@ -141,7 +142,8 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 	taskListName := id.name
 	taskType := id.taskType
 	return &taskListConfig{
-		RangeSize: config.RangeSize,
+		RangeSize:                     config.RangeSize,
+		ActivityTaskSyncMatchWaitTime: config.ActivityTaskSyncMatchWaitTime,
 		GetTasksBatchSize: func() int {
 			return config.GetTasksBatchSize(domainName, taskListName, taskType)
 		},

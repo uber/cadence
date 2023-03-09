@@ -78,7 +78,6 @@ func (h *historyExists) Check(
 			InfoDetails:     errorDomainName.Error(),
 		}
 	}
-
 	readHistoryBranchReq := &persistence.ReadHistoryBranchRequest{
 		BranchToken:   concreteExecution.BranchToken,
 		MinEventID:    c.FirstEventID,

@@ -108,6 +108,7 @@ func (s *IntegrationBase) setupSuite() {
 		dc := persistence.DynamicConfiguration{
 			EnableSQLAsyncTransaction:                dynamicconfig.GetBoolPropertyFn(false),
 			EnableCassandraAllConsistencyLevelDelete: dynamicconfig.GetBoolPropertyFn(true),
+			PersistenceSampleLoggingRate:             dynamicconfig.GetIntPropertyFn(100),
 		}
 		params := pt.TestBaseParams{
 			DefaultTestCluster:    s.defaultTestCluster,

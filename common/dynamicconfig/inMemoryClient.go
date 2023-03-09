@@ -125,6 +125,16 @@ func (mc *inMemoryClient) GetDurationValue(name DurationKey, filters map[Filter]
 	return name.DefaultDuration(), NotFoundError
 }
 
+func (mc *inMemoryClient) GetListValue(name ListKey, filters map[Filter]interface{}) ([]interface{}, error) {
+	mc.RLock()
+	defer mc.RUnlock()
+
+	if val, ok := mc.globalValues[name]; ok {
+		return val.([]interface{}), nil
+	}
+	return name.DefaultList(), NotFoundError
+}
+
 func (mc *inMemoryClient) UpdateValue(key Key, value interface{}) error {
 	if err := ValidateKeyValuePair(key, value); err != nil {
 		return err

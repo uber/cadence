@@ -1478,11 +1478,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 	// stop all goroutines that read / write tasks in the background
 	// remainder of this test works with the in-memory buffer
-	if !atomic.CompareAndSwapInt32(&tlMgr.stopped, 0, 1) {
-		return
-	}
-	close(tlMgr.shutdownCh)
-	tlMgr.taskWriter.Stop()
+	tlMgr.Stop()
 
 	// SetReadLevel should NEVER be called without updating ackManager.outstandingTasks
 	// This is only for unit test purpose
@@ -1530,8 +1526,6 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	s.Nil(err)
 	s.True(0 < len(tasks) && len(tasks) <= rangeSize)
 	s.True(isReadBatchDone)
-
-	tlMgr.engine.removeTaskListManager(tlMgr)
 }
 
 func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
@@ -1584,7 +1578,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	s.matchingEngine.config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(2)
 	// set idle timer check to a really small value to assert that we don't accidentally drop tasks while blocking
 	// on enqueuing a task to task buffer
-	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(time.Microsecond)
+	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	testCases := []struct {
 		batchSize          int

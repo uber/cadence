@@ -301,6 +301,8 @@ const (
 	PersistenceFetchDynamicConfigScope
 	// PersistenceUpdateDynamicConfigScope tracks UpdateDynamicConfig calls made by service to persistence layer
 	PersistenceUpdateDynamicConfigScope
+	// PersistenceShardRequestCountScope tracks number of persistence calls made to each shard
+	PersistenceShardRequestCountScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -1322,6 +1324,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetDLQSizeScope:                                     {operation: "GetDLQSize"},
 		PersistenceFetchDynamicConfigScope:                             {operation: "FetchDynamicConfig"},
 		PersistenceUpdateDynamicConfigScope:                            {operation: "UpdateDynamicConfig"},
+		PersistenceShardRequestCountScope:                              {operation: "ShardIdPersistenceRequest"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 

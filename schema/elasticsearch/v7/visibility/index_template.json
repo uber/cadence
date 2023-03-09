@@ -54,6 +54,9 @@
       "UpdateTime": {
         "type": "long"
       },
+      "ShardID": {
+        "type": "long"
+      },
       "Attr": {
         "properties": {
           "CadenceChangeVersion":  { "type": "keyword" },
