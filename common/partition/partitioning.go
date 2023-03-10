@@ -26,6 +26,7 @@ package partition
 
 import (
 	"context"
+
 	"github.com/uber/cadence/common/dynamicconfig"
 
 	"github.com/uber/cadence/common/types"

@@ -25,11 +25,13 @@ package partition
 import (
 	"context"
 	"fmt"
+	"sort"
+
 	"github.com/dgryski/go-farm"
+
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
-	"sort"
 )
 
 const (

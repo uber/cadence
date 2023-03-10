@@ -58,19 +58,19 @@ func (m *MockPartitioner) EXPECT() *MockPartitionerMockRecorder {
 	return m.recorder
 }
 
-// GetTaskIsolationGroupByDomainID mocks base method.
-func (m *MockPartitioner) GetTaskIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error) {
+// GetIsolationGroupByDomainID mocks base method.
+func (m *MockPartitioner) GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTaskIsolationGroupByDomainID", ctx, DomainID, partitionKey)
+	ret := m.ctrl.Call(m, "GetIsolationGroupByDomainID", ctx, DomainID, partitionKey)
 	ret0, _ := ret[0].(*types.IsolationGroupName)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetTaskIsolationGroupByDomainID indicates an expected call of GetTaskIsolationGroupByDomainID.
-func (mr *MockPartitionerMockRecorder) GetTaskIsolationGroupByDomainID(ctx, DomainID, partitionKey interface{}) *gomock.Call {
+// GetIsolationGroupByDomainID indicates an expected call of GetIsolationGroupByDomainID.
+func (mr *MockPartitionerMockRecorder) GetIsolationGroupByDomainID(ctx, DomainID, partitionKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskIsolationGroupByDomainID", reflect.TypeOf((*MockPartitioner)(nil).GetTaskIsolationGroupByDomainID), ctx, DomainID, partitionKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIsolationGroupByDomainID", reflect.TypeOf((*MockPartitioner)(nil).GetIsolationGroupByDomainID), ctx, DomainID, partitionKey)
 }
 
 // IsDrained mocks base method.
@@ -127,46 +127,31 @@ func (m *MockIsolationGroupState) EXPECT() *MockIsolationGroupStateMockRecorder 
 }
 
 // Get mocks base method.
-func (m *MockIsolationGroupState) Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error) {
+func (m *MockIsolationGroupState) Get(ctx context.Context, domain string) (*State, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, domain, isolationGroup)
-	ret0, _ := ret[0].(*types.IsolationGroupPartition)
+	ret := m.ctrl.Call(m, "Get", ctx, domain)
+	ret0, _ := ret[0].(*State)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockIsolationGroupStateMockRecorder) Get(ctx, domain, isolationGroup interface{}) *gomock.Call {
+func (mr *MockIsolationGroupStateMockRecorder) Get(ctx, domain interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIsolationGroupState)(nil).Get), ctx, domain, isolationGroup)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIsolationGroupState)(nil).Get), ctx, domain)
 }
 
 // GetByDomainID mocks base method.
-func (m *MockIsolationGroupState) GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error) {
+func (m *MockIsolationGroupState) GetByDomainID(ctx context.Context, domainID string) (*State, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByDomainID", ctx, domainID, isolationGroup)
-	ret0, _ := ret[0].(*types.IsolationGroupPartition)
+	ret := m.ctrl.Call(m, "GetByDomainID", ctx, domainID)
+	ret0, _ := ret[0].(*State)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByDomainID indicates an expected call of GetByDomainID.
-func (mr *MockIsolationGroupStateMockRecorder) GetByDomainID(ctx, domainID, isolationGroup interface{}) *gomock.Call {
+func (mr *MockIsolationGroupStateMockRecorder) GetByDomainID(ctx, domainID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDomainID", reflect.TypeOf((*MockIsolationGroupState)(nil).GetByDomainID), ctx, domainID, isolationGroup)
-}
-
-// ListAll mocks base method.
-func (m *MockIsolationGroupState) ListAll(ctx context.Context, domainID string) ([]types.IsolationGroupPartition, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAll", ctx, domainID)
-	ret0, _ := ret[0].([]types.IsolationGroupPartition)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListAll indicates an expected call of ListAll.
-func (mr *MockIsolationGroupStateMockRecorder) ListAll(ctx, domainID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockIsolationGroupState)(nil).ListAll), ctx, domainID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDomainID", reflect.TypeOf((*MockIsolationGroupState)(nil).GetByDomainID), ctx, domainID)
 }
