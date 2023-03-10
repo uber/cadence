@@ -33,27 +33,31 @@ import (
 )
 
 type Partitioner interface {
-	// GetTaskZoneByDomainID gets where the task workflow should be executing. Largely used by Matching
-	// when determining which zone to place the tasks in
-	GetTaskZoneByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.ZoneName, error)
-	// IsDrained answers the question - "is this particular zone drained?". Used by startWorkflow calls
+	// GetTaskIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
+	// when determining which isolationGroup to place the tasks in.
+	// Implementations ought to return (nil, nil) for when the feature is not enabled.
+	GetTaskIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error)
+	// IsDrained answers the question - "is this particular isolationGroup drained?". Used by startWorkflow calls
 	// and similar sync frontend calls to make routing decisions
-	IsDrained(ctx context.Context, Domain string, Zone types.ZoneName) (bool, error)
-	IsDrainedByDomainID(ctx context.Context, DomainID string, Zone types.ZoneName) (bool, error)
+	IsDrained(ctx context.Context, Domain string, IsolationGroup types.IsolationGroupName) (bool, error)
+	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup types.IsolationGroupName) (bool, error)
 }
 
-type ZoneState interface {
-	// ListAll lists the status of all zones with respect to the particular domainID
-	ListAll(ctx context.Context, domainID string) ([]types.ZonePartition, error)
-	// Get returns the state of a particular zone from the point of view of the domain
-	// responsible for merging both global configuration and zone specific configuration, with domain
-	// configuration overriding the global configuration
-	Get(ctx context.Context, domain string, zone types.ZoneName) (*types.ZonePartition, error)
-	GetByDomainID(ctx context.Context, domainID string, zone types.ZoneName) (*types.ZonePartition, error)
+// IsolationGroupState is a heavily cached in-memory library for determining the state of what zones are healthy or
+// drained presently.
+type IsolationGroupState interface {
+	// ListAll lists the status of all isolationGroups with respect to the particular domainID
+	ListAll(ctx context.Context, domainID string) ([]types.IsolationGroupPartition, error)
+	// Get returns the state of a particular isolationGroup from the point of view of the domain
+	// responsible for merging both global configuration and isolationGroup specific configuration, with domain health
+	// configuration overriding the global configuration with respect to Isolation State.
+	Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error)
+	GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error)
 }
 
 // Config is the base configuration for the partitioning library
 type Config struct {
-	zonalPartitioningEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	allZones                 []types.ZoneName
+	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	allIsolationGroups                []types.IsolationGroupName
 }

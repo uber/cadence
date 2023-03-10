@@ -58,115 +58,115 @@ func (m *MockPartitioner) EXPECT() *MockPartitionerMockRecorder {
 	return m.recorder
 }
 
-// GetTaskZoneByDomainID mocks base method.
-func (m *MockPartitioner) GetTaskZoneByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.ZoneName, error) {
+// GetTaskIsolationGroupByDomainID mocks base method.
+func (m *MockPartitioner) GetTaskIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTaskZoneByDomainID", ctx, DomainID, partitionKey)
-	ret0, _ := ret[0].(*types.ZoneName)
+	ret := m.ctrl.Call(m, "GetTaskIsolationGroupByDomainID", ctx, DomainID, partitionKey)
+	ret0, _ := ret[0].(*types.IsolationGroupName)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetTaskZoneByDomainID indicates an expected call of GetTaskZoneByDomainID.
-func (mr *MockPartitionerMockRecorder) GetTaskZoneByDomainID(ctx, DomainID, partitionKey interface{}) *gomock.Call {
+// GetTaskIsolationGroupByDomainID indicates an expected call of GetTaskIsolationGroupByDomainID.
+func (mr *MockPartitionerMockRecorder) GetTaskIsolationGroupByDomainID(ctx, DomainID, partitionKey interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskZoneByDomainID", reflect.TypeOf((*MockPartitioner)(nil).GetTaskZoneByDomainID), ctx, DomainID, partitionKey)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTaskIsolationGroupByDomainID", reflect.TypeOf((*MockPartitioner)(nil).GetTaskIsolationGroupByDomainID), ctx, DomainID, partitionKey)
 }
 
 // IsDrained mocks base method.
-func (m *MockPartitioner) IsDrained(ctx context.Context, Domain string, Zone types.ZoneName) (bool, error) {
+func (m *MockPartitioner) IsDrained(ctx context.Context, Domain string, IsolationGroup types.IsolationGroupName) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDrained", ctx, Domain, Zone)
+	ret := m.ctrl.Call(m, "IsDrained", ctx, Domain, IsolationGroup)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsDrained indicates an expected call of IsDrained.
-func (mr *MockPartitionerMockRecorder) IsDrained(ctx, Domain, Zone interface{}) *gomock.Call {
+func (mr *MockPartitionerMockRecorder) IsDrained(ctx, Domain, IsolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrained", reflect.TypeOf((*MockPartitioner)(nil).IsDrained), ctx, Domain, Zone)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrained", reflect.TypeOf((*MockPartitioner)(nil).IsDrained), ctx, Domain, IsolationGroup)
 }
 
 // IsDrainedByDomainID mocks base method.
-func (m *MockPartitioner) IsDrainedByDomainID(ctx context.Context, DomainID string, Zone types.ZoneName) (bool, error) {
+func (m *MockPartitioner) IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup types.IsolationGroupName) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDrainedByDomainID", ctx, DomainID, Zone)
+	ret := m.ctrl.Call(m, "IsDrainedByDomainID", ctx, DomainID, IsolationGroup)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsDrainedByDomainID indicates an expected call of IsDrainedByDomainID.
-func (mr *MockPartitionerMockRecorder) IsDrainedByDomainID(ctx, DomainID, Zone interface{}) *gomock.Call {
+func (mr *MockPartitionerMockRecorder) IsDrainedByDomainID(ctx, DomainID, IsolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrainedByDomainID", reflect.TypeOf((*MockPartitioner)(nil).IsDrainedByDomainID), ctx, DomainID, Zone)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrainedByDomainID", reflect.TypeOf((*MockPartitioner)(nil).IsDrainedByDomainID), ctx, DomainID, IsolationGroup)
 }
 
-// MockZoneState is a mock of ZoneState interface.
-type MockZoneState struct {
+// MockIsolationGroupState is a mock of IsolationGroupState interface.
+type MockIsolationGroupState struct {
 	ctrl     *gomock.Controller
-	recorder *MockZoneStateMockRecorder
+	recorder *MockIsolationGroupStateMockRecorder
 }
 
-// MockZoneStateMockRecorder is the mock recorder for MockZoneState.
-type MockZoneStateMockRecorder struct {
-	mock *MockZoneState
+// MockIsolationGroupStateMockRecorder is the mock recorder for MockIsolationGroupState.
+type MockIsolationGroupStateMockRecorder struct {
+	mock *MockIsolationGroupState
 }
 
-// NewMockZoneState creates a new mock instance.
-func NewMockZoneState(ctrl *gomock.Controller) *MockZoneState {
-	mock := &MockZoneState{ctrl: ctrl}
-	mock.recorder = &MockZoneStateMockRecorder{mock}
+// NewMockIsolationGroupState creates a new mock instance.
+func NewMockIsolationGroupState(ctrl *gomock.Controller) *MockIsolationGroupState {
+	mock := &MockIsolationGroupState{ctrl: ctrl}
+	mock.recorder = &MockIsolationGroupStateMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockZoneState) EXPECT() *MockZoneStateMockRecorder {
+func (m *MockIsolationGroupState) EXPECT() *MockIsolationGroupStateMockRecorder {
 	return m.recorder
 }
 
 // Get mocks base method.
-func (m *MockZoneState) Get(ctx context.Context, domain string, zone types.ZoneName) (*types.ZonePartition, error) {
+func (m *MockIsolationGroupState) Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, domain, zone)
-	ret0, _ := ret[0].(*types.ZonePartition)
+	ret := m.ctrl.Call(m, "Get", ctx, domain, isolationGroup)
+	ret0, _ := ret[0].(*types.IsolationGroupPartition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockZoneStateMockRecorder) Get(ctx, domain, zone interface{}) *gomock.Call {
+func (mr *MockIsolationGroupStateMockRecorder) Get(ctx, domain, isolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockZoneState)(nil).Get), ctx, domain, zone)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIsolationGroupState)(nil).Get), ctx, domain, isolationGroup)
 }
 
 // GetByDomainID mocks base method.
-func (m *MockZoneState) GetByDomainID(ctx context.Context, domainID string, zone types.ZoneName) (*types.ZonePartition, error) {
+func (m *MockIsolationGroupState) GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByDomainID", ctx, domainID, zone)
-	ret0, _ := ret[0].(*types.ZonePartition)
+	ret := m.ctrl.Call(m, "GetByDomainID", ctx, domainID, isolationGroup)
+	ret0, _ := ret[0].(*types.IsolationGroupPartition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByDomainID indicates an expected call of GetByDomainID.
-func (mr *MockZoneStateMockRecorder) GetByDomainID(ctx, domainID, zone interface{}) *gomock.Call {
+func (mr *MockIsolationGroupStateMockRecorder) GetByDomainID(ctx, domainID, isolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDomainID", reflect.TypeOf((*MockZoneState)(nil).GetByDomainID), ctx, domainID, zone)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDomainID", reflect.TypeOf((*MockIsolationGroupState)(nil).GetByDomainID), ctx, domainID, isolationGroup)
 }
 
 // ListAll mocks base method.
-func (m *MockZoneState) ListAll(ctx context.Context, domainID string) ([]types.ZonePartition, error) {
+func (m *MockIsolationGroupState) ListAll(ctx context.Context, domainID string) ([]types.IsolationGroupPartition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListAll", ctx, domainID)
-	ret0, _ := ret[0].([]types.ZonePartition)
+	ret0, _ := ret[0].([]types.IsolationGroupPartition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListAll indicates an expected call of ListAll.
-func (mr *MockZoneStateMockRecorder) ListAll(ctx, domainID interface{}) *gomock.Call {
+func (mr *MockIsolationGroupStateMockRecorder) ListAll(ctx, domainID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockZoneState)(nil).ListAll), ctx, domainID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockIsolationGroupState)(nil).ListAll), ctx, domainID)
 }

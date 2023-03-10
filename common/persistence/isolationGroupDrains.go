@@ -31,23 +31,23 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination zoneDrains_mock.go -self_package github.com/uber/cadence/common/persistence
 
-type GlobalZoneDrains interface {
-	GetClusterDrains(ctx context.Context) (types.ZoneConfiguration, error)
-	SetClusterDrains(ctx context.Context, partition types.ZonePartition) error
+type GlobalIsolationGroupDrains interface {
+	GetClusterDrains(ctx context.Context) (types.IsolationGroupConfiguration, error)
+	SetClusterDrains(ctx context.Context, partition types.IsolationGroupPartition) error
 }
 
-type globalZoneDrainsImpl struct {
+type globalIsolationGroupDrainsImpl struct {
 	serializer  PayloadSerializer
 	persistence ConfigStore
 	logger      log.Logger
 }
 
-func (z *globalZoneDrainsImpl) SetClusterDrains(ctx context.Context, partition types.ZonePartition) error {
+func (z *globalIsolationGroupDrainsImpl) SetClusterDrains(ctx context.Context, partition types.IsolationGroupPartition) error {
 	panic("not implemented")
 	return nil
 }
 
-func (z *globalZoneDrainsImpl) GetClusterDrains(ctx context.Context) (map[types.ZoneName]types.ZonePartition, error) {
+func (z *globalIsolationGroupDrainsImpl) GetClusterDrains(ctx context.Context) (map[types.IsolationGroupName]types.IsolationGroupPartition, error) {
 	panic("not implemented")
 	return nil, nil
 }
