@@ -301,6 +301,8 @@ const (
 	PersistenceFetchDynamicConfigScope
 	// PersistenceUpdateDynamicConfigScope tracks UpdateDynamicConfig calls made by service to persistence layer
 	PersistenceUpdateDynamicConfigScope
+	// PersistenceShardRequestCountScope tracks number of persistence calls made to each shard
+	PersistenceShardRequestCountScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -741,6 +743,8 @@ const (
 const (
 	// AdminDescribeHistoryHostScope is the metric scope for admin.AdminDescribeHistoryHostScope
 	AdminDescribeHistoryHostScope = iota + NumCommonScopes
+	// AdminDescribeClusterScope is the metric scope for admin.AdminDescribeClusterScope
+	AdminDescribeClusterScope
 	// AdminAddSearchAttributeScope is the metric scope for admin.AdminAddSearchAttributeScope
 	AdminAddSearchAttributeScope
 	// AdminDescribeWorkflowExecutionScope is the metric scope for admin.AdminDescribeWorkflowExecutionScope
@@ -1324,6 +1328,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetDLQSizeScope:                                     {operation: "GetDLQSize"},
 		PersistenceFetchDynamicConfigScope:                             {operation: "FetchDynamicConfig"},
 		PersistenceUpdateDynamicConfigScope:                            {operation: "UpdateDynamicConfig"},
+		PersistenceShardRequestCountScope:                              {operation: "ShardIdPersistenceRequest"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1549,6 +1554,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminMergeDLQMessagesScope:                  {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:               {operation: "DescribeHistoryHost"},
 		AdminDescribeShardDistributionScope:         {operation: "AdminShardList"},
+		AdminDescribeClusterScope:                   {operation: "DescribeCluster"},
 		AdminAddSearchAttributeScope:                {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:         {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:    {operation: "GetWorkflowExecutionRawHistory"},

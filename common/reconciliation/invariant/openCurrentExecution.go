@@ -77,6 +77,7 @@ func (o *openCurrentExecution) Check(
 			CheckResultType: CheckResultTypeFailed,
 			InvariantName:   o.Name(),
 			Info:            "failed to fetch Domain Name",
+			InfoDetails:     err.Error(),
 		}
 	}
 	currentExecResp, currentExecErr := o.pr.GetCurrentExecution(ctx, &persistence.GetCurrentExecutionRequest{

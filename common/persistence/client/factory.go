@@ -251,7 +251,7 @@ func (f *factoryImpl) NewExecutionManager(shardID int) (p.ExecutionManager, erro
 		result = p.NewWorkflowExecutionPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewWorkflowExecutionPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.dc.PersistenceSampleLoggingRate)
 	}
 	return result, nil
 }
