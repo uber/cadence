@@ -38,7 +38,7 @@ type Config struct {
 	allIsolationGroups                []types.IsolationGroupName
 }
 
-// A convenience return type of a collection of IsolationGroup configurations
+// State is a convenience return type of a collection of IsolationGroup configurations
 type State struct {
 	Global types.IsolationGroupConfiguration
 	Domain types.IsolationGroupConfiguration
@@ -59,6 +59,6 @@ type Partitioner interface {
 // drained presently. It may return an inclusive (allow-list based) or a exclusive (deny-list based) set of IsolationGroups
 // depending on the implementation.
 type IsolationGroupState interface {
-	Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*State, error)
-	GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*State, error)
+	Get(ctx context.Context, domain string) (*State, error)
+	GetByDomainID(ctx context.Context, domainID string) (*State, error)
 }
