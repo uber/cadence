@@ -1804,11 +1804,11 @@ const (
 
 	EnableCassandraAllConsistencyLevelDelete
 
-	// EnableShardIdMetrics turns on or off shardId metrics
-	// KeyName: system.enableShardIdMetrics
+	// EnableShardIDMetrics turns on or off shardId metrics
+	// KeyName: system.enableShardIDMetrics
 	// Value type: Bool
 	// Default value: true
-	EnableShardIdMetrics
+	EnableShardIDMetrics
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3837,8 +3837,8 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "Uses all consistency level for Cassandra delete operations",
 		DefaultValue: false,
 	},
-	EnableShardIdMetrics: DynamicBool{
-		KeyName:      "system.enableShardIdMetrics",
+	EnableShardIDMetrics: DynamicBool{
+		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
 		DefaultValue: true,
 	},
