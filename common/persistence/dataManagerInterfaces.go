@@ -462,6 +462,7 @@ type (
 		ScheduleToStartTimeout int32
 		Expiry                 time.Time
 		CreatedTime            time.Time
+		PartitionConfig        map[string]string
 	}
 
 	// TaskKey gives primary key info for a specific task

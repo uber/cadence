@@ -60,7 +60,8 @@ const (
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
 		`schedule_id: ?,` +
-		`created_time: ? ` +
+		`created_time: ?, ` +
+		`partition_config: ? ` +
 		`}`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
@@ -359,7 +360,8 @@ func (db *cdb) InsertTasks(
 				task.WorkflowID,
 				task.RunID,
 				scheduleID,
-				task.CreatedTime)
+				task.CreatedTime,
+				task.PartitionConfig)
 		} else {
 			if ttl > maxCassandraTTL {
 				ttl = maxCassandraTTL
@@ -375,6 +377,7 @@ func (db *cdb) InsertTasks(
 				task.RunID,
 				scheduleID,
 				task.CreatedTime,
+				task.PartitionConfig,
 				ttl)
 		}
 	}
@@ -462,6 +465,8 @@ func createTaskInfo(
 			info.ScheduledID = v.(int64)
 		case "created_time":
 			info.CreatedTime = v.(time.Time)
+		case "partition_config":
+			info.PartitionConfig = v.(map[string]string)
 		}
 	}
 
