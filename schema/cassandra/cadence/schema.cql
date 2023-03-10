@@ -94,7 +94,8 @@ CREATE TYPE workflow_execution (
   auto_reset_points                blob, -- the resetting points for auto-reset feature
   auto_reset_points_encoding       text, -- encoding for auto_reset_points_data
   search_attributes                map<text, blob>,
-  memo                             map<text, blob>
+  memo                             map<text, blob>,
+  partition_config                 map<text, text>
 );
 
 -- Replication information for each cluster

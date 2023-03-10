@@ -324,6 +324,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	decisionScheduleID int64,
 	branchToken []byte,
 	timerTasks []persistence.Task,
+	partitionConfig map[string]string,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	now := time.Now()
@@ -355,6 +356,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
 				BranchToken:                 branchToken,
+				PartitionConfig:             partitionConfig,
 			},
 			ExecutionStats: &persistence.ExecutionStats{},
 			TransferTasks: []persistence.Task{
@@ -390,17 +392,18 @@ func (s *TestBase) CreateWorkflowExecution(
 	lastProcessedEventID int64,
 	decisionScheduleID int64,
 	timerTasks []persistence.Task,
+	partitionConfig map[string]string,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	return s.CreateWorkflowExecutionWithBranchToken(ctx, domainID, workflowExecution, taskList, wType, wTimeout, decisionTimeout,
-		executionContext, nextEventID, lastProcessedEventID, decisionScheduleID, nil, timerTasks)
+		executionContext, nextEventID, lastProcessedEventID, decisionScheduleID, nil, timerTasks, partitionConfig)
 }
 
 // CreateChildWorkflowExecution is a utility method to create child workflow executions
 func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	parentDomainID string, parentExecution types.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleID int64, timerTasks []persistence.Task) (*persistence.CreateWorkflowExecutionResponse, error) {
+	decisionScheduleID int64, timerTasks []persistence.Task, partitionConfig map[string]string) (*persistence.CreateWorkflowExecutionResponse, error) {
 	now := time.Now()
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
@@ -433,6 +436,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
+				PartitionConfig:             partitionConfig,
 			},
 			ExecutionStats: &persistence.ExecutionStats{},
 			TransferTasks: []persistence.Task{
@@ -553,6 +557,7 @@ func (s *TestBase) ContinueAsNewExecution(
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
 				AutoResetPoints:             prevResetPoints,
+				PartitionConfig:             updatedInfo.PartitionConfig,
 			},
 			ExecutionStats:   updatedStats,
 			TransferTasks:    nil,
