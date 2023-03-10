@@ -23,104 +23,266 @@
 package partition
 
 import (
-	"context"
+	"fmt"
+	"github.com/google/uuid"
 	"testing"
 
-	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/persistence"
-
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/types"
 )
 
-func TestDefaultPartitioner_GetTaskIsolationGroup(t *testing.T) {
+func TestIsDrained(t *testing.T) {
 
-	domainID := "4271399E-10B5-4F9E-B5D1-B538EFD73125"
-	domainName := "domain-name"
-	isolationGroup2 := types.IsolationGroupName("isolationGroup2")
+	igA := types.IsolationGroupName("isolationGroupA")
+	igB := types.IsolationGroupName("isolationGroupB")
 
-	partitionKey := types.PartitionConfig{
-		DefaultPartitionConfigWorkerIsolationGroup: string(isolationGroup2),
-		DefaultPartitionConfigRunID:                "A7758FF3-CBC2-4414-B517-A37823F335D3",
+	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
+		igA: {
+			Name:   igA,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+		igB: {
+			Name:   igB,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+	}
+
+	isolationGroupsOneDrain := types.IsolationGroupConfiguration{
+		igA: {
+			Name:   igA,
+			Status: types.IsolationGroupStatusDrained,
+		},
 	}
 
 	tests := map[string]struct {
-		featureEnabledGlobally        bool
-		featureEnabledForDomain       bool
-		isolationGroupDrainAffordance func(drains *persistence.MockGlobalIsolationGroupDrains)
-		domainCacheAffordance         func(drains *cache.MockDomainCache)
-		expected                      *types.IsolationGroupName
-		expectedErr                   error
+		globalIGCfg    types.IsolationGroupConfiguration
+		domainIGCfg    types.IsolationGroupConfiguration
+		isolationGroup types.IsolationGroupName
+		expected       bool
 	}{
-		"normal case - feature not enabled": {
-			featureEnabledGlobally:  false,
-			featureEnabledForDomain: false,
-			isolationGroupDrainAffordance: func(drains *persistence.MockGlobalIsolationGroupDrains) {
-			},
-			domainCacheAffordance: func(dc *cache.MockDomainCache) {
-			},
-			expected: nil,
+		"default behaviour - no drains - isolationGroup is specified": {
+			globalIGCfg:    isolationGroupsAllHealthy,
+			domainIGCfg:    isolationGroupsAllHealthy,
+			isolationGroup: igA,
+			expected:       false,
 		},
-		"normal case - feature is not enabled for domain, all isolationGroups should always report healthy and there should be no additional DB calls": {
-			featureEnabledGlobally:  true,
-			featureEnabledForDomain: false,
-			isolationGroupDrainAffordance: func(drains *persistence.MockGlobalIsolationGroupDrains) {
-			},
-			domainCacheAffordance: func(dc *cache.MockDomainCache) {
-				o := int64(0)
-				ce := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{
-					Name:                 domainName,
-					IsolationGroupConfig: types.IsolationGroupConfiguration{},
-				}, nil, true, nil, 0, &o)
-				dc.EXPECT().GetDomainByID(domainID).Return(ce, nil)
-			},
-			expected: &isolationGroup2,
+		"default behaviour - no drains - isolationGroup is not specified": {
+			globalIGCfg:    isolationGroupsAllHealthy,
+			domainIGCfg:    isolationGroupsAllHealthy,
+			isolationGroup: "some-not-specified-drain",
+			expected:       false,
 		},
-		"IsolationGroups not drained, feature enabled, normal case - workflow is started in isolationGroup 2, so it should remain there": {
-			featureEnabledGlobally:  true,
-			featureEnabledForDomain: true,
-			isolationGroupDrainAffordance: func(drains *persistence.MockGlobalIsolationGroupDrains) {
-				drains.EXPECT().GetClusterDrains(gomock.Any()).Return(types.IsolationGroupConfiguration{}, nil) // empty drains
-			},
-			domainCacheAffordance: func(dc *cache.MockDomainCache) {
-				o := int64(0)
-				ce := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{
-					Name:                 domainName,
-					IsolationGroupConfig: types.IsolationGroupConfiguration{},
-				}, nil, true, nil, 0, &o)
-				dc.EXPECT().GetDomainByID(domainID).Return(ce, nil) // resolve the domainName first
-				dc.EXPECT().GetDomain(domainName).Return(ce, nil)   // no domain drains
-			},
-			expected: &isolationGroup2,
+		"default behaviour - globalDrain": {
+			globalIGCfg:    isolationGroupsOneDrain,
+			domainIGCfg:    isolationGroupsAllHealthy,
+			isolationGroup: igA,
+			expected:       true,
+		},
+		"default behaviour - domainDrain": {
+			globalIGCfg:    isolationGroupsAllHealthy,
+			domainIGCfg:    isolationGroupsOneDrain,
+			isolationGroup: igA,
+			expected:       true,
+		},
+		"default behaviour - both ": {
+			globalIGCfg:    isolationGroupsOneDrain,
+			domainIGCfg:    isolationGroupsOneDrain,
+			isolationGroup: igA,
+			expected:       true,
 		},
 	}
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, isDrained(td.isolationGroup, td.globalIGCfg, td.domainIGCfg))
+		})
+	}
+}
 
-			cfg := Config{
-				zonalPartitioningEnabledGlobally:  func(string) bool { return td.featureEnabledGlobally },
-				zonalPartitioningEnabledForDomain: func(string) bool { return td.featureEnabledForDomain },
-				allIsolationGroups:                []types.IsolationGroupName{"isolationGroup1", "isolationGroup2", "isolationGroup3"},
-			}
+func TestAvailableIsolationGroups(t *testing.T) {
 
-			mockCtl := gomock.NewController(t)
+	igA := types.IsolationGroupName("isolationGroupA")
+	igB := types.IsolationGroupName("isolationGroupB")
+	igC := types.IsolationGroupName("isolationGroupC")
 
-			isolationGroupDrainsMock := persistence.NewMockGlobalIsolationGroupDrains(mockCtl)
-			cacheMock := cache.NewMockDomainCache(mockCtl)
-			td.isolationGroupDrainAffordance(isolationGroupDrainsMock)
-			td.domainCacheAffordance(cacheMock)
+	all := []types.IsolationGroupName{igA, igB, igC}
 
-			isolationGroupState := NewDefaultIsolationGroupStateWatcher(loggerimpl.NewNopLogger(), cacheMock, cfg, isolationGroupDrainsMock)
-			resolver := NewDefaultTaskPartitioner(loggerimpl.NewNopLogger(), isolationGroupState, cfg)
+	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
+		igA: {
+			Name:   igA,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+		igB: {
+			Name:   igB,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+		igC: {
+			Name:   igC,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+	}
 
-			res, err := resolver.GetTaskIsolationGroupByDomainID(context.Background(), domainID, partitionKey)
+	isolationGroupsSetB := types.IsolationGroupConfiguration{
+		igA: {
+			Name:   igA,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+		igB: {
+			Name:   igB,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+	}
 
+	isolationGroupsSetC := types.IsolationGroupConfiguration{
+		igC: {
+			Name:   igC,
+			Status: types.IsolationGroupStatusDrained,
+		},
+	}
+
+	isolationGroupsSetBDrained := types.IsolationGroupConfiguration{
+		igA: {
+			Name:   igA,
+			Status: types.IsolationGroupStatusDrained,
+		},
+		igB: {
+			Name:   igB,
+			Status: types.IsolationGroupStatusDrained,
+		},
+	}
+
+	tests := map[string]struct {
+		globalIGCfg types.IsolationGroupConfiguration
+		domainIGCfg types.IsolationGroupConfiguration
+		expected    types.IsolationGroupConfiguration
+	}{
+		"default behaviour - no drains - everything should be healthy": {
+			globalIGCfg: types.IsolationGroupConfiguration{},
+			domainIGCfg: types.IsolationGroupConfiguration{},
+			expected:    isolationGroupsAllHealthy,
+		},
+		"default behaviour - one is not healthy - should return remaining 1/2": {
+			globalIGCfg: types.IsolationGroupConfiguration{},
+			domainIGCfg: isolationGroupsSetC, // C is drained
+			expected:    isolationGroupsSetB, // A and B
+		},
+		"default behaviour - one is not healthy - should return remaining 2/2": {
+			globalIGCfg: isolationGroupsSetC, // C is drained
+			domainIGCfg: types.IsolationGroupConfiguration{},
+			expected:    isolationGroupsSetB, // A and B
+		},
+		"both": {
+			globalIGCfg: isolationGroupsSetC,                 // C is drained
+			domainIGCfg: isolationGroupsSetBDrained,          // A, B
+			expected:    types.IsolationGroupConfiguration{}, // nothing should be available
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, availableIG(all, td.globalIGCfg, td.domainIGCfg))
+		})
+	}
+}
+
+func TestPickingAZone(t *testing.T) {
+
+	igA := types.IsolationGroupName("isolationGroupA")
+	igB := types.IsolationGroupName("isolationGroupB")
+	igC := types.IsolationGroupName("isolationGroupC")
+
+	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
+		igA: {
+			Name:   igA,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+		igB: {
+			Name:   igB,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+		igC: {
+			Name:   igC,
+			Status: types.IsolationGroupStatusHealthy,
+		},
+	}
+
+	tests := map[string]struct {
+		availablePartitionGroups types.IsolationGroupConfiguration
+		wfPartitionCfg           DefaultPartitionConfig
+		expected                 *types.IsolationGroupName
+		expectedErr              error
+	}{
+		"default behaviour - wf starting in a zone/isolationGroup should stay there if everything's healthy": {
+			availablePartitionGroups: isolationGroupsAllHealthy,
+			wfPartitionCfg: DefaultPartitionConfig{
+				WorkflowStartIsolationGroup: igA,
+				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
+			},
+			expected: &igA,
+		},
+		"default behaviour - wf starting in a zone/isolationGroup must run in an available zone only. If not in available list, pick a random one": {
+			availablePartitionGroups: isolationGroupsAllHealthy,
+			wfPartitionCfg: DefaultPartitionConfig{
+				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
+				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
+			},
+			expected: &igC,
+		},
+		"... and it should be deterministic": {
+			availablePartitionGroups: isolationGroupsAllHealthy,
+			wfPartitionCfg: DefaultPartitionConfig{
+				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
+				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
+			},
+			expected: &igC,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			res, err := pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
 			assert.Equal(t, td.expectedErr, err)
 			assert.Equal(t, td.expected, res)
 		})
+	}
+}
+
+func TestDefaultPartitionerFallbackPickerDistribution(t *testing.T) {
+
+	countHealthy := make(map[types.IsolationGroupName]int)
+
+	var isolationGroups []types.IsolationGroupPartition
+
+	for i := 0; i < 100; i++ {
+		healthy := types.IsolationGroupPartition{
+			Name:   types.IsolationGroupName(fmt.Sprintf("isolationGroup-%d", i)),
+			Status: types.IsolationGroupStatusHealthy,
+		}
+
+		unhealthy := types.IsolationGroupPartition{
+			Name:   types.IsolationGroupName(fmt.Sprintf("isolationGroup-%d", i)),
+			Status: types.IsolationGroupStatusHealthy,
+		}
+
+		isolationGroups = append(isolationGroups, healthy)
+		isolationGroups = append(isolationGroups, unhealthy)
+		countHealthy[healthy.Name] = 0
+	}
+
+	for i := 0; i < 100000; i++ {
+		result := pickIsolationGroupAfterDrain(isolationGroups, DefaultPartitionConfig{
+			WorkflowStartIsolationGroup: "not-a-present-isolationGroup", // always force a fallback to the simple hash
+			RunID:                       uuid.New().String(),
+		})
+
+		count, ok := countHealthy[result]
+		if !ok {
+			t.Fatal("the result wasn't found in the healthy list, something is wrong with the logic for selecting healthy isolationGroups")
+		}
+		countHealthy[result] = count + 1
+	}
+
+	for k, v := range countHealthy {
+		assert.True(t, v > 0, "failed to pick a isolationGroup %s", k)
 	}
 }

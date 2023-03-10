@@ -25,97 +25,79 @@ package partition
 import (
 	"context"
 	"fmt"
-	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
-// DefaultPartitionConfig is the open-source default Partition configuration
-// for each workflow which ensures that workflows started in the same isolationGroup remain there.
-type DefaultPartitionConfig struct {
-	WorkflowStartIsolationGroup types.IsolationGroupName
-	RunID                       string
+const (
+	DefaultPartitionConfigWorkerIsolationGroup = "worker-isolationGroup"
+	DefaultPartitionConfigRunID                = "wf-run-id"
+)
+
+type DefaultIsolationGroupState struct {
+	log                        log.Logger
+	domainCache                cache.DomainCache
+	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains
+	config                     Config
 }
 
-type DefaultPartitioner struct {
-	config              Config
-	log                 log.Logger
-	domainCache         cache.DomainCache
-	isolationGroupState IsolationGroupState
-}
-
-func NewDefaultTaskPartitioner(
+func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
-	isolationGroupState IsolationGroupState,
-	cfg Config,
-) Partitioner {
-	return &DefaultPartitioner{
-		log:                 logger,
-		config:              cfg,
-		isolationGroupState: isolationGroupState,
+	domainCache cache.DomainCache,
+	config Config,
+	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains,
+) IsolationGroupState {
+	return &DefaultIsolationGroupState{
+		log:                        logger,
+		config:                     config,
+		domainCache:                domainCache,
+		globalIsolationGroupDrains: globalIsolationGroupDrains,
 	}
 }
 
-func (r *DefaultPartitioner) IsDrained(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (bool, error) {
-	state, err := r.isolationGroupState.Get(ctx, domain, isolationGroup)
+func (z *DefaultIsolationGroupState) GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*State, error) {
+	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
-		return false, fmt.Errorf("could not determine if drained: %w", err)
+		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
-	return state.Status == types.IsolationGroupStatusDrained, nil
+	return z.Get(ctx, domain.GetInfo().Name, isolationGroup)
 }
 
-func (r *DefaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (bool, error) {
-	state, err := r.isolationGroupState.GetByDomainID(ctx, domainID, isolationGroup)
+// Get the state of a isolationGroup, with respect to both domain and global drains. Domain-specific drains override global config
+func (z *DefaultIsolationGroupState) Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*State, error) {
+	if !z.config.zonalPartitioningEnabledForDomain(domain) {
+		return &State{
+			Global: types.IsolationGroupConfiguration{
+				isolationGroup: types.IsolationGroupPartition{
+					Name:   isolationGroup,
+					Status: types.IsolationGroupStatusHealthy,
+				},
+			},
+			Domain: types.IsolationGroupConfiguration{
+				isolationGroup: types.IsolationGroupPartition{
+					Name:   isolationGroup,
+					Status: types.IsolationGroupStatusHealthy,
+				},
+			},
+		}, nil
+	}
+
+	domainData, err := z.domainCache.GetDomain(domain)
 	if err != nil {
-		return false, fmt.Errorf("could not determine if drained: %w", err)
+		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
-	return state.Status == types.IsolationGroupStatusDrained, nil
-}
+	domainCfg := domainData.GetInfo().IsolationGroupConfig
 
-func (r *DefaultPartitioner) GetTaskIsolationGroupByDomainID(ctx context.Context, domainID string, key types.PartitionConfig) (*types.IsolationGroupName, error) {
-	if !r.config.zonalPartitioningEnabledGlobally(domainID) {
-		return nil, nil
-	}
-
-	partitionData := mapPartitionConfigToDefaultPartitionConfig(key)
-
-	isDrained, err := r.IsDrainedByDomainID(ctx, domainID, partitionData.WorkflowStartIsolationGroup)
+	// todo (david.porter) wrap this in an in-memory cache
+	global, err := z.globalIsolationGroupDrains.GetClusterDrains(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to determine if a isolationGroup is drained: %w", err)
+		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}
-
-	if isDrained {
-		isolationGroups, err := r.isolationGroupState.ListAll(ctx, domainID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list all isolationGroups: %w", err)
-		}
-		isolationGroup := pickIsolationGroupAfterDrain(isolationGroups, partitionData)
-		return &isolationGroup, nil
-	}
-
-	return &partitionData.WorkflowStartIsolationGroup, nil
-}
-
-// Simple deterministic isolationGroup picker
-// which will pick a random healthy isolationGroup and place the workflow there
-func pickIsolationGroupAfterDrain(isolationGroups []types.IsolationGroupPartition, wfConfig DefaultPartitionConfig) types.IsolationGroupName {
-	var availableIsolationGroups []types.IsolationGroupName
-	for _, isolationGroup := range isolationGroups {
-		if isolationGroup.Status == types.IsolationGroupStatusHealthy {
-			availableIsolationGroups = append(availableIsolationGroups, isolationGroup.Name)
-		}
-	}
-	hashv := farm.Hash32([]byte(wfConfig.RunID))
-	return availableIsolationGroups[int(hashv)%len(availableIsolationGroups)]
-}
-
-func mapPartitionConfigToDefaultPartitionConfig(config types.PartitionConfig) DefaultPartitionConfig {
-	isolationGroup, _ := config[DefaultPartitionConfigWorkerIsolationGroup]
-	runID, _ := config[DefaultPartitionConfigRunID]
-	return DefaultPartitionConfig{
-		WorkflowStartIsolationGroup: types.IsolationGroupName(isolationGroup),
-		RunID:                       runID,
-	}
+	return &State{
+		Global: global,
+		Domain: domainCfg,
+	}, nil
 }

@@ -26,11 +26,23 @@ package partition
 
 import (
 	"context"
-
 	"github.com/uber/cadence/common/dynamicconfig"
 
 	"github.com/uber/cadence/common/types"
 )
+
+// Config is the base configuration for the partitioning library
+type Config struct {
+	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	allIsolationGroups                []types.IsolationGroupName
+}
+
+// A convenience return type of a collection of IsolationGroup configurations
+type State struct {
+	Global types.IsolationGroupConfiguration
+	Domain types.IsolationGroupConfiguration
+}
 
 type Partitioner interface {
 	// GetTaskIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
@@ -43,21 +55,10 @@ type Partitioner interface {
 	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup types.IsolationGroupName) (bool, error)
 }
 
-// IsolationGroupState is a heavily cached in-memory library for determining the state of what zones are healthy or
-// drained presently.
+// IsolationGroupState is a heavily cached in-memory library for returning the state of what zones are healthy or
+// drained presently. It may return an inclusive (allow-list based) or a exclusive (deny-list based) set of IsolationGroups
+// depending on the implementation.
 type IsolationGroupState interface {
-	// ListAll lists the status of all isolationGroups with respect to the particular domainID
-	ListAll(ctx context.Context, domainID string) ([]types.IsolationGroupPartition, error)
-	// Get returns the state of a particular isolationGroup from the point of view of the domain
-	// responsible for merging both global configuration and isolationGroup specific configuration, with domain health
-	// configuration overriding the global configuration with respect to Isolation State.
-	Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error)
-	GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*types.IsolationGroupPartition, error)
-}
-
-// Config is the base configuration for the partitioning library
-type Config struct {
-	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
-	allIsolationGroups                []types.IsolationGroupName
+	Get(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (*State, error)
+	GetByDomainID(ctx context.Context, domainID string, isolationGroup types.IsolationGroupName) (*State, error)
 }
