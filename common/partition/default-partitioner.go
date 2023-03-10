@@ -25,6 +25,7 @@ package partition
 import (
 	"context"
 	"fmt"
+
 	"github.com/uber/cadence/common/persistence"
 
 	"github.com/dgryski/go-farm"

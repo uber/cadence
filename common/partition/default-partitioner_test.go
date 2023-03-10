@@ -25,9 +25,10 @@ package partition
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/persistence"
-	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
