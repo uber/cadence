@@ -46,7 +46,7 @@ type DefaultWorkflowPartitionConfig struct {
 	RunID                       string
 }
 
-// DefaultPartitioner is a business-agnositic implementation of partitioning
+// DefaultPartitioner is a business-agnostic implementation of partitioning
 // which is used by the Cadence system to allocate workflows in matching by isolation-group
 type DefaultPartitioner struct {
 	config              Config

@@ -56,7 +56,7 @@ type Partitioner interface {
 }
 
 // IsolationGroupState is a heavily cached in-memory library for returning the state of what zones are healthy or
-// drained presently. It may return an inclusive (allow-list based) or a exclusive (deny-list based) set of IsolationGroups
+// drained presently. It may return an inclusive (allow-list based) or an exclusive (deny-list based) set of IsolationGroups
 // depending on the implementation.
 type IsolationGroupState interface {
 	Get(ctx context.Context, domain string) (*State, error)

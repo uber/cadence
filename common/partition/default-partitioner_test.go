@@ -209,7 +209,7 @@ func TestPickingAZone(t *testing.T) {
 	tests := map[string]struct {
 		availablePartitionGroups types.IsolationGroupConfiguration
 		wfPartitionCfg           DefaultWorkflowPartitionConfig
-		expected                 *types.IsolationGroupName
+		expected                 types.IsolationGroupName
 		expectedErr              error
 	}{
 		"default behaviour - wf starting in a zone/isolationGroup should stay there if everything's healthy": {
@@ -218,7 +218,7 @@ func TestPickingAZone(t *testing.T) {
 				WorkflowStartIsolationGroup: igA,
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
-			expected: &igA,
+			expected: igA,
 		},
 		"default behaviour - wf starting in a zone/isolationGroup must run in an available zone only. If not in available list, pick a random one": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
@@ -226,7 +226,7 @@ func TestPickingAZone(t *testing.T) {
 				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
-			expected: &igC,
+			expected: igC,
 		},
 		"... and it should be deterministic": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
@@ -234,7 +234,7 @@ func TestPickingAZone(t *testing.T) {
 				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
-			expected: &igC,
+			expected: igC,
 		},
 	}
 
