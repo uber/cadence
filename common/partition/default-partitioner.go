@@ -101,3 +101,43 @@ func (z *DefaultIsolationGroupState) Get(ctx context.Context, domain string, iso
 		Domain: domainCfg,
 	}, nil
 }
+
+func isDrained(isolationGroup types.IsolationGroupName, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
+	globalCfg, hasGlobalConfig := global[isolationGroup]
+	domainCfg, hasDomainConfig := domain[isolationGroup]
+	if hasGlobalConfig {
+		if globalCfg.Status == types.IsolationGroupStatusDrained {
+			return true
+		}
+	}
+	if hasDomainConfig {
+		if domainCfg.Status == types.IsolationGroupStatusDrained {
+			return true
+		}
+	}
+	return false
+}
+
+// A simple explicit deny-based isolation group implementation
+func availableIG(all []types.IsolationGroupName, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) types.IsolationGroupConfiguration {
+	out := types.IsolationGroupConfiguration{}
+	for _, isolationGroup := range all {
+		globalCfg, hasGlobalConfig := global[isolationGroup]
+		domainCfg, hasDomainConfig := domain[isolationGroup]
+		if hasGlobalConfig {
+			if globalCfg.Status == types.IsolationGroupStatusDrained {
+				continue
+			}
+		}
+		if hasDomainConfig {
+			if domainCfg.Status == types.IsolationGroupStatusDrained {
+				continue
+			}
+		}
+		out[isolationGroup] = types.IsolationGroupPartition{
+			Name:   isolationGroup,
+			Status: types.IsolationGroupStatusHealthy,
+		}
+	}
+	return out
+}

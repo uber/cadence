@@ -23,21 +23,16 @@
 package partition
 
 import (
-"context"
-"fmt"
+	"context"
+	"fmt"
 
-"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/persistence"
 
-"github.com/dgryski/go-farm"
+	"github.com/dgryski/go-farm"
 
-"github.com/uber/cadence/common/cache"
-"github.com/uber/cadence/common/log"
-"github.com/uber/cadence/common/types"
-)
-
-const (
-	DefaultPartitionConfigWorkerIsolationGroup = "worker-isolationGroup"
-	DefaultPartitionConfigRunID                = "wf-run-id"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/types"
 )
 
 type DefaultPartitioner struct {
