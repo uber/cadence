@@ -94,9 +94,8 @@ func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 
 	tlm := createTestTaskListManager(controller)
 	tlm.db.rangeID = int64(1)
-	tlm.db.ackLevel = int64(0)
-	tlm.taskAckManager.SetAckLevel(tlm.db.ackLevel)
-	tlm.taskAckManager.SetReadLevel(tlm.db.ackLevel)
+	tlm.taskAckManager.SetAckLevel(0)
+	tlm.taskAckManager.SetReadLevel(0)
 	require.Equal(t, int64(0), tlm.taskAckManager.GetAckLevel())
 	require.Equal(t, int64(0), tlm.taskAckManager.GetReadLevel())
 
@@ -173,8 +172,7 @@ func TestDescribeTaskList(t *testing.T) {
 	// Create taskList Manager and set taskList state
 	tlm := createTestTaskListManager(controller)
 	tlm.db.rangeID = int64(1)
-	tlm.db.ackLevel = int64(0)
-	tlm.taskAckManager.SetAckLevel(tlm.db.ackLevel)
+	tlm.taskAckManager.SetAckLevel(0)
 
 	for i := int64(0); i < taskCount; i++ {
 		err := tlm.taskAckManager.ReadItem(startTaskID + i)
