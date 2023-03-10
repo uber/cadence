@@ -208,13 +208,13 @@ func TestPickingAZone(t *testing.T) {
 
 	tests := map[string]struct {
 		availablePartitionGroups types.IsolationGroupConfiguration
-		wfPartitionCfg           DefaultPartitionConfig
+		wfPartitionCfg           DefaultWorkflowPartitionConfig
 		expected                 *types.IsolationGroupName
 		expectedErr              error
 	}{
 		"default behaviour - wf starting in a zone/isolationGroup should stay there if everything's healthy": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: DefaultPartitionConfig{
+			wfPartitionCfg: DefaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: igA,
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
@@ -222,7 +222,7 @@ func TestPickingAZone(t *testing.T) {
 		},
 		"default behaviour - wf starting in a zone/isolationGroup must run in an available zone only. If not in available list, pick a random one": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: DefaultPartitionConfig{
+			wfPartitionCfg: DefaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
@@ -230,7 +230,7 @@ func TestPickingAZone(t *testing.T) {
 		},
 		"... and it should be deterministic": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: DefaultPartitionConfig{
+			wfPartitionCfg: DefaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
@@ -240,8 +240,7 @@ func TestPickingAZone(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res, err := pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
-			assert.Equal(t, td.expectedErr, err)
+			res := pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
 			assert.Equal(t, td.expected, res)
 		})
 	}
@@ -249,40 +248,29 @@ func TestPickingAZone(t *testing.T) {
 
 func TestDefaultPartitionerFallbackPickerDistribution(t *testing.T) {
 
-	countHealthy := make(map[types.IsolationGroupName]int)
-
-	var isolationGroups []types.IsolationGroupPartition
+	count := make(map[types.IsolationGroupName]int)
+	var isolationGroups []types.IsolationGroupName
 
 	for i := 0; i < 100; i++ {
-		healthy := types.IsolationGroupPartition{
-			Name:   types.IsolationGroupName(fmt.Sprintf("isolationGroup-%d", i)),
-			Status: types.IsolationGroupStatusHealthy,
-		}
-
-		unhealthy := types.IsolationGroupPartition{
-			Name:   types.IsolationGroupName(fmt.Sprintf("isolationGroup-%d", i)),
-			Status: types.IsolationGroupStatusHealthy,
-		}
-
-		isolationGroups = append(isolationGroups, healthy)
-		isolationGroups = append(isolationGroups, unhealthy)
-		countHealthy[healthy.Name] = 0
+		ig := types.IsolationGroupName(fmt.Sprintf("isolationGroup-%d", i))
+		isolationGroups = append(isolationGroups, ig)
+		count[ig] = 0
 	}
 
 	for i := 0; i < 100000; i++ {
-		result := pickIsolationGroupAfterDrain(isolationGroups, DefaultPartitionConfig{
+		result := pickIsolationGroupFallback(isolationGroups, DefaultWorkflowPartitionConfig{
 			WorkflowStartIsolationGroup: "not-a-present-isolationGroup", // always force a fallback to the simple hash
 			RunID:                       uuid.New().String(),
 		})
 
-		count, ok := countHealthy[result]
+		c, ok := count[result]
 		if !ok {
 			t.Fatal("the result wasn't found in the healthy list, something is wrong with the logic for selecting healthy isolationGroups")
 		}
-		countHealthy[result] = count + 1
+		count[result] = c + 1
 	}
 
-	for k, v := range countHealthy {
+	for k, v := range count {
 		assert.True(t, v > 0, "failed to pick a isolationGroup %s", k)
 	}
 }

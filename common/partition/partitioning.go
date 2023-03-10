@@ -45,10 +45,10 @@ type State struct {
 }
 
 type Partitioner interface {
-	// GetTaskIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
+	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
-	GetTaskIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error)
+	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error)
 	// IsDrained answers the question - "is this particular isolationGroup drained?". Used by startWorkflow calls
 	// and similar sync frontend calls to make routing decisions
 	IsDrained(ctx context.Context, Domain string, IsolationGroup types.IsolationGroupName) (bool, error)

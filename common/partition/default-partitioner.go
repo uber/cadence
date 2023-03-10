@@ -25,9 +25,11 @@ package partition
 import (
 	"context"
 	"fmt"
+	"github.com/dgryski/go-farm"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
+	"sort"
 )
 
 const (
@@ -66,7 +68,7 @@ func NewDefaultPartitioner(
 }
 
 func (r *DefaultPartitioner) IsDrained(ctx context.Context, domain string, isolationGroup types.IsolationGroupName) (bool, error) {
-	state, err := r.isolationGroupState.Get(ctx, domain, isolationGroup)
+	state, err := r.isolationGroupState.Get(ctx, domain)
 	if err != nil {
 		return false, fmt.Errorf("could not determine if drained: %w", err)
 	}
@@ -81,16 +83,20 @@ func (r *DefaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID s
 	return r.IsDrained(ctx, domain.GetInfo().Name, isolationGroup)
 }
 
-func (r *DefaultPartitioner) GetTaskIsolationGroupByDomainID(ctx context.Context, domainID string, key types.PartitionConfig) (*types.IsolationGroupName, error) {
+func (r *DefaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData types.PartitionConfig) (*types.IsolationGroupName, error) {
 	if !r.config.zonalPartitioningEnabledGlobally(domainID) {
 		return nil, nil
 	}
 
-	partitionData := mapPartitionConfigToDefaultPartitionConfig(key)
+	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
+	state, err := r.isolationGroupState.GetByDomainID(ctx, domainID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get isolation group state: %w", err)
+	}
+	available := availableIG(r.config.allIsolationGroups, state.Global, state.Domain)
 
-	r.isolationGroupState.GetByDomainID(ctx, domainID)
-
-	availableIG()
+	ig := pickIsolationGroup(wfPartition, available)
+	return &ig, nil
 }
 
 func isDrained(isolationGroup types.IsolationGroupName, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
@@ -140,4 +146,34 @@ func mapPartitionConfigToDefaultPartitionConfig(config types.PartitionConfig) De
 		WorkflowStartIsolationGroup: types.IsolationGroupName(isolationGroup),
 		RunID:                       runID,
 	}
+}
+
+// picks an isolation group to run in. if the workflow was started there, it'll attempt to pin it, unless there is an explicit
+// drain.
+func pickIsolationGroup(wfPartition DefaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) types.IsolationGroupName {
+	wfIG, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
+	if isAvailable && wfIG.Status != types.IsolationGroupStatusDrained {
+		return wfPartition.WorkflowStartIsolationGroup
+	}
+
+	// it's drained, fall back to picking a deterministic but random group
+	availableList := []types.IsolationGroupName{}
+	for k, v := range available {
+		if v.Status == types.IsolationGroupStatusDrained {
+			continue
+		}
+		availableList = append(availableList, k)
+	}
+	// sort the slice to ensure it's deterministic
+	sort.Slice(availableList, func(i int, j int) bool {
+		return availableList[i] > availableList[j]
+	})
+	return pickIsolationGroupFallback(availableList, wfPartition)
+}
+
+// Simple deterministic isolationGroup picker
+// which will pick a random healthy isolationGroup and place the workflow there
+func pickIsolationGroupFallback(available []types.IsolationGroupName, wfConfig DefaultWorkflowPartitionConfig) types.IsolationGroupName {
+	hashv := farm.Hash32([]byte(wfConfig.RunID))
+	return available[int(hashv)%len(available)]
 }
