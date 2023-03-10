@@ -5690,6 +5690,10 @@ type SignalWithStartWorkflowExecutionRequest struct {
 }
 
 func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+
 	// making a deep copy of the struct for manually assigning attributes
 	cloneRequest := &SignalWithStartWorkflowExecutionRequest{
 		Domain:       v.Domain,
@@ -5699,34 +5703,53 @@ func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string,
 		RequestID:    v.RequestID,
 		CronSchedule: v.CronSchedule,
 	}
+
 	// deep copy the value within pointers
 	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	cloneWorkflowType := *v.WorkflowType
-	cloneRequest.WorkflowType = &cloneWorkflowType
+	if v.WorkflowType != nil {
+		cloneWorkflowType := *v.WorkflowType
+		cloneRequest.WorkflowType = &cloneWorkflowType
+	}
 
-	cloneTaskList := *v.TaskList
-	cloneRequest.TaskList = &cloneTaskList
+	if v.TaskList != nil {
+		cloneTaskList := *v.TaskList
+		cloneRequest.TaskList = &cloneTaskList
+	}
 
-	cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
-	cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
+	if v.ExecutionStartToCloseTimeoutSeconds != nil {
+		cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
+		cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
+	}
 
-	cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
-	cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
+	if v.TaskStartToCloseTimeoutSeconds != nil {
+		cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
+		cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
+	}
 
-	cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
-	cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
+	if v.WorkflowIDReusePolicy != nil {
+		cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
+		cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
+	}
 
-	cloneRetryPolicy := *v.RetryPolicy
-	cloneRequest.RetryPolicy = &cloneRetryPolicy
+	if v.RetryPolicy != nil {
+		cloneRetryPolicy := *v.RetryPolicy
+		cloneRequest.RetryPolicy = &cloneRetryPolicy
+	}
 
-	cloneHeader := *v.Header
-	cloneRequest.Header = &cloneHeader
+	if v.Header != nil {
+		cloneHeader := *v.Header
+		cloneRequest.Header = &cloneHeader
+	}
 
-	cloneDelayStartSeconds := *v.DelayStartSeconds
-	cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
+	if v.DelayStartSeconds != nil {
+		cloneDelayStartSeconds := *v.DelayStartSeconds
+		cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
+	}
 
-	cloneJitterStartSeconds := *v.JitterStartSeconds
-	cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
+	if v.JitterStartSeconds != nil {
+		cloneJitterStartSeconds := *v.JitterStartSeconds
+		cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
+	}
 
 	// deep copy arrays
 	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
@@ -5844,6 +5867,9 @@ type SignalWorkflowExecutionRequest struct {
 }
 
 func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	// making a deep copy of the struct for manually assigning attributes
 	cloneSignalWorkflowExecutionRequest := &SignalWorkflowExecutionRequest{
 		Domain:     v.Domain,
@@ -5853,8 +5879,10 @@ func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	}
 	// deep copy the value within a pointer
 	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	cloneWorkFlowExecution := *v.WorkflowExecution
-	cloneSignalWorkflowExecutionRequest.WorkflowExecution = &cloneWorkFlowExecution
+	if v.WorkflowExecution != nil {
+		cloneWorkFlowExecution := *v.WorkflowExecution
+		cloneSignalWorkflowExecutionRequest.WorkflowExecution = &cloneWorkFlowExecution
+	}
 
 	// deep copy an array
 	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
@@ -6151,6 +6179,9 @@ type StartWorkflowExecutionRequest struct {
 }
 
 func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	// making a deep copy of the struct for manually assigning attributes
 	cloneRequest := &StartWorkflowExecutionRequest{
 		Domain:       v.Domain,
@@ -6161,32 +6192,50 @@ func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	}
 	// deep copy the value within pointers
 	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	cloneWorkflowType := *v.WorkflowType
-	cloneRequest.WorkflowType = &cloneWorkflowType
+	if v.WorkflowType != nil {
+		cloneWorkflowType := *v.WorkflowType
+		cloneRequest.WorkflowType = &cloneWorkflowType
+	}
 
-	cloneTaskList := *v.TaskList
-	cloneRequest.TaskList = &cloneTaskList
+	if v.TaskList != nil {
+		cloneTaskList := *v.TaskList
+		cloneRequest.TaskList = &cloneTaskList
+	}
 
-	cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
-	cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
+	if v.ExecutionStartToCloseTimeoutSeconds != nil {
+		cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
+		cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
+	}
 
-	cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
-	cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
+	if v.TaskStartToCloseTimeoutSeconds != nil {
+		cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
+		cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
+	}
 
-	cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
-	cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
+	if v.WorkflowIDReusePolicy != nil {
+		cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
+		cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
+	}
 
-	cloneRetryPolicy := *v.RetryPolicy
-	cloneRequest.RetryPolicy = &cloneRetryPolicy
+	if v.RetryPolicy != nil {
+		cloneRetryPolicy := *v.RetryPolicy
+		cloneRequest.RetryPolicy = &cloneRetryPolicy
+	}
 
-	cloneHeader := *v.Header
-	cloneRequest.Header = &cloneHeader
+	if v.Header != nil {
+		cloneHeader := *v.Header
+		cloneRequest.Header = &cloneHeader
+	}
 
-	cloneDelayStartSeconds := *v.DelayStartSeconds
-	cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
+	if v.DelayStartSeconds != nil {
+		cloneDelayStartSeconds := *v.DelayStartSeconds
+		cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
+	}
 
-	cloneJitterStartSeconds := *v.JitterStartSeconds
-	cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
+	if v.JitterStartSeconds != nil {
+		cloneJitterStartSeconds := *v.JitterStartSeconds
+		cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
+	}
 
 	return SerializeRequest(cloneRequest)
 }
@@ -8091,6 +8140,5 @@ func SerializeRequest(request interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return string(res), nil
 }
