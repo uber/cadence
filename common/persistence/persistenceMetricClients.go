@@ -492,7 +492,7 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 		return err
 	}
 	p.logger.SampleInfo("Persistence ConflictResolveWorkflowExecution called", p.sampleLoggingRate(),
-		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.CurrentWorkflowMutation.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
+		tag.WorkflowDomainName(request.DomainName), tag.ShardID(p.GetShardID()))
 	var err error
 	if p.enableShardIDMetrics() {
 		err = p.callWithDomainAndShardScope(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
