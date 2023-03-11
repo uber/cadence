@@ -472,6 +472,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_Invalidated(
 			sourceTask *crossClusterSourceTask,
 			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
+			partitionConfig map[string]string,
 		) {
 			s.Error(getRequestErr)
 			s.Nil(request)
@@ -507,6 +508,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 			sourceTask *crossClusterSourceTask,
 			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
+			partitionConfig map[string]string,
 		) {
 			s.NoError(getRequestErr)
 			s.NotNil(request)
@@ -526,6 +528,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 				InitiatedEventID:         taskInfo.ScheduleID,
 				InitiatedEventAttributes: initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes,
 				TargetRunID:              common.StringPtr(childExecutionRunID),
+				PartitionConfig:          partitionConfig,
 			}, request.StartChildExecutionAttributes)
 			s.Equal(ctask.TaskStatePending, sourceTask.State())
 			s.Equal(processingStateResponseRecorded, sourceTask.ProcessingState())
@@ -562,6 +565,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 			sourceTask *crossClusterSourceTask,
 			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
+			partitionConfig map[string]string,
 		) {
 			s.NoError(getRequestErr)
 			s.NotNil(request)
@@ -581,6 +585,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_AlreadyStart
 				InitiatedEventID:         taskInfo.ScheduleID,
 				InitiatedEventAttributes: initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes,
 				TargetRunID:              common.StringPtr(childExecutionRunID),
+				PartitionConfig:          partitionConfig,
 			}, request.StartChildExecutionAttributes)
 			s.Equal(ctask.TaskStatePending, sourceTask.State())
 			s.Equal(processingStateResponseRecorded, sourceTask.ProcessingState())
@@ -617,6 +622,7 @@ func (s *crossClusterTaskSuite) TestSourceTask_GetStartChildRequest_Duplication(
 			sourceTask *crossClusterSourceTask,
 			childInfo *persistence.ChildExecutionInfo,
 			initiatedEvent *types.HistoryEvent,
+			partitionConfig map[string]string,
 		) {
 			s.NoError(getRequestErr)
 			s.Nil(request)
@@ -640,6 +646,7 @@ func (s *crossClusterTaskSuite) testGetStartChildExecutionRequest(
 		sourceTask *crossClusterSourceTask,
 		childInfo *persistence.ChildExecutionInfo,
 		initiatedEvent *types.HistoryEvent,
+		partitionConfig map[string]string,
 	),
 ) {
 	workflowExecution, mutableState, decisionCompletionID, err := test.SetupWorkflowWithCompletedDecision(s.mockShard, sourceDomainID)
@@ -689,7 +696,7 @@ func (s *crossClusterTaskSuite) testGetStartChildExecutionRequest(
 	}
 
 	request, err := sourceTask.GetCrossClusterRequest()
-	validationFn(request, err, sourceTask, childInfo, event)
+	validationFn(request, err, sourceTask, childInfo, event, mutableState.GetExecutionInfo().PartitionConfig)
 }
 
 func (s *crossClusterTaskSuite) TestSourceTask_GetCancelRequest_Duplication() {
