@@ -8099,10 +8099,6 @@ type StickyWorkerUnavailableError struct {
 // SerializeRequest Serialize an arbitrary request for logging
 // pass in a pointer as a parameter to save space
 func SerializeRequest(request interface{}) (string, error) {
-	if request == nil {
-		return "", nil
-	}
-
 	res, err := json.Marshal(request)
 	if err != nil {
 		return "", err
