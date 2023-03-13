@@ -62,7 +62,20 @@ steps:
       - docker-compose#v3.0.0:
           run: integration-test-cassandra
           config: docker/buildkite/docker-compose-es7.yml
-
+  - label: ":golang: integration test with cassandra with OpenSearch v2"
+    agents:
+      queue: "workers"
+      docker: "*"
+    command: "make cover_integration_profile"
+    artifact_paths:
+      - ".build/coverage/*.out"
+    retry:
+      automatic:
+        limit: 1
+    plugins:
+      - docker-compose#v3.0.0:
+          run: integration-test-cassandra
+          config: docker/buildkite/docker-compose-opensearch2.yml
   - label: ":golang: integration ndc test with cassandra"
     agents:
       queue: "workers"
