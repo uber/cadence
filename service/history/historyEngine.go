@@ -1162,7 +1162,7 @@ func (e *historyEngineImpl) QueryWorkflow(
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
 	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
-		if !consistentQueryEnabled{
+		if !consistentQueryEnabled {
 			return nil, workflow.ErrConsistentQueryNotEnabled
 		}
 		scope.IncCounter(metrics.ConsistentQueryPerShard)
