@@ -445,6 +445,11 @@ func newTimerQueueActiveProcessor(
 		if !ok {
 			return false, errUnexpectedQueueTask
 		}
+		if notRegistered, err := isDomainNotRegistered(shard, timer.DomainID); notRegistered && err == nil {
+			logger.Info("Domain is not in registered status, skip task in active timer queue.", tag.WorkflowDomainID(timer.DomainID), tag.Value(taskInfo))
+			return false, nil
+		}
+
 		return taskAllocator.VerifyActiveTask(timer.DomainID, timer)
 	}
 
@@ -501,6 +506,10 @@ func newTimerQueueStandbyProcessor(
 		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
+		}
+		if notRegistered, err := isDomainNotRegistered(shard, timer.DomainID); notRegistered && err == nil {
+			logger.Info("Domain is not in registered status, skip task in standby timer queue.", tag.WorkflowDomainID(timer.DomainID), tag.Value(taskInfo))
+			return false, nil
 		}
 		if timer.TaskType == persistence.TaskTypeWorkflowTimeout ||
 			timer.TaskType == persistence.TaskTypeDeleteHistoryEvent {
@@ -588,6 +597,10 @@ func newTimerQueueFailoverProcessor(
 		timer, ok := taskInfo.(*persistence.TimerTaskInfo)
 		if !ok {
 			return false, errUnexpectedQueueTask
+		}
+		if notRegistered, err := isDomainNotRegistered(shardContext, timer.DomainID); notRegistered && err == nil {
+			logger.Info("Domain is not in registered status, skip task in failover timer queue.", tag.WorkflowDomainID(timer.DomainID), tag.Value(taskInfo))
+			return false, nil
 		}
 		return taskAllocator.VerifyFailoverActiveTask(domainIDs, timer.DomainID, timer)
 	}
