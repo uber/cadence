@@ -65,6 +65,43 @@ func TestSignalWithStartWorkflowExecutionRequestSerializeForLogging(t *testing.T
 	}
 }
 
+func TestPiiSampleRequestSerializeForLogging(t *testing.T) {
+	tests := map[string]struct {
+		input               *PiiSampleRequest
+		expectedOutput      string
+		expectedErrorOutput error
+	}{
+		"complete request without error": {
+			input:               createPiiSampleRequest(),
+			expectedOutput:      "{}",
+			expectedErrorOutput: nil,
+		},
+
+		"empty request without error": {
+			input:               &PiiSampleRequest{},
+			expectedOutput:      "{}",
+			expectedErrorOutput: nil,
+		},
+
+		"nil request without error": {
+			input:               nil,
+			expectedOutput:      "",
+			expectedErrorOutput: nil,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				output, err := test.input.SerializeForLogging()
+				assert.Equal(t, test.expectedOutput, output)
+				assert.Equal(t, test.expectedErrorOutput, err)
+				assert.NotContains(t, output, "PII")
+			})
+		})
+	}
+}
+
 func TestSignalWorkflowExecutionRequestSerializeForLogging(t *testing.T) {
 	tests := map[string]struct {
 		input               *SignalWorkflowExecutionRequest
@@ -182,14 +219,25 @@ func TestStartWorkflowExecutionRequestRequestSerializeForLogging(t *testing.T) {
 }
 
 func TestSerializeRequest(t *testing.T) {
+	// test serializing a normal request
 	testReq := createNewSignalWithStartWorkflowExecutionRequest()
 	serializeRes, err := SerializeRequest(testReq)
 
-	expectRes := "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"signalInput\":\"dGVzdFNpZ25hbElucHV0\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1}"
+	expectRes := "{\"domain\":\"testDomain\",\"workflowId\":\"testWorkflowID\",\"workflowType\":{\"name\":\"testWorkflowType\"},\"taskList\":{\"name\":\"testTaskList\",\"kind\":\"STICKY\"},\"executionStartToCloseTimeoutSeconds\":1,\"taskStartToCloseTimeoutSeconds\":1,\"identity\":\"testIdentity\",\"requestId\":\"DF66E35D-A5B0-425D-8731-6AAC4A4B6368\",\"workflowIdReusePolicy\":\"AllowDuplicate\",\"signalName\":\"testRequest\",\"control\":\"dGVzdENvbnRyb2w=\",\"retryPolicy\":{\"initialIntervalInSeconds\":1,\"backoffCoefficient\":1,\"maximumIntervalInSeconds\":1,\"maximumAttempts\":1,\"nonRetriableErrorReasons\":[\"testArray\"],\"expirationIntervalInSeconds\":1},\"cronSchedule\":\"testSchedule\",\"header\":{},\"delayStartSeconds\":1,\"jitterStartSeconds\":1}"
 	expectErr := error(nil)
 
 	assert.Equal(t, expectRes, serializeRes)
 	assert.Equal(t, expectErr, err)
+
+	// test serializing a request that only contains PII
+	testPiiReq := createPiiSampleRequest()
+	serializePiiRes, piiErr := SerializeRequest(testPiiReq)
+
+	expectPiiRes := "{}"
+	expectPiiErr := error(nil)
+
+	assert.Equal(t, expectPiiRes, serializePiiRes)
+	assert.Equal(t, expectPiiErr, piiErr)
 
 	assert.NotPanics(t, func() {
 		SerializeRequest(nil)
@@ -219,7 +267,7 @@ func createNewSignalWithStartWorkflowExecutionRequest() *SignalWithStartWorkflow
 		RequestID:                           "DF66E35D-A5B0-425D-8731-6AAC4A4B6368",
 		WorkflowIDReusePolicy:               &testWorkflowIDReusePolicy,
 		SignalName:                          "testRequest",
-		SignalInput:                         []byte("testSignalInput"),
+		SignalInput:                         []byte("testSignalInputPII"),
 		Control:                             []byte("testControl"),
 		RetryPolicy: &RetryPolicy{
 			InitialIntervalInSeconds:    1,
@@ -236,5 +284,34 @@ func createNewSignalWithStartWorkflowExecutionRequest() *SignalWithStartWorkflow
 		DelayStartSeconds:  &testDelayStartSeconds,
 		JitterStartSeconds: &testJitterStartSeconds,
 	}
+	return testReq
+}
+
+type PiiSampleRequest struct {
+	Input            []byte            `json:"-"` // Filtering PII
+	Memo             *Memo             `json:"-"` // Filtering PII
+	SearchAttributes *SearchAttributes `json:"-"` // Filtering PII
+	SignalInput      []byte            `json:"-"` // Filtering PII
+}
+
+func (v *PiiSampleRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
+	return SerializeRequest(v)
+}
+
+func createPiiSampleRequest() *PiiSampleRequest {
+	piiTestArray := []byte("testInputPII")
+	testMap := make(map[string][]byte)
+	testMap["PII"] = piiTestArray
+
+	testReq := &PiiSampleRequest{
+		Input:            piiTestArray,
+		Memo:             &Memo{Fields: testMap},
+		SearchAttributes: &SearchAttributes{IndexedFields: testMap},
+		SignalInput:      piiTestArray,
+	}
+
 	return testReq
 }

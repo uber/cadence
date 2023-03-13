@@ -5765,7 +5765,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	RequestID                           string                 `json:"requestId,omitempty"`
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	SignalName                          string                 `json:"signalName,omitempty"`
-	SignalInput                         []byte                 `json:"signalInput,omitempty"`
+	SignalInput                         []byte                 `json:"-"` // Filtering PII
 	Control                             []byte                 `json:"control,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
@@ -8099,6 +8099,10 @@ type StickyWorkerUnavailableError struct {
 // SerializeRequest Serialize an arbitrary request for logging
 // pass in a pointer as a parameter to save space
 func SerializeRequest(request interface{}) (string, error) {
+	if request == nil {
+		return "", nil
+	}
+
 	res, err := json.Marshal(request)
 	if err != nil {
 		return "", err
