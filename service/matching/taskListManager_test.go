@@ -47,7 +47,7 @@ func TestDeliverBufferTasks(t *testing.T) {
 
 	tests := []func(tlm *taskListManagerImpl){
 		func(tlm *taskListManagerImpl) { close(tlm.taskReader.taskBuffer) },
-		func(tlm *taskListManagerImpl) { close(tlm.taskReader.dispatcherShutdownC) },
+		func(tlm *taskListManagerImpl) { tlm.taskReader.cancelFunc() },
 		func(tlm *taskListManagerImpl) {
 			rps := 0.1
 			tlm.matcher.UpdateRatelimit(&rps)
@@ -94,9 +94,8 @@ func TestReadLevelForAllExpiredTasksInBatch(t *testing.T) {
 
 	tlm := createTestTaskListManager(controller)
 	tlm.db.rangeID = int64(1)
-	tlm.db.ackLevel = int64(0)
-	tlm.taskAckManager.SetAckLevel(tlm.db.ackLevel)
-	tlm.taskAckManager.SetReadLevel(tlm.db.ackLevel)
+	tlm.taskAckManager.SetAckLevel(0)
+	tlm.taskAckManager.SetReadLevel(0)
 	require.Equal(t, int64(0), tlm.taskAckManager.GetAckLevel())
 	require.Equal(t, int64(0), tlm.taskAckManager.GetReadLevel())
 
@@ -162,17 +161,6 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 	return tlMgr.(*taskListManagerImpl)
 }
 
-func TestIsTaskAddedRecently(t *testing.T) {
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	tlm := createTestTaskListManager(controller)
-	require.True(t, tlm.taskReader.isTaskAddedRecently(time.Now()))
-	require.False(t, tlm.taskReader.isTaskAddedRecently(time.Now().Add(-tlm.config.MaxTasklistIdleTime())))
-	require.True(t, tlm.taskReader.isTaskAddedRecently(time.Now().Add(1*time.Second)))
-	require.False(t, tlm.taskReader.isTaskAddedRecently(time.Time{}))
-}
-
 func TestDescribeTaskList(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -184,8 +172,7 @@ func TestDescribeTaskList(t *testing.T) {
 	// Create taskList Manager and set taskList state
 	tlm := createTestTaskListManager(controller)
 	tlm.db.rangeID = int64(1)
-	tlm.db.ackLevel = int64(0)
-	tlm.taskAckManager.SetAckLevel(tlm.db.ackLevel)
+	tlm.taskAckManager.SetAckLevel(0)
 
 	for i := int64(0); i < taskCount; i++ {
 		err := tlm.taskAckManager.ReadItem(startTaskID + i)

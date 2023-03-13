@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/dynamicconfig"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -37,6 +39,7 @@ type (
 		metricClient                  metrics.Client
 		logger                        log.Logger
 		enableLatencyHistogramMetrics bool
+		sampleLoggingRate             dynamicconfig.IntPropertyFn
 	}
 
 	shardPersistenceClient struct {
@@ -112,6 +115,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 	metricClient metrics.Client,
 	logger log.Logger,
 	cfg *config.Persistence,
+	sampleLoggingRate dynamicconfig.IntPropertyFn,
 ) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence: persistence,
@@ -119,6 +123,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 			metricClient:                  metricClient,
 			logger:                        logger.WithTags(tag.ShardID(persistence.GetShardID())),
 			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
+			sampleLoggingRate:             sampleLoggingRate,
 		},
 	}
 }
@@ -295,17 +300,19 @@ func (p *persistenceMetricsClientBase) updateErrorMetric(scope int, err error, m
 
 func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op func() error, domainTag metrics.Tag, shardIDTag metrics.Tag) error {
 	domainMetricsScope := p.metricClient.Scope(scope, domainTag)
-	shardMetricsScope := p.metricClient.Scope(scope, shardIDTag)
+	shardOperationsMetricsScope := p.metricClient.Scope(scope, shardIDTag)
+	shardOverallMetricsScope := p.metricClient.Scope(metrics.PersistenceShardRequestCountScope, shardIDTag)
 
 	domainMetricsScope.IncCounter(metrics.PersistenceRequestsPerDomain)
-	shardMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
+	shardOperationsMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
+	shardOverallMetricsScope.IncCounter(metrics.PersistenceRequestsPerShard)
 
 	before := time.Now()
 	err := op()
 	duration := time.Since(before)
 
 	domainMetricsScope.RecordTimer(metrics.PersistenceLatencyPerDomain, duration)
-	shardMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
+	shardOperationsMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
 
 	if p.enableLatencyHistogramMetrics {
 		domainMetricsScope.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)
@@ -442,6 +449,8 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 		resp, err = p.persistence.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
+	p.logger.SampleInfo("Persistence UpdateWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
 	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 	if err != nil {
 		return nil, err
@@ -473,7 +482,9 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	p.logger.SampleInfo("Persistence DeleteWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
+	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
@@ -483,7 +494,9 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	op := func() error {
 		return p.persistence.DeleteCurrentWorkflowExecution(ctx, request)
 	}
-	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	p.logger.SampleInfo("Persistence DeleteCurrentWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
+	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
 }
 
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(

@@ -136,6 +136,15 @@ const (
 		`and task_id = ? ` +
 		`IF range_id = ?`
 
+	templateUpdateTaskListRangeIDQuery = `UPDATE tasks SET ` +
+		`range_id = ? ` +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ? ` +
+		`IF range_id = ?`
+
 	templateDeleteTaskListQuery = `DELETE FROM tasks ` +
 		`WHERE domain_id = ? ` +
 		`AND task_list_name = ? ` +
@@ -342,8 +351,6 @@ func (db *cdb) InsertTasks(
 	domainID := tasklistCondition.DomainID
 	taskListName := tasklistCondition.TaskListName
 	taskListType := tasklistCondition.TaskListType
-	taskListKind := tasklistCondition.TaskListKind
-	ackLevel := tasklistCondition.AckLevel
 
 	for _, task := range tasksToInsert {
 		scheduleID := task.ScheduledID
@@ -380,14 +387,8 @@ func (db *cdb) InsertTasks(
 	}
 
 	// The following query is used to ensure that range_id didn't change
-	batch.Query(templateUpdateTaskListQuery,
+	batch.Query(templateUpdateTaskListRangeIDQuery,
 		tasklistCondition.RangeID,
-		domainID,
-		taskListName,
-		taskListType,
-		ackLevel,
-		taskListKind,
-		time.Now(),
 		domainID,
 		taskListName,
 		taskListType,
