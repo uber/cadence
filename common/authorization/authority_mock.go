@@ -70,3 +70,41 @@ func (mr *MockAuthorizerMockRecorder) Authorize(ctx, attributes interface{}) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Authorize", reflect.TypeOf((*MockAuthorizer)(nil).Authorize), ctx, attributes)
 }
+
+// MockFilteredRequestBody is a mock of FilteredRequestBody interface.
+type MockFilteredRequestBody struct {
+	ctrl     *gomock.Controller
+	recorder *MockFilteredRequestBodyMockRecorder
+}
+
+// MockFilteredRequestBodyMockRecorder is the mock recorder for MockFilteredRequestBody.
+type MockFilteredRequestBodyMockRecorder struct {
+	mock *MockFilteredRequestBody
+}
+
+// NewMockFilteredRequestBody creates a new mock instance.
+func NewMockFilteredRequestBody(ctrl *gomock.Controller) *MockFilteredRequestBody {
+	mock := &MockFilteredRequestBody{ctrl: ctrl}
+	mock.recorder = &MockFilteredRequestBodyMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFilteredRequestBody) EXPECT() *MockFilteredRequestBodyMockRecorder {
+	return m.recorder
+}
+
+// SerializeForLogging mocks base method.
+func (m *MockFilteredRequestBody) SerializeForLogging() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SerializeForLogging")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SerializeForLogging indicates an expected call of SerializeForLogging.
+func (mr *MockFilteredRequestBodyMockRecorder) SerializeForLogging() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializeForLogging", reflect.TypeOf((*MockFilteredRequestBody)(nil).SerializeForLogging))
+}
