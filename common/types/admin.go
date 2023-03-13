@@ -27,6 +27,9 @@ type AddSearchAttributeRequest struct {
 }
 
 func (v *AddSearchAttributeRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -52,6 +55,9 @@ type AdminDescribeWorkflowExecutionRequest struct {
 }
 
 func (v *AdminDescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -100,6 +106,9 @@ type GetWorkflowExecutionRawHistoryV2Request struct {
 }
 
 func (v *GetWorkflowExecutionRawHistoryV2Request) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -219,6 +228,9 @@ type ResendReplicationTasksRequest struct {
 }
 
 func (v *ResendReplicationTasksRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -259,6 +271,9 @@ type GetDynamicConfigRequest struct {
 }
 
 func (v *GetDynamicConfigRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -272,6 +287,9 @@ type UpdateDynamicConfigRequest struct {
 }
 
 func (v *UpdateDynamicConfigRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -281,6 +299,9 @@ type RestoreDynamicConfigRequest struct {
 }
 
 func (v *RestoreDynamicConfigRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -292,6 +313,9 @@ type AdminDeleteWorkflowRequest struct {
 }
 
 func (v *AdminDeleteWorkflowRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -331,6 +355,9 @@ type ListDynamicConfigRequest struct {
 }
 
 func (v *ListDynamicConfigRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 

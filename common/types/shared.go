@@ -627,6 +627,9 @@ type CloseShardRequest struct {
 }
 
 func (v *CloseShardRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -794,6 +797,9 @@ type CountWorkflowExecutionsRequest struct {
 }
 
 func (v *CountWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1457,6 +1463,9 @@ type DeprecateDomainRequest struct {
 }
 
 func (v *DeprecateDomainRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1475,6 +1484,9 @@ type DescribeDomainRequest struct {
 }
 
 func (v *DescribeDomainRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1544,6 +1556,9 @@ type DescribeHistoryHostRequest struct {
 }
 
 func (v *DescribeHistoryHostRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1554,6 +1569,9 @@ type DescribeShardDistributionRequest struct {
 }
 
 func (v *DescribeShardDistributionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1596,6 +1614,9 @@ type DescribeQueueRequest struct {
 }
 
 func (v *DescribeQueueRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1637,6 +1658,9 @@ type DescribeTaskListRequest struct {
 }
 
 func (v *DescribeTaskListRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -1701,6 +1725,9 @@ type DescribeWorkflowExecutionRequest struct {
 }
 
 func (v *DescribeWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -2465,6 +2492,9 @@ type GetWorkflowExecutionHistoryRequest struct {
 }
 
 func (v *GetWorkflowExecutionHistoryRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3194,6 +3224,9 @@ type ListArchivedWorkflowExecutionsRequest struct {
 }
 
 func (v *ListArchivedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3247,6 +3280,9 @@ type ListClosedWorkflowExecutionsRequest struct {
 }
 
 func (v *ListClosedWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3295,6 +3331,9 @@ type ListDomainsRequest struct {
 }
 
 func (v *ListDomainsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3339,6 +3378,9 @@ type ListOpenWorkflowExecutionsRequest struct {
 }
 
 func (v *ListOpenWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3379,6 +3421,9 @@ type ListTaskListPartitionsRequest struct {
 }
 
 func (v *ListTaskListPartitionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3402,6 +3447,9 @@ type GetTaskListsByDomainRequest struct {
 }
 
 func (v *GetTaskListsByDomainRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3444,6 +3492,9 @@ type ListWorkflowExecutionsRequest struct {
 }
 
 func (v *ListWorkflowExecutionsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3838,6 +3889,9 @@ type PollForActivityTaskRequest struct {
 }
 
 func (v *PollForActivityTaskRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -3902,6 +3956,9 @@ type PollForDecisionTaskRequest struct {
 }
 
 func (v *PollForDecisionTaskRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4259,6 +4316,9 @@ type QueryWorkflowRequest struct {
 }
 
 func (v *QueryWorkflowRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4332,6 +4392,9 @@ type ReapplyEventsRequest struct {
 }
 
 func (v *ReapplyEventsRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4409,6 +4472,9 @@ type RecordActivityTaskHeartbeatRequest struct {
 }
 
 func (v *RecordActivityTaskHeartbeatRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4439,6 +4505,9 @@ type RefreshWorkflowTasksRequest struct {
 }
 
 func (v *RefreshWorkflowTasksRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4477,6 +4546,9 @@ type RegisterDomainRequest struct {
 }
 
 func (v *RegisterDomainRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4576,6 +4648,9 @@ type RemoveTaskRequest struct {
 }
 
 func (v *RemoveTaskRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4750,6 +4825,9 @@ type RequestCancelWorkflowExecutionRequest struct {
 }
 
 func (v *RequestCancelWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4856,6 +4934,9 @@ type ResetQueueRequest struct {
 }
 
 func (v *ResetQueueRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4890,6 +4971,9 @@ type ResetStickyTaskListRequest struct {
 }
 
 func (v *ResetStickyTaskListRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -4924,6 +5008,9 @@ type ResetWorkflowExecutionRequest struct {
 }
 
 func (v *ResetWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -5671,7 +5758,7 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	WorkflowID                          string                 `json:"workflowId,omitempty"`
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
 	TaskList                            *TaskList              `json:"taskList,omitempty"`
-	Input                               []byte                 `json:"input,omitempty"`
+	Input                               []byte                 `json:"-"` // Filtering PII
 	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	Identity                            string                 `json:"identity,omitempty"`
@@ -5682,8 +5769,8 @@ type SignalWithStartWorkflowExecutionRequest struct {
 	Control                             []byte                 `json:"control,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
-	Memo                                *Memo                  `json:"memo,omitempty"`
-	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
+	Memo                                *Memo                  `json:"-"` // Filtering PII
+	SearchAttributes                    *SearchAttributes      `json:"-"` // Filtering PII
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
@@ -5693,70 +5780,7 @@ func (v *SignalWithStartWorkflowExecutionRequest) SerializeForLogging() (string,
 	if v == nil {
 		return "", nil
 	}
-
-	// making a deep copy of the struct for manually assigning attributes
-	cloneRequest := &SignalWithStartWorkflowExecutionRequest{
-		Domain:       v.Domain,
-		WorkflowID:   v.WorkflowID,
-		SignalName:   v.SignalName,
-		Identity:     v.Identity,
-		RequestID:    v.RequestID,
-		CronSchedule: v.CronSchedule,
-	}
-
-	// deep copy the value within pointers
-	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	if v.WorkflowType != nil {
-		cloneWorkflowType := *v.WorkflowType
-		cloneRequest.WorkflowType = &cloneWorkflowType
-	}
-
-	if v.TaskList != nil {
-		cloneTaskList := *v.TaskList
-		cloneRequest.TaskList = &cloneTaskList
-	}
-
-	if v.ExecutionStartToCloseTimeoutSeconds != nil {
-		cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
-		cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
-	}
-
-	if v.TaskStartToCloseTimeoutSeconds != nil {
-		cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
-		cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
-	}
-
-	if v.WorkflowIDReusePolicy != nil {
-		cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
-		cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
-	}
-
-	if v.RetryPolicy != nil {
-		cloneRetryPolicy := *v.RetryPolicy
-		cloneRequest.RetryPolicy = &cloneRetryPolicy
-	}
-
-	if v.Header != nil {
-		cloneHeader := *v.Header
-		cloneRequest.Header = &cloneHeader
-	}
-
-	if v.DelayStartSeconds != nil {
-		cloneDelayStartSeconds := *v.DelayStartSeconds
-		cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
-	}
-
-	if v.JitterStartSeconds != nil {
-		cloneJitterStartSeconds := *v.JitterStartSeconds
-		cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
-	}
-
-	// deep copy arrays
-	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	cloneRequest.Control = append(cloneRequest.Control, v.Control...)
-	cloneRequest.SignalInput = append(cloneRequest.SignalInput, v.SignalInput...)
-
-	return SerializeRequest(cloneRequest)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -5860,7 +5884,7 @@ type SignalWorkflowExecutionRequest struct {
 	Domain            string             `json:"domain,omitempty"`
 	WorkflowExecution *WorkflowExecution `json:"workflowExecution,omitempty"`
 	SignalName        string             `json:"signalName,omitempty"`
-	Input             []byte             `json:"input,omitempty"`
+	Input             []byte             `json:"-"` // Filtering PII
 	Identity          string             `json:"identity,omitempty"`
 	RequestID         string             `json:"requestId,omitempty"`
 	Control           []byte             `json:"control,omitempty"`
@@ -5870,25 +5894,7 @@ func (v *SignalWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	if v == nil {
 		return "", nil
 	}
-	// making a deep copy of the struct for manually assigning attributes
-	cloneSignalWorkflowExecutionRequest := &SignalWorkflowExecutionRequest{
-		Domain:     v.Domain,
-		SignalName: v.SignalName,
-		Identity:   v.Identity,
-		RequestID:  v.RequestID,
-	}
-	// deep copy the value within a pointer
-	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	if v.WorkflowExecution != nil {
-		cloneWorkFlowExecution := *v.WorkflowExecution
-		cloneSignalWorkflowExecutionRequest.WorkflowExecution = &cloneWorkFlowExecution
-	}
-
-	// deep copy an array
-	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	cloneSignalWorkflowExecutionRequest.Control = append(cloneSignalWorkflowExecutionRequest.Control, v.Control...)
-
-	return SerializeRequest(cloneSignalWorkflowExecutionRequest)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6138,6 +6144,9 @@ type RestartWorkflowExecutionRequest struct {
 }
 
 func (v *RestartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -6163,7 +6172,7 @@ type StartWorkflowExecutionRequest struct {
 	WorkflowID                          string                 `json:"workflowId,omitempty"`
 	WorkflowType                        *WorkflowType          `json:"workflowType,omitempty"`
 	TaskList                            *TaskList              `json:"taskList,omitempty"`
-	Input                               []byte                 `json:"input,omitempty"`
+	Input                               []byte                 `json:"-"`
 	ExecutionStartToCloseTimeoutSeconds *int32                 `json:"executionStartToCloseTimeoutSeconds,omitempty"`
 	TaskStartToCloseTimeoutSeconds      *int32                 `json:"taskStartToCloseTimeoutSeconds,omitempty"`
 	Identity                            string                 `json:"identity,omitempty"`
@@ -6171,8 +6180,8 @@ type StartWorkflowExecutionRequest struct {
 	WorkflowIDReusePolicy               *WorkflowIDReusePolicy `json:"workflowIdReusePolicy,omitempty"`
 	RetryPolicy                         *RetryPolicy           `json:"retryPolicy,omitempty"`
 	CronSchedule                        string                 `json:"cronSchedule,omitempty"`
-	Memo                                *Memo                  `json:"memo,omitempty"`
-	SearchAttributes                    *SearchAttributes      `json:"searchAttributes,omitempty"`
+	Memo                                *Memo                  `json:"-"`
+	SearchAttributes                    *SearchAttributes      `json:"-"`
 	Header                              *Header                `json:"header,omitempty"`
 	DelayStartSeconds                   *int32                 `json:"delayStartSeconds,omitempty"`
 	JitterStartSeconds                  *int32                 `json:"jitterStartSeconds,omitempty"`
@@ -6182,62 +6191,7 @@ func (v *StartWorkflowExecutionRequest) SerializeForLogging() (string, error) {
 	if v == nil {
 		return "", nil
 	}
-	// making a deep copy of the struct for manually assigning attributes
-	cloneRequest := &StartWorkflowExecutionRequest{
-		Domain:       v.Domain,
-		WorkflowID:   v.WorkflowID,
-		Identity:     v.Identity,
-		RequestID:    v.RequestID,
-		CronSchedule: v.CronSchedule,
-	}
-	// deep copy the value within pointers
-	// manually assigning attributes because trying to prevent logging PII: i.e. user inputs, memo, and SearchAttributes
-	if v.WorkflowType != nil {
-		cloneWorkflowType := *v.WorkflowType
-		cloneRequest.WorkflowType = &cloneWorkflowType
-	}
-
-	if v.TaskList != nil {
-		cloneTaskList := *v.TaskList
-		cloneRequest.TaskList = &cloneTaskList
-	}
-
-	if v.ExecutionStartToCloseTimeoutSeconds != nil {
-		cloneExecutionStartToCloseTimeoutSeconds := *v.ExecutionStartToCloseTimeoutSeconds
-		cloneRequest.ExecutionStartToCloseTimeoutSeconds = &cloneExecutionStartToCloseTimeoutSeconds
-	}
-
-	if v.TaskStartToCloseTimeoutSeconds != nil {
-		cloneTaskStartToCloseTimeoutSeconds := *v.TaskStartToCloseTimeoutSeconds
-		cloneRequest.TaskStartToCloseTimeoutSeconds = &cloneTaskStartToCloseTimeoutSeconds
-	}
-
-	if v.WorkflowIDReusePolicy != nil {
-		cloneWorkflowIDReusePolicy := *v.WorkflowIDReusePolicy
-		cloneRequest.WorkflowIDReusePolicy = &cloneWorkflowIDReusePolicy
-	}
-
-	if v.RetryPolicy != nil {
-		cloneRetryPolicy := *v.RetryPolicy
-		cloneRequest.RetryPolicy = &cloneRetryPolicy
-	}
-
-	if v.Header != nil {
-		cloneHeader := *v.Header
-		cloneRequest.Header = &cloneHeader
-	}
-
-	if v.DelayStartSeconds != nil {
-		cloneDelayStartSeconds := *v.DelayStartSeconds
-		cloneRequest.DelayStartSeconds = &cloneDelayStartSeconds
-	}
-
-	if v.JitterStartSeconds != nil {
-		cloneJitterStartSeconds := *v.JitterStartSeconds
-		cloneRequest.JitterStartSeconds = &cloneJitterStartSeconds
-	}
-
-	return SerializeRequest(cloneRequest)
+	return SerializeRequest(v)
 }
 
 // GetDomain is an internal getter (TBD...)
@@ -6591,6 +6545,9 @@ type TerminateWorkflowExecutionRequest struct {
 }
 
 func (v *TerminateWorkflowExecutionRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -6795,6 +6752,9 @@ type UpdateDomainRequest struct {
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -8066,6 +8026,9 @@ type GetCrossClusterTasksRequest struct {
 }
 
 func (v *GetCrossClusterTasksRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
