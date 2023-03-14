@@ -1162,3 +1162,43 @@ func ToDynamicConfigFilter(t *adminv1.DynamicConfigFilter) *types.DynamicConfigF
 		Value: ToDataBlob(t.Value),
 	}
 }
+
+func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *adminv1.GetGlobalIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToGetGlobalIsolationGroupsRequest(t *adminv1.GetGlobalIsolationGroupsRequest) *types.GetGlobalIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}
+
+func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsResponse) *adminv1.GetDomainIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToGetDomainIsolationGroupsRequest(t *adminv1.GetDomainIsolationGroupsRequest) *types.GetDomainIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}
+
+func FromUpdateGlobalIsolationGroupsResponse(t *types.UpdateGlobalIsolationGroupsResponse) *adminv1.UpdateGlobalIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToUpdateGlobalIsolationGroupsRequest(t *adminv1.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}
+
+func FromUpdateDomainIsolationGroupsResponse(t *types.UpdateDomainIsolationGroupsResponse) *adminv1.UpdateDomainIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationGroupsRequest) *types.UpdateDomainIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}

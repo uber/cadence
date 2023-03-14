@@ -180,3 +180,23 @@ func (g adminGRPCHandler) ListDynamicConfig(ctx context.Context, request *adminv
 	response, err := g.h.ListDynamicConfig(ctx, proto.ToListDynamicConfigRequest(request))
 	return proto.FromListDynamicConfigResponse(response), proto.FromError(err)
 }
+
+func (g adminGRPCHandler) GetGlobalIsolationGroups(ctx context.Context, request *adminv1.GetGlobalIsolationGroupsRequest) (*adminv1.GetGlobalIsolationGroupsResponse, error) {
+	panic("not implemented")
+	return nil, nil
+}
+
+func (g adminGRPCHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *adminv1.UpdateGlobalIsolationGroupsRequest) (*adminv1.UpdateGlobalIsolationGroupsResponse, error) {
+	panic("not implemented")
+	return nil, nil
+}
+
+func (g adminGRPCHandler) GetDomainIsolationGroups(ctx context.Context, request *adminv1.GetDomainIsolationGroupsRequest) (*adminv1.GetDomainIsolationGroupsResponse, error) {
+	panic("not implemented")
+	return nil, nil
+}
+
+func (g adminGRPCHandler) UpdateDomainIsolationGroups(ctx context.Context, request *adminv1.UpdateDomainIsolationGroupsRequest) (*adminv1.UpdateDomainIsolationGroupsResponse, error) {
+	panic("not implemented")
+	return nil, nil
+}

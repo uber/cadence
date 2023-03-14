@@ -28,8 +28,11 @@ package admin
 import (
 	bytes "bytes"
 	base64 "encoding/base64"
+	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
+	math "math"
+	strconv "strconv"
 	strings "strings"
 
 	multierr "go.uber.org/multierr"
@@ -2921,6 +2924,434 @@ func (v *DescribeWorkflowExecutionResponse) IsSetMutableStateInDatabase() bool {
 	return v != nil && v.MutableStateInDatabase != nil
 }
 
+type GetDomainIsolationGroupsRequest struct {
+	Domain *string `json:"domain,omitempty"`
+}
+
+// ToWire translates a GetDomainIsolationGroupsRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetDomainIsolationGroupsRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a GetDomainIsolationGroupsRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetDomainIsolationGroupsRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetDomainIsolationGroupsRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetDomainIsolationGroupsRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a GetDomainIsolationGroupsRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a GetDomainIsolationGroupsRequest struct could not be encoded.
+func (v *GetDomainIsolationGroupsRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Domain != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Domain)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a GetDomainIsolationGroupsRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a GetDomainIsolationGroupsRequest struct could not be generated from the wire
+// representation.
+func (v *GetDomainIsolationGroupsRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Domain = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetDomainIsolationGroupsRequest
+// struct.
+func (v *GetDomainIsolationGroupsRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+
+	return fmt.Sprintf("GetDomainIsolationGroupsRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetDomainIsolationGroupsRequest match the
+// provided GetDomainIsolationGroupsRequest.
+//
+// This function performs a deep comparison.
+func (v *GetDomainIsolationGroupsRequest) Equals(rhs *GetDomainIsolationGroupsRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetDomainIsolationGroupsRequest.
+func (v *GetDomainIsolationGroupsRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *GetDomainIsolationGroupsRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *GetDomainIsolationGroupsRequest) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+type GetDomainIsolationGroupsResponse struct {
+	IsolationGroups *IsolationGroupConfiguration `json:"isolationGroups,omitempty"`
+}
+
+// ToWire translates a GetDomainIsolationGroupsResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetDomainIsolationGroupsResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.IsolationGroups != nil {
+		w, err = v.IsolationGroups.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _IsolationGroupConfiguration_Read(w wire.Value) (*IsolationGroupConfiguration, error) {
+	var v IsolationGroupConfiguration
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a GetDomainIsolationGroupsResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetDomainIsolationGroupsResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetDomainIsolationGroupsResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetDomainIsolationGroupsResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.IsolationGroups, err = _IsolationGroupConfiguration_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a GetDomainIsolationGroupsResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a GetDomainIsolationGroupsResponse struct could not be encoded.
+func (v *GetDomainIsolationGroupsResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.IsolationGroups != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.IsolationGroups.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _IsolationGroupConfiguration_Decode(sr stream.Reader) (*IsolationGroupConfiguration, error) {
+	var v IsolationGroupConfiguration
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a GetDomainIsolationGroupsResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a GetDomainIsolationGroupsResponse struct could not be generated from the wire
+// representation.
+func (v *GetDomainIsolationGroupsResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TStruct:
+			v.IsolationGroups, err = _IsolationGroupConfiguration_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetDomainIsolationGroupsResponse
+// struct.
+func (v *GetDomainIsolationGroupsResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.IsolationGroups != nil {
+		fields[i] = fmt.Sprintf("IsolationGroups: %v", v.IsolationGroups)
+		i++
+	}
+
+	return fmt.Sprintf("GetDomainIsolationGroupsResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetDomainIsolationGroupsResponse match the
+// provided GetDomainIsolationGroupsResponse.
+//
+// This function performs a deep comparison.
+func (v *GetDomainIsolationGroupsResponse) Equals(rhs *GetDomainIsolationGroupsResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.IsolationGroups == nil && rhs.IsolationGroups == nil) || (v.IsolationGroups != nil && rhs.IsolationGroups != nil && v.IsolationGroups.Equals(rhs.IsolationGroups))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetDomainIsolationGroupsResponse.
+func (v *GetDomainIsolationGroupsResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.IsolationGroups != nil {
+		err = multierr.Append(err, enc.AddObject("isolationGroups", v.IsolationGroups))
+	}
+	return err
+}
+
+// GetIsolationGroups returns the value of IsolationGroups if it is set or its
+// zero value if it is unset.
+func (v *GetDomainIsolationGroupsResponse) GetIsolationGroups() (o *IsolationGroupConfiguration) {
+	if v != nil && v.IsolationGroups != nil {
+		return v.IsolationGroups
+	}
+
+	return
+}
+
+// IsSetIsolationGroups returns true if IsolationGroups is not nil.
+func (v *GetDomainIsolationGroupsResponse) IsSetIsolationGroups() bool {
+	return v != nil && v.IsolationGroups != nil
+}
+
 type GetDynamicConfigRequest struct {
 	ConfigName *string                       `json:"configName,omitempty"`
 	Filters    []*config.DynamicConfigFilter `json:"filters,omitempty"`
@@ -3543,6 +3974,354 @@ func (v *GetDynamicConfigResponse) GetValue() (o *shared.DataBlob) {
 // IsSetValue returns true if Value is not nil.
 func (v *GetDynamicConfigResponse) IsSetValue() bool {
 	return v != nil && v.Value != nil
+}
+
+type GetGlobalIsolationGroupsRequest struct {
+}
+
+// ToWire translates a GetGlobalIsolationGroupsRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetGlobalIsolationGroupsRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a GetGlobalIsolationGroupsRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetGlobalIsolationGroupsRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetGlobalIsolationGroupsRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetGlobalIsolationGroupsRequest) FromWire(w wire.Value) error {
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a GetGlobalIsolationGroupsRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a GetGlobalIsolationGroupsRequest struct could not be encoded.
+func (v *GetGlobalIsolationGroupsRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a GetGlobalIsolationGroupsRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a GetGlobalIsolationGroupsRequest struct could not be generated from the wire
+// representation.
+func (v *GetGlobalIsolationGroupsRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetGlobalIsolationGroupsRequest
+// struct.
+func (v *GetGlobalIsolationGroupsRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [0]string
+	i := 0
+
+	return fmt.Sprintf("GetGlobalIsolationGroupsRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetGlobalIsolationGroupsRequest match the
+// provided GetGlobalIsolationGroupsRequest.
+//
+// This function performs a deep comparison.
+func (v *GetGlobalIsolationGroupsRequest) Equals(rhs *GetGlobalIsolationGroupsRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetGlobalIsolationGroupsRequest.
+func (v *GetGlobalIsolationGroupsRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	return err
+}
+
+type GetGlobalIsolationGroupsResponse struct {
+	IsolationGroups *IsolationGroupConfiguration `json:"isolationGroups,omitempty"`
+}
+
+// ToWire translates a GetGlobalIsolationGroupsResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *GetGlobalIsolationGroupsResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.IsolationGroups != nil {
+		w, err = v.IsolationGroups.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a GetGlobalIsolationGroupsResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a GetGlobalIsolationGroupsResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v GetGlobalIsolationGroupsResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *GetGlobalIsolationGroupsResponse) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.IsolationGroups, err = _IsolationGroupConfiguration_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a GetGlobalIsolationGroupsResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a GetGlobalIsolationGroupsResponse struct could not be encoded.
+func (v *GetGlobalIsolationGroupsResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.IsolationGroups != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.IsolationGroups.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a GetGlobalIsolationGroupsResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a GetGlobalIsolationGroupsResponse struct could not be generated from the wire
+// representation.
+func (v *GetGlobalIsolationGroupsResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TStruct:
+			v.IsolationGroups, err = _IsolationGroupConfiguration_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a GetGlobalIsolationGroupsResponse
+// struct.
+func (v *GetGlobalIsolationGroupsResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.IsolationGroups != nil {
+		fields[i] = fmt.Sprintf("IsolationGroups: %v", v.IsolationGroups)
+		i++
+	}
+
+	return fmt.Sprintf("GetGlobalIsolationGroupsResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this GetGlobalIsolationGroupsResponse match the
+// provided GetGlobalIsolationGroupsResponse.
+//
+// This function performs a deep comparison.
+func (v *GetGlobalIsolationGroupsResponse) Equals(rhs *GetGlobalIsolationGroupsResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.IsolationGroups == nil && rhs.IsolationGroups == nil) || (v.IsolationGroups != nil && rhs.IsolationGroups != nil && v.IsolationGroups.Equals(rhs.IsolationGroups))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of GetGlobalIsolationGroupsResponse.
+func (v *GetGlobalIsolationGroupsResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.IsolationGroups != nil {
+		err = multierr.Append(err, enc.AddObject("isolationGroups", v.IsolationGroups))
+	}
+	return err
+}
+
+// GetIsolationGroups returns the value of IsolationGroups if it is set or its
+// zero value if it is unset.
+func (v *GetGlobalIsolationGroupsResponse) GetIsolationGroups() (o *IsolationGroupConfiguration) {
+	if v != nil && v.IsolationGroups != nil {
+		return v.IsolationGroups
+	}
+
+	return
+}
+
+// IsSetIsolationGroups returns true if IsolationGroups is not nil.
+func (v *GetGlobalIsolationGroupsResponse) IsSetIsolationGroups() bool {
+	return v != nil && v.IsolationGroups != nil
 }
 
 // StartEventId defines the beginning of the event to fetch. The first event is exclusive.
@@ -4887,6 +5666,856 @@ func (v *HostInfo) GetIdentity() (o string) {
 // IsSetIdentity returns true if Identity is not nil.
 func (v *HostInfo) IsSetIdentity() bool {
 	return v != nil && v.Identity != nil
+}
+
+type IsolationGroupConfiguration struct {
+	IsolationGroups []*IsolationGroupPartition `json:"isolationGroups,omitempty"`
+}
+
+type _List_IsolationGroupPartition_ValueList []*IsolationGroupPartition
+
+func (v _List_IsolationGroupPartition_ValueList) ForEach(f func(wire.Value) error) error {
+	for i, x := range v {
+		if x == nil {
+			return fmt.Errorf("invalid list '[]*IsolationGroupPartition', index [%v]: value is nil", i)
+		}
+		w, err := x.ToWire()
+		if err != nil {
+			return err
+		}
+		err = f(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v _List_IsolationGroupPartition_ValueList) Size() int {
+	return len(v)
+}
+
+func (_List_IsolationGroupPartition_ValueList) ValueType() wire.Type {
+	return wire.TStruct
+}
+
+func (_List_IsolationGroupPartition_ValueList) Close() {}
+
+// ToWire translates a IsolationGroupConfiguration struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *IsolationGroupConfiguration) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.IsolationGroups != nil {
+		w, err = wire.NewValueList(_List_IsolationGroupPartition_ValueList(v.IsolationGroups)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _IsolationGroupPartition_Read(w wire.Value) (*IsolationGroupPartition, error) {
+	var v IsolationGroupPartition
+	err := v.FromWire(w)
+	return &v, err
+}
+
+func _List_IsolationGroupPartition_Read(l wire.ValueList) ([]*IsolationGroupPartition, error) {
+	if l.ValueType() != wire.TStruct {
+		return nil, nil
+	}
+
+	o := make([]*IsolationGroupPartition, 0, l.Size())
+	err := l.ForEach(func(x wire.Value) error {
+		i, err := _IsolationGroupPartition_Read(x)
+		if err != nil {
+			return err
+		}
+		o = append(o, i)
+		return nil
+	})
+	l.Close()
+	return o, err
+}
+
+// FromWire deserializes a IsolationGroupConfiguration struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a IsolationGroupConfiguration struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v IsolationGroupConfiguration
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *IsolationGroupConfiguration) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TList {
+				v.IsolationGroups, err = _List_IsolationGroupPartition_Read(field.Value.GetList())
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+func _List_IsolationGroupPartition_Encode(val []*IsolationGroupPartition, sw stream.Writer) error {
+
+	lh := stream.ListHeader{
+		Type:   wire.TStruct,
+		Length: len(val),
+	}
+	if err := sw.WriteListBegin(lh); err != nil {
+		return err
+	}
+
+	for i, v := range val {
+		if v == nil {
+			return fmt.Errorf("invalid list '[]*IsolationGroupPartition', index [%v]: value is nil", i)
+		}
+		if err := v.Encode(sw); err != nil {
+			return err
+		}
+	}
+	return sw.WriteListEnd()
+}
+
+// Encode serializes a IsolationGroupConfiguration struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a IsolationGroupConfiguration struct could not be encoded.
+func (v *IsolationGroupConfiguration) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.IsolationGroups != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TList}); err != nil {
+			return err
+		}
+		if err := _List_IsolationGroupPartition_Encode(v.IsolationGroups, sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _IsolationGroupPartition_Decode(sr stream.Reader) (*IsolationGroupPartition, error) {
+	var v IsolationGroupPartition
+	err := v.Decode(sr)
+	return &v, err
+}
+
+func _List_IsolationGroupPartition_Decode(sr stream.Reader) ([]*IsolationGroupPartition, error) {
+	lh, err := sr.ReadListBegin()
+	if err != nil {
+		return nil, err
+	}
+
+	if lh.Type != wire.TStruct {
+		for i := 0; i < lh.Length; i++ {
+			if err := sr.Skip(lh.Type); err != nil {
+				return nil, err
+			}
+		}
+		return nil, sr.ReadListEnd()
+	}
+
+	o := make([]*IsolationGroupPartition, 0, lh.Length)
+	for i := 0; i < lh.Length; i++ {
+		v, err := _IsolationGroupPartition_Decode(sr)
+		if err != nil {
+			return nil, err
+		}
+		o = append(o, v)
+	}
+
+	if err = sr.ReadListEnd(); err != nil {
+		return nil, err
+	}
+	return o, err
+}
+
+// Decode deserializes a IsolationGroupConfiguration struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a IsolationGroupConfiguration struct could not be generated from the wire
+// representation.
+func (v *IsolationGroupConfiguration) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TList:
+			v.IsolationGroups, err = _List_IsolationGroupPartition_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a IsolationGroupConfiguration
+// struct.
+func (v *IsolationGroupConfiguration) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.IsolationGroups != nil {
+		fields[i] = fmt.Sprintf("IsolationGroups: %v", v.IsolationGroups)
+		i++
+	}
+
+	return fmt.Sprintf("IsolationGroupConfiguration{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _List_IsolationGroupPartition_Equals(lhs, rhs []*IsolationGroupPartition) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+
+	for i, lv := range lhs {
+		rv := rhs[i]
+		if !lv.Equals(rv) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equals returns true if all the fields of this IsolationGroupConfiguration match the
+// provided IsolationGroupConfiguration.
+//
+// This function performs a deep comparison.
+func (v *IsolationGroupConfiguration) Equals(rhs *IsolationGroupConfiguration) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.IsolationGroups == nil && rhs.IsolationGroups == nil) || (v.IsolationGroups != nil && rhs.IsolationGroups != nil && _List_IsolationGroupPartition_Equals(v.IsolationGroups, rhs.IsolationGroups))) {
+		return false
+	}
+
+	return true
+}
+
+type _List_IsolationGroupPartition_Zapper []*IsolationGroupPartition
+
+// MarshalLogArray implements zapcore.ArrayMarshaler, enabling
+// fast logging of _List_IsolationGroupPartition_Zapper.
+func (l _List_IsolationGroupPartition_Zapper) MarshalLogArray(enc zapcore.ArrayEncoder) (err error) {
+	for _, v := range l {
+		err = multierr.Append(err, enc.AppendObject(v))
+	}
+	return err
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of IsolationGroupConfiguration.
+func (v *IsolationGroupConfiguration) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.IsolationGroups != nil {
+		err = multierr.Append(err, enc.AddArray("isolationGroups", (_List_IsolationGroupPartition_Zapper)(v.IsolationGroups)))
+	}
+	return err
+}
+
+// GetIsolationGroups returns the value of IsolationGroups if it is set or its
+// zero value if it is unset.
+func (v *IsolationGroupConfiguration) GetIsolationGroups() (o []*IsolationGroupPartition) {
+	if v != nil && v.IsolationGroups != nil {
+		return v.IsolationGroups
+	}
+
+	return
+}
+
+// IsSetIsolationGroups returns true if IsolationGroups is not nil.
+func (v *IsolationGroupConfiguration) IsSetIsolationGroups() bool {
+	return v != nil && v.IsolationGroups != nil
+}
+
+type IsolationGroupPartition struct {
+	Name  *string              `json:"name,omitempty"`
+	State *IsolationGroupState `json:"state,omitempty"`
+}
+
+// ToWire translates a IsolationGroupPartition struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *IsolationGroupPartition) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Name != nil {
+		w, err = wire.NewValueString(*(v.Name)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.State != nil {
+		w, err = v.State.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _IsolationGroupState_Read(w wire.Value) (IsolationGroupState, error) {
+	var v IsolationGroupState
+	err := v.FromWire(w)
+	return v, err
+}
+
+// FromWire deserializes a IsolationGroupPartition struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a IsolationGroupPartition struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v IsolationGroupPartition
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *IsolationGroupPartition) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Name = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TI32 {
+				var x IsolationGroupState
+				x, err = _IsolationGroupState_Read(field.Value)
+				v.State = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a IsolationGroupPartition struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a IsolationGroupPartition struct could not be encoded.
+func (v *IsolationGroupPartition) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Name != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Name)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.State != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TI32}); err != nil {
+			return err
+		}
+		if err := v.State.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _IsolationGroupState_Decode(sr stream.Reader) (IsolationGroupState, error) {
+	var v IsolationGroupState
+	err := v.Decode(sr)
+	return v, err
+}
+
+// Decode deserializes a IsolationGroupPartition struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a IsolationGroupPartition struct could not be generated from the wire
+// representation.
+func (v *IsolationGroupPartition) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Name = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TI32:
+			var x IsolationGroupState
+			x, err = _IsolationGroupState_Decode(sr)
+			v.State = &x
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a IsolationGroupPartition
+// struct.
+func (v *IsolationGroupPartition) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Name != nil {
+		fields[i] = fmt.Sprintf("Name: %v", *(v.Name))
+		i++
+	}
+	if v.State != nil {
+		fields[i] = fmt.Sprintf("State: %v", *(v.State))
+		i++
+	}
+
+	return fmt.Sprintf("IsolationGroupPartition{%v}", strings.Join(fields[:i], ", "))
+}
+
+func _IsolationGroupState_EqualsPtr(lhs, rhs *IsolationGroupState) bool {
+	if lhs != nil && rhs != nil {
+
+		x := *lhs
+		y := *rhs
+		return x.Equals(y)
+	}
+	return lhs == nil && rhs == nil
+}
+
+// Equals returns true if all the fields of this IsolationGroupPartition match the
+// provided IsolationGroupPartition.
+//
+// This function performs a deep comparison.
+func (v *IsolationGroupPartition) Equals(rhs *IsolationGroupPartition) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Name, rhs.Name) {
+		return false
+	}
+	if !_IsolationGroupState_EqualsPtr(v.State, rhs.State) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of IsolationGroupPartition.
+func (v *IsolationGroupPartition) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Name != nil {
+		enc.AddString("name", *v.Name)
+	}
+	if v.State != nil {
+		err = multierr.Append(err, enc.AddObject("state", *v.State))
+	}
+	return err
+}
+
+// GetName returns the value of Name if it is set or its
+// zero value if it is unset.
+func (v *IsolationGroupPartition) GetName() (o string) {
+	if v != nil && v.Name != nil {
+		return *v.Name
+	}
+
+	return
+}
+
+// IsSetName returns true if Name is not nil.
+func (v *IsolationGroupPartition) IsSetName() bool {
+	return v != nil && v.Name != nil
+}
+
+// GetState returns the value of State if it is set or its
+// zero value if it is unset.
+func (v *IsolationGroupPartition) GetState() (o IsolationGroupState) {
+	if v != nil && v.State != nil {
+		return *v.State
+	}
+
+	return
+}
+
+// IsSetState returns true if State is not nil.
+func (v *IsolationGroupPartition) IsSetState() bool {
+	return v != nil && v.State != nil
+}
+
+type IsolationGroupState int32
+
+const (
+	IsolationGroupStateInvalid IsolationGroupState = 0
+	IsolationGroupStateHealthy IsolationGroupState = 1
+	IsolationGroupStateDrained IsolationGroupState = 2
+)
+
+// IsolationGroupState_Values returns all recognized values of IsolationGroupState.
+func IsolationGroupState_Values() []IsolationGroupState {
+	return []IsolationGroupState{
+		IsolationGroupStateInvalid,
+		IsolationGroupStateHealthy,
+		IsolationGroupStateDrained,
+	}
+}
+
+// UnmarshalText tries to decode IsolationGroupState from a byte slice
+// containing its name.
+//
+//   var v IsolationGroupState
+//   err := v.UnmarshalText([]byte("INVALID"))
+func (v *IsolationGroupState) UnmarshalText(value []byte) error {
+	switch s := string(value); s {
+	case "INVALID":
+		*v = IsolationGroupStateInvalid
+		return nil
+	case "HEALTHY":
+		*v = IsolationGroupStateHealthy
+		return nil
+	case "DRAINED":
+		*v = IsolationGroupStateDrained
+		return nil
+	default:
+		val, err := strconv.ParseInt(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("unknown enum value %q for %q: %v", s, "IsolationGroupState", err)
+		}
+		*v = IsolationGroupState(val)
+		return nil
+	}
+}
+
+// MarshalText encodes IsolationGroupState to text.
+//
+// If the enum value is recognized, its name is returned.
+// Otherwise, its integer value is returned.
+//
+// This implements the TextMarshaler interface.
+func (v IsolationGroupState) MarshalText() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return []byte("INVALID"), nil
+	case 1:
+		return []byte("HEALTHY"), nil
+	case 2:
+		return []byte("DRAINED"), nil
+	}
+	return []byte(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of IsolationGroupState.
+// Enums are logged as objects, where the value is logged with key "value", and
+// if this value's name is known, the name is logged with key "name".
+func (v IsolationGroupState) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddInt32("value", int32(v))
+	switch int32(v) {
+	case 0:
+		enc.AddString("name", "INVALID")
+	case 1:
+		enc.AddString("name", "HEALTHY")
+	case 2:
+		enc.AddString("name", "DRAINED")
+	}
+	return nil
+}
+
+// Ptr returns a pointer to this enum value.
+func (v IsolationGroupState) Ptr() *IsolationGroupState {
+	return &v
+}
+
+// Encode encodes IsolationGroupState directly to bytes.
+//
+//   sWriter := BinaryStreamer.Writer(writer)
+//
+//   var v IsolationGroupState
+//   return v.Encode(sWriter)
+func (v IsolationGroupState) Encode(sw stream.Writer) error {
+	return sw.WriteInt32(int32(v))
+}
+
+// ToWire translates IsolationGroupState into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// Enums are represented as 32-bit integers over the wire.
+func (v IsolationGroupState) ToWire() (wire.Value, error) {
+	return wire.NewValueI32(int32(v)), nil
+}
+
+// FromWire deserializes IsolationGroupState from its Thrift-level
+// representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TI32)
+//   if err != nil {
+//     return IsolationGroupState(0), err
+//   }
+//
+//   var v IsolationGroupState
+//   if err := v.FromWire(x); err != nil {
+//     return IsolationGroupState(0), err
+//   }
+//   return v, nil
+func (v *IsolationGroupState) FromWire(w wire.Value) error {
+	*v = (IsolationGroupState)(w.GetI32())
+	return nil
+}
+
+// Decode reads off the encoded IsolationGroupState directly off of the wire.
+//
+//   sReader := BinaryStreamer.Reader(reader)
+//
+//   var v IsolationGroupState
+//   if err := v.Decode(sReader); err != nil {
+//     return IsolationGroupState(0), err
+//   }
+//   return v, nil
+func (v *IsolationGroupState) Decode(sr stream.Reader) error {
+	i, err := sr.ReadInt32()
+	if err != nil {
+		return err
+	}
+	*v = (IsolationGroupState)(i)
+	return nil
+}
+
+// String returns a readable string representation of IsolationGroupState.
+func (v IsolationGroupState) String() string {
+	w := int32(v)
+	switch w {
+	case 0:
+		return "INVALID"
+	case 1:
+		return "HEALTHY"
+	case 2:
+		return "DRAINED"
+	}
+	return fmt.Sprintf("IsolationGroupState(%d)", w)
+}
+
+// Equals returns true if this IsolationGroupState value matches the provided
+// value.
+func (v IsolationGroupState) Equals(rhs IsolationGroupState) bool {
+	return v == rhs
+}
+
+// MarshalJSON serializes IsolationGroupState into JSON.
+//
+// If the enum value is recognized, its name is returned.
+// Otherwise, its integer value is returned.
+//
+// This implements json.Marshaler.
+func (v IsolationGroupState) MarshalJSON() ([]byte, error) {
+	switch int32(v) {
+	case 0:
+		return ([]byte)("\"INVALID\""), nil
+	case 1:
+		return ([]byte)("\"HEALTHY\""), nil
+	case 2:
+		return ([]byte)("\"DRAINED\""), nil
+	}
+	return ([]byte)(strconv.FormatInt(int64(v), 10)), nil
+}
+
+// UnmarshalJSON attempts to decode IsolationGroupState from its JSON
+// representation.
+//
+// This implementation supports both, numeric and string inputs. If a
+// string is provided, it must be a known enum name.
+//
+// This implements json.Unmarshaler.
+func (v *IsolationGroupState) UnmarshalJSON(text []byte) error {
+	d := json.NewDecoder(bytes.NewReader(text))
+	d.UseNumber()
+	t, err := d.Token()
+	if err != nil {
+		return err
+	}
+
+	switch w := t.(type) {
+	case json.Number:
+		x, err := w.Int64()
+		if err != nil {
+			return err
+		}
+		if x > math.MaxInt32 {
+			return fmt.Errorf("enum overflow from JSON %q for %q", text, "IsolationGroupState")
+		}
+		if x < math.MinInt32 {
+			return fmt.Errorf("enum underflow from JSON %q for %q", text, "IsolationGroupState")
+		}
+		*v = (IsolationGroupState)(x)
+		return nil
+	case string:
+		return v.UnmarshalText([]byte(w))
+	default:
+		return fmt.Errorf("invalid JSON value %q (%T) to unmarshal into %q", t, t, "IsolationGroupState")
+	}
 }
 
 type ListDynamicConfigRequest struct {
@@ -8569,6 +10198,418 @@ func (v *RingInfo) IsSetMembers() bool {
 	return v != nil && v.Members != nil
 }
 
+type UpdateDomainIsolationGroupsRequest struct {
+	Domain          *string                      `json:"domain,omitempty"`
+	IsolationGroups *IsolationGroupConfiguration `json:"isolationGroups,omitempty"`
+}
+
+// ToWire translates a UpdateDomainIsolationGroupsRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateDomainIsolationGroupsRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Domain != nil {
+		w, err = wire.NewValueString(*(v.Domain)), error(nil)
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+	if v.IsolationGroups != nil {
+		w, err = v.IsolationGroups.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 20, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateDomainIsolationGroupsRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateDomainIsolationGroupsRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateDomainIsolationGroupsRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateDomainIsolationGroupsRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TBinary {
+				var x string
+				x, err = field.Value.GetString(), error(nil)
+				v.Domain = &x
+				if err != nil {
+					return err
+				}
+
+			}
+		case 20:
+			if field.Value.Type() == wire.TStruct {
+				v.IsolationGroups, err = _IsolationGroupConfiguration_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a UpdateDomainIsolationGroupsRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a UpdateDomainIsolationGroupsRequest struct could not be encoded.
+func (v *UpdateDomainIsolationGroupsRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Domain != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TBinary}); err != nil {
+			return err
+		}
+		if err := sw.WriteString(*(v.Domain)); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.IsolationGroups != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 20, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.IsolationGroups.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a UpdateDomainIsolationGroupsRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a UpdateDomainIsolationGroupsRequest struct could not be generated from the wire
+// representation.
+func (v *UpdateDomainIsolationGroupsRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TBinary:
+			var x string
+			x, err = sr.ReadString()
+			v.Domain = &x
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 20 && fh.Type == wire.TStruct:
+			v.IsolationGroups, err = _IsolationGroupConfiguration_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateDomainIsolationGroupsRequest
+// struct.
+func (v *UpdateDomainIsolationGroupsRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Domain != nil {
+		fields[i] = fmt.Sprintf("Domain: %v", *(v.Domain))
+		i++
+	}
+	if v.IsolationGroups != nil {
+		fields[i] = fmt.Sprintf("IsolationGroups: %v", v.IsolationGroups)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateDomainIsolationGroupsRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateDomainIsolationGroupsRequest match the
+// provided UpdateDomainIsolationGroupsRequest.
+//
+// This function performs a deep comparison.
+func (v *UpdateDomainIsolationGroupsRequest) Equals(rhs *UpdateDomainIsolationGroupsRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !_String_EqualsPtr(v.Domain, rhs.Domain) {
+		return false
+	}
+	if !((v.IsolationGroups == nil && rhs.IsolationGroups == nil) || (v.IsolationGroups != nil && rhs.IsolationGroups != nil && v.IsolationGroups.Equals(rhs.IsolationGroups))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateDomainIsolationGroupsRequest.
+func (v *UpdateDomainIsolationGroupsRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Domain != nil {
+		enc.AddString("domain", *v.Domain)
+	}
+	if v.IsolationGroups != nil {
+		err = multierr.Append(err, enc.AddObject("isolationGroups", v.IsolationGroups))
+	}
+	return err
+}
+
+// GetDomain returns the value of Domain if it is set or its
+// zero value if it is unset.
+func (v *UpdateDomainIsolationGroupsRequest) GetDomain() (o string) {
+	if v != nil && v.Domain != nil {
+		return *v.Domain
+	}
+
+	return
+}
+
+// IsSetDomain returns true if Domain is not nil.
+func (v *UpdateDomainIsolationGroupsRequest) IsSetDomain() bool {
+	return v != nil && v.Domain != nil
+}
+
+// GetIsolationGroups returns the value of IsolationGroups if it is set or its
+// zero value if it is unset.
+func (v *UpdateDomainIsolationGroupsRequest) GetIsolationGroups() (o *IsolationGroupConfiguration) {
+	if v != nil && v.IsolationGroups != nil {
+		return v.IsolationGroups
+	}
+
+	return
+}
+
+// IsSetIsolationGroups returns true if IsolationGroups is not nil.
+func (v *UpdateDomainIsolationGroupsRequest) IsSetIsolationGroups() bool {
+	return v != nil && v.IsolationGroups != nil
+}
+
+type UpdateDomainIsolationGroupsResponse struct {
+}
+
+// ToWire translates a UpdateDomainIsolationGroupsResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateDomainIsolationGroupsResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateDomainIsolationGroupsResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateDomainIsolationGroupsResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateDomainIsolationGroupsResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateDomainIsolationGroupsResponse) FromWire(w wire.Value) error {
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a UpdateDomainIsolationGroupsResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a UpdateDomainIsolationGroupsResponse struct could not be encoded.
+func (v *UpdateDomainIsolationGroupsResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a UpdateDomainIsolationGroupsResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a UpdateDomainIsolationGroupsResponse struct could not be generated from the wire
+// representation.
+func (v *UpdateDomainIsolationGroupsResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateDomainIsolationGroupsResponse
+// struct.
+func (v *UpdateDomainIsolationGroupsResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [0]string
+	i := 0
+
+	return fmt.Sprintf("UpdateDomainIsolationGroupsResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateDomainIsolationGroupsResponse match the
+// provided UpdateDomainIsolationGroupsResponse.
+//
+// This function performs a deep comparison.
+func (v *UpdateDomainIsolationGroupsResponse) Equals(rhs *UpdateDomainIsolationGroupsResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateDomainIsolationGroupsResponse.
+func (v *UpdateDomainIsolationGroupsResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	return err
+}
+
 type UpdateDynamicConfigRequest struct {
 	ConfigName   *string                      `json:"configName,omitempty"`
 	ConfigValues []*config.DynamicConfigValue `json:"configValues,omitempty"`
@@ -8975,12 +11016,360 @@ func (v *UpdateDynamicConfigRequest) IsSetConfigValues() bool {
 	return v != nil && v.ConfigValues != nil
 }
 
+type UpdateGlobalIsolationGroupsRequest struct {
+	IsolationGroups *IsolationGroupConfiguration `json:"isolationGroups,omitempty"`
+}
+
+// ToWire translates a UpdateGlobalIsolationGroupsRequest struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateGlobalIsolationGroupsRequest) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.IsolationGroups != nil {
+		w, err = v.IsolationGroups.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 10, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateGlobalIsolationGroupsRequest struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateGlobalIsolationGroupsRequest struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateGlobalIsolationGroupsRequest
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateGlobalIsolationGroupsRequest) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 10:
+			if field.Value.Type() == wire.TStruct {
+				v.IsolationGroups, err = _IsolationGroupConfiguration_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a UpdateGlobalIsolationGroupsRequest struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a UpdateGlobalIsolationGroupsRequest struct could not be encoded.
+func (v *UpdateGlobalIsolationGroupsRequest) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.IsolationGroups != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 10, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.IsolationGroups.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a UpdateGlobalIsolationGroupsRequest struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a UpdateGlobalIsolationGroupsRequest struct could not be generated from the wire
+// representation.
+func (v *UpdateGlobalIsolationGroupsRequest) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 10 && fh.Type == wire.TStruct:
+			v.IsolationGroups, err = _IsolationGroupConfiguration_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateGlobalIsolationGroupsRequest
+// struct.
+func (v *UpdateGlobalIsolationGroupsRequest) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.IsolationGroups != nil {
+		fields[i] = fmt.Sprintf("IsolationGroups: %v", v.IsolationGroups)
+		i++
+	}
+
+	return fmt.Sprintf("UpdateGlobalIsolationGroupsRequest{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateGlobalIsolationGroupsRequest match the
+// provided UpdateGlobalIsolationGroupsRequest.
+//
+// This function performs a deep comparison.
+func (v *UpdateGlobalIsolationGroupsRequest) Equals(rhs *UpdateGlobalIsolationGroupsRequest) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.IsolationGroups == nil && rhs.IsolationGroups == nil) || (v.IsolationGroups != nil && rhs.IsolationGroups != nil && v.IsolationGroups.Equals(rhs.IsolationGroups))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateGlobalIsolationGroupsRequest.
+func (v *UpdateGlobalIsolationGroupsRequest) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.IsolationGroups != nil {
+		err = multierr.Append(err, enc.AddObject("isolationGroups", v.IsolationGroups))
+	}
+	return err
+}
+
+// GetIsolationGroups returns the value of IsolationGroups if it is set or its
+// zero value if it is unset.
+func (v *UpdateGlobalIsolationGroupsRequest) GetIsolationGroups() (o *IsolationGroupConfiguration) {
+	if v != nil && v.IsolationGroups != nil {
+		return v.IsolationGroups
+	}
+
+	return
+}
+
+// IsSetIsolationGroups returns true if IsolationGroups is not nil.
+func (v *UpdateGlobalIsolationGroupsRequest) IsSetIsolationGroups() bool {
+	return v != nil && v.IsolationGroups != nil
+}
+
+type UpdateGlobalIsolationGroupsResponse struct {
+}
+
+// ToWire translates a UpdateGlobalIsolationGroupsResponse struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *UpdateGlobalIsolationGroupsResponse) ToWire() (wire.Value, error) {
+	var (
+		fields [0]wire.Field
+		i      int = 0
+	)
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+// FromWire deserializes a UpdateGlobalIsolationGroupsResponse struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a UpdateGlobalIsolationGroupsResponse struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v UpdateGlobalIsolationGroupsResponse
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *UpdateGlobalIsolationGroupsResponse) FromWire(w wire.Value) error {
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a UpdateGlobalIsolationGroupsResponse struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a UpdateGlobalIsolationGroupsResponse struct could not be encoded.
+func (v *UpdateGlobalIsolationGroupsResponse) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	return sw.WriteStructEnd()
+}
+
+// Decode deserializes a UpdateGlobalIsolationGroupsResponse struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a UpdateGlobalIsolationGroupsResponse struct could not be generated from the wire
+// representation.
+func (v *UpdateGlobalIsolationGroupsResponse) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a UpdateGlobalIsolationGroupsResponse
+// struct.
+func (v *UpdateGlobalIsolationGroupsResponse) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [0]string
+	i := 0
+
+	return fmt.Sprintf("UpdateGlobalIsolationGroupsResponse{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this UpdateGlobalIsolationGroupsResponse match the
+// provided UpdateGlobalIsolationGroupsResponse.
+//
+// This function performs a deep comparison.
+func (v *UpdateGlobalIsolationGroupsResponse) Equals(rhs *UpdateGlobalIsolationGroupsResponse) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of UpdateGlobalIsolationGroupsResponse.
+func (v *UpdateGlobalIsolationGroupsResponse) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	return err
+}
+
 // ThriftModule represents the IDL file used to generate this package.
 var ThriftModule = &thriftreflect.ThriftModule{
 	Name:     "admin",
 	Package:  "github.com/uber/cadence/.gen/go/admin",
 	FilePath: "admin.thrift",
-	SHA1:     "97dc0a35258af322a543448375033d60a7c5c540",
+	SHA1:     "fb26589b2086951a5a92abe9df61ae2278ea19ef",
 	Includes: []*thriftreflect.ThriftModule{
 		config.ThriftModule,
 		replicator.ThriftModule,
@@ -8989,7 +11378,7 @@ var ThriftModule = &thriftreflect.ThriftModule{
 	Raw: rawIDL,
 }
 
-const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"config.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks\n  **/\n  shared.RespondCrossClusterTasksCompletedResponse RespondCrossClusterTasksCompleted(1: shared.RespondCrossClusterTasksCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  AdminDeleteWorkflowResponse DeleteWorkflow(1: AdminDeleteWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  AdminMaintainWorkflowResponse MaintainCorruptWorkflow(1: AdminMaintainWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct AdminDeleteWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminDeleteWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\nstruct AdminMaintainWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminMaintainWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\n//Eventually remove configName and integrate this functionality into Get.\n//GetDynamicConfigResponse would need to change as well.\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<config.DynamicConfigEntry> entries\n}\n\n"
+const rawIDL = "// Copyright (c) 2017 Uber Technologies, Inc.\n//\n// Permission is hereby granted, free of charge, to any person obtaining a copy\n// of this software and associated documentation files (the \"Software\"), to deal\n// in the Software without restriction, including without limitation the rights\n// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n// copies of the Software, and to permit persons to whom the Software is\n// furnished to do so, subject to the following conditions:\n//\n// The above copyright notice and this permission notice shall be included in\n// all copies or substantial portions of the Software.\n//\n// THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\n// THE SOFTWARE.\n\nnamespace java com.uber.cadence.admin\n\ninclude \"shared.thrift\"\ninclude \"replicator.thrift\"\ninclude \"config.thrift\"\n\n/**\n* AdminService provides advanced APIs for debugging and analysis with admin privilege\n**/\nservice AdminService {\n  /**\n  * DescribeWorkflowExecution returns information about the internal states of workflow execution.\n  **/\n  DescribeWorkflowExecutionResponse DescribeWorkflowExecution(1: DescribeWorkflowExecutionRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.InternalServiceError    internalServiceError,\n      3: shared.EntityNotExistsError    entityNotExistError,\n      4: shared.AccessDeniedError       accessDeniedError,\n    )\n\n  /**\n  * DescribeShardDistribution returns information about history shards within the cluster\n  **/\n  shared.DescribeShardDistributionResponse DescribeShardDistribution(1: shared.DescribeShardDistributionRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  /**\n  * DescribeHistoryHost returns information about the internal states of a history host\n  **/\n  shared.DescribeHistoryHostResponse DescribeHistoryHost(1: shared.DescribeHistoryHostRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void CloseShard(1: shared.CloseShardRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void RemoveTask(1: shared.RemoveTaskRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  void ResetQueue(1: shared.ResetQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  shared.DescribeQueueResponse DescribeQueue(1: shared.DescribeQueueRequest request)\n    throws (\n      1: shared.BadRequestError       badRequestError,\n      2: shared.InternalServiceError  internalServiceError,\n      3: shared.AccessDeniedError     accessDeniedError,\n    )\n\n  /**\n  * Returns the raw history of specified workflow execution.  It fails with 'EntityNotExistError' if speficied workflow\n  * execution in unknown to the service.\n  * StartEventId defines the beginning of the event to fetch. The first event is inclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\n  GetWorkflowExecutionRawHistoryV2Response GetWorkflowExecutionRawHistoryV2(1: GetWorkflowExecutionRawHistoryV2Request getRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.EntityNotExistsError entityNotExistError,\n      4: shared.ServiceBusyError serviceBusyError,\n    )\n\n  replicator.GetReplicationMessagesResponse GetReplicationMessages(1: replicator.GetReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDomainReplicationMessagesResponse GetDomainReplicationMessages(1: replicator.GetDomainReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.LimitExceededError limitExceededError,\n      4: shared.ServiceBusyError serviceBusyError,\n      5: shared.ClientVersionNotSupportedError clientVersionNotSupportedError,\n    )\n\n  replicator.GetDLQReplicationMessagesResponse GetDLQReplicationMessages(1: replicator.GetDLQReplicationMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReapplyEvents applies stale events to the current workflow and current run\n  **/\n  void ReapplyEvents(1: shared.ReapplyEventsRequest reapplyEventsRequest)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      3: shared.DomainNotActiveError domainNotActiveError,\n      4: shared.LimitExceededError limitExceededError,\n      5: shared.ServiceBusyError serviceBusyError,\n      6: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * AddSearchAttribute whitelist search attribute in request.\n  **/\n  void AddSearchAttribute(1: AddSearchAttributeRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * DescribeCluster returns information about cadence cluster\n  **/\n  DescribeClusterResponse DescribeCluster()\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n      2: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * ReadDLQMessages returns messages from DLQ\n  **/\n  replicator.ReadDLQMessagesResponse ReadDLQMessages(1: replicator.ReadDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * PurgeDLQMessages purges messages from DLQ\n  **/\n  void PurgeDLQMessages(1: replicator.PurgeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * MergeDLQMessages merges messages from DLQ\n  **/\n  replicator.MergeDLQMessagesResponse MergeDLQMessages(1: replicator.MergeDLQMessagesRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * RefreshWorkflowTasks refreshes all tasks of a workflow\n  **/\n  void RefreshWorkflowTasks(1: shared.RefreshWorkflowTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.DomainNotActiveError domainNotActiveError,\n      3: shared.ServiceBusyError serviceBusyError,\n      4: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * ResendReplicationTasks requests replication tasks from remote cluster and apply tasks to current cluster\n  **/\n  void ResendReplicationTasks(1: ResendReplicationTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.ServiceBusyError serviceBusyError,\n      3: shared.EntityNotExistsError entityNotExistError,\n    )\n\n  /**\n  * GetCrossClusterTasks fetches cross cluster tasks\n  **/\n  shared.GetCrossClusterTasksResponse GetCrossClusterTasks(1: shared.GetCrossClusterTasksRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * RespondCrossClusterTasksCompleted responds the result of processing cross cluster tasks\n  **/\n  shared.RespondCrossClusterTasksCompletedResponse RespondCrossClusterTasksCompleted(1: shared.RespondCrossClusterTasksCompletedRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n      3: shared.ServiceBusyError serviceBusyError,\n    )\n\n  /**\n  * GetDynamicConfig returns values associated with a specified dynamic config parameter.\n  **/\n  GetDynamicConfigResponse GetDynamicConfig(1: GetDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void UpdateDynamicConfig(1: UpdateDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  void RestoreDynamicConfig(1: RestoreDynamicConfigRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n      2: shared.InternalServiceError internalServiceError,\n    )\n\n  ListDynamicConfigResponse ListDynamicConfig(1: ListDynamicConfigRequest request)\n    throws (\n      1: shared.InternalServiceError internalServiceError,\n    )\n\n  AdminDeleteWorkflowResponse DeleteWorkflow(1: AdminDeleteWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  AdminMaintainWorkflowResponse MaintainCorruptWorkflow(1: AdminMaintainWorkflowRequest request)\n    throws (\n      1: shared.BadRequestError         badRequestError,\n      2: shared.EntityNotExistsError    entityNotExistError,\n      3: shared.InternalServiceError    internalServiceError,\n    )\n\n  GetGlobalIsolationGroupsResponse GetGlobalIsolationGroups(1: GetGlobalIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateGlobalIsolationGroupsResponse UpdateGlobalIsolationGroups(1: UpdateGlobalIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  GetDomainIsolationGroupsResponse GetDomainIsolationGroups(1: GetDomainIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n\n  UpdateDomainIsolationGroupsResponse UpdateDomainIsolationGroups(1: UpdateDomainIsolationGroupsRequest request)\n    throws (\n      1: shared.BadRequestError badRequestError,\n    )\n}\n\nstruct DescribeWorkflowExecutionRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct DescribeWorkflowExecutionResponse {\n  10: optional string shardId\n  20: optional string historyAddr\n  40: optional string mutableStateInCache\n  50: optional string mutableStateInDatabase\n}\n\n/**\n  * StartEventId defines the beginning of the event to fetch. The first event is exclusive.\n  * EndEventId and EndEventVersion defines the end of the event to fetch. The end event is exclusive.\n  **/\nstruct GetWorkflowExecutionRawHistoryV2Request {\n  10: optional string domain\n  20: optional shared.WorkflowExecution execution\n  30: optional i64 (js.type = \"Long\") startEventId\n  40: optional i64 (js.type = \"Long\") startEventVersion\n  50: optional i64 (js.type = \"Long\") endEventId\n  60: optional i64 (js.type = \"Long\") endEventVersion\n  70: optional i32 maximumPageSize\n  80: optional binary nextPageToken\n}\n\nstruct GetWorkflowExecutionRawHistoryV2Response {\n  10: optional binary nextPageToken\n  20: optional list<shared.DataBlob> historyBatches\n  30: optional shared.VersionHistory versionHistory\n}\n\nstruct AddSearchAttributeRequest {\n  10: optional map<string, shared.IndexedValueType> searchAttribute\n  20: optional string securityToken\n}\n\nstruct HostInfo {\n  10: optional string Identity\n}\n\nstruct RingInfo {\n  10: optional string role\n  20: optional i32 memberCount\n  30: optional list<HostInfo> members\n}\n\nstruct MembershipInfo {\n  10: optional HostInfo currentHost\n  20: optional list<string> reachableMembers\n  30: optional list<RingInfo> rings\n}\n\nstruct PersistenceSetting {\n  10: optional string key\n  20: optional string value\n}\n\nstruct PersistenceFeature {\n  10: optional string key\n  20: optional bool enabled\n}\n\nstruct PersistenceInfo {\n  10: optional string backend\n  20: optional list<PersistenceSetting> settings\n  30: optional list<PersistenceFeature> features\n}\n\nstruct DescribeClusterResponse {\n  10: optional shared.SupportedClientVersions supportedClientVersions\n  20: optional MembershipInfo membershipInfo\n  30: optional map<string,PersistenceInfo> persistenceInfo\n}\n\nstruct ResendReplicationTasksRequest {\n  10: optional string domainID\n  20: optional string workflowID\n  30: optional string runID\n  40: optional string remoteCluster\n  50: optional i64 (js.type = \"Long\") startEventID\n  60: optional i64 (js.type = \"Long\") startVersion\n  70: optional i64 (js.type = \"Long\") endEventID\n  80: optional i64 (js.type = \"Long\") endVersion\n}\n\nstruct GetDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct GetDynamicConfigResponse {\n  10: optional shared.DataBlob value\n}\n\nstruct UpdateDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigValue> configValues\n}\n\nstruct RestoreDynamicConfigRequest {\n  10: optional string configName\n  20: optional list<config.DynamicConfigFilter> filters\n}\n\nstruct AdminDeleteWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminDeleteWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\nstruct AdminMaintainWorkflowRequest {\n  10: optional string                       domain\n  20: optional shared.WorkflowExecution     execution\n}\n\nstruct AdminMaintainWorkflowResponse {\n  10: optional bool historyDeleted\n  20: optional bool executionsDeleted\n  30: optional bool visibilityDeleted\n}\n\n//Eventually remove configName and integrate this functionality into Get.\n//GetDynamicConfigResponse would need to change as well.\nstruct ListDynamicConfigRequest {\n  10: optional string configName\n}\n\nstruct ListDynamicConfigResponse {\n  10: optional list<config.DynamicConfigEntry> entries\n}\n\nenum IsolationGroupState {\n  INVALID,\n  HEALTHY,\n  DRAINED,\n}\n\nstruct IsolationGroupPartition {\n  10: optional string name\n  20: optional IsolationGroupState state\n}\n\nstruct IsolationGroupConfiguration {\n  10: optional list<IsolationGroupPartition> isolationGroups\n}\n\n\n// global\nstruct GetGlobalIsolationGroupsRequest{}\n\nstruct GetGlobalIsolationGroupsResponse{\n    10: optional IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateGlobalIsolationGroupsRequest{\n    10: optional IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateGlobalIsolationGroupsResponse{}\n\n\n// For domains\nstruct GetDomainIsolationGroupsRequest{\n    10: optional string domain\n}\n\nstruct GetDomainIsolationGroupsResponse{\n    10: optional IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateDomainIsolationGroupsRequest{\n    10: optional string domain\n    20: optional IsolationGroupConfiguration isolationGroups\n}\n\nstruct UpdateDomainIsolationGroupsResponse{}\n"
 
 // AdminService_AddSearchAttribute_Args represents the arguments for the AdminService.AddSearchAttribute function.
 //
@@ -16829,6 +19218,674 @@ func (v *AdminService_GetDLQReplicationMessages_Result) EnvelopeType() wire.Enve
 	return wire.Reply
 }
 
+// AdminService_GetDomainIsolationGroups_Args represents the arguments for the AdminService.GetDomainIsolationGroups function.
+//
+// The arguments for GetDomainIsolationGroups are sent and received over the wire as this struct.
+type AdminService_GetDomainIsolationGroups_Args struct {
+	Request *GetDomainIsolationGroupsRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_GetDomainIsolationGroups_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_GetDomainIsolationGroups_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetDomainIsolationGroupsRequest_Read(w wire.Value) (*GetDomainIsolationGroupsRequest, error) {
+	var v GetDomainIsolationGroupsRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetDomainIsolationGroups_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetDomainIsolationGroups_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_GetDomainIsolationGroups_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_GetDomainIsolationGroups_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _GetDomainIsolationGroupsRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_GetDomainIsolationGroups_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_GetDomainIsolationGroups_Args struct could not be encoded.
+func (v *AdminService_GetDomainIsolationGroups_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _GetDomainIsolationGroupsRequest_Decode(sr stream.Reader) (*GetDomainIsolationGroupsRequest, error) {
+	var v GetDomainIsolationGroupsRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_GetDomainIsolationGroups_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_GetDomainIsolationGroups_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_GetDomainIsolationGroups_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _GetDomainIsolationGroupsRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetDomainIsolationGroups_Args
+// struct.
+func (v *AdminService_GetDomainIsolationGroups_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetDomainIsolationGroups_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetDomainIsolationGroups_Args match the
+// provided AdminService_GetDomainIsolationGroups_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetDomainIsolationGroups_Args) Equals(rhs *AdminService_GetDomainIsolationGroups_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetDomainIsolationGroups_Args.
+func (v *AdminService_GetDomainIsolationGroups_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDomainIsolationGroups_Args) GetRequest() (o *GetDomainIsolationGroupsRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_GetDomainIsolationGroups_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "GetDomainIsolationGroups" for this struct.
+func (v *AdminService_GetDomainIsolationGroups_Args) MethodName() string {
+	return "GetDomainIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_GetDomainIsolationGroups_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_GetDomainIsolationGroups_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.GetDomainIsolationGroups
+// function.
+var AdminService_GetDomainIsolationGroups_Helper = struct {
+	// Args accepts the parameters of GetDomainIsolationGroups in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *GetDomainIsolationGroupsRequest,
+	) *AdminService_GetDomainIsolationGroups_Args
+
+	// IsException returns true if the given error can be thrown
+	// by GetDomainIsolationGroups.
+	//
+	// An error can be thrown by GetDomainIsolationGroups only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for GetDomainIsolationGroups
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// GetDomainIsolationGroups into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by GetDomainIsolationGroups
+	//
+	//   value, err := GetDomainIsolationGroups(args)
+	//   result, err := AdminService_GetDomainIsolationGroups_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from GetDomainIsolationGroups: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*GetDomainIsolationGroupsResponse, error) (*AdminService_GetDomainIsolationGroups_Result, error)
+
+	// UnwrapResponse takes the result struct for GetDomainIsolationGroups
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if GetDomainIsolationGroups threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_GetDomainIsolationGroups_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_GetDomainIsolationGroups_Result) (*GetDomainIsolationGroupsResponse, error)
+}{}
+
+func init() {
+	AdminService_GetDomainIsolationGroups_Helper.Args = func(
+		request *GetDomainIsolationGroupsRequest,
+	) *AdminService_GetDomainIsolationGroups_Args {
+		return &AdminService_GetDomainIsolationGroups_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_GetDomainIsolationGroups_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_GetDomainIsolationGroups_Helper.WrapResponse = func(success *GetDomainIsolationGroupsResponse, err error) (*AdminService_GetDomainIsolationGroups_Result, error) {
+		if err == nil {
+			return &AdminService_GetDomainIsolationGroups_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetDomainIsolationGroups_Result.BadRequestError")
+			}
+			return &AdminService_GetDomainIsolationGroups_Result{BadRequestError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_GetDomainIsolationGroups_Helper.UnwrapResponse = func(result *AdminService_GetDomainIsolationGroups_Result) (success *GetDomainIsolationGroupsResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_GetDomainIsolationGroups_Result represents the result of a AdminService.GetDomainIsolationGroups function call.
+//
+// The result of a GetDomainIsolationGroups execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_GetDomainIsolationGroups_Result struct {
+	// Value returned by GetDomainIsolationGroups after a successful execution.
+	Success         *GetDomainIsolationGroupsResponse `json:"success,omitempty"`
+	BadRequestError *shared.BadRequestError           `json:"badRequestError,omitempty"`
+}
+
+// ToWire translates a AdminService_GetDomainIsolationGroups_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_GetDomainIsolationGroups_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_GetDomainIsolationGroups_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetDomainIsolationGroupsResponse_Read(w wire.Value) (*GetDomainIsolationGroupsResponse, error) {
+	var v GetDomainIsolationGroupsResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetDomainIsolationGroups_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetDomainIsolationGroups_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_GetDomainIsolationGroups_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_GetDomainIsolationGroups_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _GetDomainIsolationGroupsResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDomainIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_GetDomainIsolationGroups_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_GetDomainIsolationGroups_Result struct could not be encoded.
+func (v *AdminService_GetDomainIsolationGroups_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDomainIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _GetDomainIsolationGroupsResponse_Decode(sr stream.Reader) (*GetDomainIsolationGroupsResponse, error) {
+	var v GetDomainIsolationGroupsResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_GetDomainIsolationGroups_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_GetDomainIsolationGroups_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_GetDomainIsolationGroups_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _GetDomainIsolationGroupsResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetDomainIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetDomainIsolationGroups_Result
+// struct.
+func (v *AdminService_GetDomainIsolationGroups_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetDomainIsolationGroups_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetDomainIsolationGroups_Result match the
+// provided AdminService_GetDomainIsolationGroups_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetDomainIsolationGroups_Result) Equals(rhs *AdminService_GetDomainIsolationGroups_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetDomainIsolationGroups_Result.
+func (v *AdminService_GetDomainIsolationGroups_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDomainIsolationGroups_Result) GetSuccess() (o *GetDomainIsolationGroupsResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_GetDomainIsolationGroups_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetDomainIsolationGroups_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_GetDomainIsolationGroups_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "GetDomainIsolationGroups" for this struct.
+func (v *AdminService_GetDomainIsolationGroups_Result) MethodName() string {
+	return "GetDomainIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_GetDomainIsolationGroups_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // AdminService_GetDomainReplicationMessages_Args represents the arguments for the AdminService.GetDomainReplicationMessages function.
 //
 // The arguments for GetDomainReplicationMessages are sent and received over the wire as this struct.
@@ -18506,6 +21563,674 @@ func (v *AdminService_GetDynamicConfig_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_GetDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_GetGlobalIsolationGroups_Args represents the arguments for the AdminService.GetGlobalIsolationGroups function.
+//
+// The arguments for GetGlobalIsolationGroups are sent and received over the wire as this struct.
+type AdminService_GetGlobalIsolationGroups_Args struct {
+	Request *GetGlobalIsolationGroupsRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_GetGlobalIsolationGroups_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_GetGlobalIsolationGroups_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetGlobalIsolationGroupsRequest_Read(w wire.Value) (*GetGlobalIsolationGroupsRequest, error) {
+	var v GetGlobalIsolationGroupsRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetGlobalIsolationGroups_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetGlobalIsolationGroups_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_GetGlobalIsolationGroups_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_GetGlobalIsolationGroups_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _GetGlobalIsolationGroupsRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_GetGlobalIsolationGroups_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_GetGlobalIsolationGroups_Args struct could not be encoded.
+func (v *AdminService_GetGlobalIsolationGroups_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _GetGlobalIsolationGroupsRequest_Decode(sr stream.Reader) (*GetGlobalIsolationGroupsRequest, error) {
+	var v GetGlobalIsolationGroupsRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_GetGlobalIsolationGroups_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_GetGlobalIsolationGroups_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_GetGlobalIsolationGroups_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _GetGlobalIsolationGroupsRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetGlobalIsolationGroups_Args
+// struct.
+func (v *AdminService_GetGlobalIsolationGroups_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetGlobalIsolationGroups_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetGlobalIsolationGroups_Args match the
+// provided AdminService_GetGlobalIsolationGroups_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetGlobalIsolationGroups_Args) Equals(rhs *AdminService_GetGlobalIsolationGroups_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetGlobalIsolationGroups_Args.
+func (v *AdminService_GetGlobalIsolationGroups_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetGlobalIsolationGroups_Args) GetRequest() (o *GetGlobalIsolationGroupsRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_GetGlobalIsolationGroups_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "GetGlobalIsolationGroups" for this struct.
+func (v *AdminService_GetGlobalIsolationGroups_Args) MethodName() string {
+	return "GetGlobalIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_GetGlobalIsolationGroups_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_GetGlobalIsolationGroups_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.GetGlobalIsolationGroups
+// function.
+var AdminService_GetGlobalIsolationGroups_Helper = struct {
+	// Args accepts the parameters of GetGlobalIsolationGroups in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *GetGlobalIsolationGroupsRequest,
+	) *AdminService_GetGlobalIsolationGroups_Args
+
+	// IsException returns true if the given error can be thrown
+	// by GetGlobalIsolationGroups.
+	//
+	// An error can be thrown by GetGlobalIsolationGroups only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for GetGlobalIsolationGroups
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// GetGlobalIsolationGroups into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by GetGlobalIsolationGroups
+	//
+	//   value, err := GetGlobalIsolationGroups(args)
+	//   result, err := AdminService_GetGlobalIsolationGroups_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from GetGlobalIsolationGroups: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*GetGlobalIsolationGroupsResponse, error) (*AdminService_GetGlobalIsolationGroups_Result, error)
+
+	// UnwrapResponse takes the result struct for GetGlobalIsolationGroups
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if GetGlobalIsolationGroups threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_GetGlobalIsolationGroups_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_GetGlobalIsolationGroups_Result) (*GetGlobalIsolationGroupsResponse, error)
+}{}
+
+func init() {
+	AdminService_GetGlobalIsolationGroups_Helper.Args = func(
+		request *GetGlobalIsolationGroupsRequest,
+	) *AdminService_GetGlobalIsolationGroups_Args {
+		return &AdminService_GetGlobalIsolationGroups_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_GetGlobalIsolationGroups_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_GetGlobalIsolationGroups_Helper.WrapResponse = func(success *GetGlobalIsolationGroupsResponse, err error) (*AdminService_GetGlobalIsolationGroups_Result, error) {
+		if err == nil {
+			return &AdminService_GetGlobalIsolationGroups_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_GetGlobalIsolationGroups_Result.BadRequestError")
+			}
+			return &AdminService_GetGlobalIsolationGroups_Result{BadRequestError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_GetGlobalIsolationGroups_Helper.UnwrapResponse = func(result *AdminService_GetGlobalIsolationGroups_Result) (success *GetGlobalIsolationGroupsResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_GetGlobalIsolationGroups_Result represents the result of a AdminService.GetGlobalIsolationGroups function call.
+//
+// The result of a GetGlobalIsolationGroups execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_GetGlobalIsolationGroups_Result struct {
+	// Value returned by GetGlobalIsolationGroups after a successful execution.
+	Success         *GetGlobalIsolationGroupsResponse `json:"success,omitempty"`
+	BadRequestError *shared.BadRequestError           `json:"badRequestError,omitempty"`
+}
+
+// ToWire translates a AdminService_GetGlobalIsolationGroups_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_GetGlobalIsolationGroups_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_GetGlobalIsolationGroups_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _GetGlobalIsolationGroupsResponse_Read(w wire.Value) (*GetGlobalIsolationGroupsResponse, error) {
+	var v GetGlobalIsolationGroupsResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_GetGlobalIsolationGroups_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_GetGlobalIsolationGroups_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_GetGlobalIsolationGroups_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_GetGlobalIsolationGroups_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _GetGlobalIsolationGroupsResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetGlobalIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_GetGlobalIsolationGroups_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_GetGlobalIsolationGroups_Result struct could not be encoded.
+func (v *AdminService_GetGlobalIsolationGroups_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetGlobalIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _GetGlobalIsolationGroupsResponse_Decode(sr stream.Reader) (*GetGlobalIsolationGroupsResponse, error) {
+	var v GetGlobalIsolationGroupsResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_GetGlobalIsolationGroups_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_GetGlobalIsolationGroups_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_GetGlobalIsolationGroups_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _GetGlobalIsolationGroupsResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_GetGlobalIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_GetGlobalIsolationGroups_Result
+// struct.
+func (v *AdminService_GetGlobalIsolationGroups_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_GetGlobalIsolationGroups_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_GetGlobalIsolationGroups_Result match the
+// provided AdminService_GetGlobalIsolationGroups_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_GetGlobalIsolationGroups_Result) Equals(rhs *AdminService_GetGlobalIsolationGroups_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_GetGlobalIsolationGroups_Result.
+func (v *AdminService_GetGlobalIsolationGroups_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetGlobalIsolationGroups_Result) GetSuccess() (o *GetGlobalIsolationGroupsResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_GetGlobalIsolationGroups_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_GetGlobalIsolationGroups_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_GetGlobalIsolationGroups_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "GetGlobalIsolationGroups" for this struct.
+func (v *AdminService_GetGlobalIsolationGroups_Result) MethodName() string {
+	return "GetGlobalIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_GetGlobalIsolationGroups_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }
 
@@ -29883,6 +33608,674 @@ func (v *AdminService_RestoreDynamicConfig_Result) EnvelopeType() wire.EnvelopeT
 	return wire.Reply
 }
 
+// AdminService_UpdateDomainIsolationGroups_Args represents the arguments for the AdminService.UpdateDomainIsolationGroups function.
+//
+// The arguments for UpdateDomainIsolationGroups are sent and received over the wire as this struct.
+type AdminService_UpdateDomainIsolationGroups_Args struct {
+	Request *UpdateDomainIsolationGroupsRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateDomainIsolationGroups_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_UpdateDomainIsolationGroups_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateDomainIsolationGroupsRequest_Read(w wire.Value) (*UpdateDomainIsolationGroupsRequest, error) {
+	var v UpdateDomainIsolationGroupsRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateDomainIsolationGroups_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateDomainIsolationGroups_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_UpdateDomainIsolationGroups_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_UpdateDomainIsolationGroups_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _UpdateDomainIsolationGroupsRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_UpdateDomainIsolationGroups_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_UpdateDomainIsolationGroups_Args struct could not be encoded.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _UpdateDomainIsolationGroupsRequest_Decode(sr stream.Reader) (*UpdateDomainIsolationGroupsRequest, error) {
+	var v UpdateDomainIsolationGroupsRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_UpdateDomainIsolationGroups_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_UpdateDomainIsolationGroups_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _UpdateDomainIsolationGroupsRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateDomainIsolationGroups_Args
+// struct.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateDomainIsolationGroups_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateDomainIsolationGroups_Args match the
+// provided AdminService_UpdateDomainIsolationGroups_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) Equals(rhs *AdminService_UpdateDomainIsolationGroups_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateDomainIsolationGroups_Args.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) GetRequest() (o *UpdateDomainIsolationGroupsRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "UpdateDomainIsolationGroups" for this struct.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) MethodName() string {
+	return "UpdateDomainIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_UpdateDomainIsolationGroups_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_UpdateDomainIsolationGroups_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.UpdateDomainIsolationGroups
+// function.
+var AdminService_UpdateDomainIsolationGroups_Helper = struct {
+	// Args accepts the parameters of UpdateDomainIsolationGroups in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *UpdateDomainIsolationGroupsRequest,
+	) *AdminService_UpdateDomainIsolationGroups_Args
+
+	// IsException returns true if the given error can be thrown
+	// by UpdateDomainIsolationGroups.
+	//
+	// An error can be thrown by UpdateDomainIsolationGroups only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for UpdateDomainIsolationGroups
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// UpdateDomainIsolationGroups into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by UpdateDomainIsolationGroups
+	//
+	//   value, err := UpdateDomainIsolationGroups(args)
+	//   result, err := AdminService_UpdateDomainIsolationGroups_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from UpdateDomainIsolationGroups: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*UpdateDomainIsolationGroupsResponse, error) (*AdminService_UpdateDomainIsolationGroups_Result, error)
+
+	// UnwrapResponse takes the result struct for UpdateDomainIsolationGroups
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if UpdateDomainIsolationGroups threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_UpdateDomainIsolationGroups_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_UpdateDomainIsolationGroups_Result) (*UpdateDomainIsolationGroupsResponse, error)
+}{}
+
+func init() {
+	AdminService_UpdateDomainIsolationGroups_Helper.Args = func(
+		request *UpdateDomainIsolationGroupsRequest,
+	) *AdminService_UpdateDomainIsolationGroups_Args {
+		return &AdminService_UpdateDomainIsolationGroups_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_UpdateDomainIsolationGroups_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_UpdateDomainIsolationGroups_Helper.WrapResponse = func(success *UpdateDomainIsolationGroupsResponse, err error) (*AdminService_UpdateDomainIsolationGroups_Result, error) {
+		if err == nil {
+			return &AdminService_UpdateDomainIsolationGroups_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_UpdateDomainIsolationGroups_Result.BadRequestError")
+			}
+			return &AdminService_UpdateDomainIsolationGroups_Result{BadRequestError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_UpdateDomainIsolationGroups_Helper.UnwrapResponse = func(result *AdminService_UpdateDomainIsolationGroups_Result) (success *UpdateDomainIsolationGroupsResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_UpdateDomainIsolationGroups_Result represents the result of a AdminService.UpdateDomainIsolationGroups function call.
+//
+// The result of a UpdateDomainIsolationGroups execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_UpdateDomainIsolationGroups_Result struct {
+	// Value returned by UpdateDomainIsolationGroups after a successful execution.
+	Success         *UpdateDomainIsolationGroupsResponse `json:"success,omitempty"`
+	BadRequestError *shared.BadRequestError              `json:"badRequestError,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateDomainIsolationGroups_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_UpdateDomainIsolationGroups_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_UpdateDomainIsolationGroups_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateDomainIsolationGroupsResponse_Read(w wire.Value) (*UpdateDomainIsolationGroupsResponse, error) {
+	var v UpdateDomainIsolationGroupsResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateDomainIsolationGroups_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateDomainIsolationGroups_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_UpdateDomainIsolationGroups_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_UpdateDomainIsolationGroups_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _UpdateDomainIsolationGroupsResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateDomainIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_UpdateDomainIsolationGroups_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_UpdateDomainIsolationGroups_Result struct could not be encoded.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateDomainIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _UpdateDomainIsolationGroupsResponse_Decode(sr stream.Reader) (*UpdateDomainIsolationGroupsResponse, error) {
+	var v UpdateDomainIsolationGroupsResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_UpdateDomainIsolationGroups_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_UpdateDomainIsolationGroups_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _UpdateDomainIsolationGroupsResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateDomainIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateDomainIsolationGroups_Result
+// struct.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateDomainIsolationGroups_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateDomainIsolationGroups_Result match the
+// provided AdminService_UpdateDomainIsolationGroups_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) Equals(rhs *AdminService_UpdateDomainIsolationGroups_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateDomainIsolationGroups_Result.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) GetSuccess() (o *UpdateDomainIsolationGroupsResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "UpdateDomainIsolationGroups" for this struct.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) MethodName() string {
+	return "UpdateDomainIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_UpdateDomainIsolationGroups_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
 // AdminService_UpdateDynamicConfig_Args represents the arguments for the AdminService.UpdateDynamicConfig function.
 //
 // The arguments for UpdateDynamicConfig are sent and received over the wire as this struct.
@@ -30538,5 +34931,673 @@ func (v *AdminService_UpdateDynamicConfig_Result) MethodName() string {
 //
 // This will always be Reply for this struct.
 func (v *AdminService_UpdateDynamicConfig_Result) EnvelopeType() wire.EnvelopeType {
+	return wire.Reply
+}
+
+// AdminService_UpdateGlobalIsolationGroups_Args represents the arguments for the AdminService.UpdateGlobalIsolationGroups function.
+//
+// The arguments for UpdateGlobalIsolationGroups are sent and received over the wire as this struct.
+type AdminService_UpdateGlobalIsolationGroups_Args struct {
+	Request *UpdateGlobalIsolationGroupsRequest `json:"request,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateGlobalIsolationGroups_Args struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) ToWire() (wire.Value, error) {
+	var (
+		fields [1]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Request != nil {
+		w, err = v.Request.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateGlobalIsolationGroupsRequest_Read(w wire.Value) (*UpdateGlobalIsolationGroupsRequest, error) {
+	var v UpdateGlobalIsolationGroupsRequest
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateGlobalIsolationGroups_Args struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateGlobalIsolationGroups_Args struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_UpdateGlobalIsolationGroups_Args
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.Request, err = _UpdateGlobalIsolationGroupsRequest_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_UpdateGlobalIsolationGroups_Args struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_UpdateGlobalIsolationGroups_Args struct could not be encoded.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Request != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Request.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _UpdateGlobalIsolationGroupsRequest_Decode(sr stream.Reader) (*UpdateGlobalIsolationGroupsRequest, error) {
+	var v UpdateGlobalIsolationGroupsRequest
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_UpdateGlobalIsolationGroups_Args struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_UpdateGlobalIsolationGroups_Args struct could not be generated from the wire
+// representation.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.Request, err = _UpdateGlobalIsolationGroupsRequest_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateGlobalIsolationGroups_Args
+// struct.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [1]string
+	i := 0
+	if v.Request != nil {
+		fields[i] = fmt.Sprintf("Request: %v", v.Request)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateGlobalIsolationGroups_Args{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateGlobalIsolationGroups_Args match the
+// provided AdminService_UpdateGlobalIsolationGroups_Args.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) Equals(rhs *AdminService_UpdateGlobalIsolationGroups_Args) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Request == nil && rhs.Request == nil) || (v.Request != nil && rhs.Request != nil && v.Request.Equals(rhs.Request))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateGlobalIsolationGroups_Args.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Request != nil {
+		err = multierr.Append(err, enc.AddObject("request", v.Request))
+	}
+	return err
+}
+
+// GetRequest returns the value of Request if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) GetRequest() (o *UpdateGlobalIsolationGroupsRequest) {
+	if v != nil && v.Request != nil {
+		return v.Request
+	}
+
+	return
+}
+
+// IsSetRequest returns true if Request is not nil.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) IsSetRequest() bool {
+	return v != nil && v.Request != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the arguments.
+//
+// This will always be "UpdateGlobalIsolationGroups" for this struct.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) MethodName() string {
+	return "UpdateGlobalIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Call for this struct.
+func (v *AdminService_UpdateGlobalIsolationGroups_Args) EnvelopeType() wire.EnvelopeType {
+	return wire.Call
+}
+
+// AdminService_UpdateGlobalIsolationGroups_Helper provides functions that aid in handling the
+// parameters and return values of the AdminService.UpdateGlobalIsolationGroups
+// function.
+var AdminService_UpdateGlobalIsolationGroups_Helper = struct {
+	// Args accepts the parameters of UpdateGlobalIsolationGroups in-order and returns
+	// the arguments struct for the function.
+	Args func(
+		request *UpdateGlobalIsolationGroupsRequest,
+	) *AdminService_UpdateGlobalIsolationGroups_Args
+
+	// IsException returns true if the given error can be thrown
+	// by UpdateGlobalIsolationGroups.
+	//
+	// An error can be thrown by UpdateGlobalIsolationGroups only if the
+	// corresponding exception type was mentioned in the 'throws'
+	// section for it in the Thrift file.
+	IsException func(error) bool
+
+	// WrapResponse returns the result struct for UpdateGlobalIsolationGroups
+	// given its return value and error.
+	//
+	// This allows mapping values and errors returned by
+	// UpdateGlobalIsolationGroups into a serializable result struct.
+	// WrapResponse returns a non-nil error if the provided
+	// error cannot be thrown by UpdateGlobalIsolationGroups
+	//
+	//   value, err := UpdateGlobalIsolationGroups(args)
+	//   result, err := AdminService_UpdateGlobalIsolationGroups_Helper.WrapResponse(value, err)
+	//   if err != nil {
+	//     return fmt.Errorf("unexpected error from UpdateGlobalIsolationGroups: %v", err)
+	//   }
+	//   serialize(result)
+	WrapResponse func(*UpdateGlobalIsolationGroupsResponse, error) (*AdminService_UpdateGlobalIsolationGroups_Result, error)
+
+	// UnwrapResponse takes the result struct for UpdateGlobalIsolationGroups
+	// and returns the value or error returned by it.
+	//
+	// The error is non-nil only if UpdateGlobalIsolationGroups threw an
+	// exception.
+	//
+	//   result := deserialize(bytes)
+	//   value, err := AdminService_UpdateGlobalIsolationGroups_Helper.UnwrapResponse(result)
+	UnwrapResponse func(*AdminService_UpdateGlobalIsolationGroups_Result) (*UpdateGlobalIsolationGroupsResponse, error)
+}{}
+
+func init() {
+	AdminService_UpdateGlobalIsolationGroups_Helper.Args = func(
+		request *UpdateGlobalIsolationGroupsRequest,
+	) *AdminService_UpdateGlobalIsolationGroups_Args {
+		return &AdminService_UpdateGlobalIsolationGroups_Args{
+			Request: request,
+		}
+	}
+
+	AdminService_UpdateGlobalIsolationGroups_Helper.IsException = func(err error) bool {
+		switch err.(type) {
+		case *shared.BadRequestError:
+			return true
+		default:
+			return false
+		}
+	}
+
+	AdminService_UpdateGlobalIsolationGroups_Helper.WrapResponse = func(success *UpdateGlobalIsolationGroupsResponse, err error) (*AdminService_UpdateGlobalIsolationGroups_Result, error) {
+		if err == nil {
+			return &AdminService_UpdateGlobalIsolationGroups_Result{Success: success}, nil
+		}
+
+		switch e := err.(type) {
+		case *shared.BadRequestError:
+			if e == nil {
+				return nil, errors.New("WrapResponse received non-nil error type with nil value for AdminService_UpdateGlobalIsolationGroups_Result.BadRequestError")
+			}
+			return &AdminService_UpdateGlobalIsolationGroups_Result{BadRequestError: e}, nil
+		}
+
+		return nil, err
+	}
+	AdminService_UpdateGlobalIsolationGroups_Helper.UnwrapResponse = func(result *AdminService_UpdateGlobalIsolationGroups_Result) (success *UpdateGlobalIsolationGroupsResponse, err error) {
+		if result.BadRequestError != nil {
+			err = result.BadRequestError
+			return
+		}
+
+		if result.Success != nil {
+			success = result.Success
+			return
+		}
+
+		err = errors.New("expected a non-void result")
+		return
+	}
+
+}
+
+// AdminService_UpdateGlobalIsolationGroups_Result represents the result of a AdminService.UpdateGlobalIsolationGroups function call.
+//
+// The result of a UpdateGlobalIsolationGroups execution is sent and received over the wire as this struct.
+//
+// Success is set only if the function did not throw an exception.
+type AdminService_UpdateGlobalIsolationGroups_Result struct {
+	// Value returned by UpdateGlobalIsolationGroups after a successful execution.
+	Success         *UpdateGlobalIsolationGroupsResponse `json:"success,omitempty"`
+	BadRequestError *shared.BadRequestError              `json:"badRequestError,omitempty"`
+}
+
+// ToWire translates a AdminService_UpdateGlobalIsolationGroups_Result struct into a Thrift-level intermediate
+// representation. This intermediate representation may be serialized
+// into bytes using a ThriftRW protocol implementation.
+//
+// An error is returned if the struct or any of its fields failed to
+// validate.
+//
+//   x, err := v.ToWire()
+//   if err != nil {
+//     return err
+//   }
+//
+//   if err := binaryProtocol.Encode(x, writer); err != nil {
+//     return err
+//   }
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) ToWire() (wire.Value, error) {
+	var (
+		fields [2]wire.Field
+		i      int = 0
+		w      wire.Value
+		err    error
+	)
+
+	if v.Success != nil {
+		w, err = v.Success.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 0, Value: w}
+		i++
+	}
+	if v.BadRequestError != nil {
+		w, err = v.BadRequestError.ToWire()
+		if err != nil {
+			return w, err
+		}
+		fields[i] = wire.Field{ID: 1, Value: w}
+		i++
+	}
+
+	if i != 1 {
+		return wire.Value{}, fmt.Errorf("AdminService_UpdateGlobalIsolationGroups_Result should have exactly one field: got %v fields", i)
+	}
+
+	return wire.NewValueStruct(wire.Struct{Fields: fields[:i]}), nil
+}
+
+func _UpdateGlobalIsolationGroupsResponse_Read(w wire.Value) (*UpdateGlobalIsolationGroupsResponse, error) {
+	var v UpdateGlobalIsolationGroupsResponse
+	err := v.FromWire(w)
+	return &v, err
+}
+
+// FromWire deserializes a AdminService_UpdateGlobalIsolationGroups_Result struct from its Thrift-level
+// representation. The Thrift-level representation may be obtained
+// from a ThriftRW protocol implementation.
+//
+// An error is returned if we were unable to build a AdminService_UpdateGlobalIsolationGroups_Result struct
+// from the provided intermediate representation.
+//
+//   x, err := binaryProtocol.Decode(reader, wire.TStruct)
+//   if err != nil {
+//     return nil, err
+//   }
+//
+//   var v AdminService_UpdateGlobalIsolationGroups_Result
+//   if err := v.FromWire(x); err != nil {
+//     return nil, err
+//   }
+//   return &v, nil
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) FromWire(w wire.Value) error {
+	var err error
+
+	for _, field := range w.GetStruct().Fields {
+		switch field.ID {
+		case 0:
+			if field.Value.Type() == wire.TStruct {
+				v.Success, err = _UpdateGlobalIsolationGroupsResponse_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		case 1:
+			if field.Value.Type() == wire.TStruct {
+				v.BadRequestError, err = _BadRequestError_Read(field.Value)
+				if err != nil {
+					return err
+				}
+
+			}
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateGlobalIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// Encode serializes a AdminService_UpdateGlobalIsolationGroups_Result struct directly into bytes, without going
+// through an intermediary type.
+//
+// An error is returned if a AdminService_UpdateGlobalIsolationGroups_Result struct could not be encoded.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) Encode(sw stream.Writer) error {
+	if err := sw.WriteStructBegin(); err != nil {
+		return err
+	}
+
+	if v.Success != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 0, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.Success.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	if v.BadRequestError != nil {
+		if err := sw.WriteFieldBegin(stream.FieldHeader{ID: 1, Type: wire.TStruct}); err != nil {
+			return err
+		}
+		if err := v.BadRequestError.Encode(sw); err != nil {
+			return err
+		}
+		if err := sw.WriteFieldEnd(); err != nil {
+			return err
+		}
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateGlobalIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return sw.WriteStructEnd()
+}
+
+func _UpdateGlobalIsolationGroupsResponse_Decode(sr stream.Reader) (*UpdateGlobalIsolationGroupsResponse, error) {
+	var v UpdateGlobalIsolationGroupsResponse
+	err := v.Decode(sr)
+	return &v, err
+}
+
+// Decode deserializes a AdminService_UpdateGlobalIsolationGroups_Result struct directly from its Thrift-level
+// representation, without going through an intemediary type.
+//
+// An error is returned if a AdminService_UpdateGlobalIsolationGroups_Result struct could not be generated from the wire
+// representation.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) Decode(sr stream.Reader) error {
+
+	if err := sr.ReadStructBegin(); err != nil {
+		return err
+	}
+
+	fh, ok, err := sr.ReadFieldBegin()
+	if err != nil {
+		return err
+	}
+
+	for ok {
+		switch {
+		case fh.ID == 0 && fh.Type == wire.TStruct:
+			v.Success, err = _UpdateGlobalIsolationGroupsResponse_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		case fh.ID == 1 && fh.Type == wire.TStruct:
+			v.BadRequestError, err = _BadRequestError_Decode(sr)
+			if err != nil {
+				return err
+			}
+
+		default:
+			if err := sr.Skip(fh.Type); err != nil {
+				return err
+			}
+		}
+
+		if err := sr.ReadFieldEnd(); err != nil {
+			return err
+		}
+
+		if fh, ok, err = sr.ReadFieldBegin(); err != nil {
+			return err
+		}
+	}
+
+	if err := sr.ReadStructEnd(); err != nil {
+		return err
+	}
+
+	count := 0
+	if v.Success != nil {
+		count++
+	}
+	if v.BadRequestError != nil {
+		count++
+	}
+	if count != 1 {
+		return fmt.Errorf("AdminService_UpdateGlobalIsolationGroups_Result should have exactly one field: got %v fields", count)
+	}
+
+	return nil
+}
+
+// String returns a readable string representation of a AdminService_UpdateGlobalIsolationGroups_Result
+// struct.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+
+	var fields [2]string
+	i := 0
+	if v.Success != nil {
+		fields[i] = fmt.Sprintf("Success: %v", v.Success)
+		i++
+	}
+	if v.BadRequestError != nil {
+		fields[i] = fmt.Sprintf("BadRequestError: %v", v.BadRequestError)
+		i++
+	}
+
+	return fmt.Sprintf("AdminService_UpdateGlobalIsolationGroups_Result{%v}", strings.Join(fields[:i], ", "))
+}
+
+// Equals returns true if all the fields of this AdminService_UpdateGlobalIsolationGroups_Result match the
+// provided AdminService_UpdateGlobalIsolationGroups_Result.
+//
+// This function performs a deep comparison.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) Equals(rhs *AdminService_UpdateGlobalIsolationGroups_Result) bool {
+	if v == nil {
+		return rhs == nil
+	} else if rhs == nil {
+		return false
+	}
+	if !((v.Success == nil && rhs.Success == nil) || (v.Success != nil && rhs.Success != nil && v.Success.Equals(rhs.Success))) {
+		return false
+	}
+	if !((v.BadRequestError == nil && rhs.BadRequestError == nil) || (v.BadRequestError != nil && rhs.BadRequestError != nil && v.BadRequestError.Equals(rhs.BadRequestError))) {
+		return false
+	}
+
+	return true
+}
+
+// MarshalLogObject implements zapcore.ObjectMarshaler, enabling
+// fast logging of AdminService_UpdateGlobalIsolationGroups_Result.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) MarshalLogObject(enc zapcore.ObjectEncoder) (err error) {
+	if v == nil {
+		return nil
+	}
+	if v.Success != nil {
+		err = multierr.Append(err, enc.AddObject("success", v.Success))
+	}
+	if v.BadRequestError != nil {
+		err = multierr.Append(err, enc.AddObject("badRequestError", v.BadRequestError))
+	}
+	return err
+}
+
+// GetSuccess returns the value of Success if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) GetSuccess() (o *UpdateGlobalIsolationGroupsResponse) {
+	if v != nil && v.Success != nil {
+		return v.Success
+	}
+
+	return
+}
+
+// IsSetSuccess returns true if Success is not nil.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) IsSetSuccess() bool {
+	return v != nil && v.Success != nil
+}
+
+// GetBadRequestError returns the value of BadRequestError if it is set or its
+// zero value if it is unset.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) GetBadRequestError() (o *shared.BadRequestError) {
+	if v != nil && v.BadRequestError != nil {
+		return v.BadRequestError
+	}
+
+	return
+}
+
+// IsSetBadRequestError returns true if BadRequestError is not nil.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) IsSetBadRequestError() bool {
+	return v != nil && v.BadRequestError != nil
+}
+
+// MethodName returns the name of the Thrift function as specified in
+// the IDL, for which this struct represent the result.
+//
+// This will always be "UpdateGlobalIsolationGroups" for this struct.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) MethodName() string {
+	return "UpdateGlobalIsolationGroups"
+}
+
+// EnvelopeType returns the kind of value inside this struct.
+//
+// This will always be Reply for this struct.
+func (v *AdminService_UpdateGlobalIsolationGroups_Result) EnvelopeType() wire.EnvelopeType {
 	return wire.Reply
 }

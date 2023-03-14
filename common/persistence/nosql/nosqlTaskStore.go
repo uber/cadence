@@ -231,14 +231,15 @@ func (t *nosqlTaskStore) CreateTasks(
 	var tasks []*nosqlplugin.TaskRowForInsert
 	for _, t := range request.Tasks {
 		task := &nosqlplugin.TaskRow{
-			DomainID:     request.TaskListInfo.DomainID,
-			TaskListName: request.TaskListInfo.Name,
-			TaskListType: request.TaskListInfo.TaskType,
-			TaskID:       t.TaskID,
-			WorkflowID:   t.Execution.GetWorkflowID(),
-			RunID:        t.Execution.GetRunID(),
-			ScheduledID:  t.Data.ScheduleID,
-			CreatedTime:  now,
+			DomainID:        request.TaskListInfo.DomainID,
+			TaskListName:    request.TaskListInfo.Name,
+			TaskListType:    request.TaskListInfo.TaskType,
+			TaskID:          t.TaskID,
+			WorkflowID:      t.Execution.GetWorkflowID(),
+			RunID:           t.Execution.GetRunID(),
+			ScheduledID:     t.Data.ScheduleID,
+			CreatedTime:     now,
+			PartitionConfig: t.Data.PartitionConfig,
 		}
 		ttl := int(t.Data.ScheduleToStartTimeout.Seconds())
 		tasks = append(tasks, &nosqlplugin.TaskRowForInsert{
@@ -247,7 +248,13 @@ func (t *nosqlTaskStore) CreateTasks(
 		})
 	}
 
-	err := t.db.InsertTasks(ctx, tasks, toTaskListRow(request.TaskListInfo))
+	tasklistCondition := &nosqlplugin.TaskListRow{
+		DomainID:     request.TaskListInfo.DomainID,
+		TaskListName: request.TaskListInfo.Name,
+		TaskListType: request.TaskListInfo.TaskType,
+		RangeID:      request.TaskListInfo.RangeID,
+	}
+	err := t.db.InsertTasks(ctx, tasks, tasklistCondition)
 
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.TaskOperationConditionFailure)
@@ -261,18 +268,6 @@ func (t *nosqlTaskStore) CreateTasks(
 	}
 
 	return &p.CreateTasksResponse{}, nil
-}
-
-func toTaskListRow(info *p.TaskListInfo) *nosqlplugin.TaskListRow {
-	return &nosqlplugin.TaskListRow{
-		DomainID:        info.DomainID,
-		TaskListName:    info.Name,
-		TaskListType:    info.TaskType,
-		TaskListKind:    info.Kind,
-		RangeID:         info.RangeID,
-		AckLevel:        info.AckLevel,
-		LastUpdatedTime: info.LastUpdated,
-	}
 }
 
 func (t *nosqlTaskStore) GetTasks(
@@ -313,12 +308,13 @@ func (t *nosqlTaskStore) GetTasks(
 
 func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 	return &p.InternalTaskInfo{
-		DomainID:    t.DomainID,
-		WorkflowID:  t.WorkflowID,
-		RunID:       t.RunID,
-		TaskID:      t.TaskID,
-		ScheduleID:  t.ScheduledID,
-		CreatedTime: t.CreatedTime,
+		DomainID:        t.DomainID,
+		WorkflowID:      t.WorkflowID,
+		RunID:           t.RunID,
+		TaskID:          t.TaskID,
+		ScheduleID:      t.ScheduledID,
+		CreatedTime:     t.CreatedTime,
+		PartitionConfig: t.PartitionConfig,
 	}
 }
 

@@ -327,6 +327,7 @@ type (
 		ExpirationInterval time.Duration
 		Memo               map[string][]byte
 		SearchAttributes   map[string][]byte
+		PartitionConfig    map[string]string
 
 		// attributes which are not related to mutable state at all
 		HistorySize int64
@@ -885,6 +886,7 @@ type (
 		ScheduleToStartTimeout time.Duration
 		Expiry                 time.Time
 		CreatedTime            time.Time
+		PartitionConfig        map[string]string
 	}
 
 	// InternalCreateTasksInfo describes a task to be created in InternalCreateTasksRequest

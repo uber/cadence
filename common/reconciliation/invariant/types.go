@@ -44,6 +44,10 @@ const (
 
 	// HistoryExists asserts that history must exist if concrete execution exists
 	HistoryExists Name = "history_exists"
+
+	// InactiveDomainExists asserts that if domain status is not registered that it's inactive
+	InactiveDomainExists Name = "inactive_domain_exists"
+
 	// OpenCurrentExecution asserts that an open concrete execution must have a valid current execution
 	OpenCurrentExecution Name = "open_current_execution"
 	// ConcreteExecutionExists asserts that an open current execution must have a valid concrete execution
@@ -53,6 +57,8 @@ const (
 	CollectionMutableState Collection = 0
 	// CollectionHistory is the collection  of invariants relating to history
 	CollectionHistory Collection = 1
+	// CollectionDomain is the collection  of invariants relating to domain status
+	CollectionDomain Collection = 2
 )
 
 type (

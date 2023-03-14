@@ -685,3 +685,43 @@ func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.List
 		Entries: ToDynamicConfigEntryArray(t.Entries),
 	}
 }
+
+func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *admin.GetGlobalIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToGetGlobalIsolationGroupsRequest(t *admin.GetGlobalIsolationGroupsRequest) *types.GetGlobalIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}
+
+func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsResponse) *admin.GetDomainIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToGetDomainIsolationGroupsRequest(t *admin.GetDomainIsolationGroupsRequest) *types.GetDomainIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}
+
+func FromUpdateGlobalIsolationGroupsResponse(t *types.UpdateGlobalIsolationGroupsResponse) *admin.UpdateGlobalIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToUpdateGlobalIsolationGroupsRequest(t *admin.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}
+
+func FromUpdateDomainIsolationGroupsResponse(t *types.UpdateDomainIsolationGroupsResponse) *admin.UpdateDomainIsolationGroupsResponse {
+	panic("not implemented")
+	return nil
+}
+
+func ToUpdateDomainIsolationGroupsRequest(t *admin.UpdateDomainIsolationGroupsRequest) *types.UpdateDomainIsolationGroupsRequest {
+	panic("not implemented")
+	return nil
+}

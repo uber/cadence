@@ -60,7 +60,8 @@ const (
 		`workflow_id: ?, ` +
 		`run_id: ?, ` +
 		`schedule_id: ?,` +
-		`created_time: ? ` +
+		`created_time: ?, ` +
+		`partition_config: ? ` +
 		`}`
 
 	templateCreateTaskQuery = `INSERT INTO tasks (` +
@@ -129,6 +130,15 @@ const (
 	templateUpdateTaskListQueryWithTTLPart2 = `UPDATE tasks USING TTL ? SET ` +
 		`range_id = ?, ` +
 		`task_list = ` + templateTaskListType + " " +
+		`WHERE domain_id = ? ` +
+		`and task_list_name = ? ` +
+		`and task_list_type = ? ` +
+		`and type = ? ` +
+		`and task_id = ? ` +
+		`IF range_id = ?`
+
+	templateUpdateTaskListRangeIDQuery = `UPDATE tasks SET ` +
+		`range_id = ? ` +
 		`WHERE domain_id = ? ` +
 		`and task_list_name = ? ` +
 		`and task_list_type = ? ` +
@@ -342,8 +352,6 @@ func (db *cdb) InsertTasks(
 	domainID := tasklistCondition.DomainID
 	taskListName := tasklistCondition.TaskListName
 	taskListType := tasklistCondition.TaskListType
-	taskListKind := tasklistCondition.TaskListKind
-	ackLevel := tasklistCondition.AckLevel
 
 	for _, task := range tasksToInsert {
 		scheduleID := task.ScheduledID
@@ -359,7 +367,8 @@ func (db *cdb) InsertTasks(
 				task.WorkflowID,
 				task.RunID,
 				scheduleID,
-				task.CreatedTime)
+				task.CreatedTime,
+				task.PartitionConfig)
 		} else {
 			if ttl > maxCassandraTTL {
 				ttl = maxCassandraTTL
@@ -375,19 +384,14 @@ func (db *cdb) InsertTasks(
 				task.RunID,
 				scheduleID,
 				task.CreatedTime,
+				task.PartitionConfig,
 				ttl)
 		}
 	}
 
 	// The following query is used to ensure that range_id didn't change
-	batch.Query(templateUpdateTaskListQuery,
+	batch.Query(templateUpdateTaskListRangeIDQuery,
 		tasklistCondition.RangeID,
-		domainID,
-		taskListName,
-		taskListType,
-		ackLevel,
-		taskListKind,
-		time.Now(),
 		domainID,
 		taskListName,
 		taskListType,
@@ -462,6 +466,8 @@ func createTaskInfo(
 			info.ScheduledID = v.(int64)
 		case "created_time":
 			info.CreatedTime = v.(time.Time)
+		case "partition_config":
+			info.PartitionConfig = v.(map[string]string)
 		}
 	}
 
