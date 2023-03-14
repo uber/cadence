@@ -171,7 +171,7 @@ func (c *elasticV7) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 	isLastPage := false
 	if err == io.EOF { // no more result
 		isLastPage = true
-		if err := c.clearScroll(ctx, token.ScrollID); err != nil {
+		if err := c.clearScroll(ctx, searchResult.ScrollId); err != nil {
 			c.logger.Warn("scroll clear failed", tag.Error(err))
 		}
 	} else if err != nil {
@@ -197,11 +197,11 @@ func (c *elasticV7) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 }
 
 func (c *elasticV7) scroll(ctx context.Context, index, query, scrollID string) (*elastic.SearchResult, error) {
-	scrolService := elastic.NewScrollService(c.client)
+	scrollService := elastic.NewScrollService(c.client)
 	if len(scrollID) == 0 {
-		return scrolService.Index(index).Body(query).Do(ctx)
+		return scrollService.Index(index).Body(query).Do(ctx)
 	}
-	return scrolService.ScrollId(scrollID).Do(ctx)
+	return scrollService.ScrollId(scrollID).Do(ctx)
 }
 
 func (c *elasticV7) clearScroll(ctx context.Context, scrollID string) error {
