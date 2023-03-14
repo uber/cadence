@@ -40,6 +40,7 @@ type (
 		logger                        log.Logger
 		enableLatencyHistogramMetrics bool
 		sampleLoggingRate             dynamicconfig.IntPropertyFn
+		enableShardIDMetrics          dynamicconfig.BoolPropertyFn
 	}
 
 	shardPersistenceClient struct {
@@ -116,6 +117,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 	logger log.Logger,
 	cfg *config.Persistence,
 	sampleLoggingRate dynamicconfig.IntPropertyFn,
+	enableShardIDMetrics dynamicconfig.BoolPropertyFn,
 ) ExecutionManager {
 	return &workflowExecutionPersistenceClient{
 		persistence: persistence,
@@ -124,6 +126,7 @@ func NewWorkflowExecutionPersistenceMetricsClient(
 			logger:                        logger.WithTags(tag.ShardID(persistence.GetShardID())),
 			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
 			sampleLoggingRate:             sampleLoggingRate,
+			enableShardIDMetrics:          enableShardIDMetrics,
 		},
 	}
 }
@@ -415,7 +418,15 @@ func (p *workflowExecutionPersistenceClient) CreateWorkflowExecution(
 		resp, err = p.persistence.CreateWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	p.logger.SampleInfo("Persistence CreateWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.NewWorkflowSnapshot.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
+	var err error
+	if p.enableShardIDMetrics() {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	} else {
+		err = p.call(metrics.PersistenceCreateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +443,13 @@ func (p *workflowExecutionPersistenceClient) GetWorkflowExecution(
 		resp, err = p.persistence.GetWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	var err error
+	if p.enableShardIDMetrics() {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	} else {
+		err = p.call(metrics.PersistenceGetWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +468,13 @@ func (p *workflowExecutionPersistenceClient) UpdateWorkflowExecution(
 	}
 	p.logger.SampleInfo("Persistence UpdateWorkflowExecution called", p.sampleLoggingRate(),
 		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.UpdateWorkflowMutation.ExecutionInfo.WorkflowID), tag.ShardID(p.GetShardID()))
-	err := p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	var err error
+	if p.enableShardIDMetrics() {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	} else {
+		err = p.call(metrics.PersistenceUpdateWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +491,15 @@ func (p *workflowExecutionPersistenceClient) ConflictResolveWorkflowExecution(
 		resp, err = p.persistence.ConflictResolveWorkflowExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	p.logger.SampleInfo("Persistence ConflictResolveWorkflowExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.ShardID(p.GetShardID()))
+	var err error
+	if p.enableShardIDMetrics() {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	} else {
+		err = p.call(metrics.PersistenceConflictResolveWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +515,12 @@ func (p *workflowExecutionPersistenceClient) DeleteWorkflowExecution(
 	}
 	p.logger.SampleInfo("Persistence DeleteWorkflowExecution called", p.sampleLoggingRate(),
 		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
-	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	if p.enableShardIDMetrics() {
+		return p.callWithDomainAndShardScope(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	}
+	return p.call(metrics.PersistenceDeleteWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
+
 }
 
 func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
@@ -496,7 +532,11 @@ func (p *workflowExecutionPersistenceClient) DeleteCurrentWorkflowExecution(
 	}
 	p.logger.SampleInfo("Persistence DeleteCurrentWorkflowExecution called", p.sampleLoggingRate(),
 		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
-	return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName), metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	if p.enableShardIDMetrics() {
+		return p.callWithDomainAndShardScope(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	}
+	return p.call(metrics.PersistenceDeleteCurrentWorkflowExecutionScope, op, metrics.DomainTag(request.DomainName))
 }
 
 func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
@@ -509,7 +549,15 @@ func (p *workflowExecutionPersistenceClient) GetCurrentExecution(
 		resp, err = p.persistence.GetCurrentExecution(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName))
+	p.logger.SampleInfo("Persistence GetCurrentExecution called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
+	var err error
+	if p.enableShardIDMetrics() {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	} else {
+		err = p.call(metrics.PersistenceGetCurrentExecutionScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -546,7 +594,15 @@ func (p *workflowExecutionPersistenceClient) IsWorkflowExecutionExists(
 		resp, err = p.persistence.IsWorkflowExecutionExists(ctx, request)
 		return err
 	}
-	err := p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName))
+	p.logger.SampleInfo("Persistence IsWorkflowExecutionExists called", p.sampleLoggingRate(),
+		tag.WorkflowDomainName(request.DomainName), tag.WorkflowID(request.WorkflowID), tag.ShardID(p.GetShardID()))
+	var err error
+	if p.enableShardIDMetrics() {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(p.GetShardID())))
+	} else {
+		err = p.call(metrics.PersistenceIsWorkflowExecutionExistsScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}
