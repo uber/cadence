@@ -874,7 +874,7 @@ func (adh *adminHandlerImpl) DescribeCluster(
 ) (resp *types.DescribeClusterResponse, retError error) {
 
 	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
-	scope, sw := adh.startRequestProfile(ctx, metrics.AdminGetWorkflowExecutionRawHistoryV2Scope)
+	scope, sw := adh.startRequestProfile(ctx, metrics.AdminDescribeClusterScope)
 	defer sw.Stop()
 
 	// expose visibility store backend and if advanced options are available
@@ -1537,7 +1537,7 @@ func (adh *adminHandlerImpl) validatePaginationToken(
 
 // startRequestProfile initiates recording of request metrics
 func (adh *adminHandlerImpl) startRequestProfile(ctx context.Context, scope int) (metrics.Scope, metrics.Stopwatch) {
-	metricsScope := adh.GetMetricsClient().Scope(scope).Tagged(metrics.GetContextTags(ctx)...)
+	metricsScope := adh.GetMetricsClient().Scope(scope).Tagged(metrics.DomainUnknownTag()).Tagged(metrics.GetContextTags(ctx)...)
 	sw := metricsScope.StartTimer(metrics.CadenceLatency)
 	metricsScope.IncCounter(metrics.CadenceRequests)
 	return metricsScope, sw

@@ -1342,7 +1342,7 @@ const (
 	WorkflowDeletionJitterRange
 
 	// SampleLoggingRate defines the rate we want sampled logs to be logged at
-	// KeyName: system.SampleLoggingRate
+	// KeyName: system.sampleLoggingRate
 	// Value type: Int
 	// Default value: 100
 	SampleLoggingRate
@@ -1793,6 +1793,11 @@ const (
 
 	EnableCassandraAllConsistencyLevelDelete
 
+	// EnableShardIDMetrics turns on or off shardId metrics
+	// KeyName: system.enableShardIDMetrics
+	// Value type: Bool
+	// Default value: true
+	EnableShardIDMetrics
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3810,6 +3815,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableCassandraAllConsistencyLevelDelete",
 		Description:  "Uses all consistency level for Cassandra delete operations",
 		DefaultValue: false,
+	},
+	EnableShardIDMetrics: DynamicBool{
+		KeyName:      "system.enableShardIDMetrics",
+		Description:  "Enable shardId metrics in persistence client",
+		DefaultValue: true,
 	},
 }
 

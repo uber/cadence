@@ -57,6 +57,8 @@ const (
 	CollectionMutableState Collection = 0
 	// CollectionHistory is the collection  of invariants relating to history
 	CollectionHistory Collection = 1
+	// CollectionDomain is the collection  of invariants relating to domain status
+	CollectionDomain Collection = 2
 )
 
 type (
