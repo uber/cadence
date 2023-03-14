@@ -638,6 +638,7 @@ func (t *crossClusterSourceTask) getRequestForStartChildExecution(
 		RequestID:                childInfo.CreateRequestID,
 		InitiatedEventID:         initiatedEventID,
 		InitiatedEventAttributes: initiatedEvent.StartChildWorkflowExecutionInitiatedEventAttributes,
+		PartitionConfig:          mutableState.GetExecutionInfo().PartitionConfig,
 	}
 	if childInfo.StartedID != common.EmptyEventID {
 		// childExecution already started, advance to next state

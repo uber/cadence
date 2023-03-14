@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -1026,10 +1027,13 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 	workflowType := "workflowType"
 	taskList := "testTaskList"
 	identity := "testIdentity"
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	requestID := uuid.New()
@@ -1045,6 +1049,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_BrandNew() {
 			Identity:                            identity,
 			RequestID:                           requestID,
 		},
+		PartitionConfig: partitionConfig,
 	})
 	s.Nil(err)
 	s.NotNil(resp.RunID)
@@ -1133,6 +1138,9 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 	taskList := "testTaskList"
 	identity := "testIdentity"
 	lastWriteVersion := common.EmptyVersion
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 
 	options := []types.WorkflowIDReusePolicy{
 		types.WorkflowIDReusePolicyAllowDuplicateFailedOnly,
@@ -1148,7 +1156,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 		mock.Anything,
 		mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
 			return request.Mode == p.CreateWorkflowModeBrandNew &&
-				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+				!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+				reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 		}),
 	).Return(nil, &p.WorkflowExecutionAlreadyStartedError{
 		Msg:              "random message",
@@ -1168,7 +1177,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 					return request.Mode == p.CreateWorkflowModeWorkflowIDReuse &&
 						request.PreviousRunID == runID &&
 						request.PreviousLastWriteVersion == lastWriteVersion &&
-						!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+						!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+						reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 				}),
 			).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 		}
@@ -1186,6 +1196,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevSuccess() {
 				RequestID:                           "newRequestID",
 				WorkflowIDReusePolicy:               &option,
 			},
+			PartitionConfig: partitionConfig,
 		})
 
 		if expectedErrs[index] {
@@ -1207,6 +1218,9 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 	taskList := "testTaskList"
 	identity := "testIdentity"
 	lastWriteVersion := common.EmptyVersion
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 
 	options := []types.WorkflowIDReusePolicy{
 		types.WorkflowIDReusePolicyAllowDuplicateFailedOnly,
@@ -1232,7 +1246,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 			mock.Anything,
 			mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
 				return request.Mode == p.CreateWorkflowModeBrandNew &&
-					!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+					!request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() &&
+					reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 			}),
 		).Return(nil, &p.WorkflowExecutionAlreadyStartedError{
 			Msg:              "random message",
@@ -1252,7 +1267,8 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 					mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
 						return request.Mode == p.CreateWorkflowModeWorkflowIDReuse &&
 							request.PreviousRunID == runIDs[i] &&
-							request.PreviousLastWriteVersion == lastWriteVersion
+							request.PreviousLastWriteVersion == lastWriteVersion &&
+							reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 					}),
 				).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 			}
@@ -1270,6 +1286,7 @@ func (s *engine2Suite) TestStartWorkflowExecution_NotRunning_PrevFail() {
 					RequestID:                           "newRequestID",
 					WorkflowIDReusePolicy:               &option,
 				},
+				PartitionConfig: partitionConfig,
 			})
 
 			if expectedErrs[j] {
@@ -1342,6 +1359,9 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	signalName := "my signal name"
 	input := []byte("test input")
 	requestID := uuid.New()
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: domainID,
@@ -1357,6 +1377,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 			Input:                               input,
 			RequestID:                           requestID,
 		},
+		PartitionConfig: partitionConfig,
 	}
 
 	notExistErr := &types.EntityNotExistsError{Message: "Workflow not exist"}
@@ -1364,7 +1385,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotExist() {
 	s.mockExecutionMgr.On("GetCurrentExecution", mock.Anything, mock.Anything).Return(nil, notExistErr).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
@@ -1428,6 +1449,9 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 	signalName := "my signal name"
 	input := []byte("test input")
 	requestID := uuid.New()
+	partitionConfig := map[string]string{
+		"zone": "phx",
+	}
 	policy := types.WorkflowIDReusePolicyAllowDuplicate
 	sRequest = &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID: domainID,
@@ -1444,6 +1468,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 			RequestID:                           requestID,
 			WorkflowIDReusePolicy:               &policy,
 		},
+		PartitionConfig: partitionConfig,
 	}
 
 	msBuilder := execution.NewMutableStateBuilderWithEventV2(
@@ -1461,7 +1486,7 @@ func (s *engine2Suite) TestSignalWithStartWorkflowExecution_WorkflowNotRunning()
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(gwmsResponse, nil).Once()
 	s.mockHistoryV2Mgr.On("AppendHistoryNodes", mock.Anything, mock.Anything).Return(&p.AppendHistoryNodesResponse{}, nil).Once()
 	s.mockExecutionMgr.On("CreateWorkflowExecution", mock.Anything, mock.MatchedBy(func(request *p.CreateWorkflowExecutionRequest) bool {
-		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero()
+		return !request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp.IsZero() && reflect.DeepEqual(partitionConfig, request.NewWorkflowSnapshot.ExecutionInfo.PartitionConfig)
 	})).Return(&p.CreateWorkflowExecutionResponse{}, nil).Once()
 
 	resp, err := s.historyEngine.SignalWithStartWorkflowExecution(context.Background(), sRequest)
