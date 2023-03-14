@@ -1678,6 +1678,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		ContinuedFailureDetails:         attributes.FailureDetails,
 		ContinueAsNewInitiator:          attributes.Initiator,
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
+		PartitionConfig:                 previousExecutionInfo.PartitionConfig,
 	}
 
 	// if ContinueAsNew as Cron or decider, recalculate the expiration timestamp and set attempts to 0
@@ -1845,6 +1846,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	if event.SearchAttributes != nil {
 		e.executionInfo.SearchAttributes = event.SearchAttributes.GetIndexedFields()
 	}
+	e.executionInfo.PartitionConfig = event.PartitionConfig
 
 	e.writeEventToCache(startEvent)
 
