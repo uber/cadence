@@ -36,7 +36,7 @@ import (
 type Config struct {
 	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
 	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
-	allIsolationGroups                []types.IsolationGroupName
+	allIsolationGroups                []IsolationGroupName
 }
 
 // State is a convenience return type of a collection of IsolationGroup configurations
@@ -49,11 +49,11 @@ type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
-	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey types.PartitionConfig) (*types.IsolationGroupName, error)
+	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*IsolationGroupName, error)
 	// IsDrained answers the question - "is this particular isolationGroup drained?". Used by startWorkflow calls
 	// and similar sync frontend calls to make routing decisions
-	IsDrained(ctx context.Context, Domain string, IsolationGroup types.IsolationGroupName) (bool, error)
-	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup types.IsolationGroupName) (bool, error)
+	IsDrained(ctx context.Context, Domain string, IsolationGroup IsolationGroupName) (bool, error)
+	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup IsolationGroupName) (bool, error)
 }
 
 // IsolationGroupState is a heavily cached in-memory library for returning the state of what zones are healthy or

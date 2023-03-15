@@ -27,3 +27,11 @@ import "github.com/uber/cadence/common/types"
 type ChangeEvent struct {
 	changed types.IsolationGroupConfiguration
 }
+
+// An IsolationGroupName is the name of a subdivision of workflows which share geographic
+// proximity and are able to use strong DB consistency, but are subdivided for the purposes
+// of isolation and resilience.
+type IsolationGroupName string
+
+// A PartitionConfig is the values passed in by a workflow on start for their partitioning
+type PartitionConfig map[string]string
