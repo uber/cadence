@@ -1738,7 +1738,10 @@ func startWorkflowWithRetry(
 		JitterStartSeconds:    attributes.JitterStartSeconds,
 	}
 
-	historyStartReq := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now())
+	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(task.TargetDomainID, frontendStartReq, timeSource.Now())
+	if err != nil {
+		return "", err
+	}
 	historyStartReq.ParentExecutionInfo = &types.ParentExecutionInfo{
 		DomainUUID: task.DomainID,
 		Domain:     domainName,

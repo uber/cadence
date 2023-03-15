@@ -47,6 +47,7 @@ type Logger interface {
 	Error(msg string, tags ...tag.Tag)
 	Fatal(msg string, tags ...tag.Tag)
 	WithTags(tags ...tag.Tag) Logger
+	SampleInfo(msg string, sampleRate int, tags ...tag.Tag)
 }
 
 type noop struct{}
@@ -56,11 +57,12 @@ func NewNoop() Logger {
 	return &noop{}
 }
 
-func (n *noop) Debug(msg string, tags ...tag.Tag) {}
-func (n *noop) Info(msg string, tags ...tag.Tag)  {}
-func (n *noop) Warn(msg string, tags ...tag.Tag)  {}
-func (n *noop) Error(msg string, tags ...tag.Tag) {}
-func (n *noop) Fatal(msg string, tags ...tag.Tag) {}
+func (n *noop) Debug(msg string, tags ...tag.Tag)                      {}
+func (n *noop) Info(msg string, tags ...tag.Tag)                       {}
+func (n *noop) Warn(msg string, tags ...tag.Tag)                       {}
+func (n *noop) Error(msg string, tags ...tag.Tag)                      {}
+func (n *noop) Fatal(msg string, tags ...tag.Tag)                      {}
+func (n *noop) SampleInfo(msg string, sampleRate int, tags ...tag.Tag) {}
 func (n *noop) WithTags(tags ...tag.Tag) Logger {
 	return n
 }
