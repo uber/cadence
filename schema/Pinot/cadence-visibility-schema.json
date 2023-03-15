@@ -1,5 +1,5 @@
 {
-  "schemaName": "cadence-visibility-dev",
+  "schemaName": "cadence-visibility-pinot",
   "primaryKeyColumns": ["DocID"],
   "dimensionFieldSpecs": [
     {
@@ -49,6 +49,10 @@
     {
       "name": "ShardID",
       "dataType": "INT"
+    },
+    {
+      "name": "Attr",
+      "dataType": "STRING"
     }
   ],
   "dateTimeFieldSpecs": [{
