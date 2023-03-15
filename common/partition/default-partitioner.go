@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/uber/cadence/common/isolationgroup"
+
 	"github.com/dgryski/go-farm"
 
 	"github.com/uber/cadence/common/cache"
@@ -44,7 +46,7 @@ const (
 // where the workflow was started, and is expected to be pinned, and a RunID for a fallback means
 // to partition data deterministically.
 type defaultWorkflowPartitionConfig struct {
-	WorkflowStartIsolationGroup IsolationGroupName
+	WorkflowStartIsolationGroup string
 	RunID                       string
 }
 
@@ -54,12 +56,12 @@ type defaultPartitioner struct {
 	config              Config
 	log                 log.Logger
 	domainCache         cache.DomainCache
-	isolationGroupState IsolationGroupState
+	isolationGroupState isolationgroup.State
 }
 
-func NewdefaultPartitioner(
+func NewDefaultPartitioner(
 	logger log.Logger,
-	isolationGroupState IsolationGroupState,
+	isolationGroupState isolationgroup.State,
 	cfg Config,
 ) Partitioner {
 	return &defaultPartitioner{
@@ -69,7 +71,7 @@ func NewdefaultPartitioner(
 	}
 }
 
-func (r *defaultPartitioner) IsDrained(ctx context.Context, domain string, isolationGroup IsolationGroupName) (bool, error) {
+func (r *defaultPartitioner) IsDrained(ctx context.Context, domain string, isolationGroup string) (bool, error) {
 	state, err := r.isolationGroupState.Get(ctx, domain)
 	if err != nil {
 		return false, fmt.Errorf("could not determine if drained: %w", err)
@@ -77,7 +79,7 @@ func (r *defaultPartitioner) IsDrained(ctx context.Context, domain string, isola
 	return isDrained(isolationGroup, state.Global, state.Domain), nil
 }
 
-func (r *defaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID string, isolationGroup IsolationGroupName) (bool, error) {
+func (r *defaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID string, isolationGroup string) (bool, error) {
 	domain, err := r.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return false, fmt.Errorf("could not determine if drained: %w", err)
@@ -85,7 +87,7 @@ func (r *defaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID s
 	return r.IsDrained(ctx, domain.GetInfo().Name, isolationGroup)
 }
 
-func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*IsolationGroupName, error) {
+func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
 	if !r.config.zonalPartitioningEnabledGlobally(domainID) {
 		return nil, nil
 	}
@@ -101,7 +103,7 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 	return &ig, nil
 }
 
-func isDrained(isolationGroup IsolationGroupName, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
+func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
 	globalCfg, hasGlobalConfig := global[string(isolationGroup)]
 	domainCfg, hasDomainConfig := domain[string(isolationGroup)]
 	if hasGlobalConfig {
@@ -118,9 +120,9 @@ func isDrained(isolationGroup IsolationGroupName, global types.IsolationGroupCon
 }
 
 // A simple explicit deny-based isolation group implementation
-func availableIG(all []IsolationGroupName, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) types.IsolationGroupConfiguration {
+func availableIG(allIsolationGroups []string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) types.IsolationGroupConfiguration {
 	out := types.IsolationGroupConfiguration{}
-	for _, isolationGroup := range all {
+	for _, isolationGroup := range allIsolationGroups {
 		globalCfg, hasGlobalConfig := global[string(isolationGroup)]
 		domainCfg, hasDomainConfig := domain[string(isolationGroup)]
 		if hasGlobalConfig {
@@ -134,8 +136,8 @@ func availableIG(all []IsolationGroupName, global types.IsolationGroupConfigurat
 			}
 		}
 		out[isolationGroup] = types.IsolationGroupPartition{
-			Name:   isolationGroup,
-			Status: types.IsolationGroupStateHealthy,
+			Name:  isolationGroup,
+			State: types.IsolationGroupStateHealthy,
 		}
 	}
 	return out
@@ -145,23 +147,23 @@ func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultW
 	isolationGroup, _ := config[defaultPartitionConfigWorkerIsolationGroup]
 	runID, _ := config[defaultPartitionConfigRunID]
 	return defaultWorkflowPartitionConfig{
-		WorkflowStartIsolationGroup: IsolationGroupName(isolationGroup),
+		WorkflowStartIsolationGroup: isolationGroup,
 		RunID:                       runID,
 	}
 }
 
 // picks an isolation group to run in. if the workflow was started there, it'll attempt to pin it, unless there is an explicit
 // drain.
-func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) IsolationGroupName {
+func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) string {
 	wfIG, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
-	if isAvailable && wfIG.Status != types.IsolationGroupStateDrained {
+	if isAvailable && wfIG.State != types.IsolationGroupStateDrained {
 		return wfPartition.WorkflowStartIsolationGroup
 	}
 
 	// it's drained, fall back to picking a deterministic but random group
-	availableList := []IsolationGroupName{}
+	availableList := []string{}
 	for k, v := range available {
-		if v.Status == types.IsolationGroupStateDrained {
+		if v.State == types.IsolationGroupStateDrained {
 			continue
 		}
 		availableList = append(availableList, k)
@@ -175,7 +177,7 @@ func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available ty
 
 // Simple deterministic isolationGroup picker
 // which will pick a random healthy isolationGroup and place the workflow there
-func pickIsolationGroupFallback(available []IsolationGroupName, wfConfig defaultWorkflowPartitionConfig) IsolationGroupName {
+func pickIsolationGroupFallback(available []string, wfConfig defaultWorkflowPartitionConfig) string {
 	hashv := farm.Hash32([]byte(wfConfig.RunID))
 	return available[int(hashv)%len(available)]
 }

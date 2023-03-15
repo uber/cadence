@@ -28,38 +28,22 @@ import (
 	"context"
 
 	"github.com/uber/cadence/common/dynamicconfig"
-
-	"github.com/uber/cadence/common/types"
 )
 
 // Config is the base configuration for the partitioning library
 type Config struct {
 	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
 	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
-	allIsolationGroups                []IsolationGroupName
-}
-
-// State is a convenience return type of a collection of IsolationGroup configurations
-type State struct {
-	Global types.IsolationGroupConfiguration
-	Domain types.IsolationGroupConfiguration
+	allIsolationGroups                []string
 }
 
 type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
-	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*IsolationGroupName, error)
+	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*string, error)
 	// IsDrained answers the question - "is this particular isolationGroup drained?". Used by startWorkflow calls
 	// and similar sync frontend calls to make routing decisions
-	IsDrained(ctx context.Context, Domain string, IsolationGroup IsolationGroupName) (bool, error)
-	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup IsolationGroupName) (bool, error)
-}
-
-// IsolationGroupState is a heavily cached in-memory library for returning the state of what zones are healthy or
-// drained presently. It may return an inclusive (allow-list based) or an exclusive (deny-list based) set of IsolationGroups
-// depending on the implementation.
-type IsolationGroupState interface {
-	Get(ctx context.Context, domain string) (*State, error)
-	GetByDomainID(ctx context.Context, domainID string) (*State, error)
+	IsDrained(ctx context.Context, Domain string, IsolationGroup string) (bool, error)
+	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup string) (bool, error)
 }

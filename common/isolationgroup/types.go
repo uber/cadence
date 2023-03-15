@@ -20,7 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package partition
+package isolationgroup
 
-// A PartitionConfig is the values passed in by a workflow on start for their partitioning
-type PartitionConfig map[string]string
+import (
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/types"
+)
+
+// IsolationGroups is a convenience return type of a collection of IsolationGroup configurations
+type IsolationGroups struct {
+	Global types.IsolationGroupConfiguration
+	Domain types.IsolationGroupConfiguration
+}
+
+type ChangeEvent struct {
+	changed types.IsolationGroupConfiguration
+}
+
+// Config is the base configuration
+type Config struct {
+	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	allIsolationGroups                []string
+}

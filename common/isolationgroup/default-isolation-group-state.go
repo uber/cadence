@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package partition
+package isolationgroup
 
 import (
 	"context"
@@ -37,6 +37,7 @@ type DefaultIsolationGroupStateHandler struct {
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains
 	config                     Config
+	subscriptions              map[string]ChangeEvent
 }
 
 func NewDefaultIsolationGroupStateWatcher(
@@ -44,7 +45,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	domainCache cache.DomainCache,
 	config Config,
 	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains,
-) IsolationGroupState {
+) State {
 	return &DefaultIsolationGroupStateHandler{
 		log:                        logger,
 		config:                     config,
@@ -53,7 +54,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	}
 }
 
-func (z *DefaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, domainID string) (*State, error) {
+func (z *DefaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error) {
 	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
@@ -63,7 +64,7 @@ func (z *DefaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, d
 
 // Get the statue of a isolationGroup, with respect to both domain and global drains. Domain-specific drains override global config
 // will return nil, nil when it is not enabled
-func (z *DefaultIsolationGroupStateHandler) Get(ctx context.Context, domain string) (*State, error) {
+func (z *DefaultIsolationGroupStateHandler) Get(ctx context.Context, domain string) (*IsolationGroups, error) {
 	if !z.config.zonalPartitioningEnabledForDomain(domain) {
 		return nil, nil
 	}
@@ -77,8 +78,16 @@ func (z *DefaultIsolationGroupStateHandler) Get(ctx context.Context, domain stri
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}
-	return &State{
+	return &IsolationGroups{
 		Global: globalState,
 		Domain: domainState,
 	}, nil
+}
+
+func (z *DefaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error {
+	panic("not implmemented")
+}
+
+func (z *DefaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) error {
+	panic("not implemented")
 }

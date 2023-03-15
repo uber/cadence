@@ -47,7 +47,7 @@ func (z *globalIsolationGroupDrainsImpl) SetClusterDrains(ctx context.Context, p
 	return nil
 }
 
-func (z *globalIsolationGroupDrainsImpl) GetClusterDrains(ctx context.Context) (map[types.IsolationGroupName]types.IsolationGroupPartition, error) {
+func (z *globalIsolationGroupDrainsImpl) GetClusterDrains(ctx context.Context) (map[string]types.IsolationGroupPartition, error) {
 	panic("not implemented")
 	return nil, nil
 }

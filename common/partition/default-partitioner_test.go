@@ -35,31 +35,31 @@ import (
 
 func TestIsDrained(t *testing.T) {
 
-	igA := types.IsolationGroupName("isolationGroupA")
-	igB := types.IsolationGroupName("isolationGroupB")
+	igA := string("isolationGroupA")
+	igB := string("isolationGroupB")
 
 	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
 		igA: {
-			Name:   igA,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igA,
+			State: types.IsolationGroupStateHealthy,
 		},
 		igB: {
-			Name:   igB,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igB,
+			State: types.IsolationGroupStateHealthy,
 		},
 	}
 
 	isolationGroupsOneDrain := types.IsolationGroupConfiguration{
 		igA: {
-			Name:   igA,
-			Status: types.IsolationGroupStatusDrained,
+			Name:  igA,
+			State: types.IsolationGroupStateDrained,
 		},
 	}
 
 	tests := map[string]struct {
 		globalIGCfg    types.IsolationGroupConfiguration
 		domainIGCfg    types.IsolationGroupConfiguration
-		isolationGroup types.IsolationGroupName
+		isolationGroup string
 		expected       bool
 	}{
 		"default behaviour - no drains - isolationGroup is specified": {
@@ -103,53 +103,53 @@ func TestIsDrained(t *testing.T) {
 
 func TestAvailableIsolationGroups(t *testing.T) {
 
-	igA := types.IsolationGroupName("isolationGroupA")
-	igB := types.IsolationGroupName("isolationGroupB")
-	igC := types.IsolationGroupName("isolationGroupC")
+	igA := string("isolationGroupA")
+	igB := string("isolationGroupB")
+	igC := string("isolationGroupC")
 
-	all := []types.IsolationGroupName{igA, igB, igC}
+	all := []string{igA, igB, igC}
 
 	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
 		igA: {
-			Name:   igA,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igA,
+			State: types.IsolationGroupStateHealthy,
 		},
 		igB: {
-			Name:   igB,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igB,
+			State: types.IsolationGroupStateHealthy,
 		},
 		igC: {
-			Name:   igC,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igC,
+			State: types.IsolationGroupStateHealthy,
 		},
 	}
 
 	isolationGroupsSetB := types.IsolationGroupConfiguration{
 		igA: {
-			Name:   igA,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igA,
+			State: types.IsolationGroupStateHealthy,
 		},
 		igB: {
-			Name:   igB,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igB,
+			State: types.IsolationGroupStateHealthy,
 		},
 	}
 
 	isolationGroupsSetC := types.IsolationGroupConfiguration{
 		igC: {
-			Name:   igC,
-			Status: types.IsolationGroupStatusDrained,
+			Name:  igC,
+			State: types.IsolationGroupStateDrained,
 		},
 	}
 
 	isolationGroupsSetBDrained := types.IsolationGroupConfiguration{
 		igA: {
-			Name:   igA,
-			Status: types.IsolationGroupStatusDrained,
+			Name:  igA,
+			State: types.IsolationGroupStateDrained,
 		},
 		igB: {
-			Name:   igB,
-			Status: types.IsolationGroupStatusDrained,
+			Name:  igB,
+			State: types.IsolationGroupStateDrained,
 		},
 	}
 
@@ -189,34 +189,34 @@ func TestAvailableIsolationGroups(t *testing.T) {
 
 func TestPickingAZone(t *testing.T) {
 
-	igA := types.IsolationGroupName("isolationGroupA")
-	igB := types.IsolationGroupName("isolationGroupB")
-	igC := types.IsolationGroupName("isolationGroupC")
+	igA := string("isolationGroupA")
+	igB := string("isolationGroupB")
+	igC := string("isolationGroupC")
 
 	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
 		igA: {
-			Name:   igA,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igA,
+			State: types.IsolationGroupStateHealthy,
 		},
 		igB: {
-			Name:   igB,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igB,
+			State: types.IsolationGroupStateHealthy,
 		},
 		igC: {
-			Name:   igC,
-			Status: types.IsolationGroupStatusHealthy,
+			Name:  igC,
+			State: types.IsolationGroupStateHealthy,
 		},
 	}
 
 	tests := map[string]struct {
 		availablePartitionGroups types.IsolationGroupConfiguration
-		wfPartitionCfg           DefaultWorkflowPartitionConfig
-		expected                 types.IsolationGroupName
+		wfPartitionCfg           defaultWorkflowPartitionConfig
+		expected                 string
 		expectedErr              error
 	}{
 		"default behaviour - wf starting in a zone/isolationGroup should stay there if everything's healthy": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: DefaultWorkflowPartitionConfig{
+			wfPartitionCfg: defaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: igA,
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
@@ -224,16 +224,16 @@ func TestPickingAZone(t *testing.T) {
 		},
 		"default behaviour - wf starting in a zone/isolationGroup must run in an available zone only. If not in available list, pick a random one": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: DefaultWorkflowPartitionConfig{
-				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
+			wfPartitionCfg: defaultWorkflowPartitionConfig{
+				WorkflowStartIsolationGroup: string("something-else"),
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
 			expected: igC,
 		},
 		"... and it should be deterministic": {
 			availablePartitionGroups: isolationGroupsAllHealthy,
-			wfPartitionCfg: DefaultWorkflowPartitionConfig{
-				WorkflowStartIsolationGroup: types.IsolationGroupName("something-else"),
+			wfPartitionCfg: defaultWorkflowPartitionConfig{
+				WorkflowStartIsolationGroup: string("something-else"),
 				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
 			expected: igC,
@@ -250,17 +250,17 @@ func TestPickingAZone(t *testing.T) {
 
 func TestDefaultPartitionerFallbackPickerDistribution(t *testing.T) {
 
-	count := make(map[types.IsolationGroupName]int)
-	var isolationGroups []types.IsolationGroupName
+	count := make(map[string]int)
+	var isolationGroups []string
 
 	for i := 0; i < 100; i++ {
-		ig := types.IsolationGroupName(fmt.Sprintf("isolationGroup-%d", i))
+		ig := string(fmt.Sprintf("isolationGroup-%d", i))
 		isolationGroups = append(isolationGroups, ig)
 		count[ig] = 0
 	}
 
 	for i := 0; i < 100000; i++ {
-		result := pickIsolationGroupFallback(isolationGroups, DefaultWorkflowPartitionConfig{
+		result := pickIsolationGroupFallback(isolationGroups, defaultWorkflowPartitionConfig{
 			WorkflowStartIsolationGroup: "not-a-present-isolationGroup", // always force a fallback to the simple hash
 			RunID:                       uuid.New().String(),
 		})
