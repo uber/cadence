@@ -2,6 +2,7 @@ package isolationgroup
 
 import (
 	"context"
+	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/common/types"
 )
@@ -42,6 +43,8 @@ type Controller interface {
 // drained presently. It may return an inclusive (allow-list based) or an exclusive (deny-list based) set of IsolationGroups
 // depending on the implementation.
 type State interface {
+	common.Daemon
+
 	Get(ctx context.Context, domain string) (*IsolationGroups, error)
 	GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error)
 

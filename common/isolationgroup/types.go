@@ -41,5 +41,6 @@ type ChangeEvent struct {
 type Config struct {
 	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
 	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	UpdateFrequency                   dynamicconfig.IntPropertyFn
 	allIsolationGroups                []string
 }

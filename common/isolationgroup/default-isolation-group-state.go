@@ -25,19 +25,29 @@ package isolationgroup
 import (
 	"context"
 	"fmt"
-
-	"github.com/uber/cadence/common/persistence"
-
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/persistence"
+	"sync"
+	"sync/atomic"
+	"time"
 )
 
-type DefaultIsolationGroupStateHandler struct {
+type defaultIsolationGroupStateHandler struct {
+	status                     int32
+	done                       chan bool
 	log                        log.Logger
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains
 	config                     Config
-	subscriptions              map[string]ChangeEvent
+	subscriptionMu             sync.Mutex
+	valuesMu                   sync.RWMutex
+	lastSeen                   *IsolationGroups
+	updateCB                   func()
+	// subscriptions is a map of domains->subscription-keys-> subscription channels
+	// for notifying when there's a state change
+	subscriptions map[string]map[string]chan<- ChangeEvent
 }
 
 func NewDefaultIsolationGroupStateWatcher(
@@ -45,16 +55,20 @@ func NewDefaultIsolationGroupStateWatcher(
 	domainCache cache.DomainCache,
 	config Config,
 	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains,
+	done chan bool,
 ) State {
-	return &DefaultIsolationGroupStateHandler{
+	return &defaultIsolationGroupStateHandler{
+		status:                     common.DaemonStatusInitialized,
 		log:                        logger,
 		config:                     config,
 		domainCache:                domainCache,
 		globalIsolationGroupDrains: globalIsolationGroupDrains,
+		subscriptionMu:             sync.Mutex{},
+		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
 	}
 }
 
-func (z *DefaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error) {
+func (z *defaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error) {
 	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
@@ -64,7 +78,7 @@ func (z *DefaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, d
 
 // Get the statue of a isolationGroup, with respect to both domain and global drains. Domain-specific drains override global config
 // will return nil, nil when it is not enabled
-func (z *DefaultIsolationGroupStateHandler) Get(ctx context.Context, domain string) (*IsolationGroups, error) {
+func (z *defaultIsolationGroupStateHandler) Get(ctx context.Context, domain string) (*IsolationGroups, error) {
 	if !z.config.zonalPartitioningEnabledForDomain(domain) {
 		return nil, nil
 	}
@@ -78,16 +92,62 @@ func (z *DefaultIsolationGroupStateHandler) Get(ctx context.Context, domain stri
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}
-	return &IsolationGroups{
+
+	ig := &IsolationGroups{
 		Global: globalState,
 		Domain: domainState,
-	}, nil
+	}
+
+	return ig, nil
 }
 
-func (z *DefaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error {
-	panic("not implmemented")
-}
-
-func (z *DefaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) error {
+func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
+	// todo (david.porter)
+	// check new values against existing cached ones
+	// get the difference
+	// if any difference, notify subscribers for whom the change is applicable
+	// ie, global changes for all, domain changes for the domain-listeners
 	panic("not implemented")
+}
+
+func (z *defaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error {
+	z.subscriptionMu.Lock()
+	defer z.subscriptionMu.Unlock()
+
+	panic("not implemented")
+	return nil
+}
+
+func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) error {
+	z.subscriptionMu.Lock()
+	defer z.subscriptionMu.Unlock()
+	panic("not implemented")
+	return nil
+}
+
+func (z *defaultIsolationGroupStateHandler) pollForChanges() {
+	ticker := time.NewTicker(time.Duration(z.config.UpdateFrequency()) * time.Second)
+	for {
+		select {
+		case <-z.done:
+			return
+		case <-ticker.C:
+			z.checkIfChanged()
+		}
+	}
+}
+
+// Start the state handler
+func (z *defaultIsolationGroupStateHandler) Start() {
+	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+	go z.updateCB()
+}
+
+func (z *defaultIsolationGroupStateHandler) Stop() {
+	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+	close(z.done)
 }
