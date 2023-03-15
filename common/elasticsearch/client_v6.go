@@ -30,6 +30,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+
+
 	"github.com/olivere/elastic"
 
 	"github.com/uber/cadence/common"
@@ -42,6 +45,7 @@ import (
 )
 
 var _ GenericClient = (*elasticV6)(nil)
+var _ bulk.GenericBulkProcessor = (*v6BulkProcessor)(nil)
 
 type (
 	// elasticV6 implements Client

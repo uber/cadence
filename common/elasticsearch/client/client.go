@@ -26,7 +26,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/elasticsearch/bulk"
 )
 
 // Client is a generic ES client implementation.
@@ -45,7 +45,7 @@ type Client interface {
 	PutMapping(ctx context.Context, index, body string) error
 	// RunBulkProcessor starts bulk indexing processor
 	// @TODO consider to extract Bulk Processor as a separate entity
-	RunBulkProcessor(ctx context.Context, p *elasticsearch.BulkProcessorParameters) (elasticsearch.GenericBulkProcessor, error)
+	RunBulkProcessor(ctx context.Context, p *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error)
 	// Scroll retrieves the next batch of results for a scrolling search.
 	Scroll(ctx context.Context, index, body, scrollID string) (*Response, error)
 	// Search returns Elasticsearch hit bytes and additional metadata
