@@ -119,6 +119,9 @@ Then register a domain:
 ./cadence --do samples-domain domain register
 ```
 
+### Sample Repo
+The sample code is available in the [Sample repo]https://github.com/uber-common/cadence-samples
+
 Then run a helloworld from [Go Client Sample](https://github.com/uber-common/cadence-samples/) or [Java Client Sample](https://github.com/uber/cadence-java-samples)
 
 ```
