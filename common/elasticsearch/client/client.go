@@ -25,6 +25,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/uber/cadence/common/elasticsearch"
 )
 
