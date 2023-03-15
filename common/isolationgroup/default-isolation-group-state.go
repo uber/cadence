@@ -25,13 +25,15 @@ package isolationgroup
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
-	"sync"
-	"sync/atomic"
-	"time"
+	"github.com/uber/cadence/common/types"
 )
 
 type defaultIsolationGroupStateHandler struct {
@@ -39,7 +41,7 @@ type defaultIsolationGroupStateHandler struct {
 	done                       chan bool
 	log                        log.Logger
 	domainCache                cache.DomainCache
-	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains
+	globalIsolationGroupDrains persistence.ConfigStore
 	config                     Config
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
@@ -54,7 +56,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
 	domainCache cache.DomainCache,
 	config Config,
-	globalIsolationGroupDrains persistence.GlobalIsolationGroupDrains,
+	globalIsolationGroupDrains persistence.ConfigStore,
 	done chan bool,
 ) State {
 	return &defaultIsolationGroupStateHandler{
@@ -88,7 +90,9 @@ func (z *defaultIsolationGroupStateHandler) Get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalState, err := z.globalIsolationGroupDrains.GetClusterDrains(ctx)
+	globalCfg, err := z.globalIsolationGroupDrains.FetchConfig(ctx, persistence.GlobalIsolationGroupConfig)
+
+	globalState, err := fromCfgStore(globalCfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}
@@ -150,4 +154,8 @@ func (z *defaultIsolationGroupStateHandler) Stop() {
 		return
 	}
 	close(z.done)
+}
+
+func fromCfgStore(in *persistence.InternalConfigStoreEntry) (types.IsolationGroupConfiguration, error) {
+	panic("not implemented")
 }

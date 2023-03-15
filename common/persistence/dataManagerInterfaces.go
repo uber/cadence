@@ -222,6 +222,7 @@ type ConfigType int
 
 const (
 	DynamicConfig ConfigType = iota
+	GlobalIsolationGroupConfig
 )
 
 type (
