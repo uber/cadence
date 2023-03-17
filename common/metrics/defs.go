@@ -1163,6 +1163,7 @@ const (
 	LargeExecutionCountShardScope
 	// LargeExecutionBlobShardScope is the scope to track large blobs for hotshard detection
 	LargeExecutionBlobShardScope
+
 	NumHistoryScopes
 )
 
@@ -1986,10 +1987,6 @@ const (
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
 
-	LargeHistoryBlobCount
-	LargeHistoryEventCount
-	LargeHistorySizeCount
-
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2259,6 +2256,9 @@ const (
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
 	WorkflowTypeCount
+	LargeHistoryBlobCount
+	LargeHistoryEventCount
+	LargeHistorySizeCount
 
 	NumHistoryMetrics
 )
