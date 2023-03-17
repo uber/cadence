@@ -226,11 +226,14 @@ func (s *fileBasedClientSuite) TestValidateConfig_FileNotExist() {
 }
 
 func (s *fileBasedClientSuite) TestValidateConfig_ShortPollInterval() {
-	_, err := NewFileBasedClient(&FileBasedClientConfig{
+	cfg := &FileBasedClientConfig{
 		Filepath:     "config/testConfig.yaml",
 		PollInterval: time.Second,
-	}, nil, nil)
-	s.Error(err)
+	}
+	_, err := NewFileBasedClient(cfg, log.NewNoop(), nil)
+	s.NoError(err)
+	s.Equal(minPollInterval, cfg.PollInterval, "fallback to default poll interval")
+
 }
 
 func (s *fileBasedClientSuite) TestMatch() {

@@ -30,11 +30,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/olivere/elastic/v7"
-	esaws "github.com/olivere/elastic/v7/aws/v4"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
@@ -46,14 +42,12 @@ import (
 )
 
 var _ GenericClient = (*elasticV7)(nil)
-var _ GenericBulkProcessor = (*v7BulkProcessor)(nil)
 
 type (
 	// elasticV7 implements Client
 	elasticV7 struct {
-		client     *elastic.Client
-		logger     log.Logger
-		serializer p.PayloadSerializer
+		client *elastic.Client
+		logger log.Logger
 	}
 
 	// searchParametersV7 holds all required and optional parameters for executing a search
@@ -65,23 +59,13 @@ type (
 		Sorter      []elastic.Sorter
 		SearchAfter []interface{}
 	}
-
-	// bulkProcessorParametersV7 holds all required and optional parameters for executing bulk service
-	bulkProcessorParametersV7 struct {
-		Name          string
-		NumOfWorkers  int
-		BulkActions   int
-		BulkSize      int
-		FlushInterval time.Duration
-		Backoff       elastic.Backoff
-		BeforeFunc    elastic.BulkBeforeFunc
-		AfterFunc     elastic.BulkAfterFunc
-	}
 )
 
 // NewV7Client returns a new implementation of GenericClient
 func NewV7Client(
 	connectConfig *config.ElasticSearchConfig,
+	tlsClient *http.Client,
+	awsSigningClient *http.Client,
 	logger log.Logger,
 	clientOptFuncs ...elastic.ClientOptionFunc,
 ) (GenericClient, error) {
@@ -96,61 +80,24 @@ func NewV7Client(
 	if connectConfig.DisableHealthCheck {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
 	}
-	if connectConfig.AWSSigning.Enable {
-		if err := config.CheckAWSSigningConfig(connectConfig.AWSSigning); err != nil {
-			return nil, err
-		}
-		var signingClient *http.Client
-		var err error
-		if connectConfig.AWSSigning.EnvironmentCredential != nil {
-			signingClient, err = buildSigningHTTPClientFromEnvironmentCredentialV7(*connectConfig.AWSSigning.EnvironmentCredential)
-		} else {
-			signingClient, err = buildSigningHTTPClientFromStaticCredentialV7(*connectConfig.AWSSigning.StaticCredential)
-		}
-		if err != nil {
-			return nil, err
-		}
-		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
+
+	if awsSigningClient != nil {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(awsSigningClient))
 	}
-	if connectConfig.TLS.Enabled {
-		var tlsClient *http.Client
-		var err error
-		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
-		if err != nil {
-			return nil, err
-		}
+
+	if tlsClient != nil {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
 	}
+
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err
 	}
 
 	return &elasticV7{
-		client:     client,
-		logger:     logger,
-		serializer: p.NewPayloadSerializer(),
+		client: client,
+		logger: logger,
 	}, nil
-}
-
-// refer to https://github.com/olivere/elastic/blob/release-branch.v7/recipes/aws-connect-v4/main.go
-func buildSigningHTTPClientFromStaticCredentialV7(credentialConfig config.AWSStaticCredential) (*http.Client, error) {
-	awsCredentials := credentials.NewStaticCredentials(
-		credentialConfig.AccessKey,
-		credentialConfig.SecretKey,
-		credentialConfig.SessionToken,
-	)
-	return esaws.NewV4SigningClient(awsCredentials, credentialConfig.Region), nil
-}
-
-func buildSigningHTTPClientFromEnvironmentCredentialV7(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(credentialConfig.Region)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return esaws.NewV4SigningClient(sess.Config.Credentials, credentialConfig.Region), nil
 }
 
 func (c *elasticV7) IsNotFoundError(err error) bool {
@@ -174,15 +121,14 @@ func (c *elasticV7) CountByQuery(ctx context.Context, index, query string) (int6
 }
 
 func (c *elasticV7) Search(ctx context.Context, request *SearchRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
+	token, err := GetNextPageToken(request.ListRequest.NextPageToken)
+	if err != nil {
+		return nil, err
+	}
 
 	var matchQuery *elastic.MatchQuery
 	if request.MatchQuery != nil {
 		matchQuery = elastic.NewMatchQuery(request.MatchQuery.Name, request.MatchQuery.Text)
-	}
-
-	token, err := GetNextPageToken(request.ListRequest.NextPageToken)
-	if err != nil {
-		return nil, err
 	}
 
 	searchResult, err := c.getSearchResult(
@@ -202,12 +148,11 @@ func (c *elasticV7) Search(ctx context.Context, request *SearchRequest) (*p.Inte
 }
 
 func (c *elasticV7) SearchByQuery(ctx context.Context, request *SearchByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
-	searchResult, err := c.searchWithDSL(ctx, request.Index, request.Query)
+	token, err := GetNextPageToken(request.NextPageToken)
 	if err != nil {
 		return nil, err
 	}
-
-	token, err := GetNextPageToken(request.NextPageToken)
+	searchResult, err := c.client.Search(request.Index).Source(request.Query).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -221,73 +166,46 @@ func (c *elasticV7) ScanByQuery(ctx context.Context, request *ScanByQueryRequest
 	if err != nil {
 		return nil, err
 	}
-
-	var searchResult *elastic.SearchResult
-	var scrollService *elastic.ScrollService
-
-	if len(token.ScrollID) == 0 { // first call
-		searchResult, scrollService, err = c.scrollFirstPage(ctx, request.Index, request.Query)
-	} else {
-		searchResult, scrollService, err = c.scroll(ctx, token.ScrollID)
-	}
+	searchResult, err := c.scroll(ctx, request.Index, request.Query, token.ScrollID)
 
 	isLastPage := false
 	if err == io.EOF { // no more result
 		isLastPage = true
-		if scrollService != nil {
-			err := scrollService.Clear(ctx)
-			if err != nil {
-				c.logger.Warn("scrollService Clear fail", tag.Error(err))
-			}
+		if err := c.clearScroll(ctx, searchResult.ScrollId); err != nil {
+			c.logger.Warn("scroll clear failed", tag.Error(err))
 		}
 	} else if err != nil {
 		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ScanByQuery failed. Error: %v", err),
 		}
 	}
+	response := &p.InternalListWorkflowExecutionsResponse{}
+	actualHits := searchResult.Hits.Hits
+	numOfActualHits := len(actualHits)
+	response.Executions = c.esHitsToExecutions(searchResult.Hits, nil /* no filter */)
 
-	return c.getScanWorkflowExecutionsResponse(searchResult.Hits, request.PageSize, searchResult.ScrollId, isLastPage)
+	if numOfActualHits == request.PageSize && !isLastPage {
+		nextPageToken, err := SerializePageToken(&ElasticVisibilityPageToken{ScrollID: searchResult.ScrollId})
+		if err != nil {
+			return nil, err
+		}
+		response.NextPageToken = make([]byte, len(nextPageToken))
+		copy(response.NextPageToken, nextPageToken)
+	}
+
+	return response, nil
 }
 
-func (c *elasticV7) RunBulkProcessor(ctx context.Context, parameters *BulkProcessorParameters) (GenericBulkProcessor, error) {
-	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
-		parameters.BeforeFunc(executionId, fromV7ToGenericBulkableRequests(requests))
+func (c *elasticV7) scroll(ctx context.Context, index, query, scrollID string) (*elastic.SearchResult, error) {
+	scrollService := elastic.NewScrollService(c.client)
+	if len(scrollID) == 0 {
+		return scrollService.Index(index).Body(query).Do(ctx)
 	}
-
-	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := convertV7ErrorToGenericError(err)
-		parameters.AfterFunc(
-			executionId,
-			fromV7ToGenericBulkableRequests(requests),
-			fromV7toGenericBulkResponse(response),
-			gerr)
-	}
-
-	return c.runBulkProcessor(ctx, &bulkProcessorParametersV7{
-		Name:          parameters.Name,
-		NumOfWorkers:  parameters.NumOfWorkers,
-		BulkActions:   parameters.BulkActions,
-		BulkSize:      parameters.BulkSize,
-		FlushInterval: parameters.FlushInterval,
-		Backoff:       parameters.Backoff,
-		BeforeFunc:    beforeFunc,
-		AfterFunc:     afterFunc,
-	})
+	return scrollService.ScrollId(scrollID).Do(ctx)
 }
 
-func convertV7ErrorToGenericError(err error) *GenericError {
-	if err == nil {
-		return nil
-	}
-	status := unknownStatusCode
-	switch e := err.(type) {
-	case *elastic.Error:
-		status = e.Status
-	}
-	return &GenericError{
-		Status:  status,
-		Details: err,
-	}
+func (c *elasticV7) clearScroll(ctx context.Context, scrollID string) error {
+	return elastic.NewScrollService(c.client).ScrollId(scrollID).Clear(ctx)
 }
 
 func (c *elasticV7) SearchForOneClosedExecution(
@@ -327,58 +245,6 @@ func (c *elasticV7) SearchForOneClosedExecution(
 	return response, nil
 }
 
-func fromV7toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
-	if response == nil {
-		return &GenericBulkResponse{}
-	}
-	return &GenericBulkResponse{
-		Took:   response.Took,
-		Errors: response.Errors,
-		Items:  fromV7ToGenericBulkResponseItemMaps(response.Items),
-	}
-}
-
-func fromV7ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*GenericBulkResponseItem {
-	var gitems []map[string]*GenericBulkResponseItem
-	for _, it := range items {
-		gitems = append(gitems, fromV7ToGenericBulkResponseItemMap(it))
-	}
-	return gitems
-}
-
-func fromV7ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*GenericBulkResponseItem {
-	if m == nil {
-		return nil
-	}
-	gm := make(map[string]*GenericBulkResponseItem, len(m))
-	for k, v := range m {
-		gm[k] = fromV7ToGenericBulkResponseItem(v)
-	}
-	return gm
-}
-
-func fromV7ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkResponseItem {
-	return &GenericBulkResponseItem{
-		Index:         v.Index,
-		Type:          v.Type,
-		ID:            v.Id,
-		Version:       v.Version,
-		Result:        v.Result,
-		SeqNo:         v.SeqNo,
-		PrimaryTerm:   v.PrimaryTerm,
-		Status:        v.Status,
-		ForcedRefresh: v.ForcedRefresh,
-	}
-}
-
-func fromV7ToGenericBulkableRequests(requests []elastic.BulkableRequest) []GenericBulkableRequest {
-	var v7Reqs []GenericBulkableRequest
-	for _, req := range requests {
-		v7Reqs = append(v7Reqs, req)
-	}
-	return v7Reqs
-}
-
 func (c *elasticV7) search(ctx context.Context, p *searchParametersV7) (*elastic.SearchResult, error) {
 	searchService := c.client.Search(p.Index).
 		Query(p.Query).
@@ -416,109 +282,27 @@ func (c *elasticV7) SearchRaw(ctx context.Context, index string, query string) (
 
 	result := RawResponse{
 		TookInMillis: esResult.TookInMillis,
+		Hits: SearchHits{
+			TotalHits: esResult.TotalHits(),
+			Hits:      c.esHitsToExecutions(esResult.Hits, nil /*no filter*/),
+		},
 		Aggregations: esResult.Aggregations,
-	}
-
-	result.Hits = SearchHits{
-		TotalHits: esResult.TotalHits(),
-	}
-	if esResult.Hits != nil && len(esResult.Hits.Hits) > 0 {
-		result.Hits.Hits = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0, len(esResult.Hits.Hits))
-		for _, hit := range esResult.Hits.Hits {
-			workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(hit)
-			result.Hits.Hits = append(result.Hits.Hits, workflowExecutionInfo)
-		}
 	}
 
 	return &result, nil
 }
 
-func (c *elasticV7) searchWithDSL(ctx context.Context, index, query string) (*elastic.SearchResult, error) {
-	return c.client.Search(index).Source(query).Do(ctx)
-}
-
-func (c *elasticV7) scroll(ctx context.Context, scrollID string) (
-	*elastic.SearchResult, *elastic.ScrollService, error) {
-
-	scrollService := elastic.NewScrollService(c.client)
-	result, err := scrollService.ScrollId(scrollID).Do(ctx)
-	return result, scrollService, err
-}
-
-func (c *elasticV7) scrollFirstPage(ctx context.Context, index, query string) (
-	*elastic.SearchResult, *elastic.ScrollService, error) {
-
-	scrollService := elastic.NewScrollService(c.client)
-	result, err := scrollService.Index(index).Body(query).Do(ctx)
-	return result, scrollService, err
-}
-
-type v7BulkProcessor struct {
-	processor *elastic.BulkProcessor
-}
-
-func (v *v7BulkProcessor) Start(ctx context.Context) error {
-	return v.processor.Start(ctx)
-}
-
-func (v *v7BulkProcessor) Stop() error {
-	return v.processor.Stop()
-}
-
-func (v *v7BulkProcessor) Close() error {
-	return v.processor.Close()
-}
-
-func (v *v7BulkProcessor) Add(request *GenericBulkableAddRequest) {
-	var req elastic.BulkableRequest
-	switch request.RequestType {
-	case BulkableDeleteRequest:
-		req = elastic.NewBulkDeleteRequest().
-			Index(request.Index).
-			Id(request.ID).
-			VersionType(request.VersionType).
-			Version(request.Version)
-	case BulkableIndexRequest:
-		req = elastic.NewBulkIndexRequest().
-			Index(request.Index).
-			Id(request.ID).
-			VersionType(request.VersionType).
-			Version(request.Version).
-			Doc(request.Doc)
-	case BulkableCreateRequest:
-		//for bulk create request still calls the bulk index method
-		//with providing operation type
-		req = elastic.NewBulkIndexRequest().
-			OpType("create").
-			Index(request.Index).
-			Id(request.ID).
-			VersionType("internal").
-			Doc(request.Doc)
+func (c *elasticV7) esHitsToExecutions(eshits *elastic.SearchHits, filter IsRecordValidFilter) []*p.InternalVisibilityWorkflowExecutionInfo {
+	var hits = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
+	if eshits != nil && len(eshits.Hits) > 0 {
+		for _, hit := range eshits.Hits {
+			workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(hit)
+			if filter == nil || filter(workflowExecutionInfo) {
+				hits = append(hits, workflowExecutionInfo)
+			}
+		}
 	}
-	v.processor.Add(req)
-}
-
-func (v *v7BulkProcessor) Flush() error {
-	return v.processor.Flush()
-}
-
-func (c *elasticV7) runBulkProcessor(ctx context.Context, p *bulkProcessorParametersV7) (*v7BulkProcessor, error) {
-	processor, err := c.client.BulkProcessor().
-		Name(p.Name).
-		Workers(p.NumOfWorkers).
-		BulkActions(p.BulkActions).
-		BulkSize(p.BulkSize).
-		FlushInterval(p.FlushInterval).
-		Backoff(p.Backoff).
-		Before(p.BeforeFunc).
-		After(p.AfterFunc).
-		Do(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &v7BulkProcessor{
-		processor: processor,
-	}, nil
+	return hits
 }
 
 func buildPutMappingBodyV7(root, key, valueType string) map[string]interface{} {
@@ -627,34 +411,6 @@ func (c *elasticV7) convertSearchResultToVisibilityRecord(hit *elastic.SearchHit
 	return record
 }
 
-func (c *elasticV7) getScanWorkflowExecutionsResponse(
-	searchHits *elastic.SearchHits,
-	pageSize int, scrollID string,
-	isLastPage bool,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
-
-	response := &p.InternalListWorkflowExecutionsResponse{}
-	actualHits := searchHits.Hits
-	numOfActualHits := len(actualHits)
-
-	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-	for i := 0; i < numOfActualHits; i++ {
-		workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(actualHits[i])
-		response.Executions = append(response.Executions, workflowExecutionInfo)
-	}
-
-	if numOfActualHits == pageSize && !isLastPage {
-		nextPageToken, err := SerializePageToken(&ElasticVisibilityPageToken{ScrollID: scrollID})
-		if err != nil {
-			return nil, err
-		}
-		response.NextPageToken = make([]byte, len(nextPageToken))
-		copy(response.NextPageToken, nextPageToken)
-	}
-
-	return response, nil
-}
-
 func (c *elasticV7) getSearchResult(
 	ctx context.Context,
 	index string,
@@ -664,15 +420,13 @@ func (c *elasticV7) getSearchResult(
 	token *ElasticVisibilityPageToken,
 ) (*elastic.SearchResult, error) {
 
-	matchDomainQuery := elastic.NewMatchQuery(DomainID, request.DomainUUID)
-	existClosedStatusQuery := elastic.NewExistsQuery(CloseStatus)
-	var rangeQuery *elastic.RangeQuery
-	if isOpen {
-		rangeQuery = elastic.NewRangeQuery(StartTime)
-	} else {
-		rangeQuery = elastic.NewRangeQuery(CloseTime)
+	// always match domain id
+	boolQuery := elastic.NewBoolQuery().Must(elastic.NewMatchQuery(DomainID, request.DomainUUID))
+
+	if matchQuery != nil {
+		boolQuery = boolQuery.Must(matchQuery)
 	}
-	// ElasticSearch v7 is unable to precisely compare time, have to manually add resolution 1ms to time range.
+	// ElasticSearch v6 is unable to precisely compare time, have to manually add resolution 1ms to time range.
 	// Also has to use string instead of int64 to avoid data conversion issue,
 	// 9223372036854775807 to 9223372036854776000 (long overflow)
 	if request.LatestTime.UnixNano() > math.MaxInt64-oneMicroSecondInNano { // prevent latestTime overflow
@@ -681,21 +435,21 @@ func (c *elasticV7) getSearchResult(
 	if request.EarliestTime.UnixNano() < math.MinInt64+oneMicroSecondInNano { // prevent earliestTime overflow
 		request.EarliestTime = time.Unix(0, math.MinInt64+oneMicroSecondInNano)
 	}
-	earliestTimeStr := strconv.FormatInt(request.EarliestTime.UnixNano()-oneMicroSecondInNano, 10)
-	latestTimeStr := strconv.FormatInt(request.LatestTime.UnixNano()+oneMicroSecondInNano, 10)
-	rangeQuery = rangeQuery.
-		Gte(earliestTimeStr).
-		Lte(latestTimeStr)
 
-	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Filter(rangeQuery)
-	if matchQuery != nil {
-		boolQuery = boolQuery.Must(matchQuery)
-	}
+	var rangeQueryField string
+	existClosedStatusQuery := elastic.NewExistsQuery(CloseStatus)
 	if isOpen {
+		rangeQueryField = StartTime
 		boolQuery = boolQuery.MustNot(existClosedStatusQuery)
 	} else {
 		boolQuery = boolQuery.Must(existClosedStatusQuery)
+		rangeQueryField = CloseTime
 	}
+
+	earliestTimeStr := strconv.FormatInt(request.EarliestTime.UnixNano()-oneMicroSecondInNano, 10)
+	latestTimeStr := strconv.FormatInt(request.LatestTime.UnixNano()+oneMicroSecondInNano, 10)
+	rangeQuery := elastic.NewRangeQuery(rangeQueryField).Gte(earliestTimeStr).Lte(latestTimeStr)
+	boolQuery = boolQuery.Filter(rangeQuery)
 
 	params := &searchParametersV7{
 		Index:    index,
@@ -703,16 +457,12 @@ func (c *elasticV7) getSearchResult(
 		From:     token.From,
 		PageSize: request.PageSize,
 	}
-	if isOpen {
-		params.Sorter = append(params.Sorter, elastic.NewFieldSort(StartTime).Desc())
-	} else {
-		params.Sorter = append(params.Sorter, elastic.NewFieldSort(CloseTime).Desc())
-	}
+
+	params.Sorter = append(params.Sorter, elastic.NewFieldSort(rangeQueryField).Desc())
 	params.Sorter = append(params.Sorter, elastic.NewFieldSort(RunID).Desc())
 
 	if ShouldSearchAfter(token) {
 		params.SearchAfter = []interface{}{token.SortValue, token.TieBreaker}
 	}
-
 	return c.search(ctx, params)
 }
