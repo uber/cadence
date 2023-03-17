@@ -21,6 +21,8 @@
 package execution
 
 import (
+	"github.com/uber/cadence/service/history/config"
+	"strconv"
 	"time"
 
 	"github.com/uber/cadence/common/log"
@@ -29,6 +31,31 @@ import (
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
+
+func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Client, config *config.Config, shardID string,
+	domainName string, workflowID string, newHistorySize int64, newHistoryCount int64, oldHistorySize int64, oldHistoryCount int64, blobSize int64) {
+	if config.EnableShardIDMetrics() {
+		shardIDInt, _ := strconv.Atoi(shardID)
+		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
+		if blobSize > int64(config.LargeShardHistoryBlobMetricThreshold()) {
+			logger.SampleInfo("Workflow writing a large blob", config.SampleLoggingRate(), tag.WorkflowDomainName(domainName),
+				tag.WorkflowRunID(workflowID), tag.ShardID(shardIDInt))
+			metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistoryBlobCount)
+		}
+		// check if the new history count is greater than our threshold and only count/log it once when it passes it
+		if oldHistoryCount < int64(config.LargeShardHistoryEventMetricThreshold()) && newHistoryCount >= int64(config.LargeShardHistoryEventMetricThreshold()) {
+			logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(domainName),
+				tag.WorkflowRunID(workflowID), tag.ShardID(shardIDInt))
+			metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistoryEventCount)
+		}
+		// check if the new history size is greater than our threshold and only count/log it once when it passes it
+		if oldHistoryCount < int64(config.LargeShardHistorySizeMetricThreshold()) && newHistorySize >= int64(config.LargeShardHistorySizeMetricThreshold()) {
+			logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(domainName),
+				tag.WorkflowRunID(workflowID), tag.ShardID(shardIDInt))
+			metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardID)).IncCounter(metrics.LargeHistorySizeCount)
+		}
+	}
+}
 
 func emitWorkflowHistoryStats(
 	metricsClient metrics.Client,

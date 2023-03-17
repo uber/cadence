@@ -706,7 +706,6 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	currentWorkflowTransactionPolicy TransactionPolicy,
 	newWorkflowTransactionPolicy *TransactionPolicy,
 ) (retError error) {
-
 	defer func() {
 		if retError != nil {
 			c.Clear()
@@ -720,9 +719,9 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 	if err != nil {
 		return err
 	}
-
 	var persistedBlobs events.PersistedBlobs
 	currentWorkflowSize := c.GetHistorySize()
+	currentWorkflowHistorySize := c.mutableState.GetNextEventID() - 1
 	for _, workflowEvents := range currentWorkflowEventsSeq {
 		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 		if err != nil {
@@ -852,6 +851,8 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		domainName,
 		resp.MutableStateUpdateSessionStats,
 	)
+	emitLargeWorkflowShardIDStats(c.logger, c.metricsClient, c.shard.GetConfig(), string(c.shard.GetShardID()), domainName, c.workflowExecution.WorkflowID,
+		c.stats.HistorySize, c.mutableState.GetNextEventID()-1, currentWorkflowSize, currentWorkflowHistorySize, c.stats.HistorySize-currentWorkflowSize)
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, err := c.mutableState.GetCompletionEvent(ctx); err == nil {

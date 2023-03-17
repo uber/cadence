@@ -1157,7 +1157,12 @@ const (
 	HistoryReplicationV2TaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
 	SyncActivityTaskScope
-
+	// LargeExecutionSizeShardScope is the scope to track large history size for hotshard detection
+	LargeExecutionSizeShardScope
+	// LargeExecutionCountShardScope is the scope to track large history count for hotshard detection
+	LargeExecutionCountShardScope
+	// LargeExecutionBlobShardScope is the scope to track large blobs for hotshard detection
+	LargeExecutionBlobShardScope
 	NumHistoryScopes
 )
 
@@ -1750,6 +1755,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FailoverMarkerScope:                                             {operation: "FailoverMarker"},
 		HistoryReplicationV2TaskScope:                                   {operation: "HistoryReplicationV2Task"},
 		SyncActivityTaskScope:                                           {operation: "SyncActivityTask"},
+		LargeExecutionSizeShardScope:                                    {operation: "LargeExecutionSizeShard"},
+		LargeExecutionCountShardScope:                                   {operation: "LargeExecutionCountShard"},
+		LargeExecutionBlobShardScope:                                    {operation: "LargeExecutionBlobShard"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -1977,6 +1985,10 @@ const (
 
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
+
+	LargeHistoryBlobCount
+	LargeHistoryEventCount
+	LargeHistorySizeCount
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2844,6 +2856,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
 		WorkflowTypeCount:                                            {metricName: "workflow_type_count", metricType: Gauge},
+		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
+		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
+		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},
