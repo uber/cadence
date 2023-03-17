@@ -84,6 +84,7 @@ cadence:
   service: "cadence-frontend" # frontend service name
   address: "127.0.0.1:7833" # frontend address
   #host: "127.0.0.1:7933" # replace address with host if using Thrift for compatibility
+  #tlsCaFile: "path/to/file" # give file path to TLS CA file if TLS is enabled on the Cadence server
   #metrics: ... # optional detailed client side metrics like workflow latency. But for monitoring, simply use server side metrics `workflow_success` is enough.
 ```
 - **Metrics**: metrics configuration. Similar to server metric emitter, only M3/Statsd/Prometheus is supported. 
