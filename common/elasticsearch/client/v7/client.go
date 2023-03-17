@@ -26,9 +26,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/olivere/elastic/v7"
 	esaws "github.com/olivere/elastic/v7/aws/v4"
 
@@ -51,6 +49,7 @@ func NewV7Client(
 	connectConfig *config.ElasticSearchConfig,
 	logger log.Logger,
 	tlsClient *http.Client,
+	awsSigningClient *http.Client,
 ) (*ElasticV7, error) {
 	clientOptFuncs := []elastic.ClientOptionFunc{
 		elastic.SetURL(connectConfig.URL.String()),
@@ -63,36 +62,15 @@ func NewV7Client(
 	if connectConfig.DisableHealthCheck {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
 	}
-	if connectConfig.AWSSigning.Enable {
-		if err := config.CheckAWSSigningConfig(connectConfig.AWSSigning); err != nil {
-			return nil, err
-		}
-		var creds *credentials.Credentials
-		var region string
-		if connectConfig.AWSSigning.EnvironmentCredential != nil {
-			sess, err := session.NewSession(&aws.Config{
-				Region: aws.String(connectConfig.AWSSigning.EnvironmentCredential.Region)},
-			)
-			if err != nil {
-				return nil, err
-			}
-			region = connectConfig.AWSSigning.EnvironmentCredential.Region
-			creds = sess.Config.Credentials
-		} else {
-			creds = credentials.NewStaticCredentials(
-				connectConfig.AWSSigning.StaticCredential.AccessKey,
-				connectConfig.AWSSigning.StaticCredential.SecretKey,
-				connectConfig.AWSSigning.StaticCredential.SessionToken,
-			)
-			region = connectConfig.AWSSigning.StaticCredential.Region
-		}
-		signingClient := newSigningClient(creds, region)
-		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
+
+	if awsSigningClient != nil {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(awsSigningClient))
 	}
 
 	if tlsClient != nil {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
 	}
+
 	client, err := elastic.NewClient(clientOptFuncs...)
 	if err != nil {
 		return nil, err

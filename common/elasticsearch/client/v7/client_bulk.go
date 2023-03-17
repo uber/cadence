@@ -29,7 +29,6 @@ import (
 	"github.com/olivere/elastic/v7"
 
 	"github.com/uber/cadence/common/elasticsearch/bulk"
-	"github.com/uber/cadence/common/elasticsearch/query"
 )
 
 type // bulkProcessorParametersV7 holds all required and optional parameters for executing bulk service
@@ -126,27 +125,27 @@ func fromV7toGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBu
 	}
 }
 
-func fromV7ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*query.GenericBulkResponseItem {
-	var gitems []map[string]*query.GenericBulkResponseItem
+func fromV7ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*bulk.GenericBulkResponseItem {
+	var gitems []map[string]*bulk.GenericBulkResponseItem
 	for _, it := range items {
 		gitems = append(gitems, fromV7ToGenericBulkResponseItemMap(it))
 	}
 	return gitems
 }
 
-func fromV7ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*query.GenericBulkResponseItem {
+func fromV7ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*bulk.GenericBulkResponseItem {
 	if m == nil {
 		return nil
 	}
-	gm := make(map[string]*query.GenericBulkResponseItem, len(m))
+	gm := make(map[string]*bulk.GenericBulkResponseItem, len(m))
 	for k, v := range m {
 		gm[k] = fromV7ToGenericBulkResponseItem(v)
 	}
 	return gm
 }
 
-func fromV7ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *query.GenericBulkResponseItem {
-	return &query.GenericBulkResponseItem{
+func fromV7ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *bulk.GenericBulkResponseItem {
+	return &bulk.GenericBulkResponseItem{
 		Index:         v.Index,
 		Type:          v.Type,
 		ID:            v.Id,
@@ -192,16 +191,16 @@ func (c *ElasticV7) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkP
 		AfterFunc:     afterFunc,
 	})
 }
-func errorToGenericError(err error) *query.GenericError {
+func errorToGenericError(err error) *bulk.GenericError {
 	if err == nil {
 		return nil
 	}
-	status := query.UnknownStatusCode
+	status := bulk.UnknownStatusCode
 	switch e := err.(type) {
 	case *elastic.Error:
 		status = e.Status
 	}
-	return &query.GenericError{
+	return &bulk.GenericError{
 		Status:  status,
 		Details: err,
 	}

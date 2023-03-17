@@ -56,6 +56,7 @@ func NewV6Client(
 	connectConfig *config.ElasticSearchConfig,
 	logger log.Logger,
 	tlsClient *http.Client,
+	awsSigningClient *http.Client,
 ) (*ElasticV6, error) {
 	clientOptFuncs := []elastic.ClientOptionFunc{
 		elastic.SetURL(connectConfig.URL.String()),
@@ -68,22 +69,11 @@ func NewV6Client(
 	if connectConfig.DisableHealthCheck {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHealthcheck(false))
 	}
-	if connectConfig.AWSSigning.Enable {
-		if err := config.CheckAWSSigningConfig(connectConfig.AWSSigning); err != nil {
-			return nil, err
-		}
-		var signingClient *http.Client
-		var err error
-		if connectConfig.AWSSigning.EnvironmentCredential != nil {
-			signingClient, err = buildSigningHTTPClientFromEnvironmentCredentialV6(*connectConfig.AWSSigning.EnvironmentCredential)
-		} else {
-			signingClient, err = buildSigningHTTPClientFromStaticCredentialV6(*connectConfig.AWSSigning.StaticCredential)
-		}
-		if err != nil {
-			return nil, err
-		}
-		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(signingClient))
+
+	if awsSigningClient != nil {
+		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(awsSigningClient))
 	}
+
 	if tlsClient != nil {
 		clientOptFuncs = append(clientOptFuncs, elastic.SetHttpClient(tlsClient))
 	}
