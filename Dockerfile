@@ -20,13 +20,13 @@ COPY go.* ./
 RUN go mod download
 
 COPY . .
-RUN rm -fr .bin .build
+RUN rm -fr .bin .build idls
 
 ENV CADENCE_RELEASE_VERSION=$RELEASE_VERSION
 
-# bypass codegen, use committed files.  must be run separately, before building things.
-RUN make .fake-codegen
-RUN CGO_ENABLED=0 make copyright cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-bench cadence-canary
+# don't do anything fancy, just build.  must be run separately, before building things.
+RUN make .just-build
+RUN CGO_ENABLED=0 make cadence-cassandra-tool cadence-sql-tool cadence cadence-server cadence-bench cadence-canary
 
 
 # Download dockerize

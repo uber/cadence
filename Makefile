@@ -320,28 +320,11 @@ $(BUILD)/protoc: $(PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/proto
 # Rule-breaking targets intended ONLY for special cases with no good alternatives.
 # ====================================
 
-.PHONY: .fake-codegen .fake-protoc .fake-thriftrw
-
-# buildkite / release-only target to avoid building / running codegen tools (protoc is unable to be run on alpine).
-# this will ensure that committed code will be used rather than re-generating.
-# must be manually run before (nearly) any other targets.
-.fake-codegen: .fake-protoc .fake-thrift
-	$(warning build-tool binaries have been faked, you will need to delete the $(BIN) folder if you wish to build real ones)
-	$Q # touch a marker-file for a `make clean` warning.  this does not impact behavior.
-	touch $(STABLE_BIN)/fake-codegen
-
-# "build" fake binaries, and touch the book-keeping files, so Make thinks codegen has been run.
-# order matters, as e.g. a $(BIN) newer than a $(BUILD) implies Make should run the $(BIN).
-.fake-protoc: | $(STABLE_BIN) $(BUILD) $(BIN)
-	touch $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go
-	touch $(BUILD)/protoc
-
-.fake-thrift: | $(BUILD) $(BIN)
-	touch $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc
-	$Q # if the submodule exists, touch thrift_gen markers to fake their generation.
-	$Q # if it does not, do nothing - there are none.
-	$(if $(THRIFT_GEN),touch $(THRIFT_GEN),)
-	touch $(BUILD)/thrift
+# used to bypass checks when building binaries.
+# this is primarily intended for docker image builds, but can be used to skip things locally.
+.PHONY: .just-build
+.just-build: | $(BUILD)
+	touch $(BUILD)/just-build
 
 # ====================================
 # other intermediates
@@ -419,39 +402,48 @@ copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
+# normally, depend on lint, so a full build and check and codegen runs.
+# docker builds though must *not* do this, and need to rely entirely on committed code.
+ifeq (,$(wildcard $(BUILD)/just-build))
+BINS_DEPEND_ON := $(BUILD)/lint
+else
+BINS_DEPEND_ON :=
+$(warning !!!!! lint and codegen disabled, validations skipped !!!!!)
+endif
+
 BINS =
 TOOLS =
 
 BINS  += cadence-cassandra-tool
 TOOLS += cadence-cassandra-tool
-cadence-cassandra-tool: $(BUILD)/lint
+cadence-cassandra-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-cassandra-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	$Q go build -o $@ cmd/tools/cassandra/main.go
 
 BINS  += cadence-sql-tool
 TOOLS += cadence-sql-tool
-cadence-sql-tool: $(BUILD)/lint
+cadence-sql-tool: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-sql-tool with OS: $(GOOS), ARCH: $(GOARCH)"
 	$Q go build -o $@ cmd/tools/sql/main.go
 
 BINS  += cadence
 TOOLS += cadence
-cadence: $(BUILD)/lint
+cadence: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence with OS: $(GOOS), ARCH: $(GOARCH)"
 	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/tools/cli/main.go
 
 BINS += cadence-server
-cadence-server: $(BUILD)/lint
+cadence-server: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-server with OS: $(GOOS), ARCH: $(GOARCH)"
 	$Q go build -ldflags '$(GO_BUILD_LDFLAGS)' -o $@ cmd/server/main.go
 
 BINS += cadence-canary
-cadence-canary: $(BUILD)/lint
+cadence-canary: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-canary with OS: $(GOOS), ARCH: $(GOARCH)"
 	$Q go build -o $@ cmd/canary/main.go
 
 BINS += cadence-bench
-cadence-bench: $(BUILD)/lint
+cadence-bench: $(BINS_DEPEND_ON)
 	$Q echo "compiling cadence-bench with OS: $(GOOS), ARCH: $(GOARCH)"
 	$Q go build -o $@ cmd/bench/main.go
 
@@ -461,12 +453,13 @@ bins: $(BINS) ## Make all binaries
 
 tools: $(TOOLS)
 
-go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap
-	$Q echo "running go generate ./..., this takes almost 5 minutes..."
+go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## run go generate to regen mocks, enums, etc
+	$Q echo "running go generate ./..., this takes a minute or more..."
 	$Q # add our bins to PATH so `go generate` can find them
-	$Q $(BIN_PATH) go generate ./...
+	$Q $(BIN_PATH) go generate $(if $(verbose),-v) ./...
 	$Q echo "updating copyright headers"
 	$Q $(MAKE) --no-print-directory copyright
+	$Q $(MAKE) --no-print-directory fmt
 
 release: ## Re-generate generated code and run tests
 	$(MAKE) --no-print-directory go-generate
@@ -476,8 +469,8 @@ clean: ## Clean build products
 	rm -f $(BINS)
 	rm -Rf $(BUILD)
 	$(if \
-		$(filter $(BIN)/fake-codegen, $(wildcard $(BIN)/*)), \
-		$(warning fake build tools may exist, delete the $(BIN) folder to get real ones if desired),)
+		$(wildcard $(STABLE_BIN)/*), \
+		$(warning usually-stable build tools still exist, delete the $(STABLE_BIN) folder to rebuild them),)
 
 # v----- not yet cleaned up -----v
 

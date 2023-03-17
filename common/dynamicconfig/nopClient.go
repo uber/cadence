@@ -66,6 +66,10 @@ func (mc *nopClient) GetDurationValue(name DurationKey, filters map[Filter]inter
 	return name.DefaultDuration(), NotFoundError
 }
 
+func (mc *nopClient) GetListValue(name ListKey, filters map[Filter]interface{}) ([]interface{}, error) {
+	return name.DefaultList(), NotFoundError
+}
+
 func (mc *nopClient) UpdateValue(name Key, value interface{}) error {
 	return errors.New("not supported for nop client")
 }

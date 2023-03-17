@@ -109,6 +109,31 @@ docker-compose down
 docker-compose up
 ```
 
+DIY: Troubleshooting docker builds
+----------------------------------
+
+Note that Docker has been making changes to its build system, and the new system is currently missing some capabilities
+that the old one had, and makes major changes to how you control it.
+When searching for workarounds, make sure you are looking at modern answers, and consider specifically searching for
+"buildkit" solutions.  
+You can also disable buildkit explicitly with `DOCKER_BUILDKIT=0 docker build ...`.
+
+For output limiting (e.g. `[output clipped ...]` messages), or for anything that requires changing buildkit environment
+variables or other options, start a new builder and use it to build with:
+```
+# create a new builder with your options
+docker buildx create ...
+# which will print out a name, use it in the build step.
+
+# now use the exact same command as normal, but it prepends `buildx` and adds a builder flag.
+docker buildx build . -t ubercadence/<imageName>:YOUR_TAG --builder <that_builder_name>
+```
+
+For output limiting (e.g. `[output clipped ...]` messages), you can fix this with some buildkit env variables:
+```
+docker buildx create --driver-opt env.BUILDKIT_STEP_LOG_MAX_SIZE=-1 --driver-opt env.BUILDKIT_STEP_LOG_MAX_SPEED=-1
+```
+
 DIY: Running a custom cadence server locally alongside cadence requirements
 ---------------------------------------------------------------------------
 If you want to test out a custom-built cadence server, while running all the normal cadence dependencies, there's a simple workflow to do that:
@@ -138,7 +163,7 @@ docker run -e CASSANDRA_SEEDS=10.x.x.x                  -- csv of cassandra serv
     -e RINGPOP_SEEDS=10.x.x.x,10.x.x.x                  -- csv of ipaddrs for gossip bootstrap
     -e STATSD_ENDPOINT=10.x.x.x:8125                    -- statsd server endpoint
     -e NUM_HISTORY_SHARDS=1024                          -- Number of history shards
-    -e SERVICES=history,matching                        -- Spinup only the provided services, separated by commas, options are frontend,history,matching and workers
+    -e SERVICES=history,matching                        -- Spinup only the provided services, separated by commas, options are frontend,history,matching and worker
     -e LOG_LEVEL=debug,info                             -- Logging level
     -e DYNAMIC_CONFIG_FILE_PATH=<dynamic_config_file>   -- Dynamic config file to be watched, default to /etc/cadence/config/dynamicconfig/development.yaml, but you can choose /etc/cadence/config/dynamicconfig/development_es.yaml if using ElasticSearch
     ubercadence/server:<tag>

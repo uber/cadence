@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.9",
+  "MinCompatibleVersion": "0.9",
+  "Description": "add shard_id to visibility",
+  "SchemaUpdateCqlFiles": [
+    "add_shard_id.cql"
+  ]
+}

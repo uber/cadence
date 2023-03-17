@@ -22,11 +22,16 @@
 package matching
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"sync/atomic"
 
+	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -50,15 +55,20 @@ type (
 
 	// taskWriter writes tasks sequentially to persistence
 	taskWriter struct {
-		tlMgr        *taskListManagerImpl
-		config       *taskListConfig
-		taskListID   *taskListID
-		appendCh     chan *writeTaskRequest
-		taskIDBlock  taskIDBlock
-		maxReadLevel int64
-		stopped      int64 // set to 1 if the writer is stopped or is shutting down
-		logger       log.Logger
-		stopCh       chan struct{} // shutdown signal for all routines in this class
+		db             *taskListDB
+		config         *taskListConfig
+		taskListID     *taskListID
+		taskAckManager messaging.AckManager
+		appendCh       chan *writeTaskRequest
+		taskIDBlock    taskIDBlock
+		maxReadLevel   int64
+		stopped        int64 // set to 1 if the writer is stopped or is shutting down
+		logger         log.Logger
+		scope          metrics.Scope
+		stopCh         chan struct{} // shutdown signal for all routines in this class
+		throttleRetry  *backoff.ThrottleRetry
+		handleErr      func(error) error
+		onFatalErr     func()
 	}
 )
 
@@ -67,19 +77,36 @@ var errShutdown = errors.New("task list shutting down")
 
 func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
 	return &taskWriter{
-		tlMgr:      tlMgr,
-		config:     tlMgr.config,
-		taskListID: tlMgr.taskListID,
-		stopCh:     make(chan struct{}),
-		appendCh:   make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
-		logger:     tlMgr.logger,
+		db:             tlMgr.db,
+		config:         tlMgr.config,
+		taskListID:     tlMgr.taskListID,
+		taskAckManager: tlMgr.taskAckManager,
+		stopCh:         make(chan struct{}),
+		appendCh:       make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
+		logger:         tlMgr.logger,
+		scope:          tlMgr.scope,
+		handleErr:      tlMgr.handleErr,
+		onFatalErr:     tlMgr.Stop,
+		throttleRetry: backoff.NewThrottleRetry(
+			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
+			backoff.WithRetryableError(persistence.IsTransientError),
+		),
 	}
 }
 
-func (w *taskWriter) Start(block taskIDBlock) {
+func (w *taskWriter) Start() error {
+	// Make sure to grab the range first before starting task writer, as it needs the range to initialize maxReadLevel
+	state, err := w.renewLeaseWithRetry()
+	if err != nil {
+		return err
+	}
+
+	w.taskAckManager.SetAckLevel(state.ackLevel)
+	block := rangeIDToTaskIDBlock(state.rangeID, w.config.RangeSize)
 	w.taskIDBlock = block
 	w.maxReadLevel = block.start - 1
 	go w.taskWriterLoop()
+	return nil
 }
 
 // Stop stops the taskWriter
@@ -131,7 +158,7 @@ func (w *taskWriter) allocTaskIDs(count int) ([]int64, error) {
 	for i := 0; i < count; i++ {
 		if w.taskIDBlock.start > w.taskIDBlock.end {
 			// we ran out of current allocation block
-			newBlock, err := w.tlMgr.allocTaskIDBlock(w.taskIDBlock.end)
+			newBlock, err := w.allocTaskIDBlock(w.taskIDBlock.end)
 			if err != nil {
 				return nil, err
 			}
@@ -141,6 +168,35 @@ func (w *taskWriter) allocTaskIDs(count int) ([]int64, error) {
 		w.taskIDBlock.start++
 	}
 	return result, nil
+}
+
+func (w *taskWriter) allocTaskIDBlock(prevBlockEnd int64) (taskIDBlock, error) {
+	currBlock := rangeIDToTaskIDBlock(w.db.RangeID(), w.config.RangeSize)
+	if currBlock.end != prevBlockEnd {
+		return taskIDBlock{},
+			fmt.Errorf("allocTaskIDBlock: invalid state: prevBlockEnd:%v != currTaskIDBlock:%+v", prevBlockEnd, currBlock)
+	}
+	state, err := w.renewLeaseWithRetry()
+	if err != nil {
+		return taskIDBlock{}, err
+	}
+	return rangeIDToTaskIDBlock(state.rangeID, w.config.RangeSize), nil
+}
+
+func (w *taskWriter) renewLeaseWithRetry() (taskListState, error) {
+	var newState taskListState
+	op := func() (err error) {
+		newState, err = w.db.RenewLease()
+		return
+	}
+	w.scope.IncCounter(metrics.LeaseRequestPerTaskListCounter)
+	err := w.throttleRetry.Do(context.Background(), op)
+	if err != nil {
+		w.scope.IncCounter(metrics.LeaseFailurePerTaskListCounter)
+		w.onFatalErr()
+		return newState, err
+	}
+	return newState, nil
 }
 
 func (w *taskWriter) taskWriterLoop() {
@@ -172,24 +228,16 @@ writerLoop:
 					maxReadLevel = taskIDs[i]
 				}
 
-				r, err := w.tlMgr.db.CreateTasks(tasks)
-				switch err.(type) {
-				case nil:
-					// Do nothing
-				case *persistence.ConditionFailedError:
-					// Stop and reload task list manager
-					w.tlMgr.Stop()
-				default:
+				r, err := w.db.CreateTasks(tasks)
+				err = w.handleErr(err)
+				if err != nil {
 					w.logger.Error("Persistent store operation failure",
 						tag.StoreOperationCreateTasks,
 						tag.Error(err),
-						tag.WorkflowTaskListName(w.taskListID.name),
-						tag.WorkflowTaskListType(w.taskListID.taskType),
 						tag.Number(taskIDs[0]),
 						tag.NextNumber(taskIDs[batchSize-1]),
 					)
 				}
-
 				// Update the maxReadLevel after the writes are completed.
 				if maxReadLevel > 0 {
 					atomic.StoreInt64(&w.maxReadLevel, maxReadLevel)

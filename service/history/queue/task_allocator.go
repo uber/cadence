@@ -21,11 +21,13 @@
 package queue
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/service/history/shard"
 	htask "github.com/uber/cadence/service/history/task"
@@ -188,4 +190,18 @@ func (t *taskAllocatorImpl) Lock() {
 // Unlock resume the task allocator
 func (t *taskAllocatorImpl) Unlock() {
 	t.locker.Unlock()
+}
+
+// isDomainNotRegistered checks either if domain does not exist or is in deprecated or deleted status
+func isDomainNotRegistered(shard shard.Context, domainID string) (bool, error) {
+	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		// error in finding a domain
+		return false, err
+	}
+	info := domainEntry.GetInfo()
+	if info == nil {
+		return false, errors.New("domain info is nil in cache")
+	}
+	return info.Status == persistence.DomainStatusDeprecated || info.Status == persistence.DomainStatusDeleted, nil
 }
