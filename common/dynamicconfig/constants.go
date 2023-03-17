@@ -3479,7 +3479,7 @@ var IntKeys = map[IntKey]DynamicInt{
 		DefaultValue: 10000,
 	},
 	LargeShardHistoryBlobMetricThreshold: DynamicInt{
-		KeyName:      "system.largeShardHistoryEventMetricThreshold",
+		KeyName:      "system.largeShardHistoryBlobMetricThreshold",
 		Description:  "defines the threshold for what consititutes a large history blob write to alert on, default is 1/4mb",
 		DefaultValue: 262144,
 	},
