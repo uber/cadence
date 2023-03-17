@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -40,11 +41,30 @@ func NewGenericClient(
 	if connectConfig.Version == "" {
 		connectConfig.Version = "v6"
 	}
+	var tlsClient *http.Client
+	var signingAWSClient *http.Client
+
+	if connectConfig.AWSSigning.Enable {
+		var err error
+		signingAWSClient, err = buildAWSSigningClient(connectConfig.AWSSigning)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if connectConfig.TLS.Enabled {
+		var err error
+		tlsClient, err = buildTLSHTTPClient(connectConfig.TLS)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	switch connectConfig.Version {
 	case "v6":
-		return NewV6Client(connectConfig, logger)
+		return NewV6Client(connectConfig, tlsClient, signingAWSClient, logger)
 	case "v7":
-		return NewV7Client(connectConfig, logger)
+		return NewV7Client(connectConfig, tlsClient, signingAWSClient, logger)
 	default:
 		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
 	}

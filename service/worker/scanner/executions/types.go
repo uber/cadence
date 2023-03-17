@@ -98,6 +98,9 @@ func (st ScanType) ToInvariants(collections []invariant.Collection) []InvariantF
 	case ConcreteExecutionType:
 		for _, collection := range collections {
 			switch collection {
+			case invariant.CollectionDomain:
+				fns = append(fns, invariant.NewInactiveDomainExists)
+
 			case invariant.CollectionHistory:
 
 				fns = append(fns, invariant.NewHistoryExists)

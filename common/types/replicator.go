@@ -230,6 +230,9 @@ type GetDLQReplicationMessagesRequest struct {
 }
 
 func (v *GetDLQReplicationMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -254,6 +257,9 @@ type GetDomainReplicationMessagesRequest struct {
 }
 
 func (v *GetDomainReplicationMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -293,6 +299,9 @@ type GetReplicationMessagesRequest struct {
 }
 
 func (v *GetReplicationMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -406,6 +415,9 @@ type MergeDLQMessagesRequest struct {
 }
 
 func (v *MergeDLQMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -471,6 +483,9 @@ type PurgeDLQMessagesRequest struct {
 }
 
 func (v *PurgeDLQMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
@@ -517,6 +532,9 @@ type ReadDLQMessagesRequest struct {
 }
 
 func (v *ReadDLQMessagesRequest) SerializeForLogging() (string, error) {
+	if v == nil {
+		return "", nil
+	}
 	return SerializeRequest(v)
 }
 
