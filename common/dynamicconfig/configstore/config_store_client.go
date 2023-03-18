@@ -252,7 +252,7 @@ func (csc *configStoreClient) GetListValue(name dc.ListKey, filters map[dc.Filte
 
 func (csc *configStoreClient) UpdateValue(name dc.Key, value interface{}) error {
 	dcValues, ok := value.([]*types.DynamicConfigValue)
-	if !ok && dcValues != nil {
+	if !ok && value != nil {
 		return errors.New("invalid value")
 	}
 	return csc.updateValue(name, dcValues, csc.config.UpdateRetryAttempts)
