@@ -1164,41 +1164,108 @@ func ToDynamicConfigFilter(t *adminv1.DynamicConfigFilter) *types.DynamicConfigF
 }
 
 func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *adminv1.GetGlobalIsolationGroupsResponse {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	return &adminv1.GetGlobalIsolationGroupsResponse{
+		IsolationGroups: cfg,
+	}
 }
 
 func ToGetGlobalIsolationGroupsRequest(t *adminv1.GetGlobalIsolationGroupsRequest) *types.GetGlobalIsolationGroupsRequest {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	return &types.GetGlobalIsolationGroupsRequest{}
 }
 
 func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsResponse) *adminv1.GetDomainIsolationGroupsResponse {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	return &adminv1.GetDomainIsolationGroupsResponse{
+		IsolationGroups: cfg,
+	}
 }
 
 func ToGetDomainIsolationGroupsRequest(t *adminv1.GetDomainIsolationGroupsRequest) *types.GetDomainIsolationGroupsRequest {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	return &types.GetDomainIsolationGroupsRequest{Domain: t.Domain}
 }
 
 func FromUpdateGlobalIsolationGroupsResponse(t *types.UpdateGlobalIsolationGroupsResponse) *adminv1.UpdateGlobalIsolationGroupsResponse {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	return &adminv1.UpdateGlobalIsolationGroupsResponse{}
 }
 
 func ToUpdateGlobalIsolationGroupsRequest(t *adminv1.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	cfg := isolationGroupConfigFromIDL(t.IsolationGroups)
+	if cfg == nil {
+		return &types.UpdateGlobalIsolationGroupsRequest{}
+	}
+	return &types.UpdateGlobalIsolationGroupsRequest{
+		IsolationGroups: *cfg,
+	}
 }
 
 func FromUpdateDomainIsolationGroupsResponse(t *types.UpdateDomainIsolationGroupsResponse) *adminv1.UpdateDomainIsolationGroupsResponse {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	return &adminv1.UpdateDomainIsolationGroupsResponse{}
 }
 
 func ToUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationGroupsRequest) *types.UpdateDomainIsolationGroupsRequest {
-	panic("not implemented")
-	return nil
+	if t == nil {
+		return nil
+	}
+	cfg := isolationGroupConfigFromIDL(t.IsolationGroups)
+	if cfg == nil {
+		return &types.UpdateDomainIsolationGroupsRequest{
+			Domain: t.Domain,
+		}
+	}
+	return &types.UpdateDomainIsolationGroupsRequest{
+		Domain:          t.Domain,
+		IsolationGroups: *cfg,
+	}
+}
+
+func isolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *adminv1.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	var out []*adminv1.IsolationGroupPartition
+	for _, v := range *in {
+		out = append(out, &adminv1.IsolationGroupPartition{
+			Name:  v.Name,
+			State: adminv1.IsolationGroupState(v.State),
+		})
+	}
+	return &adminv1.IsolationGroupConfiguration{
+		IsolationGroups: out,
+	}
+}
+
+func isolationGroupConfigFromIDL(in *adminv1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	out := make(types.IsolationGroupConfiguration)
+	for v := range in.IsolationGroups {
+		out[in.IsolationGroups[v].Name] = types.IsolationGroupPartition{
+			Name:  in.IsolationGroups[v].Name,
+			State: types.IsolationGroupState(in.IsolationGroups[v].State),
+		}
+	}
+	return &out
 }
