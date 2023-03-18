@@ -364,3 +364,57 @@ func (v *ListDynamicConfigRequest) SerializeForLogging() (string, error) {
 type ListDynamicConfigResponse struct {
 	Entries []*DynamicConfigEntry `json:"entries,omitempty"`
 }
+
+type IsolationGroupState int
+
+const (
+	IsolationGroupStateInvalid IsolationGroupState = iota
+	IsolationGroupStateHealthy
+	IsolationGroupStateDrained
+)
+
+type IsolationGroupPartition struct {
+	Name  string
+	State IsolationGroupState
+}
+
+// IsolationGroupConfiguration is an internal representation of a set of
+// isolation-groups as a mapping and may refer to either globally or per-domain (or both) configurations.
+// and their statuses. It's redundantly indexed by IsolationGroup name to simplify lookups.
+//
+// For example: This might be a global configuration persisted
+// in the config store and look like this:
+//
+//	IsolationGroupConfiguration{
+//	  "isolationGroup1234": {Name: "isolationGroup1234", Status: IsolationGroupStatusDrained},
+//	}
+//
+// Indicating that task processing isn't to occur within this isolationGroup anymore, but all others are ok.
+type IsolationGroupConfiguration map[string]IsolationGroupPartition
+
+type GetGlobalIsolationGroupsRequest struct{}
+
+type GetGlobalIsolationGroupsResponse struct {
+	IsolationGroups IsolationGroupConfiguration
+}
+
+type UpdateGlobalIsolationGroupsRequest struct {
+	IsolationGroups IsolationGroupConfiguration
+}
+
+type UpdateGlobalIsolationGroupsResponse struct{}
+
+type GetDomainIsolationGroupsRequest struct {
+	Domain string
+}
+
+type GetDomainIsolationGroupsResponse struct {
+	IsolationGroups IsolationGroupConfiguration
+}
+
+type UpdateDomainIsolationGroupsRequest struct {
+	Domain          string
+	IsolationGroups IsolationGroupConfiguration
+}
+
+type UpdateDomainIsolationGroupsResponse struct{}
