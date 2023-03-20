@@ -89,6 +89,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 	ctx context.Context,
 	task *persistence.TransferTaskInfo,
 	activityScheduleToStartTimeout int32,
+	partitionConfig map[string]string,
 ) error {
 
 	ctx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -108,6 +109,7 @@ func (t *transferTaskExecutorBase) pushActivity(
 		TaskList:                      &types.TaskList{Name: task.TaskList},
 		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityScheduleToStartTimeout),
+		PartitionConfig:               partitionConfig,
 	})
 }
 
@@ -116,6 +118,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 	task *persistence.TransferTaskInfo,
 	tasklist *types.TaskList,
 	decisionScheduleToStartTimeout int32,
+	partitionConfig map[string]string,
 ) error {
 
 	ctx, cancel := context.WithTimeout(ctx, taskRPCCallTimeout)
@@ -134,6 +137,7 @@ func (t *transferTaskExecutorBase) pushDecision(
 		TaskList:                      tasklist,
 		ScheduleID:                    task.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(decisionScheduleToStartTimeout),
+		PartitionConfig:               partitionConfig,
 	})
 }
 

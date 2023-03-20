@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -893,7 +894,7 @@ UpdateWorkflowLoop:
 		}
 
 		if signalWithStartRequest != nil {
-			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest, signalWithStartRequest.PartitionConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -1157,10 +1158,16 @@ func (e *historyEngineImpl) QueryWorkflow(
 ) (retResp *types.HistoryQueryWorkflowResponse, retErr error) {
 
 	scope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.DomainTag(request.GetRequest().GetDomain()))
+	shardMetricScope := e.metricsClient.Scope(metrics.HistoryQueryWorkflowScope).Tagged(metrics.ShardIDTag(strconv.Itoa(e.shard.GetShardID())))
 
 	consistentQueryEnabled := e.config.EnableConsistentQuery() && e.config.EnableConsistentQueryByDomain(request.GetRequest().GetDomain())
-	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong && !consistentQueryEnabled {
-		return nil, workflow.ErrConsistentQueryNotEnabled
+	if request.GetRequest().GetQueryConsistencyLevel() == types.QueryConsistencyLevelStrong {
+		if !consistentQueryEnabled {
+			return nil, workflow.ErrConsistentQueryNotEnabled
+		}
+		scope.IncCounter(metrics.ConsistentQueryPerShard)
+		shardMetricScope.IncCounter(metrics.ConsistentQueryPerShard)
+		e.logger.SampleInfo("History QueryWorkflow called with QueryConsistencyLevelStrong", e.config.SampleLoggingRate(), tag.WorkflowID(request.GetRequest().Execution.WorkflowID), tag.WorkflowDomainName(request.GetRequest().Domain))
 	}
 
 	execution := *request.GetRequest().GetExecution()
@@ -1629,6 +1636,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			IsCron:           len(executionInfo.CronSchedule) > 0,
 			UpdateTime:       common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
 			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
+			PartitionConfig:  executionInfo.PartitionConfig,
 		},
 	}
 
@@ -2592,7 +2600,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	}
 
 	// Start workflow and signal
-	startRequest, err := getStartRequest(domainID, sRequest)
+	startRequest, err := getStartRequest(domainID, sRequest, signalWithStartRequest.PartitionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -3267,6 +3275,7 @@ func getScheduleID(
 func getStartRequest(
 	domainID string,
 	request *types.SignalWithStartWorkflowExecutionRequest,
+	partitionConfig map[string]string,
 ) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
 	req := &types.StartWorkflowExecutionRequest{
@@ -3289,7 +3298,7 @@ func getStartRequest(
 		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
-	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
+	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now(), partitionConfig)
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(

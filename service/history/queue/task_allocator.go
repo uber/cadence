@@ -196,10 +196,7 @@ func (t *taskAllocatorImpl) Unlock() {
 func isDomainNotRegistered(shard shard.Context, domainID string) (bool, error) {
 	domainEntry, err := shard.GetDomainCache().GetDomainByID(domainID)
 	if err != nil {
-		if _, ok := err.(*types.EntityNotExistsError); ok {
-			return true, nil
-		}
-		// unexpected error in finding a domain
+		// error in finding a domain
 		return false, err
 	}
 	info := domainEntry.GetInfo()
