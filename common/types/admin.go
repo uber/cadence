@@ -404,13 +404,16 @@ type UpdateGlobalIsolationGroupsRequest struct {
 
 type UpdateGlobalIsolationGroupsResponse struct{}
 
-type GetDomainIsolationGroupsRequest struct{}
+type GetDomainIsolationGroupsRequest struct {
+	Domain string
+}
 
 type GetDomainIsolationGroupsResponse struct {
 	IsolationGroups IsolationGroupConfiguration
 }
 
 type UpdateDomainIsolationGroupsRequest struct {
+	Domain          string
 	IsolationGroups IsolationGroupConfiguration
 }
 

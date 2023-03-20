@@ -21,6 +21,7 @@
 package proto
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -204,5 +205,321 @@ func TestAdminRespondCrossClusterTasksCompletedRequest(t *testing.T) {
 func TestAdminRespondCrossClusterTasksCompletedResponse(t *testing.T) {
 	for _, item := range []*types.RespondCrossClusterTasksCompletedResponse{nil, {}, &testdata.AdminRespondCrossClusterTasksCompletedResponse} {
 		assert.Equal(t, item, ToAdminRespondCrossClusterTasksCompletedResponse(FromAdminRespondCrossClusterTasksCompletedResponse(item)))
+	}
+}
+
+func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.GetGlobalIsolationGroupsResponse
+		expected *adminv1.GetGlobalIsolationGroupsResponse
+	}{
+		"Valid mapping": {
+			in: &types.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: types.IsolationGroupConfiguration{
+					"zone 0": {
+						Name:  "zone 0",
+						State: types.IsolationGroupStateHealthy,
+					},
+					"zone 1": {
+						Name:  "zone 1",
+						State: types.IsolationGroupStateDrained,
+					},
+				},
+			},
+			expected: &adminv1.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: &adminv1.IsolationGroupConfiguration{
+					IsolationGroups: []*adminv1.IsolationGroupPartition{
+						{
+							Name:  "zone 0",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+						},
+						{
+							Name:  "zone 1",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+						},
+					},
+				},
+			},
+		},
+		"nil - 1": {
+			in: &types.GetGlobalIsolationGroupsResponse{},
+			expected: &adminv1.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: &adminv1.IsolationGroupConfiguration{
+					IsolationGroups: nil,
+				},
+			},
+		},
+		"nil - 2": {
+			expected: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			res := FromGetGlobalIsolationGroupsResponse(td.in)
+			if res != nil && res.IsolationGroups != nil {
+				sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
+					return res.IsolationGroups.IsolationGroups[i].Name < res.IsolationGroups.IsolationGroups[j].Name
+				})
+			}
+			assert.Equal(t, td.expected, res)
+		})
+	}
+}
+
+func TestToGetGlobalIsolationGroupsRequest(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *adminv1.GetGlobalIsolationGroupsRequest
+		expected *types.GetGlobalIsolationGroupsRequest
+	}{
+		"Valid mapping": {
+			in:       &adminv1.GetGlobalIsolationGroupsRequest{},
+			expected: &types.GetGlobalIsolationGroupsRequest{},
+		},
+		"nil - 2": {
+			in:       &adminv1.GetGlobalIsolationGroupsRequest{},
+			expected: &types.GetGlobalIsolationGroupsRequest{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToGetGlobalIsolationGroupsRequest(td.in))
+		})
+	}
+}
+
+func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
+	tests := map[string]struct {
+		in       *types.GetDomainIsolationGroupsResponse
+		expected *adminv1.GetDomainIsolationGroupsResponse
+	}{
+		"Valid mapping": {
+			in: &types.GetDomainIsolationGroupsResponse{
+				IsolationGroups: types.IsolationGroupConfiguration{
+					"zone 0": {
+						Name:  "zone 0",
+						State: types.IsolationGroupStateHealthy,
+					},
+					"zone 1": {
+						Name:  "zone 1",
+						State: types.IsolationGroupStateDrained,
+					},
+				},
+			},
+			expected: &adminv1.GetDomainIsolationGroupsResponse{
+				IsolationGroups: &adminv1.IsolationGroupConfiguration{
+					IsolationGroups: []*adminv1.IsolationGroupPartition{
+						{
+							Name:  "zone 0",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+						},
+						{
+							Name:  "zone 1",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+						},
+					},
+				},
+			},
+		},
+		"empty": {
+			in: &types.GetDomainIsolationGroupsResponse{
+				IsolationGroups: types.IsolationGroupConfiguration{},
+			},
+			expected: &adminv1.GetDomainIsolationGroupsResponse{
+				IsolationGroups: &adminv1.IsolationGroupConfiguration{
+					IsolationGroups: []*adminv1.IsolationGroupPartition{},
+				},
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			res := FromGetDomainIsolationGroupsResponse(td.in)
+			// map iteration is nondeterministic
+			sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
+				return res.IsolationGroups.IsolationGroups[i].Name > res.IsolationGroups.IsolationGroups[j].Name
+			})
+		})
+	}
+}
+
+func TestToGetDomainIsolationGroupsRequest(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *adminv1.GetDomainIsolationGroupsRequest
+		expected *types.GetDomainIsolationGroupsRequest
+	}{
+		"Valid mapping": {
+			in: &adminv1.GetDomainIsolationGroupsRequest{
+				Domain: "domain123",
+			},
+			expected: &types.GetDomainIsolationGroupsRequest{
+				Domain: "domain123",
+			},
+		},
+		"empty": {
+			in:       &adminv1.GetDomainIsolationGroupsRequest{},
+			expected: &types.GetDomainIsolationGroupsRequest{},
+		},
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToGetDomainIsolationGroupsRequest(td.in))
+		})
+	}
+}
+
+func TestFromUpdateGlobalIsolationGroupsResponse(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *types.UpdateGlobalIsolationGroupsResponse
+		expected *adminv1.UpdateGlobalIsolationGroupsResponse
+	}{
+		"Valid mapping": {},
+		"empty": {
+			in:       &types.UpdateGlobalIsolationGroupsResponse{},
+			expected: &adminv1.UpdateGlobalIsolationGroupsResponse{},
+		},
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromUpdateGlobalIsolationGroupsResponse(td.in))
+		})
+	}
+}
+
+func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *adminv1.UpdateGlobalIsolationGroupsRequest
+		expected *types.UpdateGlobalIsolationGroupsRequest
+	}{
+		"Valid mapping": {
+			in: &adminv1.UpdateGlobalIsolationGroupsRequest{
+				IsolationGroups: &adminv1.IsolationGroupConfiguration{
+					IsolationGroups: []*adminv1.IsolationGroupPartition{
+						{
+							Name:  "zone 1",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+						},
+						{
+							Name:  "zone 2",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+						},
+					},
+				},
+			},
+			expected: &types.UpdateGlobalIsolationGroupsRequest{
+				IsolationGroups: types.IsolationGroupConfiguration{
+					"zone 1": types.IsolationGroupPartition{
+						Name:  "zone 1",
+						State: types.IsolationGroupStateHealthy,
+					},
+					"zone 2": types.IsolationGroupPartition{
+						Name:  "zone 2",
+						State: types.IsolationGroupStateDrained,
+					},
+				},
+			},
+		},
+		"empty": {
+			in:       &adminv1.UpdateGlobalIsolationGroupsRequest{},
+			expected: &types.UpdateGlobalIsolationGroupsRequest{},
+		},
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToUpdateGlobalIsolationGroupsRequest(td.in))
+		})
+	}
+}
+
+func TestFromUpdateDomainIsolationGroupsResponse(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *types.UpdateDomainIsolationGroupsResponse
+		expected *adminv1.UpdateDomainIsolationGroupsResponse
+	}{
+		"empty": {
+			in:       &types.UpdateDomainIsolationGroupsResponse{},
+			expected: &adminv1.UpdateDomainIsolationGroupsResponse{},
+		},
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, FromUpdateDomainIsolationGroupsResponse(td.in))
+		})
+	}
+}
+
+func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *adminv1.UpdateDomainIsolationGroupsRequest
+		expected *types.UpdateDomainIsolationGroupsRequest
+	}{
+		"valid": {
+			in: &adminv1.UpdateDomainIsolationGroupsRequest{
+				Domain: "test-domain",
+				IsolationGroups: &adminv1.IsolationGroupConfiguration{
+					IsolationGroups: []*adminv1.IsolationGroupPartition{
+						{
+							Name:  "zone-1",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+						},
+						{
+							Name:  "zone-2",
+							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+						},
+					},
+				},
+			},
+			expected: &types.UpdateDomainIsolationGroupsRequest{
+				Domain: "test-domain",
+				IsolationGroups: types.IsolationGroupConfiguration{
+					"zone-1": types.IsolationGroupPartition{
+						Name:  "zone-1",
+						State: types.IsolationGroupStateHealthy,
+					},
+					"zone-2": types.IsolationGroupPartition{
+						Name:  "zone-2",
+						State: types.IsolationGroupStateDrained,
+					},
+				},
+			},
+		},
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToUpdateDomainIsolationGroupsRequest(td.in))
+		})
 	}
 }
