@@ -39,7 +39,7 @@ func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Clie
 		shardIDStr := strconv.Itoa(shardID)
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
 		if blobSize > int64(config.LargeShardHistoryBlobMetricThreshold()) {
-			logger.SampleInfo("Workflow writing a large blob", config.SampleLoggingRate(), tag.WorkflowDomainName(domainName),
+			logger.SampleInfo("Workflow writing a large blob", 1, tag.WorkflowDomainName(domainName),
 				tag.WorkflowRunID(workflowID), tag.ShardID(shardID))
 			metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
 		}
