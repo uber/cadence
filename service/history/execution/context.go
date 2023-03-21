@@ -853,7 +853,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		resp.MutableStateUpdateSessionStats,
 	)
 	emitLargeWorkflowShardIDStats(c.logger, c.metricsClient, c.shard.GetConfig(), c.shard.GetShardID(), domainName, c.workflowExecution.WorkflowID,
-		currentWorkflowSize, currentWorkflowHistoryCount, oldWorkflowSize, oldWorkflowHistoryCount, currentWorkflowHistoryCount-oldWorkflowHistoryCount)
+		currentWorkflowSize, currentWorkflowHistoryCount, oldWorkflowSize, oldWorkflowHistoryCount, currentWorkflowSize-oldWorkflowSize)
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, err := c.mutableState.GetCompletionEvent(ctx); err == nil {
