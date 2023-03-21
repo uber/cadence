@@ -35,6 +35,7 @@ import (
 
 func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Client, config *config.Config, shardID int,
 	domainName string, workflowID string, newHistorySize int64, newHistoryCount int64, oldHistorySize int64, oldHistoryCount int64, blobSize int64) {
+	logger.Info("WE CAN SEE THIS")
 	if config.EnableShardIDMetrics() {
 		shardIDStr := strconv.Itoa(shardID)
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
