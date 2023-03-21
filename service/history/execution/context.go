@@ -720,10 +720,11 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		return err
 	}
 	var persistedBlobs events.PersistedBlobs
-	currentWorkflowSize := c.GetHistorySize()
-	currentWorkflowHistorySize := c.mutableState.GetNextEventID() - 1
+	currentWorkflowSize, oldWorkflowSize := c.GetHistorySize(), c.GetHistorySize()
+	currentWorkflowHistoryCount, oldWorkflowHistoryCount := c.mutableState.GetNextEventID()-1, c.mutableState.GetNextEventID()-1
 	for _, workflowEvents := range currentWorkflowEventsSeq {
 		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
+		oldWorkflowHistorySize += int64(len(workflowEvents.Events))
 		if err != nil {
 			return err
 		}
@@ -852,7 +853,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		resp.MutableStateUpdateSessionStats,
 	)
 	emitLargeWorkflowShardIDStats(c.logger, c.metricsClient, c.shard.GetConfig(), c.shard.GetShardID(), domainName, c.workflowExecution.WorkflowID,
-		c.stats.HistorySize, c.mutableState.GetNextEventID()-1, currentWorkflowSize, currentWorkflowHistorySize, c.stats.HistorySize-currentWorkflowSize)
+		currentWorkflowSize, currentWorkflowHistoryCount, oldWorkflowSize, oldWorkflowHistoryCount, currentWorkflowHistoryCount-oldWorkflowHistoryCount)
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, err := c.mutableState.GetCompletionEvent(ctx); err == nil {

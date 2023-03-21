@@ -34,9 +34,9 @@ import (
 )
 
 func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Client, config *config.Config, shardID int,
-	domainName string, workflowID string, newHistorySize int64, newHistoryCount int64, oldHistorySize int64, oldHistoryCount int64, blobSize int64) {
+	domainName string, workflowID string, currentHistorySize int64, currentHistoryCount int64, oldHistorySize int64, oldHistoryCount int64, blobSize int64) {
 	if domainName == "cadence-killers-staging" {
-		logger.Info("INFORMATION DUMP", tag.Dynamic("newHistorySize", newHistorySize), tag.Dynamic("newHistoryCount", newHistoryCount),
+		logger.Info("INFORMATION DUMP", tag.Dynamic("currentHistorySize", currentHistorySize), tag.Dynamic("currentHistoryCount", currentHistoryCount),
 			tag.Dynamic("oldHistorySize", oldHistorySize), tag.Dynamic("oldHistoryCount", oldHistoryCount), tag.Dynamic("blobSize", blobSize))
 	}
 	if config.EnableShardIDMetrics() {
@@ -48,13 +48,13 @@ func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Clie
 			metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
 		}
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
-		if oldHistoryCount < int64(config.LargeShardHistoryEventMetricThreshold()) && newHistoryCount >= int64(config.LargeShardHistoryEventMetricThreshold()) {
+		if oldHistoryCount < int64(config.LargeShardHistoryEventMetricThreshold()) && currentHistoryCount >= int64(config.LargeShardHistoryEventMetricThreshold()) {
 			logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(domainName),
 				tag.WorkflowRunID(workflowID), tag.ShardID(shardID))
 			metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
 		}
 		// check if the new history size is greater than our threshold and only count/log it once when it passes it
-		if oldHistorySize < int64(config.LargeShardHistorySizeMetricThreshold()) && newHistorySize >= int64(config.LargeShardHistorySizeMetricThreshold()) {
+		if oldHistorySize < int64(config.LargeShardHistorySizeMetricThreshold()) && currentHistorySize >= int64(config.LargeShardHistorySizeMetricThreshold()) {
 			logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(domainName),
 				tag.WorkflowRunID(workflowID), tag.ShardID(shardID))
 			metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistorySizeCount)
