@@ -32,9 +32,9 @@ import (
 
 // Config is the base configuration for the partitioning library
 type Config struct {
-	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
-	allIsolationGroups                []string
+	ZonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	ZonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	AllIsolationGroups                []string
 }
 
 type Partitioner interface {
@@ -42,8 +42,4 @@ type Partitioner interface {
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
 	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*string, error)
-	// IsDrained answers the question - "is this particular isolationGroup drained?". Used by startWorkflow calls
-	// and similar sync frontend calls to make routing decisions
-	IsDrained(ctx context.Context, Domain string, IsolationGroup string) (bool, error)
-	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup string) (bool, error)
 }

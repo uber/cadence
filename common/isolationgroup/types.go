@@ -27,20 +27,20 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-// IsolationGroups is a convenience return type of a collection of IsolationGroup configurations
-type IsolationGroups struct {
-	Global types.IsolationGroupConfiguration
-	Domain types.IsolationGroupConfiguration
-}
-
 type ChangeEvent struct {
-	changed types.IsolationGroupConfiguration
+	Changed types.IsolationGroupConfiguration
 }
 
 // Config is the base configuration
 type Config struct {
-	zonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	zonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	ZonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	ZonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
 	UpdateFrequency                   dynamicconfig.IntPropertyFn
-	allIsolationGroups                []string
+	AllIsolationGroups                []string
+}
+
+// IsolationGroups is an internal convenience return type of a collection of IsolationGroup configurations
+type isolationGroups struct {
+	Global types.IsolationGroupConfiguration
+	Domain types.IsolationGroupConfiguration
 }

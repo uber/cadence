@@ -71,76 +71,18 @@ func NewDefaultPartitioner(
 	}
 }
 
-func (r *defaultPartitioner) IsDrained(ctx context.Context, domain string, isolationGroup string) (bool, error) {
-	state, err := r.isolationGroupState.Get(ctx, domain)
-	if err != nil {
-		return false, fmt.Errorf("could not determine if drained: %w", err)
-	}
-	return isDrained(isolationGroup, state.Global, state.Domain), nil
-}
-
-func (r *defaultPartitioner) IsDrainedByDomainID(ctx context.Context, domainID string, isolationGroup string) (bool, error) {
-	domain, err := r.domainCache.GetDomainByID(domainID)
-	if err != nil {
-		return false, fmt.Errorf("could not determine if drained: %w", err)
-	}
-	return r.IsDrained(ctx, domain.GetInfo().Name, isolationGroup)
-}
-
 func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
-	if !r.config.zonalPartitioningEnabledGlobally(domainID) {
+	if !r.config.ZonalPartitioningEnabledGlobally(domainID) {
 		return nil, nil
 	}
 
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
-	state, err := r.isolationGroupState.GetByDomainID(ctx, domainID)
+	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get isolation group state: %w", err)
+		return nil, fmt.Errorf("failed to get available isolation groups: %w", err)
 	}
-	available := availableIG(r.config.allIsolationGroups, state.Global, state.Domain)
-
 	ig := pickIsolationGroup(wfPartition, available)
 	return &ig, nil
-}
-
-func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
-	globalCfg, hasGlobalConfig := global[string(isolationGroup)]
-	domainCfg, hasDomainConfig := domain[string(isolationGroup)]
-	if hasGlobalConfig {
-		if globalCfg.State == types.IsolationGroupStateDrained {
-			return true
-		}
-	}
-	if hasDomainConfig {
-		if domainCfg.State == types.IsolationGroupStateDrained {
-			return true
-		}
-	}
-	return false
-}
-
-// A simple explicit deny-based isolation group implementation
-func availableIG(allIsolationGroups []string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) types.IsolationGroupConfiguration {
-	out := types.IsolationGroupConfiguration{}
-	for _, isolationGroup := range allIsolationGroups {
-		globalCfg, hasGlobalConfig := global[string(isolationGroup)]
-		domainCfg, hasDomainConfig := domain[string(isolationGroup)]
-		if hasGlobalConfig {
-			if globalCfg.State == types.IsolationGroupStateDrained {
-				continue
-			}
-		}
-		if hasDomainConfig {
-			if domainCfg.State == types.IsolationGroupStateDrained {
-				continue
-			}
-		}
-		out[isolationGroup] = types.IsolationGroupPartition{
-			Name:  isolationGroup,
-			State: types.IsolationGroupStateHealthy,
-		}
-	}
-	return out
 }
 
 func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultWorkflowPartitionConfig {

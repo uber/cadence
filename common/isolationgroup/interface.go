@@ -67,9 +67,14 @@ type Controller interface {
 // depending on the implementation.
 type State interface {
 	common.Daemon
+	// IsDrained answers the question - "is this particular isolationGroup drained?". Used by startWorkflow calls
+	// and similar sync frontend calls to make routing decisions
+	IsDrained(ctx context.Context, Domain string, IsolationGroup string) (bool, error)
+	IsDrainedByDomainID(ctx context.Context, DomainID string, IsolationGroup string) (bool, error)
 
-	Get(ctx context.Context, domain string) (*IsolationGroups, error)
-	GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error)
+	// AvailableIsolationGroupsByDomainID returns the available isolation zones for a domain.
+	// Takes into account global and domain zones
+	AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string) (types.IsolationGroupConfiguration, error)
 
 	Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error
 	Unsubscribe(domainID, key string) error

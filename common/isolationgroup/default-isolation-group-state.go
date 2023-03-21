@@ -45,7 +45,7 @@ type defaultIsolationGroupStateHandler struct {
 	config                     Config
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
-	lastSeen                   *IsolationGroups
+	lastSeen                   *isolationGroups
 	updateCB                   func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
 	// for notifying when there's a state change
@@ -70,48 +70,43 @@ func NewDefaultIsolationGroupStateWatcher(
 	}
 }
 
-func (z *defaultIsolationGroupStateHandler) GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error) {
+func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string) (types.IsolationGroupConfiguration, error) {
+	state, err := z.getByDomainID(ctx, domainID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get isolation group state: %w", err)
+	}
+	return availableIG(z.config.AllIsolationGroups, state.Global, state.Domain), nil
+}
+
+func (z *defaultIsolationGroupStateHandler) IsDrained(ctx context.Context, domain string, isolationGroup string) (bool, error) {
+	state, err := z.get(ctx, domain)
+	if err != nil {
+		return false, fmt.Errorf("could not determine if drained: %w", err)
+	}
+	return isDrained(isolationGroup, state.Global, state.Domain), nil
+}
+
+func (z *defaultIsolationGroupStateHandler) IsDrainedByDomainID(ctx context.Context, domainID string, isolationGroup string) (bool, error) {
 	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
-		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
+		return false, fmt.Errorf("could not determine if drained: %w", err)
 	}
-	return z.Get(ctx, domain.GetInfo().Name)
+	return z.IsDrained(ctx, domain.GetInfo().Name, isolationGroup)
 }
 
-// Get the statue of a isolationGroup, with respect to both domain and global drains. Domain-specific drains override global config
-// will return nil, nil when it is not enabled
-func (z *defaultIsolationGroupStateHandler) Get(ctx context.Context, domain string) (*IsolationGroups, error) {
-	if !z.config.zonalPartitioningEnabledForDomain(domain) {
-		return nil, nil
+// Start the state handler
+func (z *defaultIsolationGroupStateHandler) Start() {
+	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
 	}
-
-	domainData, err := z.domainCache.GetDomain(domain)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
-	}
-	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.FetchConfig(ctx, persistence.GlobalIsolationGroupConfig)
-
-	globalState, err := fromCfgStore(globalCfg)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
-	}
-
-	ig := &IsolationGroups{
-		Global: globalState,
-		Domain: domainState,
-	}
-
-	return ig, nil
+	go z.updateCB()
 }
 
-func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
-	// todo (david.porter)
-	// check new values against existing cached ones
-	// get the difference
-	// if any difference, notify subscribers for whom the change is applicable
-	// ie, global changes for all, domain changes for the domain-listeners
-	panic("not implemented")
+func (z *defaultIsolationGroupStateHandler) Stop() {
+	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+	close(z.done)
 }
 
 func (z *defaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error {
@@ -129,6 +124,50 @@ func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) er
 	return nil
 }
 
+func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, domainID string) (*isolationGroups, error) {
+	domain, err := z.domainCache.GetDomainByID(domainID)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
+	}
+	return z.get(ctx, domain.GetInfo().Name)
+}
+
+// Get the statue of a isolationGroup, with respect to both domain and global drains. Domain-specific drains override global config
+// will return nil, nil when it is not enabled
+func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain string) (*isolationGroups, error) {
+	if !z.config.ZonalPartitioningEnabledForDomain(domain) {
+		return nil, nil
+	}
+
+	domainData, err := z.domainCache.GetDomain(domain)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
+	}
+	domainState := domainData.GetInfo().IsolationGroupConfig
+	globalCfg, err := z.globalIsolationGroupDrains.FetchConfig(ctx, persistence.GlobalIsolationGroupConfig)
+
+	globalState, err := fromCfgStore(globalCfg)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
+	}
+
+	ig := &isolationGroups{
+		Global: globalState,
+		Domain: domainState,
+	}
+
+	return ig, nil
+}
+
+func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
+	// todo (david.porter)
+	// check new values against existing cached ones
+	// get the difference
+	// if any difference, notify subscribers for whom the change is applicable
+	// ie, global changes for all, domain changes for the domain-listeners
+	panic("not implemented")
+}
+
 func (z *defaultIsolationGroupStateHandler) pollForChanges() {
 	ticker := time.NewTicker(time.Duration(z.config.UpdateFrequency()) * time.Second)
 	for {
@@ -141,19 +180,44 @@ func (z *defaultIsolationGroupStateHandler) pollForChanges() {
 	}
 }
 
-// Start the state handler
-func (z *defaultIsolationGroupStateHandler) Start() {
-	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
-		return
+func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
+	globalCfg, hasGlobalConfig := global[string(isolationGroup)]
+	domainCfg, hasDomainConfig := domain[string(isolationGroup)]
+	if hasGlobalConfig {
+		if globalCfg.State == types.IsolationGroupStateDrained {
+			return true
+		}
 	}
-	go z.updateCB()
+	if hasDomainConfig {
+		if domainCfg.State == types.IsolationGroupStateDrained {
+			return true
+		}
+	}
+	return false
 }
 
-func (z *defaultIsolationGroupStateHandler) Stop() {
-	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
-		return
+// A simple explicit deny-based isolation group implementation
+func availableIG(allIsolationGroups []string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) types.IsolationGroupConfiguration {
+	out := types.IsolationGroupConfiguration{}
+	for _, isolationGroup := range allIsolationGroups {
+		globalCfg, hasGlobalConfig := global[string(isolationGroup)]
+		domainCfg, hasDomainConfig := domain[string(isolationGroup)]
+		if hasGlobalConfig {
+			if globalCfg.State == types.IsolationGroupStateDrained {
+				continue
+			}
+		}
+		if hasDomainConfig {
+			if domainCfg.State == types.IsolationGroupStateDrained {
+				continue
+			}
+		}
+		out[isolationGroup] = types.IsolationGroupPartition{
+			Name:  isolationGroup,
+			State: types.IsolationGroupStateHealthy,
+		}
 	}
-	close(z.done)
+	return out
 }
 
 func fromCfgStore(in *persistence.InternalConfigStoreEntry) (types.IsolationGroupConfiguration, error) {

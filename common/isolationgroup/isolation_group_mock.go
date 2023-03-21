@@ -139,34 +139,49 @@ func (m *MockState) EXPECT() *MockStateMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method.
-func (m *MockState) Get(ctx context.Context, domain string) (*IsolationGroups, error) {
+// AvailableIsolationGroupsByDomainID mocks base method.
+func (m *MockState) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string) (types.IsolationGroupConfiguration, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, domain)
-	ret0, _ := ret[0].(*IsolationGroups)
+	ret := m.ctrl.Call(m, "AvailableIsolationGroupsByDomainID", ctx, domainID)
+	ret0, _ := ret[0].(types.IsolationGroupConfiguration)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockStateMockRecorder) Get(ctx, domain interface{}) *gomock.Call {
+// AvailableIsolationGroupsByDomainID indicates an expected call of AvailableIsolationGroupsByDomainID.
+func (mr *MockStateMockRecorder) AvailableIsolationGroupsByDomainID(ctx, domainID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockState)(nil).Get), ctx, domain)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableIsolationGroupsByDomainID", reflect.TypeOf((*MockState)(nil).AvailableIsolationGroupsByDomainID), ctx, domainID)
 }
 
-// GetByDomainID mocks base method.
-func (m *MockState) GetByDomainID(ctx context.Context, domainID string) (*IsolationGroups, error) {
+// IsDrained mocks base method.
+func (m *MockState) IsDrained(ctx context.Context, Domain, IsolationGroup string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByDomainID", ctx, domainID)
-	ret0, _ := ret[0].(*IsolationGroups)
+	ret := m.ctrl.Call(m, "IsDrained", ctx, Domain, IsolationGroup)
+	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetByDomainID indicates an expected call of GetByDomainID.
-func (mr *MockStateMockRecorder) GetByDomainID(ctx, domainID interface{}) *gomock.Call {
+// IsDrained indicates an expected call of IsDrained.
+func (mr *MockStateMockRecorder) IsDrained(ctx, Domain, IsolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByDomainID", reflect.TypeOf((*MockState)(nil).GetByDomainID), ctx, domainID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrained", reflect.TypeOf((*MockState)(nil).IsDrained), ctx, Domain, IsolationGroup)
+}
+
+// IsDrainedByDomainID mocks base method.
+func (m *MockState) IsDrainedByDomainID(ctx context.Context, DomainID, IsolationGroup string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDrainedByDomainID", ctx, DomainID, IsolationGroup)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsDrainedByDomainID indicates an expected call of IsDrainedByDomainID.
+func (mr *MockStateMockRecorder) IsDrainedByDomainID(ctx, DomainID, IsolationGroup interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrainedByDomainID", reflect.TypeOf((*MockState)(nil).IsDrainedByDomainID), ctx, DomainID, IsolationGroup)
 }
 
 // Start mocks base method.
