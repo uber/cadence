@@ -39,30 +39,19 @@ func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Clie
 		shardIDStr := strconv.Itoa(shardID)
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
 		if blobSize > int64(config.LargeShardHistoryBlobMetricThreshold()) {
-			if domainName == "cadence-killers-staging" {
-				logger.Info("INFORMATION DUMP BLOB", tag.Dynamic("currentHistorySize", currentHistorySize), tag.Dynamic("currentHistoryCount", currentHistoryCount),
-					tag.Dynamic("oldHistorySize", oldHistorySize), tag.Dynamic("oldHistoryCount", oldHistoryCount), tag.Dynamic("blobSize", blobSize))
-			}
-			logger.SampleInfo("Workflow writing a large blob", 1, tag.WorkflowDomainName(domainName),
+			logger.SampleInfo("Workflow writing a large blob", config.SampleLoggingRate(), tag.WorkflowDomainName(domainName),
 				tag.WorkflowID(workflowID), tag.ShardID(shardID))
 			metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
 		}
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
+		// this might sometimes double count if the workflow is extremely fast but should be ok to get a rough idea and identify bad actors
 		if oldHistoryCount < int64(config.LargeShardHistoryEventMetricThreshold()) && currentHistoryCount >= int64(config.LargeShardHistoryEventMetricThreshold()) {
-			if domainName == "cadence-killers-staging" {
-				logger.Info("INFORMATION DUMP COUNT", tag.Dynamic("currentHistorySize", currentHistorySize), tag.Dynamic("currentHistoryCount", currentHistoryCount),
-					tag.Dynamic("oldHistorySize", oldHistorySize), tag.Dynamic("oldHistoryCount", oldHistoryCount), tag.Dynamic("blobSize", blobSize))
-			}
 			logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(domainName),
 				tag.WorkflowID(workflowID), tag.ShardID(shardID))
 			metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
 		}
 		// check if the new history size is greater than our threshold and only count/log it once when it passes it
 		if oldHistorySize < int64(config.LargeShardHistorySizeMetricThreshold()) && currentHistorySize >= int64(config.LargeShardHistorySizeMetricThreshold()) {
-			if domainName == "cadence-killers-staging" {
-				logger.Info("INFORMATION DUMP SIZE", tag.Dynamic("currentHistorySize", currentHistorySize), tag.Dynamic("currentHistoryCount", currentHistoryCount),
-					tag.Dynamic("oldHistorySize", oldHistorySize), tag.Dynamic("oldHistoryCount", oldHistoryCount), tag.Dynamic("blobSize", blobSize))
-			}
 			logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(domainName),
 				tag.WorkflowID(workflowID), tag.ShardID(shardID))
 			metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistorySizeCount)
