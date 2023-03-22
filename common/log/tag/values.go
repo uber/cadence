@@ -132,6 +132,7 @@ var (
 	ComponentCrossClusterTaskFetcher    = component("cross-cluster-task-fetcher")
 	ComponentShardScanner               = component("shardscanner-scanner")
 	ComponentShardFixer                 = component("shardscanner-fixer")
+	ComponentPinotVisibilityManager     = component("pinot-visibility-manager")
 )
 
 // Pre-defined values for TagSysLifecycle
