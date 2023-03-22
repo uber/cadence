@@ -33,10 +33,9 @@ type ChangeEvent struct {
 
 // Config is the base configuration
 type Config struct {
-	ZonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	ZonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
-	UpdateFrequency                   dynamicconfig.IntPropertyFn
-	AllIsolationGroups                []string
+	IsolationGroupEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	UpdateFrequency                dynamicconfig.IntPropertyFn
+	AllIsolationGroups             []string
 }
 
 // IsolationGroups is an internal convenience return type of a collection of IsolationGroup configurations
