@@ -200,6 +200,8 @@ type (
 		NoSQL *NoSQL `yaml:"nosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
+		// Pinot contains the config for a Pinot datastore
+		Pinot *PinotVisibilityConfig `yaml:"pinot"`
 	}
 
 	// Cassandra contains configuration to connect to Cassandra cluster
