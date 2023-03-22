@@ -176,6 +176,7 @@ func New(
 		MessagingClient:   params.MessagingClient,
 		ESClient:          params.ESClient,
 		ESConfig:          params.ESConfig,
+		PinotConfig:       params.PinotConfig,
 	}, serviceConfig)
 	if err != nil {
 		return nil, err
