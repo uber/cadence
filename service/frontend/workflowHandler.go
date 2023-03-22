@@ -611,12 +611,14 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 
+	originZone := yarpc.CallFromContext(ctx).Header("origin-zone")
 	pollerID := uuid.New()
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID:  domainID,
-			PollerID:    pollerID,
-			PollRequest: pollRequest,
+			DomainUUID:     domainID,
+			PollerID:       pollerID,
+			PollRequest:    pollRequest,
+			IsolationGroup: originZone,
 		})
 		return err
 	}
@@ -727,12 +729,14 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	}
 
 	pollerID := uuid.New()
+	originZone := yarpc.CallFromContext(ctx).Header("origin-zone")
 	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
 		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
-			DomainUUID:  domainID,
-			PollerID:    pollerID,
-			PollRequest: pollRequest,
+			DomainUUID:     domainID,
+			PollerID:       pollerID,
+			PollRequest:    pollRequest,
+			IsolationGroup: originZone,
 		})
 		return err
 	}
@@ -2181,8 +2185,13 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 	}
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
+	originZone := yarpc.CallFromContext(ctx).Header("origin-zone")
+	partitionConfig := map[string]string{}
+	if originZone != "" {
+		partitionConfig["origin-zone"] = originZone
+	}
 	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
-		domainID, startRequest, time.Now(), nil)
+		domainID, startRequest, time.Now(), partitionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -2754,10 +2763,15 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
+	originZone := yarpc.CallFromContext(ctx).Header("origin-zone")
+	partitionConfig := map[string]string{}
+	if originZone != "" {
+		partitionConfig["origin-zone"] = originZone
+	}
 	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID:             domainID,
 		SignalWithStartRequest: signalWithStartRequest,
-		PartitionConfig:        nil,
+		PartitionConfig:        partitionConfig,
 	})
 	if err != nil {
 		return nil, wh.error(err, scope, tags...)

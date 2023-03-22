@@ -466,7 +466,8 @@ func (tm *TaskMatcher) getTaskC(task *InternalTask) chan<- *InternalTask {
 	// if we're not able to get an isolationGroup, send the task to the non-isolated channel
 	// so that it can be picked up by a random poller
 	taskC := tm.taskC
-	if isolatedTaskC, ok := tm.isolatedTaskC[task.isolationGroup]; ok && task.isolationGroup != "" {
+	isolationGroup := task.event.PartitionConfig["origin-zone"]
+	if isolatedTaskC, ok := tm.isolatedTaskC[isolationGroup]; ok && isolationGroup != "" {
 		taskC = isolatedTaskC
 	}
 	return taskC

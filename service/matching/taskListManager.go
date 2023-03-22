@@ -185,7 +185,12 @@ func newTaskListManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, nil)
+	isolationGroups := []string{}
+	if *taskListKind == types.TaskListKindNormal {
+		isolationGroups = append(isolationGroups, "dca8", "dca11", "dca18", "dca20", "dca22", "dca23", "dca24")
+		isolationGroups = append(isolationGroups, "phx2", "phx3", "phx4", "phx5", "phx6", "phx7")
+	}
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups)
 	tlMgr.startWG.Add(1)
 	return tlMgr, nil
 }
@@ -380,7 +385,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	var isolationGroup string
+	isolationGroup, _ := ctx.Value(_isolationGroupKey).(string)
+	if c.taskListKind == types.TaskListKindSticky {
+		isolationGroup = ""
+	}
 	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
