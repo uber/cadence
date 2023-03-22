@@ -72,7 +72,7 @@ func NewDefaultPartitioner(
 }
 
 func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
-	if !r.config.ZonalPartitioningEnabledGlobally(domainID) {
+	if !r.config.IsolationGroupEnabledGlobally(domainID) {
 		return nil, nil
 	}
 

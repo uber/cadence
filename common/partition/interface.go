@@ -32,9 +32,9 @@ import (
 
 // Config is the base configuration for the partitioning library
 type Config struct {
-	ZonalPartitioningEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
-	ZonalPartitioningEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
-	AllIsolationGroups                []string
+	IsolationGroupEnabledGlobally  dynamicconfig.BoolPropertyFnWithDomainIDFilter
+	IsolationGroupEnabledForDomain dynamicconfig.BoolPropertyFnWithDomainFilter
+	AllIsolationGroups             []string
 }
 
 type Partitioner interface {
