@@ -54,14 +54,6 @@ import (
 
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination isolation_group_mock.go -self_package github.com/uber/cadence/common/isolationgroup
 
-// Controller is for handling the CRUD operations of isolation groups
-type Controller interface {
-	GetClusterDrains(ctx context.Context) (types.IsolationGroupConfiguration, error)
-	SetClusterDrains(ctx context.Context, partition types.IsolationGroupPartition) error
-	GetDomainDrains(ctx context.Context) (types.IsolationGroupConfiguration, error)
-	SetDomainDrains(ctx context.Context, partition types.IsolationGroupPartition) error
-}
-
 // State is a heavily cached in-memory library for returning the state of what zones are healthy or
 // drained presently. It may return an inclusive (allow-list based) or an exclusive (deny-list based) set of IsolationGroups
 // depending on the implementation.
