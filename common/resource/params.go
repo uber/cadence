@@ -75,5 +75,6 @@ type (
 		IsolationGroupStore      configstore.Client       // This can be nil, the default config store will be created if so
 		IsolationGroupState      isolationgroup.State     // This can be nil, the default state store will be chosen if so
 		Partitioner              partition.Partitioner
+		PinotConfig              *config.PinotVisibilityConfig
 	}
 )

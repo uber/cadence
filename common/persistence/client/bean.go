@@ -85,6 +85,7 @@ type (
 		MessagingClient   messaging.Client
 		ESClient          es.GenericClient
 		ESConfig          *config.ElasticSearchConfig
+		PinotConfig       *config.PinotVisibilityConfig
 	}
 )
 
