@@ -98,16 +98,13 @@ func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultW
 // drain.
 func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) string {
 	wfIG, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
-	if isAvailable && wfIG.State != types.IsolationGroupStateDrained {
+	if isAvailable {
 		return wfPartition.WorkflowStartIsolationGroup
 	}
 
 	// it's drained, fall back to picking a deterministic but random group
 	availableList := []string{}
 	for k, v := range available {
-		if v.State == types.IsolationGroupStateDrained {
-			continue
-		}
 		availableList = append(availableList, k)
 	}
 	// sort the slice to ensure it's deterministic
