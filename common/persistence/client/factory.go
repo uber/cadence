@@ -21,7 +21,12 @@
 package client
 
 import (
+	"fmt"
 	"sync"
+
+	"github.com/startreedata/pinot-client-go/pinot"
+
+	pinotVisibility "github.com/uber/cadence/common/persistence/Pinot"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
@@ -265,7 +270,7 @@ func (f *factoryImpl) NewVisibilityManager(
 		// No need to create visibility manager as no read/write needed
 		return nil, nil
 	}
-	var visibilityFromDB, visibilityFromES p.VisibilityManager
+	var visibilityFromDB, visibilityFromES, visibilityFromPinot p.VisibilityManager
 	var err error
 	if params.PersistenceConfig.VisibilityStore != "" {
 		visibilityFromDB, err = f.newDBVisibilityManager(resourceConfig)
@@ -273,7 +278,28 @@ func (f *factoryImpl) NewVisibilityManager(
 			return nil, err
 		}
 	}
-	if params.PersistenceConfig.AdvancedVisibilityStore != "" {
+	if params.PersistenceConfig.AdvancedVisibilityStore == "pinot-visibility" {
+		visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
+		if err != nil {
+			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
+		}
+
+		pinotZookeeper := params.PinotConfig.BrokerURL
+		pinotCluster := params.PinotConfig.Cluster
+		pinotClient, err := pinot.NewFromZookeeper([]string{fmt.Sprint(pinotZookeeper)}, "", pinotCluster)
+		if err != nil {
+			f.logger.Fatal("Creating Pinot visibility client failed", tag.Error(err))
+		}
+		visibilityFromPinot = newPinotVisibilityManager(
+			pinotClient, resourceConfig, visibilityProducer, f.logger)
+		return p.NewPinotVisibilityDualManager(
+			visibilityFromDB,
+			visibilityFromPinot,
+			resourceConfig.EnableReadVisibilityFromPinot,
+			resourceConfig.AdvancedVisibilityWritingMode,
+			f.logger,
+		), nil
+	} else if params.PersistenceConfig.AdvancedVisibilityStore == "es-visibility" {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
 		visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
 		if err != nil {
@@ -290,6 +316,27 @@ func (f *factoryImpl) NewVisibilityManager(
 		resourceConfig.AdvancedVisibilityWritingMode,
 		f.logger,
 	), nil
+}
+
+// NewESVisibilityManager create a visibility manager for ElasticSearch
+// In history, it only needs kafka producer for writing data;
+// In frontend, it only needs ES client and related config for reading data
+func newPinotVisibilityManager(
+	pinotClient *pinot.Connection,
+	visibilityConfig *service.Config,
+	producer messaging.Producer,
+	log log.Logger,
+) p.VisibilityManager {
+	visibilityFromPinotStore := pinotVisibility.NewPinotVisibilityStore(pinotClient, visibilityConfig, producer, log)
+	visibilityFromPinot := p.NewVisibilityManagerImpl(visibilityFromPinotStore, log)
+
+	// wrap with rate limiter
+	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
+		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
+		visibilityFromPinot = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromPinot, esRateLimiter, log)
+	}
+
+	return visibilityFromPinot
 }
 
 // NewESVisibilityManager create a visibility manager for ElasticSearch

@@ -122,8 +122,10 @@ require (
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
+	github.com/startreedata/pinot-client-go v0.0.0-20230303070132-3b84c28a9e95 // indirect
 	github.com/uber-common/bark v1.2.1 // indirect
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
