@@ -23,12 +23,14 @@
 package pinotVisibility
 
 import (
-	"github.com/startreedata/pinot-client-go/pinot"
-	"github.com/stretchr/testify/assert"
-	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
+
+	"github.com/startreedata/pinot-client-go/pinot"
+	"github.com/stretchr/testify/assert"
+
+	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
