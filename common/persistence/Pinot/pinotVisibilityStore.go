@@ -66,7 +66,6 @@ const (
 type (
 	pinotVisibilityStore struct {
 		pinotClient *pinot.Connection
-		index       string
 		producer    messaging.Producer
 		logger      log.Logger
 		config      *service.Config
@@ -100,14 +99,12 @@ var _ p.VisibilityStore = (*pinotVisibilityStore)(nil)
 
 func NewPinotVisibilityStore(
 	pinotClient *pinot.Connection,
-	index string,
+	config *service.Config,
 	producer messaging.Producer,
 	logger log.Logger,
-	config *service.Config,
 ) p.VisibilityStore {
 	return &pinotVisibilityStore{
 		pinotClient: pinotClient,
-		index:       index,
 		producer:    producer,
 		logger:      logger.WithTags(tag.ComponentPinotVisibilityManager),
 		config:      config,
