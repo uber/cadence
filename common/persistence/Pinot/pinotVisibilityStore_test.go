@@ -285,7 +285,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	assert.Nil(t, badResult)
 
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime"}
-	hit := []interface{}{"wfid", "rid", "wftype", "domainid", 10, 10, 10, 1, 1, "encode", "tsklst", true, 1, 10}
+	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime}
 
 	result := *visibilityStore.convertSearchResultToVisibilityRecord(hit, columnName)
 
@@ -293,21 +293,21 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	assert.Equal(t, "rid", result.RunID)
 	assert.Equal(t, "wftype", result.WorkflowType)
 	assert.Equal(t, "domainid", result.DomainID)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.StartTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.ExecutionTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.CloseTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.StartTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.ExecutionTime)
+	assert.Equal(t, time.UnixMilli(testLatestTime), result.CloseTime)
 	assert.Equal(t, types.WorkflowExecutionCloseStatus(1), *result.Status)
 	assert.Equal(t, int64(1), result.HistoryLength)
 	assert.Equal(t, "tsklst", result.TaskList)
 	assert.Equal(t, true, result.IsCron)
 	assert.Equal(t, int16(1), result.NumClusters)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.UpdateTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.UpdateTime)
 }
 
 func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime"}
-	hit1 := []interface{}{"wfid1", "rid1", "wftype1", "domainid1", 10, 10, 10, 1, 1, "encode1", "tsklst1", true, 1, 10}
-	hit2 := []interface{}{"wfid2", "rid2", "wftype2", "domainid2", 10, 10, 10, 1, 1, "encode2", "tsklst2", false, 1, 10}
+	hit1 := []interface{}{"wfid1", "rid1", "wftype1", "domainid1", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode1", "tsklst1", true, 1, testEarliestTime}
+	hit2 := []interface{}{"wfid2", "rid2", "wftype2", "domainid2", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode2", "tsklst2", false, 1, testEarliestTime}
 
 	brokerResponse := &pinot.BrokerResponse{
 		AggregationResults: nil,
@@ -346,29 +346,29 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 	assert.Equal(t, "rid1", result.Executions[0].RunID)
 	assert.Equal(t, "wftype1", result.Executions[0].WorkflowType)
 	assert.Equal(t, "domainid1", result.Executions[0].DomainID)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[0].StartTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[0].ExecutionTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[0].CloseTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Executions[0].StartTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Executions[0].ExecutionTime)
+	assert.Equal(t, time.UnixMilli(testLatestTime), result.Executions[0].CloseTime)
 	assert.Equal(t, types.WorkflowExecutionCloseStatus(1), *result.Executions[0].Status)
 	assert.Equal(t, int64(1), result.Executions[0].HistoryLength)
 	assert.Equal(t, "tsklst1", result.Executions[0].TaskList)
 	assert.Equal(t, true, result.Executions[0].IsCron)
 	assert.Equal(t, int16(1), result.Executions[0].NumClusters)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[0].UpdateTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Executions[0].UpdateTime)
 
 	assert.Equal(t, "wfid2", result.Executions[1].WorkflowID)
 	assert.Equal(t, "rid2", result.Executions[1].RunID)
 	assert.Equal(t, "wftype2", result.Executions[1].WorkflowType)
 	assert.Equal(t, "domainid2", result.Executions[1].DomainID)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[1].StartTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[1].ExecutionTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[1].CloseTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Executions[1].StartTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Executions[1].ExecutionTime)
+	assert.Equal(t, time.UnixMilli(testLatestTime), result.Executions[1].CloseTime)
 	assert.Equal(t, types.WorkflowExecutionCloseStatus(1), *result.Executions[1].Status)
 	assert.Equal(t, int64(1), result.Executions[1].HistoryLength)
 	assert.Equal(t, "tsklst2", result.Executions[1].TaskList)
 	assert.Equal(t, false, result.Executions[1].IsCron)
 	assert.Equal(t, int16(1), result.Executions[1].NumClusters)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Executions[1].UpdateTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Executions[1].UpdateTime)
 
 	assert.Nil(t, err)
 
