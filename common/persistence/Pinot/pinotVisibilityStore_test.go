@@ -388,7 +388,7 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 
 func TestGetInternalGetClosedWorkflowExecutionResponse(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime"}
-	hit1 := []interface{}{"wfid1", "rid1", "wftype1", "domainid1", 10, 10, 10, 1, 1, "encode1", "tsklst1", true, 1, 10}
+	hit1 := []interface{}{"wfid1", "rid1", "wftype1", "domainid1", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode1", "tsklst1", true, 1, testEarliestTime}
 
 	brokerResponse := &pinot.BrokerResponse{
 		AggregationResults: nil,
@@ -425,15 +425,15 @@ func TestGetInternalGetClosedWorkflowExecutionResponse(t *testing.T) {
 	assert.Equal(t, "rid1", result.Execution.RunID)
 	assert.Equal(t, "wftype1", result.Execution.WorkflowType)
 	assert.Equal(t, "domainid1", result.Execution.DomainID)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Execution.StartTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Execution.ExecutionTime)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Execution.CloseTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Execution.StartTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Execution.ExecutionTime)
+	assert.Equal(t, time.UnixMilli(testLatestTime), result.Execution.CloseTime)
 	assert.Equal(t, types.WorkflowExecutionCloseStatus(1), *result.Execution.Status)
 	assert.Equal(t, int64(1), result.Execution.HistoryLength)
 	assert.Equal(t, "tsklst1", result.Execution.TaskList)
 	assert.Equal(t, true, result.Execution.IsCron)
 	assert.Equal(t, int16(1), result.Execution.NumClusters)
-	assert.Equal(t, time.Date(1969, time.December, 31, 16, 0, 0, 10000000, time.Local), result.Execution.UpdateTime)
+	assert.Equal(t, time.UnixMilli(testEarliestTime), result.Execution.UpdateTime)
 
 	assert.Nil(t, err)
 }
