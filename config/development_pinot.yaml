@@ -14,7 +14,7 @@ kafka:
   clusters:
     test:
       brokers:
-        - kafka:9093
+        - 127.0.0.1:9092
   topics:
     cadence-visibility-pinot:
       cluster: test
