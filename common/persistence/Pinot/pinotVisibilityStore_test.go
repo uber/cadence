@@ -44,7 +44,6 @@ var (
 
 	visibilityStore = pinotVisibilityStore{
 		pinotClient: nil,
-		index:       "",
 		producer:    nil,
 		logger:      nil,
 		config:      nil,
