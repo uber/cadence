@@ -20,14 +20,10 @@
 
 package config
 
-import (
-	"net/url"
-)
-
 // PinotVisibilityConfig for connecting to Pinot
 type (
 	PinotVisibilityConfig struct {
-		BrokerURL url.URL `yaml:"url"` //nolint:govet
-		Cluster   string  `yaml:"cluster"`
+		Cluster    string `yaml:"cluster"`    //nolint:govet
+		Controller string `yaml:"controller"` //nolint:govet
 	}
 )
