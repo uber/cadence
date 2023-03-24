@@ -30,7 +30,6 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-
 //go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination isolation_group_mock.go -self_package github.com/uber/cadence/common/isolationgroup
 
 // State is a heavily cached in-memory library for returning the state of what zones are healthy or

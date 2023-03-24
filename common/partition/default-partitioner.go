@@ -103,8 +103,8 @@ func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available ty
 	}
 
 	// it's drained, fall back to picking a deterministic but random group
-	availableList := []string{}
-	for k, _ := range available {
+	var availableList []string
+	for k := range available {
 		availableList = append(availableList, k)
 	}
 	// sort the slice to ensure it's deterministic
