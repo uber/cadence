@@ -135,7 +135,7 @@ func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, d
 // Get the statue of a isolationGroup, with respect to both domain and global drains. Domain-specific drains override global config
 // will return nil, nil when it is not enabled
 func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain string) (*isolationGroups, error) {
-	if !z.config.ZonalPartitioningEnabledForDomain(domain) {
+	if !z.config.IsolationGroupEnabled(domain) {
 		return nil, nil
 	}
 

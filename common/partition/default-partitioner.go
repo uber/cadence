@@ -72,7 +72,7 @@ func NewDefaultPartitioner(
 }
 
 func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
-	if !r.config.IsolationGroupEnabledGlobally(domainID) {
+	if !r.config.IsolationGroupEnabled(domainID) {
 		return nil, nil
 	}
 
@@ -97,14 +97,14 @@ func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultW
 // picks an isolation group to run in. if the workflow was started there, it'll attempt to pin it, unless there is an explicit
 // drain.
 func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) string {
-	wfIG, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
+	_, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
 	if isAvailable {
 		return wfPartition.WorkflowStartIsolationGroup
 	}
 
 	// it's drained, fall back to picking a deterministic but random group
 	availableList := []string{}
-	for k, v := range available {
+	for k, _ := range available {
 		availableList = append(availableList, k)
 	}
 	// sort the slice to ensure it's deterministic
