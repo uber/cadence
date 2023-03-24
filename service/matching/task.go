@@ -29,7 +29,7 @@ type (
 	// genericTaskInfo contains the info for an activity or decision task
 	genericTaskInfo struct {
 		*persistence.TaskInfo
-		completionFunc func(*persistence.TaskInfo, error)
+		completionFunc func(string, *persistence.TaskInfo, error)
 	}
 	// queryTaskInfo contains the info for a query task
 	queryTaskInfo struct {
@@ -51,6 +51,7 @@ type (
 		started                  *startedTaskInfo // non-nil for a task received from a parent partition which is already started
 		domainName               string
 		source                   types.TaskSource
+		sourceIsolationGroup     string
 		forwardedFrom            string     // name of the child partition this task is forwarded from (empty if not forwarded)
 		responseC                chan error // non-nil only where there is a caller waiting for response (sync-match)
 		backlogCountHint         int64
@@ -60,8 +61,9 @@ type (
 
 func newInternalTask(
 	info *persistence.TaskInfo,
-	completionFunc func(*persistence.TaskInfo, error),
+	completionFunc func(string, *persistence.TaskInfo, error),
 	source types.TaskSource,
+	sourceIsolationGroup string,
 	forwardedFrom string,
 	forSyncMatch bool,
 	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
@@ -72,6 +74,7 @@ func newInternalTask(
 			completionFunc: completionFunc,
 		},
 		source:                   source,
+		sourceIsolationGroup:     sourceIsolationGroup,
 		forwardedFrom:            forwardedFrom,
 		activityTaskDispatchInfo: activityTaskDispatchInfo,
 	}
@@ -155,6 +158,6 @@ func (task *InternalTask) finish(err error) {
 	case task.responseC != nil:
 		task.responseC <- err
 	case task.event.completionFunc != nil:
-		task.event.completionFunc(task.event.TaskInfo, err)
+		task.event.completionFunc(task.sourceIsolationGroup, task.event.TaskInfo, err)
 	}
 }

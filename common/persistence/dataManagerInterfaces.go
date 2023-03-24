@@ -446,6 +446,7 @@ type (
 		TaskType    int
 		RangeID     int64
 		AckLevel    int64
+		AckLevels   map[string]int64
 		Kind        int
 		Expiry      time.Time
 		LastUpdated time.Time
@@ -1276,9 +1277,10 @@ type (
 
 	// CreateTaskInfo describes a task to be created in CreateTasksRequest
 	CreateTaskInfo struct {
-		Execution types.WorkflowExecution
-		Data      *TaskInfo
-		TaskID    int64
+		Execution      types.WorkflowExecution
+		Data           *TaskInfo
+		IsolationGroup string
+		TaskID         int64
 	}
 
 	// CreateTasksResponse is the response to CreateTasksRequest
@@ -1287,13 +1289,14 @@ type (
 
 	// GetTasksRequest is used to retrieve tasks of a task list
 	GetTasksRequest struct {
-		DomainID     string
-		TaskList     string
-		TaskType     int
-		ReadLevel    int64  // range exclusive
-		MaxReadLevel *int64 // optional: range inclusive when specified
-		BatchSize    int
-		DomainName   string
+		DomainID       string
+		TaskList       string
+		TaskType       int
+		IsolationGroup string
+		ReadLevel      int64  // range exclusive
+		MaxReadLevel   *int64 // optional: range inclusive when specified
+		BatchSize      int
+		DomainName     string
 	}
 
 	// GetTasksResponse is the response to GetTasksRequests
@@ -1303,19 +1306,21 @@ type (
 
 	// CompleteTaskRequest is used to complete a task
 	CompleteTaskRequest struct {
-		TaskList   *TaskListInfo
-		TaskID     int64
-		DomainName string
+		TaskList       *TaskListInfo
+		IsolationGroup string
+		TaskID         int64
+		DomainName     string
 	}
 
 	// CompleteTasksLessThanRequest contains the request params needed to invoke CompleteTasksLessThan API
 	CompleteTasksLessThanRequest struct {
-		DomainID     string
-		TaskListName string
-		TaskType     int
-		TaskID       int64 // Tasks less than or equal to this ID will be completed
-		Limit        int   // Limit on the max number of tasks that can be completed. Required param
-		DomainName   string
+		DomainID       string
+		TaskListName   string
+		TaskType       int
+		IsolationGroup string
+		TaskID         int64 // Tasks less than or equal to this ID will be completed
+		Limit          int   // Limit on the max number of tasks that can be completed. Required param
+		DomainName     string
 	}
 
 	// CompleteTasksLessThanResponse is the response of CompleteTasksLessThan
@@ -1795,6 +1800,9 @@ type (
 		CompleteTasksLessThan(ctx context.Context, request *CompleteTasksLessThanRequest) (*CompleteTasksLessThanResponse, error)
 		GetOrphanTasks(ctx context.Context, request *GetOrphanTasksRequest) (*GetOrphanTasksResponse, error)
 	}
+
+	// TaskV2Manager is used to manage tasks
+	TaskV2Manager = TaskManager
 
 	// HistoryManager is used to manager workflow history events
 	HistoryManager interface {

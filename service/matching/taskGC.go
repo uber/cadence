@@ -28,7 +28,7 @@ import (
 type taskGC struct {
 	lock           int64
 	db             *taskListDB
-	ackLevel       int64
+	ackLevels      map[string]int64
 	lastDeleteTime time.Time
 	config         *taskListConfig
 }
@@ -47,42 +47,42 @@ var maxTimeBetweenTaskDeletes = time.Second
 // Finally, the Run() method is safe to be called from multiple threads. The underlying
 // implementation will make sure only one caller executes Run() and others simply bail out
 func newTaskGC(db *taskListDB, config *taskListConfig) *taskGC {
-	return &taskGC{db: db, config: config}
+	return &taskGC{db: db, config: config, ackLevels: make(map[string]int64)}
 }
 
 // Run deletes a batch of completed tasks, if its possible to do so
 // Only attempts deletion if size or time thresholds are met
-func (tgc *taskGC) Run(ackLevel int64) {
-	tgc.tryDeleteNextBatch(ackLevel, false)
+func (tgc *taskGC) Run(isolationGroup string, ackLevel int64) {
+	tgc.tryDeleteNextBatch(isolationGroup, ackLevel, false)
 }
 
 // RunNow deletes a batch of completed tasks if its possible to do so
 // This method attempts deletions without waiting for size/time threshold to be met
-func (tgc *taskGC) RunNow(ackLevel int64) {
-	tgc.tryDeleteNextBatch(ackLevel, true)
+func (tgc *taskGC) RunNow(isolationGroup string, ackLevel int64) {
+	tgc.tryDeleteNextBatch(isolationGroup, ackLevel, true)
 }
 
-func (tgc *taskGC) tryDeleteNextBatch(ackLevel int64, ignoreTimeCond bool) {
+func (tgc *taskGC) tryDeleteNextBatch(isolationGroup string, ackLevel int64, ignoreTimeCond bool) {
 	if !tgc.tryLock() {
 		return
 	}
 	defer tgc.unlock()
 	batchSize := tgc.config.MaxTaskDeleteBatchSize()
-	if !tgc.checkPrecond(ackLevel, batchSize, ignoreTimeCond) {
+	if !tgc.checkPrecond(isolationGroup, ackLevel, batchSize, ignoreTimeCond) {
 		return
 	}
 	tgc.lastDeleteTime = time.Now()
-	n, err := tgc.db.CompleteTasksLessThan(ackLevel, batchSize)
+	n, err := tgc.db.CompleteTasksLessThan(isolationGroup, ackLevel, batchSize)
 	switch {
 	case err != nil:
 		return
 	case n < batchSize:
-		tgc.ackLevel = ackLevel
+		tgc.ackLevels[isolationGroup] = ackLevel
 	}
 }
 
-func (tgc *taskGC) checkPrecond(ackLevel int64, batchSize int, ignoreTimeCond bool) bool {
-	backlog := ackLevel - tgc.ackLevel
+func (tgc *taskGC) checkPrecond(isolationGroup string, ackLevel int64, batchSize int, ignoreTimeCond bool) bool {
+	backlog := ackLevel - tgc.ackLevels[isolationGroup]
 	if backlog >= int64(batchSize) {
 		return true
 	}

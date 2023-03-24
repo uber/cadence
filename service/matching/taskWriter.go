@@ -43,9 +43,10 @@ type (
 	}
 
 	writeTaskRequest struct {
-		execution  *types.WorkflowExecution
-		taskInfo   *persistence.TaskInfo
-		responseCh chan<- *writeTaskResponse
+		execution      *types.WorkflowExecution
+		taskInfo       *persistence.TaskInfo
+		isolationGroup string
+		responseCh     chan<- *writeTaskResponse
 	}
 
 	taskIDBlock struct {
@@ -55,38 +56,46 @@ type (
 
 	// taskWriter writes tasks sequentially to persistence
 	taskWriter struct {
-		db             *taskListDB
-		config         *taskListConfig
-		taskListID     *taskListID
-		taskAckManager messaging.AckManager
-		appendCh       chan *writeTaskRequest
-		taskIDBlock    taskIDBlock
-		maxReadLevel   int64
-		stopped        int64 // set to 1 if the writer is stopped or is shutting down
-		logger         log.Logger
-		scope          metrics.Scope
-		stopCh         chan struct{} // shutdown signal for all routines in this class
-		throttleRetry  *backoff.ThrottleRetry
-		handleErr      func(error) error
-		onFatalErr     func()
+		db              *taskListDB
+		config          *taskListConfig
+		taskListID      *taskListID
+		taskAckManagers map[string]messaging.AckManager
+		appendCh        chan *writeTaskRequest
+		taskIDBlock     taskIDBlock
+		maxReadLevel    int64
+		stopped         int64 // set to 1 if the writer is stopped or is shutting down
+		logger          log.Logger
+		scope           metrics.Scope
+		stopCh          chan struct{} // shutdown signal for all routines in this class
+		throttleRetry   *backoff.ThrottleRetry
+		handleErr       func(error) error
+		onFatalErr      func()
 	}
 )
 
 // errShutdown indicates that the task list is shutting down
 var errShutdown = errors.New("task list shutting down")
 
-func newTaskWriter(tlMgr *taskListManagerImpl) *taskWriter {
+func newTaskWriter(
+	taskListID *taskListID,
+	config *taskListConfig,
+	db *taskListDB,
+	taskAckManagers map[string]messaging.AckManager,
+	logger log.Logger,
+	scope metrics.Scope,
+	tlMgr *taskListManagerImpl,
+) *taskWriter {
 	return &taskWriter{
-		db:             tlMgr.db,
-		config:         tlMgr.config,
-		taskListID:     tlMgr.taskListID,
-		taskAckManager: tlMgr.taskAckManager,
-		stopCh:         make(chan struct{}),
-		appendCh:       make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
-		logger:         tlMgr.logger,
-		scope:          tlMgr.scope,
-		handleErr:      tlMgr.handleErr,
-		onFatalErr:     tlMgr.Stop,
+		config:          config,
+		taskListID:      taskListID,
+		db:              db,
+		taskAckManagers: taskAckManagers,
+		stopCh:          make(chan struct{}),
+		appendCh:        make(chan *writeTaskRequest, tlMgr.config.OutstandingTaskAppendsThreshold()),
+		logger:          logger,
+		scope:           scope,
+		handleErr:       tlMgr.handleErr,
+		onFatalErr:      tlMgr.Stop,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -101,7 +110,14 @@ func (w *taskWriter) Start() error {
 		return err
 	}
 
-	w.taskAckManager.SetAckLevel(state.ackLevel)
+	for isolationGroup, ackLevel := range state.ackLevels {
+		if taskAckManager, ok := w.taskAckManagers[isolationGroup]; ok {
+			taskAckManager.SetAckLevel(ackLevel)
+		}
+	}
+	if len(state.ackLevels) == 0 {
+		w.taskAckManagers[""].SetAckLevel(state.ackLevel)
+	}
 	block := rangeIDToTaskIDBlock(state.rangeID, w.config.RangeSize)
 	w.taskIDBlock = block
 	w.maxReadLevel = block.start - 1
@@ -121,7 +137,7 @@ func (w *taskWriter) isStopped() bool {
 }
 
 func (w *taskWriter) appendTask(execution *types.WorkflowExecution,
-	taskInfo *persistence.TaskInfo) (*persistence.CreateTasksResponse, error) {
+	taskInfo *persistence.TaskInfo, isolationGroup string) (*persistence.CreateTasksResponse, error) {
 
 	if w.isStopped() {
 		return nil, errShutdown
@@ -129,9 +145,10 @@ func (w *taskWriter) appendTask(execution *types.WorkflowExecution,
 
 	ch := make(chan *writeTaskResponse)
 	req := &writeTaskRequest{
-		execution:  execution,
-		taskInfo:   taskInfo,
-		responseCh: ch,
+		execution:      execution,
+		taskInfo:       taskInfo,
+		isolationGroup: isolationGroup,
+		responseCh:     ch,
 	}
 
 	select {
@@ -221,9 +238,10 @@ writerLoop:
 				tasks := []*persistence.CreateTaskInfo{}
 				for i, req := range reqs {
 					tasks = append(tasks, &persistence.CreateTaskInfo{
-						TaskID:    taskIDs[i],
-						Execution: *req.execution,
-						Data:      req.taskInfo,
+						TaskID:         taskIDs[i],
+						Execution:      *req.execution,
+						Data:           req.taskInfo,
+						IsolationGroup: req.isolationGroup,
 					})
 					maxReadLevel = taskIDs[i]
 				}

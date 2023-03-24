@@ -97,8 +97,11 @@ type (
 		taskListKind    types.TaskListKind // sticky taskList has different process in persistence
 		config          *taskListConfig
 		db              *taskListDB
+		dbV2            *taskListDB
 		taskWriter      *taskWriter
+		taskV2Writer    *taskWriter
 		taskReader      *taskReader // reads tasks from db and async matches it with poller
+		taskV2Reader    *taskReader // reads tasks from db and async matches it with poller
 		liveness        *liveness
 		taskGC          *taskGC
 		taskAckManager  messaging.AckManager // tracks ackLevel for delivered messages
@@ -153,15 +156,27 @@ func newTaskListManager(
 		return nil, err
 	}
 	scope := newPerTaskListScope(domainName, taskList.name, *taskListKind, e.metricsClient, metrics.MatchingTaskListMgrScope)
+	logger := e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType))
 	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
+	dbV2 := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
+
+	taskAckManagers := make(map[string]messaging.AckManager)
+	taskAckManagers[""] = messaging.NewAckManager(e.logger)
+
+	taskV2AckManagers := make(map[string]messaging.AckManager)
+	for _, isolationGroup := range taskListConfig.IsolationGroups {
+		taskV2AckManagers[isolationGroup] = messaging.NewAckManager(e.logger)
+	}
+	taskV2AckManagers[""] = messaging.NewAckManager(e.logger)
 
 	tlMgr := &taskListManagerImpl{
 		domainCache:         e.domainCache,
 		clusterMetadata:     e.clusterMetadata,
 		taskListID:          taskList,
 		taskListKind:        *taskListKind,
-		logger:              e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
+		logger:              logger,
 		db:                  db,
+		dbV2:                dbV2,
 		taskAckManager:      messaging.NewAckManager(e.logger),
 		taskGC:              newTaskGC(db, taskListConfig),
 		config:              taskListConfig,
@@ -179,8 +194,10 @@ func newTaskListManager(
 			float64(len(tlMgr.pollerHistory.getPollerInfo(time.Time{}))))
 	})
 	tlMgr.liveness = newLiveness(clock.NewRealTimeSource(), taskListConfig.IdleTasklistCheckInterval(), tlMgr.Stop)
-	tlMgr.taskWriter = newTaskWriter(tlMgr)
-	tlMgr.taskReader = newTaskReader(tlMgr)
+	tlMgr.taskWriter = newTaskWriter(taskList, taskListConfig, db, taskAckManagers, logger, scope, tlMgr)
+	tlMgr.taskV2Writer = newTaskWriter(taskList, taskListConfig, dbV2, taskV2AckManagers, logger, scope, tlMgr)
+	tlMgr.taskReader = newTaskReader(nil, taskList, taskListConfig, db, tlMgr.taskWriter, taskAckManagers, logger, scope, tlMgr)
+	tlMgr.taskV2Reader = newTaskReader(taskListConfig.IsolationGroups, taskList, taskListConfig, dbV2, tlMgr.taskV2Writer, taskV2AckManagers, logger, scope, tlMgr)
 	var fwdr *Forwarder
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
@@ -261,8 +278,11 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 				return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 			}
 
-			r, err := c.taskWriter.appendTask(params.execution, params.taskInfo)
-			return r, err
+			if c.config.EnableTaskV2Migration() {
+				var isolationGroup string
+				return c.taskV2Writer.appendTask(params.execution, params.taskInfo, isolationGroup)
+			}
+			return c.taskWriter.appendTask(params.execution, params.taskInfo, "")
 		}
 
 		// active task, try sync match first
@@ -280,7 +300,11 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return &persistence.CreateTasksResponse{}, errRemoteSyncMatchFailed
 		}
 
-		return c.taskWriter.appendTask(params.execution, params.taskInfo)
+		if c.config.EnableTaskV2Migration() {
+			var isolationGroup string
+			return c.taskV2Writer.appendTask(params.execution, params.taskInfo, isolationGroup)
+		}
+		return c.taskWriter.appendTask(params.execution, params.taskInfo, "")
 	})
 
 	if err != nil {
@@ -290,7 +314,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			tag.WorkflowTaskListType(c.taskListID.taskType),
 		)
 	} else {
-		c.taskReader.Signal()
+		c.taskReader.Signal("")
 	}
 
 	return syncMatch, err
@@ -480,7 +504,7 @@ func (c *taskListManagerImpl) executeWithRetry(
 }
 
 func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, nil, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
+	task := newInternalTask(params.taskInfo, nil, params.source, "", params.forwardedFrom, true, params.activityTaskDispatchInfo)
 	childCtx := ctx
 	cancel := func() {}
 	waitTime := maxSyncMatchWaitTime

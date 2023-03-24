@@ -96,6 +96,11 @@ type (
 		MaxTaskBatchSize                func() int
 		NumWritePartitions              func() int
 		NumReadPartitions               func() int
+		// taskV2 migration
+		EnableTaskV2Migration func() bool
+		// task isolation
+		EnableIsolation func() bool
+		IsolationGroups []string
 	}
 )
 

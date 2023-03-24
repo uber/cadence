@@ -43,8 +43,9 @@ type (
 		logger       log.Logger
 	}
 	taskListState struct {
-		rangeID  int64
-		ackLevel int64
+		rangeID   int64
+		ackLevel  int64
+		ackLevels map[string]int64
 	}
 )
 
@@ -94,21 +95,22 @@ func (db *taskListDB) RenewLease() (taskListState, error) {
 		return taskListState{}, err
 	}
 	db.rangeID = resp.TaskListInfo.RangeID
-	return taskListState{rangeID: db.rangeID, ackLevel: resp.TaskListInfo.AckLevel}, nil
+	return taskListState{rangeID: resp.TaskListInfo.RangeID, ackLevel: resp.TaskListInfo.AckLevel, ackLevels: resp.TaskListInfo.AckLevels}, nil
 }
 
 // UpdateState updates the taskList state with the given value
-func (db *taskListDB) UpdateState(ackLevel int64) error {
+func (db *taskListDB) UpdateState(ackLevel int64, ackLevels map[string]int64) error {
 	db.Lock()
 	defer db.Unlock()
 	_, err := db.store.UpdateTaskList(context.Background(), &persistence.UpdateTaskListRequest{
 		TaskListInfo: &persistence.TaskListInfo{
-			DomainID: db.domainID,
-			Name:     db.taskListName,
-			TaskType: db.taskType,
-			AckLevel: ackLevel,
-			RangeID:  db.rangeID,
-			Kind:     db.taskListKind,
+			DomainID:  db.domainID,
+			Name:      db.taskListName,
+			TaskType:  db.taskType,
+			AckLevel:  ackLevel,
+			AckLevels: ackLevels,
+			RangeID:   db.rangeID,
+			Kind:      db.taskListKind,
 		},
 		DomainName: db.domainName,
 	})
@@ -132,51 +134,31 @@ func (db *taskListDB) CreateTasks(tasks []*persistence.CreateTaskInfo) (*persist
 }
 
 // GetTasks returns a batch of tasks between the given range
-func (db *taskListDB) GetTasks(minTaskID int64, maxTaskID int64, batchSize int) (*persistence.GetTasksResponse, error) {
+func (db *taskListDB) GetTasks(isolationGroup string, minTaskID int64, maxTaskID int64, batchSize int) (*persistence.GetTasksResponse, error) {
 	return db.store.GetTasks(context.Background(), &persistence.GetTasksRequest{
-		DomainID:     db.domainID,
-		TaskList:     db.taskListName,
-		TaskType:     db.taskType,
-		BatchSize:    batchSize,
-		ReadLevel:    minTaskID,  // exclusive
-		MaxReadLevel: &maxTaskID, // inclusive
-		DomainName:   db.domainName,
+		DomainID:       db.domainID,
+		TaskList:       db.taskListName,
+		TaskType:       db.taskType,
+		IsolationGroup: isolationGroup,
+		BatchSize:      batchSize,
+		ReadLevel:      minTaskID,  // exclusive
+		MaxReadLevel:   &maxTaskID, // inclusive
+		DomainName:     db.domainName,
 	})
-}
-
-// CompleteTask deletes a single task from this task list
-func (db *taskListDB) CompleteTask(taskID int64) error {
-	err := db.store.CompleteTask(context.Background(), &persistence.CompleteTaskRequest{
-		TaskList: &persistence.TaskListInfo{
-			DomainID: db.domainID,
-			Name:     db.taskListName,
-			TaskType: db.taskType,
-		},
-		TaskID:     taskID,
-		DomainName: db.domainName,
-	})
-	if err != nil {
-		db.logger.Error("Persistent store operation failure",
-			tag.StoreOperationCompleteTask,
-			tag.Error(err),
-			tag.TaskID(taskID),
-			tag.TaskType(db.taskType),
-			tag.WorkflowTaskListName(db.taskListName))
-	}
-	return err
 }
 
 // CompleteTasksLessThan deletes of tasks less than the given taskID. Limit is
 // the upper bound of number of tasks that can be deleted by this method. It may
 // or may not be honored
-func (db *taskListDB) CompleteTasksLessThan(taskID int64, limit int) (int, error) {
+func (db *taskListDB) CompleteTasksLessThan(isolationGroup string, taskID int64, limit int) (int, error) {
 	resp, err := db.store.CompleteTasksLessThan(context.Background(), &persistence.CompleteTasksLessThanRequest{
-		DomainID:     db.domainID,
-		TaskListName: db.taskListName,
-		TaskType:     db.taskType,
-		TaskID:       taskID,
-		Limit:        limit,
-		DomainName:   db.domainName,
+		DomainID:       db.domainID,
+		TaskListName:   db.taskListName,
+		TaskType:       db.taskType,
+		IsolationGroup: isolationGroup,
+		TaskID:         taskID,
+		Limit:          limit,
+		DomainName:     db.domainName,
 	})
 	if err != nil {
 		db.logger.Error("Persistent store operation failure",

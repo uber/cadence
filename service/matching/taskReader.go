@@ -1,6 +1,6 @@
-// Copyright (c) 2017-2020 Uber Technologies Inc.
+// The MIT License (MIT)
 
-// Portions of the Software are attributed to Copyright (c) 2020 Temporal Technologies Inc.
+// Copyright (c) 2017-2020 Uber Technologies Inc.
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
@@ -41,15 +42,14 @@ var epochStartTime = time.Unix(0, 0)
 
 type (
 	taskReader struct {
-		taskBuffer     chan *persistence.TaskInfo // tasks loaded from persistence
-		notifyC        chan struct{}              // Used as signal to notify pump of new tasks
-		tlMgr          *taskListManagerImpl
-		taskListID     *taskListID
-		config         *taskListConfig
-		db             *taskListDB
-		taskWriter     *taskWriter
-		taskGC         *taskGC
-		taskAckManager messaging.AckManager
+		taskListID      *taskListID
+		config          *taskListConfig
+		db              *taskListDB
+		taskWriter      *taskWriter
+		taskGC          *taskGC
+		taskAckManagers map[string]messaging.AckManager
+		taskBuffer      map[string]chan *persistence.TaskInfo
+		notifyC         map[string]chan struct{}
 		// The cancel objects are to cancel the ratelimiter Wait in dispatchBufferedTasks. The ideal
 		// approach is to use request-scoped contexts and use a unique one for each call to Wait. However
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
@@ -57,79 +57,141 @@ type (
 		// so the cancel can be called directly on shutdown.
 		cancelCtx     context.Context
 		cancelFunc    context.CancelFunc
-		stopped       int64 // set to 1 if the reader is stopped or is shutting down
+		status        int32
 		logger        log.Logger
 		scope         metrics.Scope
 		throttleRetry *backoff.ThrottleRetry
 		handleErr     func(error) error
 		onFatalErr    func()
 		dispatchTask  func(context.Context, *InternalTask) error
+		isVersion2    bool
 	}
 )
 
-func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
+func newTaskReader(
+	isolationGroups []string,
+	taskListID *taskListID,
+	config *taskListConfig,
+	db *taskListDB,
+	taskWriter *taskWriter,
+	taskAckManagers map[string]messaging.AckManager,
+	logger log.Logger,
+	scope metrics.Scope,
+	tlMgr *taskListManagerImpl,
+) *taskReader {
 	ctx, cancel := context.WithCancel(context.Background())
+	taskBuffer := make(map[string]chan *persistence.TaskInfo)
+	notifyC := make(map[string]chan struct{})
+	for _, isolationGroup := range isolationGroups {
+		taskBuffer[isolationGroup] = make(chan *persistence.TaskInfo, config.GetTasksBatchSize()-1)
+		notifyC[isolationGroup] = make(chan struct{}, 1)
+	}
+	taskBuffer[""] = make(chan *persistence.TaskInfo, config.GetTasksBatchSize()-1)
+	notifyC[""] = make(chan struct{}, 1)
+
 	return &taskReader{
-		tlMgr:          tlMgr,
-		taskListID:     tlMgr.taskListID,
-		config:         tlMgr.config,
-		db:             tlMgr.db,
-		taskWriter:     tlMgr.taskWriter,
-		taskGC:         tlMgr.taskGC,
-		taskAckManager: tlMgr.taskAckManager,
-		cancelCtx:      ctx,
-		cancelFunc:     cancel,
-		notifyC:        make(chan struct{}, 1),
-		// we always dequeue the head of the buffer and try to dispatch it to a poller
-		// so allocate one less than desired target buffer size
-		taskBuffer:   make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
-		logger:       tlMgr.logger,
-		scope:        tlMgr.scope,
-		handleErr:    tlMgr.handleErr,
-		onFatalErr:   tlMgr.Stop,
-		dispatchTask: tlMgr.DispatchTask,
+		taskListID:      taskListID,
+		config:          config,
+		db:              db,
+		taskWriter:      taskWriter,
+		taskGC:          newTaskGC(db, config),
+		taskAckManagers: taskAckManagers,
+		taskBuffer:      taskBuffer,
+		notifyC:         notifyC,
+		cancelCtx:       ctx,
+		cancelFunc:      cancel,
+		logger:          logger,
+		scope:           scope,
+		handleErr:       tlMgr.handleErr,
+		onFatalErr:      tlMgr.Stop,
+		dispatchTask:    tlMgr.DispatchTask,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
 		),
+		isVersion2: len(isolationGroups) > 0,
 	}
 }
 
 func (tr *taskReader) Start() {
-	tr.Signal()
-	go tr.dispatchBufferedTasks()
-	go tr.getTasksPump()
+	if !atomic.CompareAndSwapInt32(&tr.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+	tr.SignalAll()
+	for isolationGroup := range tr.notifyC {
+		go tr.dispatchBufferedTasks(isolationGroup)
+		go tr.getTasksPump(isolationGroup)
+	}
+	go tr.updateAck()
 }
 
 func (tr *taskReader) Stop() {
-	if atomic.CompareAndSwapInt64(&tr.stopped, 0, 1) {
-		tr.cancelFunc()
-		if err := tr.persistAckLevel(); err != nil {
-			tr.logger.Error("Persistent store operation failure",
-				tag.StoreOperationUpdateTaskList,
-				tag.Error(err))
-		}
-		tr.taskGC.RunNow(tr.taskAckManager.GetAckLevel())
+	if !atomic.CompareAndSwapInt32(&tr.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+	tr.cancelFunc()
+	if err := tr.persistAckLevel(); err != nil {
+		tr.logger.Error("Persistent store operation failure",
+			tag.StoreOperationUpdateTaskList,
+			tag.Error(err))
+	}
+	for isolationGroup, taskAckManager := range tr.taskAckManagers {
+		tr.taskGC.RunNow(isolationGroup, taskAckManager.GetAckLevel())
 	}
 }
 
-func (tr *taskReader) Signal() {
-	var event struct{}
+func (tr *taskReader) Signal(isolationGroup string) {
+	notifyC, ok := tr.notifyC[isolationGroup]
+	if !ok {
+		tr.logger.Fatal("")
+		return
+	}
 	select {
-	case tr.notifyC <- event:
+	case notifyC <- struct{}{}:
 	default: // channel already has an event, don't block
 	}
 }
 
-func (tr *taskReader) dispatchBufferedTasks() {
+func (tr *taskReader) SignalAll() {
+	for _, notifyC := range tr.notifyC {
+		select {
+		case notifyC <- struct{}{}:
+		default: // channel already has an event, don't block
+		}
+	}
+}
+
+func (tr *taskReader) updateAck() {
+	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
+	defer updateAckTimer.Stop()
+	for {
+		select {
+		case <-tr.cancelCtx.Done():
+			break
+		case <-updateAckTimer.C:
+			{
+				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
+					tr.logger.Error("Persistent store operation failure",
+						tag.StoreOperationUpdateTaskList,
+						tag.Error(err))
+					// keep going as saving ack is not critical
+				}
+				tr.SignalAll() // periodically signal pump to check persistence for tasks
+				updateAckTimer.Reset(tr.config.UpdateAckInterval())
+			}
+		}
+	}
+}
+
+func (tr *taskReader) dispatchBufferedTasks(isolationGroup string) {
 dispatchLoop:
 	for {
 		select {
-		case taskInfo, ok := <-tr.taskBuffer:
+		case taskInfo, ok := <-tr.taskBuffer[isolationGroup]:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
-			task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil)
+			task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, isolationGroup, "", false, nil)
 			for {
 				err := tr.dispatchTask(tr.cancelCtx, task)
 				if err == nil {
@@ -150,61 +212,43 @@ dispatchLoop:
 	}
 }
 
-func (tr *taskReader) getTasksPump() {
-	defer close(tr.taskBuffer)
-
-	updateAckTimer := time.NewTimer(tr.config.UpdateAckInterval())
-	defer updateAckTimer.Stop()
+func (tr *taskReader) getTasksPump(isolationGroup string) {
 getTasksPumpLoop:
 	for {
 		select {
 		case <-tr.cancelCtx.Done():
 			break getTasksPumpLoop
-		case <-tr.notifyC:
+		case <-tr.notifyC[isolationGroup]:
 			{
-				tasks, readLevel, isReadBatchDone, err := tr.getTaskBatch()
+				tasks, readLevel, isReadBatchDone, err := tr.getTaskBatch(isolationGroup)
 				if err != nil {
-					tr.Signal() // re-enqueue the event
+					tr.Signal(isolationGroup) // re-enqueue the event
 					// TODO: Should we ever stop retrying on db errors?
 					continue getTasksPumpLoop
 				}
 
 				if len(tasks) == 0 {
-					tr.taskAckManager.SetReadLevel(readLevel)
+					tr.taskAckManagers[isolationGroup].SetReadLevel(readLevel)
 					if !isReadBatchDone {
-						tr.Signal()
+						tr.Signal(isolationGroup)
 					}
 					continue getTasksPumpLoop
 				}
 
-				if !tr.addTasksToBuffer(tasks) {
+				if !tr.addTasksToBuffer(isolationGroup, tasks) {
 					break getTasksPumpLoop
 				}
 				// There maybe more tasks. We yield now, but signal pump to check again later.
-				tr.Signal()
-			}
-		case <-updateAckTimer.C:
-			{
-				if err := tr.handleErr(tr.persistAckLevel()); err != nil {
-					tr.logger.Error("Persistent store operation failure",
-						tag.StoreOperationUpdateTaskList,
-						tag.Error(err))
-					// keep going as saving ack is not critical
-				}
-				tr.Signal() // periodically signal pump to check persistence for tasks
-				updateAckTimer = time.NewTimer(tr.config.UpdateAckInterval())
+				tr.Signal(isolationGroup)
 			}
 		}
-		scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType))
-		scope.UpdateGauge(metrics.TaskBacklogPerTaskListGauge, float64(tr.taskAckManager.GetBacklogCount()))
 	}
-
 }
 
-func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
+func (tr *taskReader) getTaskBatchWithRange(isolationGroup string, readLevel int64, maxReadLevel int64) ([]*persistence.TaskInfo, error) {
 	var response *persistence.GetTasksResponse
 	op := func() (err error) {
-		response, err = tr.db.GetTasks(readLevel, maxReadLevel, tr.config.GetTasksBatchSize())
+		response, err = tr.db.GetTasks(isolationGroup, readLevel, maxReadLevel, tr.config.GetTasksBatchSize())
 		return
 	}
 	err := tr.throttleRetry.Do(context.Background(), op)
@@ -219,21 +263,19 @@ func (tr *taskReader) getTaskBatchWithRange(readLevel int64, maxReadLevel int64)
 	return response.Tasks, nil
 }
 
-// Returns a batch of tasks from persistence starting form current read level.
-// Also return a number that can be used to update readLevel
-// Also return a bool to indicate whether read is finished
-func (tr *taskReader) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, error) {
-	var tasks []*persistence.TaskInfo
-	readLevel := tr.taskAckManager.GetReadLevel()
+func (tr *taskReader) getTaskBatch(isolationGroup string) ([]*persistence.TaskInfo, int64, bool, error) {
+	taskAckManager := tr.taskAckManagers[isolationGroup]
+	readLevel := taskAckManager.GetReadLevel()
 	maxReadLevel := tr.taskWriter.GetMaxReadLevel()
 
+	var tasks []*persistence.TaskInfo
 	// counter i is used to break and let caller check whether tasklist is still alive and need resume read.
 	for i := 0; i < 10 && readLevel < maxReadLevel; i++ {
 		upper := readLevel + tr.config.RangeSize
 		if upper > maxReadLevel {
 			upper = maxReadLevel
 		}
-		tasks, err := tr.getTaskBatchWithRange(readLevel, upper)
+		tasks, err := tr.getTaskBatchWithRange(isolationGroup, readLevel, upper)
 		if err != nil {
 			return nil, readLevel, true, err
 		}
@@ -246,61 +288,59 @@ func (tr *taskReader) getTaskBatch() ([]*persistence.TaskInfo, int64, bool, erro
 	return tasks, readLevel, readLevel == maxReadLevel, nil // caller will update readLevel when no task grabbed
 }
 
-func (tr *taskReader) isTaskExpired(t *persistence.TaskInfo, now time.Time) bool {
-	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
-}
-
-func (tr *taskReader) addTasksToBuffer(tasks []*persistence.TaskInfo) bool {
+func (tr *taskReader) addTasksToBuffer(isolationGroup string, tasks []*persistence.TaskInfo) bool {
+	taskAckManager := tr.taskAckManagers[isolationGroup]
 	now := time.Now()
 	for _, t := range tasks {
-		if tr.isTaskExpired(t, now) {
+		if isTaskExpired(t, now) {
 			tr.scope.IncCounter(metrics.ExpiredTasksPerTaskListCounter)
 			// Also increment readLevel for expired tasks otherwise it could result in
 			// looping over the same tasks if all tasks read in the batch are expired
-			tr.taskAckManager.SetReadLevel(t.TaskID)
+			taskAckManager.SetReadLevel(t.TaskID)
 			continue
 		}
-		if !tr.addSingleTaskToBuffer(t) {
+		if !tr.addSingleTaskToBuffer(isolationGroup, t) {
 			return false // we are shutting down the task list
 		}
 	}
 	return true
 }
 
-func (tr *taskReader) addSingleTaskToBuffer(task *persistence.TaskInfo) bool {
-	err := tr.taskAckManager.ReadItem(task.TaskID)
+func (tr *taskReader) addSingleTaskToBuffer(isolationGroup string, task *persistence.TaskInfo) bool {
+	taskAckManager := tr.taskAckManagers[isolationGroup]
+	taskBuffer := tr.taskBuffer[isolationGroup] // TODO: consider re-calculating the isolation group of the task
+	err := taskAckManager.ReadItem(task.TaskID)
 	if err != nil {
 		tr.logger.Fatal("critical bug when adding item to ackManager", tag.Error(err))
 	}
-	for {
-		select {
-		case tr.taskBuffer <- task:
-			return true
-		case <-tr.cancelCtx.Done():
-			return false
-		}
+	select {
+	case taskBuffer <- task:
+		return true
+	case <-tr.cancelCtx.Done():
+		return false
 	}
 }
 
 func (tr *taskReader) persistAckLevel() error {
-	ackLevel := tr.taskAckManager.GetAckLevel()
-	if ackLevel >= 0 {
-		maxReadLevel := tr.taskWriter.GetMaxReadLevel()
-		scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType))
-		// note: this metrics is only an estimation for the lag. taskID in DB may not be continuous,
-		// especially when task list ownership changes.
-		scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
-
-		return tr.db.UpdateState(ackLevel)
+	ackLevel := int64(0)
+	ackLevels := make(map[string]int64)
+	for isolationGroup, taskAckManager := range tr.taskAckManagers {
+		ackLevels[isolationGroup] = taskAckManager.GetAckLevel()
 	}
-	return nil
+	maxReadLevel := tr.taskWriter.GetMaxReadLevel()
+	scope := tr.scope.Tagged(getTaskListTypeTag(tr.taskListID.taskType))
+	// note: this metrics is only an estimation for the lag. taskID in DB may not be continuous,
+	// especially when task list ownership changes.
+	scope.UpdateGauge(metrics.TaskLagPerTaskListGauge, float64(maxReadLevel-ackLevel))
+
+	if !tr.isVersion2 {
+		ackLevel = ackLevels[""]
+		ackLevels = nil
+	}
+	return tr.db.UpdateState(ackLevel, ackLevels)
 }
 
-// completeTask marks a task as processed. Only tasks created by taskReader (i.e. backlog from db) reach
-// here. As part of completion:
-//   - task is deleted from the database when err is nil
-//   - new task is created and current task is deleted when err is not nil
-func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
+func (tr *taskReader) completeTask(sourceGroup string, task *persistence.TaskInfo, err error) {
 	if err != nil {
 		// failed to start the task.
 		// We cannot just remove it from persistence because then it will be lost.
@@ -309,9 +349,10 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 		// again the underlying reason for failing to start will be resolved.
 		// Note that RecordTaskStarted only fails after retrying for a long time, so a single task will not be
 		// re-written to persistence frequently.
+		targetGroup := sourceGroup
 		op := func() error {
 			wf := &types.WorkflowExecution{WorkflowID: task.WorkflowID, RunID: task.RunID}
-			_, err := tr.taskWriter.appendTask(wf, task)
+			_, err := tr.taskWriter.appendTask(wf, task, targetGroup)
 			return err
 		}
 		err = tr.throttleRetry.Do(context.Background(), op)
@@ -323,8 +364,12 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 			tr.onFatalErr()
 			return
 		}
-		tr.Signal()
+		tr.Signal(targetGroup)
 	}
-	ackLevel := tr.taskAckManager.AckItem(task.TaskID)
-	tr.taskGC.Run(ackLevel)
+	ackLevel := tr.taskAckManagers[sourceGroup].AckItem(task.TaskID)
+	tr.taskGC.Run(sourceGroup, ackLevel)
+}
+
+func isTaskExpired(t *persistence.TaskInfo, now time.Time) bool {
+	return t.Expiry.After(epochStartTime) && time.Now().After(t.Expiry)
 }
