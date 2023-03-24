@@ -284,14 +284,14 @@ func (f *factoryImpl) NewVisibilityManager(
 			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
 		}
 
-		pinotZookeeper := params.PinotConfig.BrokerURL
-		pinotCluster := params.PinotConfig.Cluster
-		pinotClient, err := pinot.NewFromZookeeper([]string{fmt.Sprint(pinotZookeeper)}, "", pinotCluster)
+		pinotController := params.PinotConfig.Controller
+		f.logger.Info(fmt.Sprintf("pinot controller: %s", pinotController))
+		pinotClient, err := pinot.NewFromController(pinotController)
 		if err != nil {
 			f.logger.Fatal("Creating Pinot visibility client failed", tag.Error(err))
 		}
 		visibilityFromPinot = newPinotVisibilityManager(
-			pinotClient, resourceConfig, visibilityProducer, f.logger)
+			pinotClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger)
 		return p.NewPinotVisibilityDualManager(
 			visibilityFromDB,
 			visibilityFromPinot,
@@ -325,6 +325,7 @@ func newPinotVisibilityManager(
 	pinotClient *pinot.Connection,
 	visibilityConfig *service.Config,
 	producer messaging.Producer,
+	metricsClient metrics.Client,
 	log log.Logger,
 ) p.VisibilityManager {
 	visibilityFromPinotStore := pinotVisibility.NewPinotVisibilityStore(pinotClient, visibilityConfig, producer, log)
@@ -334,6 +335,11 @@ func newPinotVisibilityManager(
 	if visibilityConfig.PersistenceMaxQPS != nil && visibilityConfig.PersistenceMaxQPS() != 0 {
 		esRateLimiter := quotas.NewDynamicRateLimiter(visibilityConfig.PersistenceMaxQPS.AsFloat64())
 		visibilityFromPinot = p.NewVisibilityPersistenceRateLimitedClient(visibilityFromPinot, esRateLimiter, log)
+	}
+
+	if metricsClient != nil {
+		// wrap with metrics
+		visibilityFromPinot = elasticsearch.NewVisibilityMetricsClient(visibilityFromPinot, metricsClient, log)
 	}
 
 	return visibilityFromPinot
