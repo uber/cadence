@@ -3,10 +3,16 @@ persistence:
   datastores:
     pinot-visibility:
       pinot:
+        controller: "127.0.0.1:9000"
+        cluster: pinot-test
+    es-visibility:
+      elasticsearch:
+        version: "v6"
         url:
           scheme: "http"
-          host: "127.0.0.1:2181"
-        cluster: pinot-test
+          host: "127.0.0.1:9200"
+        indices:
+          visibility: cadence-visibility-dev
 
 kafka:
   tls:
