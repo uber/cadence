@@ -222,6 +222,7 @@ type ConfigType int
 
 const (
 	DynamicConfig ConfigType = iota
+	GlobalIsolationGroupConfig
 )
 
 type (
@@ -1352,12 +1353,13 @@ type (
 
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
-		ID          string
-		Name        string
-		Status      int
-		Description string
-		OwnerEmail  string
-		Data        map[string]string
+		ID                   string
+		Name                 string
+		Status               int
+		Description          string
+		OwnerEmail           string
+		Data                 map[string]string
+		IsolationGroupConfig types.IsolationGroupConfiguration
 	}
 
 	// DomainConfig describes the domain configuration
