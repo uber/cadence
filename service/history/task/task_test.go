@@ -22,6 +22,7 @@ package task
 
 import (
 	"errors"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
@@ -264,6 +265,18 @@ func (s *taskSuite) TestTaskNack_ResubmitFailed() {
 
 	task.Nack()
 	s.Equal(t.TaskStateNacked, task.State())
+}
+
+func (s *taskSuite) TestHandleErr_ErrMaxAttempts() {
+	taskBase := s.newTestTask(func(task Info) (bool, error) {
+		return true, nil
+	}, nil)
+
+	taskBase.criticalRetryCount = func(i ...dynamicconfig.FilterOption) int { return 0 }
+	s.mockTaskInfo.EXPECT().GetTaskType().Return(0)
+	assert.NotPanics(s.T(), func() {
+		taskBase.HandleErr(errors.New("err"))
+	})
 }
 
 func (s *taskSuite) newTestTask(
