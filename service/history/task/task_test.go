@@ -22,9 +22,10 @@ package task
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
