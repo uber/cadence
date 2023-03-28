@@ -94,14 +94,6 @@ func (p *producerImpl) serializeThrift(input codec.ThriftObject) ([]byte, error)
 func (p *producerImpl) getProducerMessage(message interface{}) (*sarama.ProducerMessage, error) {
 	switch message := message.(type) {
 	case *indexer.Message:
-		if *message.MessageType == indexer.MessageTypePinot {
-			msg := &sarama.ProducerMessage{
-				Topic: p.topic,
-				Key:   sarama.StringEncoder(message.GetWorkflowID()),
-				Value: sarama.ByteEncoder(message.GetPayload()),
-			}
-			return msg, nil
-		}
 		payload, err := p.serializeThrift(message)
 		if err != nil {
 			return nil, err
