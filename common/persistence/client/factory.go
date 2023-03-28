@@ -299,7 +299,7 @@ func (f *factoryImpl) NewVisibilityManager(
 			resourceConfig.AdvancedVisibilityWritingMode,
 			f.logger,
 		), nil
-	} else if params.PersistenceConfig.AdvancedVisibilityStore == "es-visibility" {
+	} else if params.PersistenceConfig.AdvancedVisibilityStore != "" {
 		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
 		visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
 		if err != nil {
