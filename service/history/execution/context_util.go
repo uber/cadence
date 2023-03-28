@@ -24,8 +24,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/uber/cadence/service/history/config"
-
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
@@ -33,28 +31,27 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func emitLargeWorkflowShardIDStats(logger log.Logger, metricsClient metrics.Client, config *config.Config, shardID int,
-	domainName string, workflowID string, currentHistorySize int64, currentHistoryCount int64, oldHistorySize int64, oldHistoryCount int64, blobSize int64) {
-	if config.EnableShardIDMetrics() {
-		shardIDStr := strconv.Itoa(shardID)
+func (c *contextImpl) emitLargeWorkflowShardIDStats() {
+	if c.shard.GetConfig().EnableShardIDMetrics() {
+		shardIDStr := strconv.Itoa(c.shard.GetShardID())
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
-		if blobSize > int64(config.LargeShardHistoryBlobMetricThreshold()) {
-			logger.SampleInfo("Workflow writing a large blob", config.SampleLoggingRate(), tag.WorkflowDomainName(domainName),
-				tag.WorkflowID(workflowID), tag.ShardID(shardID))
-			metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
+		if c.stats.BlobSize > int64(c.shard.GetConfig().LargeShardHistoryBlobMetricThreshold()) {
+			c.logger.SampleInfo("Workflow writing a large blob", c.shard.GetConfig().SampleLoggingRate(), tag.WorkflowDomainName(c.GetDomainName()),
+				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
+			c.metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
 		}
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
 		// this might sometimes double count if the workflow is extremely fast but should be ok to get a rough idea and identify bad actors
-		if oldHistoryCount < int64(config.LargeShardHistoryEventMetricThreshold()) && currentHistoryCount >= int64(config.LargeShardHistoryEventMetricThreshold()) {
-			logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(domainName),
-				tag.WorkflowID(workflowID), tag.ShardID(shardID))
-			metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
+		if c.stats.OldHistoryCount < int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()) && (c.mutableState.GetNextEventID()-1) >= int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()) {
+			c.logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
+				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
+			c.metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
 		}
 		// check if the new history size is greater than our threshold and only count/log it once when it passes it
-		if oldHistorySize < int64(config.LargeShardHistorySizeMetricThreshold()) && currentHistorySize >= int64(config.LargeShardHistorySizeMetricThreshold()) {
-			logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(domainName),
-				tag.WorkflowID(workflowID), tag.ShardID(shardID))
-			metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistorySizeCount)
+		if c.stats.OldHistorySize < int64(c.shard.GetConfig().LargeShardHistorySizeMetricThreshold()) && c.stats.HistorySize >= int64(c.shard.GetConfig().LargeShardHistorySizeMetricThreshold()) {
+			c.logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
+				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
+			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistorySizeCount)
 		}
 	}
 }

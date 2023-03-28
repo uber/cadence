@@ -361,7 +361,10 @@ type (
 
 	// ExecutionStats is the statistics about workflow execution
 	ExecutionStats struct {
-		HistorySize int64
+		HistorySize     int64
+		OldHistorySize  int64
+		OldHistoryCount int64
+		BlobSize        int64
 	}
 
 	// ReplicationState represents mutable state information for global domains.

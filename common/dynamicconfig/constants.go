@@ -1349,12 +1349,12 @@ const (
 	// LargeShardHistorySizeMetricThreshold defines the threshold for what consititutes a large history storage size to alert on
 	// KeyName: system.largeShardHistorySizeMetricThreshold
 	// Value type: Int
-	// Default value: 10485760
+	// Default value: 10485760 (10mb)
 	LargeShardHistorySizeMetricThreshold
 	// LargeShardHistoryEventMetricThreshold defines the threshold for what consititutes a large history event size to alert on
 	// KeyName: system.largeShardHistoryEventMetricThreshold
 	// Value type: Int
-	// Default value: 10000
+	// Default value: 50 * 1024
 	LargeShardHistoryEventMetricThreshold
 	// LargeShardHistoryBlobMetricThreshold defines the threshold for what consititutes a large history blob size to alert on
 	// KeyName: system.largeShardHistoryBlobMetricThreshold
@@ -3476,7 +3476,7 @@ var IntKeys = map[IntKey]DynamicInt{
 	LargeShardHistoryEventMetricThreshold: DynamicInt{
 		KeyName:      "system.largeShardHistoryEventMetricThreshold",
 		Description:  "defines the threshold for what consititutes a large history event length to alert on, default is 10000",
-		DefaultValue: 10000,
+		DefaultValue: 50 * 1024,
 	},
 	LargeShardHistoryBlobMetricThreshold: DynamicInt{
 		KeyName:      "system.largeShardHistoryBlobMetricThreshold",
