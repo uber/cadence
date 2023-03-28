@@ -42,7 +42,7 @@ import (
 
 const (
 	pinotPersistenceName = "pinot"
-	tableName            = "cadence-visibility-pinot"
+	tableName            = "cadence_visibility_pinot"
 	DescendingOrder      = "DESC"
 	AcendingOrder        = "ASC"
 
