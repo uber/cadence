@@ -1,5 +1,5 @@
 {
-  "schemaName": "cadence-visibility-pinot",
+  "schemaName": "cadence_visibility_pinot",
   "primaryKeyColumns": ["DocID"],
   "dimensionFieldSpecs": [
     {

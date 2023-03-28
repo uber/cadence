@@ -23,6 +23,7 @@
 package pinotVisibility
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -60,7 +61,7 @@ func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
 	}
 
 	result := getCountWorkflowExecutionsQuery(request)
-	expectResult := "SELECT COUNT(*)\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowId = wfid\n"
+	expectResult := fmt.Sprintf("SELECT COUNT(*)\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowId = wfid\n", tableName)
 
 	assert.Equal(t, result, expectResult)
 
@@ -81,7 +82,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				NextPageToken: nil,
 				Query:         "",
 			},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nLIMIT 10\n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nLIMIT 10\n", tableName),
 		},
 
 		"complete request with order by query": {
@@ -92,7 +93,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				NextPageToken: nil,
 				Query:         "Order by DomainId Desc",
 			},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nOrder by DomainId Desc\nLIMIT 10\n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nOrder by DomainId Desc\nLIMIT 10\n", tableName),
 		},
 
 		"complete request with filter query": {
@@ -103,12 +104,12 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				NextPageToken: nil,
 				Query:         "Status < 0",
 			},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND Status < 0\nLIMIT 10\n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND Status < 0\nLIMIT 10\n", tableName),
 		},
 
 		"empty request": {
 			input:          &p.ListWorkflowExecutionsByQueryRequest{},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = \nLIMIT 0\n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = \nLIMIT 0\n", tableName),
 		},
 
 		"nil request": {
@@ -140,8 +141,8 @@ func TestGetListWorkflowExecutionsQuery(t *testing.T) {
 	closeResult := getListWorkflowExecutionsQuery(request, true)
 	openResult := getListWorkflowExecutionsQuery(request, false)
 	nilResult := getListWorkflowExecutionsQuery(nil, true)
-	expectCloseResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus >= 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
-	expectOpenResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus < 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
+	expectCloseResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus >= 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
+	expectOpenResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus < 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
 	expectNilResult := ""
 
 	assert.Equal(t, closeResult, expectCloseResult)
@@ -165,8 +166,8 @@ func TestGetListWorkflowExecutionsByTypeQuery(t *testing.T) {
 	closeResult := getListWorkflowExecutionsByTypeQuery(request, true)
 	openResult := getListWorkflowExecutionsByTypeQuery(request, false)
 	nilResult := getListWorkflowExecutionsByTypeQuery(nil, true)
-	expectCloseResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowType = test-wf-type\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus >= 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
-	expectOpenResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowType = test-wf-type\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus < 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
+	expectCloseResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowType = test-wf-type\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus >= 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
+	expectOpenResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowType = test-wf-type\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus < 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
 	expectNilResult := ""
 
 	assert.Equal(t, closeResult, expectCloseResult)
@@ -190,8 +191,8 @@ func TestGetListWorkflowExecutionsByWorkflowIDQuery(t *testing.T) {
 	closeResult := getListWorkflowExecutionsByWorkflowIDQuery(request, true)
 	openResult := getListWorkflowExecutionsByWorkflowIDQuery(request, false)
 	nilResult := getListWorkflowExecutionsByWorkflowIDQuery(nil, true)
-	expectCloseResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowID = test-wid\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus >= 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
-	expectOpenResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowID = test-wid\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus < 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
+	expectCloseResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowID = test-wid\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus >= 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
+	expectOpenResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND WorkflowID = test-wid\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nAND CloseStatus < 0\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
 	expectNilResult := ""
 
 	assert.Equal(t, closeResult, expectCloseResult)
@@ -214,7 +215,7 @@ func TestGetListWorkflowExecutionsByStatusQuery(t *testing.T) {
 
 	closeResult := getListWorkflowExecutionsByStatusQuery(request)
 	nilResult := getListWorkflowExecutionsByStatusQuery(nil)
-	expectCloseResult := "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseStatus = 0\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n"
+	expectCloseResult := fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseStatus = 0\nAND CloseTime BETWEEN 1547596872371 AND 2547596872371\nOrder BY CloseTime DESC\nOrder BY RunID DESC\n", tableName)
 	expectNilResult := ""
 
 	assert.Equal(t, expectCloseResult, closeResult)
@@ -235,7 +236,7 @@ func TestGetGetClosedWorkflowExecutionQuery(t *testing.T) {
 					RunID:      "",
 				},
 			},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseStatus >= 0\nAND WorkflowID = test-wid\n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseStatus >= 0\nAND WorkflowID = test-wid\n", tableName),
 		},
 
 		"complete request with runId": {
@@ -247,12 +248,12 @@ func TestGetGetClosedWorkflowExecutionQuery(t *testing.T) {
 					RunID:      "runid",
 				},
 			},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseStatus >= 0\nAND WorkflowID = test-wid\nAND RunID = runid\n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = bfd5c907-f899-4baf-a7b2-2ab85e623ebd\nAND CloseStatus >= 0\nAND WorkflowID = test-wid\nAND RunID = runid\n", tableName),
 		},
 
 		"empty request": {
 			input:          &p.InternalGetClosedWorkflowExecutionRequest{},
-			expectedOutput: "SELECT *\nFROM cadence-visibility-pinot\nWHERE DomainID = \nAND CloseStatus >= 0\nAND WorkflowID = \n",
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = \nAND CloseStatus >= 0\nAND WorkflowID = \n", tableName),
 		},
 
 		"nil request": {
