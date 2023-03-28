@@ -598,6 +598,7 @@ func (t *timerActiveTaskExecutor) executeActivityRetryTimerTask(
 		TaskList:                      taskList,
 		ScheduleID:                    scheduledID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(scheduleToStartTimeout),
+		PartitionConfig:               mutableState.GetExecutionInfo().PartitionConfig,
 	})
 }
 
