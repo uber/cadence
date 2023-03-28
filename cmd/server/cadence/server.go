@@ -219,36 +219,24 @@ func (s *server) startService() common.Daemon {
 			log.Fatalf("not able to find advanced visibility store in config: %v", advancedVisStoreKey)
 		}
 
-		if params.PersistenceConfig.AdvancedVisibilityStore != "pinot-visibility" {
-			params.ESConfig = advancedVisStore.ElasticSearch
-			params.ESConfig.SetUsernamePassword()
-			esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
-			if err != nil {
-				log.Fatalf("error creating elastic search client: %v", err)
-			}
-			params.ESClient = esClient
-
-			// verify index name
-			indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
-			if !ok || len(indexName) == 0 {
-				log.Fatalf("elastic search config missing visibility index")
-			}
-		} else {
+		if params.PersistenceConfig.AdvancedVisibilityStore == "pinot-visibility" {
 			params.PinotConfig = advancedVisStore.Pinot
 			esVisStore := s.cfg.Persistence.DataStores["es-visibility"]
 			params.ESConfig = esVisStore.ElasticSearch
-			params.ESConfig.SetUsernamePassword()
-			esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
-			if err != nil {
-				log.Fatalf("error creating elastic search client: %v", err)
-			}
-			params.ESClient = esClient
+		} else {
+			params.ESConfig = advancedVisStore.ElasticSearch
+		}
+		params.ESConfig.SetUsernamePassword()
+		esClient, err := elasticsearch.NewGenericClient(params.ESConfig, params.Logger)
+		if err != nil {
+			log.Fatalf("error creating elastic search client: %v", err)
+		}
+		params.ESClient = esClient
 
-			// verify index name
-			indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
-			if !ok || len(indexName) == 0 {
-				log.Fatalf("elastic search config missing visibility index")
-			}
+		// verify index name
+		indexName, ok := params.ESConfig.Indices[common.VisibilityAppName]
+		if !ok || len(indexName) == 0 {
+			log.Fatalf("elastic search config missing visibility index")
 		}
 	}
 
