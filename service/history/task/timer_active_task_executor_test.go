@@ -1067,6 +1067,7 @@ func (s *timerActiveTaskExecutorSuite) TestActivityRetryTimer_Fire() {
 			},
 			ScheduleID:                    activityInfo.ScheduleID,
 			ScheduleToStartTimeoutSeconds: common.Int32Ptr(activityInfo.ScheduleToStartTimeout),
+			PartitionConfig:               mutableState.GetExecutionInfo().PartitionConfig,
 		},
 	).Return(nil).Times(1)
 
