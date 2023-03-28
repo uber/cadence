@@ -27,8 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/.gen/go/indexer"
-
 	"github.com/startreedata/pinot-client-go/pinot"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -76,27 +74,24 @@ type (
 	}
 
 	visibilityMessage struct {
-		DocID                 string                     `json:"docID,omitempty"`
-		DomainID              string                     `json:"domainID,omitempty"`
-		Wid                   string                     `json:"wid,omitempty"`
-		Rid                   string                     `json:"rid,omitempty"`
-		WorkflowTypeName      string                     `json:"workflowTypeName,omitempty"`
-		TaskList              string                     `json:"taskList,omitempty"`
-		StartTimeUnixNano     int64                      `json:"startTimeUnixNano,omitempty"`
-		ExecutionTimeUnixNano int64                      `json:"executionTimeUnixNano,omitempty"`
-		TaskID                int64                      `json:"taskID,omitempty"`
-		Memo                  []byte                     `json:"memo,omitempty"`
-		Encoding              common.EncodingType        `json:"encoding,omitempty"`
-		IsCron                bool                       `json:"isCron,omitempty"`
-		NumClusters           int16                      `json:"numClusters,omitempty"`
-		SearchAttributes      map[string][]byte          `json:"searchAttributes,omitempty"`
-		VisibilityOperation   common.VisibilityOperation `json:"visibilityOperation,omitempty"`
+		DocID         string `json:"docID,omitempty"`
+		DomainID      string `json:"domainID,omitempty"`
+		WorkflowID    string `json:"workflowID,omitempty"`
+		RunID         string `json:"runId,omitempty"`
+		WorkflowType  string `json:"workflowType,omitempty"`
+		TaskList      string `json:"taskList,omitempty"`
+		StartTime     int64  `json:"startTime,omitempty"`
+		ExecutionTime int64  `json:"executionTime,omitempty"`
+		TaskID        int64  `json:"taskID,omitempty"`
+		IsCron        bool   `json:"isCron,omitempty"`
+		NumClusters   int16  `json:"numClusters,omitempty"`
+		Attr          string `json:"attr,omitempty"`
+		UpdateTime    int64  `json:"updateTime,omitempty"` // update execution,
+		ShardID       int64  `json:"shardID,omitempty"`
 		// specific to certain status
-		EndTimeUnixNano    int64                                 `json:"endTimeUnixNano,omitempty"`    // close execution
-		CloseStatus        workflow.WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`        // close execution
-		HistoryLength      int64                                 `json:"historyLength,omitempty"`      // close execution
-		UpdateTimeUnixNano int64                                 `json:"updateTimeUnixNano,omitempty"` // update execution,
-		ShardID            int64                                 `json:"shardID,omitempty"`
+		EndTime       int64                                 `json:"endTime,omitempty"`       // close execution
+		CloseStatus   workflow.WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`   // close execution
+		HistoryLength int64                                 `json:"historyLength,omitempty"` // close execution
 	}
 )
 
@@ -449,44 +444,31 @@ func createVisibilityMessage(
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
-) *indexer.Message {
-	msgType := indexer.MessageTypePinot
-
-	visMsg := visibilityMessage{
-		DocID:                 wid + "-" + rid,
-		DomainID:              domainID,
-		Wid:                   wid,
-		Rid:                   rid,
-		WorkflowTypeName:      workflowTypeName,
-		TaskList:              taskList,
-		StartTimeUnixNano:     startTimeUnixNano,
-		ExecutionTimeUnixNano: executionTimeUnixNano,
-		TaskID:                taskID,
-		Memo:                  memo,
-		Encoding:              encoding,
-		IsCron:                isCron,
-		NumClusters:           NumClusters,
-		SearchAttributes:      searchAttributes,
-		VisibilityOperation:   visibilityOperation,
-		EndTimeUnixNano:       endTimeUnixNano,
-		CloseStatus:           closeStatus,
-		HistoryLength:         historyLength,
-		UpdateTimeUnixNano:    updateTimeUnixNano,
-		ShardID:               shardID,
+) []byte {
+	msg := visibilityMessage{
+		DocID:         wid + "-" + rid,
+		DomainID:      domainID,
+		WorkflowID:    wid,
+		RunID:         rid,
+		WorkflowType:  workflowTypeName,
+		TaskList:      taskList,
+		StartTime:     startTimeUnixNano,
+		ExecutionTime: executionTimeUnixNano,
+		IsCron:        isCron,
+		NumClusters:   NumClusters,
+		Attr:          "",
+		EndTime:       endTimeUnixNano,
+		CloseStatus:   closeStatus,
+		HistoryLength: historyLength,
+		UpdateTime:    updateTimeUnixNano,
+		ShardID:       shardID,
 	}
 
-	serializedMsg, err := json.Marshal(visMsg)
+	serializedMsg, err := json.Marshal(msg)
 	if err != nil {
 		panic("serialize msg error!")
 	}
-
-	msg := &indexer.Message{
-		MessageType: &msgType,
-		WorkflowID:  common.StringPtr(wid),
-		Payload:     &serializedMsg,
-	}
-
-	return msg
+	return serializedMsg
 }
 
 /****************************** Request Translator ******************************/
