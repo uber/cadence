@@ -1,10 +1,10 @@
 {
-  "tableName": "cadence-visibility-pinot",
+  "tableName": "cadence_visibility_pinot",
   "tableType": "REALTIME",
   "segmentsConfig": {
     "timeColumnName": "StartTime",
     "timeType": "MILLISECONDS",
-    "schemaName": "cadence-visibility-pinot",
+    "schemaName": "cadence_visibility_pinot",
     "replicasPerPartition": "1"
   },
   "tenants": {},
@@ -13,7 +13,7 @@
     "streamConfigs": {
       "streamType": "kafka",
       "stream.kafka.consumer.type": "lowlevel",
-      "stream.kafka.topic.name": "cadence-visibility-pinot",
+      "stream.kafka.topic.name": "cadence_visibility_pinott",
       "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
       "stream.kafka.hlc.zk.connect.string": "zookeeper:2181/kafka",
       "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory",
