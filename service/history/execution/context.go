@@ -194,7 +194,10 @@ func NewContext(
 		metricsClient:     shard.GetMetricsClient(),
 		mutex:             locks.NewMutex(),
 		stats: &persistence.ExecutionStats{
-			HistorySize: 0,
+			HistorySize:     0,
+			OldHistorySize:  0,
+			OldHistoryCount: 0,
+			BlobSize:        0,
 		},
 	}
 }
@@ -211,7 +214,10 @@ func (c *contextImpl) Clear() {
 	c.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.WorkflowContextCleared)
 	c.mutableState = nil
 	c.stats = &persistence.ExecutionStats{
-		HistorySize: 0,
+		HistorySize:     0,
+		OldHistorySize:  0,
+		OldHistoryCount: 0,
+		BlobSize:        0,
 	}
 }
 
