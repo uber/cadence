@@ -36,7 +36,7 @@ services:
       - pinot-controller
   pinot-server:
     image: apachepinot/pinot:0.11.0
-    command: "StartServer -clusterName pinot-test -zkAddress zookeeper:2181"
+    command: "StartServer -zkAddress zookeeper:2181"
     restart: unless-stopped
     container_name: "pinot-server"
     ports:
