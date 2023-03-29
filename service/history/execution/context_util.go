@@ -41,16 +41,16 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
 		if blobSize > blobSizeWarn {
 			c.logger.SampleInfo("Workflow writing a large blob", c.shard.GetConfig().SampleLoggingRate(), tag.WorkflowDomainName(c.GetDomainName()),
-				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
+				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
 			c.metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
 		}
 
 		historyCountWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()), int64(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())))
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
-		// this might sometimes double count if the workflow is extremely fast but should be ok to get a rough idea and identify bad actors
+		// this seems to double count and I can't figure out why but should be ok to get a rough idea and identify bad actors
 		if oldHistoryCount < historyCountWarn && newHistoryCount >= historyCountWarn {
 			c.logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
-				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
+				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
 			c.metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
 		}
 
@@ -58,15 +58,9 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		// check if the new history size is greater than our threshold and only count/log it once when it passes it
 		if oldHistorySize < historySizeWarn && c.stats.HistorySize >= historySizeWarn {
 			c.logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
-				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
+				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()), tag.WorkflowRunID(c.workflowExecution.GetRunID()))
 			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistorySizeCount)
 		}
-		c.logger.Info("BlogSizeLimitWarn should be "+strconv.Itoa(c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName())), tag.WorkflowDomainName(c.GetDomainName()))
-		c.logger.Info("historyCountWarn should be "+strconv.Itoa(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())), tag.WorkflowDomainName(c.GetDomainName()))
-		c.logger.Info("historySizeWarn should be "+strconv.Itoa(c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())), tag.WorkflowDomainName(c.GetDomainName()))
-		c.logger.Info("blobSizeWarn is "+strconv.Itoa(int(blobSizeWarn))+"historyCountWarn is "+strconv.Itoa(int(historyCountWarn))+
-			" historySizeWarn is "+strconv.Itoa(int(historySizeWarn))+" other shit like newHistoryCount "+strconv.Itoa(int(newHistoryCount))+
-			" blobSize "+strconv.Itoa(int(blobSize))+" oldHistoryCount is "+strconv.Itoa(int(oldHistoryCount))+" oldHistorySize is "+strconv.Itoa(int(oldHistorySize)), tag.WorkflowDomainName(c.GetDomainName()))
 	}
 }
 
