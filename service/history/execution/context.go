@@ -720,8 +720,10 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		return err
 	}
 	var persistedBlobs events.PersistedBlobs
-	currentWorkflowSize, oldWorkflowSize := c.GetHistorySize(), c.GetHistorySize()
-	currentWorkflowHistoryCount, oldWorkflowHistoryCount := c.mutableState.GetNextEventID()-1, c.mutableState.GetNextEventID()-1
+	currentWorkflowSize := c.GetHistorySize()
+	oldWorkflowSize := currentWorkflowSize
+	currentWorkflowHistoryCount := c.mutableState.GetNextEventID()-1
+	oldWorkflowHistoryCount := currentWorkflowHistoryCount
 	for _, workflowEvents := range currentWorkflowEventsSeq {
 		blob, err := c.PersistNonStartWorkflowBatchEvents(ctx, workflowEvents)
 		currentWorkflowHistoryCount += int64(len(workflowEvents.Events))
