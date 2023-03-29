@@ -33,7 +33,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCount int64, oldHistorySize int64) {
+func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCount int64, oldHistorySize int64, newHistoryCount int64) {
 	if c.shard.GetConfig().EnableShardIDMetrics() {
 		shardIDStr := strconv.Itoa(c.shard.GetShardID())
 
@@ -48,7 +48,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		historyCountWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()), int64(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())))
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
 		// this might sometimes double count if the workflow is extremely fast but should be ok to get a rough idea and identify bad actors
-		if oldHistoryCount < historyCountWarn && (c.mutableState.GetNextEventID()-1) >= historyCountWarn {
+		if oldHistoryCount < historyCountWarn && newHistoryCount >= historyCountWarn {
 			c.logger.Warn("Workflow history event count is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
 				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
 			c.metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
@@ -65,7 +65,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 		c.logger.Info("historyCountWarn should be "+strconv.Itoa(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())), tag.WorkflowDomainName(c.GetDomainName()))
 		c.logger.Info("historySizeWarn should be "+strconv.Itoa(c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())), tag.WorkflowDomainName(c.GetDomainName()))
 		c.logger.Info("blobSizeWarn is "+strconv.Itoa(int(blobSizeWarn))+"historyCountWarn is "+strconv.Itoa(int(historyCountWarn))+
-			" historySizeWarn is "+strconv.Itoa(int(historySizeWarn))+" other shit like newHistoryCount "+strconv.Itoa(int(c.mutableState.GetNextEventID()-1))+
+			" historySizeWarn is "+strconv.Itoa(int(historySizeWarn))+" other shit like newHistoryCount "+strconv.Itoa(int(newHistoryCount))+
 			" blobSize "+strconv.Itoa(int(blobSize))+" oldHistoryCount is "+strconv.Itoa(int(oldHistoryCount))+" oldHistorySize is "+strconv.Itoa(int(oldHistorySize)), tag.WorkflowDomainName(c.GetDomainName()))
 	}
 }
