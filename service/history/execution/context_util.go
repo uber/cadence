@@ -61,6 +61,15 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 				tag.WorkflowID(c.workflowExecution.GetWorkflowID()), tag.ShardID(c.shard.GetShardID()))
 			c.metricsClient.Scope(metrics.LargeExecutionSizeShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistorySizeCount)
 		}
+
+		if c.GetDomainName() == "cadence-killers-staging" {
+			c.logger.Info("BlogSizeLimitWarn should be " + strconv.Itoa(c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName())))
+			c.logger.Info("historyCountWarn should be " + strconv.Itoa(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())))
+			c.logger.Info("historySizeWarn should be " + strconv.Itoa(c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())))
+			c.logger.Info("blobSizeWarn is " + strconv.Itoa(int(blobSizeWarn)) + "historyCountWarn is " + strconv.Itoa(int(historyCountWarn)) +
+				" historySizeWarn is " + strconv.Itoa(int(historySizeWarn)) + " other shit like newHistoryCount " + strconv.Itoa(int(c.mutableState.GetNextEventID()-1)) +
+				" blobSize " + strconv.Itoa(int(blobSize)) + " oldHistoryCount is " + strconv.Itoa(int(oldHistoryCount)) + " oldHistorySize is " + strconv.Itoa(int(oldHistorySize)))
+		}
 	}
 }
 
