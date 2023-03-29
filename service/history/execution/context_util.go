@@ -36,10 +36,12 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats() {
 		shardIDStr := strconv.Itoa(c.shard.GetShardID())
 
 		var blobSizeWarn int64
-		if c.shard.GetConfig().LargeShardHistoryBlobMetricThreshold() < c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName()) {
-			blobSizeWarn = int64(c.shard.GetConfig().LargeShardHistoryBlobMetricThreshold())
+		blobSizeGlobalWarn := c.shard.GetConfig().LargeShardHistoryBlobMetricThreshold()
+		blobSizeDomainWarn := c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName())
+		if blobSizeGlobalWarn < blobSizeDomainWarn {
+			blobSizeWarn = int64(blobSizeGlobalWarn)
 		} else {
-			blobSizeWarn = int64(c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName()))
+			blobSizeWarn = int64(blobSizeDomainWarn)
 		}
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
 		if c.stats.BlobSize > blobSizeWarn {
@@ -49,10 +51,12 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats() {
 		}
 
 		var historyCountWarn int64
-		if c.shard.GetConfig().LargeShardHistoryEventMetricThreshold() < c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName()) {
-			historyCountWarn = int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold())
+		historyCountGlobalWarn := c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()
+		historyCountDomainWarn := c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())
+		if historyCountGlobalWarn < historyCountDomainWarn {
+			historyCountWarn = int64(historyCountGlobalWarn)
 		} else {
-			historyCountWarn = int64(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName()))
+			historyCountWarn = int64(historyCountDomainWarn)
 		}
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
 		// this might sometimes double count if the workflow is extremely fast but should be ok to get a rough idea and identify bad actors
@@ -63,10 +67,12 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats() {
 		}
 
 		var historySizeWarn int64
-		if c.shard.GetConfig().LargeShardHistorySizeMetricThreshold() < c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName()) {
-			historySizeWarn = int64(c.shard.GetConfig().LargeShardHistorySizeMetricThreshold())
+		historySizeGlobalWarn := c.shard.GetConfig().LargeShardHistorySizeMetricThreshold()
+		historySizeDomainWarn := c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())
+		if historySizeGlobalWarn < historySizeDomainWarn {
+			historySizeWarn = int64(historySizeGlobalWarn)
 		} else {
-			historySizeWarn = int64(c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName()))
+			historySizeWarn = int64(historySizeDomainWarn)
 		}
 		// check if the new history size is greater than our threshold and only count/log it once when it passes it
 		if c.stats.OldHistorySize < historySizeWarn && c.stats.HistorySize >= historySizeWarn {
