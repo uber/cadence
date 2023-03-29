@@ -38,52 +38,52 @@ func NewBuilder() *Builder {
 	}
 }
 
-func (s *Builder) Query(query Query) *Builder {
-	s.query = query
-	return s
+func (b *Builder) Query(query Query) *Builder {
+	b.query = query
+	return b
 }
 
-func (s *Builder) From(from int) *Builder {
-	s.from = from
-	return s
+func (b *Builder) From(from int) *Builder {
+	b.from = from
+	return b
 }
 
-func (s *Builder) Sortby(sorters ...Sorter) *Builder {
-	s.sorters = sorters
-	return s
+func (b *Builder) Sortby(sorters ...Sorter) *Builder {
+	b.sorters = sorters
+	return b
 }
 
-func (s *Builder) Size(size int) *Builder {
-	s.size = size
-	return s
+func (b *Builder) Size(size int) *Builder {
+	b.size = size
+	return b
 }
 
-func (s *Builder) SearchAfter(v ...interface{}) *Builder {
-	s.searchAfterSortValues = v
-	return s
+func (b *Builder) SearchAfter(v ...interface{}) *Builder {
+	b.searchAfterSortValues = v
+	return b
 }
 
 // Source returns the serializable JSON for the source builder.
-func (s *Builder) Source() (interface{}, error) {
+func (b *Builder) Source() (interface{}, error) {
 	source := make(map[string]interface{})
 
-	if s.from != -1 {
-		source["from"] = s.from
+	if b.from != -1 {
+		source["from"] = b.from
 	}
-	if s.size != -1 {
-		source["size"] = s.size
+	if b.size != -1 {
+		source["size"] = b.size
 	}
 
-	if s.query != nil {
-		src, err := s.query.Source()
+	if b.query != nil {
+		src, err := b.query.Source()
 		if err != nil {
 			return nil, err
 		}
 		source["query"] = src
 	}
-	if len(s.sorters) > 0 {
+	if len(b.sorters) > 0 {
 		var sortarr []interface{}
-		for _, sorter := range s.sorters {
+		for _, sorter := range b.sorters {
 			src, err := sorter.Source()
 			if err != nil {
 				return nil, err
@@ -93,8 +93,8 @@ func (s *Builder) Source() (interface{}, error) {
 		source["sort"] = sortarr
 	}
 
-	if len(s.searchAfterSortValues) > 0 {
-		source["search_after"] = s.searchAfterSortValues
+	if len(b.searchAfterSortValues) > 0 {
+		source["search_after"] = b.searchAfterSortValues
 	}
 
 	return source, nil

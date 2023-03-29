@@ -56,11 +56,18 @@ func TestBuilderAgainsESv7(t *testing.T) {
 	qb.Query(NewExistsQuery("user"))
 	qb.Size(10)
 	qb.Sortby(NewFieldSort("runid").Desc())
-
-	searchSource := elastic.NewSearchSource().Query(elastic.NewExistsQuery("user")).Size(10).SortBy(elastic.NewFieldSort("runid").Desc())
-	sss, err := searchSource.Source()
-	assert.NoError(t, err)
+	qb.Query(NewBoolQuery().Must(NewMatchQuery("domainID", "uuid"))).SearchAfter([]interface{}{"sortval", "tiebraker"})
 	qbs, err := qb.Source()
 	assert.NoError(t, err)
+
+	searchSource := elastic.NewSearchSource().
+		Query(elastic.NewExistsQuery("user")).
+		Size(10).
+		SortBy(elastic.NewFieldSort("runid").Desc()).
+		Query(elastic.NewBoolQuery().Must(elastic.NewMatchQuery("domainID", "uuid"))).SearchAfter([]interface{}{"sortval", "tiebraker"})
+
+	sss, err := searchSource.Source()
+	assert.NoError(t, err)
+
 	assert.Equal(t, sss, qbs, "ESv7 and local QueryBuilder should produce the same query")
 }
