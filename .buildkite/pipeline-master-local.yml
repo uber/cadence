@@ -1,14 +1,9 @@
 steps:
-  - label: "fossa analyze"
-    agents:
-      queue: "init"
-      docker: "*"
-    command: "./scripts/buildkite/fossa.sh"
   - label: ":golang: unit test"
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
+    command: "CASSANDRA_HOST=cassandra make install-schema && make cover_profile" # make install-schema is needed for a server startup test. See main_test.go
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -37,7 +32,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -52,7 +47,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -67,7 +62,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_ndc_profile"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -82,7 +77,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -97,7 +92,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_ndc_profile"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -112,7 +107,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_integration_profile"
+    command: "make cover_integration_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
@@ -127,7 +122,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "make just-build; make cover_ndc_profile"
+    command: "make cover_ndc_profile"
     artifact_paths:
       - ".build/coverage/*.out"
     retry:
