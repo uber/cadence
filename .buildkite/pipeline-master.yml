@@ -23,7 +23,7 @@ steps:
     agents:
       queue: "workers"
       docker: "*"
-    command: "./scripts/buildkite/golint.sh"
+    command: "make .just-build; ./scripts/buildkite/golint.sh"
     artifact_paths: []
     retry:
       automatic:
