@@ -317,7 +317,7 @@ func (s *configStoreClientSuite) SetupTest() {
 
 func defaultTestSetup(s *configStoreClientSuite) {
 	s.mockManager.EXPECT().
-		FetchDynamicConfig(gomock.Any()).
+		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
 		Return(&p.FetchDynamicConfigResponse{
 			Snapshot: snapshot1,
 		}, nil).
@@ -684,8 +684,8 @@ func (s *configStoreClientSuite) TestUpdateValue_NilOverwrite() {
 	defaultTestSetup(s)
 
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest, cfgType p.ConfigType) error {
 			if request.Snapshot.Values.Entries[0].Name != dc.TestGetBoolPropertyKey.String() {
 				return nil
 			}
@@ -700,7 +700,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 	defaultTestSetup(s)
 
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2)).
+		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2), p.DynamicConfig).
 		Return(nil).MaxTimes(1)
 
 	values := []*types.DynamicConfigValue{
@@ -719,7 +719,7 @@ func (s *configStoreClientSuite) TestUpdateValue_NoRetrySuccess() {
 	snapshot2 := snapshot1
 	snapshot2.Values.Entries[0].Values = values
 	s.mockManager.EXPECT().
-		FetchDynamicConfig(gomock.Any()).
+		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
 		Return(&p.FetchDynamicConfigResponse{
 			Snapshot: snapshot2,
 		}, nil).MaxTimes(1)
@@ -744,7 +744,7 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 	}
 
 	s.mockManager.EXPECT().
-		FetchDynamicConfig(gomock.Any()).
+		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
 		Return(&p.FetchDynamicConfigResponse{
 			Snapshot: &p.DynamicConfigSnapshot{
 				Version: 1,
@@ -757,8 +757,8 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 		AnyTimes()
 
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest, cfgType p.ConfigType) error {
 			s.Equal(1, len(request.Snapshot.Values.Entries))
 			s.Equal(request.Snapshot.Values.Entries[0].Values, values)
 			return nil
@@ -771,16 +771,16 @@ func (s *configStoreClientSuite) TestUpdateValue_SuccessNewKey() {
 
 func (s *configStoreClientSuite) TestUpdateValue_RetrySuccess() {
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2)).
+		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(2), p.DynamicConfig).
 		Return(&p.ConditionFailedError{}).AnyTimes()
 
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(3)).
+		UpdateDynamicConfig(gomock.Any(), EqSnapshotVersion(3), p.DynamicConfig).
 		Return(nil).AnyTimes()
 
 	snapshot1.Version = 2
 	s.mockManager.EXPECT().
-		FetchDynamicConfig(gomock.Any()).
+		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
 		Return(&p.FetchDynamicConfigResponse{
 			Snapshot: snapshot1,
 		}, nil).AnyTimes()
@@ -795,7 +795,7 @@ func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
 	defaultTestSetup(s)
 
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
 		Return(&p.ConditionFailedError{}).MaxTimes(retryAttempts + 1)
 
 	err := s.client.UpdateValue(dc.TestGetFloat64PropertyKey, []*types.DynamicConfigValue{})
@@ -805,8 +805,8 @@ func (s *configStoreClientSuite) TestUpdateValue_RetryFailure() {
 func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
 	defaultTestSetup(s)
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, _ *p.UpdateDynamicConfigRequest) error {
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
+		DoAndReturn(func(_ context.Context, _ *p.UpdateDynamicConfigRequest, cfgType p.ConfigType) error {
 			time.Sleep(2 * time.Second)
 			return nil
 		}).AnyTimes()
@@ -818,8 +818,8 @@ func (s *configStoreClientSuite) TestUpdateValue_Timeout() {
 func (s *configStoreClientSuite) TestRestoreValue_NoFilter() {
 	defaultTestSetup(s)
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest, cfgType p.ConfigType) error {
 			for _, entry := range request.Snapshot.Values.Entries {
 				if entry.Name == dc.TestGetBoolPropertyKey.String() {
 					for _, value := range entry.Values {
@@ -841,8 +841,8 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
 	defaultTestSetup(s)
 
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest, cfgType p.ConfigType) error {
 			for _, resEntry := range request.Snapshot.Values.Entries {
 				for _, oriEntry := range snapshot1.Values.Entries {
 					if oriEntry.Name == resEntry.Name {
@@ -864,8 +864,8 @@ func (s *configStoreClientSuite) TestRestoreValue_FilterNoMatch() {
 func (s *configStoreClientSuite) TestRestoreValue_FilterMatch() {
 	defaultTestSetup(s)
 	s.mockManager.EXPECT().
-		UpdateDynamicConfig(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest) error {
+		UpdateDynamicConfig(gomock.Any(), gomock.Any(), p.DynamicConfig).
+		DoAndReturn(func(_ context.Context, request *p.UpdateDynamicConfigRequest, cfgType p.ConfigType) error {
 			for _, resEntry := range request.Snapshot.Values.Entries {
 				if resEntry.Name == dc.TestGetBoolPropertyKey.String() {
 					s.Equal(2, len(resEntry.Values))
@@ -897,7 +897,7 @@ func (s *configStoreClientSuite) TestListValues() {
 
 func (s *configStoreClientSuite) TestListValues_EmptyCache() {
 	s.mockManager.EXPECT().
-		FetchDynamicConfig(gomock.Any()).
+		FetchDynamicConfig(gomock.Any(), p.DynamicConfig).
 		Return(&p.FetchDynamicConfigResponse{
 			Snapshot: &p.DynamicConfigSnapshot{
 				Version: 1,

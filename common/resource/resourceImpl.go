@@ -25,6 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/partition"
+
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/yarpc"
@@ -118,6 +121,9 @@ type (
 		pprofInitializer       common.PProfInitializer
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		rpcFactory             common.RPCFactory
+
+		isolationGroups isolationgroup.State
+		partitioner     partition.Partitioner
 	}
 )
 
@@ -297,7 +303,9 @@ func New(
 			logger,
 			params.InstanceID,
 		),
-		rpcFactory: params.RPCFactory,
+		rpcFactory:      params.RPCFactory,
+		isolationGroups: params.isolationGroupState,
+		partitioner:     params.partitioner,
 	}
 	return impl, nil
 }

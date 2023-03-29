@@ -41,7 +41,7 @@ type defaultIsolationGroupStateHandler struct {
 	done                       chan bool
 	log                        log.Logger
 	domainCache                cache.DomainCache
-	globalIsolationGroupDrains persistence.ConfigStore
+	globalIsolationGroupDrains persistence.ConfigStoreManager
 	config                     Config
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
@@ -56,8 +56,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
 	domainCache cache.DomainCache,
 	config Config,
-	globalIsolationGroupDrains persistence.ConfigStore,
-	done chan bool,
+	globalIsolationGroupDrains persistence.ConfigStoreManager,
 ) State {
 	return &defaultIsolationGroupStateHandler{
 		status:                     common.DaemonStatusInitialized,
@@ -144,7 +143,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.FetchConfig(ctx, persistence.GlobalIsolationGroupConfig)
+	globalCfg, err := z.globalIsolationGroupDrains.FetchDynamicConfig(ctx, persistence.GlobalIsolationGroupConfig)
 
 	globalState, err := fromCfgStore(globalCfg)
 	if err != nil {
@@ -220,6 +219,6 @@ func availableIG(allIsolationGroups []string, global types.IsolationGroupConfigu
 	return out
 }
 
-func fromCfgStore(in *persistence.InternalConfigStoreEntry) (types.IsolationGroupConfiguration, error) {
+func fromCfgStore(in *persistence.FetchDynamicConfigResponse) (types.IsolationGroupConfiguration, error) {
 	panic("not implemented")
 }

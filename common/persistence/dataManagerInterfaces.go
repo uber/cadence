@@ -1868,8 +1868,8 @@ type (
 
 	ConfigStoreManager interface {
 		Closeable
-		FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error)
-		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error
+		FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error
 		//can add functions for config types other than dynamic config
 	}
 )
