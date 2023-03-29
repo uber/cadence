@@ -1359,7 +1359,7 @@ const (
 	// LargeShardHistoryBlobMetricThreshold defines the threshold for what consititutes a large history blob size to alert on
 	// KeyName: system.largeShardHistoryBlobMetricThreshold
 	// Value type: Int
-	// Default value: 262144
+	// Default value: 262144 (1/4mb)
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
