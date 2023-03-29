@@ -87,5 +87,5 @@ func (s *UpdateSchemaTestSuite) TestShortcut() {
 	if cassandraHost := os.Getenv("CASSANDRA_HOST"); cassandraHost != "" {
 		cqlshArgs = append(cqlshArgs, cassandraHost)
 	}
-	s.RunShortcutTest(cassandra2.BuildCLIOptions(), client, "-k", dir, "cqlsh", cqlshArgs...)
+	s.RunShortcutTest(cassandra2.BuildCLIOptions(), client, "-k", dir, "docker", "run", "--rm", "cassandra:3.11", "cqlsh", cqlshArgs...)
 }
