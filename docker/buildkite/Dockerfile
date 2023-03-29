@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       gettext-base \
       libyaml-dev \
-      python \
+      python2.7 \
       python-dev \
       python-setuptools \
       time \
