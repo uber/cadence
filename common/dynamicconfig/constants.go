@@ -3475,7 +3475,7 @@ var IntKeys = map[IntKey]DynamicInt{
 	},
 	LargeShardHistoryEventMetricThreshold: DynamicInt{
 		KeyName:      "system.largeShardHistoryEventMetricThreshold",
-		Description:  "defines the threshold for what consititutes a large history event length to alert on, default is 10000",
+		Description:  "defines the threshold for what consititutes a large history event length to alert on, default is 50k",
 		DefaultValue: 50 * 1024,
 	},
 	LargeShardHistoryBlobMetricThreshold: DynamicInt{
