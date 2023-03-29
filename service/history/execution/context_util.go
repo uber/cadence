@@ -21,6 +21,7 @@
 package execution
 
 import (
+	"github.com/uber/cadence/common"
 	"strconv"
 	"time"
 
@@ -35,14 +36,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 	if c.shard.GetConfig().EnableShardIDMetrics() {
 		shardIDStr := strconv.Itoa(c.shard.GetShardID())
 
-		var blobSizeWarn int64
-		blobSizeGlobalWarn := c.shard.GetConfig().LargeShardHistoryBlobMetricThreshold()
-		blobSizeDomainWarn := c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName())
-		if blobSizeGlobalWarn < blobSizeDomainWarn {
-			blobSizeWarn = int64(blobSizeGlobalWarn)
-		} else {
-			blobSizeWarn = int64(blobSizeDomainWarn)
-		}
+		blobSizeWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistoryBlobMetricThreshold()), int64(c.shard.GetConfig().BlobSizeLimitWarn(c.GetDomainName())))
 		// check if blob size is larger than threshold in Dynamic config if so alert on it every time
 		if blobSize > blobSizeWarn {
 			c.logger.SampleInfo("Workflow writing a large blob", c.shard.GetConfig().SampleLoggingRate(), tag.WorkflowDomainName(c.GetDomainName()),
@@ -50,14 +44,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 			c.metricsClient.Scope(metrics.LargeExecutionBlobShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryBlobCount)
 		}
 
-		var historyCountWarn int64
-		historyCountGlobalWarn := c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()
-		historyCountDomainWarn := c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())
-		if historyCountGlobalWarn < historyCountDomainWarn {
-			historyCountWarn = int64(historyCountGlobalWarn)
-		} else {
-			historyCountWarn = int64(historyCountDomainWarn)
-		}
+		historyCountWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistoryEventMetricThreshold()), int64(c.shard.GetConfig().HistoryCountLimitWarn(c.GetDomainName())))
 		// check if the new history count is greater than our threshold and only count/log it once when it passes it
 		// this might sometimes double count if the workflow is extremely fast but should be ok to get a rough idea and identify bad actors
 		if oldHistoryCount < historyCountWarn && (c.mutableState.GetNextEventID()-1) >= historyCountWarn {
@@ -66,14 +53,7 @@ func (c *contextImpl) emitLargeWorkflowShardIDStats(blobSize int64, oldHistoryCo
 			c.metricsClient.Scope(metrics.LargeExecutionCountShardScope, metrics.ShardIDTag(shardIDStr)).IncCounter(metrics.LargeHistoryEventCount)
 		}
 
-		var historySizeWarn int64
-		historySizeGlobalWarn := c.shard.GetConfig().LargeShardHistorySizeMetricThreshold()
-		historySizeDomainWarn := c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())
-		if historySizeGlobalWarn < historySizeDomainWarn {
-			historySizeWarn = int64(historySizeGlobalWarn)
-		} else {
-			historySizeWarn = int64(historySizeDomainWarn)
-		}
+		historySizeWarn := common.MinInt64(int64(c.shard.GetConfig().LargeShardHistorySizeMetricThreshold()), int64(c.shard.GetConfig().HistorySizeLimitWarn(c.GetDomainName())))
 		// check if the new history size is greater than our threshold and only count/log it once when it passes it
 		if oldHistorySize < historySizeWarn && c.stats.HistorySize >= historySizeWarn {
 			c.logger.Warn("Workflow history event size is reaching dangerous levels", tag.WorkflowDomainName(c.GetDomainName()),
