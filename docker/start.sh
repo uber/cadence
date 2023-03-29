@@ -86,6 +86,10 @@ setup_schema() {
     fi
 }
 
+cqlsh () {
+    docker run --rm cassandra:3.11 cqlsh "$@"
+}
+
 wait_for_cassandra() {
     server=`echo $CASSANDRA_SEEDS | awk -F ',' '{print $1}'`
     until cqlsh -u $CASSANDRA_USER -p $CASSANDRA_PASSWORD --cqlversion=3.4.4 --protocol-version=$CASSANDRA_PROTO_VERSION $server < /dev/null; do
