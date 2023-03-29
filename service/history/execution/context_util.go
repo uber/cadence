@@ -21,9 +21,10 @@
 package execution
 
 import (
-	"github.com/uber/cadence/common"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
