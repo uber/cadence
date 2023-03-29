@@ -194,10 +194,7 @@ func NewContext(
 		metricsClient:     shard.GetMetricsClient(),
 		mutex:             locks.NewMutex(),
 		stats: &persistence.ExecutionStats{
-			HistorySize:     0,
-			OldHistorySize:  0,
-			OldHistoryCount: 0,
-			BlobSize:        0,
+			HistorySize: 0,
 		},
 	}
 }
@@ -214,10 +211,7 @@ func (c *contextImpl) Clear() {
 	c.metricsClient.IncCounter(metrics.WorkflowContextScope, metrics.WorkflowContextCleared)
 	c.mutableState = nil
 	c.stats = &persistence.ExecutionStats{
-		HistorySize:     0,
-		OldHistorySize:  0,
-		OldHistoryCount: 0,
-		BlobSize:        0,
+		HistorySize: 0,
 	}
 }
 
@@ -858,10 +852,7 @@ func (c *contextImpl) UpdateWorkflowExecutionWithNew(
 		domainName,
 		resp.MutableStateUpdateSessionStats,
 	)
-	c.stats.BlobSize = currentWorkflowSize - oldWorkflowSize
-	c.stats.OldHistoryCount = oldWorkflowHistoryCount
-	c.stats.OldHistorySize = oldWorkflowSize
-	c.emitLargeWorkflowShardIDStats()
+	c.emitLargeWorkflowShardIDStats(currentWorkflowSize-oldWorkflowSize, oldWorkflowHistoryCount, oldWorkflowSize)
 	// emit workflow completion stats if any
 	if currentWorkflow.ExecutionInfo.State == persistence.WorkflowStateCompleted {
 		if event, err := c.mutableState.GetCompletionEvent(ctx); err == nil {
