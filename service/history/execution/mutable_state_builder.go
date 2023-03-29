@@ -2235,6 +2235,7 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 			WorkflowDomain:                  e.GetDomainEntry().GetInfo().Name,
 			ScheduledTimestampOfThisAttempt: common.Int64Ptr(ai.ScheduledTime.UnixNano()),
 		},
+		PartitionConfig: e.executionInfo.PartitionConfig,
 	})
 	if err == nil {
 		taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
