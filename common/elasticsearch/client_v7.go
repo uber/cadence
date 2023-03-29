@@ -422,7 +422,6 @@ func (c *elasticV7) getSearchResult(
 ) (*elastic.SearchResult, error) {
 
 	// always match domain id
-	//boolQuery := elastic.NewBoolQuery().Must(elastic.NewMatchQuery(DomainID, request.DomainUUID))
 	boolQuery := query.NewBoolQuery().Must(query.NewMatchQuery(DomainID, request.DomainUUID))
 	if matchQuery != nil {
 		boolQuery = boolQuery.Must(matchQuery)
@@ -458,7 +457,6 @@ func (c *elasticV7) getSearchResult(
 		From:     token.From,
 		PageSize: request.PageSize,
 	}
-
 	params.Sorter = append(params.Sorter, query.NewFieldSort(rangeQueryField).Desc())
 	params.Sorter = append(params.Sorter, query.NewFieldSort(RunID).Desc())
 
