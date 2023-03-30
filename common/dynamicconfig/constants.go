@@ -1821,7 +1821,7 @@ const (
 	// EnableTasklistIsolation Is a feature to enable subdivision of workflows by units called 'isolation-groups'
 	// and to control their movement and blast radius. This has some nontrivial operational overheads in management
 	// and a good understanding of poller distribution, so probably not worth enabling unless it's well understood.
-	// KeyName: system.enableIsolationGroupPartitioning
+	// KeyName: system.enableTasklistIsolation
 	// Value type: bool
 	// Default value: false
 	EnableTasklistIsolation
@@ -3843,7 +3843,7 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		DefaultValue: false,
 	},
 	EnableTasklistIsolation: DynamicBool{
-		KeyName:      "system.enableIsolationGroupPartitioning",
+		KeyName:      "system.enableTasklistIsolation",
 		Description:  "EnableTasklistIsolation is a feature to enable isolation-groups for a domain. Should not be enabled without a deep understanding of this feature",
 		DefaultValue: false,
 	},
@@ -4457,7 +4457,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		DefaultValue: time.Hour * 24 * 30,
 	},
 	IsolationGroupStateRefreshInterval: DynamicDuration{
-		KeyName:      "system.isolationGroupCfgUpdateFrequency",
+		KeyName:      "system.isolationGroupStateRefreshInterval",
 		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
 		DefaultValue: time.Minute * 2,
 	},
