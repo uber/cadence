@@ -44,7 +44,10 @@ var (
 	testWorkflowID   = "test-wid"
 	testCloseStatus  = int32(1)
 
-	client = NewPinotConnectionClient(nil, nil)
+	client = pinotConnectionClient{
+		client: nil,
+		logger: nil,
+	}
 )
 
 func TestBuildMap(t *testing.T) {
