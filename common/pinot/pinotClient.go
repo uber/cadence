@@ -41,19 +41,19 @@ const (
 	tableName = "cadence_visibility_pinot"
 )
 
-type pinotConnectionClient struct {
+type pinotClient struct {
 	client *pinot.Connection
 	logger log.Logger
 }
 
-func NewPinotConnectionClient(client *pinot.Connection, logger log.Logger) GenericClient {
-	return &pinotConnectionClient{
+func NewPinotClient(client *pinot.Connection, logger log.Logger) GenericClient {
+	return &pinotClient{
 		client: client,
 		logger: logger,
 	}
 }
 
-func (c *pinotConnectionClient) Search(request *SearchRequest) (*SearchResponse, error) {
+func (c *pinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 	resp, err := c.client.ExecuteSQL(tableName, request.Query)
 
 	if err != nil {
@@ -65,7 +65,7 @@ func (c *pinotConnectionClient) Search(request *SearchRequest) (*SearchResponse,
 	return c.getInternalListWorkflowExecutionsResponse(resp, request.Filter)
 }
 
-func (c *pinotConnectionClient) CountByQuery(query string) (int64, error) {
+func (c *pinotClient) CountByQuery(query string) (int64, error) {
 	resp, err := c.client.ExecuteSQL(tableName, query)
 	if err != nil {
 		return 0, &types.InternalServiceError{
@@ -107,7 +107,7 @@ type VisibilityRecord struct {
 	Attr          map[string]interface{}
 }
 
-func (c *pinotConnectionClient) convertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) *p.InternalVisibilityWorkflowExecutionInfo {
+func (c *pinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) *p.InternalVisibilityWorkflowExecutionInfo {
 	if len(hit) != len(columnNames) {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (c *pinotConnectionClient) convertSearchResultToVisibilityRecord(hit []inte
 	return record
 }
 
-func (c *pinotConnectionClient) getInternalListWorkflowExecutionsResponse(
+func (c *pinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -208,7 +208,7 @@ func (c *pinotConnectionClient) getInternalListWorkflowExecutionsResponse(
 	return response, nil
 }
 
-func (c *pinotConnectionClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.BrokerResponse) (
+func (c *pinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.BrokerResponse) (
 	*p.InternalGetClosedWorkflowExecutionResponse,
 	error,
 ) {
