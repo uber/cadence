@@ -22,7 +22,7 @@ RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py
 RUN python get-pip.py
 RUN pip install -U 'pip<21'
 RUN pip install PyYAML==3.13 cqlsh==5.0.4
-
+RUN pip install futures
 # verbose test output from `make`, can be disabled with V=0
 ENV V=1
 
