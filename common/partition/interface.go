@@ -26,15 +26,7 @@ package partition
 
 import (
 	"context"
-
-	"github.com/uber/cadence/common/dynamicconfig"
 )
-
-// Config is the base configuration for the partitioning library
-type Config struct {
-	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	AllIsolationGroups    []string
-}
 
 type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching

@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/config"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -38,11 +40,11 @@ import (
 
 type defaultIsolationGroupStateHandler struct {
 	status                     int32
-	done                       chan bool
+	done                       chan struct{}
 	log                        log.Logger
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains persistence.ConfigStoreManager
-	config                     Config
+	config                     config.IsolationGroups
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
 	lastSeen                   *isolationGroups
@@ -54,18 +56,16 @@ type defaultIsolationGroupStateHandler struct {
 
 func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
-	domainCache cache.DomainCache,
-	config Config,
-	globalIsolationGroupDrains persistence.ConfigStoreManager,
+	config config.IsolationGroups,
+	done chan struct{},
 ) State {
 	return &defaultIsolationGroupStateHandler{
-		status:                     common.DaemonStatusInitialized,
-		log:                        logger,
-		config:                     config,
-		domainCache:                domainCache,
-		globalIsolationGroupDrains: globalIsolationGroupDrains,
-		subscriptionMu:             sync.Mutex{},
-		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
+		done:           done,
+		status:         common.DaemonStatusInitialized,
+		log:            logger,
+		config:         config,
+		subscriptionMu: sync.Mutex{},
+		subscriptions:  make(map[string]map[string]chan<- ChangeEvent),
 	}
 }
 
@@ -156,6 +156,16 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	}
 
 	return ig, nil
+}
+
+func (z *defaultIsolationGroupStateHandler) ProvideDomainCache(domainCache cache.DomainCache) State {
+	z.domainCache = domainCache
+	return z
+}
+
+func (z *defaultIsolationGroupStateHandler) ProvideConfigStoreManager(cfgMgr persistence.ConfigStoreManager) State {
+	z.globalIsolationGroupDrains = cfgMgr
+	return z
 }
 
 func (z *defaultIsolationGroupStateHandler) checkIfChanged() {

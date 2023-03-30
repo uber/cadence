@@ -2360,7 +2360,7 @@ func (p *configStoreErrorInjectionPersistenceClient) UpdateDynamicConfig(ctx con
 	var persistenceErr error
 	var forwardCall bool
 	if forwardCall = shouldForwardCallToPersistence(fakeErr); forwardCall {
-		persistenceErr = p.persistence.UpdateDynamicConfig(ctx, request, DynamicConfig)
+		persistenceErr = p.persistence.UpdateDynamicConfig(ctx, request, cfgType)
 	}
 
 	if fakeErr != nil {

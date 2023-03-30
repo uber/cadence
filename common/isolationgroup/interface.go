@@ -25,6 +25,9 @@ package isolationgroup
 import (
 	"context"
 
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/persistence"
+
 	"github.com/uber/cadence/common"
 
 	"github.com/uber/cadence/common/types"
@@ -48,4 +51,7 @@ type State interface {
 
 	Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error
 	Unsubscribe(domainID, key string) error
+
+	ProvideDomainCache(cache cache.DomainCache) State
+	ProvideConfigStoreManager(manager persistence.ConfigStoreManager) State
 }

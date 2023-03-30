@@ -69,7 +69,7 @@ type (
 		ArchiverProvider         provider.ArchiverProvider
 		Authorizer               authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
 		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
-		isolationGroupState      isolationgroup.State
-		partitioner              partition.Partitioner
+		IsolationGroupState      isolationgroup.State
+		Partitioner              partition.Partitioner
 	}
 )

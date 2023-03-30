@@ -27,11 +27,12 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/uber/cadence/common/config"
+
 	"github.com/uber/cadence/common/isolationgroup"
 
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
@@ -53,16 +54,15 @@ type defaultWorkflowPartitionConfig struct {
 // defaultPartitioner is a business-agnostic implementation of partitioning
 // which is used by the Cadence system to allocate workflows in matching by isolation-group
 type defaultPartitioner struct {
-	config              Config
+	config              config.Partitioner
 	log                 log.Logger
-	domainCache         cache.DomainCache
 	isolationGroupState isolationgroup.State
 }
 
 func NewDefaultPartitioner(
 	logger log.Logger,
 	isolationGroupState isolationgroup.State,
-	cfg Config,
+	cfg config.Partitioner,
 ) Partitioner {
 	return &defaultPartitioner{
 		log:                 logger,

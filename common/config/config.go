@@ -75,6 +75,10 @@ type (
 		Authorization Authorization `yaml:"authorization"`
 		// HeaderForwardingRules defines which inbound headers to include or exclude on outbound calls
 		HeaderForwardingRules []HeaderRule `yaml:"headerForwardingRules"`
+		// IsolationGroups is for configuration the isolationGroupState handler
+		IsolationGroups IsolationGroups `yaml:"-" json:"-"`
+		// Partitioner configuration for subdivision of traffic
+		Partitioner Partitioner `yaml:"-" json:"-"`
 	}
 
 	HeaderRule struct {
@@ -514,6 +518,23 @@ type (
 		Status string `yaml:"status"`
 		// URI is the domain default URI for visibility archiver
 		URI string `yaml:"URI"`
+	}
+
+	// Partitioner is the configuration for the partitioning library, a library
+	// for segmenting portions of workflows into isolation-groups - a resiliency
+	// concept meant to help move workflows around and away from failure zones.
+	Partitioner struct {
+		IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+		AllIsolationGroups    []string
+	}
+
+	// IsolationGroups refers to the configuration for subdivisions of workflows
+	// into a distinct and geographic grouping in which failure expected to be
+	// contained and able to be drained
+	IsolationGroups struct {
+		IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+		UpdateFrequency       dynamicconfig.DurationPropertyFn
+		AllIsolationGroups    []string
 	}
 )
 

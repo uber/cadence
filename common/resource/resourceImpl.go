@@ -247,6 +247,10 @@ func New(
 		return nil, err
 	}
 
+	isolationGroupState := params.IsolationGroupState.
+		ProvideDomainCache(domainCache).
+		ProvideConfigStoreManager(persistenceBean.GetConfigStoreManager())
+
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
 
@@ -304,8 +308,8 @@ func New(
 			params.InstanceID,
 		),
 		rpcFactory:      params.RPCFactory,
-		isolationGroups: params.isolationGroupState,
-		partitioner:     params.partitioner,
+		isolationGroups: isolationGroupState,
+		partitioner:     params.Partitioner,
 	}
 	return impl, nil
 }

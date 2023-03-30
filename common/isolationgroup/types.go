@@ -23,19 +23,11 @@
 package isolationgroup
 
 import (
-	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
 type ChangeEvent struct {
 	Changed types.IsolationGroupConfiguration
-}
-
-// Config is the base configuration
-type Config struct {
-	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	UpdateFrequency       dynamicconfig.IntPropertyFn
-	AllIsolationGroups    []string
 }
 
 // IsolationGroups is an internal convenience return type of a collection of IsolationGroup configurations

@@ -1804,6 +1804,14 @@ const (
 
 	EnableCassandraAllConsistencyLevelDelete
 
+	// EnableIsolationGroupPartitioning Is a feature to enable subdivision of workflows by units called 'isolation-groups'
+	// and to control their movement and blast radius. This has some nontrivial operational overheads in management
+	// and a good understanding of poller distribution, so probably not worth enabling unless it's well understood.
+	// KeyName: system.enableIsolationGroupPartitioning
+	// Value type: bool
+	// Default value: false
+	EnableIsolationGroupPartitioning
+
 	// EnableShardIDMetrics turns on or off shardId metrics
 	// KeyName: system.enableShardIDMetrics
 	// Value type: Bool
@@ -2496,6 +2504,12 @@ const (
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
 
+	// IsolationGroupCfgUpdateFrequency
+	// KeyName: system.isolationGroupCfgUpdateFrequency
+	// Value type: Duration
+	// Default value: 2 minutes
+	IsolationGroupCfgUpdateFrequency
+
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
 )
@@ -2562,6 +2576,13 @@ const (
 	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
 	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
 	HeaderForwardingRules
+
+	// AllIsolationGroups is the list of all possible isolation groups in a service
+	// KeyName: system.allIsolationGroups
+	// Value type: []string
+	// Default value: N/A
+	// Allowed filters: N/A
+	AllIsolationGroups
 
 	LastListKey
 )
@@ -3792,6 +3813,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableAuthorization is the key to enable authorization for a domain, only for extension binary:",
 		DefaultValue: false,
 	},
+	EnableIsolationGroupPartitioning: DynamicBool{
+		KeyName:      "system.enableIsolationGroupPartitioning",
+		Description:  "EnableIsolationGroupPartitioning is a feature to enable isolation-groups for a domain. Should not be enabled without a deep understanding of this feature",
+		DefaultValue: false,
+	},
 	EnableServiceAuthorization: DynamicBool{
 		KeyName:      "system.enableServiceAuthorization",
 		Description:  "EnableServiceAuthorization is the key to enable authorization for a service, only for extension binary:",
@@ -4400,6 +4426,11 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "worker.ESAnalyzerTimeWindow",
 		Description:  "ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages",
 		DefaultValue: time.Hour * 24 * 30,
+	},
+	IsolationGroupCfgUpdateFrequency: DynamicDuration{
+		KeyName:      "system.isolationGroupCfgUpdateFrequency",
+		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
+		DefaultValue: time.Minute * 2,
 	},
 	ESAnalyzerBufferWaitTime: DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
