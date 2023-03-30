@@ -557,3 +557,13 @@ func (h *Impl) GetThrottledLogger() log.Logger {
 func (h *Impl) GetDispatcher() *yarpc.Dispatcher {
 	return h.dispatcher
 }
+
+// GetIsolationGroupState returns the isolationGroupState
+func (h *Impl) GetIsolationGroupState() isolationgroup.State {
+	return h.isolationGroups
+}
+
+// GetPartitioner returns the partitioner
+func (h *Impl) GetPartitioner() partition.Partitioner {
+	return h.partitioner
+}
