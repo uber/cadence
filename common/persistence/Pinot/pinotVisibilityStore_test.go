@@ -24,11 +24,13 @@ package pinotVisibility
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/types"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	p "github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/types"
 )
 
 var (
