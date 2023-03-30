@@ -1818,13 +1818,13 @@ const (
 
 	EnableCassandraAllConsistencyLevelDelete
 
-	// EnableIsolationGroupPartitioning Is a feature to enable subdivision of workflows by units called 'isolation-groups'
+	// EnableTasklistIsolation Is a feature to enable subdivision of workflows by units called 'isolation-groups'
 	// and to control their movement and blast radius. This has some nontrivial operational overheads in management
 	// and a good understanding of poller distribution, so probably not worth enabling unless it's well understood.
 	// KeyName: system.enableIsolationGroupPartitioning
 	// Value type: bool
 	// Default value: false
-	EnableIsolationGroupPartitioning
+	EnableTasklistIsolation
 
 	// EnableShardIDMetrics turns on or off shardId metrics
 	// KeyName: system.enableShardIDMetrics
@@ -2518,11 +2518,11 @@ const (
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
 
-	// IsolationGroupCfgUpdateFrequency
-	// KeyName: system.isolationGroupCfgUpdateFrequency
+	// IsolationGroupStateRefreshInterval
+	// KeyName: system.isolationGroupStateRefreshInterval
 	// Value type: Duration
 	// Default value: 2 minutes
-	IsolationGroupCfgUpdateFrequency
+	IsolationGroupStateRefreshInterval
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -3842,9 +3842,9 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		Description:  "EnableAuthorization is the key to enable authorization for a domain, only for extension binary:",
 		DefaultValue: false,
 	},
-	EnableIsolationGroupPartitioning: DynamicBool{
+	EnableTasklistIsolation: DynamicBool{
 		KeyName:      "system.enableIsolationGroupPartitioning",
-		Description:  "EnableIsolationGroupPartitioning is a feature to enable isolation-groups for a domain. Should not be enabled without a deep understanding of this feature",
+		Description:  "EnableTasklistIsolation is a feature to enable isolation-groups for a domain. Should not be enabled without a deep understanding of this feature",
 		DefaultValue: false,
 	},
 	EnableServiceAuthorization: DynamicBool{
@@ -4456,7 +4456,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		Description:  "ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages",
 		DefaultValue: time.Hour * 24 * 30,
 	},
-	IsolationGroupCfgUpdateFrequency: DynamicDuration{
+	IsolationGroupStateRefreshInterval: DynamicDuration{
 		KeyName:      "system.isolationGroupCfgUpdateFrequency",
 		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
 		DefaultValue: time.Minute * 2,

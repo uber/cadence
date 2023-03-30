@@ -32,8 +32,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	cache "github.com/uber/cadence/common/cache"
-	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -103,34 +101,6 @@ func (m *MockState) IsDrainedByDomainID(ctx context.Context, DomainID, Isolation
 func (mr *MockStateMockRecorder) IsDrainedByDomainID(ctx, DomainID, IsolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrainedByDomainID", reflect.TypeOf((*MockState)(nil).IsDrainedByDomainID), ctx, DomainID, IsolationGroup)
-}
-
-// ProvideConfigStoreManager mocks base method.
-func (m *MockState) ProvideConfigStoreManager(manager persistence.ConfigStoreManager) State {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProvideConfigStoreManager", manager)
-	ret0, _ := ret[0].(State)
-	return ret0
-}
-
-// ProvideConfigStoreManager indicates an expected call of ProvideConfigStoreManager.
-func (mr *MockStateMockRecorder) ProvideConfigStoreManager(manager interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvideConfigStoreManager", reflect.TypeOf((*MockState)(nil).ProvideConfigStoreManager), manager)
-}
-
-// ProvideDomainCache mocks base method.
-func (m *MockState) ProvideDomainCache(cache cache.DomainCache) State {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProvideDomainCache", cache)
-	ret0, _ := ret[0].(State)
-	return ret0
-}
-
-// ProvideDomainCache indicates an expected call of ProvideDomainCache.
-func (mr *MockStateMockRecorder) ProvideDomainCache(cache interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvideDomainCache", reflect.TypeOf((*MockState)(nil).ProvideDomainCache), cache)
 }
 
 // Start mocks base method.

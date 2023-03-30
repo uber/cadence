@@ -24,9 +24,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 
@@ -41,7 +38,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
-	zapLogger "github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -268,17 +264,6 @@ func (s *server) startService() common.Daemon {
 		params.BlobstoreClient = nil
 	}
 
-	allIsolationGroups := mapIGs(params.Logger, dc.GetListProperty(dynamicconfig.AllIsolationGroups)())
-	params.IsolationGroupState = isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, config.IsolationGroups{
-		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableIsolationGroupPartitioning),
-		UpdateFrequency:       dc.GetDurationProperty(dynamicconfig.IsolationGroupCfgUpdateFrequency),
-		AllIsolationGroups:    allIsolationGroups,
-	}, s.doneC)
-	params.Partitioner = partition.NewDefaultPartitioner(params.Logger, params.IsolationGroupState, config.Partitioner{
-		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableIsolationGroupPartitioning),
-		AllIsolationGroups:    allIsolationGroups,
-	})
-
 	params.Logger.Info("Starting service " + s.name)
 
 	var daemon common.Daemon
@@ -306,17 +291,4 @@ func (s *server) startService() common.Daemon {
 func execute(d common.Daemon, doneC chan struct{}) {
 	d.Start()
 	close(doneC)
-}
-
-func mapIGs(log zapLogger.Logger, in []interface{}) []string {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if ok {
-			allIsolationGroups = append(allIsolationGroups, v)
-		} else {
-			log.Error("Invalid isolation-group: ", tag.Dynamic("isolation-group", v))
-		}
-	}
-	return allIsolationGroups
 }

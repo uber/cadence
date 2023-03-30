@@ -29,8 +29,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/uber/cadence/common/config"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
@@ -44,7 +42,7 @@ type defaultIsolationGroupStateHandler struct {
 	log                        log.Logger
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains persistence.ConfigStoreManager
-	config                     config.IsolationGroups
+	config                     Config
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
 	lastSeen                   *isolationGroups
@@ -56,16 +54,20 @@ type defaultIsolationGroupStateHandler struct {
 
 func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
-	config config.IsolationGroups,
+	config Config,
+	domainCache cache.DomainCache,
+	manager persistence.ConfigStoreManager,
 	done chan struct{},
 ) State {
 	return &defaultIsolationGroupStateHandler{
-		done:           done,
-		status:         common.DaemonStatusInitialized,
-		log:            logger,
-		config:         config,
-		subscriptionMu: sync.Mutex{},
-		subscriptions:  make(map[string]map[string]chan<- ChangeEvent),
+		done:                       done,
+		domainCache:                domainCache,
+		globalIsolationGroupDrains: manager,
+		status:                     common.DaemonStatusInitialized,
+		log:                        logger,
+		config:                     config,
+		subscriptionMu:             sync.Mutex{},
+		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
 	}
 }
 
@@ -158,16 +160,6 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	return ig, nil
 }
 
-func (z *defaultIsolationGroupStateHandler) ProvideDomainCache(domainCache cache.DomainCache) State {
-	z.domainCache = domainCache
-	return z
-}
-
-func (z *defaultIsolationGroupStateHandler) ProvideConfigStoreManager(cfgMgr persistence.ConfigStoreManager) State {
-	z.globalIsolationGroupDrains = cfgMgr
-	return z
-}
-
 func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 	// todo (david.porter)
 	// check new values against existing cached ones
@@ -178,7 +170,7 @@ func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 }
 
 func (z *defaultIsolationGroupStateHandler) pollForChanges() {
-	ticker := time.NewTicker(time.Duration(z.config.UpdateFrequency()) * time.Second)
+	ticker := time.NewTicker(z.config.UpdateFrequency())
 	for {
 		select {
 		case <-z.done:

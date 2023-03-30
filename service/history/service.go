@@ -48,6 +48,7 @@ type Service struct {
 func NewService(
 	params *commonResource.Params,
 ) (resource.Resource, error) {
+	stopChannel := make(chan struct{})
 	serviceConfig := config.New(
 		dynamicconfig.NewCollection(
 			params.DynamicConfig,
@@ -65,6 +66,7 @@ func NewService(
 		params,
 		service.History,
 		serviceConfig,
+		stopChannel,
 	)
 	if err != nil {
 		return nil, err
@@ -73,7 +75,7 @@ func NewService(
 	return &Service{
 		Resource: serviceResource,
 		status:   common.DaemonStatusInitialized,
-		stopC:    make(chan struct{}),
+		stopC:    stopChannel,
 		params:   params,
 		config:   serviceConfig,
 	}, nil
