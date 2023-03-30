@@ -247,9 +247,12 @@ func New(
 		return nil, err
 	}
 
-	isolationGroupState := params.IsolationGroupState.
-		ProvideDomainCache(domainCache).
-		ProvideConfigStoreManager(persistenceBean.GetConfigStoreManager())
+	var isolationGroupState isolationgroup.State
+	if params.IsolationGroupState != nil {
+		isolationGroupState = params.IsolationGroupState.
+			ProvideDomainCache(domainCache).
+			ProvideConfigStoreManager(persistenceBean.GetConfigStoreManager())
+	}
 
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
