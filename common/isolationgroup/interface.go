@@ -54,4 +54,8 @@ type State interface {
 
 	ProvideDomainCache(cache cache.DomainCache) State
 	ProvideConfigStoreManager(manager persistence.ConfigStoreManager) State
+
+	// CRUD operations for state handling
+	GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error)
+	UpdateGlobalState(ctx context.Context, state types.UpdateGlobalIsolationGroupsRequest) error
 }

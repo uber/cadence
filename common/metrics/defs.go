@@ -799,6 +799,10 @@ const (
 	AdminDeleteWorkflowScope
 	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
 	MaintainCorruptWorkflowScope
+	// GetGlobalIsolationGroups is the scope for getting global isolatino groups
+	GetGlobalIsolationGroups
+	// UpdateGlobalIsolationGroups is the scope for getting global isolatino groups
+	UpdateGlobalIsolationGroups
 
 	NumAdminScopes
 )

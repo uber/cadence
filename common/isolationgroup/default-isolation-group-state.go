@@ -123,6 +123,18 @@ func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) er
 	return nil
 }
 
+func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
+	return z.globalIsolationGroupDrains.UpdateDynamicConfig(ctx, updateGlobalIGRequest(in), persistence.GlobalIsolationGroupConfig)
+}
+
+func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
+	res, err := z.globalIsolationGroupDrains.FetchDynamicConfig(ctx, persistence.GlobalIsolationGroupConfig)
+	if err != nil {
+		return nil, nil
+	}
+	return getGlobalIGResponse(*res), nil
+}
+
 func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, domainID string) (*isolationGroups, error) {
 	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
@@ -231,4 +243,24 @@ func availableIG(allIsolationGroups []string, global types.IsolationGroupConfigu
 
 func fromCfgStore(in *persistence.FetchDynamicConfigResponse) (types.IsolationGroupConfiguration, error) {
 	panic("not implemented")
+}
+
+func updateGlobalIGRequest(in types.UpdateGlobalIsolationGroupsRequest) *persistence.UpdateDynamicConfigRequest {
+
+	types.DynamicConfigBlob{
+		SchemaVersion: 0,
+		Entries:       nil,
+	}
+
+	return &persistence.UpdateDynamicConfigRequest{
+		Snapshot: &persistence.DynamicConfigSnapshot{
+			Version: 0,
+			Values:  nil,
+		},
+	}
+}
+
+func getGlobalIGResponse(in persistence.FetchDynamicConfigResponse) *types.GetGlobalIsolationGroupsResponse {
+	panic("not implement")
+	return nil
 }

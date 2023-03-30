@@ -23,6 +23,7 @@
 package isolationgroup
 
 import (
+	"github.com/uber/cadence/common/persistence"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -180,6 +181,22 @@ func TestIsDrained(t *testing.T) {
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, td.expected, isDrained(td.isolationGroup, td.globalIGCfg, td.domainIGCfg))
+		})
+	}
+}
+
+func TestMapping(t *testing.T) {
+
+	tests := map[string]struct {
+		in       types.UpdateGlobalIsolationGroupsRequest
+		expected *persistence.UpdateDynamicConfigRequest
+	}{
+		"napping": {},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, updateGlobalIGRequest(td.in))
 		})
 	}
 }

@@ -21,6 +21,8 @@
 package resource
 
 import (
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/partition"
 	"go.uber.org/yarpc"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -103,5 +105,9 @@ type (
 
 		// for registering handlers
 		GetDispatcher() *yarpc.Dispatcher
+
+		// GetIsolationGroupState returns the isolationGroupState
+		GetIsolationGroupState() isolationgroup.State
+		GetPartitioner() partition.Partitioner
 	}
 )
