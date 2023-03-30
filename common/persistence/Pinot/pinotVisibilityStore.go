@@ -24,27 +24,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-	"time"
-
-	"github.com/startreedata/pinot-client-go/pinot"
-
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	p "github.com/uber/cadence/common/persistence"
+	pnt "github.com/uber/cadence/common/pinot"
 	"github.com/uber/cadence/common/service"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
+	"strings"
 )
 
 const (
 	pinotPersistenceName = "pinot"
 	tableName            = "cadence_visibility_pinot"
-	DescendingOrder      = "DESC"
-	AcendingOrder        = "ASC"
+
+	DescendingOrder = "DESC"
+	AcendingOrder   = "ASC"
 
 	DomainID            = "DomainID"
 	WorkflowID          = "WorkflowID"
@@ -55,7 +53,6 @@ const (
 	CloseTime           = "CloseTime"
 	CloseStatus         = "CloseStatus"
 	HistoryLength       = "HistoryLength"
-	Memo                = "Memo"
 	Encoding            = "Encoding"
 	TaskList            = "TaskList"
 	IsCron              = "IsCron"
@@ -67,7 +64,7 @@ const (
 
 type (
 	pinotVisibilityStore struct {
-		pinotClient *pinot.Connection
+		pinotClient pnt.GenericClient
 		producer    messaging.Producer
 		logger      log.Logger
 		config      *service.Config
@@ -98,7 +95,7 @@ type (
 var _ p.VisibilityStore = (*pinotVisibilityStore)(nil)
 
 func NewPinotVisibilityStore(
-	pinotClient *pinot.Connection,
+	pinotClient pnt.GenericClient,
 	config *service.Config,
 	producer messaging.Producer,
 	logger log.Logger,
@@ -112,7 +109,7 @@ func NewPinotVisibilityStore(
 }
 
 func (v *pinotVisibilityStore) Close() {
-	v.pinotClient.CloseTrace() // TODO: need to double check what is close trace do. Does it close the client?
+	return // TODO: need to double check what is close trace do. Does it close the client?
 }
 
 func (v *pinotVisibilityStore) GetName() string {
@@ -234,14 +231,16 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsQuery(request, false)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsQuery(request, false)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
@@ -252,14 +251,16 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsQuery(request, true)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsQuery(request, true)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Context, request *p.InternalListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -267,14 +268,16 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Cont
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsByTypeQuery(request, false)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByTypeQuery(request, false)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Context, request *p.InternalListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -282,14 +285,16 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsByTypeQuery(request, true)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByTypeQuery(request, true)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -297,14 +302,16 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx contex
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsByWorkflowIDQuery(request, false)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByWorkflowIDQuery(request, false)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx context.Context, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -312,14 +319,16 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx cont
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsByWorkflowIDQuery(request, true)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByWorkflowIDQuery(request, true)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.Context, request *p.InternalListClosedWorkflowExecutionsByStatusRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -327,25 +336,39 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	ListClosedWorkflowExecutionsQuery := getListWorkflowExecutionsByStatusQuery(request)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByStatusQuery(request)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          isRecordValid,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
-	return v.getInternalListWorkflowExecutionsResponse(resp, isRecordValid)
+
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, request *p.InternalGetClosedWorkflowExecutionRequest) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
-	ListClosedWorkflowExecutionsQuery := getGetClosedWorkflowExecutionQuery(request)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, ListClosedWorkflowExecutionsQuery)
+	query := getGetClosedWorkflowExecutionQuery(request)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+	}
+
+	resp, err := v.pinotClient.Search(req)
+
 	if err != nil {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
+			Message: fmt.Sprintf("Pinot GetClosedWorkflowExecution failed, %v", err),
 		}
 	}
-	return v.getInternalGetClosedWorkflowExecutionResponse(resp)
+
+	return &p.InternalGetClosedWorkflowExecutionResponse{
+		Execution: resp.Executions[0],
+	}, nil
 }
 
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -353,15 +376,16 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 
 	// TODO: need to check next page token in the future
 
-	workflowExecutionQuery := getListWorkflowExecutionsByQueryQuery(request)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, workflowExecutionQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByQueryQuery(request)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
 
-	return v.getInternalListWorkflowExecutionsResponse(resp, nil)
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -369,20 +393,21 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 
 	// TODO: need to check next page token in the future
 
-	workflowExecutionQuery := getListWorkflowExecutionsByQueryQuery(request)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, workflowExecutionQuery)
-	if err != nil {
-		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
-		}
+	query := getListWorkflowExecutionsByQueryQuery(request)
+
+	req := &pnt.SearchRequest{
+		Query:           query,
+		IsOpen:          true,
+		Filter:          nil,
+		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	}
 
-	return v.getInternalListWorkflowExecutionsResponse(resp, nil)
+	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	workflowExecutionQuery := getCountWorkflowExecutionsQuery(request)
-	resp, err := v.pinotClient.ExecuteSQL(tableName, workflowExecutionQuery)
+	query := getCountWorkflowExecutionsQuery(request)
+	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
 		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
@@ -390,7 +415,7 @@ func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, requ
 	}
 
 	return &p.CountWorkflowExecutionsResponse{
-		Count: int64(resp.ResultTable.GetRowCount()),
+		Count: resp,
 	}, nil
 }
 
@@ -413,12 +438,6 @@ func (v *pinotVisibilityStore) checkProducer() {
 	if v.producer == nil {
 		// must be bug, check history setup
 		panic("message producer is nil")
-	}
-}
-
-func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
-	if request.PageSize == 0 {
-		request.PageSize = 1000
 	}
 }
 
@@ -710,151 +729,8 @@ func getGetClosedWorkflowExecutionQuery(request *p.InternalGetClosedWorkflowExec
 	return query.String()
 }
 
-/****************************** Response Translator ******************************/
-
-func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
-	resMap := make(map[string]interface{})
-
-	for i := 0; i < len(columnNames); i++ {
-		resMap[columnNames[i]] = hit[i]
+func checkPageSize(request *p.ListWorkflowExecutionsByQueryRequest) {
+	if request.PageSize == 0 {
+		request.PageSize = 1000
 	}
-
-	return resMap
-}
-
-// VisibilityRecord is a struct of doc for deserialization
-type VisibilityRecord struct {
-	WorkflowID    string
-	RunID         string
-	WorkflowType  string
-	DomainID      string
-	StartTime     int64
-	ExecutionTime int64
-	CloseTime     int64
-	CloseStatus   workflow.WorkflowExecutionCloseStatus
-	HistoryLength int64
-	Encoding      string
-	TaskList      string
-	IsCron        bool
-	NumClusters   int16
-	UpdateTime    int64
-	Attr          map[string]interface{}
-}
-
-func (v *pinotVisibilityStore) convertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) *p.InternalVisibilityWorkflowExecutionInfo {
-	if len(hit) != len(columnNames) {
-		return nil
-	}
-
-	columnNameToValue := buildMap(hit, columnNames)
-	jsonColumnNameToValue, err := json.Marshal(columnNameToValue)
-	if err != nil { // log and skip error
-		v.logger.Error("unable to marshal columnNameToValue",
-			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-		)
-		return nil
-	}
-
-	var source *VisibilityRecord
-	err = json.Unmarshal(jsonColumnNameToValue, &source)
-	if err != nil { // log and skip error
-		v.logger.Error("unable to marshal columnNameToValue",
-			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-		)
-		return nil
-	}
-
-	record := &p.InternalVisibilityWorkflowExecutionInfo{
-		DomainID:         source.DomainID,
-		WorkflowType:     source.WorkflowType,
-		WorkflowID:       source.WorkflowID,
-		RunID:            source.RunID,
-		TypeName:         source.WorkflowType,
-		StartTime:        time.UnixMilli(source.StartTime), // be careful: source.StartTime is in milisecond
-		ExecutionTime:    time.UnixMilli(source.ExecutionTime),
-		TaskList:         source.TaskList,
-		IsCron:           source.IsCron,
-		NumClusters:      source.NumClusters,
-		SearchAttributes: source.Attr,
-	}
-	if source.UpdateTime != 0 {
-		record.UpdateTime = time.UnixMilli(source.UpdateTime)
-	}
-	if source.CloseTime != 0 {
-		record.CloseTime = time.UnixMilli(source.CloseTime)
-		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
-		record.HistoryLength = source.HistoryLength
-	}
-
-	return record
-}
-
-func (v *pinotVisibilityStore) getInternalListWorkflowExecutionsResponse(
-	resp *pinot.BrokerResponse,
-	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
-) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if resp == nil {
-		return nil, nil
-	}
-
-	response := &p.InternalListWorkflowExecutionsResponse{}
-
-	schema := resp.ResultTable.DataSchema // get the schema to map results
-	//columnDataTypes := schema.ColumnDataTypes
-	columnNames := schema.ColumnNames
-	actualHits := resp.ResultTable.Rows
-
-	numOfActualHits := resp.ResultTable.GetRowCount()
-
-	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
-
-	for i := 0; i < numOfActualHits; i++ {
-		workflowExecutionInfo := v.convertSearchResultToVisibilityRecord(actualHits[i], columnNames)
-		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
-			response.Executions = append(response.Executions, workflowExecutionInfo)
-		}
-	}
-
-	//if numOfActualHits == pageSize { // this means the response is not the last page
-	//	var nextPageToken []byte
-	//	var err error
-	//
-	//	// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
-	//	// to retrieve deeper pages, use ES SearchAfter
-	//	if searchHits.TotalHits <= int64(maxResultWindow-pageSize) { // use ES Search From+Size
-	//		nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
-	//	} else { // use ES Search After
-	//		var sortVal interface{}
-	//		sortVals := actualHits[len(response.Executions)-1].Sort
-	//		sortVal = sortVals[0]
-	//		tieBreaker := sortVals[1].(string)
-	//
-	//		nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{SortValue: sortVal, TieBreaker: tieBreaker})
-	//	}
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	response.NextPageToken = make([]byte, len(nextPageToken))
-	//	copy(response.NextPageToken, nextPageToken)
-	//}
-
-	return response, nil
-}
-
-func (v *pinotVisibilityStore) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.BrokerResponse) (
-	*p.InternalGetClosedWorkflowExecutionResponse,
-	error,
-) {
-	if resp == nil {
-		return nil, nil
-	}
-
-	response := &p.InternalGetClosedWorkflowExecutionResponse{}
-	schema := resp.ResultTable.DataSchema // get the schema to map results
-	columnNames := schema.ColumnNames
-	actualHits := resp.ResultTable.Rows
-	response.Execution = v.convertSearchResultToVisibilityRecord(actualHits[0], columnNames)
-
-	return response, nil
 }
