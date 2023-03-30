@@ -316,6 +316,7 @@ func (p *persistenceMetricsClientBase) callWithDomainAndShardScope(scope int, op
 
 	domainMetricsScope.RecordTimer(metrics.PersistenceLatencyPerDomain, duration)
 	shardOperationsMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
+	shardOverallMetricsScope.RecordTimer(metrics.PersistenceLatencyPerShard, duration)
 
 	if p.enableLatencyHistogramMetrics {
 		domainMetricsScope.RecordHistogramDuration(metrics.PersistenceLatencyHistogram, duration)

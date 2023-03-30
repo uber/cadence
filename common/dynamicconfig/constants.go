@@ -1346,7 +1346,21 @@ const (
 	// Value type: Int
 	// Default value: 100
 	SampleLoggingRate
-
+	// LargeShardHistorySizeMetricThreshold defines the threshold for what consititutes a large history storage size to alert on
+	// KeyName: system.largeShardHistorySizeMetricThreshold
+	// Value type: Int
+	// Default value: 10485760 (10mb)
+	LargeShardHistorySizeMetricThreshold
+	// LargeShardHistoryEventMetricThreshold defines the threshold for what consititutes a large history event size to alert on
+	// KeyName: system.largeShardHistoryEventMetricThreshold
+	// Value type: Int
+	// Default value: 50 * 1024
+	LargeShardHistoryEventMetricThreshold
+	// LargeShardHistoryBlobMetricThreshold defines the threshold for what consititutes a large history blob size to alert on
+	// KeyName: system.largeShardHistoryBlobMetricThreshold
+	// Value type: Int
+	// Default value: 262144 (1/4mb)
+	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
 )
@@ -3474,6 +3488,21 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.sampleLoggingRate",
 		Description:  "The rate for which sampled logs are logged at. 100 means 1/100 is logged",
 		DefaultValue: 100,
+	},
+	LargeShardHistorySizeMetricThreshold: DynamicInt{
+		KeyName:      "system.largeShardHistorySizeMetricThreshold",
+		Description:  "defines the threshold for what consititutes a large history size to alert on, default is 10mb",
+		DefaultValue: 10485760,
+	},
+	LargeShardHistoryEventMetricThreshold: DynamicInt{
+		KeyName:      "system.largeShardHistoryEventMetricThreshold",
+		Description:  "defines the threshold for what consititutes a large history event length to alert on, default is 50k",
+		DefaultValue: 50 * 1024,
+	},
+	LargeShardHistoryBlobMetricThreshold: DynamicInt{
+		KeyName:      "system.largeShardHistoryBlobMetricThreshold",
+		Description:  "defines the threshold for what consititutes a large history blob write to alert on, default is 1/4mb",
+		DefaultValue: 262144,
 	},
 }
 
