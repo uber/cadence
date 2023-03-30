@@ -69,6 +69,10 @@ type (
 		EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
 		ActivityTaskSyncMatchWaitTime dynamicconfig.DurationPropertyFnWithDomainFilter
+
+		// isolation configuration
+		EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
+		AllIsolationGroups      []string
 	}
 
 	forwarderConfig struct {
@@ -96,6 +100,8 @@ type (
 		MaxTaskBatchSize                func() int
 		NumWritePartitions              func() int
 		NumReadPartitions               func() int
+		// isolation configuration
+		EnableTasklistIsolation bool
 	}
 )
 
@@ -130,7 +136,20 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
 		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID),
 		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
+		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
+		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
 	}
+}
+
+func mapIGs(in []interface{}) []string {
+	var allIsolationGroups []string
+	for k := range in {
+		v, ok := in[k].(string)
+		if ok {
+			allIsolationGroups = append(allIsolationGroups, v)
+		}
+	}
+	return allIsolationGroups
 }
 
 func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainCache) (*taskListConfig, error) {
@@ -143,6 +162,7 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 	taskType := id.taskType
 	return &taskListConfig{
 		RangeSize:                     config.RangeSize,
+		EnableTasklistIsolation:       config.EnableTasklistIsolation(domainName),
 		ActivityTaskSyncMatchWaitTime: config.ActivityTaskSyncMatchWaitTime,
 		GetTasksBatchSize: func() int {
 			return config.GetTasksBatchSize(domainName, taskListName, taskType)

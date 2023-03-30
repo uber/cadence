@@ -37,8 +37,12 @@ import (
 // Producers are usually rpc calls from history or taskReader
 // that drains backlog from db. Consumers are the task list pollers
 type TaskMatcher struct {
-	// synchronous task channel to match producer/consumer
-	taskC         chan *InternalTask
+	// synchronous task channel to match producer/consumer for any isolation group
+	// tasks having no isolation requirement are added to this channel
+	// and pollers from all isolation groups read from this channel
+	taskC chan *InternalTask
+	// synchronos task channels to match producer/consumer for a certain isolation group
+	// the key is the name of the isolation group
 	isolatedTaskC map[string]chan *InternalTask
 	// synchronous task channel to match query task - the reason to have
 	// separate channel for this is because there are cases when consumers

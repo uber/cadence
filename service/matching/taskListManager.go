@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -105,6 +106,7 @@ type (
 		matcher         *TaskMatcher         // for matching a task producer with a poller
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
+		partitioner     partition.Partitioner
 		logger          log.Logger
 		scope           metrics.Scope
 		domainName      string
@@ -158,6 +160,7 @@ func newTaskListManager(
 	tlMgr := &taskListManagerImpl{
 		domainCache:         e.domainCache,
 		clusterMetadata:     e.clusterMetadata,
+		partitioner:         e.partitioner,
 		taskListID:          taskList,
 		taskListKind:        *taskListKind,
 		logger:              e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
@@ -185,7 +188,11 @@ func newTaskListManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, nil)
+	var isolationGroups []string
+	if tlMgr.isIsolationEnabled() {
+		isolationGroups = config.AllIsolationGroups
+	}
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups)
 	tlMgr.startWG.Add(1)
 	return tlMgr, nil
 }
@@ -266,6 +273,14 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		}
 
 		isolationGroup := ""
+		if c.isIsolationEnabled() {
+			group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, params.taskInfo.DomainID, params.taskInfo.PartitionConfig)
+			if err != nil {
+				c.logger.Error("Failed to get isolation group for async match task", tag.Error(err))
+			} else if group != nil {
+				isolationGroup = *group
+			}
+		}
 		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
@@ -382,6 +397,9 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	}
 
 	var isolationGroup string
+	if c.isIsolationEnabled() {
+		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
+	}
 	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
@@ -534,6 +552,10 @@ func (c *taskListManagerImpl) newChildContext(
 
 func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind types.TaskListKind) bool {
 	return !taskList.IsRoot() && kind != types.TaskListKindSticky
+}
+
+func (c *taskListManagerImpl) isIsolationEnabled() bool {
+	return c.taskListKind != types.TaskListKindSticky && c.config.EnableTasklistIsolation
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {
