@@ -94,8 +94,7 @@ func TestEnsureIsolationGroupImpl(t *testing.T) {
 			coll := dynamicconfig.NewCollection(dcMock, loggerimpl.NewNopLogger())
 			td.dcAffordance(dcMock)
 			cfgStore := persistence.NewMockConfigStoreManager(gomock)
-			stopChan := make(chan struct{})
-			state := ensureIsolationGroupStateHandlerOrDefault(td.params, cfgStore, coll, domainCache, stopChan)
+			state := ensureIsolationGroupStateHandlerOrDefault(td.params, cfgStore, coll, domainCache)
 			assert.NotNil(t, state)
 		})
 	}

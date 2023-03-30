@@ -134,7 +134,6 @@ func New(
 	params *Params,
 	serviceName string,
 	serviceConfig *service.Config,
-	stopChannel chan struct{},
 ) (impl *Impl, retError error) {
 
 	logger := params.Logger
@@ -248,7 +247,7 @@ func New(
 		return nil, err
 	}
 
-	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(params, persistenceBean.GetConfigStoreManager(), dynamicCollection, domainCache, stopChannel)
+	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(params, persistenceBean.GetConfigStoreManager(), dynamicCollection, domainCache)
 	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
 
 	impl = &Impl{
@@ -369,6 +368,7 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
+	h.isolationGroups.Stop()
 }
 
 // GetServiceName return service name
@@ -586,7 +586,6 @@ func ensureIsolationGroupStateHandlerOrDefault(params *Params,
 	cfgStoreMgr persistence.ConfigStoreManager,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
-	stopChannel chan struct{},
 ) isolationgroup.State {
 
 	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
@@ -600,12 +599,11 @@ func ensureIsolationGroupStateHandlerOrDefault(params *Params,
 		UpdateFrequency:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval),
 		AllIsolationGroups:    allIsolationGroups,
 	}
-	return isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, cfg, domainCache, cfgStoreMgr, stopChannel)
+	return isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, cfg, domainCache, cfgStoreMgr)
 }
 
 // Use the provided partitioner or the default one
 func ensurePartitionerOrDefault(params *Params, dc *dynamicconfig.Collection, state isolationgroup.State) partition.Partitioner {
-
 	if params.Partitioner != nil {
 		return params.Partitioner
 	}

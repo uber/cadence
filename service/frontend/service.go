@@ -209,7 +209,6 @@ type Service struct {
 func NewService(
 	params *resource.Params,
 ) (resource.Resource, error) {
-	stopChannel := make(chan struct{})
 
 	isAdvancedVisExistInConfig := len(params.PersistenceConfig.AdvancedVisibilityStore) != 0
 	serviceConfig := NewConfig(
@@ -244,7 +243,6 @@ func NewService(
 			ESIndexMaxResultWindow: serviceConfig.ESIndexMaxResultWindow,
 			ValidSearchAttributes:  serviceConfig.ValidSearchAttributes,
 		},
-		stopChannel,
 	)
 	if err != nil {
 		return nil, err
@@ -254,7 +252,7 @@ func NewService(
 		Resource: serviceResource,
 		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
-		stopC:    stopChannel,
+		stopC:    make(chan struct{}),
 		params:   params,
 	}, nil
 }

@@ -84,7 +84,6 @@ func New(
 	params *resource.Params,
 	serviceName string,
 	config *config.Config,
-	stopChannel chan struct{},
 ) (historyResource Resource, retError error) {
 	serviceResource, err := resource.New(
 		params,
@@ -107,7 +106,6 @@ func New(
 			ESIndexMaxResultWindow: nil, // history service never read,
 			ValidSearchAttributes:  nil, // history service never read,
 		},
-		stopChannel,
 	)
 	if err != nil {
 		return nil, err

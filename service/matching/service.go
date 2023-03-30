@@ -45,7 +45,6 @@ func NewService(
 	params *resource.Params,
 ) (resource.Resource, error) {
 
-	stopChannel := make(chan struct{})
 	serviceConfig := NewConfig(
 		dynamicconfig.NewCollection(
 			params.DynamicConfig,
@@ -63,7 +62,6 @@ func NewService(
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
 			// matching doesn't need visibility config as it never read or write visibility
 		},
-		stopChannel,
 	)
 	if err != nil {
 		return nil, err
@@ -73,7 +71,7 @@ func NewService(
 		Resource: serviceResource,
 		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
-		stopC:    stopChannel,
+		stopC:    make(chan struct{}),
 	}, nil
 }
 

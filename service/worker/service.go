@@ -94,7 +94,6 @@ func NewService(
 	params *resource.Params,
 ) (resource.Resource, error) {
 
-	stopChannel := make(chan struct{})
 	serviceConfig := NewConfig(params)
 
 	serviceResource, err := resource.New(
@@ -106,7 +105,6 @@ func NewService(
 			ThrottledLoggerMaxRPS:   serviceConfig.ThrottledLogRPS,
 			// worker service doesn't need visibility config as it never call visibilityManager API
 		},
-		stopChannel,
 	)
 	if err != nil {
 		return nil, err
@@ -117,7 +115,7 @@ func NewService(
 		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		params:   params,
-		stopC:    stopChannel,
+		stopC:    make(chan struct{}),
 	}, nil
 }
 

@@ -70,10 +70,6 @@ func NewDefaultPartitioner(
 }
 
 func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
-	if !r.config.IsolationGroupEnabled(domainID) {
-		return nil, nil
-	}
-
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
 	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID)
 	if err != nil {

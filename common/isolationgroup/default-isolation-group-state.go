@@ -57,10 +57,9 @@ func NewDefaultIsolationGroupStateWatcher(
 	config Config,
 	domainCache cache.DomainCache,
 	manager persistence.ConfigStoreManager,
-	done chan struct{},
 ) State {
 	return &defaultIsolationGroupStateHandler{
-		done:                       done,
+		done:                       make(chan struct{}),
 		domainCache:                domainCache,
 		globalIsolationGroupDrains: manager,
 		status:                     common.DaemonStatusInitialized,
