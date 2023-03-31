@@ -194,6 +194,7 @@ func New(
 		ESClient:          params.ESClient,
 		ESConfig:          params.ESConfig,
 		PinotConfig:       params.PinotConfig,
+		PinotClient:       params.PinotClient,
 	}, serviceConfig)
 	if err != nil {
 		return nil, err
