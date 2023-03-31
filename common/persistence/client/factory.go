@@ -21,10 +21,9 @@
 package client
 
 import (
-	"fmt"
 	"sync"
 
-	"github.com/startreedata/pinot-client-go/pinot"
+	pnt "github.com/uber/cadence/common/pinot"
 
 	pinotVisibility "github.com/uber/cadence/common/persistence/Pinot"
 
@@ -284,14 +283,8 @@ func (f *factoryImpl) NewVisibilityManager(
 			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
 		}
 
-		pinotController := params.PinotConfig.Controller
-		f.logger.Info(fmt.Sprintf("pinot controller: %s", pinotController))
-		pinotClient, err := pinot.NewFromController(pinotController)
-		if err != nil {
-			f.logger.Fatal("Creating Pinot visibility client failed", tag.Error(err))
-		}
 		visibilityFromPinot = newPinotVisibilityManager(
-			pinotClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger)
+			params.PinotClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger)
 		return p.NewPinotVisibilityDualManager(
 			visibilityFromDB,
 			visibilityFromPinot,
@@ -322,7 +315,7 @@ func (f *factoryImpl) NewVisibilityManager(
 // In history, it only needs kafka producer for writing data;
 // In frontend, it only needs ES client and related config for reading data
 func newPinotVisibilityManager(
-	pinotClient *pinot.Connection,
+	pinotClient pnt.GenericClient,
 	visibilityConfig *service.Config,
 	producer messaging.Producer,
 	metricsClient metrics.Client,
