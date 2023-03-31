@@ -247,12 +247,8 @@ func New(
 		return nil, err
 	}
 
-	var isolationGroupState isolationgroup.State
-	if params.IsolationGroupState != nil {
-		isolationGroupState = params.IsolationGroupState.
-			ProvideDomainCache(domainCache).
-			ProvideConfigStoreManager(persistenceBean.GetConfigStoreManager())
-	}
+	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(params, persistenceBean.GetConfigStoreManager(), dynamicCollection, domainCache)
+	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
 
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
@@ -312,7 +308,7 @@ func New(
 		),
 		rpcFactory:      params.RPCFactory,
 		isolationGroups: isolationGroupState,
-		partitioner:     params.Partitioner,
+		partitioner:     partitioner,
 	}
 	return impl, nil
 }
@@ -372,6 +368,7 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
+	h.isolationGroups.Stop()
 }
 
 // GetServiceName return service name
@@ -569,4 +566,49 @@ func (h *Impl) GetIsolationGroupState() isolationgroup.State {
 // GetPartitioner returns the partitioner
 func (h *Impl) GetPartitioner() partition.Partitioner {
 	return h.partitioner
+}
+
+func mapIGs(log log.Logger, in []interface{}) []string {
+	var allIsolationGroups []string
+	for k := range in {
+		v, ok := in[k].(string)
+		if ok {
+			allIsolationGroups = append(allIsolationGroups, v)
+		} else {
+			log.Error("Invalid isolation-group: ", tag.Dynamic("isolation-group", v))
+		}
+	}
+	return allIsolationGroups
+}
+
+// Use the provided IsolationGroupStateHandler or the default one
+func ensureIsolationGroupStateHandlerOrDefault(params *Params,
+	cfgStoreMgr persistence.ConfigStoreManager,
+	dc *dynamicconfig.Collection,
+	domainCache cache.DomainCache,
+) isolationgroup.State {
+
+	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
+	allIsolationGroups := mapIGs(params.Logger, allIGs)
+
+	if params.IsolationGroupState != nil {
+		return params.IsolationGroupState
+	}
+	cfg := isolationgroup.Config{
+		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
+		UpdateFrequency:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval),
+		AllIsolationGroups:    allIsolationGroups,
+	}
+	return isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, cfg, domainCache, cfgStoreMgr)
+}
+
+// Use the provided partitioner or the default one
+func ensurePartitionerOrDefault(params *Params, dc *dynamicconfig.Collection, state isolationgroup.State) partition.Partitioner {
+	if params.Partitioner != nil {
+		return params.Partitioner
+	}
+	cfg := partition.Config{
+		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
+	}
+	return partition.NewDefaultPartitioner(params.Logger, state, cfg)
 }

@@ -34,3 +34,11 @@ type Partitioner interface {
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
 	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*string, error)
 }
+
+// Config is the configuration for the partitioning library, a library
+// for segmenting portions of workflows into isolation-groups - a resiliency
+// concept meant to help move workflows around and away from failure zones.
+type Config struct {
+	// IsolationGroupEnabled is a domain-based switch for the feature to be enabled
+	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+}

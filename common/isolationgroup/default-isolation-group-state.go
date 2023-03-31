@@ -44,7 +44,7 @@ type defaultIsolationGroupStateHandler struct {
 	log                        log.Logger
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains persistence.ConfigStoreManager
-	config                     config.IsolationGroups
+	config                     Config
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
 	lastSeen                   *isolationGroups
@@ -56,16 +56,19 @@ type defaultIsolationGroupStateHandler struct {
 
 func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
-	config config.IsolationGroups,
-	done chan struct{},
+	config Config,
+	domainCache cache.DomainCache,
+	manager persistence.ConfigStoreManager,
 ) State {
 	return &defaultIsolationGroupStateHandler{
-		done:           done,
-		status:         common.DaemonStatusInitialized,
-		log:            logger,
-		config:         config,
-		subscriptionMu: sync.Mutex{},
-		subscriptions:  make(map[string]map[string]chan<- ChangeEvent),
+		done:                       make(chan struct{}),
+		domainCache:                domainCache,
+		globalIsolationGroupDrains: manager,
+		status:                     common.DaemonStatusInitialized,
+		log:                        logger,
+		config:                     config,
+		subscriptionMu:             sync.Mutex{},
+		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
 	}
 }
 
@@ -190,7 +193,7 @@ func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 }
 
 func (z *defaultIsolationGroupStateHandler) pollForChanges() {
-	ticker := time.NewTicker(time.Duration(z.config.UpdateFrequency()) * time.Second)
+	ticker := time.NewTicker(z.config.UpdateFrequency())
 	for {
 		select {
 		case <-z.done:

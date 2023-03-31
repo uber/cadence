@@ -24,12 +24,8 @@ package isolationgroup
 
 import (
 	"context"
-
-	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/persistence"
-
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common"
-
 	"github.com/uber/cadence/common/types"
 )
 
@@ -58,4 +54,16 @@ type State interface {
 	// CRUD operations for state handling
 	GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error)
 	UpdateGlobalState(ctx context.Context, state types.UpdateGlobalIsolationGroupsRequest) error
+}
+
+// Config values for the partitioning library for segmenting portions of workflows into isolation-groups - a resiliency
+// concept meant to help move workflows around and away from failure zones.
+type Config struct {
+	// IsolationGroupEnabled is a domain-based configuration value for whether this feature is enabled at all
+	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	// AllIsolationGroups is a static list of all the possible isolation group names
+	AllIsolationGroups []string
+	// UpdateFrequency refers to the frequency by which the function
+	// polls the configuration store for changes in isolation group drains
+	UpdateFrequency dynamicconfig.DurationPropertyFn
 }
