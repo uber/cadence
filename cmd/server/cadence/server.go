@@ -230,7 +230,7 @@ func (s *server) startService() common.Daemon {
 			pinotController := params.PinotConfig.Controller
 			pinotRawClient, err := pinot.NewFromController(pinotController)
 			if err != nil {
-				log.Fatalf("Creating Pinot visibility client failed", tag.Error(err))
+				log.Fatalf("Creating Pinot visibility client failed: %v", err)
 			}
 			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger)
 			params.PinotClient = pinotClient
