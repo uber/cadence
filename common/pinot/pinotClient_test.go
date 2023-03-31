@@ -44,7 +44,7 @@ var (
 	testWorkflowID   = "test-wid"
 	testCloseStatus  = int32(1)
 
-	client = pinotClient{
+	client = PinotClient{
 		client: nil,
 		logger: nil,
 	}
