@@ -23,7 +23,17 @@
 package pinotVisibility
 
 import (
+	"errors"
 	"fmt"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/mock"
+	"github.com/uber/cadence/common"
+	"github.com/uber/cadence/common/definition"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/mocks"
+	pnt "github.com/uber/cadence/common/pinot"
+	"github.com/uber/cadence/common/service"
 	"testing"
 	"time"
 
@@ -44,11 +54,32 @@ var (
 	testWorkflowID   = "test-wid"
 	testCloseStatus  = int32(1)
 
+	testRequest = &p.InternalListWorkflowExecutionsRequest{
+		DomainUUID:   testDomainID,
+		Domain:       testDomain,
+		PageSize:     testPageSize,
+		EarliestTime: time.Unix(0, testEarliestTime),
+		LatestTime:   time.Unix(0, testLatestTime),
+	}
+	testSearchResult = &p.InternalListWorkflowExecutionsResponse{}
+	errTestPinot     = errors.New("Pinot error")
+
+	testContextTimeout = 5 * time.Second
+
+	pinotIndexMaxResultWindow = 3
+
+	logger = log.NewNoop()
+
+	config = &service.Config{
+		ESIndexMaxResultWindow: dynamicconfig.GetIntPropertyFn(pinotIndexMaxResultWindow),
+		ValidSearchAttributes:  dynamicconfig.GetMapPropertyFn(definition.GetDefaultIndexedKeys()),
+	}
+
 	visibilityStore = pinotVisibilityStore{
 		pinotClient: nil,
 		producer:    nil,
-		logger:      nil,
-		config:      nil,
+		logger:      logger,
+		config:      config,
 	}
 )
 
@@ -269,4 +300,322 @@ func TestGetGetClosedWorkflowExecutionQuery(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestRecordWorkflowExecutionStarted(t *testing.T) {
+	mockProducer := &mocks.KafkaProducer{}
+	mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+	visibilityStore.producer = mockProducer
+
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionStartedRequest{}
+	request.DomainUUID = "domainID"
+	request.WorkflowID = "wid"
+	request.RunID = "rid"
+	request.WorkflowTypeName = "wfType"
+	request.StartTimestamp = time.Unix(0, int64(123))
+	request.ExecutionTimestamp = time.Unix(0, int64(321))
+	request.TaskID = int64(111)
+	request.IsCron = true
+	request.NumClusters = 2
+	memoBytes := []byte(`test bytes`)
+	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+	request.ShardID = 1234
+
+	assert.NotPanics(t, func() {
+		visibilityStore.RecordWorkflowExecutionStarted(nil, request)
+	})
+
+	panicRequest := &p.InternalRecordWorkflowExecutionStartedRequest{}
+	assert.Panics(t, func() {
+		visibilityStore.RecordWorkflowExecutionStarted(nil, panicRequest)
+	})
+}
+
+func TestRecordWorkflowExecutionClosed(t *testing.T) {
+	mockProducer := &mocks.KafkaProducer{}
+	mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+	visibilityStore.producer = mockProducer
+
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionClosedRequest{}
+	request.DomainUUID = "domainID"
+	request.WorkflowID = "wid"
+	request.RunID = "rid"
+	request.WorkflowTypeName = "wfType"
+	request.StartTimestamp = time.Unix(0, int64(123))
+	request.ExecutionTimestamp = time.Unix(0, int64(321))
+	request.TaskID = int64(111)
+	memoBytes := []byte(`test bytes`)
+	request.Memo = p.NewDataBlob(memoBytes, common.EncodingTypeThriftRW)
+	request.CloseTimestamp = time.Unix(0, int64(999))
+	request.Status = types.WorkflowExecutionCloseStatusTerminated
+	request.HistoryLength = int64(20)
+	request.IsCron = false
+	request.NumClusters = 2
+	request.UpdateTimestamp = time.Unix(0, int64(213))
+	request.ShardID = 1234
+
+	assert.NotPanics(t, func() {
+		visibilityStore.RecordWorkflowExecutionClosed(nil, request)
+	})
+
+	panicRequest := &p.InternalRecordWorkflowExecutionClosedRequest{}
+	assert.Panics(t, func() {
+		visibilityStore.RecordWorkflowExecutionClosed(nil, panicRequest)
+	})
+}
+
+func TestRecordWorkflowExecutionUninitialized(t *testing.T) {
+	mockProducer := &mocks.KafkaProducer{}
+	mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+	visibilityStore.producer = mockProducer
+
+	// test non-empty request fields match
+	request := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
+	request.DomainUUID = "domainID"
+	request.WorkflowID = "wid"
+	request.RunID = "rid"
+	request.WorkflowTypeName = "wfType"
+	request.UpdateTimestamp = time.Unix(0, int64(213))
+	request.ShardID = 1234
+
+	assert.NotPanics(t, func() {
+		visibilityStore.RecordWorkflowExecutionUninitialized(nil, request)
+	})
+
+	panicRequest := &p.InternalRecordWorkflowExecutionUninitializedRequest{}
+	assert.Panics(t, func() {
+		visibilityStore.RecordWorkflowExecutionUninitialized(nil, panicRequest)
+	})
+}
+
+func TestUpsertWorkflowExecution(t *testing.T) {
+	mockProducer := &mocks.KafkaProducer{}
+	mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()
+	visibilityStore.producer = mockProducer
+
+	// test non-empty request fields match
+	request := &p.InternalUpsertWorkflowExecutionRequest{
+		DomainUUID:         "1",
+		WorkflowID:         "1",
+		RunID:              "1",
+		WorkflowTypeName:   "1",
+		StartTimestamp:     time.Time{},
+		ExecutionTimestamp: time.Time{},
+		WorkflowTimeout:    1,
+		TaskID:             1,
+		Memo:               &p.DataBlob{},
+		TaskList:           "",
+		IsCron:             false,
+		NumClusters:        0,
+		UpdateTimestamp:    time.Time{},
+		SearchAttributes:   map[string][]byte{},
+		ShardID:            0,
+	}
+
+	assert.NotPanics(t, func() {
+		visibilityStore.UpsertWorkflowExecution(nil, request)
+	})
+
+	panicRequest := &p.InternalUpsertWorkflowExecutionRequest{}
+	assert.Panics(t, func() {
+		visibilityStore.UpsertWorkflowExecution(nil, panicRequest)
+	})
+}
+
+func TestListOpenWorkflowExecutions(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListWorkflowExecutionsRequest{
+		DomainUUID:    testDomainID,
+		Domain:        testDomain,
+		EarliestTime:  time.Unix(0, testEarliestTime),
+		LatestTime:    time.Unix(0, testLatestTime),
+		PageSize:      testPageSize,
+		NextPageToken: nil,
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListOpenWorkflowExecutions(nil, request)
+	})
+}
+
+func TestListClosedWorkflowExecutions(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListWorkflowExecutionsRequest{
+		DomainUUID:    testDomainID,
+		Domain:        testDomain,
+		EarliestTime:  time.Unix(0, testEarliestTime),
+		LatestTime:    time.Unix(0, testLatestTime),
+		PageSize:      testPageSize,
+		NextPageToken: nil,
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListClosedWorkflowExecutions(nil, request)
+	})
+}
+
+func TestListOpenWorkflowExecutionsByType(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{},
+		WorkflowTypeName:                      "",
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListOpenWorkflowExecutionsByType(nil, request)
+	})
+}
+
+func TestListClosedWorkflowExecutionsByType(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListWorkflowExecutionsByTypeRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{},
+		WorkflowTypeName:                      "",
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListClosedWorkflowExecutionsByType(nil, request)
+	})
+}
+
+func TestListOpenWorkflowExecutionsByWorkflowID(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{},
+		WorkflowID:                            testWorkflowID,
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListOpenWorkflowExecutionsByWorkflowID(nil, request)
+	})
+}
+
+func TestListClosedWorkflowExecutionsByWorkflowID(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListWorkflowExecutionsByWorkflowIDRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{},
+		WorkflowID:                            testWorkflowID,
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListClosedWorkflowExecutionsByWorkflowID(nil, request)
+	})
+}
+
+func TestListClosedWorkflowExecutionsByStatus(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.InternalListClosedWorkflowExecutionsByStatusRequest{
+		InternalListWorkflowExecutionsRequest: p.InternalListWorkflowExecutionsRequest{},
+		Status:                                0,
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ListClosedWorkflowExecutionsByStatus(nil, request)
+	})
+}
+
+func TestScanWorkflowExecutions(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.ListWorkflowExecutionsByQueryRequest{
+		DomainUUID:    testDomainID,
+		Domain:        testDomain,
+		PageSize:      testPageSize,
+		NextPageToken: nil,
+		Query:         "",
+	}
+
+	response := &p.InternalListWorkflowExecutionsResponse{
+		Executions:    nil,
+		NextPageToken: nil,
+	}
+
+	client.EXPECT().Search(gomock.Any()).Return(response, nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.ScanWorkflowExecutions(nil, request)
+	})
+}
+
+func TestCountWorkflowExecutions(t *testing.T) {
+	client := pnt.NewMockGenericClient(gomock.NewController(t))
+	visibilityStore.pinotClient = client
+
+	request := &p.CountWorkflowExecutionsRequest{
+		DomainUUID: testDomainID,
+		Domain:     testDomain,
+		Query:      "",
+	}
+
+	client.EXPECT().CountByQuery(gomock.Any()).Return(int64(0), nil)
+
+	assert.NotPanics(t, func() {
+		visibilityStore.CountWorkflowExecutions(nil, request)
+	})
 }
