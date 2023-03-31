@@ -52,6 +52,10 @@ import (
 	"github.com/uber/cadence/service/frontend"
 	"github.com/uber/cadence/service/history"
 	"github.com/uber/cadence/service/matching"
+
+	"github.com/startreedata/pinot-client-go/pinot"
+
+	pnt "github.com/uber/cadence/common/pinot"
 )
 
 type (
@@ -223,6 +227,13 @@ func (s *server) startService() common.Daemon {
 			params.PinotConfig = advancedVisStore.Pinot
 			esVisStore := s.cfg.Persistence.DataStores["es-visibility"]
 			params.ESConfig = esVisStore.ElasticSearch
+			pinotController := params.PinotConfig.Controller
+			pinotRawClient, err := pinot.NewFromController(pinotController)
+			if err != nil {
+				log.Fatalf("Creating Pinot visibility client failed", tag.Error(err))
+			}
+			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger)
+			params.PinotClient = pinotClient
 		} else {
 			params.ESConfig = advancedVisStore.ElasticSearch
 		}
