@@ -31,7 +31,6 @@ import (
 
 	"github.com/dgryski/go-farm"
 
-	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
@@ -55,7 +54,6 @@ type defaultWorkflowPartitionConfig struct {
 type defaultPartitioner struct {
 	config              Config
 	log                 log.Logger
-	domainCache         cache.DomainCache
 	isolationGroupState isolationgroup.State
 }
 
@@ -72,10 +70,6 @@ func NewDefaultPartitioner(
 }
 
 func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
-	if !r.config.IsolationGroupEnabled(domainID) {
-		return nil, nil
-	}
-
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
 	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID)
 	if err != nil {

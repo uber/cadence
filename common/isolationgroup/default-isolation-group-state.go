@@ -38,10 +38,10 @@ import (
 
 type defaultIsolationGroupStateHandler struct {
 	status                     int32
-	done                       chan bool
+	done                       chan struct{}
 	log                        log.Logger
 	domainCache                cache.DomainCache
-	globalIsolationGroupDrains persistence.ConfigStore
+	globalIsolationGroupDrains persistence.ConfigStoreManager
 	config                     Config
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
@@ -54,17 +54,17 @@ type defaultIsolationGroupStateHandler struct {
 
 func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
-	domainCache cache.DomainCache,
 	config Config,
-	globalIsolationGroupDrains persistence.ConfigStore,
-	done chan bool,
+	domainCache cache.DomainCache,
+	manager persistence.ConfigStoreManager,
 ) State {
 	return &defaultIsolationGroupStateHandler{
+		done:                       make(chan struct{}),
+		domainCache:                domainCache,
+		globalIsolationGroupDrains: manager,
 		status:                     common.DaemonStatusInitialized,
 		log:                        logger,
 		config:                     config,
-		domainCache:                domainCache,
-		globalIsolationGroupDrains: globalIsolationGroupDrains,
 		subscriptionMu:             sync.Mutex{},
 		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
 	}
@@ -144,7 +144,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.FetchConfig(ctx, persistence.GlobalIsolationGroupConfig)
+	globalCfg, err := z.globalIsolationGroupDrains.FetchDynamicConfig(ctx, persistence.GlobalIsolationGroupConfig)
 
 	globalState, err := fromCfgStore(globalCfg)
 	if err != nil {
@@ -169,7 +169,7 @@ func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 }
 
 func (z *defaultIsolationGroupStateHandler) pollForChanges() {
-	ticker := time.NewTicker(time.Duration(z.config.UpdateFrequency()) * time.Second)
+	ticker := time.NewTicker(z.config.UpdateFrequency())
 	for {
 		select {
 		case <-z.done:
@@ -220,6 +220,6 @@ func availableIG(allIsolationGroups []string, global types.IsolationGroupConfigu
 	return out
 }
 
-func fromCfgStore(in *persistence.InternalConfigStoreEntry) (types.IsolationGroupConfiguration, error) {
+func fromCfgStore(in *persistence.FetchDynamicConfigResponse) (types.IsolationGroupConfiguration, error) {
 	panic("not implemented")
 }

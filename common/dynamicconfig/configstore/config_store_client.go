@@ -405,7 +405,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 		ctx,
 		&persistence.UpdateDynamicConfigRequest{
 			Snapshot: newSnapshot,
-		},
+		}, persistence.DynamicConfig,
 	)
 
 	select {
@@ -498,7 +498,7 @@ func (csc *configStoreClient) update() error {
 	ctx, cancel := context.WithTimeout(context.Background(), csc.config.FetchTimeout)
 	defer cancel()
 
-	res, err := csc.configStoreManager.FetchDynamicConfig(ctx)
+	res, err := csc.configStoreManager.FetchDynamicConfig(ctx, persistence.DynamicConfig)
 
 	select {
 	case <-ctx.Done():

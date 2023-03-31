@@ -30,15 +30,17 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 )
 
-// Config is the base configuration for the partitioning library
-type Config struct {
-	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	AllIsolationGroups    []string
-}
-
 type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
 	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*string, error)
+}
+
+// Config is the configuration for the partitioning library, a library
+// for segmenting portions of workflows into isolation-groups - a resiliency
+// concept meant to help move workflows around and away from failure zones.
+type Config struct {
+	// IsolationGroupEnabled is a domain-based switch for the feature to be enabled
+	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
 }
