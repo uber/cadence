@@ -21,6 +21,7 @@
 package cadence
 
 import (
+	"github.com/uber/cadence/common/persistence"
 	"log"
 	"time"
 
@@ -128,6 +129,7 @@ func (s *server) startService() common.Daemon {
 				&s.cfg.Persistence,
 				params.Logger,
 				s.doneC,
+				persistence.DynamicConfig,
 			)
 		case dynamicconfig.FileBasedClient:
 			params.Logger.Info("initialising File Based dynamic config client")

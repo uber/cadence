@@ -25,6 +25,7 @@ package isolationgroup
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/persistence"
 	"sync"
 	"sync/atomic"
 
@@ -83,7 +84,7 @@ func NewDefaultIsolationGroupStateWatcher(
 		FetchTimeout:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateFetchTimeout)(),
 		UpdateTimeout:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateUpdateTimeout)(),
 	}
-	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, persistenceCfg, logger, stopChan)
+	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, persistenceCfg, logger, stopChan, persistence.GlobalIsolationGroupConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failure during setup for the IsolationGroupStateWatcher: %w", err)
 	}
