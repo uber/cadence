@@ -25,9 +25,10 @@ package isolationgroup
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/persistence"
 	"sync"
 	"sync/atomic"
+
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/dynamicconfig"

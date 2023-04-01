@@ -21,9 +21,10 @@
 package cadence
 
 import (
-	"github.com/uber/cadence/common/persistence"
 	"log"
 	"time"
+
+	"github.com/uber/cadence/common/persistence"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
@@ -39,7 +40,6 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 	"github.com/uber/cadence/common/elasticsearch"
-	zapLogger "github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/membership"
@@ -294,17 +294,4 @@ func (s *server) startService() common.Daemon {
 func execute(d common.Daemon, doneC chan struct{}) {
 	d.Start()
 	close(doneC)
-}
-
-func mapIGs(log zapLogger.Logger, in []interface{}) []string {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if ok {
-			allIsolationGroups = append(allIsolationGroups, v)
-		} else {
-			log.Error("Invalid isolation-group: ", tag.Dynamic("isolation-group", v))
-		}
-	}
-	return allIsolationGroups
 }
