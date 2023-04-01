@@ -247,7 +247,10 @@ func New(
 		return nil, err
 	}
 
-	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(params, persistenceBean.GetConfigStoreManager(), dynamicCollection, domainCache)
+	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(
+		params,
+		dynamicCollection,
+		domainCache)
 	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
 
 	impl = &Impl{
@@ -568,38 +571,23 @@ func (h *Impl) GetPartitioner() partition.Partitioner {
 	return h.partitioner
 }
 
-func mapIGs(log log.Logger, in []interface{}) []string {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if ok {
-			allIsolationGroups = append(allIsolationGroups, v)
-		} else {
-			log.Error("Invalid isolation-group: ", tag.Dynamic("isolation-group", v))
-		}
-	}
-	return allIsolationGroups
-}
-
 // Use the provided IsolationGroupStateHandler or the default one
-func ensureIsolationGroupStateHandlerOrDefault(params *Params,
-	cfgStoreMgr persistence.ConfigStoreManager,
+func ensureIsolationGroupStateHandlerOrDefault(
+	params *Params,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
 ) isolationgroup.State {
 
-	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
-	allIsolationGroups := mapIGs(params.Logger, allIGs)
-
 	if params.IsolationGroupState != nil {
 		return params.IsolationGroupState
 	}
-	cfg := isolationgroup.Config{
-		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
-		UpdateFrequency:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval),
-		AllIsolationGroups:    allIsolationGroups,
+
+	ig, err := isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, dc, &params.PersistenceConfig, domainCache)
+	if err != nil {
+		params.Logger.Error("failed to load up isolation-group", tag.Error(err))
+		return nil
 	}
-	return isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, cfg, domainCache, cfgStoreMgr)
+	return ig
 }
 
 // Use the provided partitioner or the default one

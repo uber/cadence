@@ -23,7 +23,7 @@
 package isolationgroup
 
 import (
-	"github.com/uber/cadence/common/persistence"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -119,8 +119,8 @@ func TestAvailableIsolationGroups(t *testing.T) {
 
 func TestIsDrained(t *testing.T) {
 
-	igA := string("isolationGroupA")
-	igB := string("isolationGroupB")
+	igA := "isolationGroupA"
+	igB := "isolationGroupB"
 
 	isolationGroupsAllHealthy := types.IsolationGroupConfiguration{
 		igA: {
@@ -185,18 +185,110 @@ func TestIsDrained(t *testing.T) {
 	}
 }
 
-func TestMapping(t *testing.T) {
+func TestIsolationGroupStateMapping(t *testing.T) {
 
 	tests := map[string]struct {
-		in       types.UpdateGlobalIsolationGroupsRequest
-		expected *persistence.UpdateDynamicConfigRequest
+		in          map[string]interface{}
+		expected    types.IsolationGroupConfiguration
+		expectedErr error
 	}{
-		"napping": {},
+		"valid mapping": {
+			in: map[string]interface{}{
+				"zone-1": 1,
+				"zone-2": 2,
+			},
+			expected: map[string]types.IsolationGroupPartition{
+				"zone-1": {
+					Name:  "zone-1",
+					State: types.IsolationGroupStateHealthy,
+				},
+				"zone-2": {
+					Name:  "zone-2",
+					State: types.IsolationGroupStateDrained,
+				},
+			},
+		},
+		"invalid values ": {
+			in: map[string]interface{}{
+				"zone-1": "an invalid value",
+			},
+			expectedErr: errors.New("could not map isolation group state, got an invalid value (string)"),
+		},
+		"invalid values - 2 - valid type, invalid value": {
+			in: map[string]interface{}{
+				"zone-1": 0,
+			},
+			expectedErr: errors.New("invalid isolation-group state: 0"),
+		},
+		"nil": {
+			in:       nil,
+			expected: nil,
+		},
 	}
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, updateGlobalIGRequest(td.in))
+			res, err := mapDynamicConfigResponse(td.in)
+			assert.Equal(t, td.expected, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func TestMapAllIsolationGroupStates(t *testing.T) {
+
+	tests := map[string]struct {
+		in          []interface{}
+		expected    []string
+		expectedErr error
+	}{
+		"valid mapping": {
+			in:       []interface{}{"zone-1", "zone-2", "zone-3"},
+			expected: []string{"zone-1", "zone-2", "zone-3"},
+		},
+		"invalid mapping": {
+			in:          []interface{}{1, 2, 3},
+			expectedErr: errors.New("failed to get all-isolation-groups resonse from dynamic config: got 1 (int)"),
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			res, err := mapAllIsolationGroupsResponse(td.in)
+			assert.Equal(t, td.expected, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func TestUpdateRequest(t *testing.T) {
+
+	tests := map[string]struct {
+		in       types.IsolationGroupConfiguration
+		expected map[string]int
+	}{
+		"valid mapping": {
+			in: types.IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  "zone-1",
+					State: types.IsolationGroupStateHealthy,
+				},
+				"zone-2": {
+					Name:  "zone-2",
+					State: types.IsolationGroupStateDrained,
+				},
+			},
+			expected: map[string]int{
+				"zone-1": 1,
+				"zone-2": 2,
+			},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			res := mapUpdateGlobalIsolationGroupsRequest(td.in)
+			assert.Equal(t, td.expected, res)
 		})
 	}
 }

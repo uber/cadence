@@ -27,49 +27,99 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
 
+// defaultConfig values for the partitioning library for segmenting portions of workflows into isolation-groups - a resiliency
+// concept meant to help move workflows around and away from failure zones.
+type defaultConfig struct {
+	// IsolationGroupEnabled is a domain-based configuration value for whether this feature is enabled at all
+	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	// AllIsolationGroups is a static list of all the possible isolation group names
+	AllIsolationGroups []string
+}
+
 type defaultIsolationGroupStateHandler struct {
-	status                     int32
-	done                       chan struct{}
-	log                        log.Logger
-	domainCache                cache.DomainCache
-	globalIsolationGroupDrains persistence.ConfigStoreManager
-	config                     Config
-	subscriptionMu             sync.Mutex
-	valuesMu                   sync.RWMutex
-	lastSeen                   *isolationGroups
-	updateCB                   func()
+	status                          int32
+	done                            chan struct{}
+	log                             log.Logger
+	domainCache                     cache.DomainCache
+	globalIsolationGroupDrains      dynamicconfig.Client
+	globalIsolationGroupDrainClient dynamicconfig.Client
+	config                          defaultConfig
+	subscriptionMu                  sync.Mutex
+	valuesMu                        sync.RWMutex
+	lastSeen                        *isolationGroups
+	updateCB                        func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
 	// for notifying when there's a state change
 	subscriptions map[string]map[string]chan<- ChangeEvent
 }
 
+const (
+	DefaultIsolationGroupConfigStoreManagerGlobalMapping dynamicconfig.MapKey = iota
+)
+
+// NewDefaultIsolationGroupStateWatcher is the default constructor
 func NewDefaultIsolationGroupStateWatcher(
 	logger log.Logger,
-	config Config,
+	dc *dynamicconfig.Collection,
+	persistenceCfg *config.Persistence,
 	domainCache cache.DomainCache,
-	manager persistence.ConfigStoreManager,
-) State {
+) (State, error) {
+	stopChan := make(chan struct{})
+	cscConfig := &csc.ClientConfig{
+		PollInterval:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval)(),
+		UpdateRetryAttempts: dc.GetIntProperty(dynamicconfig.IsolationGroupStateUpdateRetryAttempts)(),
+		FetchTimeout:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateFetchTimeout)(),
+		UpdateTimeout:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateUpdateTimeout)(),
+	}
+	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, persistenceCfg, logger, stopChan)
+	if err != nil {
+		return nil, fmt.Errorf("failure during setup for the IsolationGroupStateWatcher: %w", err)
+	}
+	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, cfgStoreClient, stopChan)
+}
+
+// Is a constructor which allows passing in the dynamic config client
+func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
+	logger log.Logger,
+	dc *dynamicconfig.Collection,
+	domainCache cache.DomainCache,
+	cfgStoreClient dynamicconfig.Client,
+	stopChan chan struct{},
+) (State, error) {
+
+	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
+	allIsolationGroups, err := mapAllIsolationGroupsResponse(allIGs)
+	if err != nil {
+		return nil, fmt.Errorf("could not get all isolation groups fron dynamic config: %w", err)
+	}
+
+	config := defaultConfig{
+		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
+		AllIsolationGroups:    allIsolationGroups,
+	}
+
 	return &defaultIsolationGroupStateHandler{
-		done:                       make(chan struct{}),
+		done:                       stopChan,
 		domainCache:                domainCache,
-		globalIsolationGroupDrains: manager,
+		globalIsolationGroupDrains: cfgStoreClient,
 		status:                     common.DaemonStatusInitialized,
 		log:                        logger,
 		config:                     config,
 		subscriptionMu:             sync.Mutex{},
 		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
-	}
+	}, nil
 }
 
 func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string) (types.IsolationGroupConfiguration, error) {
@@ -127,15 +177,22 @@ func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) er
 }
 
 func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
-	return z.globalIsolationGroupDrains.UpdateDynamicConfig(ctx, updateGlobalIGRequest(in), persistence.GlobalIsolationGroupConfig)
+	return z.globalIsolationGroupDrains.UpdateValue(
+		DefaultIsolationGroupConfigStoreManagerGlobalMapping,
+		mapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups),
+	)
 }
 
 func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
-	res, err := z.globalIsolationGroupDrains.FetchDynamicConfig(ctx, persistence.GlobalIsolationGroupConfig)
+	res, err := z.globalIsolationGroupDrains.GetMapValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {
-		return nil, nil
+		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
-	return getGlobalIGResponse(*res), nil
+	resp, err := mapDynamicConfigResponse(res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
+	}
+	return &types.GetGlobalIsolationGroupsResponse{IsolationGroups: resp}, nil
 }
 
 func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, domainID string) (*isolationGroups, error) {
@@ -158,9 +215,12 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.FetchDynamicConfig(ctx, persistence.GlobalIsolationGroupConfig)
+	globalCfg, err := z.globalIsolationGroupDrains.GetMapValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
+	if err != nil {
+		return nil, fmt.Errorf("could not resolve global drains in %w", err)
+	}
 
-	globalState, err := fromCfgStore(globalCfg)
+	globalState, err := mapDynamicConfigResponse(globalCfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}
@@ -173,16 +233,6 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	return ig, nil
 }
 
-func (z *defaultIsolationGroupStateHandler) ProvideDomainCache(domainCache cache.DomainCache) State {
-	z.domainCache = domainCache
-	return z
-}
-
-func (z *defaultIsolationGroupStateHandler) ProvideConfigStoreManager(cfgMgr persistence.ConfigStoreManager) State {
-	z.globalIsolationGroupDrains = cfgMgr
-	return z
-}
-
 func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 	// todo (david.porter)
 	// check new values against existing cached ones
@@ -190,34 +240,6 @@ func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 	// if any difference, notify subscribers for whom the change is applicable
 	// ie, global changes for all, domain changes for the domain-listeners
 	panic("not implemented")
-}
-
-func (z *defaultIsolationGroupStateHandler) pollForChanges() {
-	ticker := time.NewTicker(z.config.UpdateFrequency())
-	for {
-		select {
-		case <-z.done:
-			return
-		case <-ticker.C:
-			z.checkIfChanged()
-		}
-	}
-}
-
-func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
-	globalCfg, hasGlobalConfig := global[string(isolationGroup)]
-	domainCfg, hasDomainConfig := domain[string(isolationGroup)]
-	if hasGlobalConfig {
-		if globalCfg.State == types.IsolationGroupStateDrained {
-			return true
-		}
-	}
-	if hasDomainConfig {
-		if domainCfg.State == types.IsolationGroupStateDrained {
-			return true
-		}
-	}
-	return false
 }
 
 // A simple explicit deny-based isolation group implementation
@@ -244,26 +266,68 @@ func availableIG(allIsolationGroups []string, global types.IsolationGroupConfigu
 	return out
 }
 
-func fromCfgStore(in *persistence.FetchDynamicConfigResponse) (types.IsolationGroupConfiguration, error) {
-	panic("not implemented")
+func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) bool {
+	globalCfg, hasGlobalConfig := global[isolationGroup]
+	domainCfg, hasDomainConfig := domain[isolationGroup]
+	if hasGlobalConfig {
+		if globalCfg.State == types.IsolationGroupStateDrained {
+			return true
+		}
+	}
+	if hasDomainConfig {
+		if domainCfg.State == types.IsolationGroupStateDrained {
+			return true
+		}
+	}
+	return false
 }
 
-func updateGlobalIGRequest(in types.UpdateGlobalIsolationGroupsRequest) *persistence.UpdateDynamicConfigRequest {
-
-	types.DynamicConfigBlob{
-		SchemaVersion: 0,
-		Entries:       nil,
+// ----- Mappers -----
+func mapDynamicConfigResponse(in map[string]interface{}) (types.IsolationGroupConfiguration, error) {
+	if in == nil {
+		return nil, nil
 	}
-
-	return &persistence.UpdateDynamicConfigRequest{
-		Snapshot: &persistence.DynamicConfigSnapshot{
-			Version: 0,
-			Values:  nil,
-		},
+	out := types.IsolationGroupConfiguration{}
+	for k, v := range in {
+		state, err := mapIsolationGroupState(v)
+		if err != nil {
+			return nil, err
+		}
+		out[k] = types.IsolationGroupPartition{
+			Name:  k,
+			State: state,
+		}
 	}
+	return out, nil
 }
 
-func getGlobalIGResponse(in persistence.FetchDynamicConfigResponse) *types.GetGlobalIsolationGroupsResponse {
-	panic("not implement")
-	return nil
+func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
+	var allIsolationGroups []string
+	for k := range in {
+		v, ok := in[k].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get all-isolation-groups resonse from dynamic config: got %v (%T)", in[k], in[k])
+		}
+		allIsolationGroups = append(allIsolationGroups, v)
+	}
+	return allIsolationGroups, nil
+}
+
+func mapIsolationGroupState(v interface{}) (types.IsolationGroupState, error) {
+	state, ok := v.(int)
+	if !ok {
+		return types.IsolationGroupStateInvalid, fmt.Errorf("could not map isolation group state, got %v (%T)", v, v)
+	}
+	if types.IsolationGroupState(state) != types.IsolationGroupStateHealthy && types.IsolationGroupState(state) != types.IsolationGroupStateDrained {
+		return types.IsolationGroupStateInvalid, fmt.Errorf("invalid isolation-group state: %v", state)
+	}
+	return types.IsolationGroupState(state), nil
+}
+
+func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) interface{} {
+	out := map[string]int{}
+	for _, v := range in {
+		out[v.Name] = int(v.State)
+	}
+	return out
 }

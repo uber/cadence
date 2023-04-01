@@ -24,9 +24,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 
@@ -267,17 +264,6 @@ func (s *server) startService() common.Daemon {
 		log.Printf("failed to create file blobstore client, will continue startup without it: %v", err)
 		params.BlobstoreClient = nil
 	}
-
-	allIsolationGroups := mapIGs(params.Logger, dc.GetListProperty(dynamicconfig.AllIsolationGroups)())
-	params.IsolationGroupState = isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, config.IsolationGroups{
-		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableIsolationGroupPartitioning),
-		UpdateFrequency:       dc.GetDurationProperty(dynamicconfig.IsolationGroupCfgUpdateFrequency),
-		AllIsolationGroups:    allIsolationGroups,
-	}, s.doneC)
-	params.Partitioner = partition.NewDefaultPartitioner(params.Logger, params.IsolationGroupState, config.Partitioner{
-		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableIsolationGroupPartitioning),
-		AllIsolationGroups:    allIsolationGroups,
-	})
 
 	params.Logger.Info("Starting service " + s.name)
 

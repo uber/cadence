@@ -21,9 +21,10 @@
 package resource
 
 import (
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
-	"go.uber.org/yarpc"
 
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 

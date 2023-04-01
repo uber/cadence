@@ -32,8 +32,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
-	cache "github.com/uber/cadence/common/cache"
-	persistence "github.com/uber/cadence/common/persistence"
 	types "github.com/uber/cadence/common/types"
 )
 
@@ -75,6 +73,21 @@ func (mr *MockStateMockRecorder) AvailableIsolationGroupsByDomainID(ctx, domainI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableIsolationGroupsByDomainID", reflect.TypeOf((*MockState)(nil).AvailableIsolationGroupsByDomainID), ctx, domainID)
 }
 
+// GetGlobalState mocks base method.
+func (m *MockState) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGlobalState", ctx)
+	ret0, _ := ret[0].(*types.GetGlobalIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGlobalState indicates an expected call of GetGlobalState.
+func (mr *MockStateMockRecorder) GetGlobalState(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGlobalState", reflect.TypeOf((*MockState)(nil).GetGlobalState), ctx)
+}
+
 // IsDrained mocks base method.
 func (m *MockState) IsDrained(ctx context.Context, Domain, IsolationGroup string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -103,34 +116,6 @@ func (m *MockState) IsDrainedByDomainID(ctx context.Context, DomainID, Isolation
 func (mr *MockStateMockRecorder) IsDrainedByDomainID(ctx, DomainID, IsolationGroup interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDrainedByDomainID", reflect.TypeOf((*MockState)(nil).IsDrainedByDomainID), ctx, DomainID, IsolationGroup)
-}
-
-// ProvideConfigStoreManager mocks base method.
-func (m *MockState) ProvideConfigStoreManager(manager persistence.ConfigStoreManager) State {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProvideConfigStoreManager", manager)
-	ret0, _ := ret[0].(State)
-	return ret0
-}
-
-// ProvideConfigStoreManager indicates an expected call of ProvideConfigStoreManager.
-func (mr *MockStateMockRecorder) ProvideConfigStoreManager(manager interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvideConfigStoreManager", reflect.TypeOf((*MockState)(nil).ProvideConfigStoreManager), manager)
-}
-
-// ProvideDomainCache mocks base method.
-func (m *MockState) ProvideDomainCache(cache cache.DomainCache) State {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProvideDomainCache", cache)
-	ret0, _ := ret[0].(State)
-	return ret0
-}
-
-// ProvideDomainCache indicates an expected call of ProvideDomainCache.
-func (mr *MockStateMockRecorder) ProvideDomainCache(cache interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProvideDomainCache", reflect.TypeOf((*MockState)(nil).ProvideDomainCache), cache)
 }
 
 // Start mocks base method.
@@ -183,4 +168,18 @@ func (m *MockState) Unsubscribe(domainID, key string) error {
 func (mr *MockStateMockRecorder) Unsubscribe(domainID, key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unsubscribe", reflect.TypeOf((*MockState)(nil).Unsubscribe), domainID, key)
+}
+
+// UpdateGlobalState mocks base method.
+func (m *MockState) UpdateGlobalState(ctx context.Context, state types.UpdateGlobalIsolationGroupsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateGlobalState", ctx, state)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateGlobalState indicates an expected call of UpdateGlobalState.
+func (mr *MockStateMockRecorder) UpdateGlobalState(ctx, state interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGlobalState", reflect.TypeOf((*MockState)(nil).UpdateGlobalState), ctx, state)
 }

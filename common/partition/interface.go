@@ -26,6 +26,8 @@ package partition
 
 import (
 	"context"
+
+	"github.com/uber/cadence/common/dynamicconfig"
 )
 
 type Partitioner interface {

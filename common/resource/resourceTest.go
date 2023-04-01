@@ -26,9 +26,11 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
-
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/partition"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -92,6 +94,9 @@ type (
 		HistoryMgr      *mocks.HistoryV2Manager
 		ExecutionMgr    *mocks.ExecutionManager
 		PersistenceBean *persistenceClient.MockBean
+
+		IsolationGroups isolationgroup.State
+		Partitioner     partition.Partitioner
 
 		Logger log.Logger
 	}
@@ -395,6 +400,16 @@ func (s *Test) GetThrottledLogger() log.Logger {
 // GetDispatcher for testing
 func (s *Test) GetDispatcher() *yarpc.Dispatcher {
 	panic("user should implement this method for test")
+}
+
+// GetIsolationGroupState returns the isolationGroupState for testing
+func (s *Test) GetIsolationGroupState() isolationgroup.State {
+	return s.IsolationGroups
+}
+
+// GetPartitioner returns the partitioner
+func (s *Test) GetPartitioner() partition.Partitioner {
+	return s.Partitioner
 }
 
 // Finish checks whether expectations are met

@@ -1583,6 +1583,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
 		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
+		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
+		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
