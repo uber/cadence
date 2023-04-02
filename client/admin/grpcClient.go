@@ -177,3 +177,13 @@ func (g grpcClient) ListDynamicConfig(ctx context.Context, request *types.ListDy
 	response, err := g.c.ListDynamicConfig(ctx, proto.FromListDynamicConfigRequest(request), opts...)
 	return proto.ToListDynamicConfigResponse(response), proto.ToError(err)
 }
+
+func (g grpcClient) GetGlobalIsolationGroupsRequest(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	response, err := g.c.GetGlobalIsolationGroups(ctx, proto.FromGetGlobalIsolationGroupsRequest(request), opts...)
+	return proto.ToGetGlobalIsolationGroupsResponse(response), proto.ToError(err)
+}
+
+func (g grpcClient) UpdateGlobalIsolationGroupsRequest(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	response, err := g.c.UpdateGlobalIsolationGroups(ctx, proto.FromGetGlobalIsolationGroupsRequest(request), opts...)
+	return proto.ToGetGlobalIsolationGroupsResponse(response), proto.ToError(err)
+}
