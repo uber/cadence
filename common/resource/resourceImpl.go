@@ -371,7 +371,9 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
-	h.isolationGroups.Stop()
+	if h.isolationGroups != nil {
+		h.isolationGroups.Stop()
+	}
 }
 
 // GetServiceName return service name

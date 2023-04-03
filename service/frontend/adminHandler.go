@@ -1734,7 +1734,11 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	return adh.Resource.GetIsolationGroupState().GetGlobalState(ctx)
+	ig := adh.Resource.GetIsolationGroupState()
+	if ig == nil {
+		return nil, nil
+	}
+	return ig.GetGlobalState(ctx)
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
