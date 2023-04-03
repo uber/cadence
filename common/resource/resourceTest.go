@@ -153,6 +153,12 @@ func NewTest(
 	persistenceBean.EXPECT().GetShardManager().Return(shardMgr).AnyTimes()
 	persistenceBean.EXPECT().GetExecutionManager(gomock.Any()).Return(executionMgr, nil).AnyTimes()
 
+	isolationGroupMock := isolationgroup.NewMockState(controller)
+	isolationGroupMock.EXPECT().Stop().AnyTimes()
+
+	partitionMock := partition.NewMockPartitioner(controller)
+	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("zone-1", nil)
+
 	scope := tally.NewTestScope("test", nil)
 
 	return &Test{
@@ -195,6 +201,8 @@ func NewTest(
 		HistoryMgr:      historyMgr,
 		ExecutionMgr:    executionMgr,
 		PersistenceBean: persistenceBean,
+		IsolationGroups: isolationGroupMock,
+		Partitioner:     partitionMock,
 
 		// logger
 
