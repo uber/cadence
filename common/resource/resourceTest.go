@@ -157,7 +157,8 @@ func NewTest(
 	isolationGroupMock.EXPECT().Stop().AnyTimes()
 
 	partitionMock := partition.NewMockPartitioner(controller)
-	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("zone-1", nil)
+	mockZone := "zone1"
+	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&mockZone, nil)
 
 	scope := tally.NewTestScope("test", nil)
 
