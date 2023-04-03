@@ -24,7 +24,9 @@ package isolationgroup
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -92,7 +94,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, cfgStoreClient, stopChan)
 }
 
-// Is a constructor which allows passing in the dynamic config client
+// NewDefaultIsolationGroupStateWatcherWithConfigStoreClient Is a constructor which allows passing in the dynamic config client
 func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	logger log.Logger,
 	dc *dynamicconfig.Collection,
@@ -179,14 +181,18 @@ func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) er
 }
 
 func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
+	mappedInput, err := mapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
+	if err != nil {
+		return err
+	}
 	return z.globalIsolationGroupDrains.UpdateValue(
 		DefaultIsolationGroupConfigStoreManagerGlobalMapping,
-		mapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups),
+		mappedInput,
 	)
 }
 
 func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
-	res, err := z.globalIsolationGroupDrains.GetMapValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
+	res, err := z.globalIsolationGroupDrains.ListValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
@@ -217,7 +223,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.GetMapValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
+	globalCfg, err := z.globalIsolationGroupDrains.ListValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in %w", err)
 	}
@@ -285,19 +291,29 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 }
 
 // ----- Mappers -----
-func mapDynamicConfigResponse(in map[string]interface{}) (types.IsolationGroupConfiguration, error) {
+// dynamic config library does much of the decoding already, so this is asymmetric
+// to the serialization step. Incoming value should be just
+// map[string]interface{}
+func mapDynamicConfigResponse(in []*types.DynamicConfigEntry) (out types.IsolationGroupConfiguration, err error) {
 	if in == nil {
 		return nil, nil
 	}
-	out := types.IsolationGroupConfiguration{}
-	for k, v := range in {
-		state, err := mapIsolationGroupState(v)
-		if err != nil {
-			return nil, err
-		}
-		out[k] = types.IsolationGroupPartition{
-			Name:  k,
-			State: state,
+	out = make(types.IsolationGroupConfiguration)
+
+	for _, entry := range in {
+		for _, v := range entry.Values {
+			if v.Value == nil {
+				continue
+			}
+			if v.Value.GetEncodingType() != types.EncodingTypeJSON {
+				return nil, fmt.Errorf("failed to decode values: %v, (%T)", v.Value, v.Value.EncodingType)
+			}
+			var partition types.IsolationGroupPartition
+			err := json.Unmarshal(v.Value.GetData(), &partition)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal entry: %v, got %w", string(v.Value.GetData()), err)
+			}
+			out[partition.Name] = partition
 		}
 	}
 	return out, nil
@@ -315,21 +331,24 @@ func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
 	return allIsolationGroups, nil
 }
 
-func mapIsolationGroupState(v interface{}) (types.IsolationGroupState, error) {
-	state, ok := v.(int)
-	if !ok {
-		return types.IsolationGroupStateInvalid, fmt.Errorf("could not map isolation group state, got %v (%T)", v, v)
-	}
-	if types.IsolationGroupState(state) != types.IsolationGroupStateHealthy && types.IsolationGroupState(state) != types.IsolationGroupStateDrained {
-		return types.IsolationGroupStateInvalid, fmt.Errorf("invalid isolation-group state: %v", state)
-	}
-	return types.IsolationGroupState(state), nil
-}
-
-func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) interface{} {
-	out := map[string]int{}
+func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) ([]*types.DynamicConfigValue, error) {
+	var out []*types.DynamicConfigValue
 	for _, v := range in {
-		out[v.Name] = int(v.State)
+		jsonData, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal input for dynamic config: %w", err)
+		}
+		out = append(out, &types.DynamicConfigValue{
+			Value: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         jsonData,
+			},
+			Filters: nil,
+		})
 	}
-	return out
+	// ensure sort-order
+	sort.Slice(out, func(i, j int) bool {
+		return string(out[i].Value.GetData()) < string(out[j].Value.GetData())
+	})
+	return out, nil
 }
