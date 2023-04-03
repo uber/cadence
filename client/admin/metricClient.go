@@ -529,3 +529,25 @@ func (c *metricClient) ListDynamicConfig(
 	}
 	return resp, err
 }
+
+func (c *metricClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	c.metricsClient.IncCounter(metrics.AdminClientGetGlobalIsolationGroupsScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.AdminClientGetGlobalIsolationGroupsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.GetGlobalIsolationGroups(ctx, request, opts...)
+	sw.Stop()
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientGetGlobalIsolationGroupsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}
+
+func (c *metricClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	c.metricsClient.IncCounter(metrics.AdminClientUpdateGlobalIsolationGroupsScope, metrics.CadenceClientRequests)
+	sw := c.metricsClient.StartTimer(metrics.AdminClientUpdateGlobalIsolationGroupsScope, metrics.CadenceClientLatency)
+	resp, err := c.client.UpdateGlobalIsolationGroups(ctx, request, opts...)
+	sw.Stop()
+	if err != nil {
+		c.metricsClient.IncCounter(metrics.AdminClientUpdateGlobalIsolationGroupsScope, metrics.CadenceClientFailures)
+	}
+	return resp, err
+}

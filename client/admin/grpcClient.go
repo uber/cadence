@@ -178,12 +178,12 @@ func (g grpcClient) ListDynamicConfig(ctx context.Context, request *types.ListDy
 	return proto.ToListDynamicConfigResponse(response), proto.ToError(err)
 }
 
-func (g grpcClient) GetGlobalIsolationGroupsRequest(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+func (g grpcClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
 	response, err := g.c.GetGlobalIsolationGroups(ctx, proto.FromGetGlobalIsolationGroupsRequest(request), opts...)
 	return proto.ToGetGlobalIsolationGroupsResponse(response), proto.ToError(err)
 }
 
-func (g grpcClient) UpdateGlobalIsolationGroupsRequest(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
-	response, err := g.c.UpdateGlobalIsolationGroups(ctx, proto.FromGetGlobalIsolationGroupsRequest(request), opts...)
-	return proto.ToGetGlobalIsolationGroupsResponse(response), proto.ToError(err)
+func (g grpcClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	response, err := g.c.UpdateGlobalIsolationGroups(ctx, proto.FromUpdateGlobalIsolationGroupsRequest(request), opts...)
+	return proto.ToUpdateGlobalIsolationGroupsResponse(response), proto.ToError(err)
 }

@@ -443,3 +443,33 @@ func (c *retryableClient) ListDynamicConfig(
 	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
+
+func (c *retryableClient) GetGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.GetGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetGlobalIsolationGroupsResponse, error) {
+	var resp *types.GetGlobalIsolationGroupsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetGlobalIsolationGroups(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) UpdateGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	var resp *types.UpdateGlobalIsolationGroupsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.UpdateGlobalIsolationGroups(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
