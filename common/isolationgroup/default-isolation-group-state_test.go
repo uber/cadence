@@ -339,3 +339,10 @@ func TestUpdateRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestIsolationGroupShutdown(t *testing.T) {
+	var v defaultIsolationGroupStateHandler
+	assert.NotPanics(t, func() {
+		v.Stop()
+	})
+}
