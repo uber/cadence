@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -280,9 +281,6 @@ func (s *matchingEngineSuite) PollForDecisionTasksResultTest() {
 	_, err = addTask(s.matchingEngine, s.handlerContext, addRequest)
 	s.NoError(err)
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-
 	resp, err = pollTask(s.matchingEngine, s.handlerContext, pollReq)
 
 	expectedResp := &pollTaskResponse{
@@ -313,8 +311,7 @@ func (s *matchingEngineSuite) PollForTasksEmptyResultTest(callContext context.Co
 	tl := "makeToast"
 	identity := "selfDrivingToaster"
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList := &types.TaskList{Name: tl}
 	var taskListType types.TaskListType
 	tlID := newTestTaskListID(domainID, tl, taskType)
 	s.handlerContext.Context = callContext
@@ -382,8 +379,7 @@ func (s *matchingEngineSuite) AddTasksTest(taskType int, isForwarded bool) {
 	tl := "makeToast"
 	forwardedFrom := "/__cadence_sys/makeToast/1"
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList := &types.TaskList{Name: tl}
 
 	const taskCount = 111
 
@@ -429,8 +425,7 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	domainID := "domainId"
 	tl := "makeToast"
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList := &types.TaskList{Name: tl}
 
 	runID := "run1"
 	workflowID := "workflow1"
@@ -464,79 +459,50 @@ func (s *matchingEngineSuite) TestTaskWriterShutdown() {
 	tlmImpl.taskWriter.stopped = 1 // reset it back to old value
 }
 
-func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
-	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+func (s *matchingEngineSuite) TestAddAndPollDecisionTasks() {
+	s.AddAndPollTasks(persistence.TaskListTypeDecision)
+}
 
-	taskType := persistence.TaskListTypeActivity
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
+func (s *matchingEngineSuite) TestAddAndPollActivityTasks() {
+	s.AddAndPollTasks(persistence.TaskListTypeDecision)
+}
+
+func (s *matchingEngineSuite) AddAndPollTasks(taskType int) {
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	const taskCount = 1000
 	const initialRangeID = 102
 	// TODO: Understand why publish is low when rangeSize is 3
 	const rangeSize = 30
 
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, taskType)
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
+	testParam := newTestParam(taskType)
+	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
-			DomainUUID:                    domainID,
-			Execution:                     &workflowExecution,
+			DomainUUID:                    testParam.DomainID,
+			Execution:                     testParam.WorkflowExecution,
 			ScheduleID:                    scheduleID,
-			TaskList:                      taskList,
+			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
 		}
-
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 		s.NoError(err)
 	}
-	s.EqualValues(taskCount, s.taskManager.getTaskCount(tlID))
+	s.EqualValues(taskCount, s.taskManager.getTaskCount(testParam.TaskListID))
 
-	activityTypeName := "activity1"
-	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: activityTypeName}
-	activityInput := []byte("Activity1 Input")
-
-	identity := "nobody"
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
-			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
-			resp := &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
-					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    activityID,
-						TaskList:                      &types.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(10),
-					}),
-			}
-			resp.StartedTimestamp = common.Int64Ptr(time.Now().UnixNano())
-			return resp, nil
-		}).AnyTimes()
+	s.setupRecordTaskStartedMock(taskType, testParam, false)
 
 	for i := int64(0); i < taskCount; {
 		scheduleID := i * 3
 		pollReq := &pollTaskRequest{
 			TaskType:   taskType,
-			DomainUUID: domainID,
-			TaskList:   taskList,
-			Identity:   identity,
+			DomainUUID: testParam.DomainID,
+			TaskList:   testParam.TaskList,
+			Identity:   testParam.Identity,
 		}
 		result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
 		s.NoError(err)
@@ -545,106 +511,61 @@ func (s *matchingEngineSuite) TestAddThenConsumeActivities() {
 			s.logger.Debug("empty poll returned")
 			continue
 		}
-		s.EqualValues(activityID, result.ActivityID)
-		s.EqualValues(activityType, result.ActivityType)
-		s.EqualValues(activityInput, result.Input)
-		s.EqualValues(workflowExecution, *result.WorkflowExecution)
-		s.Equal(true, validateTimeRange(time.Unix(0, *result.ScheduledTimestamp), time.Minute))
-		s.Equal(int32(100), *result.ScheduleToCloseTimeoutSeconds)
-		s.Equal(true, validateTimeRange(time.Unix(0, *result.StartedTimestamp), time.Minute))
-		s.Equal(int32(50), *result.StartToCloseTimeoutSeconds)
-		s.Equal(int32(10), *result.HeartbeatTimeoutSeconds)
-		token := &common.TaskToken{
-			DomainID:     domainID,
-			WorkflowID:   workflowID,
-			RunID:        runID,
-			ScheduleID:   scheduleID,
-			ActivityID:   activityID,
-			ActivityType: activityTypeName,
-		}
-		s.EqualValues(token, result.TaskToken)
+		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 		i++
 	}
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
-	expectedRange := int64(initialRangeID + taskCount/rangeSize)
-	if taskCount%rangeSize > 0 {
-		expectedRange++
-	}
+	s.EqualValues(0, s.taskManager.getTaskCount(testParam.TaskListID))
+	expectedRange := getExpectedRange(initialRangeID, taskCount, rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.
-	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
+	s.True(expectedRange <= s.taskManager.getTaskListManager(testParam.TaskListID).rangeID)
 }
 
-func (s *matchingEngineSuite) TestSyncMatchActivities() {
-	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
-	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(50 * time.Millisecond)
+func (s *matchingEngineSuite) TestSyncMatchActivityTasks() {
+	s.SyncMatchTasks(persistence.TaskListTypeActivity)
+}
 
-	taskType := persistence.TaskListTypeActivity
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
+func (s *matchingEngineSuite) TestSyncMatchDecisionTasks() {
+	s.SyncMatchTasks(persistence.TaskListTypeDecision)
+}
 
+func (s *matchingEngineSuite) SyncMatchTasks(taskType int) {
 	const taskCount = 10
 	const initialRangeID = 102
 	// TODO: Understand why publish is low when rangeSize is 3
 	const rangeSize = 30
+	var throttledTaskCount int64
+	if taskType == persistence.TaskListTypeActivity {
+		throttledTaskCount = 3
+	}
 
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, taskType)
-	tlKind := types.TaskListKindNormal
+	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(50 * time.Millisecond)
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	// So we can get snapshots
 	scope := tally.NewTestScope("test", nil)
 	s.matchingEngine.metricsClient = metrics.NewClient(scope, metrics.Matching)
 
+	testParam := newTestParam(taskType)
 	dispatchTTL := time.Nanosecond
 	dPtr := _defaultTaskDispatchRPS
-
-	mgr, err := newTaskListManager(s.matchingEngine, tlID, &tlKind, s.matchingEngine.config)
+	tlKind := types.TaskListKindNormal
+	mgr, err := newTaskListManager(s.matchingEngine, testParam.TaskListID, &tlKind, s.matchingEngine.config)
 	s.NoError(err)
-
 	mgrImpl, ok := mgr.(*taskListManagerImpl)
 	s.True(ok)
-
 	mgrImpl.matcher.limiter = quotas.NewRateLimiter(&dPtr, dispatchTTL, _minBurst)
-	s.matchingEngine.updateTaskList(tlID, mgr)
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
+	s.matchingEngine.updateTaskList(testParam.TaskListID, mgr)
+	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
 	s.NoError(mgr.Start())
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-	activityTypeName := "activity1"
-	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: activityTypeName}
-	activityInput := []byte("Activity1 Input")
-
-	identity := "nobody"
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
-			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
-			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
-					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    activityID,
-						TaskList:                      &types.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
-					}),
-			}, nil
-		}).AnyTimes()
+	s.setupRecordTaskStartedMock(taskType, testParam, false)
 
 	pollFunc := func(maxDispatch float64) (*pollTaskResponse, error) {
 		pollReq := &pollTaskRequest{
 			TaskType:         taskType,
-			DomainUUID:       domainID,
-			TaskList:         taskList,
-			Identity:         identity,
+			DomainUUID:       testParam.DomainID,
+			TaskList:         testParam.TaskList,
+			Identity:         testParam.Identity,
 			TaskListMetadata: &types.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 		}
 		return pollTask(s.matchingEngine, s.handlerContext, pollReq)
@@ -652,26 +573,21 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
-
 		var wg sync.WaitGroup
 		var result *pollTaskResponse
 		var pollErr error
-		maxDispatch := _defaultTaskDispatchRPS
-		if i == taskCount/2 {
-			maxDispatch = 0
-		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, pollErr = pollFunc(maxDispatch)
+			result, pollErr = pollFunc(_defaultTaskDispatchRPS)
 		}()
-		time.Sleep(20 * time.Millisecond) // Necessary for sync match to happen
+		time.Sleep(20 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
-			DomainUUID:                    domainID,
-			Execution:                     &workflowExecution,
+			DomainUUID:                    testParam.DomainID,
+			Execution:                     testParam.WorkflowExecution,
 			ScheduleID:                    scheduleID,
-			TaskList:                      taskList,
+			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
@@ -679,131 +595,125 @@ func (s *matchingEngineSuite) TestSyncMatchActivities() {
 		s.NoError(err)
 		s.NoError(pollErr)
 		s.NotNil(result)
-
-		if isEmptyToken(result.TaskToken) {
-			// when ratelimit is set to zero, poller is expected to return empty result
-			// reset ratelimit, poll again and make sure task is returned this time
-			s.logger.Debug("empty poll returned")
-			s.Equal(float64(0), maxDispatch)
-			maxDispatch = _defaultTaskDispatchRPS
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				result, pollErr = pollFunc(maxDispatch)
-			}()
-			wg.Wait()
-			s.NoError(err)
-			s.NoError(pollErr)
-			s.NotNil(result)
-			s.False(isEmptyToken(result.TaskToken))
-		}
-
-		s.EqualValues(activityID, result.ActivityID)
-		s.EqualValues(activityType, result.ActivityType)
-		s.EqualValues(activityInput, result.Input)
-		s.EqualValues(workflowExecution, *result.WorkflowExecution)
-		token := &common.TaskToken{
-			DomainID:     domainID,
-			WorkflowID:   workflowID,
-			RunID:        runID,
-			ScheduleID:   scheduleID,
-			ActivityID:   activityID,
-			ActivityType: activityTypeName,
-		}
-		s.EqualValues(token, result.TaskToken)
+		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
 
-	time.Sleep(20 * time.Millisecond) // So any buffer tasks from 0 rps get picked up
-	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist=makeToast"]
-	s.Equal(1, int(syncCtr.Value()))                         // Check times zero rps is set = throttle counter
-	s.EqualValues(1, s.taskManager.getCreateTaskCount(tlID)) // Check times zero rps is set = Tasks stored in persistence
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
-	expectedRange := int64(initialRangeID + taskCount/rangeSize)
-	if taskCount%rangeSize > 0 {
-		expectedRange++
+	// Set the dispatch RPS to 0, to verify that poller will not get any task and task will be persisted into database
+	// Revert the dispatch RPS and verify that poller will get the task
+	for i := int64(0); i < throttledTaskCount; i++ {
+		scheduleID := i * 3
+		var wg sync.WaitGroup
+		var result *pollTaskResponse
+		var pollErr error
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			result, pollErr = pollFunc(0.0)
+		}()
+		time.Sleep(20 * time.Millisecond) // Wait for a short period of time to let the poller start so that sync match will happen
+		addRequest := &addTaskRequest{
+			TaskType:                      taskType,
+			DomainUUID:                    testParam.DomainID,
+			Execution:                     testParam.WorkflowExecution,
+			ScheduleID:                    scheduleID,
+			TaskList:                      testParam.TaskList,
+			ScheduleToStartTimeoutSeconds: 1,
+		}
+		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
+		wg.Wait()
+		s.NoError(err)
+		s.NoError(pollErr)
+		s.NotNil(result)
+		// when ratelimit is set to zero, poller is expected to return empty result
+		// reset ratelimit, poll again and make sure task is returned this time
+		s.True(isEmptyToken(result.TaskToken))
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			result, pollErr = pollFunc(_defaultTaskDispatchRPS)
+		}()
+		wg.Wait()
+		s.NoError(err)
+		s.NoError(pollErr)
+		s.NotNil(result)
+		s.False(isEmptyToken(result.TaskToken))
+		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 	}
+	s.EqualValues(throttledTaskCount, s.taskManager.getCreateTaskCount(testParam.TaskListID))
+	s.EqualValues(0, s.taskManager.getTaskCount(testParam.TaskListID))
+	expectedRange := getExpectedRange(initialRangeID, int(taskCount+throttledTaskCount), rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.
-	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
+	s.True(expectedRange <= s.taskManager.getTaskListManager(testParam.TaskListID).rangeID)
+
+	if throttledTaskCount > 0 {
+		syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
+		s.EqualValues(throttledTaskCount, int(syncCtr.Value()))
+	}
 
 	// check the poller information
-	tlType := types.TaskListTypeActivity
 	descResp, err := s.matchingEngine.DescribeTaskList(s.handlerContext, &types.MatchingDescribeTaskListRequest{
-		DomainUUID: domainID,
+		DomainUUID: testParam.DomainID,
 		DescRequest: &types.DescribeTaskListRequest{
-			TaskList:              taskList,
-			TaskListType:          &tlType,
+			TaskList:              testParam.TaskList,
+			TaskListType:          testParam.TaskListType,
 			IncludeTaskListStatus: true,
 		},
 	})
 	s.NoError(err)
 	s.Equal(1, len(descResp.Pollers))
-	s.Equal(identity, descResp.Pollers[0].GetIdentity())
+	s.Equal(testParam.Identity, descResp.Pollers[0].GetIdentity())
 	s.NotEmpty(descResp.Pollers[0].GetLastAccessTime())
 	s.Equal(_defaultTaskDispatchRPS, descResp.Pollers[0].GetRatePerSecond())
 	s.NotNil(descResp.GetTaskListStatus())
 	s.True(descResp.GetTaskListStatus().GetRatePerSecond() >= (_defaultTaskDispatchRPS - 1))
 }
 
-func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivities() {
-	dispatchLimitFn := func(int, int64) float64 {
-		return _defaultTaskDispatchRPS
-	}
-	const workerCount = 20
-	const taskCount = 100
-	throttleCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
-	s.Zero(throttleCt)
+func (s *matchingEngineSuite) TestConcurrentAddAndPollActivities() {
+	s.ConcurrentAddAndPollTasks(persistence.TaskListTypeActivity, 20, 100, false)
 }
 
-func (s *matchingEngineSuite) TestConcurrentPublishConsumeActivitiesWithZeroDispatch() {
-	// Set a short long poll expiration so we don't have to wait too long for 0 throttling cases
-	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(20 * time.Millisecond)
+func (s *matchingEngineSuite) TestConcurrentAddAndPollActivitiesWithZeroDispatch() {
+	s.ConcurrentAddAndPollTasks(persistence.TaskListTypeActivity, 20, 100, true)
+}
+
+func (s *matchingEngineSuite) TestConcurrentAddAndPollDecisions() {
+	s.ConcurrentAddAndPollTasks(persistence.TaskListTypeDecision, 20, 100, false)
+}
+
+func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCount int, taskCount int64, throttled bool) {
 	dispatchLimitFn := func(wc int, tc int64) float64 {
-		if tc%50 == 0 && wc%5 == 0 { // Gets triggered atleast 20 times
-			return 0
-		}
 		return _defaultTaskDispatchRPS
 	}
-	const workerCount = 20
-	const taskCount = 100
-	s.matchingEngine.metricsClient = metrics.NewClient(tally.NewTestScope("test", nil), metrics.Matching)
-	throttleCt := s.concurrentPublishConsumeActivities(workerCount, taskCount, dispatchLimitFn)
-	s.logger.Info(fmt.Sprintf("Number of tasks throttled: %d", throttleCt))
-	// atleast once from 0 dispatch poll, and until TTL is hit at which time throttle limit is reset
-	// hard to predict exactly how many times, since the atomic.Value load might not have updated.
-	s.True(throttleCt >= 1)
-}
-
-func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
-	workerCount int, taskCount int64, dispatchLimitFn func(int, int64) float64) int64 {
+	if throttled {
+		dispatchLimitFn = func(wc int, tc int64) float64 {
+			if tc%50 == 0 && wc%5 == 0 { // Gets triggered atleast 20 times
+				return 0
+			}
+			return _defaultTaskDispatchRPS
+		}
+	}
 	scope := tally.NewTestScope("test", nil)
 	s.matchingEngine.metricsClient = metrics.NewClient(scope, metrics.Matching)
-	taskType := persistence.TaskListTypeActivity
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
 
 	const initialRangeID = 0
 	const rangeSize = 3
 	var scheduleID int64 = 123
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, taskType)
+
+	testParam := newTestParam(taskType)
 	tlKind := types.TaskListKindNormal
 	dispatchTTL := time.Nanosecond
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
 	dPtr := _defaultTaskDispatchRPS
 
-	mgr, err := newTaskListManager(s.matchingEngine, tlID, &tlKind, s.matchingEngine.config)
+	mgr, err := newTaskListManager(s.matchingEngine, testParam.TaskListID, &tlKind, s.matchingEngine.config)
 	s.NoError(err)
 
 	mgrImpl := mgr.(*taskListManagerImpl)
 	mgrImpl.matcher.limiter = quotas.NewRateLimiter(&dPtr, dispatchTTL, _minBurst)
-	s.matchingEngine.updateTaskList(tlID, mgr)
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
+	s.matchingEngine.updateTaskList(testParam.TaskListID, mgr)
+	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
 	s.NoError(mgr.Start())
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
 	var wg sync.WaitGroup
 	wg.Add(2 * workerCount)
 
@@ -813,13 +723,12 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := &addTaskRequest{
 					TaskType:                      taskType,
-					DomainUUID:                    domainID,
-					Execution:                     &workflowExecution,
+					DomainUUID:                    testParam.DomainID,
+					Execution:                     testParam.WorkflowExecution,
 					ScheduleID:                    scheduleID,
-					TaskList:                      taskList,
+					TaskList:                      testParam.TaskList,
 					ScheduleToStartTimeoutSeconds: 1,
 				}
-
 				_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 				if err != nil {
 					s.logger.Info("Failure in AddActivityTask", tag.Error(err))
@@ -829,35 +738,7 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 		}()
 	}
 
-	activityTypeName := "activity1"
-	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: activityTypeName}
-	activityInput := []byte("Activity1 Input")
-	activityHeader := &types.Header{
-		Fields: map[string][]byte{"tracing": []byte("tracing data")},
-	}
-
-	identity := "nobody"
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
-			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
-			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
-					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    activityID,
-						TaskList:                      &types.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
-						Header:                        activityHeader,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(1),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
-					}),
-			}, nil
-		}).AnyTimes()
+	s.setupRecordTaskStartedMock(taskType, testParam, false)
 
 	for p := 0; p < workerCount; p++ {
 		go func(wNum int) {
@@ -866,9 +747,9 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 				maxDispatch := dispatchLimitFn(wNum, i)
 				pollReq := &pollTaskRequest{
 					TaskType:         taskType,
-					DomainUUID:       domainID,
-					TaskList:         taskList,
-					Identity:         identity,
+					DomainUUID:       testParam.DomainID,
+					TaskList:         testParam.TaskList,
+					Identity:         testParam.Identity,
 					TaskListMetadata: &types.TaskListMetadata{MaxTasksPerSecond: &maxDispatch},
 				}
 				result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
@@ -878,38 +759,22 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 					s.logger.Debug("empty poll returned")
 					continue
 				}
-				s.EqualValues(activityID, result.ActivityID)
-				s.EqualValues(activityType, result.ActivityType)
-				s.EqualValues(activityInput, result.Input)
-				s.EqualValues(activityHeader, result.Header)
-				s.EqualValues(workflowExecution, *result.WorkflowExecution)
-				token := &common.TaskToken{
-					DomainID:     domainID,
-					WorkflowID:   workflowID,
-					RunID:        runID,
-					ScheduleID:   scheduleID,
-					ActivityID:   activityID,
-					ActivityType: activityTypeName,
-				}
-				s.EqualValues(token, result.TaskToken)
+				s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 				i++
 			}
 		}(p)
 	}
 	wg.Wait()
 	totalTasks := int(taskCount) * workerCount
-	persisted := s.taskManager.getCreateTaskCount(tlID)
+	persisted := s.taskManager.getCreateTaskCount(testParam.TaskListID)
 	s.True(persisted < totalTasks)
-	expectedRange := int64(initialRangeID + persisted/rangeSize)
-	if persisted%rangeSize > 0 {
-		expectedRange++
-	}
+	expectedRange := getExpectedRange(initialRangeID, persisted, rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.
-	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
+	s.True(expectedRange <= s.taskManager.getTaskListManager(testParam.TaskListID).rangeID)
+	s.EqualValues(0, s.taskManager.getTaskCount(testParam.TaskListID))
 
-	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist=makeToast"]
-	bufCtr := scope.Snapshot().Counters()["test.buffer_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist=makeToast"]
+	syncCtr := scope.Snapshot().Counters()["test.sync_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
+	bufCtr := scope.Snapshot().Counters()["test.buffer_throttle_count_per_tl+domain="+matchingTestDomainName+",operation=TaskListMgr,tasklist="+testParam.TaskList.Name]
 	total := int64(0)
 	if syncCtr != nil {
 		total += syncCtr.Value()
@@ -917,120 +782,29 @@ func (s *matchingEngineSuite) concurrentPublishConsumeActivities(
 	if bufCtr != nil {
 		total += bufCtr.Value()
 	}
-	return total
+	if throttled {
+		// atleast once from 0 dispatch poll, and until TTL is hit at which time throttle limit is reset
+		// hard to predict exactly how many times, since the atomic.Value load might not have updated.
+		s.True(total >= 1)
+	} else {
+		s.EqualValues(0, total)
+	}
 }
 
-func (s *matchingEngineSuite) TestConcurrentPublishConsumeDecisions() {
-	taskType := persistence.TaskListTypeDecision
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
-
-	const workerCount = 20
-	const taskCount = 100
-	const initialRangeID = 0
-	const rangeSize = 5
-	var scheduleID int64 = 123
-	var startedEventID int64 = 1412
-
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, taskType)
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
-	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-
-	var wg sync.WaitGroup
-	wg.Add(2 * workerCount)
-
-	for p := 0; p < workerCount; p++ {
-		go func() {
-			for i := int64(0); i < taskCount; i++ {
-				addRequest := &addTaskRequest{
-					TaskType:                      taskType,
-					DomainUUID:                    domainID,
-					Execution:                     &workflowExecution,
-					ScheduleID:                    scheduleID,
-					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: 1,
-				}
-				_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
-				s.Require().NoError(err)
-			}
-			wg.Done()
-		}()
-	}
-	workflowTypeName := "workflowType1"
-	workflowType := &types.WorkflowType{Name: workflowTypeName}
-
-	identity := "nobody"
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordDecisionTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
-			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
-			return &types.RecordDecisionTaskStartedResponse{
-				PreviousStartedEventID: &startedEventID,
-				StartedEventID:         startedEventID,
-				ScheduledEventID:       scheduleID,
-				WorkflowType:           workflowType,
-			}, nil
-		}).AnyTimes()
-	for p := 0; p < workerCount; p++ {
-		go func() {
-			for i := int64(0); i < taskCount; {
-				pollReq := &pollTaskRequest{
-					TaskType:   taskType,
-					DomainUUID: domainID,
-					TaskList:   taskList,
-					Identity:   identity,
-				}
-				result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
-				s.Require().NoError(err)
-				s.NotNil(result)
-				if isEmptyToken(result.TaskToken) {
-					s.logger.Debug("empty poll returned")
-					continue
-				}
-				s.EqualValues(workflowExecution, *result.WorkflowExecution)
-				s.EqualValues(workflowType, result.WorkflowType)
-				s.EqualValues(startedEventID, result.StartedEventID)
-				s.EqualValues(workflowExecution, *result.WorkflowExecution)
-				token := &common.TaskToken{
-					DomainID:   domainID,
-					WorkflowID: workflowID,
-					RunID:      runID,
-					ScheduleID: scheduleID,
-				}
-				s.EqualValues(token, result.TaskToken)
-				i++
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
-	totalTasks := taskCount * workerCount
-	persisted := s.taskManager.getCreateTaskCount(tlID)
-	s.True(persisted < totalTasks)
-	expectedRange := int64(initialRangeID + persisted/rangeSize)
-	if persisted%rangeSize > 0 {
-		expectedRange++
-	}
-	// Due to conflicts some ids are skipped and more real ranges are used.
-	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
+func (s *matchingEngineSuite) TestPollActivityWithExpiredContext() {
+	s.PollWithExpiredContext(persistence.TaskListTypeActivity)
 }
 
-func (s *matchingEngineSuite) TestPollWithExpiredContext() {
-	taskType := persistence.TaskListTypeActivity
+func (s *matchingEngineSuite) TestPollDecisionWithExpiredContext() {
+	s.PollWithExpiredContext(persistence.TaskListTypeDecision)
+}
+
+func (s *matchingEngineSuite) PollWithExpiredContext(taskType int) {
 	identity := "nobody"
 	domainID := "domainId"
 	tl := "makeToast"
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList := &types.TaskList{Name: tl}
 
 	// Try with cancelled context
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -1043,7 +817,6 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 		Identity:   identity,
 	}
 	_, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
-
 	s.Equal(ctx.Err(), err)
 
 	// Try with expired context
@@ -1056,152 +829,14 @@ func (s *matchingEngineSuite) TestPollWithExpiredContext() {
 }
 
 func (s *matchingEngineSuite) TestMultipleEnginesActivitiesRangeStealing() {
-	taskType := persistence.TaskListTypeActivity
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
-
-	const engineCount = 2
-	const taskCount = 400
-	const iterations = 2
-	const initialRangeID = 0
-	const rangeSize = 10
-	var scheduleID int64 = 123
-
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, taskType)
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
-	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-
-	var engines []*matchingEngineImpl
-
-	for p := 0; p < engineCount; p++ {
-		e := s.newMatchingEngine(defaultTestConfig(), s.taskManager)
-		e.config.RangeSize = rangeSize
-		engines = append(engines, e)
-		e.Start()
-	}
-
-	for j := 0; j < iterations; j++ {
-		for p := 0; p < engineCount; p++ {
-			engine := engines[p]
-			for i := int64(0); i < taskCount; i++ {
-				addRequest := &addTaskRequest{
-					TaskType:                      taskType,
-					DomainUUID:                    domainID,
-					Execution:                     &workflowExecution,
-					ScheduleID:                    scheduleID,
-					TaskList:                      taskList,
-					ScheduleToStartTimeoutSeconds: 600,
-				}
-
-				_, err := addTask(engine, s.handlerContext, addRequest)
-				if err != nil {
-					s.Require().IsType(&persistence.ConditionFailedError{}, err)
-					i-- // retry adding
-				}
-			}
-		}
-	}
-
-	s.EqualValues(iterations*engineCount*taskCount, s.taskManager.getCreateTaskCount(tlID))
-
-	activityTypeName := "activity1"
-	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: activityTypeName}
-	activityInput := []byte("Activity1 Input")
-
-	identity := "nobody"
-
-	startedTasks := make(map[int64]bool)
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
-			if _, ok := startedTasks[taskRequest.TaskID]; ok {
-				s.logger.Debug(fmt.Sprintf("From error function Mock Received DUPLICATED RecordActivityTaskStartedRequest for taskID=%v", taskRequest.TaskID))
-				return nil, &types.EntityNotExistsError{Message: "already started"}
-			}
-			s.logger.Debug(fmt.Sprintf("Mock Received RecordActivityTaskStartedRequest for taskID=%v", taskRequest.TaskID))
-
-			startedTasks[taskRequest.TaskID] = true
-			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
-					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    activityID,
-						TaskList:                      &types.TaskList{Name: taskList.Name},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(600),
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(2),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(1),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(1),
-					}),
-			}, nil
-		}).AnyTimes()
-	for j := 0; j < iterations; j++ {
-		for p := 0; p < engineCount; p++ {
-			engine := engines[p]
-			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
-				pollReq := &pollTaskRequest{
-					TaskType:   taskType,
-					DomainUUID: domainID,
-					TaskList:   taskList,
-					Identity:   identity,
-				}
-				result, err := pollTask(engine, s.handlerContext, pollReq)
-				s.Require().NoError(err)
-				s.NotNil(result)
-				if isEmptyToken(result.TaskToken) {
-					s.logger.Debug("empty poll returned")
-					continue
-				}
-				s.EqualValues(activityID, result.ActivityID)
-				s.EqualValues(activityType, result.ActivityType)
-				s.EqualValues(activityInput, result.Input)
-				s.EqualValues(workflowExecution, *result.WorkflowExecution)
-				token := &common.TaskToken{
-					DomainID:     domainID,
-					WorkflowID:   workflowID,
-					RunID:        runID,
-					ScheduleID:   scheduleID,
-					ActivityID:   activityID,
-					ActivityType: activityTypeName,
-				}
-				s.EqualValues(token, result.TaskToken)
-				i++
-			}
-		}
-	}
-
-	for _, e := range engines {
-		e.Stop()
-	}
-
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
-	totalTasks := taskCount * engineCount * iterations
-	persisted := s.taskManager.getCreateTaskCount(tlID)
-	// No sync matching as all messages are published first
-	s.EqualValues(totalTasks, persisted)
-	expectedRange := int64(initialRangeID + persisted/rangeSize)
-	if persisted%rangeSize > 0 {
-		expectedRange++
-	}
-	// Due to conflicts some ids are skipped and more real ranges are used.
-	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
-
+	s.MultipleEnginesTasksRangeStealing(persistence.TaskListTypeActivity)
 }
 
 func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
-	taskType := persistence.TaskListTypeDecision
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
+	s.MultipleEnginesTasksRangeStealing(persistence.TaskListTypeDecision)
+}
 
+func (s *matchingEngineSuite) MultipleEnginesTasksRangeStealing(taskType int) {
 	const engineCount = 2
 	const taskCount = 400
 	const iterations = 2
@@ -1209,14 +844,9 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 	const rangeSize = 10
 	var scheduleID int64 = 123
 
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, persistence.TaskListTypeDecision)
-	s.taskManager.getTaskListManager(tlID).rangeID = initialRangeID
+	testParam := newTestParam(taskType)
+	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
 
 	var engines []*matchingEngineImpl
 
@@ -1233,12 +863,13 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			for i := int64(0); i < taskCount; i++ {
 				addRequest := &addTaskRequest{
 					TaskType:                      taskType,
-					DomainUUID:                    domainID,
-					Execution:                     &workflowExecution,
+					DomainUUID:                    testParam.DomainID,
+					Execution:                     testParam.WorkflowExecution,
 					ScheduleID:                    scheduleID,
-					TaskList:                      taskList,
+					TaskList:                      testParam.TaskList,
 					ScheduleToStartTimeoutSeconds: 600,
 				}
+
 				_, err := addTask(engine, s.handlerContext, addRequest)
 				if err != nil {
 					s.Require().IsType(&persistence.ConditionFailedError{}, err)
@@ -1247,39 +878,19 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 			}
 		}
 	}
-	workflowType := &types.WorkflowType{Name: "workflowType1"}
+	s.EqualValues(iterations*engineCount*taskCount, s.taskManager.getCreateTaskCount(testParam.TaskListID))
 
-	identity := "nobody"
-	var startedEventID int64 = 1412
+	s.setupRecordTaskStartedMock(taskType, testParam, true)
 
-	startedTasks := make(map[int64]bool)
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordDecisionTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
-			if _, ok := startedTasks[taskRequest.TaskID]; ok {
-				s.logger.Debug(fmt.Sprintf("From error function Mock Received DUPLICATED RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskID))
-				return nil, &types.EventAlreadyStartedError{Message: "already started"}
-			}
-			s.logger.Debug(fmt.Sprintf("Mock Received RecordDecisionTaskStartedRequest for taskID=%v", taskRequest.TaskID))
-			s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
-			startedTasks[taskRequest.TaskID] = true
-			return &types.RecordDecisionTaskStartedResponse{
-				PreviousStartedEventID: &startedEventID,
-				StartedEventID:         startedEventID,
-				ScheduledEventID:       scheduleID,
-				WorkflowType:           workflowType,
-			}, nil
-		}).AnyTimes()
 	for j := 0; j < iterations; j++ {
 		for p := 0; p < engineCount; p++ {
 			engine := engines[p]
 			for i := int64(0); i < taskCount; /* incremented explicitly to skip empty polls */ {
 				pollReq := &pollTaskRequest{
 					TaskType:   taskType,
-					DomainUUID: domainID,
-					TaskList:   taskList,
-					Identity:   identity,
+					DomainUUID: testParam.DomainID,
+					TaskList:   testParam.TaskList,
+					Identity:   testParam.Identity,
 				}
 				result, err := pollTask(engine, s.handlerContext, pollReq)
 				s.Require().NoError(err)
@@ -1288,17 +899,7 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 					s.logger.Debug("empty poll returned")
 					continue
 				}
-				s.EqualValues(workflowExecution, *result.WorkflowExecution)
-				s.EqualValues(workflowType, result.WorkflowType)
-				s.EqualValues(startedEventID, result.StartedEventID)
-				s.EqualValues(workflowExecution, *result.WorkflowExecution)
-				token := &common.TaskToken{
-					DomainID:   domainID,
-					WorkflowID: workflowID,
-					RunID:      runID,
-					ScheduleID: scheduleID,
-				}
-				s.EqualValues(token, result.TaskToken)
+				s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
 				i++
 			}
 		}
@@ -1308,18 +909,14 @@ func (s *matchingEngineSuite) TestMultipleEnginesDecisionsRangeStealing() {
 		e.Stop()
 	}
 
-	s.EqualValues(0, s.taskManager.getTaskCount(tlID))
+	s.EqualValues(0, s.taskManager.getTaskCount(testParam.TaskListID))
 	totalTasks := taskCount * engineCount * iterations
-	persisted := s.taskManager.getCreateTaskCount(tlID)
-	// No sync matching as all messages are published first
+	persisted := s.taskManager.getCreateTaskCount(testParam.TaskListID)
+	// No sync matching as all messages are added first
 	s.EqualValues(totalTasks, persisted)
-	expectedRange := int64(initialRangeID + persisted/rangeSize)
-	if persisted%rangeSize > 0 {
-		expectedRange++
-	}
+	expectedRange := getExpectedRange(initialRangeID, persisted, rangeSize)
 	// Due to conflicts some ids are skipped and more real ranges are used.
-	s.True(expectedRange <= s.taskManager.getTaskListManager(tlID).rangeID)
-
+	s.True(expectedRange <= s.taskManager.getTaskListManager(testParam.TaskListID).rangeID)
 }
 
 func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
@@ -1333,8 +930,7 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 	tlID := newTestTaskListID(domainID, tl, taskType)
 	tlKind := types.TaskListKindNormal
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
+	taskList := &types.TaskList{Name: tl}
 
 	scheduleID := int64(0)
 	addRequest := &addTaskRequest{
@@ -1369,30 +965,21 @@ func (s *matchingEngineSuite) TestAddTaskAfterStartFailure() {
 
 func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	taskType := persistence.TaskListTypeActivity
-	runID := "run1"
-	workflowID := "workflow1"
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
-
-	domainID := "domainId"
-	tl := "makeToast"
-	tlID := newTestTaskListID(domainID, tl, taskType)
-
-	taskList := &types.TaskList{}
-	taskList.Name = tl
 
 	const taskCount = 1200
 	const rangeSize = 10
 	s.matchingEngine.config.RangeSize = rangeSize
+	testParam := newTestParam(taskType)
 
 	// add taskCount tasks
 	for i := int64(0); i < taskCount; i++ {
 		scheduleID := i * 3
 		addRequest := &addTaskRequest{
 			TaskType:                      taskType,
-			DomainUUID:                    domainID,
-			Execution:                     &workflowExecution,
+			DomainUUID:                    testParam.DomainID,
+			Execution:                     testParam.WorkflowExecution,
 			ScheduleID:                    scheduleID,
-			TaskList:                      taskList,
+			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
 		}
 
@@ -1400,9 +987,9 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 		s.NoError(err)
 	}
 
-	tlMgr, ok := s.matchingEngine.taskLists[*tlID].(*taskListManagerImpl)
+	tlMgr, ok := s.matchingEngine.taskLists[*testParam.TaskListID].(*taskListManagerImpl)
 	s.True(ok, "taskListManger doesn't implement taskListManager interface")
-	s.EqualValues(taskCount, s.taskManager.getTaskCount(tlID))
+	s.EqualValues(taskCount, s.taskManager.getTaskCount(testParam.TaskListID))
 
 	// wait until all tasks are read by the task pump and enqeued into the in-memory buffer
 	// at the end of this step, ackManager readLevel will also be equal to the buffer size
@@ -1429,7 +1016,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 	s.EqualValues(rangeSize, readLevel)
 	s.True(isReadBatchDone)
 
-	s.setupRecordActivityTaskStartedMock(tl)
+	s.setupRecordTaskStartedMock(taskType, testParam, false)
 
 	// reset the ackManager readLevel to the buffer size and consume
 	// the in-memory tasks by calling Poll API - assert ackMgr state
@@ -1438,12 +1025,11 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 
 	// complete rangeSize events
 	for i := int64(0); i < rangeSize; i++ {
-		identity := "nobody"
 		pollReq := &pollTaskRequest{
 			TaskType:   taskType,
-			DomainUUID: domainID,
-			TaskList:   taskList,
-			Identity:   identity,
+			DomainUUID: testParam.DomainID,
+			TaskList:   testParam.TaskList,
+			Identity:   testParam.Identity,
 		}
 		result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
 		s.NoError(err)
@@ -1454,7 +1040,7 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch() {
 			continue
 		}
 	}
-	s.EqualValues(taskCount-rangeSize, s.taskManager.getTaskCount(tlID))
+	s.EqualValues(taskCount-rangeSize, s.taskManager.getTaskCount(testParam.TaskListID))
 	tasks, _, isReadBatchDone, err = tlMgr.taskReader.getTaskBatch()
 	s.Nil(err)
 	s.True(0 < len(tasks) && len(tasks) <= rangeSize)
@@ -1493,19 +1079,15 @@ func (s *matchingEngineSuite) TestTaskListManagerGetTaskBatch_ReadBatchDone() {
 	s.NoError(err)
 }
 
-func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
-	taskType := persistence.TaskListTypeActivity
-	runID := uuid.New()
-	workflowID := uuid.New()
-	workflowExecution := types.WorkflowExecution{RunID: runID, WorkflowID: workflowID}
+func (s *matchingEngineSuite) TestActivityExpiryAndCompletion() {
+	s.TaskExpiryAndCompletion(persistence.TaskListTypeActivity)
+}
 
-	domainID := uuid.New()
-	tl := "task-expiry-completion-tl0"
-	tlID := newTestTaskListID(domainID, tl, taskType)
+func (s *matchingEngineSuite) TestDecisionExpiryAndCompletion() {
+	s.TaskExpiryAndCompletion(persistence.TaskListTypeDecision)
+}
 
-	taskList := &types.TaskList{}
-	taskList.Name = tl
-
+func (s *matchingEngineSuite) TaskExpiryAndCompletion(taskType int) {
 	const taskCount = 20
 	const rangeSize = 10
 	s.matchingEngine.config.RangeSize = rangeSize
@@ -1514,6 +1096,7 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 	// on enqueuing a task to task buffer
 	s.matchingEngine.config.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
+	testParam := newTestParam(taskType)
 	testCases := []struct {
 		batchSize          int
 		maxTimeBtwnDeletes time.Duration
@@ -1527,10 +1110,10 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 			scheduleID := i * 3
 			addRequest := &addTaskRequest{
 				TaskType:                      taskType,
-				DomainUUID:                    domainID,
-				Execution:                     &workflowExecution,
+				DomainUUID:                    testParam.DomainID,
+				Execution:                     testParam.WorkflowExecution,
 				ScheduleID:                    scheduleID,
-				TaskList:                      taskList,
+				TaskList:                      testParam.TaskList,
 				ScheduleToStartTimeoutSeconds: 5,
 			}
 			if i%2 == 0 {
@@ -1542,9 +1125,9 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 			s.NoError(err)
 		}
 
-		tlMgr, ok := s.matchingEngine.taskLists[*tlID].(*taskListManagerImpl)
+		tlMgr, ok := s.matchingEngine.taskLists[*testParam.TaskListID].(*taskListManagerImpl)
 		s.True(ok, "failed to load task list")
-		s.EqualValues(taskCount, s.taskManager.getTaskCount(tlID))
+		s.EqualValues(taskCount, s.taskManager.getTaskCount(testParam.TaskListID))
 
 		// wait until all tasks are loaded by into in-memory buffers by task list manager
 		// the buffer size should be one less than expected because dispatcher will dequeue the head
@@ -1553,13 +1136,13 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 		maxTimeBetweenTaskDeletes = tc.maxTimeBtwnDeletes
 		s.matchingEngine.config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(tc.batchSize)
 
-		s.setupRecordActivityTaskStartedMock(tl)
+		s.setupRecordTaskStartedMock(taskType, testParam, false)
 
 		pollReq := &pollTaskRequest{
 			TaskType:   taskType,
-			DomainUUID: domainID,
-			TaskList:   taskList,
-			Identity:   "test",
+			DomainUUID: testParam.DomainID,
+			TaskList:   testParam.TaskList,
+			Identity:   testParam.Identity,
 		}
 
 		remaining := taskCount
@@ -1573,35 +1156,56 @@ func (s *matchingEngineSuite) TestTaskExpiryAndCompletion() {
 			remaining -= taskCount / 2
 			// since every other task is expired, we expect half the tasks to be deleted
 			// after poll consumed 1/4th of what is available
-			s.EqualValues(remaining, s.taskManager.getTaskCount(tlID))
+			s.EqualValues(remaining, s.taskManager.getTaskCount(testParam.TaskListID))
 		}
 	}
 }
 
-func (s *matchingEngineSuite) setupRecordActivityTaskStartedMock(tlName string) {
-	activityTypeName := "activity1"
-	activityID := "activityId1"
-	activityType := &types.ActivityType{Name: activityTypeName}
-	activityInput := []byte("Activity1 Input")
-
-	// History service is using mock
-	s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
-			s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
-			return &types.RecordActivityTaskStartedResponse{
-				ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
-					&types.ScheduleActivityTaskDecisionAttributes{
-						ActivityID:                    activityID,
-						TaskList:                      &types.TaskList{Name: tlName},
-						ActivityType:                  activityType,
-						Input:                         activityInput,
-						ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
-						ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
-						StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
-						HeartbeatTimeoutSeconds:       common.Int32Ptr(10),
-					}),
-			}, nil
-		}).AnyTimes()
+func (s *matchingEngineSuite) setupRecordTaskStartedMock(taskType int, param *testParam, checkDuplicate bool) {
+	startedTasks := make(map[int64]bool)
+	if taskType == persistence.TaskListTypeActivity {
+		s.mockHistoryClient.EXPECT().RecordActivityTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, taskRequest *types.RecordActivityTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordActivityTaskStartedResponse, error) {
+				s.logger.Debug("Mock Received RecordActivityTaskStartedRequest")
+				if checkDuplicate {
+					if _, ok := startedTasks[taskRequest.TaskID]; ok {
+						return nil, &types.EventAlreadyStartedError{Message: "already started"}
+					}
+					startedTasks[taskRequest.TaskID] = true
+				}
+				return &types.RecordActivityTaskStartedResponse{
+					ScheduledEvent: newActivityTaskScheduledEvent(taskRequest.ScheduleID, 0,
+						&types.ScheduleActivityTaskDecisionAttributes{
+							ActivityID:                    param.ActivityID,
+							TaskList:                      param.TaskList,
+							ActivityType:                  param.ActivityType,
+							Input:                         param.ActivityInput,
+							Header:                        param.ActivityHeader,
+							ScheduleToCloseTimeoutSeconds: common.Int32Ptr(100),
+							ScheduleToStartTimeoutSeconds: common.Int32Ptr(50),
+							StartToCloseTimeoutSeconds:    common.Int32Ptr(50),
+							HeartbeatTimeoutSeconds:       common.Int32Ptr(10),
+						}),
+				}, nil
+			}).AnyTimes()
+	} else {
+		s.mockHistoryClient.EXPECT().RecordDecisionTaskStarted(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, taskRequest *types.RecordDecisionTaskStartedRequest, option ...yarpc.CallOption) (*types.RecordDecisionTaskStartedResponse, error) {
+				s.logger.Debug("Mock Received RecordDecisionTaskStartedRequest")
+				if checkDuplicate {
+					if _, ok := startedTasks[taskRequest.TaskID]; ok {
+						return nil, &types.EventAlreadyStartedError{Message: "already started"}
+					}
+					startedTasks[taskRequest.TaskID] = true
+				}
+				return &types.RecordDecisionTaskStartedResponse{
+					PreviousStartedEventID: &param.StartedEventID,
+					StartedEventID:         param.StartedEventID,
+					ScheduledEventID:       taskRequest.ScheduleID,
+					WorkflowType:           param.WorkflowType,
+				}, nil
+			}).AnyTimes()
+	}
 }
 
 func (s *matchingEngineSuite) awaitCondition(cond func() bool, timeout time.Duration) bool {
@@ -1613,6 +1217,36 @@ func (s *matchingEngineSuite) awaitCondition(cond func() bool, timeout time.Dura
 		}
 	}
 	return true
+}
+
+func (s *matchingEngineSuite) assertPollTaskResponse(taskType int, param *testParam, scheduleID int64, actual *pollTaskResponse) {
+	if taskType == persistence.TaskListTypeActivity {
+		token := &common.TaskToken{
+			DomainID:     param.DomainID,
+			WorkflowID:   param.WorkflowExecution.WorkflowID,
+			RunID:        param.WorkflowExecution.RunID,
+			ScheduleID:   scheduleID,
+			ActivityID:   param.ActivityID,
+			ActivityType: param.ActivityType.Name,
+		}
+		s.EqualValues(token, actual.TaskToken)
+		s.EqualValues(param.ActivityID, actual.ActivityID)
+		s.EqualValues(param.ActivityType, actual.ActivityType)
+		s.EqualValues(param.ActivityInput, actual.Input)
+		s.EqualValues(param.ActivityHeader, actual.Header)
+		s.EqualValues(param.WorkflowExecution, actual.WorkflowExecution)
+	} else {
+		token := &common.TaskToken{
+			DomainID:   param.DomainID,
+			WorkflowID: param.WorkflowExecution.WorkflowID,
+			RunID:      param.WorkflowExecution.RunID,
+			ScheduleID: scheduleID,
+		}
+		s.EqualValues(token, actual.TaskToken)
+		s.EqualValues(param.WorkflowExecution, actual.WorkflowExecution)
+		s.EqualValues(param.WorkflowType, actual.WorkflowType)
+		s.EqualValues(param.StartedEventID, actual.StartedEventID)
+	}
 }
 
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,
@@ -1958,6 +1592,58 @@ func defaultTestConfig() *Config {
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
 	return config
+}
+
+func getExpectedRange(initialRangeID, taskCount, rangeSize int) int64 {
+	expectedRange := int64(initialRangeID + taskCount/rangeSize)
+	if taskCount%rangeSize > 0 {
+		expectedRange++
+	}
+	return expectedRange
+}
+
+type testParam struct {
+	DomainID          string
+	WorkflowExecution *types.WorkflowExecution
+	TaskList          *types.TaskList
+	TaskListID        *taskListID
+	TaskListType      *types.TaskListType
+	Identity          string
+	ActivityID        string
+	ActivityType      *types.ActivityType
+	ActivityInput     []byte
+	ActivityHeader    *types.Header
+	WorkflowType      *types.WorkflowType
+	StartedEventID    int64
+	ScheduledEventID  int64
+}
+
+func newTestParam(taskType int) *testParam {
+	domainID := uuid.New()
+	taskList := &types.TaskList{
+		Name: strings.ReplaceAll(uuid.New(), "-", ""), // metric tags are sanitized
+	}
+	tlID := newTestTaskListID(domainID, taskList.Name, taskType)
+	taskListType := types.TaskListType(taskType)
+	return &testParam{
+		DomainID: domainID,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: uuid.New(),
+			RunID:      uuid.New(),
+		},
+		TaskList:     taskList,
+		TaskListID:   tlID,
+		TaskListType: &taskListType,
+		Identity:     uuid.New(),
+		ActivityID:   uuid.New(),
+		ActivityType: &types.ActivityType{
+			Name: uuid.New(),
+		},
+		ActivityInput:    []byte(uuid.New()),
+		ActivityHeader:   &types.Header{Fields: map[string][]byte{"tracing": []byte("tracing data")}},
+		WorkflowType:     &types.WorkflowType{Name: uuid.New()},
+		ScheduledEventID: 1412,
+	}
 }
 
 type addTaskRequest struct {
