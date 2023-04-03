@@ -327,7 +327,7 @@ func TestUpdateRequest(t *testing.T) {
 		},
 		"empty mapping": {
 			in:       types.IsolationGroupConfiguration{},
-			expected: []*types.DynamicConfigValue{},
+			expected: nil,
 		},
 	}
 
