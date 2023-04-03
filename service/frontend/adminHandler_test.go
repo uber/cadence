@@ -779,10 +779,30 @@ func (s *adminHandlerSuite) Test_GetDynamicConfig_FilterMatch() {
 
 func Test_GetGlobalIsolationGroups(t *testing.T) {
 
-	validOutput := map[string]interface{}{
-		"zone-1": 2,
-		"zone-2": 1,
-		"zone-3": 2,
+	validConfig := []*types.DynamicConfigEntry{
+		&types.DynamicConfigEntry{
+			Name: "",
+			Values: []*types.DynamicConfigValue{
+				{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"Name":"zone-1","State":2}`),
+					},
+				},
+				{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"Name":"zone-2","State":1}`),
+					},
+				},
+				{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`{"Name":"zone-3","State":2}`),
+					},
+				},
+			},
+		},
 	}
 
 	tests := map[string]struct {
@@ -793,7 +813,7 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 	}{
 		"happy-path - no errors and payload is decoded and returned": {
 			configStoreDCAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetMapValue(isolationgroup.DefaultIsolationGroupConfigStoreManagerGlobalMapping, gomock.Any()).Return(validOutput, nil)
+				mock.EXPECT().ListValue(isolationgroup.DefaultIsolationGroupConfigStoreManagerGlobalMapping).Return(validConfig, nil)
 			},
 			dynamicConfigAffordance: func(mock *dynamicconfig.MockClient) {
 				mock.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return([]interface{}{"zone-1", "zone-2", "zone-3"}, nil)
@@ -817,7 +837,7 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 		},
 		"errors - no value": {
 			configStoreDCAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetMapValue(isolationgroup.DefaultIsolationGroupConfigStoreManagerGlobalMapping, gomock.Any()).Return(nil, nil)
+				mock.EXPECT().ListValue(isolationgroup.DefaultIsolationGroupConfigStoreManagerGlobalMapping).Return(nil, nil)
 			},
 			dynamicConfigAffordance: func(mock *dynamicconfig.MockClient) {
 				mock.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return([]interface{}{"zone-1", "zone-2", "zone-3"}, nil)
@@ -874,10 +894,25 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 
 func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 
-	expectedUpdateValue := map[string]int{
-		"zone-1": 2,
-		"zone-2": 1,
-		"zone-3": 2,
+	validConfig := []*types.DynamicConfigValue{
+		{
+			Value: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         []byte(`{"Name":"zone-1","State":2}`),
+			},
+		},
+		{
+			Value: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         []byte(`{"Name":"zone-2","State":1}`),
+			},
+		},
+		{
+			Value: &types.DataBlob{
+				EncodingType: types.EncodingTypeJSON.Ptr(),
+				Data:         []byte(`{"Name":"zone-3","State":2}`),
+			},
+		},
 	}
 
 	tests := map[string]struct {
@@ -907,7 +942,7 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 			configStoreDCAffordance: func(mock *dynamicconfig.MockClient) {
 				mock.EXPECT().UpdateValue(
 					isolationgroup.DefaultIsolationGroupConfigStoreManagerGlobalMapping,
-					expectedUpdateValue,
+					validConfig,
 				).Return(nil)
 			},
 			dynamicConfigAffordance: func(mock *dynamicconfig.MockClient) {
