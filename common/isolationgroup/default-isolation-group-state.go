@@ -159,6 +159,9 @@ func (z *defaultIsolationGroupStateHandler) Start() {
 }
 
 func (z *defaultIsolationGroupStateHandler) Stop() {
+	if z == nil {
+		return
+	}
 	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
 		return
 	}
