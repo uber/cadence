@@ -244,6 +244,7 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 
 	// when have valid advance visibility config, update elasticsearch mapping, new added field will not be able to remove or update
 	if err := adh.validateConfigForAdvanceVisibility(); err == nil {
+		adh.GetLogger().Warn("Skip updating OpenSearch/ElasticSearch mapping since Advance Visibility hasn't been enabled.")
 		index := adh.params.ESConfig.GetVisibilityIndex()
 		for k, v := range searchAttr {
 			valueType := convertIndexedValueTypeToESDataType(v)
