@@ -27,12 +27,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/olivere/elastic"
-	esaws "github.com/olivere/elastic/aws/v4"
-
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/elasticsearch/client"
 	"github.com/uber/cadence/common/log"
@@ -89,26 +84,6 @@ func NewV6Client(
 	}, nil
 }
 
-// Refer to https://github.com/olivere/elastic/blob/release-branch.v6/recipes/aws-connect-v4/main.go
-func buildSigningHTTPClientFromStaticCredentialV6(credentialConfig config.AWSStaticCredential) (*http.Client, error) {
-	awsCredentials := credentials.NewStaticCredentials(
-		credentialConfig.AccessKey,
-		credentialConfig.SecretKey,
-		credentialConfig.SessionToken,
-	)
-	return esaws.NewV4SigningClient(awsCredentials, credentialConfig.Region), nil
-}
-
-func buildSigningHTTPClientFromEnvironmentCredentialV6(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(credentialConfig.Region)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return esaws.NewV4SigningClient(sess.Config.Credentials, credentialConfig.Region), nil
-}
-
 func (c *ElasticV6) PutMapping(ctx context.Context, index, body string) error {
 	_, err := c.client.PutMapping().Index(index).Type("_doc").BodyString(body).Do(ctx)
 	return err
@@ -138,17 +113,21 @@ func (c *ElasticV6) Scroll(ctx context.Context, index, body, scrollID string) (*
 		esResult, err = scrollService.ScrollId(scrollID).Do(ctx)
 	}
 
-	var byteResult [][]byte
-	if esResult != nil && esResult.Hits != nil {
-		for _, hit := range esResult.Hits.Hits {
-			byteResult = append(byteResult, *hit.Source)
+	if esResult == nil {
+		return nil, err
+	}
+
+	var hits []*client.SearchHit
+	if esResult.Hits != nil {
+		for _, h := range esResult.Hits.Hits {
+			hits = append(hits, &client.SearchHit{Source: *h.Source})
 		}
 	}
 
 	result := &client.Response{
 		TookInMillis: esResult.TookInMillis,
 		TotalHits:    esResult.TotalHits(),
-		Hits:         byteResult,
+		Hits:         &client.SearchHits{Hits: hits},
 		ScrollID:     esResult.ScrollId,
 	}
 
@@ -179,10 +158,11 @@ func (c *ElasticV6) Search(ctx context.Context, index, body string) (*client.Res
 	}
 
 	var sort []interface{}
-	var hits [][]byte
+	var hits []*client.SearchHit
+
 	if esResult != nil && esResult.Hits != nil {
 		for _, h := range esResult.Hits.Hits {
-			hits = append(hits, *h.Source)
+			hits = append(hits, &client.SearchHit{Source: *h.Source})
 			sort = h.Sort
 		}
 	}
@@ -190,7 +170,7 @@ func (c *ElasticV6) Search(ctx context.Context, index, body string) (*client.Res
 	result := &client.Response{
 		TookInMillis: esResult.TookInMillis,
 		TotalHits:    esResult.TotalHits(),
-		Hits:         hits,
+		Hits:         &client.SearchHits{Hits: hits},
 		Sort:         sort,
 	}
 

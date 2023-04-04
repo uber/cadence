@@ -26,10 +26,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/olivere/elastic/v7"
-	esaws "github.com/olivere/elastic/v7/aws/v4"
-
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/elasticsearch/client"
 	"github.com/uber/cadence/common/log"
@@ -82,10 +79,6 @@ func NewV7Client(
 	}, nil
 }
 
-func newSigningClient(creds *credentials.Credentials, region string) *http.Client {
-	return esaws.NewV4SigningClient(creds, region)
-}
-
 func (c *ElasticV7) IsNotFoundError(err error) bool {
 	return elastic.IsNotFound(err)
 }
@@ -123,10 +116,11 @@ func (c *ElasticV7) Search(ctx context.Context, index string, body string) (*cli
 	}
 
 	var sort []interface{}
-	var hits [][]byte
+	var hits []*client.SearchHit
+
 	if esResult != nil && esResult.Hits != nil {
 		for _, h := range esResult.Hits.Hits {
-			hits = append(hits, h.Source)
+			hits = append(hits, &client.SearchHit{Source: h.Source})
 			sort = h.Sort
 		}
 	}
@@ -134,7 +128,7 @@ func (c *ElasticV7) Search(ctx context.Context, index string, body string) (*cli
 	return &client.Response{
 		TookInMillis: esResult.TookInMillis,
 		TotalHits:    esResult.TotalHits(),
-		Hits:         hits,
+		Hits:         &client.SearchHits{Hits: hits},
 		Aggregations: esResult.Aggregations,
 		Sort:         sort,
 	}, nil
@@ -153,17 +147,21 @@ func (c *ElasticV7) Scroll(ctx context.Context, index, body, scrollID string) (*
 		esResult, err = scrollService.ScrollId(scrollID).Do(ctx)
 	}
 
-	var byteResult [][]byte
-	if esResult != nil && esResult.Hits != nil {
-		for _, hit := range esResult.Hits.Hits {
-			byteResult = append(byteResult, hit.Source)
+	if esResult == nil {
+		return nil, err
+	}
+
+	var hits []*client.SearchHit
+	if esResult.Hits != nil {
+		for _, h := range esResult.Hits.Hits {
+			hits = append(hits, &client.SearchHit{Source: h.Source})
 		}
 	}
 
 	return &client.Response{
 		TookInMillis: esResult.TookInMillis,
 		TotalHits:    esResult.TotalHits(),
-		Hits:         byteResult,
+		Hits:         &client.SearchHits{Hits: hits},
 		Aggregations: esResult.Aggregations,
 		ScrollID:     esResult.ScrollId,
 	}, err
