@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/olivere/elastic"
+
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/elasticsearch/client"
 	"github.com/uber/cadence/common/log"
