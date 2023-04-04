@@ -96,6 +96,8 @@ type (
 		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error)
 		MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error)
+		GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (*types.GetGlobalIsolationGroupsResponse, error)
+		UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (*types.UpdateGlobalIsolationGroupsResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -1722,6 +1724,35 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil
+}
+
+func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (_ *types.GetGlobalIsolationGroupsResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.GetGlobalIsolationGroups)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	ig := adh.Resource.GetIsolationGroupState()
+	if ig == nil {
+		return nil, nil
+	}
+	return ig.GetGlobalState(ctx)
+}
+
+func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateGlobalIsolationGroups)
+	defer sw.Stop()
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	err := adh.Resource.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
+	if err != nil {
+		return nil, err
+	}
+	return &types.UpdateGlobalIsolationGroupsResponse{}, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {
