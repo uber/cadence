@@ -85,7 +85,8 @@ const (
 
 const (
 	// VisibilityAppName is used to find kafka topics and ES indexName for visibility
-	VisibilityAppName = "visibility"
+	VisibilityAppName      = "visibility"
+	PinotVisibilityAppName = "pinot-visibility"
 )
 
 // This was flagged by salus as potentially hardcoded credentials. This is a false positive by the scanner and should be
