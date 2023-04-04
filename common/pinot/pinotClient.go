@@ -31,7 +31,6 @@ import (
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 	"github.com/uber/cadence/common/types/mapper/thrift"
@@ -107,7 +106,7 @@ type VisibilityRecord struct {
 	Attr          map[string]interface{}
 }
 
-func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) *p.InternalVisibilityWorkflowExecutionInfo {
+func convertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) *p.InternalVisibilityWorkflowExecutionInfo {
 	if len(hit) != len(columnNames) {
 		return nil
 	}
@@ -115,19 +114,13 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 	columnNameToValue := buildMap(hit, columnNames)
 	jsonColumnNameToValue, err := json.Marshal(columnNameToValue)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to marshal columnNameToValue",
-			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-		)
-		return nil
+		panic(err)
 	}
 
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonColumnNameToValue, &source)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to marshal columnNameToValue",
-			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-		)
-		return nil
+		panic(err)
 	}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
@@ -175,7 +168,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
 
 	for i := 0; i < numOfActualHits; i++ {
-		workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(actualHits[i], columnNames)
+		workflowExecutionInfo := convertSearchResultToVisibilityRecord(actualHits[i], columnNames)
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
 			response.Executions = append(response.Executions, workflowExecutionInfo)
 		}
@@ -220,7 +213,7 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	columnNames := schema.ColumnNames
 	actualHits := resp.ResultTable.Rows
-	response.Execution = c.convertSearchResultToVisibilityRecord(actualHits[0], columnNames)
+	response.Execution = convertSearchResultToVisibilityRecord(actualHits[0], columnNames)
 
 	return response, nil
 }

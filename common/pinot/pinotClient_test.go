@@ -60,13 +60,13 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	badHit := []interface{}{1, 2, 3}
 	badColumnName := []string{"testName1", "testName2"}
 
-	badResult := client.convertSearchResultToVisibilityRecord(badHit, badColumnName)
+	badResult := convertSearchResultToVisibilityRecord(badHit, badColumnName)
 	assert.Nil(t, badResult)
 
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime"}
 	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime}
 
-	result := *client.convertSearchResultToVisibilityRecord(hit, columnName)
+	result := convertSearchResultToVisibilityRecord(hit, columnName)
 
 	assert.Equal(t, "wfid", result.WorkflowID)
 	assert.Equal(t, "rid", result.RunID)
