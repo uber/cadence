@@ -111,6 +111,13 @@ func (p *producerImpl) getProducerMessage(message interface{}) (*sarama.Producer
 			Value: sarama.ByteEncoder(message.Value),
 		}
 		return msg, nil
+	case *indexer.PinotMessage:
+		msg := &sarama.ProducerMessage{
+			Topic: p.topic,
+			Key:   sarama.StringEncoder(message.GetWorkflowID()),
+			Value: sarama.ByteEncoder(message.GetPayload()),
+		}
+		return msg, nil
 	default:
 		return nil, errors.New("unknown producer message type")
 	}
