@@ -1,5 +1,7 @@
 package query
 
+import "encoding/json"
+
 // The MIT License (MIT)
 
 // Copyright (c) 2017-2020 Uber Technologies Inc.
@@ -98,4 +100,18 @@ func (b *Builder) Source() (interface{}, error) {
 	}
 
 	return source, nil
+}
+
+func (b *Builder) String() (string, error) {
+	source, err := b.Source()
+	if err != nil {
+		return "", err
+	}
+
+	marshaled, err := json.Marshal(source)
+	if err != nil {
+		return "", err
+	}
+
+	return string(marshaled), nil
 }
