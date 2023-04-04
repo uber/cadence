@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/uber/cadence/.gen/go/indexer"
+
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/log"
@@ -464,8 +466,8 @@ func createVisibilityMessage(
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
-) []byte {
-	msg := visibilityMessage{
+) *indexer.PinotMessage {
+	rawMsg := visibilityMessage{
 		DocID:         wid + "-" + rid,
 		DomainID:      domainID,
 		WorkflowID:    wid,
@@ -484,11 +486,18 @@ func createVisibilityMessage(
 		ShardID:       shardID,
 	}
 
-	serializedMsg, err := json.Marshal(msg)
+	serializedMsg, err := json.Marshal(rawMsg)
 	if err != nil {
 		panic("serialize msg error!")
 	}
-	return serializedMsg
+
+	msgType := indexer.MessageTypePinot
+	msg := &indexer.PinotMessage{
+		MessageType: &msgType,
+		WorkflowID:  common.StringPtr(wid),
+		Payload:     &serializedMsg,
+	}
+	return msg
 }
 
 /****************************** Request Translator ******************************/
