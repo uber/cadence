@@ -278,16 +278,24 @@ func (f *factoryImpl) NewVisibilityManager(
 		}
 	}
 	if params.PersistenceConfig.AdvancedVisibilityStore == "pinot-visibility" {
-		visibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
+		visibilityProducer, err := params.MessagingClient.NewProducer(common.PinotVisibilityAppName)
 		if err != nil {
 			f.logger.Fatal("Creating visibility producer failed", tag.Error(err))
 		}
 
 		visibilityFromPinot = newPinotVisibilityManager(
 			params.PinotClient, resourceConfig, visibilityProducer, params.MetricsClient, f.logger)
-		return p.NewPinotVisibilityDualManager(
+
+		esVisibilityProducer, err := params.MessagingClient.NewProducer(common.VisibilityAppName)
+		visibilityIndexName := params.ESConfig.Indices[common.VisibilityAppName]
+		visibilityFromES = newESVisibilityManager(
+			visibilityIndexName, params.ESClient, resourceConfig, esVisibilityProducer, params.MetricsClient, f.logger,
+		)
+
+		return p.NewPinotVisibilityTripleManager(
 			visibilityFromDB,
 			visibilityFromPinot,
+			visibilityFromES,
 			resourceConfig.EnableReadVisibilityFromPinot,
 			resourceConfig.AdvancedVisibilityWritingMode,
 			f.logger,
