@@ -96,6 +96,8 @@ type (
 		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error)
 		MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error)
+		GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (*types.GetGlobalIsolationGroupsResponse, error)
+		UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (*types.UpdateGlobalIsolationGroupsResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -1722,6 +1724,14 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil
+}
+
+func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (_ *types.GetGlobalIsolationGroupsResponse, retError error) {
+	panic("not implemented")
+}
+
+func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
+	panic("Not implemented")
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

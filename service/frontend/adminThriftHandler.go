@@ -209,13 +209,13 @@ func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admi
 }
 
 func (t AdminThriftHandler) GetGlobalIsolationGroups(ctx context.Context, request *admin.GetGlobalIsolationGroupsRequest) (*admin.GetGlobalIsolationGroupsResponse, error) {
-	panic("not implemented")
-	return nil, nil
+	res, err := t.h.GetGlobalIsolationGroups(ctx, thrift.ToGetGlobalIsolationGroupsRequest(request))
+	return thrift.FromGetGlobalIsolationGroupsResponse(res), thrift.FromError(err)
 }
 
 func (t AdminThriftHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *admin.UpdateGlobalIsolationGroupsRequest) (*admin.UpdateGlobalIsolationGroupsResponse, error) {
-	panic("not implemented")
-	return nil, nil
+	res, err := t.h.UpdateGlobalIsolationGroups(ctx, thrift.ToUpdateGlobalIsolationGroupsRequest(request))
+	return thrift.FromUpdateGlobalIsolationGroupsResponse(res), thrift.FromError(err)
 }
 
 func (t AdminThriftHandler) GetDomainIsolationGroups(ctx context.Context, request *admin.GetDomainIsolationGroupsRequest) (*admin.GetDomainIsolationGroupsResponse, error) {
