@@ -1173,11 +1173,40 @@ func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsRespo
 	}
 }
 
+func FromGetGlobalIsolationGroupsRequest(t *types.GetGlobalIsolationGroupsRequest) *adminv1.GetGlobalIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.GetGlobalIsolationGroupsRequest{}
+}
+
+func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroupsRequest) *adminv1.UpdateGlobalIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &adminv1.UpdateGlobalIsolationGroupsRequest{
+		IsolationGroups: isolationGroupConfigToIDL(&t.IsolationGroups),
+	}
+}
+
 func ToGetGlobalIsolationGroupsRequest(t *adminv1.GetGlobalIsolationGroupsRequest) *types.GetGlobalIsolationGroupsRequest {
 	if t == nil {
 		return nil
 	}
 	return &types.GetGlobalIsolationGroupsRequest{}
+}
+
+func ToGetGlobalIsolationGroupsResponse(t *adminv1.GetGlobalIsolationGroupsResponse) *types.GetGlobalIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
+	if ig == nil {
+		return nil
+	}
+	return &types.GetGlobalIsolationGroupsResponse{
+		IsolationGroups: *ig,
+	}
 }
 
 func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsResponse) *adminv1.GetDomainIsolationGroupsResponse {
@@ -1215,6 +1244,13 @@ func ToUpdateGlobalIsolationGroupsRequest(t *adminv1.UpdateGlobalIsolationGroups
 	return &types.UpdateGlobalIsolationGroupsRequest{
 		IsolationGroups: *cfg,
 	}
+}
+
+func ToUpdateGlobalIsolationGroupsResponse(t *adminv1.UpdateGlobalIsolationGroupsResponse) *types.UpdateGlobalIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateGlobalIsolationGroupsResponse{}
 }
 
 func FromUpdateDomainIsolationGroupsResponse(t *types.UpdateDomainIsolationGroupsResponse) *adminv1.UpdateDomainIsolationGroupsResponse {

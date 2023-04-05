@@ -347,3 +347,50 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestToGetGlobalIsolationGroupsResponse(t *testing.T) {
+
+	tests := map[string]struct {
+		in       *admin.GetGlobalIsolationGroupsResponse
+		expected *types.GetGlobalIsolationGroupsResponse
+	}{
+		"valid": {
+			in: &admin.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: &admin.IsolationGroupConfiguration{
+					IsolationGroups: []*admin.IsolationGroupPartition{
+						{
+							Name:  strPtr("zone-1"),
+							State: igStatePtr(admin.IsolationGroupStateDrained),
+						},
+						{
+							Name:  strPtr("zone-2"),
+							State: igStatePtr(admin.IsolationGroupStateHealthy),
+						},
+					},
+				},
+			},
+			expected: &types.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: map[string]types.IsolationGroupPartition{
+					"zone-1": {
+						Name:  "zone-1",
+						State: types.IsolationGroupStateDrained,
+					},
+					"zone-2": {
+						Name:  "zone-2",
+						State: types.IsolationGroupStateHealthy,
+					},
+				},
+			},
+		},
+		"no groups": {
+			in:       &admin.GetGlobalIsolationGroupsResponse{},
+			expected: &types.GetGlobalIsolationGroupsResponse{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expected, ToGetGlobalIsolationGroupsResponse(td.in))
+		})
+	}
+}
