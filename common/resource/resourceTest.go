@@ -29,9 +29,6 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
 
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/partition"
-
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -204,9 +201,6 @@ func NewTest(
 		HistoryMgr:      historyMgr,
 		ExecutionMgr:    executionMgr,
 		PersistenceBean: persistenceBean,
-		IsolationGroups: isolationGroupMock,
-		Partitioner:     partitionMock,
-
 		IsolationGroups: isolationGroupMock,
 		Partitioner:     partitionMock,
 
