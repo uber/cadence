@@ -772,3 +772,19 @@ func (c *errorInjectionClient) ListDynamicConfig(
 	}
 	return resp, clientErr
 }
+
+func (c *errorInjectionClient) GetGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.GetGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetGlobalIsolationGroupsResponse, error) {
+	panic("not implemented")
+}
+
+func (c *errorInjectionClient) UpdateGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	panic("not implemented")
+}

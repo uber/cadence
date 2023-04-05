@@ -317,6 +317,26 @@ func (mr *MockClientMockRecorder) GetDynamicConfig(arg0, arg1 interface{}, arg2 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicConfig", reflect.TypeOf((*MockClient)(nil).GetDynamicConfig), varargs...)
 }
 
+// GetGlobalIsolationGroups mocks base method.
+func (m *MockClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetGlobalIsolationGroups", varargs...)
+	ret0, _ := ret[0].(*types.GetGlobalIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGlobalIsolationGroups indicates an expected call of GetGlobalIsolationGroups.
+func (mr *MockClientMockRecorder) GetGlobalIsolationGroups(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGlobalIsolationGroups", reflect.TypeOf((*MockClient)(nil).GetGlobalIsolationGroups), varargs...)
+}
+
 // GetReplicationMessages mocks base method.
 func (m *MockClient) GetReplicationMessages(arg0 context.Context, arg1 *types.GetReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
@@ -607,4 +627,24 @@ func (mr *MockClientMockRecorder) UpdateDynamicConfig(arg0, arg1 interface{}, ar
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockClient)(nil).UpdateDynamicConfig), varargs...)
+}
+
+// UpdateGlobalIsolationGroups mocks base method.
+func (m *MockClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateGlobalIsolationGroups", varargs...)
+	ret0, _ := ret[0].(*types.UpdateGlobalIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateGlobalIsolationGroups indicates an expected call of UpdateGlobalIsolationGroups.
+func (mr *MockClientMockRecorder) UpdateGlobalIsolationGroups(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGlobalIsolationGroups", reflect.TypeOf((*MockClient)(nil).UpdateGlobalIsolationGroups), varargs...)
 }
