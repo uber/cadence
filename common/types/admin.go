@@ -392,6 +392,14 @@ type IsolationGroupPartition struct {
 // Indicating that task processing isn't to occur within this isolationGroup anymore, but all others are ok.
 type IsolationGroupConfiguration map[string]IsolationGroupPartition
 
+func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition {
+	var out []IsolationGroupPartition
+	for _, v := range i {
+		out = append(out, v)
+	}
+	return out
+}
+
 type GetGlobalIsolationGroupsRequest struct{}
 
 type GetGlobalIsolationGroupsResponse struct {
