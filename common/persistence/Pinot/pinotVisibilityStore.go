@@ -90,7 +90,7 @@ type (
 		ShardID       int64  `json:"ShardID,omitempty"`
 		// specific to certain status
 		CloseTime     int64 `json:"CloseTime,omitempty"`     // close execution
-		CloseStatus   int   `json:"CloseStatus,omitempty"`   // close execution
+		CloseStatus   int   `json:"CloseStatus"`             // close execution
 		HistoryLength int64 `json:"HistoryLength,omitempty"` // close execution
 	}
 )
