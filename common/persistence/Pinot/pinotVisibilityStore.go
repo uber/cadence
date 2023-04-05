@@ -124,6 +124,11 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
+	attr, err := json.Marshal(request.SearchAttributes)
+	if err != nil {
+		return err
+	}
+
 	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -144,12 +149,18 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		0,                                   // will not be used
 		request.UpdateTimestamp.UnixMilli(), // will be updated when workflow execution updates
 		int64(request.ShardID),
+		string(attr),
 	)
 	return v.producer.Publish(ctx, msg)
 }
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context, request *p.InternalRecordWorkflowExecutionClosedRequest) error {
 	v.checkProducer()
+	attr, err := json.Marshal(request.SearchAttributes)
+	if err != nil {
+		return err
+	}
+
 	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -170,6 +181,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
+		string(attr),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -196,12 +208,18 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		0,
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
+		"",
 	)
 	return v.producer.Publish(ctx, msg)
 }
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
 	v.checkProducer()
+	attr, err := json.Marshal(request.SearchAttributes)
+	if err != nil {
+		return err
+	}
+
 	msg := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -222,6 +240,7 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		0, // will not be used
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
+		string(attr),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -466,6 +485,7 @@ func createVisibilityMessage(
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
+	attr string,
 ) *indexer.PinotMessage {
 	status := int(closeStatus)
 
@@ -480,7 +500,7 @@ func createVisibilityMessage(
 		ExecutionTime: executionTimeUnixNano,
 		IsCron:        isCron,
 		NumClusters:   NumClusters,
-		Attr:          "",
+		Attr:          attr,
 		CloseTime:     closeTimeUnixNano,
 		CloseStatus:   status,
 		HistoryLength: historyLength,
