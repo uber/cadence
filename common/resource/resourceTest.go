@@ -26,7 +26,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
-
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
 
@@ -202,7 +201,6 @@ func NewTest(
 		HistoryMgr:      historyMgr,
 		ExecutionMgr:    executionMgr,
 		PersistenceBean: persistenceBean,
-
 		IsolationGroups: isolationGroupMock,
 		Partitioner:     partitionMock,
 

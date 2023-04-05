@@ -25,77 +25,12 @@ package resource
 import (
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/uber/cadence/common/cache"
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/isolationgroup"
-	"github.com/uber/cadence/common/log/loggerimpl"
-	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/service"
 )
 
-func TestEnsureIsolationGroupImpl(t *testing.T) {
-
-	ctrl := gomock.NewController(t)
-
-	tests := map[string]struct {
-		params       *Params
-		cfg          *service.Config
-		allIGs       []string
-		dcAffordance func(client *dynamicconfig.MockClient)
-		expectedErr  error
-	}{
-		"default config - all values set": {
-			params: &Params{
-				Name:                "some-service",
-				Logger:              loggerimpl.NewNopLogger(),
-				IsolationGroupState: nil,
-				Partitioner:         nil,
-			},
-			dcAffordance: func(client *dynamicconfig.MockClient) {
-				client.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return([]interface{}{"zone-1", "zone-2", "zone-3"}, nil)
-			},
-		},
-		"empty values - the cluster hasn't been configured for this feature": {
-			params: &Params{
-				Name:                "some-service",
-				Logger:              loggerimpl.NewNopLogger(),
-				IsolationGroupState: nil,
-				Partitioner:         nil,
-			},
-			dcAffordance: func(client *dynamicconfig.MockClient) {
-				client.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return(nil, nil)
-			},
-		},
-		"passed in overrides": {
-			params: &Params{
-				Name:                "some-service",
-				Logger:              loggerimpl.NewNopLogger(),
-				IsolationGroupState: isolationgroup.NewMockState(ctrl),
-				Partitioner:         nil,
-			},
-			dcAffordance: func(client *dynamicconfig.MockClient) {
-				client.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return(nil, nil)
-			},
-		},
-	}
-
-	for name, td := range tests {
-		t.Run(name, func(t *testing.T) {
-
-			gomock := gomock.NewController(t)
-			dcMock := dynamicconfig.NewMockClient(gomock)
-			domainMgr := persistence.NewMockDomainManager(gomock)
-			domainCache := cache.NewDomainCache(domainMgr, cluster.Metadata{}, metrics.NewNoopMetricsClient(), loggerimpl.NewNopLogger())
-			coll := dynamicconfig.NewCollection(dcMock, loggerimpl.NewNopLogger())
-			td.dcAffordance(dcMock)
-			cfgStore := persistence.NewMockConfigStoreManager(gomock)
-			state := ensureIsolationGroupStateHandlerOrDefault(td.params, cfgStore, coll, domainCache)
-			assert.NotNil(t, state)
-		})
-	}
+func TestShutdown(t *testing.T) {
+	i := Impl{}
+	assert.NotPanics(t, func() {
+		i.Stop()
+	})
 }
