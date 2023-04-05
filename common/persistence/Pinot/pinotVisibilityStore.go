@@ -74,24 +74,24 @@ type (
 	}
 
 	visibilityMessage struct {
-		DocID         string `json:"docID,omitempty"`
-		DomainID      string `json:"domainID,omitempty"`
-		WorkflowID    string `json:"workflowID,omitempty"`
-		RunID         string `json:"runId,omitempty"`
-		WorkflowType  string `json:"workflowType,omitempty"`
-		TaskList      string `json:"taskList,omitempty"`
-		StartTime     int64  `json:"startTime,omitempty"`
-		ExecutionTime int64  `json:"executionTime,omitempty"`
-		TaskID        int64  `json:"taskID,omitempty"`
-		IsCron        bool   `json:"isCron,omitempty"`
-		NumClusters   int16  `json:"numClusters,omitempty"`
-		Attr          string `json:"attr,omitempty"`
-		UpdateTime    int64  `json:"updateTime,omitempty"` // update execution,
-		ShardID       int64  `json:"shardID,omitempty"`
+		DocID         string `json:"DocID,omitempty"`
+		DomainID      string `json:"DomainID,omitempty"`
+		WorkflowID    string `json:"WorkflowID,omitempty"`
+		RunID         string `json:"RunId,omitempty"`
+		WorkflowType  string `json:"WorkflowType,omitempty"`
+		TaskList      string `json:"TaskList,omitempty"`
+		StartTime     int64  `json:"StartTime,omitempty"`
+		ExecutionTime int64  `json:"ExecutionTime,omitempty"`
+		TaskID        int64  `json:"TaskID,omitempty"`
+		IsCron        bool   `json:"IsCron,omitempty"`
+		NumClusters   int16  `json:"NumClusters,omitempty"`
+		Attr          string `json:"Attr,omitempty"`
+		UpdateTime    int64  `json:"UpdateTime,omitempty"` // update execution,
+		ShardID       int64  `json:"ShardID,omitempty"`
 		// specific to certain status
-		EndTime       int64                                 `json:"endTime,omitempty"`       // close execution
-		CloseStatus   workflow.WorkflowExecutionCloseStatus `json:"closeStatus,omitempty"`   // close execution
-		HistoryLength int64                                 `json:"historyLength,omitempty"` // close execution
+		EndTime       int64                                 `json:"EndTime,omitempty"`       // close execution
+		CloseStatus   workflow.WorkflowExecutionCloseStatus `json:"CloseStatus,omitempty"`   // close execution
+		HistoryLength int64                                 `json:"HistoryLength,omitempty"` // close execution
 	}
 )
 
