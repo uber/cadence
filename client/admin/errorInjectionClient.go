@@ -778,7 +778,24 @@ func (c *errorInjectionClient) GetGlobalIsolationGroups(
 	request *types.GetGlobalIsolationGroupsRequest,
 	opts ...yarpc.CallOption,
 ) (*types.GetGlobalIsolationGroupsResponse, error) {
-	panic("not implemented")
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+	var resp *types.GetGlobalIsolationGroupsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetGlobalIsolationGroups(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetGlobalIsolationGroups,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }
 
 func (c *errorInjectionClient) UpdateGlobalIsolationGroups(
@@ -786,5 +803,22 @@ func (c *errorInjectionClient) UpdateGlobalIsolationGroups(
 	request *types.UpdateGlobalIsolationGroupsRequest,
 	opts ...yarpc.CallOption,
 ) (*types.UpdateGlobalIsolationGroupsResponse, error) {
-	panic("not implemented")
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+	var resp *types.UpdateGlobalIsolationGroupsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.UpdateGlobalIsolationGroups(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationUpdateGlobalIsolationGroups,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
 }

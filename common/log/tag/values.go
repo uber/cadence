@@ -301,6 +301,8 @@ var (
 	AdminClientOperationUpdateDynamicConfig               = clientOperation("admin-update-dynamic-config")
 	AdminClientOperationRestoreDynamicConfig              = clientOperation("admin-restore-dynamic-config")
 	AdminClientOperationListDynamicConfig                 = clientOperation("admin-list-dynamic-config")
+	AdminClientOperationGetGlobalIsolationGroups          = clientOperation("admin-get-global-isolation-groups")
+	AdminClientOperationUpdateGlobalIsolationGroups       = clientOperation("admin-update-global-isolation-groups")
 	AdminDeleteWorkflow                                   = clientOperation("admin-delete-workflow")
 	MaintainCorruptWorkflow                               = clientOperation("maintain-corrupt-workflow")
 
