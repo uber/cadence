@@ -121,7 +121,9 @@ func (c *ElasticV6) Scroll(ctx context.Context, index, body, scrollID string) (*
 	var hits []*client.SearchHit
 	if esResult.Hits != nil {
 		for _, h := range esResult.Hits.Hits {
-			hits = append(hits, &client.SearchHit{Source: *h.Source})
+			if h.Source != nil {
+				hits = append(hits, &client.SearchHit{Source: *h.Source})
+			}
 		}
 	}
 
@@ -135,7 +137,9 @@ func (c *ElasticV6) Scroll(ctx context.Context, index, body, scrollID string) (*
 	if len(esResult.Aggregations) > 0 {
 		result.Aggregations = make(map[string]json.RawMessage, len(esResult.Aggregations))
 		for key, agg := range esResult.Aggregations {
-			result.Aggregations[key] = *agg
+			if agg != nil {
+				result.Aggregations[key] = *agg
+			}
 		}
 	}
 
