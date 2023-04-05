@@ -1360,13 +1360,6 @@ const (
 	// KeyName: system.largeShardHistoryBlobMetricThreshold
 	// Value type: Int
 	// Default value: 262144 (1/4mb)
-
-	// IsolationGroupStateUpdateRetryAttempts
-	// KeyName: system.isolationGroupStateUpdateRetryAttempts
-	// Value type: int
-	// Default value: 2
-	IsolationGroupStateUpdateRetryAttempts
-
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
@@ -2524,21 +2517,12 @@ const (
 	// Value type: Duration
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
+
 	// IsolationGroupStateRefreshInterval
 	// KeyName: system.isolationGroupStateRefreshInterval
 	// Value type: Duration
 	// Default value: 2 minutes
 	IsolationGroupStateRefreshInterval
-	// IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value
-	// KeyName: system.isolationGroupStateFetchTimeout
-	// Value type: Duration
-	// Default value: 30 seconds
-	IsolationGroupStateFetchTimeout
-	// IsolationGroupStateUpdateTimeout is the dynamic config DB update timeout value
-	// KeyName: system.isolationGroupStateUpdateTimeout
-	// Value type: Duration
-	// Default value: 30 seconds
-	IsolationGroupStateUpdateTimeout
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -3520,11 +3504,6 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "defines the threshold for what consititutes a large history blob write to alert on, default is 1/4mb",
 		DefaultValue: 262144,
 	},
-	IsolationGroupStateUpdateRetryAttempts: DynamicInt{
-		KeyName:      "system.isolationGroupStateUpdateRetryAttempts",
-		Description:  "The number of attempts to push Isolation group configuration to the config store",
-		DefaultValue: 2,
-	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
@@ -4481,16 +4460,6 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "system.isolationGroupStateRefreshInterval",
 		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
 		DefaultValue: time.Minute * 2,
-	},
-	IsolationGroupStateFetchTimeout: DynamicDuration{
-		KeyName:      "system.IsolationGroupStateFetchTimeout",
-		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value",
-		DefaultValue: time.Second * 30,
-	},
-	IsolationGroupStateUpdateTimeout: DynamicDuration{
-		KeyName:      "system.IsolationGroupStateUpdateTimeout",
-		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB update timeout value",
-		DefaultValue: time.Second * 30,
 	},
 	ESAnalyzerBufferWaitTime: DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
