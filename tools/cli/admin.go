@@ -1296,3 +1296,32 @@ func newAdminConfigStoreCommands() []cli.Command {
 		},
 	}
 }
+
+func newAdminIsolationGroupCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:    "get-global",
+			Aliases: []string{"g"},
+			Usage:   "gets the global isolation groups",
+			Flags:   []cli.Flag{},
+			Action: func(c *cli.Context) {
+				AdminGetGlobalIsolationGroups(c)
+			},
+		},
+		{
+			Name:    "update-global",
+			Aliases: []string{"g"},
+			Usage:   "sets the global isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagIsolationGroupConfigurations,
+					Usage:    `the configurations to upsert: eg: [{"Name": "zone-1": "State": 2}]. To remove groups, specify an empty configuration`,
+					Required: true,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateGlobalIsolationGroups(c)
+			},
+		},
+	}
+}

@@ -294,6 +294,7 @@ const (
 	FlagTransport                         = "transport"
 	FlagTransportWithAlias                = FlagTransport + ", t"
 	FlagFormat                            = "format"
+	FlagIsolationGroupConfigurations      = "config"
 )
 
 var flagsForExecution = []cli.Flag{
