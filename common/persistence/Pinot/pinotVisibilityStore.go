@@ -77,7 +77,7 @@ type (
 		DocID         string `json:"DocID,omitempty"`
 		DomainID      string `json:"DomainID,omitempty"`
 		WorkflowID    string `json:"WorkflowID,omitempty"`
-		RunID         string `json:"RunId,omitempty"`
+		RunID         string `json:"RunID,omitempty"`
 		WorkflowType  string `json:"WorkflowType,omitempty"`
 		TaskList      string `json:"TaskList,omitempty"`
 		StartTime     int64  `json:"StartTime,omitempty"`
