@@ -545,6 +545,10 @@ const (
 	AdminClientRestoreDynamicConfigScope
 	// AdminClientListDynamicConfigScope tracks RPC calls to admin service
 	AdminClientListDynamicConfigScope
+	// AdminClientGetGlobalIsolationGroupsScope is a request to get all the global isolation-groups
+	AdminClientGetGlobalIsolationGroupsScope
+	// AdminClientUpdateGlobalIsolationGroupsScope is a request to update the global isolation-groups
+	AdminClientUpdateGlobalIsolationGroupsScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -799,6 +803,10 @@ const (
 	AdminDeleteWorkflowScope
 	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
 	MaintainCorruptWorkflowScope
+	// GetGlobalIsolationGroups is the scope for getting global isolation groups
+	GetGlobalIsolationGroups
+	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
+	UpdateGlobalIsolationGroups
 
 	NumAdminScopes
 )
@@ -1459,6 +1467,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminClientUpdateDynamicConfigScope:                   {operation: "AdminClientUpdateDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientRestoreDynamicConfigScope:                  {operation: "AdminClientRestoreDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		AdminClientListDynamicConfigScope:                     {operation: "AdminClientListDynamicConfigScope", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientGetGlobalIsolationGroupsScope:              {operation: "AdminClientGetGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
+		AdminClientUpdateGlobalIsolationGroupsScope:           {operation: "AdminClientUpdateGlobalIsolationGroups", tags: map[string]string{CadenceRoleTagName: AdminClientRoleTagValue}},
 		DCRedirectionDeprecateDomainScope:                     {operation: "DCRedirectionDeprecateDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeDomainScope:                      {operation: "DCRedirectionDescribeDomain", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
 		DCRedirectionDescribeTaskListScope:                    {operation: "DCRedirectionDescribeTaskList", tags: map[string]string{CadenceRoleTagName: DCRedirectionRoleTagValue}},
@@ -1579,6 +1589,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
 		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
+		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
+		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
