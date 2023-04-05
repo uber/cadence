@@ -89,9 +89,9 @@ type (
 		UpdateTime    int64  `json:"UpdateTime,omitempty"` // update execution,
 		ShardID       int64  `json:"ShardID,omitempty"`
 		// specific to certain status
-		EndTime       int64                                 `json:"EndTime,omitempty"`       // close execution
-		CloseStatus   workflow.WorkflowExecutionCloseStatus `json:"CloseStatus,omitempty"`   // close execution
-		HistoryLength int64                                 `json:"HistoryLength,omitempty"` // close execution
+		CloseTime     int64 `json:"CloseTime,omitempty"`     // close execution
+		CloseStatus   int   `json:"CloseStatus,omitempty"`   // close execution
+		HistoryLength int64 `json:"HistoryLength,omitempty"` // close execution
 	}
 )
 
@@ -461,12 +461,14 @@ func createVisibilityMessage(
 	searchAttributes map[string][]byte,
 	visibilityOperation common.VisibilityOperation,
 	// specific to certain status
-	endTimeUnixNano int64, // close execution
+	closeTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
 ) *indexer.PinotMessage {
+	status := int(closeStatus)
+
 	rawMsg := visibilityMessage{
 		DocID:         wid + "-" + rid,
 		DomainID:      domainID,
@@ -479,8 +481,8 @@ func createVisibilityMessage(
 		IsCron:        isCron,
 		NumClusters:   NumClusters,
 		Attr:          "",
-		EndTime:       endTimeUnixNano,
-		CloseStatus:   closeStatus,
+		CloseTime:     closeTimeUnixNano,
+		CloseStatus:   status,
 		HistoryLength: historyLength,
 		UpdateTime:    updateTimeUnixNano,
 		ShardID:       shardID,
