@@ -1165,9 +1165,8 @@ func (e *historyEngineImpl) QueryWorkflow(
 		if !consistentQueryEnabled {
 			return nil, workflow.ErrConsistentQueryNotEnabled
 		}
-		scope.IncCounter(metrics.ConsistentQueryPerShard)
 		shardMetricScope.IncCounter(metrics.ConsistentQueryPerShard)
-		e.logger.SampleInfo("History QueryWorkflow called with QueryConsistencyLevelStrong", e.config.SampleLoggingRate(), tag.WorkflowID(request.GetRequest().Execution.WorkflowID), tag.WorkflowDomainName(request.GetRequest().Domain))
+		e.logger.SampleInfo("History QueryWorkflow called with QueryConsistencyLevelStrong", e.config.SampleLoggingRate(), tag.ShardID(e.shard.GetShardID()), tag.WorkflowID(request.GetRequest().Execution.WorkflowID), tag.WorkflowDomainName(request.GetRequest().Domain))
 	}
 
 	execution := *request.GetRequest().GetExecution()
