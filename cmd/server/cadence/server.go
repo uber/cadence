@@ -227,9 +227,25 @@ func (s *server) startService() common.Daemon {
 			params.PinotConfig = advancedVisStore.Pinot
 			esVisStore := s.cfg.Persistence.DataStores["es-visibility"]
 			params.ESConfig = esVisStore.ElasticSearch
-			pinotController := params.PinotConfig.Controller
-			pinotRawClient, err := pinot.NewFromController(pinotController)
-			if err != nil {
+			//pinotController := params.PinotConfig.Controller
+			pinotRawClient, err := pinot.NewFromBrokerList([]string{"localhost:8099"})
+			//pinotRawClient, err := pinot.NewFromController(pinotController)
+			/*pinotRawClient, err := pinot.NewWithConfig(&pinot.ClientConfig{
+				ControllerConfig: &pinot.ControllerConfig{
+					ControllerAddress: pinotController,
+					// Frequency of broker data refresh in milliseconds via controller API - defaults to 1000ms
+					UpdateFreqMs: 500,
+					// Additional HTTP headers to include in the controller API request
+					//ExtraControllerAPIHeaders: map[string]string{
+					//	"header": "val",
+					//},
+				},
+				// additional header added to Broker Query API requests
+				ExtraHTTPHeader: map[string]string{
+					"Content-Type": "application/json",
+				},
+			})*/
+			if err != nil || pinotRawClient == nil {
 				log.Fatalf("Creating Pinot visibility client failed: %v", err)
 			}
 			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger)
