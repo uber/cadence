@@ -131,7 +131,7 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 	}
 
 	attr := make(map[string]interface{})
-	if source.Attr != "" {
+	if source.Attr != "null" {
 		err = json.Unmarshal([]byte(source.Attr), attr)
 
 		if err != nil { // log and skip error
