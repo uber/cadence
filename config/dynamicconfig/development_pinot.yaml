@@ -1,0 +1,48 @@
+frontend.enableClientVersionCheck:
+  - value: true
+system.advancedVisibilityWritingMode:
+  - value: "on"
+system.enableReadVisibilityFromES:
+  - value: true
+system.enableReadVisibilityFromPinot:
+  - value: true
+frontend.validSearchAttributes:
+  - value:
+      DomainID: 1
+      WorkflowID: 1
+      RunID: 1
+      WorkflowType: 1
+      StartTime: 2
+      ExecutionTime: 2
+      CloseTime: 2
+      CloseStatus: 2
+      HistoryLength: 2
+      TaskList: 1
+      IsCron: 1
+      NumClusters: 2
+      UpdateTime: 2
+      CustomStringField: 0
+      CustomKeywordField: 1
+      CustomIntField: 2
+      CustomDoubleField: 3
+      CustomBoolField: 4
+      CustomDatetimeField: 5
+      project: 1
+      service: 1
+      environment: 1
+      addon: 1
+      addon-type: 1
+      user: 1
+      CustomDomain: 1
+      Operator: 1
+      RolloutID: 1
+      CadenceChangeVersion: 1
+      BinaryChecksums: 1
+      Passed: 4
+      ShardID: 2
+system.minRetentionDays:
+    - value: 0
+history.EnableConsistentQueryByDomain:
+- value: true
+  constraints: {}
+

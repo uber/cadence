@@ -1438,6 +1438,12 @@ const (
 	// Default value: true
 	// Allowed filters: DomainName
 	EnableReadVisibilityFromES
+	// EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility
+	// KeyName: system.enableReadVisibilityFromPinot
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: DomainName
+	EnableReadVisibilityFromPinot
 	// EmitShardDiffLog is whether emit the shard diff log
 	// KeyName: history.emitShardDiffLog
 	// Value type: Bool
@@ -3649,6 +3655,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 		KeyName:      "system.enableReadVisibilityFromES",
 		Filters:      []Filter{DomainName},
 		Description:  "EnableReadVisibilityFromES is key for enable read from elastic search or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
+		DefaultValue: true,
+	},
+	EnableReadVisibilityFromPinot: DynamicBool{
+		KeyName:      "system.enableReadVisibilityFromPinot",
+		Description:  "EnableReadVisibilityFromPinot is key for enable read from pinot or db visibility, usually using with AdvancedVisibilityWritingMode for seamless migration from db visibility to advanced visibility",
 		DefaultValue: true,
 	},
 	EmitShardDiffLog: DynamicBool{
