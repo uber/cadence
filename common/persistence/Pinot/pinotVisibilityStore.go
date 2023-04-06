@@ -119,12 +119,26 @@ func (v *pinotVisibilityStore) GetName() string {
 	return pinotPersistenceName
 }
 
+func decodeAttr(attr map[string][]byte) ([]byte, error) {
+	decodedMap := make(map[string]interface{})
+	for key, value := range attr {
+		var val interface{}
+		err := json.Unmarshal(value, &val)
+		if err != nil {
+			return nil, err
+		}
+		decodedMap[key] = val
+	}
+	return json.Marshal(decodedMap)
+}
+
 func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	attr, err := json.Marshal(request.SearchAttributes)
+	//attr, err := json.Marshal(request.SearchAttributes)
+	attr, err := decodeAttr(request.SearchAttributes)
 	if err != nil {
 		return err
 	}
@@ -156,7 +170,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context, request *p.InternalRecordWorkflowExecutionClosedRequest) error {
 	v.checkProducer()
-	attr, err := json.Marshal(request.SearchAttributes)
+	attr, err := decodeAttr(request.SearchAttributes)
 	if err != nil {
 		return err
 	}
@@ -215,7 +229,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
 	v.checkProducer()
-	attr, err := json.Marshal(request.SearchAttributes)
+	attr, err := decodeAttr(request.SearchAttributes)
 	if err != nil {
 		return err
 	}
@@ -579,7 +593,8 @@ func (f *PinotQueryFilter) checkFirstFilter() {
 
 func (f *PinotQueryFilter) addEqual(obj string, val interface{}) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s = %s\n", obj, val)
+	quotedVal := fmt.Sprintf("'%s'", val)
+	f.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
 }
 
 // addQuery adds a complete query into the filter
