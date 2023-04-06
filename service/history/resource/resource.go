@@ -95,6 +95,7 @@ func New(
 
 			EnableReadVisibilityFromES:    nil, // history service never read,
 			AdvancedVisibilityWritingMode: config.AdvancedVisibilityWritingMode,
+			EnableReadVisibilityFromPinot: nil, // history service never read,
 
 			EnableDBVisibilitySampling:                  config.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: nil, // history service never read,
