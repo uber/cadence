@@ -606,18 +606,22 @@ func (f *PinotQueryFilter) addQuery(query string) {
 // addGte check object is greater than or equals to val
 func (f *PinotQueryFilter) addGte(obj string, val interface{}) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s >= %s\n", obj, val)
+	quotedVal := fmt.Sprintf("'%s'", val)
+	f.string += fmt.Sprintf("%s >= %s\n", obj, quotedVal)
 }
 
 // addLte check object is less than val
 func (f *PinotQueryFilter) addLt(obj string, val interface{}) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s < %s\n", obj, val)
+	quotedVal := fmt.Sprintf("'%s'", val)
+	f.string += fmt.Sprintf("%s < %s\n", obj, quotedVal)
 }
 
 func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest interface{}) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
+	quotedEarlist := fmt.Sprintf("'%s'", earliest)
+	quotedLate := fmt.Sprintf("'%s'", latest)
+	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, quotedEarlist, quotedLate)
 }
 
 func getCountWorkflowExecutionsQuery(request *p.CountWorkflowExecutionsRequest) string {
