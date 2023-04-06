@@ -120,6 +120,10 @@ func (v *pinotVisibilityStore) GetName() string {
 }
 
 func decodeAttr(attr map[string][]byte) ([]byte, error) {
+	if attr == nil {
+		return nil, nil
+	}
+
 	decodedMap := make(map[string]interface{})
 	for key, value := range attr {
 		var val interface{}
@@ -156,14 +160,13 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		request.SearchAttributes,
+		string(attr),
 		common.RecordStarted,
 		0,                                   // will not be used
 		0,                                   // will not be used
 		0,                                   // will not be used
 		request.UpdateTimestamp.UnixMilli(), // will be updated when workflow execution updates
 		int64(request.ShardID),
-		string(attr),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -188,14 +191,13 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		request.SearchAttributes,
+		string(attr),
 		common.RecordClosed,
 		request.CloseTimestamp.UnixMilli(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
-		string(attr),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -215,14 +217,13 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		"",
 		false,
 		0,
-		nil,
+		"",
 		"",
 		0,
 		0,
 		0,
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
-		"",
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -247,14 +248,13 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		request.SearchAttributes,
+		string(attr),
 		common.UpsertSearchAttributes,
 		0, // will not be used
 		0, // will not be used
 		0, // will not be used
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
-		string(attr),
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -284,6 +284,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
+		v.logger.Fatal(fmt.Sprintf("AABBCCDDDEBUG%s, %s", request, rec))
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
@@ -491,7 +492,7 @@ func createVisibilityMessage(
 	encoding common.EncodingType,
 	isCron bool,
 	NumClusters int16,
-	searchAttributes map[string][]byte,
+	searchAttributes string,
 	visibilityOperation common.VisibilityOperation,
 	// specific to certain status
 	closeTimeUnixNano int64, // close execution
@@ -499,7 +500,6 @@ func createVisibilityMessage(
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
-	attr string,
 ) *indexer.PinotMessage {
 	status := int(closeStatus)
 
@@ -514,7 +514,7 @@ func createVisibilityMessage(
 		ExecutionTime: executionTimeUnixNano,
 		IsCron:        isCron,
 		NumClusters:   NumClusters,
-		Attr:          attr,
+		Attr:          searchAttributes,
 		CloseTime:     closeTimeUnixNano,
 		CloseStatus:   status,
 		HistoryLength: historyLength,
