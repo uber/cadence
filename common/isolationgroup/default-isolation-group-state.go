@@ -69,7 +69,7 @@ type defaultIsolationGroupStateHandler struct {
 }
 
 const (
-	DefaultIsolationGroupConfigStoreManagerGlobalMapping dynamicconfig.MapKey = iota
+	defaultIsolationGroupConfigStoreManagerGlobalMapping dynamicconfig.ListKey = iota
 )
 
 // NewDefaultIsolationGroupStateWatcher is the default constructor
@@ -188,13 +188,13 @@ func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Contex
 		return err
 	}
 	return z.globalIsolationGroupDrains.UpdateValue(
-		DefaultIsolationGroupConfigStoreManagerGlobalMapping,
+		defaultIsolationGroupConfigStoreManagerGlobalMapping,
 		mappedInput,
 	)
 }
 
 func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
-	res, err := z.globalIsolationGroupDrains.ListValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping)
+	res, err := z.globalIsolationGroupDrains.ListValue(defaultIsolationGroupConfigStoreManagerGlobalMapping)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
@@ -225,7 +225,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.ListValue(DefaultIsolationGroupConfigStoreManagerGlobalMapping)
+	globalCfg, err := z.globalIsolationGroupDrains.ListValue(defaultIsolationGroupConfigStoreManagerGlobalMapping)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in %w", err)
 	}
