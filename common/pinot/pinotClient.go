@@ -104,7 +104,7 @@ type VisibilityRecord struct {
 	IsCron        bool
 	NumClusters   int16
 	UpdateTime    int64
-	Attr          map[string]interface{}
+	Attr          string
 }
 
 func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, columnNames []string) *p.InternalVisibilityWorkflowExecutionInfo {
@@ -124,10 +124,22 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 	var source *VisibilityRecord
 	err = json.Unmarshal(jsonColumnNameToValue, &source)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to marshal columnNameToValue",
+		c.logger.Error("unable to Unmarshal columnNameToValue",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
+	}
+
+	attr := make(map[string]interface{})
+	if source.Attr != "" {
+		err = json.Unmarshal([]byte(source.Attr), attr)
+
+		if err != nil { // log and skip error
+			c.logger.Error("unable to Unmarshal source.Attr",
+				tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
+			)
+			return nil
+		}
 	}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
@@ -141,7 +153,7 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
 		NumClusters:      source.NumClusters,
-		SearchAttributes: source.Attr,
+		SearchAttributes: attr,
 	}
 	if source.UpdateTime != 0 {
 		record.UpdateTime = time.UnixMilli(source.UpdateTime)
