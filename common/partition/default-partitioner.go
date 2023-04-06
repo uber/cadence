@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	defaultPartitionConfigWorkerIsolationGroup = "worker-isolation-group"
-	defaultPartitionConfigRunID                = "wf-run-id"
+	IsolationGroupKey = "isolation-group"
+	WorkflowRunIDKey  = "wf-run-id"
 )
 
 // DefaultWorkflowPartitionConfig Is the default dataset expected to be passed around in the
@@ -80,8 +80,8 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 }
 
 func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultWorkflowPartitionConfig {
-	isolationGroup, _ := config[defaultPartitionConfigWorkerIsolationGroup]
-	runID, _ := config[defaultPartitionConfigRunID]
+	isolationGroup, _ := config[IsolationGroupKey]
+	runID, _ := config[WorkflowRunIDKey]
 	return defaultWorkflowPartitionConfig{
 		WorkflowStartIsolationGroup: isolationGroup,
 		RunID:                       runID,
