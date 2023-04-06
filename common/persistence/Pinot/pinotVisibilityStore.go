@@ -572,7 +572,12 @@ func (q *PinotQuery) concatSorter(sorter string) {
 }
 
 func (q *PinotQuery) addPinotSorter(orderBy string, order string) {
-	q.sorters += fmt.Sprintf("Order BY %s %s\n", orderBy, order)
+	if q.sorters == "" {
+		q.sorters = "Order BY "
+	} else {
+		q.sorters += ", "
+	}
+	q.sorters += fmt.Sprintf("%s %s\n", orderBy, order)
 }
 
 func (q *PinotQuery) addLimits(limit int) {
@@ -606,22 +611,18 @@ func (f *PinotQueryFilter) addQuery(query string) {
 // addGte check object is greater than or equals to val
 func (f *PinotQueryFilter) addGte(obj string, val interface{}) {
 	f.checkFirstFilter()
-	quotedVal := fmt.Sprintf("'%s'", val)
-	f.string += fmt.Sprintf("%s >= %s\n", obj, quotedVal)
+	f.string += fmt.Sprintf("%s >= %s\n", obj, val)
 }
 
 // addLte check object is less than val
 func (f *PinotQueryFilter) addLt(obj string, val interface{}) {
 	f.checkFirstFilter()
-	quotedVal := fmt.Sprintf("'%s'", val)
-	f.string += fmt.Sprintf("%s < %s\n", obj, quotedVal)
+	f.string += fmt.Sprintf("%s < %s\n", obj, val)
 }
 
 func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest interface{}) {
 	f.checkFirstFilter()
-	quotedEarlist := fmt.Sprintf("'%s'", earliest)
-	quotedLate := fmt.Sprintf("'%s'", latest)
-	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, quotedEarlist, quotedLate)
+	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
 func getCountWorkflowExecutionsQuery(request *p.CountWorkflowExecutionsRequest) string {
