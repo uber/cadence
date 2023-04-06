@@ -45,8 +45,9 @@ type Config struct {
 	EnableVisibilitySampling        dynamicconfig.BoolPropertyFn
 	EnableReadFromClosedExecutionV2 dynamicconfig.BoolPropertyFn
 	// deprecated: never used for ratelimiting, only sampling-based failure injection, and only on database-based visibility
-	VisibilityListMaxQPS       dynamicconfig.IntPropertyFnWithDomainFilter
-	EnableReadVisibilityFromES dynamicconfig.BoolPropertyFnWithDomainFilter
+	VisibilityListMaxQPS          dynamicconfig.IntPropertyFnWithDomainFilter
+	EnableReadVisibilityFromES    dynamicconfig.BoolPropertyFnWithDomainFilter
+	EnableReadVisibilityFromPinot dynamicconfig.BoolPropertyFnWithDomainFilter
 	// deprecated: never read from
 	ESVisibilityListMaxQPS            dynamicconfig.IntPropertyFnWithDomainFilter
 	ESIndexMaxResultWindow            dynamicconfig.IntPropertyFn
@@ -129,6 +130,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		VisibilityListMaxQPS:                        dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendVisibilityListMaxQPS),
 		ESVisibilityListMaxQPS:                      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendESVisibilityListMaxQPS),
 		EnableReadVisibilityFromES:                  dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromES),
+		EnableReadVisibilityFromPinot:               dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableReadVisibilityFromPinot),
 		ESIndexMaxResultWindow:                      dc.GetIntProperty(dynamicconfig.FrontendESIndexMaxResultWindow),
 		HistoryMaxPageSize:                          dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendHistoryMaxPageSize),
 		UserRPS:                                     dc.GetIntProperty(dynamicconfig.FrontendUserRPS),
@@ -232,6 +234,7 @@ func NewService(
 
 			EnableReadVisibilityFromES:    serviceConfig.EnableReadVisibilityFromES,
 			AdvancedVisibilityWritingMode: nil, // frontend service never write
+			EnableReadVisibilityFromPinot: serviceConfig.EnableReadVisibilityFromPinot,
 
 			EnableDBVisibilitySampling:                  serviceConfig.EnableVisibilitySampling,
 			EnableReadDBVisibilityFromClosedExecutionV2: serviceConfig.EnableReadFromClosedExecutionV2,
