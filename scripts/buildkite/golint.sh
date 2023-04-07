@@ -2,11 +2,19 @@
 
 set -ex
 
-make go-generate && make fmt && make lint && make copyright
+if ! make go-generate; then
+  >&2 echo 'failed to `make go-generate`, run it locally and commit any changes'
+  exit 1
+fi
+
+if ! make lint; then
+  >&2 echo 'failed to `make lint`, make sure lint passes'
+  exit 1
+fi
 
 if [ -n "$(git status --porcelain)" ]; then
-  echo "There are changes after make go-generate && make fmt && make lint && make copyright"
-  echo "Please rerun the command and commit the changes"
+  >&2 echo "There are changes after make go-generate && make lint"
+  >&2 echo "Please rerun the commands and fix and commit any changes"
   git status --porcelain
   exit 1
 fi

@@ -471,7 +471,7 @@ tools: $(TOOLS)
 go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## run go generate to regen mocks, enums, etc
 	$Q echo "running go generate ./..., this takes a minute or more..."
 	$Q # add our bins to PATH so `go generate` can find them
-	$Q $(BIN_PATH) go generate $(if $(verbose),-v) ./...
+	$Q $(BIN_PATH) go generate $(if $(verbose),-x) ./...
 	$Q echo "updating copyright headers"
 	$Q $(MAKE) --no-print-directory copyright
 	$Q $(MAKE) --no-print-directory fmt
