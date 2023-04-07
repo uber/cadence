@@ -420,7 +420,7 @@ func TestIsolationGroupStateMapping(t *testing.T) {
 		},
 		"empty mapping": {
 			in:       nil,
-			expected: types.IsolationGroupConfiguration{},
+			expected: nil,
 		},
 		"invalid mapping 1": {
 			in:          []interface{}{"invalid"},
