@@ -167,43 +167,6 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 	return record
 }
 
-// debug purpose only, will cleanup after
-func (c *PinotClient) printBrokerResp(brokerResp *pinot.BrokerResponse) {
-	c.logger.Info(fmt.Sprintf("Query Stats: response time - %d ms, scanned docs - %d, total docs - %d", brokerResp.TimeUsedMs, brokerResp.NumDocsScanned, brokerResp.TotalDocs))
-	if brokerResp.Exceptions != nil && len(brokerResp.Exceptions) > 0 {
-		jsonBytes, _ := json.Marshal(brokerResp.Exceptions)
-		c.logger.Info(fmt.Sprintf("brokerResp.Exceptions:\n%s\n", jsonBytes))
-		return
-	}
-	if brokerResp.ResultTable != nil {
-		jsonBytes, _ := json.Marshal(brokerResp.ResultTable)
-		c.logger.Info(fmt.Sprintf("brokerResp.ResultTable:\n%s\n", jsonBytes))
-		line := ""
-		for c := 0; c < brokerResp.ResultTable.GetColumnCount(); c++ {
-			line += fmt.Sprintf("%s(%s)\t", brokerResp.ResultTable.GetColumnName(c), brokerResp.ResultTable.GetColumnDataType(c))
-		}
-		line += "\n"
-		for r := 0; r < brokerResp.ResultTable.GetRowCount(); r++ {
-			for c := 0; c < brokerResp.ResultTable.GetColumnCount(); c++ {
-				line += fmt.Sprintf("%v\t", brokerResp.ResultTable.Get(r, c))
-			}
-			line += "\n"
-		}
-		c.logger.Info(fmt.Sprintf("ResultTable:\n%s", line))
-		return
-	}
-	if brokerResp.AggregationResults != nil {
-		jsonBytes, _ := json.Marshal(brokerResp.AggregationResults)
-		c.logger.Info(fmt.Sprintf("brokerResp.AggregationResults:\n%s\n", jsonBytes))
-		return
-	}
-	if brokerResp.SelectionResults != nil {
-		jsonBytes, _ := json.Marshal(brokerResp.SelectionResults)
-		c.logger.Info(fmt.Sprintf("brokerResp.SelectionResults:\n%s\n", jsonBytes))
-		return
-	}
-}
-
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
@@ -213,8 +176,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
-	c.logger.Info("===========parsing response")
-	c.printBrokerResp(resp)
+	c.logger.Info(fmt.Sprintf("Query Stats: response time - %d ms, scanned docs - %d, total docs - %d", resp.TimeUsedMs, resp.NumDocsScanned, resp.TotalDocs))
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	//columnDataTypes := schema.ColumnDataTypes
 	columnNames := schema.ColumnNames
