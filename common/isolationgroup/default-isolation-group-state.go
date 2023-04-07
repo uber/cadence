@@ -328,7 +328,7 @@ func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
 	for k := range in {
 		v, ok := in[k].(string)
 		if !ok {
-			return nil, fmt.Errorf("failed to get all-isolation-groups resonse from dynamic config: got %v (%T)", in[k], in[k])
+			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
 		}
 		allIsolationGroups = append(allIsolationGroups, v)
 	}
