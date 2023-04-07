@@ -48,8 +48,19 @@ func (g grpcHandler) register(dispatcher *yarpc.Dispatcher) {
 }
 
 func rename(p []transport.Procedure) []transport.Procedure {
-	for _, pp := range p {
+	for i, pp := range p {
+		// all generated proto packages are prefixed with "server." when generated for the server,
+		// to prevent namespace collisions with the client's proto packages.
+		// this allows them to coexist at different versions without conflicting on gogoproto's
+		// global type registrations, which are not optional (though they appear to only be for
+		// json and text protocols).
+		//
+		// since that also changes the RPC name of the things we're trying to host, just strip it
+		// from the host-transports.
+		// server-to-server clients must also do this remapping, but anything using the client
+		// library will have the correct name because the client's code-gen is unmodified.
 		pp.Name = strings.TrimPrefix(pp.Name, "server.")
+		p[i] = pp // value type must be re-assigned back to the slice
 	}
 	return p
 }
