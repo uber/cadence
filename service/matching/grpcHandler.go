@@ -22,10 +22,8 @@ package matching
 
 import (
 	"context"
-	"strings"
 
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/api/transport"
 
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	matchingv1 "github.com/uber/cadence/.gen/proto/matching/v1"
@@ -41,14 +39,8 @@ func newGRPCHandler(h Handler) grpcHandler {
 }
 
 func (g grpcHandler) register(dispatcher *yarpc.Dispatcher) {
-	dispatcher.Register(rename(matchingv1.BuildMatchingAPIYARPCProcedures(g)))
-	dispatcher.Register(rename(apiv1.BuildMetaAPIYARPCProcedures(g)))
-}
-func rename(p []transport.Procedure) []transport.Procedure {
-	for _, pp := range p {
-		pp.Name = strings.TrimPrefix(pp.Name, "server.")
-	}
-	return p
+	dispatcher.Register(matchingv1.BuildMatchingAPIYARPCProcedures(g))
+	dispatcher.Register(apiv1.BuildMetaAPIYARPCProcedures(g))
 }
 
 func (g grpcHandler) Health(ctx context.Context, _ *apiv1.HealthRequest) (*apiv1.HealthResponse, error) {
