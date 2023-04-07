@@ -299,7 +299,7 @@ $(MODIFIED_PROTO_FILES): $(RAW_PROTO_FILES)
 	$Q mkdir -p $(dir $@)
 	$Q # rewrite the proto package name
 	$Q sed 's/^package \(.*\)/package server.\1/' $(subst .build/,./,$@) \
-		| sed 's/github\.com\/uber\/cadence-idl\/go\/proto/github.com\/uber\/cadence\/.gen\/proto/g' > $@
+		| sed 's/^\(option go_package = .*\)cadence-idl\/go\(.*\)/\1cadence\/.gen\2/g' > $@
 
 MODIFIED_PROTO_DIRS = $(sort $(dir $(MODIFIED_PROTO_FILES)))
 
