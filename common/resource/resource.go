@@ -23,6 +23,9 @@ package resource
 import (
 	"go.uber.org/yarpc"
 
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/partition"
+
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
 	"github.com/uber/cadence/client"
@@ -38,12 +41,10 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
-	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 )

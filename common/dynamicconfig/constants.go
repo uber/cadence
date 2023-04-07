@@ -1360,6 +1360,13 @@ const (
 	// KeyName: system.largeShardHistoryBlobMetricThreshold
 	// Value type: Int
 	// Default value: 262144 (1/4mb)
+
+	// IsolationGroupStateUpdateRetryAttempts
+	// KeyName: system.isolationGroupStateUpdateRetryAttempts
+	// Value type: int
+	// Default value: 2
+	IsolationGroupStateUpdateRetryAttempts
+
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
@@ -2517,12 +2524,21 @@ const (
 	// Value type: Duration
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
-
 	// IsolationGroupStateRefreshInterval
 	// KeyName: system.isolationGroupStateRefreshInterval
 	// Value type: Duration
-	// Default value: 2 minutes
+	// Default value: 30 seconds
 	IsolationGroupStateRefreshInterval
+	// IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value
+	// KeyName: system.isolationGroupStateFetchTimeout
+	// Value type: Duration
+	// Default value: 30 seconds
+	IsolationGroupStateFetchTimeout
+	// IsolationGroupStateUpdateTimeout is the dynamic config DB update timeout value
+	// KeyName: system.isolationGroupStateUpdateTimeout
+	// Value type: Duration
+	// Default value: 30 seconds
+	IsolationGroupStateUpdateTimeout
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -2590,7 +2606,6 @@ const (
 	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
 	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
 	HeaderForwardingRules
-
 	// AllIsolationGroups is the list of all possible isolation groups in a service
 	// KeyName: system.allIsolationGroups
 	// Value type: []string
@@ -2600,6 +2615,12 @@ const (
 
 	LastListKey
 )
+
+// DefaultIsolationGroupConfigStoreManagerGlobalMapping is the dynamic config value for isolation groups
+// Note: This is not typically used for normal dynamic config (type 0), but instead
+// it's used only for IsolationGroup config (type 1).
+// KeyName: system.defaultIsolationGroupConfigStoreManagerGlobalMapping
+const DefaultIsolationGroupConfigStoreManagerGlobalMapping ListKey = -1 // This is a hack to put it in a different list due to it being a different config type
 
 var IntKeys = map[IntKey]DynamicInt{
 	TestGetIntPropertyKey: DynamicInt{
@@ -3503,6 +3524,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		KeyName:      "system.largeShardHistoryBlobMetricThreshold",
 		Description:  "defines the threshold for what consititutes a large history blob write to alert on, default is 1/4mb",
 		DefaultValue: 262144,
+	},
+	IsolationGroupStateUpdateRetryAttempts: DynamicInt{
+		KeyName:      "system.isolationGroupStateUpdateRetryAttempts",
+		Description:  "The number of attempts to push Isolation group configuration to the config store",
+		DefaultValue: 2,
 	},
 }
 
@@ -4459,7 +4485,17 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	IsolationGroupStateRefreshInterval: DynamicDuration{
 		KeyName:      "system.isolationGroupStateRefreshInterval",
 		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
-		DefaultValue: time.Minute * 2,
+		DefaultValue: time.Second * 30,
+	},
+	IsolationGroupStateFetchTimeout: DynamicDuration{
+		KeyName:      "system.IsolationGroupStateFetchTimeout",
+		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value",
+		DefaultValue: time.Second * 30,
+	},
+	IsolationGroupStateUpdateTimeout: DynamicDuration{
+		KeyName:      "system.IsolationGroupStateUpdateTimeout",
+		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB update timeout value",
+		DefaultValue: time.Second * 30,
 	},
 	ESAnalyzerBufferWaitTime: DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
@@ -4506,6 +4542,15 @@ var MapKeys = map[MapKey]DynamicMap{
 }
 
 var ListKeys = map[ListKey]DynamicList{
+	AllIsolationGroups: {
+		KeyName:     "system.allIsolationGroups",
+		Description: "A list of all the isolation groups in a system",
+	},
+	DefaultIsolationGroupConfigStoreManagerGlobalMapping: {
+		KeyName: "system.defaultIsolationGroupConfigStoreManagerGlobalMapping",
+		Description: "A configuration store for global isolation groups - used in isolation-group config only, not normal dynamic config." +
+			"Not intended for use in normal dynamic config",
+	},
 	HeaderForwardingRules: {
 		KeyName: "admin.HeaderForwardingRules", // make a new scope for global?
 		Description: "Only loaded at startup.  " +
