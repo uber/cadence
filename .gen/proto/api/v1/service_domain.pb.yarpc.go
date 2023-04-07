@@ -54,7 +54,7 @@ type DomainAPIYARPCClient interface {
 func newDomainAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) DomainAPIYARPCClient {
 	return &_DomainAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.api.v1.DomainAPI",
+			ServiceName:  "uber.cadence.api.v1.DomainAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -85,7 +85,7 @@ func buildDomainAPIYARPCProcedures(params buildDomainAPIYARPCProceduresParams) [
 	handler := &_DomainAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.api.v1.DomainAPI",
+			ServiceName: "uber.cadence.api.v1.DomainAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "RegisterDomain",
@@ -238,7 +238,7 @@ func NewFxDomainAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.api.v1.DomainAPI",
+				ServiceName:     "uber.cadence.api.v1.DomainAPI",
 				FileDescriptors: yarpcFileDescriptorClosure2e37d15268893114,
 			},
 		}

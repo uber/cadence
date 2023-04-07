@@ -77,7 +77,7 @@ type AdminAPIYARPCClient interface {
 func newAdminAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) AdminAPIYARPCClient {
 	return &_AdminAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.admin.v1.AdminAPI",
+			ServiceName:  "uber.cadence.admin.v1.AdminAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -131,7 +131,7 @@ func buildAdminAPIYARPCProcedures(params buildAdminAPIYARPCProceduresParams) []t
 	handler := &_AdminAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.admin.v1.AdminAPI",
+			ServiceName: "uber.cadence.admin.v1.AdminAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "DescribeWorkflowExecution",
@@ -514,7 +514,7 @@ func NewFxAdminAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.admin.v1.AdminAPI",
+				ServiceName:     "uber.cadence.admin.v1.AdminAPI",
 				FileDescriptors: yarpcFileDescriptorClosurec6fc96d64a8b67fd,
 			},
 		}

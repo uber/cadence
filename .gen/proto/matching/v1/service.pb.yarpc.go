@@ -59,7 +59,7 @@ type MatchingAPIYARPCClient interface {
 func newMatchingAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) MatchingAPIYARPCClient {
 	return &_MatchingAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.matching.v1.MatchingAPI",
+			ServiceName:  "uber.cadence.matching.v1.MatchingAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -95,7 +95,7 @@ func buildMatchingAPIYARPCProcedures(params buildMatchingAPIYARPCProceduresParam
 	handler := &_MatchingAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.matching.v1.MatchingAPI",
+			ServiceName: "uber.cadence.matching.v1.MatchingAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "PollForDecisionTask",
@@ -298,7 +298,7 @@ func NewFxMatchingAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.matching.v1.MatchingAPI",
+				ServiceName:     "uber.cadence.matching.v1.MatchingAPI",
 				FileDescriptors: yarpcFileDescriptorClosure826e827d3aabf7fc,
 			},
 		}

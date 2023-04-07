@@ -64,7 +64,7 @@ type WorkflowAPIYARPCClient interface {
 func newWorkflowAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) WorkflowAPIYARPCClient {
 	return &_WorkflowAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.api.v1.WorkflowAPI",
+			ServiceName:  "uber.cadence.api.v1.WorkflowAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -105,7 +105,7 @@ func buildWorkflowAPIYARPCProcedures(params buildWorkflowAPIYARPCProceduresParam
 	handler := &_WorkflowAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.api.v1.WorkflowAPI",
+			ServiceName: "uber.cadence.api.v1.WorkflowAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "RestartWorkflowExecution",
@@ -358,7 +358,7 @@ func NewFxWorkflowAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.api.v1.WorkflowAPI",
+				ServiceName:     "uber.cadence.api.v1.WorkflowAPI",
 				FileDescriptors: yarpcFileDescriptorClosure674d14d2fee4e473,
 			},
 		}

@@ -60,7 +60,9 @@ func rename(p []transport.Procedure) []transport.Procedure {
 		// server-to-server clients must also do this remapping, but anything using the client
 		// library will have the correct name because the client's code-gen is unmodified.
 		pp.Name = strings.TrimPrefix(pp.Name, "server.")
-		p[i] = pp // value type must be re-assigned back to the slice
+		_ = i
+		// TODO: disabled to test something
+		//p[i] = pp // value type must be re-assigned back to the slice
 	}
 	return p
 }

@@ -63,7 +63,7 @@ type WorkerAPIYARPCClient interface {
 func newWorkerAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) WorkerAPIYARPCClient {
 	return &_WorkerAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.api.v1.WorkerAPI",
+			ServiceName:  "uber.cadence.api.v1.WorkerAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -103,7 +103,7 @@ func buildWorkerAPIYARPCProcedures(params buildWorkerAPIYARPCProceduresParams) [
 	handler := &_WorkerAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.api.v1.WorkerAPI",
+			ServiceName: "uber.cadence.api.v1.WorkerAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "PollForDecisionTask",
@@ -346,7 +346,7 @@ func NewFxWorkerAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.api.v1.WorkerAPI",
+				ServiceName:     "uber.cadence.api.v1.WorkerAPI",
 				FileDescriptors: yarpcFileDescriptorClosure00684e887839a48c,
 			},
 		}

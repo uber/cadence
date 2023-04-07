@@ -92,7 +92,7 @@ type HistoryAPIYARPCClient interface {
 func newHistoryAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) HistoryAPIYARPCClient {
 	return &_HistoryAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.history.v1.HistoryAPI",
+			ServiceName:  "uber.cadence.history.v1.HistoryAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -161,7 +161,7 @@ func buildHistoryAPIYARPCProcedures(params buildHistoryAPIYARPCProceduresParams)
 	handler := &_HistoryAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.history.v1.HistoryAPI",
+			ServiceName: "uber.cadence.history.v1.HistoryAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "StartWorkflowExecution",
@@ -694,7 +694,7 @@ func NewFxHistoryAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.history.v1.HistoryAPI",
+				ServiceName:     "uber.cadence.history.v1.HistoryAPI",
 				FileDescriptors: yarpcFileDescriptorClosurefee8ff76963a38ed,
 			},
 		}

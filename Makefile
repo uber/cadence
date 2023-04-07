@@ -298,8 +298,8 @@ $(MODIFIED_PROTO_FILES): $(RAW_PROTO_FILES)
 	$(call ensure_idl_submodule)
 	$Q mkdir -p $(dir $@)
 	$Q # rewrite the proto package name
-	$Q sed 's/^package \(.*\)/package server.\1/' $(subst .build/,./,$@) \
-		| sed 's/^\(option go_package = .*\)cadence-idl\/go\(.*\)/\1cadence\/.gen\2/g' > $@
+	$Q perl -pe 's/^package (.*)/package server.\1/' $(subst .build/,./,$@) \
+		| perl -pe 's/^(option go_package = .*)cadence-idl\/go(.*)/\1cadence\/.gen\2/g' > $@
 
 MODIFIED_PROTO_DIRS = $(sort $(dir $(MODIFIED_PROTO_FILES)))
 
@@ -322,6 +322,9 @@ $(BUILD)/protoc: $(MODIFIED_PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(B
 		--yarpc-go_out=$(PROTO_OUT) \
 		$$(find ./$(PROTO_DIR) -name '*.proto');\
 	)
+	$Q # rewrite the hard-coded-and-not-configurable yarpc service names (in place) to exclude the server prefix.
+	$Q # this is done prior to the rename so the final files only exist when everything succeeds
+	$Q perl -pi -e 's/^(\s+ServiceName:\s+)"server.uber/\1"uber/g' $$(find $(PROTO_OUT)/uber/cadence -type f -name '*.go')
 	$Q # protoc generates to the/import/path but we want a flatter structure
 	$Q cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/
 	$Q rm -r $(PROTO_OUT)/uber

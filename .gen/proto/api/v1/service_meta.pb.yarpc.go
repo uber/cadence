@@ -50,7 +50,7 @@ type MetaAPIYARPCClient interface {
 func newMetaAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) MetaAPIYARPCClient {
 	return &_MetaAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.api.v1.MetaAPI",
+			ServiceName:  "uber.cadence.api.v1.MetaAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -77,7 +77,7 @@ func buildMetaAPIYARPCProcedures(params buildMetaAPIYARPCProceduresParams) []tra
 	handler := &_MetaAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.api.v1.MetaAPI",
+			ServiceName: "uber.cadence.api.v1.MetaAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "Health",
@@ -190,7 +190,7 @@ func NewFxMetaAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.api.v1.MetaAPI",
+				ServiceName:     "uber.cadence.api.v1.MetaAPI",
 				FileDescriptors: yarpcFileDescriptorClosuref45a67f89288e7f3,
 			},
 		}

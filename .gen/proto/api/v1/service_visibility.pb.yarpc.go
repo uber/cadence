@@ -56,7 +56,7 @@ type VisibilityAPIYARPCClient interface {
 func newVisibilityAPIYARPCClient(clientConfig transport.ClientConfig, anyResolver jsonpb.AnyResolver, options ...protobuf.ClientOption) VisibilityAPIYARPCClient {
 	return &_VisibilityAPIYARPCCaller{protobuf.NewStreamClient(
 		protobuf.ClientParams{
-			ServiceName:  "server.uber.cadence.api.v1.VisibilityAPI",
+			ServiceName:  "uber.cadence.api.v1.VisibilityAPI",
 			ClientConfig: clientConfig,
 			AnyResolver:  anyResolver,
 			Options:      options,
@@ -89,7 +89,7 @@ func buildVisibilityAPIYARPCProcedures(params buildVisibilityAPIYARPCProceduresP
 	handler := &_VisibilityAPIYARPCHandler{params.Server}
 	return protobuf.BuildProcedures(
 		protobuf.BuildProceduresParams{
-			ServiceName: "server.uber.cadence.api.v1.VisibilityAPI",
+			ServiceName: "uber.cadence.api.v1.VisibilityAPI",
 			UnaryHandlerParams: []protobuf.BuildProceduresUnaryHandlerParams{
 				{
 					MethodName: "ListWorkflowExecutions",
@@ -262,7 +262,7 @@ func NewFxVisibilityAPIYARPCProcedures() interface{} {
 				AnyResolver: params.AnyResolver,
 			}),
 			ReflectionMeta: reflection.ServerMeta{
-				ServiceName:     "server.uber.cadence.api.v1.VisibilityAPI",
+				ServiceName:     "uber.cadence.api.v1.VisibilityAPI",
 				FileDescriptors: yarpcFileDescriptorClosurea7341dc69cef4364,
 			},
 		}
