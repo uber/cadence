@@ -677,6 +677,10 @@ func validateKeyDataBlobPair(key dc.Key, blob *types.DataBlob) error {
 		if _, ok := value.(map[string]interface{}); !ok {
 			return err
 		}
+	case dc.ListKey:
+		if _, ok := value.([]interface{}); !ok {
+			return err
+		}
 	default:
 		return fmt.Errorf("unknown key type: %T", key)
 	}

@@ -23,6 +23,7 @@
 package isolationgroup
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -187,31 +188,30 @@ func TestIsDrained(t *testing.T) {
 
 func TestIsolationGroupStateMapping(t *testing.T) {
 
+	z1 := types.IsolationGroupPartition{
+		Name:  "zone-1",
+		State: types.IsolationGroupStateHealthy,
+	}
+
+	z2 := types.IsolationGroupPartition{
+		Name:  "zone-2",
+		State: types.IsolationGroupStateDrained,
+	}
+
+	// JSON serialization inside the dynamic config library makes a mess of things because
+	// it doesn't have any type information. So mimicing this type information loss to ensure
+	// any field name types or similar serialization quirks are picked up by the test
+	zMarshalled, _ := json.Marshal([]types.IsolationGroupPartition{z1, z2})
+	var rawIsolationGroupDataMarshalled []interface{}
+	json.Unmarshal(zMarshalled, &rawIsolationGroupDataMarshalled)
+
 	tests := map[string]struct {
-		in          []*types.DynamicConfigEntry
+		in          []interface{}
 		expected    types.IsolationGroupConfiguration
 		expectedErr error
 	}{
 		"valid mapping": {
-			in: []*types.DynamicConfigEntry{
-				&types.DynamicConfigEntry{
-					Name: "",
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         []byte(`{"Name":"zone-1","State":1}`),
-							},
-						},
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeJSON.Ptr(),
-								Data:         []byte(`{"Name":"zone-2","State":2}`),
-							},
-						},
-					},
-				},
-			},
+			in: rawIsolationGroupDataMarshalled,
 			expected: map[string]types.IsolationGroupPartition{
 				"zone-1": {
 					Name:  "zone-1",
@@ -223,33 +223,17 @@ func TestIsolationGroupStateMapping(t *testing.T) {
 				},
 			},
 		},
-		"invalid values - encoding": {
-			in: []*types.DynamicConfigEntry{
-				&types.DynamicConfigEntry{
-					Name: "",
-					Values: []*types.DynamicConfigValue{
-						{
-							Value: &types.DataBlob{
-								EncodingType: types.EncodingTypeThriftRW.Ptr(), //invalid, not expected to use thrift here
-								Data:         []byte(`{"Name":"zone-1","State":2}`),
-							},
-						},
-					},
-				},
-			},
-			expectedErr: errors.New("failed to decode values: &{ThriftRW [123 34 78 97 109 101 34 58 34 122 111 110 101 45 49 34 44 34 83 116 97 116 101 34 58 50 125]}, (*types.EncodingType)"),
+		"empty mapping": {
+			in:       nil,
+			expected: types.IsolationGroupConfiguration{},
 		},
-		"invalid encoding - incomplete input - 1": {
-			in:       []*types.DynamicConfigEntry{},
-			expected: map[string]types.IsolationGroupPartition{},
+		"invalid mapping 1": {
+			in:          []interface{}{"invalid"},
+			expectedErr: errors.New("failed parse a dynamic config entry, map[], (got invalid)"),
 		},
-		"invalid encoding - incomplete input - 2": {
-			in: []*types.DynamicConfigEntry{
-				{
-					Values: nil,
-				},
-			},
-			expected: map[string]types.IsolationGroupPartition{},
+		"invalid mapping 2": {
+			in:          []interface{}{`{"Name": "some zone", "State": "not the right type"}`},
+			expectedErr: errors.New(`failed parse a dynamic config entry, map[], (got {"Name": "some zone", "State": "not the right type"})`),
 		},
 	}
 
@@ -290,8 +274,6 @@ func TestMapAllIsolationGroupStates(t *testing.T) {
 
 func TestUpdateRequest(t *testing.T) {
 
-	json := types.EncodingTypeJSON
-
 	tests := map[string]struct {
 		in          types.IsolationGroupConfiguration
 		expected    []*types.DynamicConfigValue
@@ -311,23 +293,24 @@ func TestUpdateRequest(t *testing.T) {
 			expected: []*types.DynamicConfigValue{
 				{
 					Value: &types.DataBlob{
-						EncodingType: &json,
-						Data:         []byte(`{"Name":"zone-1","State":1}`),
-					},
-					Filters: nil,
-				},
-				{
-					Value: &types.DataBlob{
-						EncodingType: &json,
-						Data:         []byte(`{"Name":"zone-2","State":2}`),
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`[{"Name":"zone-1","State":1},{"Name":"zone-2","State":2}]`),
 					},
 					Filters: nil,
 				},
 			},
 		},
 		"empty mapping": {
-			in:       types.IsolationGroupConfiguration{},
-			expected: nil,
+			in: types.IsolationGroupConfiguration{},
+			expected: []*types.DynamicConfigValue{
+				{
+					Value: &types.DataBlob{
+						EncodingType: types.EncodingTypeJSON.Ptr(),
+						Data:         []byte(`null`),
+					},
+					Filters: nil,
+				},
+			},
 		},
 	}
 
