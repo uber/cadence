@@ -284,7 +284,6 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		//v.logger.Fatal(fmt.Sprintf("AABBCCDDDEBUG%s, %s", request, rec))
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
