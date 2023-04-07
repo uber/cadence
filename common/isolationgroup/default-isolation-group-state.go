@@ -294,18 +294,13 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 }
 
 // ----- Mappers -----
-func mapDynamicConfigResponse(in interface{}) (out types.IsolationGroupConfiguration, err error) {
+func mapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
 	if in == nil {
 		return nil, nil
 	}
 
-	dcData, ok := in.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("failed to parse dynamic config data, unexpected format returned: %v, (%T)", in, in)
-	}
-
-	out = make(types.IsolationGroupConfiguration, len(dcData))
-	for _, v := range dcData {
+	out = make(types.IsolationGroupConfiguration, len(in))
+	for _, v := range in {
 		v1, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
