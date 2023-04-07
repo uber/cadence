@@ -25,6 +25,7 @@ package isolationgroup
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -53,24 +54,21 @@ type defaultConfig struct {
 }
 
 type defaultIsolationGroupStateHandler struct {
-	status                     int32
-	done                       chan struct{}
-	log                        log.Logger
-	domainCache                cache.DomainCache
-	globalIsolationGroupDrains dynamicconfig.Client
-	config                     defaultConfig
-	subscriptionMu             sync.Mutex
-	valuesMu                   sync.RWMutex
-	lastSeen                   *isolationGroups
-	updateCB                   func()
+	status                          int32
+	done                            chan struct{}
+	log                             log.Logger
+	domainCache                     cache.DomainCache
+	globalIsolationGroupDrains      dynamicconfig.Client
+	globalIsolationGroupDrainClient dynamicconfig.Client
+	config                          defaultConfig
+	subscriptionMu                  sync.Mutex
+	valuesMu                        sync.RWMutex
+	lastSeen                        *isolationGroups
+	updateCB                        func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
 	// for notifying when there's a state change
 	subscriptions map[string]map[string]chan<- ChangeEvent
 }
-
-const (
-	defaultIsolationGroupConfigStoreManagerGlobalMapping dynamicconfig.ListKey = iota
-)
 
 // NewDefaultIsolationGroupStateWatcher is the default constructor
 func NewDefaultIsolationGroupStateWatcher(
@@ -188,14 +186,18 @@ func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Contex
 		return err
 	}
 	return z.globalIsolationGroupDrains.UpdateValue(
-		defaultIsolationGroupConfigStoreManagerGlobalMapping,
+		dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping,
 		mappedInput,
 	)
 }
 
 func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
-	res, err := z.globalIsolationGroupDrains.ListValue(defaultIsolationGroupConfigStoreManagerGlobalMapping)
+	res, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {
+		var e types.EntityNotExistsError
+		if errors.As(err, &e) {
+			return &types.GetGlobalIsolationGroupsResponse{}, nil
+		}
 		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
 	resp, err := mapDynamicConfigResponse(res)
@@ -225,7 +227,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 	domainState := domainData.GetInfo().IsolationGroupConfig
-	globalCfg, err := z.globalIsolationGroupDrains.ListValue(defaultIsolationGroupConfigStoreManagerGlobalMapping)
+	globalCfg, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in %w", err)
 	}
@@ -256,8 +258,8 @@ func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
 func availableIG(allIsolationGroups []string, global types.IsolationGroupConfiguration, domain types.IsolationGroupConfiguration) types.IsolationGroupConfiguration {
 	out := types.IsolationGroupConfiguration{}
 	for _, isolationGroup := range allIsolationGroups {
-		globalCfg, hasGlobalConfig := global[string(isolationGroup)]
-		domainCfg, hasDomainConfig := domain[string(isolationGroup)]
+		globalCfg, hasGlobalConfig := global[isolationGroup]
+		domainCfg, hasDomainConfig := domain[isolationGroup]
 		if hasGlobalConfig {
 			if globalCfg.State == types.IsolationGroupStateDrained {
 				continue
@@ -293,29 +295,35 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 }
 
 // ----- Mappers -----
-// dynamic config library does much of the decoding already, so this is asymmetric
-// to the serialization step. Incoming value should be just
-// map[string]interface{}
-func mapDynamicConfigResponse(in []*types.DynamicConfigEntry) (out types.IsolationGroupConfiguration, err error) {
+func mapDynamicConfigResponse(in interface{}) (out types.IsolationGroupConfiguration, err error) {
 	if in == nil {
 		return nil, nil
 	}
-	out = make(types.IsolationGroupConfiguration)
 
-	for _, entry := range in {
-		for _, v := range entry.Values {
-			if v.Value == nil {
-				continue
-			}
-			if v.Value.GetEncodingType() != types.EncodingTypeJSON {
-				return nil, fmt.Errorf("failed to decode values: %v, (%T)", v.Value, v.Value.EncodingType)
-			}
-			var partition types.IsolationGroupPartition
-			err := json.Unmarshal(v.Value.GetData(), &partition)
-			if err != nil {
-				return nil, fmt.Errorf("failed to unmarshal entry: %v, got %w", string(v.Value.GetData()), err)
-			}
-			out[partition.Name] = partition
+	dcData, ok := in.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to parse dynamic config data, unexpected format returned: %v, (%T)", in, in)
+	}
+
+	out = make(types.IsolationGroupConfiguration, len(dcData))
+	for _, v := range dcData {
+		v1, ok := v.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
+		}
+		n, okName := v1["Name"]
+		s, okState := v1["State"]
+		if !okState || !okName {
+			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
+		}
+		nS, okStr := n.(string)
+		sI, okI := s.(float64)
+		if !okStr || !okI {
+			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
+		}
+		out[nS] = types.IsolationGroupPartition{
+			Name:  nS,
+			State: types.IsolationGroupState(sI),
 		}
 	}
 	return out, nil
@@ -334,23 +342,29 @@ func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
 }
 
 func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) ([]*types.DynamicConfigValue, error) {
-	var out []*types.DynamicConfigValue
+
+	// store as a plain list for simplicity
+	var isolationGroupList []types.IsolationGroupPartition
 	for _, v := range in {
-		jsonData, err := json.Marshal(v)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal input for dynamic config: %w", err)
-		}
-		out = append(out, &types.DynamicConfigValue{
+		isolationGroupList = append(isolationGroupList, v)
+	}
+	// ensure determinitism in list ordering for convenience
+	sort.Slice(isolationGroupList, func(i, j int) bool {
+		return isolationGroupList[i].Name < isolationGroupList[j].Name
+	})
+
+	jsonData, err := json.Marshal(isolationGroupList)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal input for dynamic config: %w", err)
+	}
+
+	out := []*types.DynamicConfigValue{
+		&types.DynamicConfigValue{
 			Value: &types.DataBlob{
 				EncodingType: types.EncodingTypeJSON.Ptr(),
 				Data:         jsonData,
 			},
-			Filters: nil,
-		})
+		},
 	}
-	// ensure sort-order
-	sort.Slice(out, func(i, j int) bool {
-		return string(out[i].Value.GetData()) < string(out[j].Value.GetData())
-	})
 	return out, nil
 }

@@ -2527,7 +2527,7 @@ const (
 	// IsolationGroupStateRefreshInterval
 	// KeyName: system.isolationGroupStateRefreshInterval
 	// Value type: Duration
-	// Default value: 2 minutes
+	// Default value: 30 seconds
 	IsolationGroupStateRefreshInterval
 	// IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value
 	// KeyName: system.isolationGroupStateFetchTimeout
@@ -2613,6 +2613,12 @@ const (
 	// Default value: N/A
 	// Allowed filters: N/A
 	AllIsolationGroups
+
+	// DefaultIsolationGroupConfigStoreManagerGlobalMapping is the dynamic config value for isolation groups
+	// Note: This is not typically used for normal dynamic config (type 0), but instead
+	// it's used only for IsolationGroup config (type 1).
+	// KeyName: system.defaultIsolationGroupConfigStoreManagerGlobalMapping
+	DefaultIsolationGroupConfigStoreManagerGlobalMapping
 
 	LastListKey
 )
@@ -4480,7 +4486,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	IsolationGroupStateRefreshInterval: DynamicDuration{
 		KeyName:      "system.isolationGroupStateRefreshInterval",
 		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
-		DefaultValue: time.Minute * 2,
+		DefaultValue: time.Second * 30,
 	},
 	IsolationGroupStateFetchTimeout: DynamicDuration{
 		KeyName:      "system.IsolationGroupStateFetchTimeout",
@@ -4537,6 +4543,15 @@ var MapKeys = map[MapKey]DynamicMap{
 }
 
 var ListKeys = map[ListKey]DynamicList{
+	AllIsolationGroups: {
+		KeyName:     "system.allIsolationGroups",
+		Description: "A list of all the isolation groups in a system",
+	},
+	DefaultIsolationGroupConfigStoreManagerGlobalMapping: {
+		KeyName: "system.defaultIsolationGroupConfigStoreManagerGlobalMapping",
+		Description: "A configuration store for global isolation groups - used in isolation-group config only, not normal dynamic config." +
+			"Not intended for use in normal dynamic config",
+	},
 	HeaderForwardingRules: {
 		KeyName: "admin.HeaderForwardingRules", // make a new scope for global?
 		Description: "Only loaded at startup.  " +
