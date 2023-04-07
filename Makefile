@@ -298,7 +298,8 @@ $(MODIFIED_PROTO_FILES): $(RAW_PROTO_FILES)
 	$(call ensure_idl_submodule)
 	$Q mkdir -p $(dir $@)
 	$Q # rewrite the proto package name
-	$Q sed 's/^package \(.*\)/package server.\1/' $(subst .build/,./,$@) > $@
+	$Q sed 's/^package \(.*\)/package server.\1/' $(subst .build/,./,$@) \
+		| sed 's/github\.com\/uber\/cadence-idl\/go\/proto/github.com\/uber\/cadence\/.gen\/proto/g' > $@
 
 MODIFIED_PROTO_DIRS = $(sort $(dir $(MODIFIED_PROTO_FILES)))
 

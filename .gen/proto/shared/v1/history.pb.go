@@ -33,8 +33,8 @@ import (
 
 	proto "github.com/gogo/protobuf/proto"
 
-	v11 "github.com/uber/cadence-idl/go/proto/admin/v1"
-	v1 "github.com/uber/cadence-idl/go/proto/api/v1"
+	v11 "github.com/uber/cadence/.gen/proto/admin/v1"
+	v1 "github.com/uber/cadence/.gen/proto/api/v1"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
