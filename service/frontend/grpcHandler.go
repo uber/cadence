@@ -22,8 +22,10 @@ package frontend
 
 import (
 	"context"
+	"strings"
 
 	"go.uber.org/yarpc"
+	"go.uber.org/yarpc/api/transport"
 
 	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 	"github.com/uber/cadence/common/types/mapper/proto"
@@ -38,11 +40,18 @@ func newGrpcHandler(h Handler) grpcHandler {
 }
 
 func (g grpcHandler) register(dispatcher *yarpc.Dispatcher) {
-	dispatcher.Register(apiv1.BuildDomainAPIYARPCProcedures(g))
-	dispatcher.Register(apiv1.BuildWorkflowAPIYARPCProcedures(g))
-	dispatcher.Register(apiv1.BuildWorkerAPIYARPCProcedures(g))
-	dispatcher.Register(apiv1.BuildVisibilityAPIYARPCProcedures(g))
-	dispatcher.Register(apiv1.BuildMetaAPIYARPCProcedures(g))
+	dispatcher.Register(rename(apiv1.BuildDomainAPIYARPCProcedures(g)))
+	dispatcher.Register(rename(apiv1.BuildWorkflowAPIYARPCProcedures(g)))
+	dispatcher.Register(rename(apiv1.BuildWorkerAPIYARPCProcedures(g)))
+	dispatcher.Register(rename(apiv1.BuildVisibilityAPIYARPCProcedures(g)))
+	dispatcher.Register(rename(apiv1.BuildMetaAPIYARPCProcedures(g)))
+}
+
+func rename(p []transport.Procedure) []transport.Procedure {
+	for _, pp := range p {
+		pp.Name = strings.TrimPrefix(pp.Name, "server.")
+	}
+	return p
 }
 
 func (g grpcHandler) Health(ctx context.Context, _ *apiv1.HealthRequest) (*apiv1.HealthResponse, error) {
