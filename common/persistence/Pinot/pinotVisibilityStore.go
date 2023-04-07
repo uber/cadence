@@ -526,11 +526,9 @@ func createVisibilityMessage(
 		panic("serialize msg error!")
 	}
 
-	msgType := indexer.MessageTypePinot
 	msg := &indexer.PinotMessage{
-		MessageType: &msgType,
-		WorkflowID:  common.StringPtr(wid),
-		Payload:     &serializedMsg,
+		WorkflowID: common.StringPtr(wid),
+		Payload:    serializedMsg,
 	}
 	return msg
 }
