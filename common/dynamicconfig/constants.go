@@ -2606,7 +2606,6 @@ const (
 	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
 	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
 	HeaderForwardingRules
-
 	// AllIsolationGroups is the list of all possible isolation groups in a service
 	// KeyName: system.allIsolationGroups
 	// Value type: []string
@@ -2622,6 +2621,12 @@ const (
 
 	LastListKey
 )
+
+// DefaultIsolationGroupConfigStoreManagerGlobalMapping is the dynamic config value for isolation groups
+// Note: This is not typically used for normal dynamic config (type 0), but instead
+// it's used only for IsolationGroup config (type 1).
+// KeyName: system.defaultIsolationGroupConfigStoreManagerGlobalMapping
+const DefaultIsolationGroupConfigStoreManagerGlobalMapping ListKey = -1 // This is a hack to put it in a different list due to it being a different config type
 
 var IntKeys = map[IntKey]DynamicInt{
 	TestGetIntPropertyKey: DynamicInt{

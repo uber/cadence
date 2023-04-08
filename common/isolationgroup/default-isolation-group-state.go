@@ -54,17 +54,16 @@ type defaultConfig struct {
 }
 
 type defaultIsolationGroupStateHandler struct {
-	status                          int32
-	done                            chan struct{}
-	log                             log.Logger
-	domainCache                     cache.DomainCache
-	globalIsolationGroupDrains      dynamicconfig.Client
-	globalIsolationGroupDrainClient dynamicconfig.Client
-	config                          defaultConfig
-	subscriptionMu                  sync.Mutex
-	valuesMu                        sync.RWMutex
-	lastSeen                        *isolationGroups
-	updateCB                        func()
+	status                     int32
+	done                       chan struct{}
+	log                        log.Logger
+	domainCache                cache.DomainCache
+	globalIsolationGroupDrains dynamicconfig.Client
+	config                     defaultConfig
+	subscriptionMu             sync.Mutex
+	valuesMu                   sync.RWMutex
+	lastSeen                   *isolationGroups
+	updateCB                   func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
 	// for notifying when there's a state change
 	subscriptions map[string]map[string]chan<- ChangeEvent
@@ -295,18 +294,13 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 }
 
 // ----- Mappers -----
-func mapDynamicConfigResponse(in interface{}) (out types.IsolationGroupConfiguration, err error) {
+func mapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
 	if in == nil {
 		return nil, nil
 	}
 
-	dcData, ok := in.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("failed to parse dynamic config data, unexpected format returned: %v, (%T)", in, in)
-	}
-
-	out = make(types.IsolationGroupConfiguration, len(dcData))
-	for _, v := range dcData {
+	out = make(types.IsolationGroupConfiguration, len(in))
+	for _, v := range in {
 		v1, ok := v.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
@@ -334,7 +328,7 @@ func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
 	for k := range in {
 		v, ok := in[k].(string)
 		if !ok {
-			return nil, fmt.Errorf("failed to get all-isolation-groups resonse from dynamic config: got %v (%T)", in[k], in[k])
+			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
 		}
 		allIsolationGroups = append(allIsolationGroups, v)
 	}
