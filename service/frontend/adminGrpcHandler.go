@@ -38,7 +38,7 @@ func newAdminGRPCHandler(h AdminHandler) adminGRPCHandler {
 }
 
 func (g adminGRPCHandler) register(dispatcher *yarpc.Dispatcher) {
-	dispatcher.Register(rename(adminv1.BuildAdminAPIYARPCProcedures(g)))
+	dispatcher.Register(adminv1.BuildAdminAPIYARPCProcedures(g))
 }
 
 func (g adminGRPCHandler) AddSearchAttribute(ctx context.Context, request *adminv1.AddSearchAttributeRequest) (*adminv1.AddSearchAttributeResponse, error) {
