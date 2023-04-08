@@ -58,7 +58,7 @@ $(BUILD)/fmt: $(BUILD)/copyright # formatting must occur only after all other go
 $(BUILD)/copyright: $(BUILD)/codegen # must add copyright to generated code, sometimes needs re-formatting
 $(BUILD)/codegen: $(BUILD)/thrift $(BUILD)/protoc
 $(BUILD)/thrift: $(BUILD)/go_mod_check
-$(BUILD)/protoc: $(BUILD)/go_mod_check
+$(BUILD)/protoc: $(BUILD)/go_mod_check $(BUILD)/proto-lint
 $(BUILD)/go_mod_check:
 
 # ====================================
@@ -287,33 +287,47 @@ $(THRIFT_GEN): $(THRIFT_FILES) $(BIN)/thriftrw $(BIN)/thriftrw-plugin-yarpc | $(
 PROTO_ROOT := proto
 # output location is defined by `option go_package` in the proto files, all must stay in sync with this
 PROTO_OUT := .gen/proto
-PROTO_FILES = $(shell find -L ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs" | grep -v public)
-PROTO_DIRS = $(sort $(dir $(PROTO_FILES)))
+# -L because proto/public is a symlink to the idls submodule
+RAW_PROTO_FILES = $(shell find -L ./$(PROTO_ROOT) -name "*.proto" | grep -v "persistenceblobs")
+
+# copy protos into a build dir, and rewrite them so they do not conflict with the client library.
+# ./proto/... -> .build/proto/...
+MODIFIED_PROTO_FILES = $(addprefix $(BUILD),$(subst ./,/,$(RAW_PROTO_FILES)))
+
+$(MODIFIED_PROTO_FILES): $(RAW_PROTO_FILES)
+	$(call ensure_idl_submodule)
+	$Q mkdir -p $(dir $@)
+	$Q # rewrite the proto package name
+	$Q perl -pe 's/^package (.*)/package server.\1/' $(subst .build/,./,$@) \
+		| perl -pe 's/^(option go_package = .*)cadence-idl\/go(.*)/\1cadence\/.gen\2/g' > $@
+
+MODIFIED_PROTO_DIRS = $(sort $(dir $(MODIFIED_PROTO_FILES)))
 
 # protoc splits proto files into directories, otherwise protoc-gen-gogofast is complaining about inconsistent package
 # import paths due to multiple packages being compiled at once.
 #
 # After compilation files are moved to final location, as plugins adds additional path based on proto package.
-$(BUILD)/protoc: $(PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
+$(BUILD)/protoc: $(MODIFIED_PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/protoc-gen-gogofast $(BIN)/protoc-gen-yarpc-go | $(BUILD)
 	$(call ensure_idl_submodule)
 	$Q mkdir -p $(PROTO_OUT)
 	$Q echo "protoc..."
 	$Q chmod +x $(STABLE_BIN)/$(PROTOC_VERSION_BIN)
-	$Q $(foreach PROTO_DIR,$(PROTO_DIRS),$(EMULATE_X86) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) \
+	$Q $(foreach PROTO_DIR,$(MODIFIED_PROTO_DIRS),$(EMULATE_X86) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) \
 		--plugin $(BIN)/protoc-gen-gogofast \
 		--plugin $(BIN)/protoc-gen-yarpc-go \
-		-I=$(PROTO_ROOT)/public \
-		-I=$(PROTO_ROOT)/internal \
+		-I=$(BUILD)/proto/public \
+		-I=$(BUILD)/proto/internal \
 		-I=$(PROTOC_UNZIP_DIR)/include \
 		--gogofast_out=Mgoogle/protobuf/duration.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/field_mask.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/wrappers.proto=github.com/gogo/protobuf/types,paths=source_relative:$(PROTO_OUT) \
 		--yarpc-go_out=$(PROTO_OUT) \
-		$$(find $(PROTO_DIR) -name '*.proto');\
+		$$(find ./$(PROTO_DIR) -name '*.proto');\
 	)
-	$Q # This directory exists for local/buildkite but not for docker builds.
-	$Q if [ -d "$(PROTO_OUT)/uber/cadence" ]; then \
-		cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/; \
-		rm -r $(PROTO_OUT)/uber; \
-	   fi
+	$Q # rewrite the hard-coded-and-not-configurable yarpc service names (in place) to exclude the server prefix.
+	$Q # this is done prior to the rename so the final files only exist when everything succeeds
+	$Q perl -pi -e 's/^(\s+ServiceName:\s+)"server.uber/\1"uber/g' $$(find $(PROTO_OUT)/uber/cadence -type f -name '*.go')
+	$Q # protoc generates to the/import/path but we want a flatter structure
+	$Q cp -R $(PROTO_OUT)/uber/cadence/* $(PROTO_OUT)/
+	$Q rm -r $(PROTO_OUT)/uber
 	$Q touch $@
 
 # ====================================
@@ -330,7 +344,12 @@ $(BUILD)/protoc: $(PROTO_FILES) $(STABLE_BIN)/$(PROTOC_VERSION_BIN) $(BIN)/proto
 # other intermediates
 # ====================================
 
-$(BUILD)/proto-lint: $(PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
+$(BUILD)/proto-lint: $(MODIFIED_PROTO_FILES) $(STABLE_BIN)/$(BUF_VERSION_BIN) | $(BUILD)
+	$Q # make sure we don't use google.protobuf.Any anywhere.  this is not impossible to support, but requires care.
+	$Q if >&2 grep -F 'google.protobuf.Any' $(RAW_PROTO_FILES); then \
+		>&2 echo 'google.protobuf.Any is potentially unsafe due to package rewriting'; \
+		exit 1; \
+	fi
 	$Q cd $(PROTO_ROOT) && ../$(STABLE_BIN)/$(BUF_VERSION_BIN) lint
 	$Q touch $@
 
@@ -456,7 +475,7 @@ tools: $(TOOLS)
 go-generate: $(BIN)/mockgen $(BIN)/enumer $(BIN)/mockery  $(BIN)/gowrap ## run go generate to regen mocks, enums, etc
 	$Q echo "running go generate ./..., this takes a minute or more..."
 	$Q # add our bins to PATH so `go generate` can find them
-	$Q $(BIN_PATH) go generate $(if $(verbose),-v) ./...
+	$Q $(BIN_PATH) go generate $(if $(verbose),-x) ./...
 	$Q echo "updating copyright headers"
 	$Q $(MAKE) --no-print-directory copyright
 	$Q $(MAKE) --no-print-directory fmt

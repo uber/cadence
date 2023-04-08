@@ -22,6 +22,9 @@ package cli
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"time"
 
 	"go.uber.org/yarpc/peer"
@@ -36,14 +39,10 @@ import (
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/zap"
 
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
-
-	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	serverAdmin "github.com/uber/cadence/.gen/go/admin/adminserviceclient"
 	serverFrontend "github.com/uber/cadence/.gen/go/cadence/workflowserviceclient"
+	adminv1 "github.com/uber/cadence/.gen/proto/admin/v1"
+	apiv1 "github.com/uber/cadence/.gen/proto/api/v1"
 
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
