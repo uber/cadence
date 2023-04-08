@@ -53,6 +53,7 @@ var defaultConfigValues = &csc.ClientConfig{
 }
 
 type configStoreClient struct {
+	configStoreType    persistence.ConfigType
 	values             atomic.Value
 	lastUpdatedTime    time.Time
 	config             *csc.ClientConfig
@@ -68,7 +69,12 @@ type cacheEntry struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Persistence, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+func NewConfigStoreClient(clientCfg *csc.ClientConfig,
+	persistenceCfg *config.Persistence,
+	logger log.Logger,
+	doneCh chan struct{},
+	configType persistence.ConfigType,
+) (dc.Client, error) {
 	if persistenceCfg == nil {
 		return nil, errors.New("persistence cfg is nil")
 	}
@@ -87,7 +93,7 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Pe
 		clientCfg = defaultConfigValues
 	}
 
-	client, err := newConfigStoreClient(clientCfg, store.NoSQL, logger, doneCh)
+	client, err := newConfigStoreClient(clientCfg, store.NoSQL, logger, doneCh, configType)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +104,13 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Pe
 	return client, nil
 }
 
-func newConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.NoSQL, logger log.Logger, doneCh chan struct{}) (*configStoreClient, error) {
+func newConfigStoreClient(
+	clientCfg *csc.ClientConfig,
+	persistenceCfg *config.NoSQL,
+	logger log.Logger,
+	doneCh chan struct{},
+	configType persistence.ConfigType,
+) (*configStoreClient, error) {
 	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger, nil)
 	if err != nil {
 		return nil, err
@@ -109,6 +121,7 @@ func newConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.No
 		doneCh:             doneCh,
 		configStoreManager: persistence.NewConfigStoreManagerImpl(store, logger),
 		logger:             logger,
+		configStoreType:    configType,
 	}
 
 	return client, nil
@@ -405,7 +418,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 		ctx,
 		&persistence.UpdateDynamicConfigRequest{
 			Snapshot: newSnapshot,
-		}, persistence.DynamicConfig,
+		}, csc.configStoreType,
 	)
 
 	select {
@@ -498,7 +511,7 @@ func (csc *configStoreClient) update() error {
 	ctx, cancel := context.WithTimeout(context.Background(), csc.config.FetchTimeout)
 	defer cancel()
 
-	res, err := csc.configStoreManager.FetchDynamicConfig(ctx, persistence.DynamicConfig)
+	res, err := csc.configStoreManager.FetchDynamicConfig(ctx, csc.configStoreType)
 
 	select {
 	case <-ctx.Done():
@@ -662,6 +675,10 @@ func validateKeyDataBlobPair(key dc.Key, blob *types.DataBlob) error {
 		}
 	case dc.MapKey:
 		if _, ok := value.(map[string]interface{}); !ok {
+			return err
+		}
+	case dc.ListKey:
+		if _, ok := value.([]interface{}); !ok {
 			return err
 		}
 	default:

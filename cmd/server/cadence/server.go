@@ -24,6 +24,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/uber/cadence/common/persistence"
+
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
 
@@ -127,6 +129,7 @@ func (s *server) startService() common.Daemon {
 				&s.cfg.Persistence,
 				params.Logger,
 				s.doneC,
+				persistence.DynamicConfig,
 			)
 		case dynamicconfig.FileBasedClient:
 			params.Logger.Info("initialising File Based dynamic config client")
