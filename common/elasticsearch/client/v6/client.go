@@ -167,7 +167,9 @@ func (c *ElasticV6) Search(ctx context.Context, index, body string) (*client.Res
 
 	if esResult != nil && esResult.Hits != nil {
 		for _, h := range esResult.Hits.Hits {
-			hits = append(hits, &client.SearchHit{Source: *h.Source})
+			if h.Source != nil {
+				hits = append(hits, &client.SearchHit{Source: *h.Source})
+			}
 			sort = h.Sort
 		}
 	}
@@ -182,7 +184,9 @@ func (c *ElasticV6) Search(ctx context.Context, index, body string) (*client.Res
 	if len(esResult.Aggregations) > 0 {
 		result.Aggregations = make(map[string]json.RawMessage, len(esResult.Aggregations))
 		for key, agg := range esResult.Aggregations {
-			result.Aggregations[key] = *agg
+			if agg != nil {
+				result.Aggregations[key] = *agg
+			}
 		}
 	}
 
