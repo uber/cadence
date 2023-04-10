@@ -1748,7 +1748,7 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	err := adh.Resource.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
+	err := adh.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
 	if err != nil {
 		return nil, err
 	}
