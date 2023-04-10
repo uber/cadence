@@ -1734,7 +1734,7 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	ig := adh.Resource.GetIsolationGroupState()
+	ig := adh.GetIsolationGroupState()
 	if ig == nil {
 		return &types.GetGlobalIsolationGroupsResponse{}, nil
 	}
