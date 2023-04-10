@@ -26,7 +26,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/elasticsearch/bulk"
 )
 
 // Client is a generic ES client implementation.
@@ -45,7 +45,7 @@ type Client interface {
 	PutMapping(ctx context.Context, index, body string) error
 	// RunBulkProcessor starts bulk indexing processor
 	// @TODO consider to extract Bulk Processor as a separate entity
-	RunBulkProcessor(ctx context.Context, p *elasticsearch.BulkProcessorParameters) (elasticsearch.GenericBulkProcessor, error)
+	RunBulkProcessor(ctx context.Context, p *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error)
 	// Scroll retrieves the next batch of results for a scrolling search.
 	Scroll(ctx context.Context, index, body, scrollID string) (*Response, error)
 	// Search returns Elasticsearch hit bytes and additional metadata
@@ -56,8 +56,21 @@ type Client interface {
 type Response struct {
 	TookInMillis int64
 	TotalHits    int64
-	Hits         [][]byte // response from ES server as bytes, used to unmarshal to internal structs
+	Hits         *SearchHits // response from ES server as bytes, used to unmarshal to internal structs
 	Aggregations map[string]json.RawMessage
 	Sort         []interface{}
 	ScrollID     string
+}
+
+// SearchHits specifies the list of search hits.
+type SearchHits struct {
+	Hits []*SearchHit `json:"hits,omitempty"` // the actual hits returned
+}
+
+// SearchHit is a single hit.
+type SearchHit struct {
+	Index  string          `json:"_index,omitempty"`  // index name
+	ID     string          `json:"_id,omitempty"`     // external or internal
+	Sort   []interface{}   `json:"sort,omitempty"`    // sort information
+	Source json.RawMessage `json:"_source,omitempty"` // stored document source
 }
