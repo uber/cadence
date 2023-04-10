@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -336,22 +335,10 @@ func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
 }
 
 func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) ([]*types.DynamicConfigValue, error) {
-
-	// store as a plain list for simplicity
-	var isolationGroupList []types.IsolationGroupPartition
-	for _, v := range in {
-		isolationGroupList = append(isolationGroupList, v)
-	}
-	// ensure determinitism in list ordering for convenience
-	sort.Slice(isolationGroupList, func(i, j int) bool {
-		return isolationGroupList[i].Name < isolationGroupList[j].Name
-	})
-
-	jsonData, err := json.Marshal(isolationGroupList)
+	jsonData, err := json.Marshal(in.ToPartitionList())
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal input for dynamic config: %w", err)
 	}
-
 	out := []*types.DynamicConfigValue{
 		&types.DynamicConfigValue{
 			Value: &types.DataBlob{
