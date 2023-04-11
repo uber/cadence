@@ -176,7 +176,6 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	}
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
-	c.logger.Info(fmt.Sprintf("Query Stats: response time - %d ms, scanned docs - %d, total docs - %d", resp.TimeUsedMs, resp.NumDocsScanned, resp.TotalDocs))
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	//columnDataTypes := schema.ColumnDataTypes
 	columnNames := schema.ColumnNames
