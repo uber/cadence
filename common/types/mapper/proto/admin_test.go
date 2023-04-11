@@ -246,7 +246,7 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 			expected: &adminv1.GetGlobalIsolationGroupsResponse{},
 		},
 		"nil - 2": {
-			expected: &adminv1.GetGlobalIsolationGroupsResponse{},
+			expected: nil,
 		},
 	}
 
@@ -436,7 +436,7 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 		},
 		"nil": {
 			in:       nil,
-			expected: &types.UpdateGlobalIsolationGroupsRequest{},
+			expected: nil,
 		},
 	}
 

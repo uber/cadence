@@ -980,3 +980,17 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 		})
 	}
 }
+
+func Test_IsolationGroupsNotEnabled(t *testing.T) {
+	handler := adminHandlerImpl{
+		Resource: &resource.Test{
+			Logger:          loggerimpl.NewNopLogger(),
+			IsolationGroups: nil, // valid state, the isolation-groups feature is not available for all persistence types
+			MetricsClient:   metrics.NewNoopMetricsClient(),
+		},
+	}
+	assert.NotPanics(t, func() {
+		handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
+		handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
+	})
+}
