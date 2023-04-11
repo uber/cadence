@@ -1735,13 +1735,9 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if adh.GetIsolationGroupState() == nil {
-		adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
+		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	ig := adh.GetIsolationGroupState()
-	if ig == nil {
-		return &types.GetGlobalIsolationGroupsResponse{}, nil
-	}
-	return ig.GetGlobalState(ctx)
+	return adh.GetIsolationGroupState().GetGlobalState(ctx)
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
@@ -1752,7 +1748,7 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 		return nil, adh.error(errRequestNotSet, scope)
 	}
 	if adh.GetIsolationGroupState() == nil {
-		adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
+		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
 	err := adh.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
 	if err != nil {
