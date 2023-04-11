@@ -1167,9 +1167,12 @@ func ToDynamicConfigFilter(t *adminv1.DynamicConfigFilter) *types.DynamicConfigF
 
 func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *adminv1.GetGlobalIsolationGroupsResponse {
 	if t == nil {
-		return nil
+		return &adminv1.GetGlobalIsolationGroupsResponse{}
 	}
 	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	if cfg == nil || len(cfg.IsolationGroups) == 0 {
+		return &adminv1.GetGlobalIsolationGroupsResponse{}
+	}
 	return &adminv1.GetGlobalIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -1200,11 +1203,11 @@ func ToGetGlobalIsolationGroupsRequest(t *adminv1.GetGlobalIsolationGroupsReques
 
 func ToGetGlobalIsolationGroupsResponse(t *adminv1.GetGlobalIsolationGroupsResponse) *types.GetGlobalIsolationGroupsResponse {
 	if t == nil {
-		return nil
+		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
-	if ig == nil {
-		return nil
+	if ig == nil || len(*ig) == 0 {
+		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	return &types.GetGlobalIsolationGroupsResponse{
 		IsolationGroups: *ig,

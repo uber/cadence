@@ -242,27 +242,22 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 			},
 		},
 		"nil - 1": {
-			in: &types.GetGlobalIsolationGroupsResponse{},
-			expected: &adminv1.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: &adminv1.IsolationGroupConfiguration{
-					IsolationGroups: nil,
-				},
-			},
+			in:       &types.GetGlobalIsolationGroupsResponse{},
+			expected: &adminv1.GetGlobalIsolationGroupsResponse{},
 		},
 		"nil - 2": {
-			expected: nil,
+			expected: &adminv1.GetGlobalIsolationGroupsResponse{},
 		},
 	}
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
 			res := FromGetGlobalIsolationGroupsResponse(td.in)
-			if res != nil && res.IsolationGroups != nil {
-				sort.Slice(res.IsolationGroups.IsolationGroups, func(i int, j int) bool {
-					return res.IsolationGroups.IsolationGroups[i].Name < res.IsolationGroups.IsolationGroups[j].Name
-				})
+			assert.Equal(t, td.expected, res, "mapping")
+			roundTrip := ToGetGlobalIsolationGroupsResponse(res)
+			if td.in != nil {
+				assert.Equal(t, td.in, roundTrip, "roundtrip")
 			}
-			assert.Equal(t, td.expected, res)
 		})
 	}
 }
