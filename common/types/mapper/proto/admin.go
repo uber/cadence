@@ -21,6 +21,8 @@
 package proto
 
 import (
+	"sort"
+
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
 	"github.com/uber/cadence/common/types"
 )
@@ -1287,6 +1289,12 @@ func isolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *adminv1.I
 			State: adminv1.IsolationGroupState(v.State),
 		})
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i] == nil || out[j] == nil {
+			return false
+		}
+		return out[i].Name < out[j].Name
+	})
 	return &adminv1.IsolationGroupConfiguration{
 		IsolationGroups: out,
 	}

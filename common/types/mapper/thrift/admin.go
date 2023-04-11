@@ -21,6 +21,8 @@
 package thrift
 
 import (
+	"sort"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -816,6 +818,12 @@ func isolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *admin.Iso
 			State: igStatePtr(admin.IsolationGroupState(v.State)),
 		})
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i] == nil || out[j] == nil {
+			return false
+		}
+		return *out[i].Name < *out[j].Name
+	})
 	return &admin.IsolationGroupConfiguration{
 		IsolationGroups: out,
 	}
