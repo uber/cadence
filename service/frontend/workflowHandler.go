@@ -44,6 +44,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceutils "github.com/uber/cadence/common/persistence/persistence-utils"
 	"github.com/uber/cadence/common/quotas"
@@ -614,9 +615,10 @@ func (wh *WorkflowHandler) PollForActivityTask(
 	pollerID := uuid.New()
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
-			DomainUUID:  domainID,
-			PollerID:    pollerID,
-			PollRequest: pollRequest,
+			DomainUUID:     domainID,
+			PollerID:       pollerID,
+			PollRequest:    pollRequest,
+			IsolationGroup: partition.IsolationGroupFromContext(ctx),
 		})
 		return err
 	}
@@ -730,9 +732,10 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
 		matchingResp, err = wh.GetMatchingClient().PollForDecisionTask(ctx, &types.MatchingPollForDecisionTaskRequest{
-			DomainUUID:  domainID,
-			PollerID:    pollerID,
-			PollRequest: pollRequest,
+			DomainUUID:     domainID,
+			PollerID:       pollerID,
+			PollRequest:    pollRequest,
+			IsolationGroup: partition.IsolationGroupFromContext(ctx),
 		})
 		return err
 	}
@@ -2182,7 +2185,7 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
-		domainID, startRequest, time.Now(), nil)
+		domainID, startRequest, time.Now(), partition.ConfigFromContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -2757,7 +2760,7 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID:             domainID,
 		SignalWithStartRequest: signalWithStartRequest,
-		PartitionConfig:        nil,
+		PartitionConfig:        partition.ConfigFromContext(ctx),
 	})
 	if err != nil {
 		return nil, wh.error(err, scope, tags...)
@@ -3400,7 +3403,7 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 	}
 	startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
 		domainName, request.Identity, wfExecution.WorkflowID)
-	req, err := common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now(), nil)
+	req, err := common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now(), partition.ConfigFromContext(ctx))
 	if err != nil {
 		return nil, err
 	}
