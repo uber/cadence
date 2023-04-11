@@ -52,6 +52,7 @@ type (
 		domainName               string
 		source                   types.TaskSource
 		forwardedFrom            string     // name of the child partition this task is forwarded from (empty if not forwarded)
+		isolationGroup           string     // isolation group of this task (empty if it can be polled by workers from any isolation group)
 		responseC                chan error // non-nil only where there is a caller waiting for response (sync-match)
 		backlogCountHint         int64
 		activityTaskDispatchInfo *types.ActivityTaskDispatchInfo
@@ -65,6 +66,7 @@ func newInternalTask(
 	forwardedFrom string,
 	forSyncMatch bool,
 	activityTaskDispatchInfo *types.ActivityTaskDispatchInfo,
+	isolationGroup string,
 ) *InternalTask {
 	task := &InternalTask{
 		event: &genericTaskInfo{
@@ -73,6 +75,7 @@ func newInternalTask(
 		},
 		source:                   source,
 		forwardedFrom:            forwardedFrom,
+		isolationGroup:           isolationGroup,
 		activityTaskDispatchInfo: activityTaskDispatchInfo,
 	}
 	if forSyncMatch {

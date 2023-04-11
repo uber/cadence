@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -144,11 +145,13 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 		panic(err)
 	}
 	tm := newTestTaskManager(logger)
+	mockPartitioner := partition.NewMockPartitioner(controller)
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
 	me := newMatchingEngine(
-		cfg, tm, nil, logger, mockDomainCache,
+		cfg, tm, nil, logger, mockDomainCache, mockPartitioner,
 	)
 	tl := "tl"
 	dID := "domain"

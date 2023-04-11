@@ -94,6 +94,7 @@ func (s *Service) Start() {
 		s.GetMetricsClient(),
 		s.GetDomainCache(),
 		s.GetMembershipResolver(),
+		s.GetPartitioner(),
 	)
 
 	s.handler = NewHandler(engine, s.config, s.GetDomainCache(), s.GetMetricsClient(), s.GetLogger(), s.GetThrottledLogger())
