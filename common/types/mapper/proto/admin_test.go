@@ -441,13 +441,18 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 		},
 		"nil": {
 			in:       nil,
-			expected: nil,
+			expected: &types.UpdateGlobalIsolationGroupsRequest{},
 		},
 	}
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToUpdateGlobalIsolationGroupsRequest(td.in))
+			res := ToUpdateGlobalIsolationGroupsRequest(td.in)
+			assert.Equal(t, td.expected, res, "conversion")
+			roundTrip := FromUpdateGlobalIsolationGroupsRequest(res)
+			if td.in != nil {
+				assert.Equal(t, td.in, roundTrip, "roundtrip")
+			}
 		})
 	}
 }

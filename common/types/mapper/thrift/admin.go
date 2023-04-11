@@ -698,6 +698,9 @@ func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsRespo
 		return nil
 	}
 	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	if cfg == nil || cfg.GetIsolationGroups() == nil {
+		return &admin.GetGlobalIsolationGroupsResponse{}
+	}
 	return &admin.GetGlobalIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -711,7 +714,7 @@ func ToGetGlobalIsolationGroupsResponse(t *admin.GetGlobalIsolationGroupsRespons
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
-	if ig == nil {
+	if ig == nil || len(*ig) == 0 {
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	return &types.GetGlobalIsolationGroupsResponse{
@@ -751,8 +754,8 @@ func FromUpdateGlobalIsolationGroupsResponse(t *types.UpdateGlobalIsolationGroup
 }
 
 func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroupsRequest) *admin.UpdateGlobalIsolationGroupsRequest {
-	if t == nil {
-		return nil
+	if t == nil || t.IsolationGroups == nil {
+		return &admin.UpdateGlobalIsolationGroupsRequest{}
 	}
 	return &admin.UpdateGlobalIsolationGroupsRequest{
 		IsolationGroups: isolationGroupConfigToIDL(&t.IsolationGroups),
@@ -761,10 +764,10 @@ func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroups
 
 func ToUpdateGlobalIsolationGroupsRequest(t *admin.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
 	if t == nil {
-		return nil
+		return &types.UpdateGlobalIsolationGroupsRequest{}
 	}
 	cfg := isolationGroupConfigFromIDL(t.IsolationGroups)
-	if cfg == nil {
+	if cfg == nil || len(*cfg) == 0 {
 		return &types.UpdateGlobalIsolationGroupsRequest{}
 	}
 	return &types.UpdateGlobalIsolationGroupsRequest{
