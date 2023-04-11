@@ -699,7 +699,7 @@ func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	cfg := isolationGroupConfigToIDL(t.IsolationGroups)
 	if cfg == nil || cfg.GetIsolationGroups() == nil {
 		return &admin.GetGlobalIsolationGroupsResponse{}
 	}
@@ -735,7 +735,7 @@ func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	cfg := isolationGroupConfigToIDL(t.IsolationGroups)
 	return &admin.GetDomainIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -756,20 +756,23 @@ func FromUpdateGlobalIsolationGroupsResponse(t *types.UpdateGlobalIsolationGroup
 }
 
 func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroupsRequest) *admin.UpdateGlobalIsolationGroupsRequest {
-	if t == nil || t.IsolationGroups == nil {
+	if t == nil {
+		return nil
+	}
+	if t.IsolationGroups == nil {
 		return &admin.UpdateGlobalIsolationGroupsRequest{}
 	}
 	return &admin.UpdateGlobalIsolationGroupsRequest{
-		IsolationGroups: isolationGroupConfigToIDL(&t.IsolationGroups),
+		IsolationGroups: isolationGroupConfigToIDL(t.IsolationGroups),
 	}
 }
 
 func ToUpdateGlobalIsolationGroupsRequest(t *admin.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
 	if t == nil {
-		return &types.UpdateGlobalIsolationGroupsRequest{}
+		return nil
 	}
 	cfg := isolationGroupConfigFromIDL(t.IsolationGroups)
-	if cfg == nil || len(*cfg) == 0 {
+	if cfg == nil {
 		return &types.UpdateGlobalIsolationGroupsRequest{}
 	}
 	return &types.UpdateGlobalIsolationGroupsRequest{
@@ -807,12 +810,12 @@ func ToUpdateDomainIsolationGroupsRequest(t *admin.UpdateDomainIsolationGroupsRe
 	}
 }
 
-func isolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *admin.IsolationGroupConfiguration {
+func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *admin.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
 	var out []*admin.IsolationGroupPartition
-	for _, v := range *in {
+	for _, v := range in {
 		out = append(out, &admin.IsolationGroupPartition{
 			Name:  strPtr(v.Name),
 			State: igStatePtr(admin.IsolationGroupState(v.State)),

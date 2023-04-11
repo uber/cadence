@@ -263,7 +263,7 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 		},
 		"nil": {
 			in:       nil,
-			expected: &types.UpdateGlobalIsolationGroupsRequest{},
+			expected: nil,
 		},
 	}
 
