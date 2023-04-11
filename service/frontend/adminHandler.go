@@ -1727,11 +1727,34 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 }
 
 func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (_ *types.GetGlobalIsolationGroupsResponse, retError error) {
-	panic("not implemented")
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.GetGlobalIsolationGroups)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if adh.GetIsolationGroupState() == nil {
+		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
+	}
+	return adh.GetIsolationGroupState().GetGlobalState(ctx)
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
-	panic("Not implemented")
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateGlobalIsolationGroups)
+	defer sw.Stop()
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	if adh.GetIsolationGroupState() == nil {
+		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
+	}
+	err := adh.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
+	if err != nil {
+		return nil, err
+	}
+	return &types.UpdateGlobalIsolationGroupsResponse{}, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

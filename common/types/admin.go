@@ -20,6 +20,8 @@
 
 package types
 
+import "sort"
+
 // AddSearchAttributeRequest is an internal type (TBD...)
 type AddSearchAttributeRequest struct {
 	SearchAttribute map[string]IndexedValueType `json:"searchAttribute,omitempty"`
@@ -391,6 +393,18 @@ type IsolationGroupPartition struct {
 //
 // Indicating that task processing isn't to occur within this isolationGroup anymore, but all others are ok.
 type IsolationGroupConfiguration map[string]IsolationGroupPartition
+
+func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition {
+	var out []IsolationGroupPartition
+	for _, v := range i {
+		out = append(out, v)
+	}
+	// ensure determinitism in list ordering for convenience
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Name < out[j].Name
+	})
+	return out
+}
 
 type GetGlobalIsolationGroupsRequest struct{}
 
