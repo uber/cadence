@@ -94,6 +94,7 @@ type (
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
+		enableIsolation bool
 		taskListID      *taskListID
 		taskListKind    types.TaskListKind // sticky taskList has different process in persistence
 		config          *taskListConfig
@@ -158,6 +159,7 @@ func newTaskListManager(
 	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
 
 	tlMgr := &taskListManagerImpl{
+		enableIsolation:     taskListConfig.EnableTasklistIsolation(),
 		domainCache:         e.domainCache,
 		clusterMetadata:     e.clusterMetadata,
 		partitioner:         e.partitioner,
@@ -244,6 +246,10 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams) (bool, error) {
 	c.startWG.Wait()
+	if c.shouldReload() {
+		c.Stop()
+		return false, errShutdown
+	}
 	if params.forwardedFrom == "" {
 		// request sent by history service
 		c.liveness.markAlive(time.Now())
@@ -339,6 +345,10 @@ func (c *taskListManagerImpl) GetTask(
 	ctx context.Context,
 	maxDispatchPerSecond *float64,
 ) (*InternalTask, error) {
+	if c.shouldReload() {
+		c.Stop()
+		return nil, ErrNoTasks
+	}
 	c.liveness.markAlive(time.Now())
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
@@ -555,7 +565,11 @@ func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind type
 }
 
 func (c *taskListManagerImpl) isIsolationEnabled() bool {
-	return c.taskListKind != types.TaskListKindSticky && c.config.EnableTasklistIsolation
+	return c.taskListKind != types.TaskListKindSticky && c.enableIsolation
+}
+
+func (c *taskListManagerImpl) shouldReload() bool {
+	return c.config.EnableTasklistIsolation() != c.enableIsolation && c.taskListKind != types.TaskListKindSticky
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {

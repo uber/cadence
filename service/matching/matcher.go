@@ -283,7 +283,7 @@ forLoop:
 func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*InternalTask, error) {
 	isolatedTaskC, ok := tm.isolatedTaskC[isolationGroup]
 	if !ok && isolationGroup != "" {
-		return nil, fmt.Errorf("invalid isolation group: %s", isolationGroup)
+		return nil, &types.BadRequestError{Message: fmt.Sprintf("invalid isolation group: %s", isolationGroup)}
 	}
 	// try local match first without blocking until context timeout
 	if task, err := tm.pollNonBlocking(ctx, isolatedTaskC, tm.taskC, tm.queryTaskC); err == nil {

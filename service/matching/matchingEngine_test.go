@@ -1216,6 +1216,65 @@ func (s *matchingEngineSuite) TaskExpiryAndCompletion(taskType int) {
 	}
 }
 
+func (s *matchingEngineSuite) TestUnloadActivityTasklistOnIsolationConfigChange() {
+	s.UnloadTasklistOnIsolationConfigChange(persistence.TaskListTypeActivity)
+}
+
+func (s *matchingEngineSuite) TestUnloadDecisionTasklistOnIsolationConfigChange() {
+	s.UnloadTasklistOnIsolationConfigChange(persistence.TaskListTypeDecision)
+}
+
+func (s *matchingEngineSuite) UnloadTasklistOnIsolationConfigChange(taskType int) {
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(50 * time.Millisecond)
+	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(false)
+
+	const taskCount = 1000
+	const initialRangeID = 102
+	// TODO: Understand why publish is low when rangeSize is 3
+	const rangeSize = 30
+
+	testParam := newTestParam(taskType)
+	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
+	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
+
+	addRequest := &addTaskRequest{
+		TaskType:                      taskType,
+		DomainUUID:                    testParam.DomainID,
+		Execution:                     testParam.WorkflowExecution,
+		ScheduleID:                    333,
+		TaskList:                      testParam.TaskList,
+		ScheduleToStartTimeoutSeconds: 1,
+	}
+	_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
+	s.NoError(err)
+
+	// enable isolation and verify that poller should not get any task
+	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true)
+	s.setupGetIsolationGroupByDomainIDMock(testParam.DomainID)
+	s.setupRecordTaskStartedMock(taskType, testParam, false)
+
+	pollReq := &pollTaskRequest{
+		TaskType:   taskType,
+		DomainUUID: testParam.DomainID,
+		TaskList:   testParam.TaskList,
+		Identity:   testParam.Identity,
+	}
+	result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
+	s.NoError(err)
+	s.Equal(&pollTaskResponse{}, result)
+
+	result, err = pollTask(s.matchingEngine, s.handlerContext, pollReq)
+	s.NoError(err)
+	s.NotNil(result)
+	s.assertPollTaskResponse(taskType, testParam, 333, result)
+
+	// disable isolation again and verify add tasklist should fail
+	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(false)
+	_, err = addTask(s.matchingEngine, s.handlerContext, addRequest)
+	s.Error(err)
+	s.Contains(err.Error(), errShutdown.Error())
+}
+
 func (s *matchingEngineSuite) setupRecordTaskStartedMock(taskType int, param *testParam, checkDuplicate bool) {
 	startedTasks := make(map[int64]bool)
 	if taskType == persistence.TaskListTypeActivity {

@@ -101,7 +101,7 @@ type (
 		NumWritePartitions              func() int
 		NumReadPartitions               func() int
 		// isolation configuration
-		EnableTasklistIsolation bool
+		EnableTasklistIsolation func() bool
 	}
 )
 
@@ -161,8 +161,10 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 	taskListName := id.name
 	taskType := id.taskType
 	return &taskListConfig{
-		RangeSize:                     config.RangeSize,
-		EnableTasklistIsolation:       config.EnableTasklistIsolation(domainName),
+		RangeSize: config.RangeSize,
+		EnableTasklistIsolation: func() bool {
+			return config.EnableTasklistIsolation(domainName)
+		},
 		ActivityTaskSyncMatchWaitTime: config.ActivityTaskSyncMatchWaitTime,
 		GetTasksBatchSize: func() int {
 			return config.GetTasksBatchSize(domainName, taskListName, taskType)
