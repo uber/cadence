@@ -236,6 +236,7 @@ type (
 		PreviousLastWriteVersion int64
 
 		NewWorkflowSnapshot InternalWorkflowSnapshot
+		TTL                 int64
 	}
 
 	// InternalGetReplicationTasksResponse is the response to GetReplicationTask

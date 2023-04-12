@@ -418,6 +418,7 @@ type (
 			replicationTasks []*ReplicationTask,
 			timerTasks []*TimerTask,
 			shardCondition *ShardCondition,
+			ttl int64,
 		) error
 
 		// UpdateWorkflowExecutionWithTasks is for updating a new workflow execution record.

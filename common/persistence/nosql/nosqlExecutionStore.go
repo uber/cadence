@@ -124,7 +124,7 @@ func (d *nosqlExecutionStore) CreateWorkflowExecution(
 		ctx,
 		currentWorkflowWriteReq, workflowExecutionWriteReq,
 		transferTasks, crossClusterTasks, replicationTasks, timerTasks,
-		shardCondition,
+		shardCondition, request.TTL,
 	)
 	if err != nil {
 		conditionFailureErr, isConditionFailedError := err.(*nosqlplugin.WorkflowOperationConditionFailure)

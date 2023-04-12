@@ -45,6 +45,7 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	buffertimeforTTL         = 15
 )
 
 type conflictError struct {
@@ -349,6 +350,13 @@ func (c *contextImpl) CreateWorkflowExecution(
 		}
 	}()
 	domainName := c.GetDomainName()
+
+	//Calculating the TTL for workflow Execution.
+	domainObj, _ := c.shard.GetDomainCache().GetDomainByID(c.domainID)
+	config := domainObj.GetConfig()
+	retention := time.Duration(config.Retention)
+	ttl := (int64(time.Duration(newWorkflow.ExecutionInfo.DecisionStartToCloseTimeout).Seconds()) + int64(retention.Seconds())) + int64(time.Duration(buffertimeforTTL).Seconds())
+
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		// workflow create mode & prev run ID & version
 		Mode:                     createMode,
@@ -357,6 +365,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 
 		NewWorkflowSnapshot: *newWorkflow,
 		DomainName:          domainName,
+		TTL:                 ttl,
 	}
 
 	historySize := int64(len(persistedHistory.Data))

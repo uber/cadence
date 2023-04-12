@@ -1823,6 +1823,14 @@ const (
 	// Value type: Bool
 	// Default value: true
 	EnableShardIDMetrics
+
+	// EnableTTL is which domains are allowed to have workflow executions with a TTL
+	// KeyName: N/A
+	// Value type: Bool
+	// Default value: true
+	// Allowed filters: DomainID
+	EnableTTL
+
 	// LastBoolKey must be the last one in this const group
 	LastBoolKey
 )
@@ -3869,6 +3877,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableShardIDMetrics: DynamicBool{
 		KeyName:      "system.enableShardIDMetrics",
 		Description:  "Enable shardId metrics in persistence client",
+		DefaultValue: true,
+	},
+	EnableTTL: DynamicBool{
+		KeyName:      "enableTTL",
+		Description:  "EnableTTL is which domains are allowed to have workflow executions with a TTL",
 		DefaultValue: true,
 	},
 }

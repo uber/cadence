@@ -40,6 +40,7 @@ func (db *ddb) InsertWorkflowExecutionWithTasks(
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
 	shardCondition *nosqlplugin.ShardCondition,
+	ttl int64,
 ) error {
 	panic("TODO")
 }

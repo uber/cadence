@@ -872,6 +872,8 @@ type (
 		NewWorkflowSnapshot WorkflowSnapshot
 
 		DomainName string
+
+		TTL int64
 	}
 
 	// CreateWorkflowExecutionResponse is the response to CreateWorkflowExecutionRequest

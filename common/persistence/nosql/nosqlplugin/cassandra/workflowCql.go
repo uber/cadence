@@ -244,6 +244,10 @@ workflow_state = ? ` +
 		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum, workflow_last_write_version, workflow_state) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ?, ?, ` + templateChecksumType + `, ?, ?) IF NOT EXISTS `
 
+	templateCreateWorkflowExecutionWithTTL = `INSERT INTO executions (` +
+		`shard_id, domain_id, workflow_id, run_id, type, execution, next_event_id, visibility_ts, task_id, version_histories, version_histories_encoding, checksum, workflow_last_write_version, workflow_state) ` +
+		`VALUES(?, ?, ?, ?, ?, ` + templateWorkflowExecutionType + `, ?, ?, ?, ?, ?, ` + templateChecksumType + `, ?, ?) IF NOT EXISTS USING TTL ?`
+
 	templateCreateTransferTaskQuery = `INSERT INTO executions (` +
 		`shard_id, type, domain_id, workflow_id, run_id, transfer, visibility_ts, task_id) ` +
 		`VALUES(?, ?, ?, ?, ?, ` + templateTransferTaskType + `, ?, ?)`
