@@ -2613,12 +2613,6 @@ const (
 	// Allowed filters: N/A
 	AllIsolationGroups
 
-	// DefaultIsolationGroupConfigStoreManagerGlobalMapping is the dynamic config value for isolation groups
-	// Note: This is not typically used for normal dynamic config (type 0), but instead
-	// it's used only for IsolationGroup config (type 1).
-	// KeyName: system.defaultIsolationGroupConfigStoreManagerGlobalMapping
-	DefaultIsolationGroupConfigStoreManagerGlobalMapping
-
 	LastListKey
 )
 
