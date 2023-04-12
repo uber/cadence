@@ -13,3 +13,15 @@ history.enableCrossClusterOperations:
 history.useNewInitialFailoverVersion:
 - value: true
   constraints: {}
+history.useNewInitialFailoverVersion:
+- value: true
+  constraints: {}
+system.allIsolationGroups:
+- value:
+  - "zone-1"
+  - "zone-2"
+  - "zone-3"
+  constraints: {}
+system.enableTasklistIsolation:
+- value: true
+
