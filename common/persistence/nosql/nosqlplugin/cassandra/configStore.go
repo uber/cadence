@@ -24,8 +24,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gocql/gocql"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
@@ -58,9 +56,6 @@ func (db *cdb) SelectLatestConfig(ctx context.Context, rowType int) (*persistenc
 
 	query := db.session.Query(templateSelectLatestConfig, rowType).WithContext(ctx)
 	err := query.Scan(&rowType, &version, &timestamp, &data, &encoding)
-	if err == gocql.ErrNotFound {
-		return nil, nil
-	}
 	if err != nil {
 		return nil, err
 	}

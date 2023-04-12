@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/definition"
 	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
+	"github.com/uber/cadence/common/elasticsearch/bulk"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -53,7 +54,7 @@ var (
 type (
 	ESProcessor interface {
 		common.Daemon
-		Add(request *es.GenericBulkableAddRequest, key string, kafkaMsg messaging.Message)
+		Add(request *bulk.GenericBulkableAddRequest, key string, kafkaMsg messaging.Message)
 	}
 	// Indexer used to consumer data from kafka then send to ElasticSearch
 	Indexer struct {
@@ -223,7 +224,7 @@ func (i *Indexer) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.M
 	}
 
 	var keyToKafkaMsg string
-	req := &es.GenericBulkableAddRequest{
+	req := &bulk.GenericBulkableAddRequest{
 		Index:       i.esIndexName,
 		Type:        es.GetESDocType(),
 		ID:          docID,
@@ -235,15 +236,15 @@ func (i *Indexer) addMessageToES(indexMsg *indexer.Message, kafkaMsg messaging.M
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
 		doc := i.generateESDoc(indexMsg, keyToKafkaMsg)
 		req.Doc = doc
-		req.RequestType = es.BulkableIndexRequest
+		req.RequestType = bulk.BulkableIndexRequest
 	case indexer.MessageTypeDelete:
 		keyToKafkaMsg = docID
-		req.RequestType = es.BulkableDeleteRequest
+		req.RequestType = bulk.BulkableDeleteRequest
 	case indexer.MessageTypeCreate:
 		keyToKafkaMsg = fmt.Sprintf("%v-%v", kafkaMsg.Partition(), kafkaMsg.Offset())
 		doc := i.generateESDoc(indexMsg, keyToKafkaMsg)
 		req.Doc = doc
-		req.RequestType = es.BulkableCreateRequest
+		req.RequestType = bulk.BulkableCreateRequest
 	default:
 		logger.Error("Unknown message type")
 		i.scope.IncCounter(metrics.IndexProcessorCorruptedData)

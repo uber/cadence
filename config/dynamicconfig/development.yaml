@@ -13,3 +13,39 @@ history.enableCrossClusterOperations:
 history.useNewInitialFailoverVersion:
 - value: true
   constraints: {}
+frontend.validSearchAttributes:
+- value:
+    BinaryChecksums: 1
+    CadenceChangeVersion: 1
+    CloseStatus: 2
+    CloseTime: 2
+    CustomBoolField: 4
+    CustomDatetimeField: 5
+    CustomDomain: 1
+    CustomDoubleField: 3
+    CustomIntField: 2
+    CustomKeywordField: 1
+    CustomStringField: 0
+    DomainID: 1
+    ExecutionTime: 2
+    HistoryLength: 2
+    IsCron: 1
+    NewKey: 1
+    NumClusters: 2
+    Operator: 1
+    Passed: 4
+    RolloutID: 1
+    RunID: 1
+    ShardID: 2
+    StartTime: 2
+    TaskList: 1
+    UpdateTime: 2
+    WorkflowID: 1
+    WorkflowType: 1
+    addon: 1
+    addon-type: 1
+    environment: 1
+    project: 1
+    service: 1
+    user: 1
+  constraints: {}

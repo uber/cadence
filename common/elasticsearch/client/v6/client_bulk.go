@@ -20,53 +20,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package elasticsearch
+package v6
 
 import (
 	"context"
-
-	"github.com/uber/cadence/common/elasticsearch/bulk"
+	"time"
 
 	"github.com/olivere/elastic"
+
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+	"github.com/uber/cadence/common/log"
 )
 
-var _ bulk.GenericBulkProcessor = (*v6BulkProcessor)(nil)
+// bulkProcessorParametersV6 holds all required and optional parameters for executing bulk service
+type bulkProcessorParametersV6 struct {
+	Name          string
+	NumOfWorkers  int
+	BulkActions   int
+	BulkSize      int
+	FlushInterval time.Duration
+	Backoff       elastic.Backoff
+	BeforeFunc    elastic.BulkBeforeFunc
+	AfterFunc     elastic.BulkAfterFunc
+}
 
 type v6BulkProcessor struct {
 	processor *elastic.BulkProcessor
-}
-
-func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
-	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
-		parameters.BeforeFunc(executionId, fromV6ToGenericBulkableRequests(requests))
-	}
-
-	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := convertV6ErrorToGenericError(err)
-		parameters.AfterFunc(
-			executionId,
-			fromV6ToGenericBulkableRequests(requests),
-			fromV6toGenericBulkResponse(response),
-			gerr)
-	}
-
-	processor, err := c.client.BulkProcessor().
-		Name(parameters.Name).
-		Workers(parameters.NumOfWorkers).
-		BulkActions(parameters.BulkActions).
-		BulkSize(parameters.BulkSize).
-		FlushInterval(parameters.FlushInterval).
-		Backoff(parameters.Backoff).
-		Before(beforeFunc).
-		After(afterFunc).
-		Do(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &v6BulkProcessor{
-		processor: processor,
-	}, nil
+	logger    log.Logger
 }
 
 func (v *v6BulkProcessor) Start(ctx context.Context) error {
@@ -115,6 +95,51 @@ func (v *v6BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 
 func (v *v6BulkProcessor) Flush() error {
 	return v.processor.Flush()
+}
+
+func (c *ElasticV6) runBulkProcessor(ctx context.Context, p *bulkProcessorParametersV6) (*v6BulkProcessor, error) {
+	processor, err := c.client.BulkProcessor().
+		Name(p.Name).
+		Workers(p.NumOfWorkers).
+		BulkActions(p.BulkActions).
+		BulkSize(p.BulkSize).
+		FlushInterval(p.FlushInterval).
+		Backoff(p.Backoff).
+		Before(p.BeforeFunc).
+		After(p.AfterFunc).
+		Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &v6BulkProcessor{
+		processor: processor,
+	}, nil
+}
+
+func (c *ElasticV6) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
+	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
+		parameters.BeforeFunc(executionId, fromV6ToGenericBulkableRequests(requests))
+	}
+
+	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+		gerr := convertV6ErrorToGenericError(err)
+		parameters.AfterFunc(
+			executionId,
+			fromV6ToGenericBulkableRequests(requests),
+			fromV6toGenericBulkResponse(response),
+			gerr)
+	}
+
+	return c.runBulkProcessor(ctx, &bulkProcessorParametersV6{
+		Name:          parameters.Name,
+		NumOfWorkers:  parameters.NumOfWorkers,
+		BulkActions:   parameters.BulkActions,
+		BulkSize:      parameters.BulkSize,
+		FlushInterval: parameters.FlushInterval,
+		Backoff:       parameters.Backoff,
+		BeforeFunc:    beforeFunc,
+		AfterFunc:     afterFunc,
+	})
 }
 
 func convertV6ErrorToGenericError(err error) *bulk.GenericError {
