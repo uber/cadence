@@ -11,6 +11,7 @@ You can find a list of previous releases on the [github releases](https://github
 - Added TLS support for gRPC (#4606). Use `tls` config section under service `rpc` block to enable it.
 ### Changed
 - Default outbound between internal server components are now switched to gRPC. There is still an option to switch back to TChannel by setting dynamic config `system.enableGRPCOutbound` to `false`. However this is now considered deprecated and will be removed in the future release.
+- Allow registering search attributes when Advanced Visibility is not enabled
 
 ## [0.23.0] - TBD
 ### Added
