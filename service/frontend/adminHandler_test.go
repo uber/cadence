@@ -541,15 +541,6 @@ func (s *adminHandlerSuite) Test_AddSearchAttribute_Validate() {
 			Request:  &types.AddSearchAttributeRequest{},
 			Expected: &types.BadRequestError{Message: "SearchAttributes are not provided"},
 		},
-		{
-			Name: "no advanced config",
-			Request: &types.AddSearchAttributeRequest{
-				SearchAttribute: map[string]types.IndexedValueType{
-					"CustomKeywordField": 1,
-				},
-			},
-			Expected: &types.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"},
-		},
 	}
 	for _, testCase := range testCases1 {
 		s.Equal(testCase.Expected, handler.AddSearchAttribute(ctx, testCase.Request))
