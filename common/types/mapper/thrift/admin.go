@@ -21,6 +21,8 @@
 package thrift
 
 import (
+	"sort"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -697,7 +699,10 @@ func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	cfg := isolationGroupConfigToIDL(t.IsolationGroups)
+	if cfg == nil || cfg.GetIsolationGroups() == nil {
+		return &admin.GetGlobalIsolationGroupsResponse{}
+	}
 	return &admin.GetGlobalIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -711,7 +716,7 @@ func ToGetGlobalIsolationGroupsResponse(t *admin.GetGlobalIsolationGroupsRespons
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
-	if ig == nil {
+	if ig == nil || len(*ig) == 0 {
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	return &types.GetGlobalIsolationGroupsResponse{
@@ -730,7 +735,7 @@ func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigToIDL(&t.IsolationGroups)
+	cfg := isolationGroupConfigToIDL(t.IsolationGroups)
 	return &admin.GetDomainIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -754,8 +759,11 @@ func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroups
 	if t == nil {
 		return nil
 	}
+	if t.IsolationGroups == nil {
+		return &admin.UpdateGlobalIsolationGroupsRequest{}
+	}
 	return &admin.UpdateGlobalIsolationGroupsRequest{
-		IsolationGroups: isolationGroupConfigToIDL(&t.IsolationGroups),
+		IsolationGroups: isolationGroupConfigToIDL(t.IsolationGroups),
 	}
 }
 
@@ -802,17 +810,23 @@ func ToUpdateDomainIsolationGroupsRequest(t *admin.UpdateDomainIsolationGroupsRe
 	}
 }
 
-func isolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *admin.IsolationGroupConfiguration {
+func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *admin.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
 	var out []*admin.IsolationGroupPartition
-	for _, v := range *in {
+	for _, v := range in {
 		out = append(out, &admin.IsolationGroupPartition{
 			Name:  strPtr(v.Name),
 			State: igStatePtr(admin.IsolationGroupState(v.State)),
 		})
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i] == nil || out[j] == nil {
+			return false
+		}
+		return *out[i].Name < *out[j].Name
+	})
 	return &admin.IsolationGroupConfiguration{
 		IsolationGroups: out,
 	}

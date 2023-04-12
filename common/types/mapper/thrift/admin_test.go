@@ -66,12 +66,8 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 			},
 		},
 		"nil - 1": {
-			in: &types.GetGlobalIsolationGroupsResponse{},
-			expected: &admin.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: nil,
-				},
-			},
+			in:       &types.GetGlobalIsolationGroupsResponse{},
+			expected: &admin.GetGlobalIsolationGroupsResponse{},
 		},
 		"nil - 2": {
 			expected: nil,
@@ -86,7 +82,9 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 					return *res.IsolationGroups.IsolationGroups[i].Name < *res.IsolationGroups.IsolationGroups[j].Name
 				})
 			}
-			assert.Equal(t, td.expected, res)
+			assert.Equal(t, td.expected, res, "expected value")
+			roundTrip := ToGetGlobalIsolationGroupsResponse(res)
+			assert.Equal(t, td.in, roundTrip, "roundtrip value")
 		})
 	}
 }
@@ -271,7 +269,12 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, ToUpdateGlobalIsolationGroupsRequest(td.in))
+			res := ToUpdateGlobalIsolationGroupsRequest(td.in)
+			assert.Equal(t, td.expected, res)
+			roundTrip := FromUpdateGlobalIsolationGroupsRequest(res)
+			if td.in != nil {
+				assert.Equal(t, td.in, roundTrip)
+			}
 		})
 	}
 }
