@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -93,6 +94,7 @@ type (
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
+		enableIsolation bool
 		taskListID      *taskListID
 		taskListKind    types.TaskListKind // sticky taskList has different process in persistence
 		config          *taskListConfig
@@ -105,6 +107,7 @@ type (
 		matcher         *TaskMatcher         // for matching a task producer with a poller
 		clusterMetadata cluster.Metadata
 		domainCache     cache.DomainCache
+		partitioner     partition.Partitioner
 		logger          log.Logger
 		scope           metrics.Scope
 		domainName      string
@@ -156,8 +159,10 @@ func newTaskListManager(
 	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
 
 	tlMgr := &taskListManagerImpl{
+		enableIsolation:     taskListConfig.EnableTasklistIsolation(),
 		domainCache:         e.domainCache,
 		clusterMetadata:     e.clusterMetadata,
+		partitioner:         e.partitioner,
 		taskListID:          taskList,
 		taskListKind:        *taskListKind,
 		logger:              e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
@@ -185,7 +190,11 @@ func newTaskListManager(
 	if tlMgr.isFowardingAllowed(taskList, *taskListKind) {
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
 	}
-	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope)
+	var isolationGroups []string
+	if tlMgr.isIsolationEnabled() {
+		isolationGroups = config.AllIsolationGroups
+	}
+	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups)
 	tlMgr.startWG.Add(1)
 	return tlMgr, nil
 }
@@ -237,6 +246,10 @@ func (c *taskListManagerImpl) handleErr(err error) error {
 // be written to database and later asynchronously matched with a poller
 func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams) (bool, error) {
 	c.startWG.Wait()
+	if c.shouldReload() {
+		c.Stop()
+		return false, errShutdown
+	}
 	if params.forwardedFrom == "" {
 		// request sent by history service
 		c.liveness.markAlive(time.Now())
@@ -265,8 +278,17 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return r, err
 		}
 
+		isolationGroup := ""
+		if c.isIsolationEnabled() {
+			group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, params.taskInfo.DomainID, params.taskInfo.PartitionConfig)
+			if err != nil {
+				c.logger.Error("Failed to get isolation group for async match task", tag.Error(err))
+			} else if group != nil {
+				isolationGroup = *group
+			}
+		}
 		// active task, try sync match first
-		syncMatch, err = c.trySyncMatch(ctx, params)
+		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
 			return &persistence.CreateTasksResponse{}, err
 		}
@@ -323,6 +345,10 @@ func (c *taskListManagerImpl) GetTask(
 	ctx context.Context,
 	maxDispatchPerSecond *float64,
 ) (*InternalTask, error) {
+	if c.shouldReload() {
+		c.Stop()
+		return nil, ErrNoTasks
+	}
 	c.liveness.markAlive(time.Now())
 	task, err := c.getTask(ctx, maxDispatchPerSecond)
 	if err != nil {
@@ -380,7 +406,11 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	return c.matcher.Poll(childCtx)
+	var isolationGroup string
+	if c.isIsolationEnabled() {
+		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
+	}
+	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes
@@ -479,8 +509,8 @@ func (c *taskListManagerImpl) executeWithRetry(
 	return
 }
 
-func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams) (bool, error) {
-	task := newInternalTask(params.taskInfo, nil, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo)
+func (c *taskListManagerImpl) trySyncMatch(ctx context.Context, params addTaskParams, isolationGroup string) (bool, error) {
+	task := newInternalTask(params.taskInfo, nil, params.source, params.forwardedFrom, true, params.activityTaskDispatchInfo, isolationGroup)
 	childCtx := ctx
 	cancel := func() {}
 	waitTime := maxSyncMatchWaitTime
@@ -532,6 +562,14 @@ func (c *taskListManagerImpl) newChildContext(
 
 func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind types.TaskListKind) bool {
 	return !taskList.IsRoot() && kind != types.TaskListKindSticky
+}
+
+func (c *taskListManagerImpl) isIsolationEnabled() bool {
+	return c.taskListKind != types.TaskListKindSticky && c.enableIsolation
+}
+
+func (c *taskListManagerImpl) shouldReload() bool {
+	return c.config.EnableTasklistIsolation() != c.enableIsolation && c.taskListKind != types.TaskListKindSticky
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {

@@ -33,6 +33,7 @@ import (
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
 )
@@ -50,20 +51,22 @@ type (
 		taskWriter     *taskWriter
 		taskGC         *taskGC
 		taskAckManager messaging.AckManager
+		partitioner    partition.Partitioner
 		// The cancel objects are to cancel the ratelimiter Wait in dispatchBufferedTasks. The ideal
 		// approach is to use request-scoped contexts and use a unique one for each call to Wait. However
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
 		// the shutdown channel. To optimize on efficiency, we instead create one and tag it on the struct
 		// so the cancel can be called directly on shutdown.
-		cancelCtx     context.Context
-		cancelFunc    context.CancelFunc
-		stopped       int64 // set to 1 if the reader is stopped or is shutting down
-		logger        log.Logger
-		scope         metrics.Scope
-		throttleRetry *backoff.ThrottleRetry
-		handleErr     func(error) error
-		onFatalErr    func()
-		dispatchTask  func(context.Context, *InternalTask) error
+		cancelCtx          context.Context
+		cancelFunc         context.CancelFunc
+		stopped            int64 // set to 1 if the reader is stopped or is shutting down
+		logger             log.Logger
+		scope              metrics.Scope
+		throttleRetry      *backoff.ThrottleRetry
+		handleErr          func(error) error
+		onFatalErr         func()
+		dispatchTask       func(context.Context, *InternalTask) error
+		isIsolationEnabled func() bool
 	}
 )
 
@@ -77,17 +80,19 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		taskWriter:     tlMgr.taskWriter,
 		taskGC:         tlMgr.taskGC,
 		taskAckManager: tlMgr.taskAckManager,
+		partitioner:    tlMgr.partitioner,
 		cancelCtx:      ctx,
 		cancelFunc:     cancel,
 		notifyC:        make(chan struct{}, 1),
 		// we always dequeue the head of the buffer and try to dispatch it to a poller
 		// so allocate one less than desired target buffer size
-		taskBuffer:   make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
-		logger:       tlMgr.logger,
-		scope:        tlMgr.scope,
-		handleErr:    tlMgr.handleErr,
-		onFatalErr:   tlMgr.Stop,
-		dispatchTask: tlMgr.DispatchTask,
+		taskBuffer:         make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
+		logger:             tlMgr.logger,
+		scope:              tlMgr.scope,
+		handleErr:          tlMgr.handleErr,
+		onFatalErr:         tlMgr.Stop,
+		dispatchTask:       tlMgr.DispatchTask,
+		isIsolationEnabled: tlMgr.isIsolationEnabled,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -129,7 +134,18 @@ dispatchLoop:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
-			task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil)
+			isolationGroup := ""
+			if tr.isIsolationEnabled() {
+				ctx, cancel := context.WithTimeout(tr.cancelCtx, time.Second)
+				group, err := tr.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, taskInfo.PartitionConfig)
+				if err != nil {
+					tr.logger.Error("Failed to get isolation group for async match task", tag.TaskID(taskInfo.TaskID), tag.Error(err))
+				} else if group != nil {
+					isolationGroup = *group
+				}
+				cancel()
+			}
+			task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil, isolationGroup)
 			for {
 				err := tr.dispatchTask(tr.cancelCtx, task)
 				if err == nil {
