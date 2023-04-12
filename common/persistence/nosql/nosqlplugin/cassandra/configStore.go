@@ -56,9 +56,6 @@ func (db *cdb) SelectLatestConfig(ctx context.Context, rowType int) (*persistenc
 
 	query := db.session.Query(templateSelectLatestConfig, rowType).WithContext(ctx)
 	err := query.Scan(&rowType, &version, &timestamp, &data, &encoding)
-	if db.IsNotFoundError(err) {
-		return nil, nil
-	}
 	if err != nil {
 		return nil, err
 	}
