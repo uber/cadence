@@ -26,10 +26,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/golang/mock/gomock"
+
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log/loggerimpl"
-	"testing"
 
 	"github.com/google/uuid"
 
