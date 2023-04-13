@@ -136,6 +136,7 @@ dispatchLoop:
 			}
 			isolationGroup := ""
 			if tr.isIsolationEnabled() && len(taskInfo.PartitionConfig) > 0 {
+				taskInfo.PartitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
 				ctx, cancel := context.WithTimeout(tr.cancelCtx, time.Second)
 				group, err := tr.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, taskInfo.PartitionConfig)
 				if err != nil {
