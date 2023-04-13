@@ -21,10 +21,11 @@
 package resource
 
 import (
-	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"math/rand"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
