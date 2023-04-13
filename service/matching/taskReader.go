@@ -140,8 +140,8 @@ dispatchLoop:
 				group, err := tr.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, taskInfo.PartitionConfig)
 				if err != nil {
 					tr.logger.Error("Failed to get isolation group for async match task", tag.TaskID(taskInfo.TaskID), tag.Error(err))
-				} else if group != nil {
-					isolationGroup = *group
+				} else if group != "" {
+					isolationGroup = group
 				}
 				cancel()
 			}

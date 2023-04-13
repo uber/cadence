@@ -23,7 +23,12 @@
 package partition
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"github.com/golang/mock/gomock"
+	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/log/loggerimpl"
 	"testing"
 
 	"github.com/google/uuid"
@@ -120,5 +125,82 @@ func TestDefaultPartitionerFallbackPickerDistribution(t *testing.T) {
 
 	for k, v := range count {
 		assert.True(t, v > 0, "failed to pick a isolationGroup %s", k)
+	}
+}
+
+func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
+
+	domainID := "some-domain-id"
+	validIsolationGroup := types.IsolationGroupConfiguration{
+		"zone-2": {
+			Name:  "zone-2",
+			State: types.IsolationGroupStateHealthy,
+		},
+		"zone-3": {
+			Name:  "zone-3",
+			State: types.IsolationGroupStateHealthy,
+		},
+	}
+
+	tests := map[string]struct {
+		stateAffordance      func(state *isolationgroup.MockState)
+		partitionKeyPassedIn PartitionConfig
+		expectedValue        string
+		expectedError        error
+	}{
+		"happy path - zone is available - zone pinning": {
+			partitionKeyPassedIn: PartitionConfig{
+				IsolationGroupKey: "zone-2",
+				WorkflowRunIDKey:  "run-123",
+			},
+			stateAffordance: func(state *isolationgroup.MockState) {
+				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
+			},
+			expectedValue: "zone-2",
+		},
+		"happy path - zone is not - zone fallback": {
+			partitionKeyPassedIn: PartitionConfig{
+				IsolationGroupKey: "zone-1",
+				WorkflowRunIDKey:  "run-123",
+			},
+			stateAffordance: func(state *isolationgroup.MockState) {
+				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
+			},
+			expectedValue: "zone-3",
+		},
+		"Error condition - No zones listed though the feature is enabled": {
+			partitionKeyPassedIn: PartitionConfig{
+				IsolationGroupKey: "zone-1",
+				WorkflowRunIDKey:  "run-123",
+			},
+			stateAffordance: func(state *isolationgroup.MockState) {
+				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(
+					types.IsolationGroupConfiguration{}, nil)
+			},
+			expectedValue: "",
+			expectedError: errors.New("no isolation-groups are available"),
+		},
+		"Error condition - No isolation-group information passed in": {
+			partitionKeyPassedIn: PartitionConfig{},
+			stateAffordance: func(state *isolationgroup.MockState) {
+			},
+			expectedValue: "",
+			expectedError: errors.New("invalid partition config"),
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			ig := isolationgroup.NewMockState(ctrl)
+			td.stateAffordance(ig)
+			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig, Config{
+				IsolationGroupEnabled: func(domain string) bool { return true },
+			})
+			res, err := partitioner.GetIsolationGroupByDomainID(context.Background(), domainID, td.partitionKeyPassedIn)
+
+			assert.Equal(t, td.expectedValue, res)
+			assert.Equal(t, td.expectedError, err)
+		})
 	}
 }
