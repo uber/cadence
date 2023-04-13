@@ -146,7 +146,7 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 	}
 	tm := newTestTaskManager(logger)
 	mockPartitioner := partition.NewMockPartitioner(controller)
-	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
