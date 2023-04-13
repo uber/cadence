@@ -93,7 +93,11 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		// not set, load from static config
 		forwardingRules = config.HeaderForwardingRules
 	}
-	inboundMiddleware := yarpc.UnaryInboundMiddleware(&InboundMetricsMiddleware{}, &ZonalPartitionConfigMiddleware{})
+	inboundMiddleware := yarpc.UnaryInboundMiddleware(
+		&InboundMetricsMiddleware{},
+		&ForwardPartitionConfigMiddleware{},
+		&ZonalPartitionConfigMiddleware{},
+	)
 	return Params{
 		ServiceName:     serviceName,
 		TChannelAddress: net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.Port))),
