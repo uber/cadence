@@ -135,7 +135,7 @@ dispatchLoop:
 				break dispatchLoop
 			}
 			isolationGroup := ""
-			if tr.isIsolationEnabled() {
+			if tr.isIsolationEnabled() && len(taskInfo.PartitionConfig) > 0 {
 				ctx, cancel := context.WithTimeout(tr.cancelCtx, time.Second)
 				group, err := tr.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, taskInfo.PartitionConfig)
 				if err != nil {

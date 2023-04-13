@@ -279,7 +279,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 		}
 
 		isolationGroup := ""
-		if c.isIsolationEnabled() {
+		if c.isIsolationEnabled() && len(params.taskInfo.PartitionConfig) > 0 {
 			group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, params.taskInfo.DomainID, params.taskInfo.PartitionConfig)
 			if err != nil {
 				c.logger.Error("Failed to get isolation group for async match task", tag.Error(err))
