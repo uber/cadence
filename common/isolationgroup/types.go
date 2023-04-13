@@ -29,9 +29,3 @@ import (
 type ChangeEvent struct {
 	Changed types.IsolationGroupConfiguration
 }
-
-// IsolationGroups is an internal convenience return type of a collection of IsolationGroup configurations
-type isolationGroups struct {
-	Global types.IsolationGroupConfiguration
-	Domain types.IsolationGroupConfiguration
-}
