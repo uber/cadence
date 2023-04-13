@@ -79,7 +79,9 @@ func NewDefaultPartitioner(
 }
 
 func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (string, error) {
-
+	if wfPartitionData == nil {
+		return "", ErrInvalidPartitionConfig
+	}
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
 	if wfPartition.WorkflowStartIsolationGroup == "" || wfPartition.RunID == "" {
 		return "", ErrInvalidPartitionConfig

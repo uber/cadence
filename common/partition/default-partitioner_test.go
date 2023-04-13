@@ -146,6 +146,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 
 	tests := map[string]struct {
 		stateAffordance      func(state *isolationgroup.MockState)
+		incomingContext      context.Context
 		partitionKeyPassedIn PartitionConfig
 		expectedValue        string
 		expectedError        error
@@ -155,6 +156,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 				IsolationGroupKey: "zone-2",
 				WorkflowRunIDKey:  "run-123",
 			},
+			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
 				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
 			},
@@ -165,6 +167,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 				IsolationGroupKey: "zone-1",
 				WorkflowRunIDKey:  "run-123",
 			},
+			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
 				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
 			},
@@ -175,6 +178,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 				IsolationGroupKey: "zone-1",
 				WorkflowRunIDKey:  "run-123",
 			},
+			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
 				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(
 					types.IsolationGroupConfiguration{}, nil)
@@ -184,10 +188,17 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 		},
 		"Error condition - No isolation-group information passed in": {
 			partitionKeyPassedIn: PartitionConfig{},
-			stateAffordance: func(state *isolationgroup.MockState) {
-			},
-			expectedValue: "",
-			expectedError: errors.New("invalid partition config"),
+			stateAffordance:      func(state *isolationgroup.MockState) {},
+			incomingContext:      context.Background(),
+			expectedValue:        "",
+			expectedError:        errors.New("invalid partition config"),
+		},
+		"Error condition - No isolation-group information passed in 2": {
+			partitionKeyPassedIn: nil,
+			stateAffordance:      func(state *isolationgroup.MockState) {},
+			incomingContext:      context.Background(),
+			expectedValue:        "",
+			expectedError:        errors.New("invalid partition config"),
 		},
 	}
 
@@ -199,7 +210,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig, Config{
 				IsolationGroupEnabled: func(domain string) bool { return true },
 			})
-			res, err := partitioner.GetIsolationGroupByDomainID(context.Background(), domainID, td.partitionKeyPassedIn)
+			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, domainID, td.partitionKeyPassedIn)
 
 			assert.Equal(t, td.expectedValue, res)
 			assert.Equal(t, td.expectedError, err)
