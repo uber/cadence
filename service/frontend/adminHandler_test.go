@@ -25,9 +25,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"testing"
-
-	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroup"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
@@ -853,11 +852,10 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 			td.configStoreDCAffordance(configStoreManagerClientMock)
 			td.dynamicConfigAffordance(dcClientMock)
 
-			ig, err := defaultisolationgroup.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
+			ig, err := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 				loggerimpl.NewNopLogger(),
 				dc,
 				domainCache,
-				domainManager,
 				configStoreManagerClientMock,
 				make(chan struct{}),
 			)
@@ -950,11 +948,10 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 			td.configStoreDCAffordance(configStoreManagerClientMock)
 			td.dynamicConfigAffordance(dcClientMock)
 
-			ig, err := defaultisolationgroup.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
+			ig, err := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 				loggerimpl.NewNopLogger(),
 				dc,
 				domainCache,
-				domainManager,
 				configStoreManagerClientMock,
 				make(chan struct{}))
 

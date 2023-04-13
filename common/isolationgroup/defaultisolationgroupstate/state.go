@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package defaultisolationgroup
+package defaultisolationgroupstate
 
 import (
 	"context"
@@ -65,7 +65,6 @@ func NewDefaultIsolationGroupStateWatcher(
 	dc *dynamicconfig.Collection,
 	persistenceCfg *config.Persistence,
 	domainCache cache.DomainCache,
-	domainManager persistence.DomainManager,
 ) (isolationgroup.State, error) {
 	stopChan := make(chan struct{})
 	cscConfig := &csc.ClientConfig{
@@ -78,7 +77,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	if err != nil {
 		return nil, fmt.Errorf("failure during setup for the IsolationGroupStateWatcher: %w", err)
 	}
-	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, domainManager, cfgStoreClient, stopChan)
+	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, cfgStoreClient, stopChan)
 }
 
 // NewDefaultIsolationGroupStateWatcherWithConfigStoreClient Is a constructor which allows passing in the dynamic config client
@@ -86,7 +85,6 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	logger log.Logger,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
-	domainManager persistence.DomainManager,
 	cfgStoreClient dynamicconfig.Client,
 	stopChan chan struct{},
 ) (isolationgroup.State, error) {
@@ -107,7 +105,6 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 		domainCache:                domainCache,
 		globalIsolationGroupDrains: cfgStoreClient,
 		status:                     common.DaemonStatusInitialized,
-		domainManager:              domainManager,
 		log:                        logger,
 		config:                     config,
 		subscriptionMu:             sync.Mutex{},

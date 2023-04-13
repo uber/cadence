@@ -20,19 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package defaultisolationgroup
+package defaultisolationgroupstate
 
 import (
-	"context"
-
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
-// GetDomainState returns the Isolation Group state as it relates to a domain
-func (z *defaultIsolationGroupStateHandler) GetDomainState(ctx context.Context, req types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
+// IsolationGroups is an internal convenience return type of a collection of IsolationGroup configurations
+type isolationGroups struct {
+	Global types.IsolationGroupConfiguration
+	Domain types.IsolationGroupConfiguration
 }
 
-func (z *defaultIsolationGroupStateHandler) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
-	panic("not implemented")
+// defaultConfig values for the partitioning library for segmenting portions of workflows into isolation-groups - a resiliency
+// concept meant to help move workflows around and away from failure zones.
+type defaultConfig struct {
+	// IsolationGroupEnabled is a domain-based configuration value for whether this feature is enabled at all
+	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
+	// AllIsolationGroups is a static list of all the possible isolation group names
+	AllIsolationGroups []string
 }

@@ -21,11 +21,10 @@
 package resource
 
 import (
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 	"math/rand"
 	"sync/atomic"
 	"time"
-
-	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroup"
 
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
@@ -253,7 +252,6 @@ func New(
 		params,
 		dynamicCollection,
 		domainCache,
-		persistenceBean.GetDomainManager(),
 	)
 	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
 
@@ -582,19 +580,17 @@ func ensureIsolationGroupStateHandlerOrDefault(
 	params *Params,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
-	dm persistence.DomainManager,
 ) isolationgroup.State {
 
 	if params.IsolationGroupState != nil {
 		return params.IsolationGroupState
 	}
 
-	ig, err := defaultisolationgroup.NewDefaultIsolationGroupStateWatcher(
+	ig, err := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcher(
 		params.Logger,
 		dc,
 		&params.PersistenceConfig,
 		domainCache,
-		dm,
 	)
 	if err != nil {
 		params.Logger.Error("failed to load up isolation-group", tag.Error(err))
