@@ -25,6 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroup"
+
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
 
@@ -250,7 +252,9 @@ func New(
 	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(
 		params,
 		dynamicCollection,
-		domainCache)
+		domainCache,
+		persistenceBean.GetDomainManager(),
+	)
 	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
 
 	impl = &Impl{
@@ -578,13 +582,20 @@ func ensureIsolationGroupStateHandlerOrDefault(
 	params *Params,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
+	dm persistence.DomainManager,
 ) isolationgroup.State {
 
 	if params.IsolationGroupState != nil {
 		return params.IsolationGroupState
 	}
 
-	ig, err := isolationgroup.NewDefaultIsolationGroupStateWatcher(params.Logger, dc, &params.PersistenceConfig, domainCache)
+	ig, err := defaultisolationgroup.NewDefaultIsolationGroupStateWatcher(
+		params.Logger,
+		dc,
+		&params.PersistenceConfig,
+		domainCache,
+		dm,
+	)
 	if err != nil {
 		params.Logger.Error("failed to load up isolation-group", tag.Error(err))
 		return nil

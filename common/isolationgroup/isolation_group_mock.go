@@ -73,6 +73,21 @@ func (mr *MockStateMockRecorder) AvailableIsolationGroupsByDomainID(ctx, domainI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableIsolationGroupsByDomainID", reflect.TypeOf((*MockState)(nil).AvailableIsolationGroupsByDomainID), ctx, domainID)
 }
 
+// GetDomainState mocks base method.
+func (m *MockState) GetDomainState(ctx context.Context, request types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainState", ctx, request)
+	ret0, _ := ret[0].(*types.GetDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainState indicates an expected call of GetDomainState.
+func (mr *MockStateMockRecorder) GetDomainState(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainState", reflect.TypeOf((*MockState)(nil).GetDomainState), ctx, request)
+}
+
 // GetGlobalState mocks base method.
 func (m *MockState) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
 	m.ctrl.T.Helper()
@@ -168,6 +183,20 @@ func (m *MockState) Unsubscribe(domainID, key string) error {
 func (mr *MockStateMockRecorder) Unsubscribe(domainID, key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unsubscribe", reflect.TypeOf((*MockState)(nil).Unsubscribe), domainID, key)
+}
+
+// UpdateDomainState mocks base method.
+func (m *MockState) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDomainState", ctx, state)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateDomainState indicates an expected call of UpdateDomainState.
+func (mr *MockStateMockRecorder) UpdateDomainState(ctx, state interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainState", reflect.TypeOf((*MockState)(nil).UpdateDomainState), ctx, state)
 }
 
 // UpdateGlobalState mocks base method.

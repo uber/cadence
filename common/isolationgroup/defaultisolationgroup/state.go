@@ -20,12 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package isolationgroup
+package defaultisolationgroup
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -39,18 +37,10 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
 )
-
-// defaultConfig values for the partitioning library for segmenting portions of workflows into isolation-groups - a resiliency
-// concept meant to help move workflows around and away from failure zones.
-type defaultConfig struct {
-	// IsolationGroupEnabled is a domain-based configuration value for whether this feature is enabled at all
-	IsolationGroupEnabled dynamicconfig.BoolPropertyFnWithDomainFilter
-	// AllIsolationGroups is a static list of all the possible isolation group names
-	AllIsolationGroups []string
-}
 
 type defaultIsolationGroupStateHandler struct {
 	status                     int32
@@ -58,6 +48,7 @@ type defaultIsolationGroupStateHandler struct {
 	log                        log.Logger
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains dynamicconfig.Client
+	domainManager              persistence.DomainManager
 	config                     defaultConfig
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
@@ -65,7 +56,7 @@ type defaultIsolationGroupStateHandler struct {
 	updateCB                   func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
 	// for notifying when there's a state change
-	subscriptions map[string]map[string]chan<- ChangeEvent
+	subscriptions map[string]map[string]chan<- isolationgroup.ChangeEvent
 }
 
 // NewDefaultIsolationGroupStateWatcher is the default constructor
@@ -74,7 +65,8 @@ func NewDefaultIsolationGroupStateWatcher(
 	dc *dynamicconfig.Collection,
 	persistenceCfg *config.Persistence,
 	domainCache cache.DomainCache,
-) (State, error) {
+	domainManager persistence.DomainManager,
+) (isolationgroup.State, error) {
 	stopChan := make(chan struct{})
 	cscConfig := &csc.ClientConfig{
 		PollInterval:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval)(),
@@ -86,7 +78,7 @@ func NewDefaultIsolationGroupStateWatcher(
 	if err != nil {
 		return nil, fmt.Errorf("failure during setup for the IsolationGroupStateWatcher: %w", err)
 	}
-	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, cfgStoreClient, stopChan)
+	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, domainManager, cfgStoreClient, stopChan)
 }
 
 // NewDefaultIsolationGroupStateWatcherWithConfigStoreClient Is a constructor which allows passing in the dynamic config client
@@ -94,9 +86,10 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	logger log.Logger,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
+	domainManager persistence.DomainManager,
 	cfgStoreClient dynamicconfig.Client,
 	stopChan chan struct{},
-) (State, error) {
+) (isolationgroup.State, error) {
 
 	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
 	allIsolationGroups, err := mapAllIsolationGroupsResponse(allIGs)
@@ -114,10 +107,11 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 		domainCache:                domainCache,
 		globalIsolationGroupDrains: cfgStoreClient,
 		status:                     common.DaemonStatusInitialized,
+		domainManager:              domainManager,
 		log:                        logger,
 		config:                     config,
 		subscriptionMu:             sync.Mutex{},
-		subscriptions:              make(map[string]map[string]chan<- ChangeEvent),
+		subscriptions:              make(map[string]map[string]chan<- isolationgroup.ChangeEvent),
 	}, nil
 }
 
@@ -163,7 +157,7 @@ func (z *defaultIsolationGroupStateHandler) Stop() {
 	close(z.done)
 }
 
-func (z *defaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error {
+func (z *defaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- isolationgroup.ChangeEvent) error {
 	z.subscriptionMu.Lock()
 	defer z.subscriptionMu.Unlock()
 
@@ -176,33 +170,6 @@ func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) er
 	defer z.subscriptionMu.Unlock()
 	panic("not implemented")
 	return nil
-}
-
-func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
-	mappedInput, err := mapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
-	if err != nil {
-		return err
-	}
-	return z.globalIsolationGroupDrains.UpdateValue(
-		dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping,
-		mappedInput,
-	)
-}
-
-func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
-	res, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
-	if err != nil {
-		var e types.EntityNotExistsError
-		if errors.As(err, &e) {
-			return &types.GetGlobalIsolationGroupsResponse{}, nil
-		}
-		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
-	}
-	resp, err := mapDynamicConfigResponse(res)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
-	}
-	return &types.GetGlobalIsolationGroupsResponse{IsolationGroups: resp}, nil
 }
 
 func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, domainID string) (*isolationGroups, error) {
@@ -290,62 +257,4 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 		}
 	}
 	return false
-}
-
-// ----- Mappers -----
-func mapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
-	if in == nil {
-		return nil, nil
-	}
-
-	out = make(types.IsolationGroupConfiguration, len(in))
-	for _, v := range in {
-		v1, ok := v.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
-		}
-		n, okName := v1["Name"]
-		s, okState := v1["State"]
-		if !okState || !okName {
-			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
-		}
-		nS, okStr := n.(string)
-		sI, okI := s.(float64)
-		if !okStr || !okI {
-			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
-		}
-		out[nS] = types.IsolationGroupPartition{
-			Name:  nS,
-			State: types.IsolationGroupState(sI),
-		}
-	}
-	return out, nil
-}
-
-func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
-		}
-		allIsolationGroups = append(allIsolationGroups, v)
-	}
-	return allIsolationGroups, nil
-}
-
-func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) ([]*types.DynamicConfigValue, error) {
-	jsonData, err := json.Marshal(in.ToPartitionList())
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal input for dynamic config: %w", err)
-	}
-	out := []*types.DynamicConfigValue{
-		&types.DynamicConfigValue{
-			Value: &types.DataBlob{
-				EncodingType: types.EncodingTypeJSON.Ptr(),
-				Data:         jsonData,
-			},
-		},
-	}
-	return out, nil
 }
