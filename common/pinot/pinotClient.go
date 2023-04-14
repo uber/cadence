@@ -37,24 +37,22 @@ import (
 	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
-const (
-	tableName = "cadence_visibility_pinot"
-)
-
 type PinotClient struct {
-	client *pinot.Connection
-	logger log.Logger
+	client    *pinot.Connection
+	logger    log.Logger
+	tableName string
 }
 
-func NewPinotClient(client *pinot.Connection, logger log.Logger) GenericClient {
+func NewPinotClient(client *pinot.Connection, logger log.Logger, tableName string) GenericClient {
 	return &PinotClient{
-		client: client,
-		logger: logger,
+		client:    client,
+		logger:    logger,
+		tableName: tableName,
 	}
 }
 
 func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
-	resp, err := c.client.ExecuteSQL(tableName, request.Query)
+	resp, err := c.client.ExecuteSQL(c.tableName, request.Query)
 
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -66,7 +64,7 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 }
 
 func (c *PinotClient) CountByQuery(query string) (int64, error) {
-	resp, err := c.client.ExecuteSQL(tableName, query)
+	resp, err := c.client.ExecuteSQL(c.tableName, query)
 	if err != nil {
 		return 0, &types.InternalServiceError{
 			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),

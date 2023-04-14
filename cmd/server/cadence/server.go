@@ -227,9 +227,8 @@ func (s *server) startService() common.Daemon {
 			params.PinotConfig = advancedVisStore.Pinot
 			esVisStore := s.cfg.Persistence.DataStores["es-visibility"]
 			params.ESConfig = esVisStore.ElasticSearch
-			//pinotController := params.PinotConfig.Controller
-			pinotRawClient, err := pinot.NewFromBrokerList([]string{"localhost:8099"})
-			//pinotRawClient, err := pinot.NewFromController(pinotController)
+			pinotBroker := params.PinotConfig.Broker
+			pinotRawClient, err := pinot.NewFromBrokerList([]string{pinotBroker})
 			/*pinotRawClient, err := pinot.NewWithConfig(&pinot.ClientConfig{
 				ControllerConfig: &pinot.ControllerConfig{
 					ControllerAddress: pinotController,
@@ -248,7 +247,7 @@ func (s *server) startService() common.Daemon {
 			if err != nil || pinotRawClient == nil {
 				log.Fatalf("Creating Pinot visibility client failed: %v", err)
 			}
-			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger)
+			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig.Table)
 			params.PinotClient = pinotClient
 		} else {
 			params.ESConfig = advancedVisStore.ElasticSearch
