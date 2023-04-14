@@ -82,7 +82,7 @@ func NewDefaultIsolationGroupStateWatcher(
 		FetchTimeout:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateFetchTimeout)(),
 		UpdateTimeout:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateUpdateTimeout)(),
 	}
-	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, persistenceCfg, logger, stopChan, persistence.GlobalIsolationGroupConfig)
+	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, persistenceCfg, logger, persistence.GlobalIsolationGroupConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failure during setup for the IsolationGroupStateWatcher: %w", err)
 	}

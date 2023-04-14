@@ -308,7 +308,7 @@ func (s *configStoreClientSuite) SetupTest() {
 		},
 		&config.NoSQL{
 			PluginName: "cassandra",
-		}, log.NewNoop(), s.doneCh, p.DynamicConfig)
+		}, log.NewNoop(), p.DynamicConfig)
 	s.Require().NoError(err)
 
 	s.mockManager = p.NewMockConfigStoreManager(s.mockController)
