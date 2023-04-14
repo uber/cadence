@@ -47,9 +47,4 @@ type State interface {
 
 	Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error
 	Unsubscribe(domainID, key string) error
-
-	// GetGlobalState returns the current configuration of isolation-groups which apply to all domains
-	GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error)
-	// UpdateGlobalState updates isolation-groups which apply to all domains
-	UpdateGlobalState(ctx context.Context, state types.UpdateGlobalIsolationGroupsRequest) error
 }

@@ -284,7 +284,7 @@ func (s *Service) Start() {
 	grpcHandler := newGrpcHandler(handler)
 	grpcHandler.register(s.GetDispatcher())
 
-	s.adminHandler = NewAdminHandler(s, s.params, s.config)
+	s.adminHandler = NewAdminHandler(*s, s.params, s.config)
 	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)

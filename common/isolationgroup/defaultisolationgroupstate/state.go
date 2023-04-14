@@ -28,15 +28,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/uber/cadence/common/persistence"
+	"github.com/uber/cadence/common/isolationgroup/isolationgrouphandler"
 
-	"github.com/uber/cadence/common/config"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/dynamicconfig/configstore"
-	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/types"
@@ -59,35 +57,14 @@ type defaultIsolationGroupStateHandler struct {
 	subscriptions map[string]map[string]chan<- isolationgroup.ChangeEvent
 }
 
-// NewDefaultIsolationGroupStateWatcher is the default constructor
-func NewDefaultIsolationGroupStateWatcher(
-	logger log.Logger,
-	dc *dynamicconfig.Collection,
-	persistenceCfg *config.Persistence,
-	domainCache cache.DomainCache,
-) (isolationgroup.State, error) {
-	stopChan := make(chan struct{})
-	cscConfig := &csc.ClientConfig{
-		PollInterval:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval)(),
-		UpdateRetryAttempts: dc.GetIntProperty(dynamicconfig.IsolationGroupStateUpdateRetryAttempts)(),
-		FetchTimeout:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateFetchTimeout)(),
-		UpdateTimeout:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateUpdateTimeout)(),
-	}
-	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, persistenceCfg, logger, stopChan, persistence.GlobalIsolationGroupConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failure during setup for the IsolationGroupStateWatcher: %w", err)
-	}
-	return NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(logger, dc, domainCache, cfgStoreClient, stopChan)
-}
-
 // NewDefaultIsolationGroupStateWatcherWithConfigStoreClient Is a constructor which allows passing in the dynamic config client
 func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	logger log.Logger,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
 	cfgStoreClient dynamicconfig.Client,
-	stopChan chan struct{},
 ) (isolationgroup.State, error) {
+	stopChan := make(chan struct{})
 
 	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
 	allIsolationGroups, err := mapAllIsolationGroupsResponse(allIGs)
@@ -194,7 +171,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve global drains in %w", err)
 	}
 
-	globalState, err := mapDynamicConfigResponse(globalCfg)
+	globalState, err := isolationgrouphandler.MapDynamicConfigResponse(globalCfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}
@@ -254,4 +231,16 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 		}
 	}
 	return false
+}
+
+func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
+	var allIsolationGroups []string
+	for k := range in {
+		v, ok := in[k].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
+		}
+		allIsolationGroups = append(allIsolationGroups, v)
+	}
+	return allIsolationGroups, nil
 }

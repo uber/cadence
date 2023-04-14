@@ -31,6 +31,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup/isolationgrouphandler"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -112,6 +114,7 @@ type (
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
+		isolationGroups       isolationgrouphandler.Handler
 	}
 
 	workflowQueryTemplate struct {
@@ -142,37 +145,38 @@ var (
 	}
 )
 
-// NewAdminHandler creates a thrift handler for the cadence admin service
+// NewAdminHandler creates a thrift service for the cadence admin service
 func NewAdminHandler(
-	resource resource.Resource,
+	service Service,
 	params *resource.Params,
 	config *Config,
 ) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
-		resource.GetDomainManager(),
-		resource.GetTimeSource(),
-		resource.GetLogger(),
+		service.GetDomainManager(),
+		service.GetTimeSource(),
+		service.GetLogger(),
 	)
+
 	return &adminHandlerImpl{
-		Resource:              resource,
+		Resource:              &service,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
 		config:                config,
 		domainDLQHandler: domain.NewDLQMessageHandler(
 			domainReplicationTaskExecutor,
-			resource.GetDomainReplicationQueue(),
-			resource.GetLogger(),
-			resource.GetMetricsClient(),
+			service.GetDomainReplicationQueue(),
+			service.GetLogger(),
+			service.GetMetricsClient(),
 		),
 		domainFailoverWatcher: domain.NewFailoverWatcher(
-			resource.GetDomainCache(),
-			resource.GetDomainManager(),
-			resource.GetTimeSource(),
+			service.GetDomainCache(),
+			service.GetDomainManager(),
+			service.GetTimeSource(),
 			config.DomainFailoverRefreshInterval,
 			config.DomainFailoverRefreshTimerJitterCoefficient,
-			resource.GetMetricsClient(),
-			resource.GetLogger(),
+			service.GetMetricsClient(),
+			service.GetLogger(),
 		),
 		eventSerializer: persistence.NewPayloadSerializer(),
 		esClient:        params.ESClient,
@@ -180,6 +184,7 @@ func NewAdminHandler(
 			backoff.WithRetryPolicy(adminServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
+		isolationGroups: isolationgrouphandler.New(service.GetLogger(), service.GetIsolationGroupStore(), service.handler.domainHandler),
 	}
 }
 
@@ -1738,7 +1743,8 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	if adh.GetIsolationGroupState() == nil {
 		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	return adh.GetIsolationGroupState().GetGlobalState(ctx)
+
+	return adh.isolationGroups.GetGlobalState(ctx)
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
@@ -1751,7 +1757,7 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 	if adh.GetIsolationGroupState() == nil {
 		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	err := adh.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
+	err := adh.isolationGroups.UpdateGlobalState(ctx, *request)
 	if err != nil {
 		return nil, err
 	}

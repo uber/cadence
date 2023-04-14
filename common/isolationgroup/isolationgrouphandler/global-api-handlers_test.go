@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package defaultisolationgroupstate
+package isolationgrouphandler
 
 import (
 	"context"
@@ -61,7 +61,7 @@ func TestUpdateGlobalState(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dcMock := dynamicconfig.NewMockClient(gomock.NewController(t))
 			td.dcAffordance(dcMock)
-			handler := defaultIsolationGroupStateHandler{
+			handler := handlerImpl{
 				log:                        loggerimpl.NewNopLogger(),
 				globalIsolationGroupDrains: dcMock,
 			}
@@ -122,7 +122,7 @@ func TestGetGlobalState(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			dcMock := dynamicconfig.NewMockClient(gomock.NewController(t))
 			td.dcAffordance(dcMock)
-			handler := defaultIsolationGroupStateHandler{
+			handler := handlerImpl{
 				log:                        loggerimpl.NewNopLogger(),
 				globalIsolationGroupDrains: dcMock,
 			}

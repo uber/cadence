@@ -25,6 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
+
 	"github.com/uber/cadence/common/isolationgroup/defaultisolationgroupstate"
 
 	"github.com/uber/cadence/common/isolationgroup"
@@ -124,8 +127,9 @@ type (
 		runtimeMetricsReporter *metrics.RuntimeMetricsReporter
 		rpcFactory             common.RPCFactory
 
-		isolationGroups isolationgroup.State
-		partitioner     partition.Partitioner
+		isolationGroups           isolationgroup.State
+		isolationGroupConfigStore configstore.Client
+		partitioner               partition.Partitioner
 	}
 )
 
@@ -249,12 +253,15 @@ func New(
 		return nil, err
 	}
 
-	isolationGroupState := ensureIsolationGroupStateHandlerOrDefault(
+	isolationGroupStore := createConfigStoreOrDefault(params, dynamicCollection)
+
+	isolationGroupState := createIsolationGroupStateHandlerOrDefault(
 		params,
 		dynamicCollection,
 		domainCache,
+		isolationGroupStore,
 	)
-	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
+	partitioner := createPartitionerOrDefault(params, dynamicCollection, isolationGroupState)
 
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
@@ -312,9 +319,10 @@ func New(
 			logger,
 			params.InstanceID,
 		),
-		rpcFactory:      params.RPCFactory,
-		isolationGroups: isolationGroupState,
-		partitioner:     partitioner,
+		rpcFactory:                params.RPCFactory,
+		isolationGroups:           isolationGroupState, // can be nil where persistence is not available
+		isolationGroupConfigStore: isolationGroupStore, // can be nil where persistence is not available
+		partitioner:               partitioner,         // can be nil where persistence is not available
 	}
 	return impl, nil
 }
@@ -374,6 +382,9 @@ func (h *Impl) Stop() {
 	}
 	h.runtimeMetricsReporter.Stop()
 	h.persistenceBean.Close()
+	if h.isolationGroupConfigStore != nil {
+		h.isolationGroupConfigStore.Stop()
+	}
 	if h.isolationGroups != nil {
 		h.isolationGroups.Stop()
 	}
@@ -566,32 +577,70 @@ func (h *Impl) GetDispatcher() *yarpc.Dispatcher {
 	return h.dispatcher
 }
 
-// GetIsolationGroupState returns the isolationGroupState
+// GetIsolationGroupState returns the isolationGroupState or nil
 func (h *Impl) GetIsolationGroupState() isolationgroup.State {
 	return h.isolationGroups
 }
 
-// GetPartitioner returns the partitioner
+// GetPartitioner returns the partitioner or nil
 func (h *Impl) GetPartitioner() partition.Partitioner {
 	return h.partitioner
 }
 
+// GetIsolationGroupStore returns the isolation group configuration store or nil
+func (h *Impl) GetIsolationGroupStore() configstore.Client {
+	return h.isolationGroupConfigStore
+}
+
+// due to the config store being only available for some
+// persistence layers, *both* the configStoreClient and IsolationGroupState
+// will be optionally available
+func createConfigStoreOrDefault(
+	params *Params,
+	dc *dynamicconfig.Collection,
+) configstore.Client {
+
+	if params.IsolationGroupStore != nil {
+		return params.IsolationGroupStore
+	}
+	cscConfig := &csc.ClientConfig{
+		PollInterval:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateRefreshInterval)(),
+		UpdateRetryAttempts: dc.GetIntProperty(dynamicconfig.IsolationGroupStateUpdateRetryAttempts)(),
+		FetchTimeout:        dc.GetDurationProperty(dynamicconfig.IsolationGroupStateFetchTimeout)(),
+		UpdateTimeout:       dc.GetDurationProperty(dynamicconfig.IsolationGroupStateUpdateTimeout)(),
+	}
+	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, &params.PersistenceConfig, params.Logger, persistence.GlobalIsolationGroupConfig)
+	if err != nil {
+		// not possible to create the client under some persistence configurations, so this is expected
+		return nil
+	}
+	return cfgStoreClient
+}
+
 // Use the provided IsolationGroupStateHandler or the default one
-func ensureIsolationGroupStateHandlerOrDefault(
+// due to the config store being only available for some
+// persistence layers, *both* the configStoreClient and IsolationGroupState
+// will be optionally available
+func createIsolationGroupStateHandlerOrDefault(
 	params *Params,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
+	isolationGroupStore dynamicconfig.Client,
 ) isolationgroup.State {
 
 	if params.IsolationGroupState != nil {
 		return params.IsolationGroupState
 	}
 
-	ig, err := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcher(
+	if isolationGroupStore == nil {
+		return nil
+	}
+
+	ig, err := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 		params.Logger,
 		dc,
-		&params.PersistenceConfig,
 		domainCache,
+		isolationGroupStore,
 	)
 	if err != nil {
 		params.Logger.Error("failed to load up isolation-group", tag.Error(err))
@@ -601,9 +650,12 @@ func ensureIsolationGroupStateHandlerOrDefault(
 }
 
 // Use the provided partitioner or the default one
-func ensurePartitionerOrDefault(params *Params, dc *dynamicconfig.Collection, state isolationgroup.State) partition.Partitioner {
+func createPartitionerOrDefault(params *Params, dc *dynamicconfig.Collection, state isolationgroup.State) partition.Partitioner {
 	if params.Partitioner != nil {
 		return params.Partitioner
+	}
+	if state == nil {
+		return nil
 	}
 	cfg := partition.Config{
 		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),

@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package defaultisolationgroupstate
+package isolationgrouphandler
 
 import (
 	"context"
@@ -32,7 +32,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
+func (z *handlerImpl) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
 	mappedInput, err := mapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
 	if err != nil {
 		return err
@@ -43,7 +43,7 @@ func (z *defaultIsolationGroupStateHandler) UpdateGlobalState(ctx context.Contex
 	)
 }
 
-func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
+func (z *handlerImpl) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
 	res, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {
 		var e types.EntityNotExistsError
@@ -52,14 +52,14 @@ func (z *defaultIsolationGroupStateHandler) GetGlobalState(ctx context.Context) 
 		}
 		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
-	resp, err := mapDynamicConfigResponse(res)
+	resp, err := MapDynamicConfigResponse(res)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
 	return &types.GetGlobalIsolationGroupsResponse{IsolationGroups: resp}, nil
 }
 
-func mapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
+func MapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
 	if in == nil {
 		return nil, nil
 	}
@@ -86,18 +86,6 @@ func mapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfigu
 		}
 	}
 	return out, nil
-}
-
-func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
-		}
-		allIsolationGroups = append(allIsolationGroups, v)
-	}
-	return allIsolationGroups, nil
 }
 
 func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) ([]*types.DynamicConfigValue, error) {

@@ -24,6 +24,8 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+
 	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/partition"
 
@@ -69,7 +71,8 @@ type (
 		ArchiverProvider         provider.ArchiverProvider
 		Authorizer               authorization.Authorizer // NOTE: this can be nil. If nil, AccessControlledHandlerImpl will initiate one with config.Authorization
 		AuthorizationConfig      config.Authorization     // NOTE: empty(default) struct will get a authorization.NoopAuthorizer
-		IsolationGroupState      isolationgroup.State
-		Partitioner              partition.Partitioner
+		IsolationGroupStore      configstore.Client       // This can be nil, the default config store will be created if so
+		IsolationGroupState      isolationgroup.State     // This can be nil, the default state store will be chosen if so
+		Partitioner              partition.Partitioner    // This can be nil, if the state store is available it will be created with the default
 	}
 )
