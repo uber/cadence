@@ -67,7 +67,7 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	stopChan := make(chan struct{})
 
 	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
-	allIsolationGroups, err := mapAllIsolationGroupsResponse(allIGs)
+	allIsolationGroups, err := isolationgrouphandler.MapAllIsolationGroupsResponse(allIGs)
 	if err != nil {
 		return nil, fmt.Errorf("could not get all isolation groups fron dynamic config: %w", err)
 	}
@@ -231,16 +231,4 @@ func isDrained(isolationGroup string, global types.IsolationGroupConfiguration, 
 		}
 	}
 	return false
-}
-
-func mapAllIsolationGroupsResponse(in []interface{}) ([]string, error) {
-	var allIsolationGroups []string
-	for k := range in {
-		v, ok := in[k].(string)
-		if !ok {
-			return nil, fmt.Errorf("failed to get all-isolation-groups response from dynamic config: got %v (%T)", in[k], in[k])
-		}
-		allIsolationGroups = append(allIsolationGroups, v)
-	}
-	return allIsolationGroups, nil
 }

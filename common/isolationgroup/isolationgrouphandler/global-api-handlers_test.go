@@ -84,7 +84,7 @@ func TestGetGlobalState(t *testing.T) {
 		},
 	}
 
-	validCfg, _ := mapUpdateGlobalIsolationGroupsRequest(validInput)
+	validCfg, _ := MapUpdateGlobalIsolationGroupsRequest(validInput)
 
 	validCfgData := validCfg[0].Value.GetData()
 	dynamicConfigResponse := []interface{}{}

@@ -24,7 +24,6 @@ package isolationgrouphandler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -33,7 +32,7 @@ import (
 )
 
 func (z *handlerImpl) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
-	mappedInput, err := mapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
+	mappedInput, err := MapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
 	if err != nil {
 		return err
 	}
@@ -57,49 +56,4 @@ func (z *handlerImpl) GetGlobalState(ctx context.Context) (*types.GetGlobalIsola
 		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
 	}
 	return &types.GetGlobalIsolationGroupsResponse{IsolationGroups: resp}, nil
-}
-
-func MapDynamicConfigResponse(in []interface{}) (out types.IsolationGroupConfiguration, err error) {
-	if in == nil {
-		return nil, nil
-	}
-
-	out = make(types.IsolationGroupConfiguration, len(in))
-	for _, v := range in {
-		v1, ok := v.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
-		}
-		n, okName := v1["Name"]
-		s, okState := v1["State"]
-		if !okState || !okName {
-			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
-		}
-		nS, okStr := n.(string)
-		sI, okI := s.(float64)
-		if !okStr || !okI {
-			return nil, fmt.Errorf("failed parse a dynamic config entry, %v, (got %v)", v1, v)
-		}
-		out[nS] = types.IsolationGroupPartition{
-			Name:  nS,
-			State: types.IsolationGroupState(sI),
-		}
-	}
-	return out, nil
-}
-
-func mapUpdateGlobalIsolationGroupsRequest(in types.IsolationGroupConfiguration) ([]*types.DynamicConfigValue, error) {
-	jsonData, err := json.Marshal(in.ToPartitionList())
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal input for dynamic config: %w", err)
-	}
-	out := []*types.DynamicConfigValue{
-		&types.DynamicConfigValue{
-			Value: &types.DataBlob{
-				EncodingType: types.EncodingTypeJSON.Ptr(),
-				Data:         jsonData,
-			},
-		},
-	}
-	return out, nil
 }

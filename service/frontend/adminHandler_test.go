@@ -110,6 +110,7 @@ func (s *adminHandlerSuite) SetupTest() {
 		EnableAdminProtection:  dynamicconfig.GetBoolPropertyFn(false),
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
+	
 	s.handler = NewAdminHandler(s.mockResource, params, config).(*adminHandlerImpl)
 	s.handler.Start()
 }
@@ -858,7 +859,6 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 				dc,
 				domainCache,
 				configStoreManagerClientMock,
-				make(chan struct{}),
 			)
 
 			assert.NoError(t, err)
@@ -954,7 +954,7 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 				dc,
 				domainCache,
 				configStoreManagerClientMock,
-				make(chan struct{}))
+			)
 
 			assert.NoError(t, err)
 
