@@ -3,8 +3,9 @@ persistence:
   datastores:
     pinot-visibility:
       pinot:
-        controller: "127.0.0.1:9000"
+        broker: "localhost:8099"
         cluster: pinot-test
+        table: "cadence-visibility-pinot"
     es-visibility:
       elasticsearch:
         version: "v6"
