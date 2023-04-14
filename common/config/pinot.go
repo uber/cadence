@@ -23,7 +23,8 @@ package config
 // PinotVisibilityConfig for connecting to Pinot
 type (
 	PinotVisibilityConfig struct {
-		Cluster    string `yaml:"cluster"`    //nolint:govet
-		Controller string `yaml:"controller"` //nolint:govet
+		Cluster string `yaml:"cluster"` //nolint:govet
+		Broker  string `yaml:"broker"`  //nolint:govet
+		Table   string `yaml:"table"`   //nolint:govet
 	}
 )
