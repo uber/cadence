@@ -111,7 +111,17 @@ func (s *adminHandlerSuite) SetupTest() {
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
 
-	s.handler = NewAdminHandler(s.mockResource, params, config).(*adminHandlerImpl)
+	service := Service{
+		Resource:     s.mockResource,
+		status:       common.DaemonStatusInitialized,
+		handler:      &WorkflowHandler{},
+		adminHandler: nil,
+		stopC:        make(chan struct{}),
+		config:       config,
+		params:       params,
+	}
+
+	s.handler = NewAdminHandler(service, params, config).(*adminHandlerImpl)
 	s.handler.Start()
 }
 
