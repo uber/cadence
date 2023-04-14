@@ -34,7 +34,7 @@ type Partitioner interface {
 	// GetIsolationGroupByDomainID gets where the task workflow should be executing. Largely used by Matching
 	// when determining which isolationGroup to place the tasks in.
 	// Implementations ought to return (nil, nil) for when the feature is not enabled.
-	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*string, error)
+	GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (string, error)
 }
 
 // Config is the configuration for the partitioning library, a library
