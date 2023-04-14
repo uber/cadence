@@ -28,7 +28,7 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination isolation_handler.go -self_package github.com/uber/cadence/common/isolationgroup/isolationgrouphandler
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination isolation_handler_mock.go -self_package github.com/uber/cadence/common/isolationgroup/isolationgrouphandler
 
 type Handler interface {
 	// GetGlobalState returns the current configuration of isolation-groups which apply to all domains
