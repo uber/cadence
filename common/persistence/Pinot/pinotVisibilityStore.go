@@ -42,7 +42,6 @@ import (
 
 const (
 	pinotPersistenceName = "pinot"
-	tableName            = "cadence_visibility_pinot"
 
 	DescendingOrder = "DESC"
 	AcendingOrder   = "ASC"
@@ -267,7 +266,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsQuery(request, false)
+	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -287,7 +286,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsQuery(request, true)
+	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, true)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -304,7 +303,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Cont
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByTypeQuery(request, false)
+	query := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, false)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -321,7 +320,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByTypeQuery(request, true)
+	query := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, true)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -338,7 +337,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx contex
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByWorkflowIDQuery(request, false)
+	query := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, false)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -355,7 +354,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx cont
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByWorkflowIDQuery(request, true)
+	query := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, true)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -372,7 +371,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
 
-	query := getListWorkflowExecutionsByStatusQuery(request)
+	query := getListWorkflowExecutionsByStatusQuery(v.pinotClient.GetTableName(), request)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -385,7 +384,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 }
 
 func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, request *p.InternalGetClosedWorkflowExecutionRequest) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
-	query := getGetClosedWorkflowExecutionQuery(request)
+	query := getGetClosedWorkflowExecutionQuery(v.pinotClient.GetTableName(), request)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -412,7 +411,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 
 	// TODO: need to check next page token in the future
 
-	query := getListWorkflowExecutionsByQueryQuery(request)
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -429,7 +428,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 
 	// TODO: need to check next page token in the future
 
-	query := getListWorkflowExecutionsByQueryQuery(request)
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -442,7 +441,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := getCountWorkflowExecutionsQuery(request)
+	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -542,7 +541,7 @@ type PinotQuery struct {
 	limits  string
 }
 
-func NewPinotQuery() PinotQuery {
+func NewPinotQuery(tableName string) PinotQuery {
 	return PinotQuery{
 		query:   fmt.Sprintf("SELECT *\nFROM %s\n", tableName),
 		filters: PinotQueryFilter{},
@@ -551,7 +550,7 @@ func NewPinotQuery() PinotQuery {
 	}
 }
 
-func NewPinotCountQuery() PinotQuery {
+func NewPinotCountQuery(tableName string) PinotQuery {
 	return PinotQuery{
 		query:   fmt.Sprintf("SELECT COUNT(*)\nFROM %s\n", tableName),
 		filters: PinotQueryFilter{},
@@ -622,12 +621,12 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
-func getCountWorkflowExecutionsQuery(request *p.CountWorkflowExecutionsRequest) string {
+func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotCountQuery()
+	query := NewPinotCountQuery(tableName)
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
@@ -640,12 +639,12 @@ func getCountWorkflowExecutionsQuery(request *p.CountWorkflowExecutionsRequest) 
 	return query.String()
 }
 
-func getListWorkflowExecutionsByQueryQuery(request *p.ListWorkflowExecutionsByQueryRequest) string {
+func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotQuery()
+	query := NewPinotQuery(tableName)
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
@@ -664,12 +663,12 @@ func getListWorkflowExecutionsByQueryQuery(request *p.ListWorkflowExecutionsByQu
 	return query.String()
 }
 
-func getListWorkflowExecutionsQuery(request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {
+func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotQuery()
+	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
@@ -684,12 +683,12 @@ func getListWorkflowExecutionsQuery(request *p.InternalListWorkflowExecutionsReq
 	return query.String()
 }
 
-func getListWorkflowExecutionsByTypeQuery(request *p.InternalListWorkflowExecutionsByTypeRequest, isClosed bool) string {
+func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalListWorkflowExecutionsByTypeRequest, isClosed bool) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotQuery()
+	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(WorkflowType, request.WorkflowTypeName)
@@ -705,12 +704,12 @@ func getListWorkflowExecutionsByTypeQuery(request *p.InternalListWorkflowExecuti
 	return query.String()
 }
 
-func getListWorkflowExecutionsByWorkflowIDQuery(request *p.InternalListWorkflowExecutionsByWorkflowIDRequest, isClosed bool) string {
+func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest, isClosed bool) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotQuery()
+	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(WorkflowID, request.WorkflowID)
@@ -726,12 +725,12 @@ func getListWorkflowExecutionsByWorkflowIDQuery(request *p.InternalListWorkflowE
 	return query.String()
 }
 
-func getListWorkflowExecutionsByStatusQuery(request *p.InternalListClosedWorkflowExecutionsByStatusRequest) string {
+func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.InternalListClosedWorkflowExecutionsByStatusRequest) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotQuery()
+	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 
@@ -759,12 +758,12 @@ func getListWorkflowExecutionsByStatusQuery(request *p.InternalListClosedWorkflo
 	return query.String()
 }
 
-func getGetClosedWorkflowExecutionQuery(request *p.InternalGetClosedWorkflowExecutionRequest) string {
+func getGetClosedWorkflowExecutionQuery(tableName string, request *p.InternalGetClosedWorkflowExecutionRequest) string {
 	if request == nil {
 		return ""
 	}
 
-	query := NewPinotQuery()
+	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addGte(CloseStatus, "0")

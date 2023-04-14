@@ -74,6 +74,10 @@ func (c *PinotClient) CountByQuery(query string) (int64, error) {
 	return int64(resp.ResultTable.GetRowCount()), nil
 }
 
+func (c *PinotClient) GetTableName() string {
+	return c.tableName
+}
+
 /****************************** Response Translator ******************************/
 
 func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
