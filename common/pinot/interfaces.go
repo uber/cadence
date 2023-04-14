@@ -37,6 +37,7 @@ type (
 		Search(request *SearchRequest) (*SearchResponse, error)
 		// CountByQuery is for returning the count of workflow executions that match the query
 		CountByQuery(query string) (int64, error)
+		GetTableName() string
 	}
 
 	// IsRecordValidFilter is a function to filter visibility records
