@@ -71,6 +71,20 @@ func (mr *MockGenericClientMockRecorder) CountByQuery(query interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountByQuery", reflect.TypeOf((*MockGenericClient)(nil).CountByQuery), query)
 }
 
+// GetTableName mocks base method.
+func (m *MockGenericClient) GetTableName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTableName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetTableName indicates an expected call of GetTableName.
+func (mr *MockGenericClientMockRecorder) GetTableName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTableName", reflect.TypeOf((*MockGenericClient)(nil).GetTableName))
+}
+
 // Search mocks base method.
 func (m *MockGenericClient) Search(request *SearchRequest) (*SearchResponse, error) {
 	m.ctrl.T.Helper()
