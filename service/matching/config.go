@@ -52,6 +52,7 @@ type (
 		ForwarderMaxOutstandingTasks dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		ForwarderMaxRatePerSecond    dynamicconfig.IntPropertyFnWithTaskListInfoFilters
 		ForwarderMaxChildrenPerNode  dynamicconfig.IntPropertyFnWithTaskListInfoFilters
+		AsyncTaskDispatchTimeout     dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
 
 		// Time to hold a poll request before returning an empty response if there are no tasks
 		LongPollExpirationInterval dynamicconfig.DurationPropertyFnWithTaskListInfoFilters
@@ -95,6 +96,7 @@ type (
 		MaxTasklistIdleTime           func() time.Duration
 		MinTaskThrottlingBurstSize    func() int
 		MaxTaskDeleteBatchSize        func() int
+		AsyncTaskDispatchTimeout      func() time.Duration
 		// taskWriter configuration
 		OutstandingTaskAppendsThreshold func() int
 		MaxTaskBatchSize                func() int
@@ -138,6 +140,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
 		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
+		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
 	}
 }
 
@@ -201,6 +204,9 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 		},
 		NumReadPartitions: func() int {
 			return common.MaxInt(1, config.NumTasklistReadPartitions(domainName, taskListName, taskType))
+		},
+		AsyncTaskDispatchTimeout: func() time.Duration {
+			return config.AsyncTaskDispatchTimeout(domainName, taskListName, taskType)
 		},
 		forwarderConfig: forwarderConfig{
 			ForwarderMaxOutstandingPolls: func() int {

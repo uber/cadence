@@ -21,6 +21,7 @@
 package matching
 
 import (
+	"sort"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -38,7 +39,8 @@ type (
 	pollerIdentity string
 
 	pollerInfo struct {
-		ratePerSecond float64
+		ratePerSecond  *float64
+		isolationGroup string
 	}
 )
 
@@ -68,12 +70,8 @@ func newPollerHistory(historyUpdatedFunc HistoryUpdatedFunc) *pollerHistory {
 	}
 }
 
-func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, ratePerSecond *float64) {
-	rps := _defaultTaskDispatchRPS
-	if ratePerSecond != nil {
-		rps = *ratePerSecond
-	}
-	pollers.history.Put(id, &pollerInfo{ratePerSecond: rps})
+func (pollers *pollerHistory) updatePollerInfo(id pollerIdentity, info pollerInfo) {
+	pollers.history.Put(id, &info)
 	if pollers.onHistoryUpdatedFunc != nil {
 		pollers.onHistoryUpdatedFunc()
 	}
@@ -91,13 +89,39 @@ func (pollers *pollerHistory) getPollerInfo(earliestAccessTime time.Time) []*typ
 		// TODO add IP, T1396795
 		lastAccessTime := entry.CreateTime()
 		if earliestAccessTime.Before(lastAccessTime) {
+			rps := _defaultTaskDispatchRPS
+			if value.ratePerSecond != nil {
+				rps = *value.ratePerSecond
+			}
 			result = append(result, &types.PollerInfo{
 				Identity:       string(key),
 				LastAccessTime: common.Int64Ptr(lastAccessTime.UnixNano()),
-				RatePerSecond:  value.ratePerSecond,
+				RatePerSecond:  rps,
 			})
 		}
 	}
 
+	return result
+}
+
+func (pollers *pollerHistory) getPollerIsolationGroups(earliestAccessTime time.Time) []string {
+	groupSet := make(map[string]struct{})
+	ite := pollers.history.Iterator()
+	defer ite.Close()
+	for ite.HasNext() {
+		entry := ite.Next()
+		value := entry.Value().(*pollerInfo)
+		lastAccessTime := entry.CreateTime()
+		if earliestAccessTime.Before(lastAccessTime) {
+			if value.isolationGroup != "" {
+				groupSet[value.isolationGroup] = struct{}{}
+			}
+		}
+	}
+	var result []string
+	for k := range groupSet {
+		result = append(result, k)
+	}
+	sort.Strings(result)
 	return result
 }

@@ -2540,6 +2540,13 @@ const (
 	// Default value: 30 seconds
 	IsolationGroupStateUpdateTimeout
 
+	// AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match
+	// KeyName: matching.asyncTaskDispatchTimeout
+	// Value type: Duration
+	// Default value: 30 seconds
+	// Allowed filters: domainName, taskListName, taskListType
+	AsyncTaskDispatchTimeout
+
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
 )
@@ -4501,6 +4508,11 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
 		Description:  "ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck",
 		DefaultValue: time.Minute * 30,
+	},
+	AsyncTaskDispatchTimeout: DynamicDuration{
+		KeyName:      "matching.asyncTaskDispatchTimeout",
+		Description:  "AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match",
+		DefaultValue: time.Second * 30,
 	},
 }
 

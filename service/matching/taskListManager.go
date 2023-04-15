@@ -31,6 +31,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/dgryski/go-farm"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -165,7 +167,7 @@ func newTaskListManager(
 		partitioner:         e.partitioner,
 		taskListID:          taskList,
 		taskListKind:        *taskListKind,
-		logger:              e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
+		logger:              e.logger.WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
 		db:                  db,
 		taskAckManager:      messaging.NewAckManager(e.logger),
 		taskGC:              newTaskGC(db, taskListConfig),
@@ -278,16 +280,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return r, err
 		}
 
-		isolationGroup := ""
-		if c.isIsolationEnabled() && len(params.taskInfo.PartitionConfig) > 0 {
-			params.taskInfo.PartitionConfig[partition.WorkflowRunIDKey] = params.taskInfo.RunID
-			group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, params.taskInfo.DomainID, params.taskInfo.PartitionConfig)
-			if err != nil {
-				c.logger.Error("Failed to get isolation group for async match task", tag.Error(err))
-			} else if group != "" {
-				isolationGroup = group
-			}
-		}
+		isolationGroup := c.getIsolationGroupForTask(ctx, params.taskInfo)
 		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
@@ -368,6 +361,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	childCtx, cancel := c.newChildContext(ctx, c.config.LongPollExpirationInterval(), returnEmptyTaskTimeBudget)
 	defer cancel()
 
+	var isolationGroup string
+	if c.isIsolationEnabled() {
+		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
+	}
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
 	if ok && pollerID != "" {
 		// Found pollerID on context, add it to the map to allow it to be canceled in
@@ -384,10 +381,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 
 	identity, ok := ctx.Value(identityKey).(string)
 	if ok && identity != "" {
-		c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+		c.pollerHistory.updatePollerInfo(pollerIdentity(identity), pollerInfo{ratePerSecond: maxDispatchPerSecond, isolationGroup: isolationGroup})
 		defer func() {
 			// to update timestamp of this poller when long poll ends
-			c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+			c.pollerHistory.updatePollerInfo(pollerIdentity(identity), pollerInfo{ratePerSecond: maxDispatchPerSecond, isolationGroup: isolationGroup})
 		}()
 	}
 
@@ -407,10 +404,6 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	var isolationGroup string
-	if c.isIsolationEnabled() {
-		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
-	}
 	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
@@ -571,6 +564,42 @@ func (c *taskListManagerImpl) isIsolationEnabled() bool {
 
 func (c *taskListManagerImpl) shouldReload() bool {
 	return c.config.EnableTasklistIsolation() != c.enableIsolation && c.taskListKind != types.TaskListKindSticky
+}
+
+func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) string {
+	if c.isIsolationEnabled() && len(taskInfo.PartitionConfig) > 0 {
+		partitionConfig := make(map[string]string)
+		for k, v := range taskInfo.PartitionConfig {
+			partitionConfig[k] = v
+		}
+		partitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
+		var isolationGroup string
+		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig)
+		if err != nil {
+			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
+		} else {
+			isolationGroup = group
+		}
+		// check if the isolation group has pollers, if not use the fallback logic
+		pollerIsolationGroups := c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
+		if len(pollerIsolationGroups) == 0 {
+			// we don't have any pollers, use the original isolation group and wait for pollers' arriving
+			return isolationGroup
+		}
+		if isolationGroup != "" {
+			for _, pollerGroup := range pollerIsolationGroups {
+				if pollerGroup == isolationGroup {
+					return isolationGroup
+				}
+			}
+			c.logger.Warn("Failed to find a poller from the given isolation group", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID))
+		}
+		// if we hit this branch, either we failed to get isolation group from the partition library, or we don't have pollers from the given isolation group
+		// use runID to deterministically choose an isolation group with pollers
+		hashv := farm.Hash32([]byte(taskInfo.RunID))
+		return pollerIsolationGroups[int(hashv)%len(pollerIsolationGroups)]
+	}
+	return ""
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {

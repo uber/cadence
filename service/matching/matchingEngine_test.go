@@ -1275,6 +1275,75 @@ func (s *matchingEngineSuite) UnloadTasklistOnIsolationConfigChange(taskType int
 	s.Contains(err.Error(), errShutdown.Error())
 }
 
+func (s *matchingEngineSuite) TestDrainActivityBacklogNoPollersIsolationGroup() {
+	s.DrainBacklogNoPollersIsolationGroup(persistence.TaskListTypeActivity)
+}
+
+func (s *matchingEngineSuite) TestDrainDecisionBacklogNoPollersIsolationGroup() {
+	s.DrainBacklogNoPollersIsolationGroup(persistence.TaskListTypeDecision)
+}
+
+func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) {
+	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
+	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true)
+	s.matchingEngine.config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
+
+	isolationGroups := s.matchingEngine.config.AllIsolationGroups
+
+	const taskCount = 1000
+	const initialRangeID = 102
+	// TODO: Understand why publish is low when rangeSize is 3
+	const rangeSize = 30
+
+	testParam := newTestParam(taskType)
+	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
+	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
+
+	s.setupGetIsolationGroupByDomainIDMock(testParam.DomainID)
+
+	for i := int64(0); i < taskCount; i++ {
+		scheduleID := i * 3
+		addRequest := &addTaskRequest{
+			TaskType:                      taskType,
+			DomainUUID:                    testParam.DomainID,
+			Execution:                     testParam.WorkflowExecution,
+			ScheduleID:                    scheduleID,
+			TaskList:                      testParam.TaskList,
+			ScheduleToStartTimeoutSeconds: 1,
+			PartitionConfig:               map[string]string{"datacenter": isolationGroups[int(i)%len(isolationGroups)]},
+		}
+		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
+		s.NoError(err)
+	}
+	s.EqualValues(taskCount, s.taskManager.getTaskCount(testParam.TaskListID))
+
+	s.setupRecordTaskStartedMock(taskType, testParam, false)
+
+	for i := int64(0); i < taskCount; {
+		scheduleID := i * 3
+		pollReq := &pollTaskRequest{
+			TaskType:       taskType,
+			DomainUUID:     testParam.DomainID,
+			TaskList:       testParam.TaskList,
+			Identity:       testParam.Identity,
+			IsolationGroup: isolationGroups[0],
+		}
+		result, err := pollTask(s.matchingEngine, s.handlerContext, pollReq)
+		s.NoError(err)
+		s.NotNil(result)
+		if isEmptyToken(result.TaskToken) {
+			s.logger.Debug("empty poll returned")
+			continue
+		}
+		s.assertPollTaskResponse(taskType, testParam, scheduleID, result)
+		i++
+	}
+	s.EqualValues(0, s.taskManager.getTaskCount(testParam.TaskListID))
+	expectedRange := getExpectedRange(initialRangeID, taskCount, rangeSize)
+	// Due to conflicts some ids are skipped and more real ranges are used.
+	s.True(expectedRange <= s.taskManager.getTaskListManager(testParam.TaskListID).rangeID)
+}
+
 func (s *matchingEngineSuite) setupRecordTaskStartedMock(taskType int, param *testParam, checkDuplicate bool) {
 	startedTasks := make(map[int64]bool)
 	if taskType == persistence.TaskListTypeActivity {
@@ -1324,12 +1393,12 @@ func (s *matchingEngineSuite) setupRecordTaskStartedMock(taskType int, param *te
 
 func (s *matchingEngineSuite) setupGetIsolationGroupByDomainIDMock(domainID string) {
 	s.mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), domainID, gomock.Any()).DoAndReturn(
-		func(ctx context.Context, domainID string, partitionConfig map[string]string) (*string, error) {
+		func(ctx context.Context, domainID string, partitionConfig map[string]string) (string, error) {
 			if partitionConfig == nil {
-				return nil, nil
+				return "", nil
 			}
 			group := partitionConfig["datacenter"]
-			return &group, nil
+			return group, nil
 		},
 	).AnyTimes()
 
@@ -1720,6 +1789,7 @@ func defaultTestConfig() *Config {
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
 	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}
+	config.AsyncTaskDispatchTimeout = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	return config
 }
 
