@@ -82,7 +82,7 @@ func (idc *inactiveDomainExists) Check(
 			CheckResultType: CheckResultTypeCorrupted,
 			InvariantName:   idc.Name(),
 			Info:            "failed check: domain is not active",
-			InfoDetails:     err.Error(),
+			InfoDetails:     "The domain has been deprecated or deleted",
 		}
 	}
 
