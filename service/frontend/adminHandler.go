@@ -31,6 +31,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -112,6 +114,7 @@ type (
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
+		isolationGroups       isolationgroupapi.Handler
 	}
 
 	workflowQueryTemplate struct {
@@ -142,11 +145,12 @@ var (
 	}
 )
 
-// NewAdminHandler creates a thrift handler for the cadence admin service
+// NewAdminHandler creates a thrift service for the cadence admin service
 func NewAdminHandler(
 	resource resource.Resource,
 	params *resource.Params,
 	config *Config,
+	domainHandler domain.Handler,
 ) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
@@ -154,6 +158,7 @@ func NewAdminHandler(
 		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
+
 	return &adminHandlerImpl{
 		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
@@ -180,6 +185,7 @@ func NewAdminHandler(
 			backoff.WithRetryPolicy(adminServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
+		isolationGroups: isolationgroupapi.New(resource.GetLogger(), resource.GetIsolationGroupStore(), domainHandler),
 	}
 }
 
@@ -1735,10 +1741,11 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.GetIsolationGroupState() == nil {
+	if adh.isolationGroups == nil {
 		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	return adh.GetIsolationGroupState().GetGlobalState(ctx)
+
+	return adh.isolationGroups.GetGlobalState(ctx)
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
@@ -1748,10 +1755,10 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.GetIsolationGroupState() == nil {
+	if adh.isolationGroups == nil {
 		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	err := adh.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
+	err := adh.isolationGroups.UpdateGlobalState(ctx, *request)
 	if err != nil {
 		return nil, err
 	}

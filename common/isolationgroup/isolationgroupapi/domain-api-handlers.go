@@ -20,12 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package isolationgroup
+package isolationgroupapi
 
 import (
+	"context"
+
 	"github.com/uber/cadence/common/types"
 )
 
-type ChangeEvent struct {
-	Changed types.IsolationGroupConfiguration
+func (handlerImpl) GetDomainState(ctx context.Context, request types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
+	panic("not implemented")
+}
+
+// UpdateDomainState is the read operation for updating a domain's isolation-groups
+func (handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
+	panic("not implemented")
 }

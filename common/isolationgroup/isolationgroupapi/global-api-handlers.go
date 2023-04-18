@@ -20,12 +20,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package isolationgroup
+package isolationgroupapi
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
 )
 
-type ChangeEvent struct {
-	Changed types.IsolationGroupConfiguration
+func (z *handlerImpl) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
+	mappedInput, err := MapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
+	if err != nil {
+		return err
+	}
+	return z.globalIsolationGroupDrains.UpdateValue(
+		dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping,
+		mappedInput,
+	)
+}
+
+func (z *handlerImpl) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
+	res, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
+	if err != nil {
+		var e types.EntityNotExistsError
+		if errors.As(err, &e) {
+			return &types.GetGlobalIsolationGroupsResponse{}, nil
+		}
+		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
+	}
+	resp, err := MapDynamicConfigResponse(res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get global isolation groups from datastore: %w", err)
+	}
+	return &types.GetGlobalIsolationGroupsResponse{IsolationGroups: resp}, nil
 }

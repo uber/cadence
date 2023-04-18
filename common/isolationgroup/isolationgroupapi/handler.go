@@ -20,12 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package isolationgroup
+package isolationgroupapi
 
 import (
-	"github.com/uber/cadence/common/types"
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
 )
 
-type ChangeEvent struct {
-	Changed types.IsolationGroupConfiguration
+type handlerImpl struct {
+	log                        log.Logger
+	globalIsolationGroupDrains dynamicconfig.Client
+	domainManager              domain.Handler
+}
+
+func New(log log.Logger, igConfigStore dynamicconfig.Client, dh domain.Handler) Handler {
+	return &handlerImpl{
+		log:                        log,
+		globalIsolationGroupDrains: igConfigStore,
+		domainManager:              dh,
+	}
 }

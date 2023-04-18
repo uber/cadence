@@ -27,11 +27,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/uber/cadence/common/partition"
+
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
 
-	"github.com/uber/cadence/common/cluster"
-	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/service"
 
@@ -109,7 +112,9 @@ func (s *adminHandlerSuite) SetupTest() {
 		EnableAdminProtection:  dynamicconfig.GetBoolPropertyFn(false),
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
-	s.handler = NewAdminHandler(s.mockResource, params, config).(*adminHandlerImpl)
+
+	dh := domain.NewMockHandler(s.controller)
+	s.handler = NewAdminHandler(s.mockResource, params, config, dh).(*adminHandlerImpl)
 	s.handler.Start()
 }
 
@@ -770,66 +775,39 @@ func (s *adminHandlerSuite) Test_GetDynamicConfig_FilterMatch() {
 
 func Test_GetGlobalIsolationGroups(t *testing.T) {
 
-	// this is the encoding method and output types used by the dynamic config library
-	// when calling GetListValue(), it's a JSON unmarshalled type, but there's
-	// no type information passed to the unmarshaller
-	validDataBlob, _ := json.Marshal([]types.IsolationGroupPartition{
-		{
-			Name:  "zone-1",
-			State: types.IsolationGroupStateDrained,
+	validResponse := types.GetGlobalIsolationGroupsResponse{
+		IsolationGroups: types.IsolationGroupConfiguration{
+			"zone-1": types.IsolationGroupPartition{
+				Name:  "zone-1",
+				State: types.IsolationGroupStateDrained,
+			},
+			"zone-2": types.IsolationGroupPartition{
+				Name:  "zone-2",
+				State: types.IsolationGroupStateHealthy,
+			},
+			"zone-3": types.IsolationGroupPartition{
+				Name:  "zone-3",
+				State: types.IsolationGroupStateDrained,
+			},
 		},
-		{
-			Name:  "zone-2",
-			State: types.IsolationGroupStateHealthy,
-		},
-		{
-			Name:  "zone-3",
-			State: types.IsolationGroupStateDrained,
-		},
-	})
-	var validData []interface{}
-	json.Unmarshal(validDataBlob, &validData)
+	}
 
 	tests := map[string]struct {
-		configStoreDCAffordance func(mock *dynamicconfig.MockClient)
-		dynamicConfigAffordance func(mock *dynamicconfig.MockClient)
-		expectOut               *types.GetGlobalIsolationGroupsResponse
-		expectedErr             error
+		ighandlerAffordance func(mock *isolationgroupapi.MockHandler)
+		expectOut           *types.GetGlobalIsolationGroupsResponse
+		expectedErr         error
 	}{
 		"happy-path - no errors and payload is decoded and returned": {
-			configStoreDCAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil).Return(validData, nil)
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().GetGlobalState(gomock.Any()).Return(&validResponse, nil)
 			},
-			dynamicConfigAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return([]interface{}{"zone-1", "zone-2", "zone-3"}, nil)
-			},
-			expectOut: &types.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: types.IsolationGroupConfiguration{
-					"zone-1": types.IsolationGroupPartition{
-						Name:  "zone-1",
-						State: types.IsolationGroupStateDrained,
-					},
-					"zone-2": types.IsolationGroupPartition{
-						Name:  "zone-2",
-						State: types.IsolationGroupStateHealthy,
-					},
-					"zone-3": types.IsolationGroupPartition{
-						Name:  "zone-3",
-						State: types.IsolationGroupStateDrained,
-					},
-				},
-			},
+			expectOut: &validResponse,
 		},
-		"errors - no value": {
-			configStoreDCAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil).Return(nil, nil)
+		"an error returned": {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().GetGlobalState(gomock.Any()).Return(nil, assert.AnError)
 			},
-			dynamicConfigAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetListValue(dynamicconfig.AllIsolationGroups, gomock.Any()).Return([]interface{}{"zone-1", "zone-2", "zone-3"}, nil)
-			},
-			expectOut: &types.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: nil,
-			},
+			expectedErr: assert.AnError,
 		},
 	}
 
@@ -837,36 +815,15 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			goMock := gomock.NewController(t)
-			domainManager := persistence.NewMockDomainManager(goMock)
-			domainCache := cache.NewDomainCache(
-				domainManager,
-				cluster.Metadata{},
-				metrics.NewNoopMetricsClient(),
-				loggerimpl.NewNopLogger(),
-			)
-
-			configStoreManagerClientMock := dynamicconfig.NewMockClient(goMock)
-			dcClientMock := dynamicconfig.NewMockClient(goMock)
-			dc := dynamicconfig.NewCollection(dcClientMock, loggerimpl.NewNopLogger())
-
-			td.configStoreDCAffordance(configStoreManagerClientMock)
-			td.dynamicConfigAffordance(dcClientMock)
-
-			ig, err := isolationgroup.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
-				loggerimpl.NewNopLogger(),
-				dc,
-				domainCache,
-				configStoreManagerClientMock,
-				make(chan struct{}))
-
-			assert.NoError(t, err)
+			igMock := isolationgroupapi.NewMockHandler(goMock)
+			td.ighandlerAffordance(igMock)
 
 			handler := adminHandlerImpl{
 				Resource: &resource.Test{
-					Logger:          loggerimpl.NewNopLogger(),
-					IsolationGroups: ig,
-					MetricsClient:   metrics.NewNoopMetricsClient(),
+					Logger:        loggerimpl.NewNopLogger(),
+					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
+				isolationGroups: igMock,
 			}
 
 			res, err := handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
@@ -879,89 +836,57 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 
 func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 
-	validConfig := []*types.DynamicConfigValue{
-		{
-			Value: &types.DataBlob{
-				EncodingType: types.EncodingTypeJSON.Ptr(),
-				Data:         []byte(`[{"Name":"zone-1","State":2},{"Name":"zone-2","State":1},{"Name":"zone-3","State":2}]`),
+	validConfig := types.UpdateGlobalIsolationGroupsRequest{
+		IsolationGroups: types.IsolationGroupConfiguration{
+			"zone-1": {
+				Name:  "zone-1",
+				State: types.IsolationGroupStateDrained,
+			},
+			"zone-2": {
+				Name:  "zone-2",
+				State: types.IsolationGroupStateHealthy,
+			},
+			"zone-3": {
+				Name:  "zone-3",
+				State: types.IsolationGroupStateDrained,
 			},
 		},
 	}
 
 	tests := map[string]struct {
-		configStoreDCAffordance func(mock *dynamicconfig.MockClient)
-		dynamicConfigAffordance func(mock *dynamicconfig.MockClient)
-		input                   *types.UpdateGlobalIsolationGroupsRequest
-		expectOut               *types.UpdateGlobalIsolationGroupsResponse
-		expectedErr             error
+		ighandlerAffordance func(mock *isolationgroupapi.MockHandler)
+		input               *types.UpdateGlobalIsolationGroupsRequest
+		expectOut           *types.UpdateGlobalIsolationGroupsResponse
+		expectedErr         error
 	}{
 		"happy-path - update to the database": {
-			input: &types.UpdateGlobalIsolationGroupsRequest{
-				IsolationGroups: types.IsolationGroupConfiguration{
-					"zone-1": {
-						Name:  "zone-1",
-						State: types.IsolationGroupStateDrained,
-					},
-					"zone-2": {
-						Name:  "zone-2",
-						State: types.IsolationGroupStateHealthy,
-					},
-					"zone-3": {
-						Name:  "zone-3",
-						State: types.IsolationGroupStateDrained,
-					},
-				},
-			},
-			configStoreDCAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().UpdateValue(
-					dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping,
-					validConfig,
-				).Return(nil)
-			},
-			dynamicConfigAffordance: func(mock *dynamicconfig.MockClient) {
-				mock.EXPECT().GetListValue(
-					dynamicconfig.AllIsolationGroups,
-					gomock.Any(),
-				).Return([]interface{}{"zone-1", "zone-2", "zone-3"}, nil)
+			input: &validConfig,
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().UpdateGlobalState(gomock.Any(), validConfig).Return(nil)
 			},
 			expectOut: &types.UpdateGlobalIsolationGroupsResponse{},
+		},
+		"happy-path - an error is returned": {
+			input: &validConfig,
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().UpdateGlobalState(gomock.Any(), validConfig).Return(assert.AnError)
+			},
+			expectedErr: assert.AnError,
 		},
 	}
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-
 			goMock := gomock.NewController(t)
-			domainManager := persistence.NewMockDomainManager(goMock)
-			domainCache := cache.NewDomainCache(
-				domainManager,
-				cluster.Metadata{},
-				metrics.NewNoopMetricsClient(),
-				loggerimpl.NewNopLogger(),
-			)
-
-			configStoreManagerClientMock := dynamicconfig.NewMockClient(goMock)
-			dcClientMock := dynamicconfig.NewMockClient(goMock)
-			dc := dynamicconfig.NewCollection(dcClientMock, loggerimpl.NewNopLogger())
-
-			td.configStoreDCAffordance(configStoreManagerClientMock)
-			td.dynamicConfigAffordance(dcClientMock)
-
-			ig, err := isolationgroup.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
-				loggerimpl.NewNopLogger(),
-				dc,
-				domainCache,
-				configStoreManagerClientMock,
-				make(chan struct{}))
-
-			assert.NoError(t, err)
+			igMock := isolationgroupapi.NewMockHandler(goMock)
+			td.ighandlerAffordance(igMock)
 
 			handler := adminHandlerImpl{
 				Resource: &resource.Test{
-					Logger:          loggerimpl.NewNopLogger(),
-					IsolationGroups: ig,
-					MetricsClient:   metrics.NewNoopMetricsClient(),
+					Logger:        loggerimpl.NewNopLogger(),
+					MetricsClient: metrics.NewNoopMetricsClient(),
 				},
+				isolationGroups: igMock,
 			}
 
 			res, err := handler.UpdateGlobalIsolationGroups(context.Background(), td.input)
@@ -975,13 +900,14 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 func Test_IsolationGroupsNotEnabled(t *testing.T) {
 	handler := adminHandlerImpl{
 		Resource: &resource.Test{
-			Logger:          loggerimpl.NewNopLogger(),
-			IsolationGroups: nil, // valid state, the isolation-groups feature is not available for all persistence types
-			MetricsClient:   metrics.NewNoopMetricsClient(),
+			Logger:        loggerimpl.NewNopLogger(),
+			MetricsClient: metrics.NewNoopMetricsClient(),
 		},
+		isolationGroups: nil, // valid state, the isolation-groups feature is not available for all persistence types
 	}
-	assert.NotPanics(t, func() {
-		handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
-		handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
-	})
+
+	_, err := handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
+	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
+	_, err = handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
+	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
 }
