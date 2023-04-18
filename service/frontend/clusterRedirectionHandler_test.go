@@ -22,6 +22,7 @@ package frontend
 
 import (
 	"context"
+	"github.com/uber/cadence/common/domain"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -103,7 +104,8 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 		0,
 		false,
 	)
-	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, nil, client.NewVersionChecker())
+	dh := domain.NewMockHandler(s.controller)
+	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, client.NewVersionChecker(), dh)
 
 	s.mockFrontendHandler = NewMockHandler(s.controller)
 	s.handler = NewClusterRedirectionHandler(frontendHandler, s.mockResource, s.config, config.ClusterRedirectionPolicy{})

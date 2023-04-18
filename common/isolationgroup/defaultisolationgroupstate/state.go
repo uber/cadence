@@ -25,12 +25,9 @@ package defaultisolationgroupstate
 import (
 	"context"
 	"fmt"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"sync"
 	"sync/atomic"
-
-	"github.com/uber/cadence/common/isolationgroup/isolationgrouphandler"
-
-	"github.com/uber/cadence/common/persistence"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"
@@ -46,7 +43,6 @@ type defaultIsolationGroupStateHandler struct {
 	log                        log.Logger
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains dynamicconfig.Client
-	domainManager              persistence.DomainManager
 	config                     defaultConfig
 	subscriptionMu             sync.Mutex
 	valuesMu                   sync.RWMutex
@@ -67,7 +63,7 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	stopChan := make(chan struct{})
 
 	allIGs := dc.GetListProperty(dynamicconfig.AllIsolationGroups)()
-	allIsolationGroups, err := isolationgrouphandler.MapAllIsolationGroupsResponse(allIGs)
+	allIsolationGroups, err := isolationgroupapi.MapAllIsolationGroupsResponse(allIGs)
 	if err != nil {
 		return nil, fmt.Errorf("could not get all isolation groups fron dynamic config: %w", err)
 	}
@@ -171,7 +167,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve global drains in %w", err)
 	}
 
-	globalState, err := isolationgrouphandler.MapDynamicConfigResponse(globalCfg)
+	globalState, err := isolationgroupapi.MapDynamicConfigResponse(globalCfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
 	}

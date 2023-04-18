@@ -1,3 +1,11 @@
+package isolationgroupapi
+
+import (
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+)
+
 // The MIT License (MIT)
 
 // Copyright (c) 2017-2020 Uber Technologies Inc.
@@ -20,19 +28,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package isolationgrouphandler
-
-import (
-	"context"
-
-	"github.com/uber/cadence/common/types"
-)
-
-func (handlerImpl) GetDomainState(ctx context.Context, request types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
+type handlerImpl struct {
+	log                        log.Logger
+	globalIsolationGroupDrains dynamicconfig.Client
+	domainManager              domain.Handler
 }
 
-// UpdateDomainState is the read operation for updating a domain's isolation-groups
-func (handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
-	panic("not implemented")
+func New(log log.Logger, igConfigStore dynamicconfig.Client, dh domain.Handler) Handler {
+	return &handlerImpl{
+		log:                        log,
+		globalIsolationGroupDrains: igConfigStore,
+		domainManager:              dh,
+	}
 }

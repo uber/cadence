@@ -28,8 +28,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/uber/cadence/common/isolationgroup/isolationgrouphandler"
-
 	"github.com/golang/mock/gomock"
 
 	"github.com/uber/cadence/common/cache"
@@ -55,7 +53,7 @@ func TestIsDrainedHandler(t *testing.T) {
 		},
 	}
 
-	validCfg, _ := isolationgrouphandler.MapUpdateGlobalIsolationGroupsRequest(validInput)
+	validCfg, _ := isolationgroupapi.MapUpdateGlobalIsolationGroupsRequest(validInput)
 
 	validCfgData := validCfg[0].Value.GetData()
 	dynamicConfigResponse := []interface{}{}
@@ -336,7 +334,7 @@ func TestIsolationGroupStateMapping(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res, err := isolationgrouphandler.MapDynamicConfigResponse(td.in)
+			res, err := isolationgroupapi.MapDynamicConfigResponse(td.in)
 			assert.Equal(t, td.expected, res)
 			assert.Equal(t, td.expectedErr, err)
 		})
@@ -362,7 +360,7 @@ func TestMapAllIsolationGroupStates(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res, err := isolationgrouphandler.MapAllIsolationGroupsResponse(td.in)
+			res, err := isolationgroupapi.MapAllIsolationGroupsResponse(td.in)
 			assert.Equal(t, td.expected, res)
 			assert.Equal(t, td.expectedErr, err)
 		})
@@ -413,7 +411,7 @@ func TestUpdateRequest(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res, err := isolationgrouphandler.MapUpdateGlobalIsolationGroupsRequest(td.in)
+			res, err := isolationgroupapi.MapUpdateGlobalIsolationGroupsRequest(td.in)
 			assert.Equal(t, td.expected, res)
 			assert.Equal(t, td.expectedErr, err)
 		})

@@ -266,8 +266,20 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("frontend starting")
 
+	// domain handler's shared between admin and workflow handler, so instantiate it centrally and share it
+	dh := domain.NewHandler(
+		s.config.domainConfig,
+		s.GetLogger(),
+		s.GetDomainManager(),
+		s.GetClusterMetadata(),
+		domain.NewDomainReplicator(s.GetDomainReplicationQueue(), s.GetLogger()),
+		s.GetArchivalMetadata(),
+		s.GetArchiverProvider(),
+		s.GetTimeSource(),
+	)
+
 	// Base handler
-	s.handler = NewWorkflowHandler(s, s.config, s.GetDomainReplicationQueue(), client.NewVersionChecker())
+	s.handler = NewWorkflowHandler(s, s.config, client.NewVersionChecker(), dh)
 
 	// Additional decorations
 	var handler Handler = s.handler
@@ -284,7 +296,7 @@ func (s *Service) Start() {
 	grpcHandler := newGrpcHandler(handler)
 	grpcHandler.register(s.GetDispatcher())
 
-	s.adminHandler = NewAdminHandler(*s, s.params, s.config)
+	s.adminHandler = NewAdminHandler(s, s.params, s.config, dh)
 	s.adminHandler = NewAccessControlledAdminHandlerImpl(s.adminHandler, s, s.params.Authorizer, s.params.AuthorizationConfig)
 
 	adminThriftHandler := NewAdminThriftHandler(s.adminHandler)

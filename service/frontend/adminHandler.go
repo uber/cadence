@@ -27,11 +27,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"math"
 	"strconv"
 	"time"
-
-	"github.com/uber/cadence/common/isolationgroup/isolationgrouphandler"
 
 	"github.com/pborman/uuid"
 
@@ -114,7 +113,7 @@ type (
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
-		isolationGroups       isolationgrouphandler.Handler
+		isolationGroups       isolationgroupapi.Handler
 	}
 
 	workflowQueryTemplate struct {
@@ -147,36 +146,37 @@ var (
 
 // NewAdminHandler creates a thrift service for the cadence admin service
 func NewAdminHandler(
-	service Service,
+	resource resource.Resource,
 	params *resource.Params,
 	config *Config,
+	domainHandler domain.Handler,
 ) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
-		service.GetDomainManager(),
-		service.GetTimeSource(),
-		service.GetLogger(),
+		resource.GetDomainManager(),
+		resource.GetTimeSource(),
+		resource.GetLogger(),
 	)
 
 	return &adminHandlerImpl{
-		Resource:              &service,
+		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
 		params:                params,
 		config:                config,
 		domainDLQHandler: domain.NewDLQMessageHandler(
 			domainReplicationTaskExecutor,
-			service.GetDomainReplicationQueue(),
-			service.GetLogger(),
-			service.GetMetricsClient(),
+			resource.GetDomainReplicationQueue(),
+			resource.GetLogger(),
+			resource.GetMetricsClient(),
 		),
 		domainFailoverWatcher: domain.NewFailoverWatcher(
-			service.GetDomainCache(),
-			service.GetDomainManager(),
-			service.GetTimeSource(),
+			resource.GetDomainCache(),
+			resource.GetDomainManager(),
+			resource.GetTimeSource(),
 			config.DomainFailoverRefreshInterval,
 			config.DomainFailoverRefreshTimerJitterCoefficient,
-			service.GetMetricsClient(),
-			service.GetLogger(),
+			resource.GetMetricsClient(),
+			resource.GetLogger(),
 		),
 		eventSerializer: persistence.NewPayloadSerializer(),
 		esClient:        params.ESClient,
@@ -184,7 +184,7 @@ func NewAdminHandler(
 			backoff.WithRetryPolicy(adminServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
-		isolationGroups: isolationgrouphandler.New(service.GetLogger(), service.GetIsolationGroupStore(), service.handler.domainHandler),
+		isolationGroups: isolationgroupapi.New(resource.GetLogger(), resource.GetIsolationGroupStore(), domainHandler),
 	}
 }
 

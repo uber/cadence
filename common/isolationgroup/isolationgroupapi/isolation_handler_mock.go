@@ -24,7 +24,7 @@
 // Source: interface.go
 
 // Package isolationgrouphandler is a generated GoMock package.
-package isolationgrouphandler
+package isolationgroupapi
 
 import (
 	context "context"

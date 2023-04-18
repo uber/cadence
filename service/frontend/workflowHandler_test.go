@@ -69,6 +69,7 @@ type (
 		mockResource      *resource.Test
 		mockDomainCache   *cache.MockDomainCache
 		mockHistoryClient *history.MockClient
+		mockDomainHandler domain.Handler
 
 		mockProducer           *mocks.KafkaProducer
 		mockMessagingClient    messaging.Client
@@ -119,6 +120,19 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockVisibilityArchiver = &archiver.VisibilityArchiverMock{}
 	s.mockVersionChecker = client.NewMockVersionChecker(s.controller)
 
+	// these tests don't mock the domain handler
+	config := s.newConfig(dc.NewInMemoryClient())
+	s.mockDomainHandler = domain.NewHandler(
+		config.domainConfig,
+		s.mockResource.GetLogger(),
+		s.mockResource.GetDomainManager(),
+		s.mockResource.GetClusterMetadata(),
+		domain.NewDomainReplicator(nil, s.mockResource.GetLogger()),
+		s.mockResource.GetArchivalMetadata(),
+		s.mockResource.GetArchiverProvider(),
+		s.mockResource.GetTimeSource(),
+	)
+
 	mockMonitor := s.mockResource.MembershipResolver
 	mockMonitor.EXPECT().MemberCount(service.Frontend).Return(5, nil).AnyTimes()
 	s.mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -133,7 +147,7 @@ func (s *workflowHandlerSuite) TearDownTest() {
 }
 
 func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
-	return NewWorkflowHandler(s.mockResource, config, s.mockProducer, s.mockVersionChecker)
+	return NewWorkflowHandler(s.mockResource, config, s.mockVersionChecker, s.mockDomainHandler)
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
@@ -692,6 +706,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_InvalidArchivalURI() {
 		nil,
 		nil,
 	)
+
 	_, err := wh.UpdateDomain(context.Background(), updateReq)
 	s.Error(err)
 }
@@ -859,6 +874,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEn
 	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
 	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
+
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
 	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),

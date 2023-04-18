@@ -25,9 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"testing"
-
-	"github.com/uber/cadence/common/isolationgroup/isolationgrouphandler"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"
@@ -110,17 +110,10 @@ func (s *adminHandlerSuite) SetupTest() {
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
 
-	service := Service{
-		Resource:     s.mockResource,
-		status:       common.DaemonStatusInitialized,
-		handler:      &WorkflowHandler{},
-		adminHandler: nil,
-		stopC:        make(chan struct{}),
-		config:       config,
-		params:       params,
-	}
+	ctrl := gomock.NewController(s.T())
+	dh := domain.NewMockHandler(ctrl)
 
-	s.handler = NewAdminHandler(service, params, config).(*adminHandlerImpl)
+	s.handler = NewAdminHandler(s.mockResource, params, config, dh).(*adminHandlerImpl)
 	s.handler.Start()
 }
 
@@ -799,18 +792,18 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		ighandlerAffordance func(mock *isolationgrouphandler.MockHandler)
+		ighandlerAffordance func(mock *isolationgroupapi.MockHandler)
 		expectOut           *types.GetGlobalIsolationGroupsResponse
 		expectedErr         error
 	}{
 		"happy-path - no errors and payload is decoded and returned": {
-			ighandlerAffordance: func(mock *isolationgrouphandler.MockHandler) {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().GetGlobalState(gomock.Any()).Return(&validResponse, nil)
 			},
 			expectOut: &validResponse,
 		},
 		"an error returned": {
-			ighandlerAffordance: func(mock *isolationgrouphandler.MockHandler) {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().GetGlobalState(gomock.Any()).Return(nil, assert.AnError)
 			},
 			expectedErr: assert.AnError,
@@ -821,7 +814,7 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 
 			goMock := gomock.NewController(t)
-			igMock := isolationgrouphandler.NewMockHandler(goMock)
+			igMock := isolationgroupapi.NewMockHandler(goMock)
 			td.ighandlerAffordance(igMock)
 
 			handler := adminHandlerImpl{
@@ -860,21 +853,21 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		ighandlerAffordance func(mock *isolationgrouphandler.MockHandler)
+		ighandlerAffordance func(mock *isolationgroupapi.MockHandler)
 		input               *types.UpdateGlobalIsolationGroupsRequest
 		expectOut           *types.UpdateGlobalIsolationGroupsResponse
 		expectedErr         error
 	}{
 		"happy-path - update to the database": {
 			input: &validConfig,
-			ighandlerAffordance: func(mock *isolationgrouphandler.MockHandler) {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().UpdateGlobalState(gomock.Any(), validConfig).Return(nil)
 			},
 			expectOut: &types.UpdateGlobalIsolationGroupsResponse{},
 		},
 		"happy-path - an error is returned": {
 			input: &validConfig,
-			ighandlerAffordance: func(mock *isolationgrouphandler.MockHandler) {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().UpdateGlobalState(gomock.Any(), validConfig).Return(assert.AnError)
 			},
 			expectedErr: assert.AnError,
@@ -884,7 +877,7 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
 			goMock := gomock.NewController(t)
-			igMock := isolationgrouphandler.NewMockHandler(goMock)
+			igMock := isolationgroupapi.NewMockHandler(goMock)
 			td.ighandlerAffordance(igMock)
 
 			handler := adminHandlerImpl{
