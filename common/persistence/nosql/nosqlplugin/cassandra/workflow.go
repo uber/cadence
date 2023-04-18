@@ -45,7 +45,7 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
 	shardCondition *nosqlplugin.ShardCondition,
-	ttl int64,
+	ttlInSeconds int64,
 ) error {
 	shardID := shardCondition.ShardID
 	domainID := execution.DomainID
@@ -58,7 +58,7 @@ func (db *cdb) InsertWorkflowExecutionWithTasks(
 		return err
 	}
 
-	err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, execution, ttl)
+	err = db.createWorkflowExecutionWithMergeMaps(batch, shardID, domainID, workflowID, execution, ttlInSeconds)
 	if err != nil {
 		return err
 	}

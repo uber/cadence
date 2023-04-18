@@ -583,7 +583,7 @@ func (m *executionManagerImpl) CreateWorkflowExecution(
 
 		NewWorkflowSnapshot: *serializedNewWorkflowSnapshot,
 
-		TTL: request.TTL,
+		TTLInSeconds: request.TTLInSeconds,
 	}
 
 	msuss := m.statsComputer.computeMutableStateCreateStats(newRequest)

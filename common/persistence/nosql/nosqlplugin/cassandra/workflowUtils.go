@@ -1018,9 +1018,9 @@ func (db *cdb) createWorkflowExecutionWithMergeMaps(
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
-	ttl int64,
+	ttlInSeconds int64,
 ) error {
-	err := db.createWorkflowExecution(batch, shardID, domainID, workflowID, execution, ttl)
+	err := db.createWorkflowExecution(batch, shardID, domainID, workflowID, execution, ttlInSeconds)
 	if err != nil {
 		return err
 	}
@@ -1293,11 +1293,11 @@ func (db *cdb) createWorkflowExecution(
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
-	ttl int64,
+	ttlInSeconds int64,
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
-	if db.dc.EnableTTL(domainID) && ttl > 0 {
+	if db.dc.EnableExecutionTTL(domainID) && ttlInSeconds > 0 {
 		batch.Query(templateCreateWorkflowExecutionWithTTL,
 			shardID,
 			domainID,
@@ -1373,7 +1373,7 @@ func (db *cdb) createWorkflowExecution(
 			execution.Checksums.Value,
 			execution.LastWriteVersion,
 			execution.State,
-			ttl,
+			ttlInSeconds,
 		)
 	} else {
 		batch.Query(templateCreateWorkflowExecutionWithVersionHistoriesQuery,
