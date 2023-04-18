@@ -25,9 +25,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/uber-go/tally"

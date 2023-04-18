@@ -22,8 +22,9 @@ package frontend
 
 import (
 	"context"
-	"github.com/uber/cadence/common/domain"
 	"testing"
+
+	"github.com/uber/cadence/common/domain"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"

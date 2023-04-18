@@ -25,9 +25,10 @@ package defaultisolationgroupstate
 import (
 	"context"
 	"fmt"
-	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"sync"
 	"sync/atomic"
+
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/cache"

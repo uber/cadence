@@ -27,10 +27,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
 
 	"github.com/pborman/uuid"
 
