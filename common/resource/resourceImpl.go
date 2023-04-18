@@ -357,6 +357,9 @@ func (h *Impl) Start() {
 	}
 	h.hostInfo = hostInfo
 
+	if h.isolationGroupConfigStore != nil {
+		h.isolationGroupConfigStore.Start()
+	}
 	// The service is now started up
 	h.logger.Info("service started")
 	// seed the random generator once for this service

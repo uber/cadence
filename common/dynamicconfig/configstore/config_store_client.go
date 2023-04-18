@@ -105,10 +105,6 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 	if err != nil {
 		return nil, err
 	}
-	err = client.startUpdate()
-	if err != nil {
-		return nil, err
-	}
 	return client, nil
 }
 
@@ -359,6 +355,11 @@ func (csc *configStoreClient) Stop() {
 }
 
 func (csc *configStoreClient) Start() {
+	err := csc.startUpdate()
+	if err != nil {
+		csc.logger.Error("could not start config store", tag.Error(err))
+		return
+	}
 	if !atomic.CompareAndSwapInt32(&csc.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
