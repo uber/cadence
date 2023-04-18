@@ -24,6 +24,7 @@ package query
 
 import (
 	"encoding/json"
+
 	"github.com/olivere/elastic/v7"
 	"github.com/stretchr/testify/assert"
 
