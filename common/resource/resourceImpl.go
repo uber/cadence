@@ -612,6 +612,7 @@ func createConfigStoreOrDefault(
 	cfgStoreClient, err := configstore.NewConfigStoreClient(cscConfig, &params.PersistenceConfig, params.Logger, persistence.GlobalIsolationGroupConfig)
 	if err != nil {
 		// not possible to create the client under some persistence configurations, so this is expected
+		params.Logger.Warn("not instantiating Isolation group config store, this feature will not be enabled", tag.Error(err))
 		return nil
 	}
 	return cfgStoreClient

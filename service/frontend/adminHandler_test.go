@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/partition"
 	"testing"
 
 	"github.com/uber/cadence/common/domain"
@@ -111,9 +112,7 @@ func (s *adminHandlerSuite) SetupTest() {
 		EnableGracefulFailover: dynamicconfig.GetBoolPropertyFn(false),
 	}
 
-	ctrl := gomock.NewController(s.T())
-	dh := domain.NewMockHandler(ctrl)
-
+	dh := domain.NewMockHandler(s.controller)
 	s.handler = NewAdminHandler(s.mockResource, params, config, dh).(*adminHandlerImpl)
 	s.handler.Start()
 }
@@ -905,8 +904,9 @@ func Test_IsolationGroupsNotEnabled(t *testing.T) {
 		},
 		isolationGroups: nil, // valid state, the isolation-groups feature is not available for all persistence types
 	}
-	assert.NotPanics(t, func() {
-		handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
-		handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
-	})
+
+	_, err := handler.GetGlobalIsolationGroups(context.Background(), &types.GetGlobalIsolationGroupsRequest{})
+	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
+	_, err = handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
+	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
 }

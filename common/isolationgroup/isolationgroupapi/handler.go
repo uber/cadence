@@ -1,11 +1,3 @@
-package isolationgroupapi
-
-import (
-	"github.com/uber/cadence/common/domain"
-	"github.com/uber/cadence/common/dynamicconfig"
-	"github.com/uber/cadence/common/log"
-)
-
 // The MIT License (MIT)
 
 // Copyright (c) 2017-2020 Uber Technologies Inc.
@@ -27,6 +19,14 @@ import (
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+
+package isolationgroupapi
+
+import (
+	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/dynamicconfig"
+	"github.com/uber/cadence/common/log"
+)
 
 type handlerImpl struct {
 	log                        log.Logger

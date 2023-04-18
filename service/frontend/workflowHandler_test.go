@@ -127,7 +127,7 @@ func (s *workflowHandlerSuite) SetupTest() {
 		s.mockResource.GetLogger(),
 		s.mockResource.GetDomainManager(),
 		s.mockResource.GetClusterMetadata(),
-		domain.NewDomainReplicator(nil, s.mockResource.GetLogger()),
+		domain.NewDomainReplicator(s.mockProducer, s.mockResource.GetLogger()),
 		s.mockResource.GetArchivalMetadata(),
 		s.mockResource.GetArchiverProvider(),
 		s.mockResource.GetTimeSource(),
