@@ -34,6 +34,7 @@ import (
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
+	"github.com/uber/cadence/common/elasticsearch/query"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
@@ -53,7 +54,7 @@ type (
 	// searchParametersV6 holds all required and optional parameters for executing a search
 	searchParametersV6 struct {
 		Index       string
-		Query       elastic.Query
+		Query       query.Query
 		From        int
 		PageSize    int
 		Sorter      []elastic.Sorter
@@ -126,9 +127,9 @@ func (c *elasticV6) Search(ctx context.Context, request *SearchRequest) (*p.Inte
 		return nil, err
 	}
 
-	var matchQuery *elastic.MatchQuery
+	var matchQuery *query.MatchQuery
 	if request.MatchQuery != nil {
-		matchQuery = elastic.NewMatchQuery(request.MatchQuery.Name, request.MatchQuery.Text)
+		matchQuery = query.NewMatchQuery(request.MatchQuery.Name, request.MatchQuery.Text)
 	}
 
 	searchResult, err := c.getSearchResult(
@@ -214,10 +215,10 @@ func (c *elasticV6) SearchForOneClosedExecution(
 	request *p.InternalGetClosedWorkflowExecutionRequest,
 ) (*p.InternalGetClosedWorkflowExecutionResponse, error) {
 
-	matchDomainQuery := elastic.NewMatchQuery(DomainID, request.DomainUUID)
-	existClosedStatusQuery := elastic.NewExistsQuery(CloseStatus)
-	matchWorkflowIDQuery := elastic.NewMatchQuery(WorkflowID, request.Execution.GetWorkflowID())
-	boolQuery := elastic.NewBoolQuery().Must(matchDomainQuery).Must(existClosedStatusQuery).Must(matchWorkflowIDQuery)
+	matchDomainQuery := query.NewMatchQuery(DomainID, request.DomainUUID)
+	existClosedStatusQuery := query.NewExistsQuery(CloseStatus)
+	matchWorkflowIDQuery := query.NewMatchQuery(WorkflowID, request.Execution.GetWorkflowID())
+	boolQuery := query.NewBoolQuery().Must(matchDomainQuery).Must(existClosedStatusQuery).Must(matchWorkflowIDQuery)
 	rid := request.Execution.GetRunID()
 	if rid != "" {
 		matchRunIDQuery := elastic.NewMatchQuery(RunID, rid)
@@ -412,13 +413,13 @@ func (c *elasticV6) getSearchResult(
 	ctx context.Context,
 	index string,
 	request *p.InternalListWorkflowExecutionsRequest,
-	matchQuery *elastic.MatchQuery,
+	matchQuery *query.MatchQuery,
 	isOpen bool,
 	token *ElasticVisibilityPageToken,
 ) (*elastic.SearchResult, error) {
 
 	// always match domain id
-	boolQuery := elastic.NewBoolQuery().Must(elastic.NewMatchQuery(DomainID, request.DomainUUID))
+	boolQuery := query.NewBoolQuery().Must(query.NewMatchQuery(DomainID, request.DomainUUID))
 
 	if matchQuery != nil {
 		boolQuery = boolQuery.Must(matchQuery)
@@ -434,7 +435,7 @@ func (c *elasticV6) getSearchResult(
 	}
 
 	var rangeQueryField string
-	existClosedStatusQuery := elastic.NewExistsQuery(CloseStatus)
+	existClosedStatusQuery := query.NewExistsQuery(CloseStatus)
 	if isOpen {
 		rangeQueryField = StartTime
 		boolQuery = boolQuery.MustNot(existClosedStatusQuery)
@@ -445,7 +446,7 @@ func (c *elasticV6) getSearchResult(
 
 	earliestTimeStr := strconv.FormatInt(request.EarliestTime.UnixNano()-oneMicroSecondInNano, 10)
 	latestTimeStr := strconv.FormatInt(request.LatestTime.UnixNano()+oneMicroSecondInNano, 10)
-	rangeQuery := elastic.NewRangeQuery(rangeQueryField).Gte(earliestTimeStr).Lte(latestTimeStr)
+	rangeQuery := query.NewRangeQuery(rangeQueryField).Gte(earliestTimeStr).Lte(latestTimeStr)
 	boolQuery = boolQuery.Filter(rangeQuery)
 
 	params := &searchParametersV6{
@@ -455,8 +456,8 @@ func (c *elasticV6) getSearchResult(
 		PageSize: request.PageSize,
 	}
 
-	params.Sorter = append(params.Sorter, elastic.NewFieldSort(rangeQueryField).Desc())
-	params.Sorter = append(params.Sorter, elastic.NewFieldSort(RunID).Desc())
+	params.Sorter = append(params.Sorter, query.NewFieldSort(rangeQueryField).Desc())
+	params.Sorter = append(params.Sorter, query.NewFieldSort(RunID).Desc())
 
 	if ShouldSearchAfter(token) {
 		params.SearchAfter = []interface{}{token.SortValue, token.TieBreaker}
