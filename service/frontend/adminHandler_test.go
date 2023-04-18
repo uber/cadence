@@ -25,8 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/uber/cadence/common/partition"
 	"testing"
+
+	"github.com/uber/cadence/common/partition"
 
 	"github.com/uber/cadence/common/domain"
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
