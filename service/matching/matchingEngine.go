@@ -28,6 +28,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -295,6 +297,23 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	if err != nil {
 		return false, err
 	}
+
+	var sb strings.Builder
+
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return false, err
+	}
+	sb.WriteString(domainName)
+	sb.WriteString("+")
+	sb.WriteString(taskList.baseName)
+	sb.WriteString("+")
+	sb.WriteString(strconv.Itoa(taskList.partition))
+
+	taskListID := sb.String()
+
+	e.metricsClient.Scope(metrics.MatchingAddDecisionTaskScope, metrics.TaskListTag(taskListID)).IncCounter(metrics.CadenceClientRequests)
+	e.emitInfoOrDebugLog(domainID, "taskListID of Cadence Client Requests", tag.Dynamic("taskListID", taskListID))
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
