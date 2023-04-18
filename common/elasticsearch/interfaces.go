@@ -29,6 +29,10 @@ import (
 	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/elasticsearch/bulk"
+	esc "github.com/uber/cadence/common/elasticsearch/client"
+	v6 "github.com/uber/cadence/common/elasticsearch/client/v6"
+	v7 "github.com/uber/cadence/common/elasticsearch/client/v7"
+	"github.com/uber/cadence/common/elasticsearch/query"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
 )
@@ -37,7 +41,7 @@ import (
 func NewGenericClient(
 	connectConfig *config.ElasticSearchConfig,
 	logger log.Logger,
-) (GenericClient, error) {
+) (*ESClient, error) {
 	if connectConfig.Version == "" {
 		connectConfig.Version = "v6"
 	}
@@ -60,14 +64,26 @@ func NewGenericClient(
 		}
 	}
 
+	var esClient esc.Client
+	var err error
+
 	switch connectConfig.Version {
 	case "v6":
-		return NewV6Client(connectConfig, tlsClient, signingAWSClient, logger)
+		esClient, err = v6.NewV6Client(connectConfig, logger, tlsClient, signingAWSClient)
 	case "v7":
-		return NewV7Client(connectConfig, tlsClient, signingAWSClient, logger)
+		esClient, err = v7.NewV7Client(connectConfig, logger, tlsClient, signingAWSClient)
 	default:
 		return nil, fmt.Errorf("not supported ElasticSearch version: %v", connectConfig.Version)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ESClient{
+		client: esClient,
+		logger: logger,
+	}, nil
 }
 
 type (
@@ -105,14 +121,8 @@ type (
 		ListRequest     *p.InternalListWorkflowExecutionsRequest
 		IsOpen          bool
 		Filter          IsRecordValidFilter
-		MatchQuery      *GenericMatch
+		MatchQuery      *query.MatchQuery
 		MaxResultWindow int
-	}
-
-	// GenericMatch is a match struct
-	GenericMatch struct {
-		Name string
-		Text interface{}
 	}
 
 	// SearchByQueryRequest is request for SearchByQuery
