@@ -324,12 +324,6 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		return false, err
 	}
 
-	e.logger.Info("tlMgr of Cadence Client Request",
-		tag.Dynamic("tlMgr name", tlMgr.TaskListID().qualifiedTaskListName.name),
-		tag.Dynamic("tlMgr basename", tlMgr.TaskListID().qualifiedTaskListName.baseName),
-		tag.Dynamic("tlMgr partition", tlMgr.TaskListID().qualifiedTaskListName.partition),
-		tag.Dynamic("as", tlMgr.String()))
-
 	if taskListKind != nil && *taskListKind == types.TaskListKindSticky {
 		// check if the sticky worker is still available, if not, fail this request early
 		if !tlMgr.HasPollerAfter(time.Now().Add(-_stickyPollerUnavailableWindow)) {
