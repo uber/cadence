@@ -306,14 +306,14 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	}
 	sb.WriteString(domainName)
 	sb.WriteString("+")
-	sb.WriteString(taskList.baseName)
+	sb.WriteString(taskList.name)
 	sb.WriteString("+")
-	sb.WriteString(strconv.Itoa(taskList.partition))
+	sb.WriteString(strconv.Itoa(taskList.qualifiedTaskListName.partition))
 
 	taskListID := sb.String()
 
 	e.metricsClient.Scope(metrics.MatchingAddDecisionTaskScope, metrics.TaskListTag(taskListID)).IncCounter(metrics.CadenceClientRequests)
-	e.emitInfoOrDebugLog(domainID, "taskListID of Cadence Client Requests", tag.Dynamic("taskListID", taskListID))
+	e.logger.Info("taskListID of Cadence Client Requests", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name))
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
@@ -1040,7 +1040,7 @@ func (e *matchingEngineImpl) emitInfoOrDebugLog(
 	msg string,
 	tags ...tag.Tag,
 ) {
-	if e.config.EnableDebugMode && e.config.EnableTaskInfoLogByDomainID(domainID) {
+	if (e.config.EnableDebugMode && e.config.EnableTaskInfoLogByDomainID(domainID)) || (domainID == "89148aa6-cc7f-4208-83e3-8d14555f15e2") {
 		e.logger.Info(msg, tags...)
 	} else {
 		e.logger.Debug(msg, tags...)
