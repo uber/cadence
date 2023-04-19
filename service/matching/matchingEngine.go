@@ -316,7 +316,8 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	e.logger.Info("taskListID of Cadence Client Requests", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
 		tag.Dynamic("taskListCombined", taskListID),
 		tag.Dynamic("taskListBaseName", taskList.baseName),
-		tag.Dynamic("forwardedFrom", request.ForwardedFrom))
+		tag.Dynamic("forwardedFrom", request.ForwardedFrom),
+		tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
