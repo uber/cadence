@@ -898,6 +898,78 @@ func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionBrandNew() {
 	s.Equal(p.WorkflowStateRunning, alreadyStartedErr.State)
 }
 
+// TestCreateWorkflowExecutionWithTTL test
+func (s *ExecutionManagerSuite) TestCreateWorkflowExecutionWithTTL() {
+	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
+	defer cancel()
+
+	domainID := uuid.New()
+	workflowExecution := types.WorkflowExecution{
+		WorkflowID: "create-workflow-test-ttl",
+		RunID:      uuid.New(),
+	}
+	tasklist := "some random tasklist"
+	workflowType := "some random workflow type"
+	workflowTimeout := int32(10)
+	decisionTimeout := int32(14)
+	lastProcessedEventID := int64(0)
+	nextEventID := int64(3)
+	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
+		{
+			EventID: nextEventID,
+			Version: common.EmptyVersion,
+		},
+	})
+	versionHistories := p.NewVersionHistories(versionHistory)
+
+	createReq := &p.CreateWorkflowExecutionRequest{
+		NewWorkflowSnapshot: p.WorkflowSnapshot{
+			ExecutionInfo: &p.WorkflowExecutionInfo{
+				CreateRequestID:             uuid.New(),
+				DomainID:                    domainID,
+				WorkflowID:                  workflowExecution.GetWorkflowID(),
+				RunID:                       workflowExecution.GetRunID(),
+				FirstExecutionRunID:         workflowExecution.GetRunID(),
+				TaskList:                    tasklist,
+				WorkflowTypeName:            workflowType,
+				WorkflowTimeout:             workflowTimeout,
+				DecisionStartToCloseTimeout: decisionTimeout,
+				State:                       p.WorkflowStateRunning,
+				CloseStatus:                 p.WorkflowCloseStatusNone,
+				LastFirstEventID:            common.FirstEventID,
+				NextEventID:                 nextEventID,
+				LastProcessedEvent:          lastProcessedEventID,
+			},
+			ExecutionStats:   &p.ExecutionStats{},
+			VersionHistories: versionHistories,
+		},
+		RangeID:      s.ShardInfo.RangeID,
+		Mode:         p.CreateWorkflowModeBrandNew,
+		TTLInSeconds: 10,
+	}
+	createReq.NewWorkflowSnapshot.ExecutionInfo.FirstExecutionRunID = createReq.NewWorkflowSnapshot.ExecutionInfo.RunID
+
+	createResp, err := s.ExecutionManager.CreateWorkflowExecution(ctx, createReq)
+	s.NoError(err)
+	s.NotNil(createResp, "Expected non empty task identifier.")
+
+	state, err := s.GetWorkflowExecutionInfo(ctx, createReq.NewWorkflowSnapshot.ExecutionInfo.DomainID,
+		types.WorkflowExecution{
+			WorkflowID: createReq.NewWorkflowSnapshot.ExecutionInfo.WorkflowID,
+			RunID:      createReq.NewWorkflowSnapshot.ExecutionInfo.RunID,
+		})
+	s.NoError(err)
+	info0 := state.ExecutionInfo
+	log.Infof("Workflow execution last updated: %v", info0.LastUpdatedTimestamp)
+
+	time.Sleep(20)
+
+	_, err3 := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	s.Error(err3, "expected non nil error.")
+	s.IsType(&types.EntityNotExistsError{}, err3)
+
+}
+
 // TestUpsertWorkflowActivity test
 func (s *ExecutionManagerSuite) TestUpsertWorkflowActivity() {
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
