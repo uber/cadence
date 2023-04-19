@@ -136,7 +136,9 @@ dispatchLoop:
 				isolationGroup := tr.getIsolationGroupForTask(tr.cancelCtx, taskInfo)
 				task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil, isolationGroup)
 				dispatchCtx, cancel := tr.newDispatchContext(isolationGroup)
+				timerScope := tr.scope.StartTimer(metrics.AsyncMatchLatencyPerTaskList)
 				err := tr.dispatchTask(dispatchCtx, task)
+				timerScope.Stop()
 				cancel()
 				if err == nil {
 					break
@@ -150,6 +152,8 @@ dispatchLoop:
 					// if this happens, we don't want to block the task dispatching, because there might be pollers from
 					// other isolation groups, we just simply continue and dispatch the task to a new isolation group which
 					// has pollers
+					tr.logger.Warn("Async task dispatch timed out")
+					tr.scope.IncCounter(metrics.AsyncMatchDispatchTimeoutCounterPerTaskList)
 					continue
 				}
 				// this should never happen unless there is a bug - don't drop the task

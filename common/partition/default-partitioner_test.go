@@ -143,6 +143,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			State: types.IsolationGroupStateHealthy,
 		},
 	}
+	isolationGroups := []string{"zone-1", "zone-2", "zone-3"}
 
 	tests := map[string]struct {
 		stateAffordance      func(state *isolationgroup.MockState)
@@ -158,7 +159,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
-				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
+				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID, isolationGroups).Return(validIsolationGroup, nil)
 			},
 			expectedValue: "zone-2",
 		},
@@ -169,7 +170,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
-				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(validIsolationGroup, nil)
+				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID, isolationGroups).Return(validIsolationGroup, nil)
 			},
 			expectedValue: "zone-3",
 		},
@@ -180,7 +181,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
-				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID).Return(
+				state.EXPECT().AvailableIsolationGroupsByDomainID(gomock.Any(), domainID, isolationGroups).Return(
 					types.IsolationGroupConfiguration{}, nil)
 			},
 			expectedValue: "",
@@ -210,7 +211,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig, Config{
 				IsolationGroupEnabled: func(domain string) bool { return true },
 			})
-			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, domainID, td.partitionKeyPassedIn)
+			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, domainID, td.partitionKeyPassedIn, isolationGroups)
 
 			assert.Equal(t, td.expectedValue, res)
 			assert.Equal(t, td.expectedError, err)

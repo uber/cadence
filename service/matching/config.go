@@ -104,6 +104,7 @@ type (
 		NumReadPartitions               func() int
 		// isolation configuration
 		EnableTasklistIsolation func() bool
+		AllIsolationGroups      []string
 	}
 )
 
@@ -164,7 +165,8 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 	taskListName := id.name
 	taskType := id.taskType
 	return &taskListConfig{
-		RangeSize: config.RangeSize,
+		RangeSize:          config.RangeSize,
+		AllIsolationGroups: config.AllIsolationGroups,
 		EnableTasklistIsolation: func() bool {
 			return config.EnableTasklistIsolation(domainName)
 		},

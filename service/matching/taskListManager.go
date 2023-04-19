@@ -31,8 +31,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dgryski/go-farm"
-
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
 	"github.com/uber/cadence/common/cache"
@@ -96,6 +94,7 @@ type (
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
+		createTime      time.Time
 		enableIsolation bool
 		taskListID      *taskListID
 		taskListKind    types.TaskListKind // sticky taskList has different process in persistence
@@ -142,6 +141,7 @@ func newTaskListManager(
 	taskList *taskListID,
 	taskListKind *types.TaskListKind,
 	config *Config,
+	createTime time.Time,
 ) (taskListManager, error) {
 
 	taskListConfig, err := newTaskListConfig(taskList, config, e.domainCache)
@@ -161,6 +161,7 @@ func newTaskListManager(
 	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
 
 	tlMgr := &taskListManagerImpl{
+		createTime:          createTime,
 		enableIsolation:     taskListConfig.EnableTasklistIsolation(),
 		domainCache:         e.domainCache,
 		clusterMetadata:     e.clusterMetadata,
@@ -573,31 +574,23 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			partitionConfig[k] = v
 		}
 		partitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
-		var isolationGroup string
-		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig)
+		pollerIsolationGroups := c.config.AllIsolationGroups
+		// not all poller information are available at the time of task list manager creation,
+		// because we don't persist poller information in database, so in the first minute, we always assume
+		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group
+		if time.Now().Sub(c.createTime) > time.Minute {
+			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
+			if len(pollerIsolationGroups) == 0 {
+				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
+				pollerIsolationGroups = c.config.AllIsolationGroups
+			}
+		}
+		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig, pollerIsolationGroups)
 		if err != nil {
 			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
 		} else {
-			isolationGroup = group
+			return group
 		}
-		// check if the isolation group has pollers, if not use the fallback logic
-		pollerIsolationGroups := c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
-		if len(pollerIsolationGroups) == 0 {
-			// we don't have any pollers, use the original isolation group and wait for pollers' arriving
-			return isolationGroup
-		}
-		if isolationGroup != "" {
-			for _, pollerGroup := range pollerIsolationGroups {
-				if pollerGroup == isolationGroup {
-					return isolationGroup
-				}
-			}
-			c.logger.Warn("Failed to find a poller from the given isolation group", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID))
-		}
-		// if we hit this branch, either we failed to get isolation group from the partition library, or we don't have pollers from the given isolation group
-		// use runID to deterministically choose an isolation group with pollers
-		hashv := farm.Hash32([]byte(taskInfo.RunID))
-		return pollerIsolationGroups[int(hashv)%len(pollerIsolationGroups)]
 	}
 	return ""
 }
