@@ -2875,6 +2875,18 @@ func (s *ShardInfo) Copy() *ShardInfo {
 	}
 }
 
+// SerializeIsolationGroups flattens isolation groups
+func SerializeIsolationGroups(isolationGroupPartitions []types.IsolationGroupPartition) []map[string]interface{} {
+	out := []map[string]interface{}{}
+	for _, v := range isolationGroupPartitions {
+		out = append(out, map[string]interface{}{
+			"name":  v.Name,
+			"state": v.State,
+		})
+	}
+	return out
+}
+
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable
 // by flattening them into map[string]interface{}
 func SerializeClusterConfigs(replicationConfigs []*ClusterReplicationConfig) []map[string]interface{} {

@@ -59,7 +59,7 @@ const (
 		`visibility_archival_status: ?, ` +
 		`visibility_archival_uri: ?, ` +
 		`bad_binaries: ?,` +
-		`bad_binaries_encoding: ?` +
+		`bad_binaries_encoding: ?,` +
 		`isolation_groups: ?` +
 		`}`
 
@@ -196,6 +196,7 @@ func (db *cdb) InsertDomain(
 		row.Config.VisibilityArchivalStatus,
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
+		p.SerializeIsolationGroups(row.Config.IsolationGroups),
 		string(row.Config.BadBinaries.Encoding),
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
