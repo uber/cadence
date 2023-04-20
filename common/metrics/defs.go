@@ -1876,6 +1876,8 @@ const (
 	CadenceClientFailures
 	CadenceClientLatency
 
+	CadenceDecisionTasklistRequests
+
 	CadenceDcRedirectionClientRequests
 	CadenceDcRedirectionClientFailures
 	CadenceDcRedirectionClientLatency
@@ -2459,6 +2461,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceClientRequests:                                        {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                                        {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                         {metricName: "cadence_client_latency", metricType: Timer},
+		CadenceDecisionTasklistRequests:                              {metricName: "cadence_decision_tasklist_request", metricType: Counter},
 		CadenceDcRedirectionClientRequests:                           {metricName: "cadence_client_requests_redirection", metricType: Counter},
 		CadenceDcRedirectionClientFailures:                           {metricName: "cadence_client_errors_redirection", metricType: Counter},
 		CadenceDcRedirectionClientLatency:                            {metricName: "cadence_client_latency_redirection", metricType: Timer},
