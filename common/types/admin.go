@@ -376,8 +376,8 @@ const (
 )
 
 type IsolationGroupPartition struct {
-	Name  string
-	State IsolationGroupState
+	Name  string              `json:"name"`
+	State IsolationGroupState `json:"state"`
 }
 
 // IsolationGroupConfiguration is an internal representation of a set of

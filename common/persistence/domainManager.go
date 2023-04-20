@@ -199,6 +199,7 @@ func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDom
 		VisibilityArchivalStatus: c.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
 		BadBinaries:              badBinaries,
+		IsolationGroups:          c.IsolationGroups,
 	}, nil
 }
 

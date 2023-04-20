@@ -389,6 +389,24 @@ func (d *handlerImpl) UpdateDomain(
 	visibilityArchivalConfigChanged := false
 	// whether active cluster is changed
 	activeClusterChanged := false
+
+	// Whether isolation-groups are changed. There's semantic API difference between the
+	// domain isolation-group update API which is a flat upsert and this handler API which
+	// relies on modifying specified values only, and leaving the rest as-is.
+	// for callers of the Domain API wishing to update isolation groups,
+	// To distinguish between the operation to remove all drains and
+	// take no action, the UpdateDomain handler uses the presence or nil-ness of the IsolationGroup
+	// field to indicate either drain removal (where the struct is present), and to take no action
+	// where the field is nil.
+	//
+	// ie, for the purposes of this handler:
+	// h.UpdateDomain(ctx, UpdateDomainRequest{
+	//   IsolationGroups: nil,                              // take no action for isolation groups
+	// })
+	// h.UpdateDomain(ctx, UpdateDomainRequest{
+	//   IsolationGroups: IsolationGroupConfiguration{},    // remove all isolation groups for domain
+	// })
+	config, isolationGroupConfigurationChanged, err := d.getIsolationGroupStatus(config, updateRequest)
 	// whether anything other than active cluster is changed
 	configurationChanged := false
 
@@ -473,7 +491,7 @@ func (d *handlerImpl) UpdateDomain(
 		previousFailoverVersion = failoverVersion
 	}
 
-	configurationChanged = historyArchivalConfigChanged || visibilityArchivalConfigChanged || domainInfoChanged || domainConfigChanged || deleteBinaryChanged || replicationConfigChanged
+	configurationChanged = historyArchivalConfigChanged || visibilityArchivalConfigChanged || domainInfoChanged || domainConfigChanged || deleteBinaryChanged || replicationConfigChanged || isolationGroupConfigurationChanged
 
 	if err := d.domainAttrValidator.validateDomainConfig(config); err != nil {
 		return nil, err
@@ -655,6 +673,11 @@ func (d *handlerImpl) createResponse(
 		UUID:        info.ID,
 	}
 
+	isolationGroupConfiguration := make(types.IsolationGroupConfiguration)
+	for _, g := range config.IsolationGroups {
+		isolationGroupConfiguration[g.Name] = g
+	}
+
 	configResult := &types.DomainConfiguration{
 		EmitMetric:                             config.EmitMetric,
 		WorkflowExecutionRetentionPeriodInDays: config.Retention,
@@ -663,6 +686,7 @@ func (d *handlerImpl) createResponse(
 		VisibilityArchivalStatus:               config.VisibilityArchivalStatus.Ptr(),
 		VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 		BadBinaries:                            &config.BadBinaries,
+		IsolationGroups:                        isolationGroupConfiguration,
 	}
 
 	clusters := []*types.ClusterReplicationConfiguration{}
@@ -924,6 +948,20 @@ func (d *handlerImpl) updateReplicationConfig(
 		config.ActiveClusterName = *updateRequest.ActiveClusterName
 	}
 	return config, clusterUpdated, activeClusterUpdated, nil
+}
+
+func (d *handlerImpl) getIsolationGroupStatus(
+	incomingCfg *persistence.DomainConfig,
+	updateRequest *types.UpdateDomainRequest,
+) (config *persistence.DomainConfig, isolationGroupsChanged bool, err error) {
+
+	if updateRequest.IsolationGroupConfiguration == nil {
+		return incomingCfg, false, nil
+	}
+
+	// upsert with whatever is present in the request always
+	config.IsolationGroups = updateRequest.IsolationGroupConfiguration.ToPartitionList()
+	return config, true, nil
 }
 
 func getDomainStatus(info *persistence.DomainInfo) *types.DomainStatus {
