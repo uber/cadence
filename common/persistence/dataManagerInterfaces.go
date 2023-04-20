@@ -1353,13 +1353,12 @@ type (
 
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
-		ID                   string
-		Name                 string
-		Status               int
-		Description          string
-		OwnerEmail           string
-		Data                 map[string]string
-		IsolationGroupConfig types.IsolationGroupConfiguration
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+		Data        map[string]string
 	}
 
 	// DomainConfig describes the domain configuration
@@ -1372,6 +1371,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
+		IsolationGroups          []types.IsolationGroupPartition
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1435,6 +1435,7 @@ type (
 		FailoverEndTime             *int64
 		LastUpdatedTime             int64
 		NotificationVersion         int64
+		IsolationGroups             []types.IsolationGroupPartition
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table

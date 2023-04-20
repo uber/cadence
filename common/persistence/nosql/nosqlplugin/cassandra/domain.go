@@ -60,6 +60,7 @@ const (
 		`visibility_archival_uri: ?, ` +
 		`bad_binaries: ?,` +
 		`bad_binaries_encoding: ?` +
+		`isolation_groups: ?` +
 		`}`
 
 	templateDomainReplicationConfigType = `{` +
@@ -147,6 +148,8 @@ const (
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? `
+
+	templateIsolationGroups = `[(?, ?)]`
 )
 
 // Insert a new record to domain
@@ -291,6 +294,7 @@ func (db *cdb) UpdateDomain(
 		row.Config.VisibilityArchivalStatus,
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
+		row.Config.IsolationGroups,
 		string(row.Config.BadBinaries.Encoding),
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
