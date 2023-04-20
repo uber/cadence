@@ -83,13 +83,13 @@ type (
 		ExecutionTime int64  `json:"ExecutionTime,omitempty"`
 		TaskID        int64  `json:"TaskID,omitempty"`
 		IsCron        bool   `json:"IsCron,omitempty"`
-		NumClusters   int16  `json:"NumClusters,omitempty"`
+		NumClusters   int64  `json:"NumClusters,omitempty"`
 		Attr          string `json:"Attr,omitempty"`
 		UpdateTime    int64  `json:"UpdateTime,omitempty"` // update execution,
 		ShardID       int64  `json:"ShardID,omitempty"`
 		// specific to certain status
 		CloseTime     int64 `json:"CloseTime,omitempty"`     // close execution
-		CloseStatus   int   `json:"CloseStatus"`             // close execution
+		CloseStatus   int64 `json:"CloseStatus"`             // close execution
 		HistoryLength int64 `json:"HistoryLength,omitempty"` // close execution
 	}
 )
@@ -511,10 +511,10 @@ func createVisibilityMessage(
 		StartTime:     startTimeUnixNano,
 		ExecutionTime: executionTimeUnixNano,
 		IsCron:        isCron,
-		NumClusters:   NumClusters,
+		NumClusters:   int64(NumClusters),
 		Attr:          searchAttributes,
 		CloseTime:     closeTimeUnixNano,
-		CloseStatus:   status,
+		CloseStatus:   int64(status),
 		HistoryLength: historyLength,
 		UpdateTime:    updateTimeUnixNano,
 		ShardID:       shardID,
