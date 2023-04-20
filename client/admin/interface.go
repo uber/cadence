@@ -62,4 +62,6 @@ type Client interface {
 	MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest, ...yarpc.CallOption) (*types.AdminMaintainWorkflowResponse, error)
 	GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error)
 	UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error)
+	GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error)
+	UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error)
 }

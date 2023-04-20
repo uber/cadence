@@ -76,3 +76,53 @@ examples:
 		ErrorAndExit("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", req, err))
 	}
 }
+
+func AdminGetDomainIsolationGroups(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+	domain := c.String(FlagDomain)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	req := &types.GetDomainIsolationGroupsRequest{
+		Domain: domain,
+	}
+	igs, err := adminClient.GetDomainIsolationGroups(ctx, req)
+	if err != nil {
+		ErrorAndExit("failed to get isolation-groups:", err)
+	}
+	prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+}
+
+func AdminUpdateDomainIsolationGroups(c *cli.Context) {
+	adminClient := cFactory.ServerAdminClient(c)
+	cfgString := c.String(FlagIsolationGroupConfigurations)
+	domain := c.String(FlagDomain)
+
+	ctx, cancel := newContext(c)
+	defer cancel()
+
+	var input []types.IsolationGroupPartition
+	err := json.Unmarshal([]byte(cfgString), &input)
+	if err != nil {
+		ErrorAndExit(`failed to marshal input. Trying to marshal []types.IsolationGroupPartition
+
+examples: 
+- []                                    # will remove all isolation groups
+- [{"Name": "zone-123", "State": 2}]    # drain zone-123
+`, err)
+	}
+
+	req := types.IsolationGroupConfiguration{}
+	for _, g := range input {
+		req[g.Name] = g
+	}
+
+	_, err = adminClient.UpdateDomainIsolationGroups(ctx, &types.UpdateDomainIsolationGroupsRequest{
+		Domain:          domain,
+		IsolationGroups: req,
+	})
+	if err != nil {
+		ErrorAndExit("failed to update isolation-groups", fmt.Errorf("used %#v, got %v", req, err))
+	}
+}

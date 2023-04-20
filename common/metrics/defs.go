@@ -549,6 +549,10 @@ const (
 	AdminClientGetGlobalIsolationGroupsScope
 	// AdminClientUpdateGlobalIsolationGroupsScope is a request to update the global isolation-groups
 	AdminClientUpdateGlobalIsolationGroupsScope
+	// AdminClientGetDomainIsolationGroupsScope is a request to get the domains' isolation groups
+	AdminClientGetDomainIsolationGroupsScope
+	// AdminClientUpdateDomainIsolationGroupsScope is a request to update the domains isolation-groups
+	AdminClientUpdateDomainIsolationGroupsScope
 	// DCRedirectionDeprecateDomainScope tracks RPC calls for dc redirection
 	DCRedirectionDeprecateDomainScope
 	// DCRedirectionDescribeDomainScope tracks RPC calls for dc redirection
@@ -807,6 +811,10 @@ const (
 	GetGlobalIsolationGroups
 	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
 	UpdateGlobalIsolationGroups
+	// GetDomainIsolationGroups is the scope for getting domain isolation groups
+	GetDomainIsolationGroups
+	// UpdateDomainIsolationGroups is the scope for getting domain isolation groups
+	UpdateDomainIsolationGroups
 
 	NumAdminScopes
 )

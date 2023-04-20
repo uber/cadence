@@ -187,3 +187,13 @@ func (t thriftClient) UpdateGlobalIsolationGroups(ctx context.Context, request *
 	res, err := t.c.UpdateGlobalIsolationGroups(ctx, thrift.FromUpdateGlobalIsolationGroupsRequest(request))
 	return thrift.ToUpdateGlobalIsolationGroupsResponse(res), thrift.ToError(err)
 }
+
+func (t thriftClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
+	res, err := t.c.GetDomainIsolationGroups(ctx, thrift.FromGetDomainIsolationGroupsRequest(request))
+	return thrift.ToGetDomainIsolationGroupsResponse(res), thrift.ToError(err)
+}
+
+func (t thriftClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	res, err := t.c.UpdateDomainIsolationGroups(ctx, thrift.FromUpdateDomainIsolationGroupsRequest(request))
+	return thrift.ToUpdateDomainIsolationGroupsResponse(res), thrift.ToError(err)
+}

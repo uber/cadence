@@ -277,6 +277,26 @@ func (mr *MockClientMockRecorder) GetDLQReplicationMessages(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockClient)(nil).GetDLQReplicationMessages), varargs...)
 }
 
+// GetDomainIsolationGroups mocks base method.
+func (m *MockClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDomainIsolationGroups", varargs...)
+	ret0, _ := ret[0].(*types.GetDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainIsolationGroups indicates an expected call of GetDomainIsolationGroups.
+func (mr *MockClientMockRecorder) GetDomainIsolationGroups(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainIsolationGroups", reflect.TypeOf((*MockClient)(nil).GetDomainIsolationGroups), varargs...)
+}
+
 // GetDomainReplicationMessages mocks base method.
 func (m *MockClient) GetDomainReplicationMessages(arg0 context.Context, arg1 *types.GetDomainReplicationMessagesRequest, arg2 ...yarpc.CallOption) (*types.GetDomainReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
@@ -608,6 +628,26 @@ func (mr *MockClientMockRecorder) RestoreDynamicConfig(arg0, arg1 interface{}, a
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreDynamicConfig", reflect.TypeOf((*MockClient)(nil).RestoreDynamicConfig), varargs...)
+}
+
+// UpdateDomainIsolationGroups mocks base method.
+func (m *MockClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateDomainIsolationGroups", varargs...)
+	ret0, _ := ret[0].(*types.UpdateDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainIsolationGroups indicates an expected call of UpdateDomainIsolationGroups.
+func (mr *MockClientMockRecorder) UpdateDomainIsolationGroups(ctx, request interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainIsolationGroups", reflect.TypeOf((*MockClient)(nil).UpdateDomainIsolationGroups), varargs...)
 }
 
 // UpdateDynamicConfig mocks base method.

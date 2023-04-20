@@ -473,3 +473,33 @@ func (c *retryableClient) UpdateGlobalIsolationGroups(
 	err := c.throttleRetry.Do(ctx, op)
 	return resp, err
 }
+
+func (c *retryableClient) GetDomainIsolationGroups(
+	ctx context.Context,
+	request *types.GetDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetDomainIsolationGroupsResponse, error) {
+	var resp *types.GetDomainIsolationGroupsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.GetDomainIsolationGroups(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}
+
+func (c *retryableClient) UpdateDomainIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	var resp *types.UpdateDomainIsolationGroupsResponse
+	op := func() error {
+		var err error
+		resp, err = c.client.UpdateDomainIsolationGroups(ctx, request, opts...)
+		return err
+	}
+	err := c.throttleRetry.Do(ctx, op)
+	return resp, err
+}

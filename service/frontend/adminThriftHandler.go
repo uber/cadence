@@ -219,11 +219,11 @@ func (t AdminThriftHandler) UpdateGlobalIsolationGroups(ctx context.Context, req
 }
 
 func (t AdminThriftHandler) GetDomainIsolationGroups(ctx context.Context, request *admin.GetDomainIsolationGroupsRequest) (*admin.GetDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
-	return nil, nil
+	res, err := t.h.GetDomainIsolationGroups(ctx, thrift.ToGetDomainIsolationGroupsRequest(request))
+	return thrift.FromGetDomainIsolationGroupsResponse(res), thrift.FromError(err)
 }
 
 func (t AdminThriftHandler) UpdateDomainIsolationGroups(ctx context.Context, request *admin.UpdateDomainIsolationGroupsRequest) (*admin.UpdateDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
-	return nil, nil
+	res, err := t.h.UpdateDomainIsolationGroups(ctx, thrift.ToUpdateDomainIsolationGroupsRequest(request))
+	return thrift.FromUpdateDomainIsolationGroupsResponse(res), thrift.FromError(err)
 }

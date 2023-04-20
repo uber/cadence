@@ -162,7 +162,9 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
-	domainState := domainData.GetInfo().IsolationGroupConfig
+
+	domainState := types.FromIsolationGroupPartitionList(domainData.GetConfig().IsolationGroups)
+
 	globalCfg, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve global drains in %w", err)

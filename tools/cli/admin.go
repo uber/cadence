@@ -1300,18 +1300,16 @@ func newAdminConfigStoreCommands() []cli.Command {
 func newAdminIsolationGroupCommands() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "get-global",
-			Aliases: []string{"g"},
-			Usage:   "gets the global isolation groups",
-			Flags:   []cli.Flag{},
+			Name:  "get-global",
+			Usage: "gets the global isolation groups",
+			Flags: []cli.Flag{},
 			Action: func(c *cli.Context) {
 				AdminGetGlobalIsolationGroups(c)
 			},
 		},
 		{
-			Name:    "update-global",
-			Aliases: []string{"g"},
-			Usage:   "sets the global isolation groups",
+			Name:  "update-global",
+			Usage: "sets the global isolation groups",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:     FlagIsolationGroupConfigurations,
@@ -1321,6 +1319,39 @@ func newAdminIsolationGroupCommands() []cli.Command {
 			},
 			Action: func(c *cli.Context) {
 				AdminUpdateGlobalIsolationGroups(c)
+			},
+		},
+		{
+			Name:  "get-domain",
+			Usage: "gets the domain isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagDomain,
+					Usage:    `The domain to operate on`,
+					Required: true,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetDomainIsolationGroups(c)
+			},
+		},
+		{
+			Name:  "update-domain",
+			Usage: "sets the domain isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagDomain,
+					Usage:    `The domain to operate on`,
+					Required: true,
+				},
+				cli.StringFlag{
+					Name:     FlagIsolationGroupConfigurations,
+					Usage:    `the configurations to upsert: eg: [{"Name": "zone-1": "State": 2}]. To remove groups, specify an empty configuration`,
+					Required: true,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateDomainIsolationGroups(c)
 			},
 		},
 	}

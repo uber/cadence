@@ -695,6 +695,13 @@ func FromGetGlobalIsolationGroupsRequest(t *types.GetGlobalIsolationGroupsReques
 	return &admin.GetGlobalIsolationGroupsRequest{}
 }
 
+func FromGetDomainIsolationGroupsRequest(t *types.GetDomainIsolationGroupsRequest) *admin.GetDomainIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	return &admin.GetDomainIsolationGroupsRequest{}
+}
+
 func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *admin.GetGlobalIsolationGroupsResponse {
 	if t == nil {
 		return nil
@@ -720,6 +727,22 @@ func ToGetGlobalIsolationGroupsResponse(t *admin.GetGlobalIsolationGroupsRespons
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
 	return &types.GetGlobalIsolationGroupsResponse{
+		IsolationGroups: *ig,
+	}
+}
+
+func ToGetDomainIsolationGroupsResponse(t *admin.GetDomainIsolationGroupsResponse) *types.GetDomainIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	if t.IsolationGroups == nil {
+		return &types.GetDomainIsolationGroupsResponse{}
+	}
+	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
+	if ig == nil || len(*ig) == 0 {
+		return &types.GetDomainIsolationGroupsResponse{}
+	}
+	return &types.GetDomainIsolationGroupsResponse{
 		IsolationGroups: *ig,
 	}
 }
@@ -767,6 +790,19 @@ func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroups
 	}
 }
 
+func FromUpdateDomainIsolationGroupsRequest(t *types.UpdateDomainIsolationGroupsRequest) *admin.UpdateDomainIsolationGroupsRequest {
+	if t == nil {
+		return nil
+	}
+	if t.IsolationGroups == nil {
+		return &admin.UpdateDomainIsolationGroupsRequest{}
+	}
+	return &admin.UpdateDomainIsolationGroupsRequest{
+		Domain:          &t.Domain,
+		IsolationGroups: isolationGroupConfigToIDL(t.IsolationGroups),
+	}
+}
+
 func ToUpdateGlobalIsolationGroupsRequest(t *admin.UpdateGlobalIsolationGroupsRequest) *types.UpdateGlobalIsolationGroupsRequest {
 	if t == nil {
 		return nil
@@ -785,6 +821,13 @@ func ToUpdateGlobalIsolationGroupsResponse(t *admin.UpdateGlobalIsolationGroupsR
 		return nil
 	}
 	return &types.UpdateGlobalIsolationGroupsResponse{}
+}
+
+func ToUpdateDomainIsolationGroupsResponse(t *admin.UpdateDomainIsolationGroupsResponse) *types.UpdateDomainIsolationGroupsResponse {
+	if t == nil {
+		return nil
+	}
+	return &types.UpdateDomainIsolationGroupsResponse{}
 }
 
 func FromUpdateDomainIsolationGroupsResponse(t *types.UpdateDomainIsolationGroupsResponse) *admin.UpdateDomainIsolationGroupsResponse {

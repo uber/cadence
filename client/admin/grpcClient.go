@@ -187,3 +187,13 @@ func (g grpcClient) UpdateGlobalIsolationGroups(ctx context.Context, request *ty
 	response, err := g.c.UpdateGlobalIsolationGroups(ctx, proto.FromUpdateGlobalIsolationGroupsRequest(request), opts...)
 	return proto.ToUpdateGlobalIsolationGroupsResponse(response), proto.ToError(err)
 }
+
+func (g grpcClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
+	response, err := g.c.GetDomainIsolationGroups(ctx, proto.FromGetDomainIsolationGroupsRequest(request), opts...)
+	return proto.ToGetDomainIsolationGroupsResponse(response), proto.ToError(err)
+}
+
+func (g grpcClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	response, err := g.c.UpdateDomainIsolationGroups(ctx, proto.FromUpdateDomainIsolationGroupsRequest(request), opts...)
+	return proto.ToUpdateDomainIsolationGroupsResponse(response), proto.ToError(err)
+}
