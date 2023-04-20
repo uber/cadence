@@ -313,7 +313,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	taskListID := sb.String()
 
 	// tell if the tasklist is partitioned or sticky
-	if int32(request.GetTaskList().GetKind()) != 1 && &request.ForwardedFrom == nil {
+	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddDecisionTaskScope, metrics.TaskListTag(taskListID)).IncCounter(metrics.CadenceDecisionTasklistRequests)
 		e.logger.Info("Emitting tasklist counter", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
 			tag.Dynamic("taskListCombined", taskListID),
