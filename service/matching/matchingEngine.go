@@ -1051,7 +1051,7 @@ func (e *matchingEngineImpl) emitInfoOrDebugLog(
 	msg string,
 	tags ...tag.Tag,
 ) {
-	if (e.config.EnableDebugMode && e.config.EnableTaskInfoLogByDomainID(domainID)) || (domainID == "89148aa6-cc7f-4208-83e3-8d14555f15e2") {
+	if e.config.EnableDebugMode && e.config.EnableTaskInfoLogByDomainID(domainID) {
 		e.logger.Info(msg, tags...)
 	} else {
 		e.logger.Debug(msg, tags...)
