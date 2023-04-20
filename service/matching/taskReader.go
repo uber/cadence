@@ -135,13 +135,14 @@ dispatchLoop:
 				break dispatchLoop
 			}
 			isolationGroup := ""
-			if tr.isIsolationEnabled() {
+			if tr.isIsolationEnabled() && len(taskInfo.PartitionConfig) > 0 {
+				taskInfo.PartitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
 				ctx, cancel := context.WithTimeout(tr.cancelCtx, time.Second)
 				group, err := tr.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, taskInfo.PartitionConfig)
 				if err != nil {
 					tr.logger.Error("Failed to get isolation group for async match task", tag.TaskID(taskInfo.TaskID), tag.Error(err))
-				} else if group != nil {
-					isolationGroup = *group
+				} else if group != "" {
+					isolationGroup = group
 				}
 				cancel()
 			}

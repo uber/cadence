@@ -73,21 +73,6 @@ func (mr *MockStateMockRecorder) AvailableIsolationGroupsByDomainID(ctx, domainI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableIsolationGroupsByDomainID", reflect.TypeOf((*MockState)(nil).AvailableIsolationGroupsByDomainID), ctx, domainID)
 }
 
-// GetGlobalState mocks base method.
-func (m *MockState) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGlobalState", ctx)
-	ret0, _ := ret[0].(*types.GetGlobalIsolationGroupsResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetGlobalState indicates an expected call of GetGlobalState.
-func (mr *MockStateMockRecorder) GetGlobalState(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGlobalState", reflect.TypeOf((*MockState)(nil).GetGlobalState), ctx)
-}
-
 // IsDrained mocks base method.
 func (m *MockState) IsDrained(ctx context.Context, Domain, IsolationGroup string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -168,18 +153,4 @@ func (m *MockState) Unsubscribe(domainID, key string) error {
 func (mr *MockStateMockRecorder) Unsubscribe(domainID, key interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unsubscribe", reflect.TypeOf((*MockState)(nil).Unsubscribe), domainID, key)
-}
-
-// UpdateGlobalState mocks base method.
-func (m *MockState) UpdateGlobalState(ctx context.Context, state types.UpdateGlobalIsolationGroupsRequest) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateGlobalState", ctx, state)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpdateGlobalState indicates an expected call of UpdateGlobalState.
-func (mr *MockStateMockRecorder) UpdateGlobalState(ctx, state interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGlobalState", reflect.TypeOf((*MockState)(nil).UpdateGlobalState), ctx, state)
 }

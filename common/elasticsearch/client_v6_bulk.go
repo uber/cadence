@@ -25,16 +25,18 @@ package elasticsearch
 import (
 	"context"
 
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+
 	"github.com/olivere/elastic"
 )
 
-var _ GenericBulkProcessor = (*v6BulkProcessor)(nil)
+var _ bulk.GenericBulkProcessor = (*v6BulkProcessor)(nil)
 
 type v6BulkProcessor struct {
 	processor *elastic.BulkProcessor
 }
 
-func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *BulkProcessorParameters) (GenericBulkProcessor, error) {
+func (c *elasticV6) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
 	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
 		parameters.BeforeFunc(executionId, fromV6ToGenericBulkableRequests(requests))
 	}
@@ -79,17 +81,17 @@ func (v *v6BulkProcessor) Close() error {
 	return v.processor.Close()
 }
 
-func (v *v6BulkProcessor) Add(request *GenericBulkableAddRequest) {
+func (v *v6BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 	var req elastic.BulkableRequest
 	switch request.RequestType {
-	case BulkableDeleteRequest:
+	case bulk.BulkableDeleteRequest:
 		req = elastic.NewBulkDeleteRequest().
 			Index(request.Index).
 			Type(request.Type).
 			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version)
-	case BulkableIndexRequest:
+	case bulk.BulkableIndexRequest:
 		req = elastic.NewBulkIndexRequest().
 			Index(request.Index).
 			Type(request.Type).
@@ -97,7 +99,7 @@ func (v *v6BulkProcessor) Add(request *GenericBulkableAddRequest) {
 			VersionType(request.VersionType).
 			Version(request.Version).
 			Doc(request.Doc)
-	case BulkableCreateRequest:
+	case bulk.BulkableCreateRequest:
 		//for bulk create request still calls the bulk index method
 		//with providing operation type
 		req = elastic.NewBulkIndexRequest().
@@ -115,53 +117,53 @@ func (v *v6BulkProcessor) Flush() error {
 	return v.processor.Flush()
 }
 
-func convertV6ErrorToGenericError(err error) *GenericError {
+func convertV6ErrorToGenericError(err error) *bulk.GenericError {
 	if err == nil {
 		return nil
 	}
-	status := unknownStatusCode
+	status := bulk.UnknownStatusCode
 	switch e := err.(type) {
 	case *elastic.Error:
 		status = e.Status
 	}
-	return &GenericError{
+	return &bulk.GenericError{
 		Status:  status,
 		Details: err,
 	}
 }
 
-func fromV6toGenericBulkResponse(response *elastic.BulkResponse) *GenericBulkResponse {
+func fromV6toGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBulkResponse {
 	if response == nil {
-		return &GenericBulkResponse{}
+		return &bulk.GenericBulkResponse{}
 	}
-	return &GenericBulkResponse{
+	return &bulk.GenericBulkResponse{
 		Took:   response.Took,
 		Errors: response.Errors,
 		Items:  fromV6ToGenericBulkResponseItemMaps(response.Items),
 	}
 }
 
-func fromV6ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*GenericBulkResponseItem {
-	var gitems []map[string]*GenericBulkResponseItem
+func fromV6ToGenericBulkResponseItemMaps(items []map[string]*elastic.BulkResponseItem) []map[string]*bulk.GenericBulkResponseItem {
+	var gitems []map[string]*bulk.GenericBulkResponseItem
 	for _, it := range items {
 		gitems = append(gitems, fromV6ToGenericBulkResponseItemMap(it))
 	}
 	return gitems
 }
 
-func fromV6ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*GenericBulkResponseItem {
+func fromV6ToGenericBulkResponseItemMap(m map[string]*elastic.BulkResponseItem) map[string]*bulk.GenericBulkResponseItem {
 	if m == nil {
 		return nil
 	}
-	gm := make(map[string]*GenericBulkResponseItem, len(m))
+	gm := make(map[string]*bulk.GenericBulkResponseItem, len(m))
 	for k, v := range m {
 		gm[k] = fromV6ToGenericBulkResponseItem(v)
 	}
 	return gm
 }
 
-func fromV6ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkResponseItem {
-	return &GenericBulkResponseItem{
+func fromV6ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *bulk.GenericBulkResponseItem {
+	return &bulk.GenericBulkResponseItem{
 		Index:         v.Index,
 		Type:          v.Type,
 		ID:            v.Id,
@@ -174,8 +176,8 @@ func fromV6ToGenericBulkResponseItem(v *elastic.BulkResponseItem) *GenericBulkRe
 	}
 }
 
-func fromV6ToGenericBulkableRequests(requests []elastic.BulkableRequest) []GenericBulkableRequest {
-	var v6Reqs []GenericBulkableRequest
+func fromV6ToGenericBulkableRequests(requests []elastic.BulkableRequest) []bulk.GenericBulkableRequest {
+	var v6Reqs []bulk.GenericBulkableRequest
 	for _, req := range requests {
 		v6Reqs = append(v6Reqs, req)
 	}

@@ -128,7 +128,6 @@ func (s *server) startService() common.Daemon {
 				&s.cfg.DynamicConfig.ConfigStore,
 				&s.cfg.Persistence,
 				params.Logger,
-				s.doneC,
 				persistence.DynamicConfig,
 			)
 		case dynamicconfig.FileBasedClient:

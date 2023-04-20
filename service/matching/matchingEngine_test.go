@@ -1613,11 +1613,12 @@ func (m *testTaskManager) CreateTasks(
 	for _, task := range request.Tasks {
 		scheduleID := task.Data.ScheduleID
 		info := &persistence.TaskInfo{
-			DomainID:   domainID,
-			RunID:      task.Execution.RunID,
-			ScheduleID: scheduleID,
-			TaskID:     task.TaskID,
-			WorkflowID: task.Execution.WorkflowID,
+			DomainID:        domainID,
+			RunID:           task.Execution.RunID,
+			ScheduleID:      scheduleID,
+			TaskID:          task.TaskID,
+			WorkflowID:      task.Execution.WorkflowID,
+			PartitionConfig: task.Data.PartitionConfig,
 		}
 		if task.Data.ScheduleToStartTimeout != 0 {
 			info.Expiry = time.Now().Add(time.Duration(task.Data.ScheduleToStartTimeout) * time.Second)

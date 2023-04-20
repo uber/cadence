@@ -26,6 +26,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/codec"
@@ -47,7 +49,7 @@ const (
 type (
 	// ESProcessorImpl implements ESProcessor, it's an agent of GenericBulkProcessor
 	ESProcessorImpl struct {
-		bulkProcessor es.GenericBulkProcessor
+		bulkProcessor bulk.GenericBulkProcessor
 		mapToKafkaMsg collection.ConcurrentTxMap // used to map ES request to kafka message
 		config        *Config
 		logger        log.Logger
@@ -76,13 +78,13 @@ func newESProcessor(
 		msgEncoder: defaultEncoder,
 	}
 
-	params := &es.BulkProcessorParameters{
+	params := &bulk.BulkProcessorParameters{
 		Name:          name,
 		NumOfWorkers:  config.ESProcessorNumOfWorkers(),
 		BulkActions:   config.ESProcessorBulkActions(),
 		BulkSize:      config.ESProcessorBulkSize(),
 		FlushInterval: config.ESProcessorFlushInterval(),
-		Backoff:       es.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval),
+		Backoff:       bulk.NewExponentialBackoff(esProcessorInitialRetryInterval, esProcessorMaxRetryInterval),
 		BeforeFunc:    p.bulkBeforeAction,
 		AfterFunc:     p.bulkAfterAction,
 	}
@@ -106,7 +108,7 @@ func (p *ESProcessorImpl) Stop() {
 }
 
 // Add an ES request, and an map item for kafka message
-func (p *ESProcessorImpl) Add(request *es.GenericBulkableAddRequest, key string, kafkaMsg messaging.Message) {
+func (p *ESProcessorImpl) Add(request *bulk.GenericBulkableAddRequest, key string, kafkaMsg messaging.Message) {
 	actionWhenFoundDuplicates := func(key interface{}, value interface{}) error {
 		return kafkaMsg.Ack()
 	}
@@ -120,12 +122,12 @@ func (p *ESProcessorImpl) Add(request *es.GenericBulkableAddRequest, key string,
 }
 
 // bulkBeforeAction is triggered before bulk bulkProcessor commit
-func (p *ESProcessorImpl) bulkBeforeAction(executionID int64, requests []es.GenericBulkableRequest) {
+func (p *ESProcessorImpl) bulkBeforeAction(executionID int64, requests []bulk.GenericBulkableRequest) {
 	p.scope.AddCounter(metrics.ESProcessorRequests, int64(len(requests)))
 }
 
 // bulkAfterAction is triggered after bulk bulkProcessor commit
-func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []es.GenericBulkableRequest, response *es.GenericBulkResponse, err *es.GenericError) {
+func (p *ESProcessorImpl) bulkAfterAction(id int64, requests []bulk.GenericBulkableRequest, response *bulk.GenericBulkResponse, err *bulk.GenericError) {
 	if err != nil {
 		// This happens after configured retry, which means something bad happens on cluster or index
 		// When cluster back to live, bulkProcessor will re-commit those failure requests
@@ -214,7 +216,7 @@ func (p *ESProcessorImpl) getKafkaMsg(key string) (kafkaMsg *kafkaMessageWithMet
 	return kafkaMsg, ok
 }
 
-func (p *ESProcessorImpl) retrieveKafkaKey(request es.GenericBulkableRequest) string {
+func (p *ESProcessorImpl) retrieveKafkaKey(request bulk.GenericBulkableRequest) string {
 	req, err := request.Source()
 	if err != nil {
 		p.logger.Error("Get request source err.", tag.Error(err), tag.ESRequest(request.String()))
@@ -309,7 +311,7 @@ func isResponseRetriable(status int) bool {
 	return ok
 }
 
-func getErrorMsgFromESResp(resp *es.GenericBulkResponseItem) string {
+func getErrorMsgFromESResp(resp *bulk.GenericBulkResponseItem) string {
 	var errMsg string
 	if resp.Error != nil {
 		errMsg = fmt.Sprintf("%v", resp.Error)

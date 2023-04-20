@@ -24,4 +24,3 @@ system.allIsolationGroups:
   constraints: {}
 system.enableTasklistIsolation:
 - value: true
-

@@ -28,6 +28,7 @@ import (
 	mock "github.com/stretchr/testify/mock"
 
 	elasticsearch "github.com/uber/cadence/common/elasticsearch"
+	bulk "github.com/uber/cadence/common/elasticsearch/bulk"
 
 	persistence "github.com/uber/cadence/common/persistence"
 )
@@ -101,20 +102,20 @@ func (_m *GenericClient) PutMapping(ctx context.Context, index string, root stri
 }
 
 // RunBulkProcessor provides a mock function with given fields: ctx, p
-func (_m *GenericClient) RunBulkProcessor(ctx context.Context, p *elasticsearch.BulkProcessorParameters) (elasticsearch.GenericBulkProcessor, error) {
+func (_m *GenericClient) RunBulkProcessor(ctx context.Context, p *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
 	ret := _m.Called(ctx, p)
 
-	var r0 elasticsearch.GenericBulkProcessor
-	if rf, ok := ret.Get(0).(func(context.Context, *elasticsearch.BulkProcessorParameters) elasticsearch.GenericBulkProcessor); ok {
+	var r0 bulk.GenericBulkProcessor
+	if rf, ok := ret.Get(0).(func(context.Context, *bulk.BulkProcessorParameters) bulk.GenericBulkProcessor); ok {
 		r0 = rf(ctx, p)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(elasticsearch.GenericBulkProcessor)
+			r0 = ret.Get(0).(bulk.GenericBulkProcessor)
 		}
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *elasticsearch.BulkProcessorParameters) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *bulk.BulkProcessorParameters) error); ok {
 		r1 = rf(ctx, p)
 	} else {
 		r1 = ret.Error(1)

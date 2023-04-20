@@ -31,6 +31,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -112,6 +114,7 @@ type (
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
+		isolationGroups       isolationgroupapi.Handler
 	}
 
 	workflowQueryTemplate struct {
@@ -142,11 +145,12 @@ var (
 	}
 )
 
-// NewAdminHandler creates a thrift handler for the cadence admin service
+// NewAdminHandler creates a thrift service for the cadence admin service
 func NewAdminHandler(
 	resource resource.Resource,
 	params *resource.Params,
 	config *Config,
+	domainHandler domain.Handler,
 ) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
@@ -154,6 +158,7 @@ func NewAdminHandler(
 		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
+
 	return &adminHandlerImpl{
 		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
@@ -180,6 +185,7 @@ func NewAdminHandler(
 			backoff.WithRetryPolicy(adminServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
+		isolationGroups: isolationgroupapi.New(resource.GetLogger(), resource.GetIsolationGroupStore(), domainHandler),
 	}
 }
 
@@ -218,9 +224,6 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 	if len(request.GetSearchAttribute()) == 0 {
 		return adh.error(&types.BadRequestError{Message: "SearchAttributes are not provided"}, scope)
 	}
-	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
-		return adh.error(&types.BadRequestError{Message: "AdvancedVisibilityStore is not configured for this Cadence Cluster"}, scope)
-	}
 
 	searchAttr := request.GetSearchAttribute()
 	currentValidAttr, err := adh.params.DynamicConfig.GetMapValue(dc.ValidSearchAttributes, nil)
@@ -247,23 +250,27 @@ func (adh *adminHandlerImpl) AddSearchAttribute(
 		adh.GetLogger().Warn("Failed to update dynamicconfig. This is only useful in local dev environment for filebased config. Please ignore this warn if this is in a real Cluster, because your filebased dynamicconfig MUST be updated separately. Configstore dynamic config will also require separate updating via the CLI.")
 	}
 
-	// update elasticsearch mapping, new added field will not be able to remove or update
-	index := adh.params.ESConfig.GetVisibilityIndex()
-	for k, v := range searchAttr {
-		valueType := convertIndexedValueTypeToESDataType(v)
-		if len(valueType) == 0 {
-			return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
-		}
-		err := adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
-		if adh.esClient.IsNotFoundError(err) {
-			err = adh.params.ESClient.CreateIndex(ctx, index)
-			if err != nil {
-				return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
+	// when have valid advance visibility config, update elasticsearch mapping, new added field will not be able to remove or update
+	if err := adh.validateConfigForAdvanceVisibility(); err != nil {
+		adh.GetLogger().Warn("Skip updating OpenSearch/ElasticSearch mapping since Advance Visibility hasn't been enabled.")
+	} else {
+		index := adh.params.ESConfig.GetVisibilityIndex()
+		for k, v := range searchAttr {
+			valueType := convertIndexedValueTypeToESDataType(v)
+			if len(valueType) == 0 {
+				return adh.error(&types.BadRequestError{Message: fmt.Sprintf("Unknown value type, %v", v)}, scope)
 			}
-			err = adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
-		}
-		if err != nil {
-			return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to update ES mapping, err: %v", err)}, scope)
+			err := adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
+			if adh.esClient.IsNotFoundError(err) {
+				err = adh.params.ESClient.CreateIndex(ctx, index)
+				if err != nil {
+					return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to create ES index, err: %v", err)}, scope)
+				}
+				err = adh.params.ESClient.PutMapping(ctx, index, definition.Attr, k, valueType)
+			}
+			if err != nil {
+				return adh.error(&types.InternalServiceError{Message: fmt.Sprintf("Failed to update ES mapping, err: %v", err)}, scope)
+			}
 		}
 	}
 
@@ -1734,10 +1741,11 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.GetIsolationGroupState() == nil {
+	if adh.isolationGroups == nil {
 		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	return adh.GetIsolationGroupState().GetGlobalState(ctx)
+
+	return adh.isolationGroups.GetGlobalState(ctx)
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
@@ -1747,10 +1755,10 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.GetIsolationGroupState() == nil {
+	if adh.isolationGroups == nil {
 		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
 	}
-	err := adh.GetIsolationGroupState().UpdateGlobalState(ctx, *request)
+	err := adh.isolationGroups.UpdateGlobalState(ctx, *request)
 	if err != nil {
 		return nil, err
 	}

@@ -29,6 +29,8 @@ import (
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
 
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
+
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
 	"github.com/uber/cadence/client/frontend"
@@ -94,8 +96,9 @@ type (
 		ExecutionMgr    *mocks.ExecutionManager
 		PersistenceBean *persistenceClient.MockBean
 
-		IsolationGroups isolationgroup.State
-		Partitioner     partition.Partitioner
+		IsolationGroups     isolationgroup.State
+		IsolationGroupStore configstore.Client
+		Partitioner         partition.Partitioner
 
 		Logger log.Logger
 	}
@@ -157,7 +160,7 @@ func NewTest(
 
 	partitionMock := partition.NewMockPartitioner(controller)
 	mockZone := "zone1"
-	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&mockZone, nil)
+	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(mockZone, nil)
 
 	scope := tally.NewTestScope("test", nil)
 
@@ -418,6 +421,12 @@ func (s *Test) GetIsolationGroupState() isolationgroup.State {
 // GetPartitioner returns the partitioner
 func (s *Test) GetPartitioner() partition.Partitioner {
 	return s.Partitioner
+}
+
+// GetIsolationGroupStore returns the config store for their
+// isolation-group stores
+func (s *Test) GetIsolationGroupStore() configstore.Client {
+	return s.IsolationGroupStore
 }
 
 // Finish checks whether expectations are met

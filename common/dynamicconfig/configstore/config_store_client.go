@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common"
+
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -40,6 +42,12 @@ import (
 )
 
 var _ dc.Client = (*configStoreClient)(nil)
+
+// Client is a stateful config store
+type Client interface {
+	common.Daemon
+	dc.Client
+}
 
 const (
 	configStoreMinPollInterval = time.Second * 2
@@ -53,6 +61,7 @@ var defaultConfigValues = &csc.ClientConfig{
 }
 
 type configStoreClient struct {
+	status             int32
 	configStoreType    persistence.ConfigType
 	values             atomic.Value
 	lastUpdatedTime    time.Time
@@ -72,9 +81,8 @@ type cacheEntry struct {
 func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 	persistenceCfg *config.Persistence,
 	logger log.Logger,
-	doneCh chan struct{},
 	configType persistence.ConfigType,
-) (dc.Client, error) {
+) (Client, error) {
 	if persistenceCfg == nil {
 		return nil, errors.New("persistence cfg is nil")
 	}
@@ -93,11 +101,7 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig,
 		clientCfg = defaultConfigValues
 	}
 
-	client, err := newConfigStoreClient(clientCfg, store.NoSQL, logger, doneCh, configType)
-	if err != nil {
-		return nil, err
-	}
-	err = client.startUpdate()
+	client, err := newConfigStoreClient(clientCfg, store.NoSQL, logger, configType)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +112,6 @@ func newConfigStoreClient(
 	clientCfg *csc.ClientConfig,
 	persistenceCfg *config.NoSQL,
 	logger log.Logger,
-	doneCh chan struct{},
 	configType persistence.ConfigType,
 ) (*configStoreClient, error) {
 	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger, nil)
@@ -116,7 +119,9 @@ func newConfigStoreClient(
 		return nil, err
 	}
 
+	doneCh := make(chan struct{})
 	client := &configStoreClient{
+		status:             common.DaemonStatusStarted,
 		config:             clientCfg,
 		doneCh:             doneCh,
 		configStoreManager: persistence.NewConfigStoreManagerImpl(store, logger),
@@ -340,6 +345,24 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 	}
 
 	return resList, nil
+}
+
+func (csc *configStoreClient) Stop() {
+	if !atomic.CompareAndSwapInt32(&csc.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+	close(csc.doneCh)
+}
+
+func (csc *configStoreClient) Start() {
+	err := csc.startUpdate()
+	if err != nil {
+		csc.logger.Error("could not start config store", tag.Error(err))
+		return
+	}
+	if !atomic.CompareAndSwapInt32(&csc.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
 }
 
 func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.DynamicConfigValue, retryAttempts int) error {

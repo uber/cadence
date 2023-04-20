@@ -24,6 +24,7 @@ package partition
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -39,6 +40,14 @@ const (
 	IsolationGroupKey = "isolation-group"
 	WorkflowRunIDKey  = "wf-run-id"
 )
+
+// ErrNoIsolationGroupsAvailable is returned when there are no available isolation-groups
+// this usually indicates a misconfiguration
+var ErrNoIsolationGroupsAvailable = errors.New("no isolation-groups are available")
+
+// ErrInvalidPartitionConfig is returned when the required partitioning configuration
+// is missing due to misconfiguration
+var ErrInvalidPartitionConfig = errors.New("invalid partition config")
 
 // DefaultWorkflowPartitionConfig Is the default dataset expected to be passed around in the
 // execution records for workflows which is used for partitioning. It contains the IsolationGroup
@@ -69,14 +78,26 @@ func NewDefaultPartitioner(
 	}
 }
 
-func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (*string, error) {
+func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (string, error) {
+	if wfPartitionData == nil {
+		return "", ErrInvalidPartitionConfig
+	}
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
+	if wfPartition.WorkflowStartIsolationGroup == "" || wfPartition.RunID == "" {
+		return "", ErrInvalidPartitionConfig
+	}
+
 	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available isolation groups: %w", err)
+		return "", fmt.Errorf("failed to get available isolation groups: %w", err)
 	}
+
+	if len(available) == 0 {
+		return "", ErrNoIsolationGroupsAvailable
+	}
+
 	ig := pickIsolationGroup(wfPartition, available)
-	return &ig, nil
+	return ig, nil
 }
 
 func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultWorkflowPartitionConfig {
@@ -111,6 +132,9 @@ func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available ty
 // Simple deterministic isolationGroup picker
 // which will pick a random healthy isolationGroup and place the workflow there
 func pickIsolationGroupFallback(available []string, wfConfig defaultWorkflowPartitionConfig) string {
+	if len(available) == 0 {
+		return ""
+	}
 	hashv := farm.Hash32([]byte(wfConfig.RunID))
 	return available[int(hashv)%len(available)]
 }

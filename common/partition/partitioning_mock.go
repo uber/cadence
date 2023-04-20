@@ -57,10 +57,10 @@ func (m *MockPartitioner) EXPECT() *MockPartitionerMockRecorder {
 }
 
 // GetIsolationGroupByDomainID mocks base method.
-func (m *MockPartitioner) GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (*string, error) {
+func (m *MockPartitioner) GetIsolationGroupByDomainID(ctx context.Context, DomainID string, partitionKey PartitionConfig) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetIsolationGroupByDomainID", ctx, DomainID, partitionKey)
-	ret0, _ := ret[0].(*string)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

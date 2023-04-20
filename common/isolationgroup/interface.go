@@ -47,8 +47,4 @@ type State interface {
 
 	Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error
 	Unsubscribe(domainID, key string) error
-
-	// CRUD operations for state handling
-	GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error)
-	UpdateGlobalState(ctx context.Context, state types.UpdateGlobalIsolationGroupsRequest) error
 }
