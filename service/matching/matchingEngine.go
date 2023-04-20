@@ -306,9 +306,8 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
-		e.logger.Info("Emitting tasklist counter", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", request.TaskList.Name),
 			tag.Dynamic("taskListBaseName", taskList.baseName),
-			tag.Dynamic("forwardedFrom", request.ForwardedFrom),
 			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 	}
 
@@ -377,9 +376,8 @@ func (e *matchingEngineImpl) AddActivityTask(
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
-		e.logger.Info("Emitting tasklist counter", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", request.TaskList.Name),
 			tag.Dynamic("taskListBaseName", taskList.baseName),
-			tag.Dynamic("forwardedFrom", request.ForwardedFrom),
 			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 	}
 
