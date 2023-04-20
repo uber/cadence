@@ -322,6 +322,15 @@ func (e *matchingEngineImpl) AddDecisionTask(
 			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 	}
 
+	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom != "" {
+		e.metricsClient.Scope(metrics.MatchingAddDecisionTaskScope).Tagged(metrics.DomainTag(domainName), metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("forwarded")).IncCounter(metrics.CadenceDecisionTasklistRequests)
+		e.logger.Info("Emitting forwarded tasklist", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
+			tag.Dynamic("taskListCombined", taskListID),
+			tag.Dynamic("taskListBaseName", taskList.baseName),
+			tag.Dynamic("forwardedFrom", request.ForwardedFrom),
+			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
+	}
+
 	e.logger.Info("taskListID of Cadence Client Requests", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
 		tag.Dynamic("taskListCombined", taskListID),
 		tag.Dynamic("taskListBaseName", taskList.baseName),
