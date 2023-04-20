@@ -37,6 +37,7 @@ frontend.validSearchAttributes:
       CadenceChangeVersion: 1
       BinaryChecksums: 1
       Passed: 4
+      ShardID: 2
 system.minRetentionDays:
     - value: 0
 history.EnableConsistentQueryByDomain:

@@ -26,37 +26,39 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/elasticsearch/bulk"
+	mocks2 "github.com/uber/cadence/common/elasticsearch/bulk/mocks"
+
+	"go.uber.org/zap/zaptest"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/zap"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 	"github.com/uber/cadence/common"
-	"github.com/uber/cadence/common/codec"
 	"github.com/uber/cadence/common/collection"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/elasticsearch"
-	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	msgMocks "github.com/uber/cadence/common/messaging/mocks"
 	"github.com/uber/cadence/common/metrics"
-	mmocks "github.com/uber/cadence/common/metrics/mocks"
+	"github.com/uber/cadence/common/metrics/mocks"
 )
 
 type esProcessorSuite struct {
 	suite.Suite
-	esProcessor       *esProcessorImpl
-	mockBulkProcessor *esMocks.GenericBulkProcessor
-	mockMetricClient  *mmocks.Client
+	esProcessor       *ESProcessorImpl
+	mockBulkProcessor *mocks2.GenericBulkProcessor
 	mockESClient      *esMocks.GenericClient
+	mockScope         *mocks.Scope
 }
 
 var (
 	testIndex     = "test-index"
 	testType      = elasticsearch.GetESDocType()
 	testID        = "test-doc-id"
-	testStopWatch = metrics.NopStopwatch()
+	testStopWatch = metrics.NoopScope(metrics.ESProcessorScope).StartTimer(metrics.ESProcessorProcessMsgLatency)
 	testScope     = metrics.ESProcessorScope
 	testMetric    = metrics.ESProcessorProcessMsgLatency
 )
@@ -77,20 +79,18 @@ func (s *esProcessorSuite) SetupTest() {
 		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
-	s.mockMetricClient = &mmocks.Client{}
-	s.mockBulkProcessor = &esMocks.GenericBulkProcessor{}
+	s.mockBulkProcessor = &mocks2.GenericBulkProcessor{}
+	zapLogger := zaptest.NewLogger(s.T())
+	s.mockScope = &mocks.Scope{}
 
-	zapLogger, err := zap.NewDevelopment()
-	s.Require().NoError(err)
-
-	p := &esProcessorImpl{
-		config:        config,
-		logger:        loggerimpl.NewLogger(zapLogger),
-		metricsClient: s.mockMetricClient,
-		msgEncoder:    codec.NewThriftRWEncoder(),
+	p := &ESProcessorImpl{
+		config:     config,
+		logger:     loggerimpl.NewLogger(zapLogger),
+		scope:      s.mockScope,
+		msgEncoder: defaultEncoder,
 	}
 	p.mapToKafkaMsg = collection.NewShardedConcurrentTxMap(1024, p.hashFn)
-	p.processor = s.mockBulkProcessor
+	p.bulkProcessor = s.mockBulkProcessor
 
 	s.esProcessor = p
 
@@ -99,7 +99,6 @@ func (s *esProcessorSuite) SetupTest() {
 
 func (s *esProcessorSuite) TearDownTest() {
 	s.mockBulkProcessor.AssertExpectations(s.T())
-	s.mockMetricClient.AssertExpectations(s.T())
 	s.mockESClient.AssertExpectations(s.T())
 }
 
@@ -110,9 +109,9 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		ESProcessorBulkSize:      dynamicconfig.GetIntPropertyFn(2 << 20),
 		ESProcessorFlushInterval: dynamicconfig.GetDurationPropertyFn(1 * time.Minute),
 	}
-	processorName := "test-processor"
+	processorName := "test-bulkProcessor"
 
-	s.mockESClient.On("RunBulkProcessor", mock.Anything, mock.MatchedBy(func(input *es.BulkProcessorParameters) bool {
+	s.mockESClient.On("RunBulkProcessor", mock.Anything, mock.MatchedBy(func(input *bulk.BulkProcessorParameters) bool {
 		s.Equal(processorName, input.Name)
 		s.Equal(config.ESProcessorNumOfWorkers(), input.NumOfWorkers)
 		s.Equal(config.ESProcessorBulkActions(), input.BulkActions)
@@ -121,8 +120,8 @@ func (s *esProcessorSuite) TestNewESProcessorAndStart() {
 		s.NotNil(input.Backoff)
 		s.NotNil(input.AfterFunc)
 		return true
-	})).Return(&esMocks.GenericBulkProcessor{}, nil).Once()
-	processor, err := newESProcessorAndStart(config, s.mockESClient, processorName, s.esProcessor.logger, &mmocks.Client{}, codec.NewThriftRWEncoder())
+	})).Return(&mocks2.GenericBulkProcessor{}, nil).Once()
+	processor, err := newESProcessor(processorName, config, s.mockESClient, s.esProcessor.logger, metrics.NewNoopMetricsClient())
 	s.NoError(err)
 
 	s.NotNil(processor.mapToKafkaMsg)
@@ -135,32 +134,32 @@ func (s *esProcessorSuite) TestStop() {
 }
 
 func (s *esProcessorSuite) TestAdd() {
-	request := &es.GenericBulkableAddRequest{RequestType: es.BulkableIndexRequest}
+	request := &bulk.GenericBulkableAddRequest{RequestType: bulk.BulkableIndexRequest}
 	mockKafkaMsg := &msgMocks.Message{}
 	key := "test-key"
 	s.Equal(0, s.esProcessor.mapToKafkaMsg.Len())
 
 	s.mockBulkProcessor.On("Add", request).Return().Once()
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 	mockKafkaMsg.AssertExpectations(s.T())
 
 	// handle duplicate
 	mockKafkaMsg.On("Ack").Return(nil).Once()
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 	mockKafkaMsg.AssertExpectations(s.T())
 }
 
 func (s *esProcessorSuite) TestAdd_ConcurrentAdd() {
-	request := &es.GenericBulkableAddRequest{RequestType: es.BulkableIndexRequest}
+	request := &bulk.GenericBulkableAddRequest{RequestType: bulk.BulkableIndexRequest}
 	mockKafkaMsg := &msgMocks.Message{}
 	key := "test-key"
 
 	addFunc := func(wg *sync.WaitGroup) {
-		s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+		s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 		s.esProcessor.Add(request, key, mockKafkaMsg)
 		wg.Done()
 	}
@@ -179,11 +178,13 @@ func (s *esProcessorSuite) TestAdd_ConcurrentAdd() {
 func (s *esProcessorSuite) TestBulkAfterActionX() {
 	version := int64(3)
 	testKey := "testKey"
-	request := &esMocks.GenericBulkableRequest{}
+	request := &mocks2.GenericBulkableRequest{}
 	request.On("String").Return("")
-	requests := []es.GenericBulkableRequest{request}
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
 
-	mSuccess := map[string]*es.GenericBulkResponseItem{
+	requests := []bulk.GenericBulkableRequest{request}
+
+	mSuccess := map[string]*bulk.GenericBulkResponseItem{
 		"index": {
 			Index:   testIndex,
 			Type:    testType,
@@ -192,17 +193,16 @@ func (s *esProcessorSuite) TestBulkAfterActionX() {
 			Status:  200,
 		},
 	}
-	response := &es.GenericBulkResponse{
+	response := &bulk.GenericBulkResponse{
 		Took:   3,
 		Errors: false,
-		Items:  []map[string]*es.GenericBulkResponseItem{mSuccess},
+		Items:  []map[string]*bulk.GenericBulkResponseItem{mSuccess},
 	}
 
 	mockKafkaMsg := &msgMocks.Message{}
 	mapVal := newKafkaMessageWithMetrics(mockKafkaMsg, &testStopWatch)
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Ack").Return(nil).Once()
-	s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
@@ -210,11 +210,12 @@ func (s *esProcessorSuite) TestBulkAfterActionX() {
 func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	version := int64(3)
 	testKey := "testKey"
-	request := &esMocks.GenericBulkableRequest{}
+	request := &mocks2.GenericBulkableRequest{}
 	request.On("String").Return("")
-	requests := []es.GenericBulkableRequest{request}
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
+	requests := []bulk.GenericBulkableRequest{request}
 
-	mFailed := map[string]*es.GenericBulkResponseItem{
+	mFailed := map[string]*bulk.GenericBulkResponseItem{
 		"index": {
 			Index:   testIndex,
 			Type:    testType,
@@ -223,10 +224,10 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 			Status:  400,
 		},
 	}
-	response := &es.GenericBulkResponse{
+	response := &bulk.GenericBulkResponse{
 		Took:   3,
 		Errors: false,
-		Items:  []map[string]*es.GenericBulkResponseItem{mFailed},
+		Items:  []map[string]*bulk.GenericBulkResponseItem{mFailed},
 	}
 
 	wid := "test-workflowID"
@@ -239,7 +240,7 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	mockKafkaMsg.On("Value").Return(payload).Once()
-	s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
+	//s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
 	s.esProcessor.bulkAfterAction(0, requests, response, nil)
 	mockKafkaMsg.AssertExpectations(s.T())
 }
@@ -247,11 +248,12 @@ func (s *esProcessorSuite) TestBulkAfterAction_Nack() {
 func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 	version := int64(3)
 	testKey := "testKey"
-	request := &esMocks.GenericBulkableRequest{}
+	request := &mocks2.GenericBulkableRequest{}
 	request.On("String").Return("")
-	requests := []es.GenericBulkableRequest{request}
+	request.On("Source").Return([]string{string(`{"delete":{"_id":"testKey"}}`)}, nil)
+	requests := []bulk.GenericBulkableRequest{request}
 
-	mFailed := map[string]*es.GenericBulkResponseItem{
+	mFailed := map[string]*bulk.GenericBulkResponseItem{
 		"index": {
 			Index:   testIndex,
 			Type:    testType,
@@ -260,10 +262,10 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 			Status:  400,
 		},
 	}
-	response := &es.GenericBulkResponse{
+	response := &bulk.GenericBulkResponse{
 		Took:   3,
 		Errors: true,
-		Items:  []map[string]*es.GenericBulkResponseItem{mFailed},
+		Items:  []map[string]*bulk.GenericBulkResponseItem{mFailed},
 	}
 
 	wid := "test-workflowID"
@@ -276,9 +278,8 @@ func (s *esProcessorSuite) TestBulkAfterAction_Error() {
 	s.esProcessor.mapToKafkaMsg.Put(testKey, mapVal)
 	mockKafkaMsg.On("Nack").Return(nil).Once()
 	mockKafkaMsg.On("Value").Return(payload).Once()
-	s.mockMetricClient.On("IncCounter", metrics.ESProcessorScope, metrics.ESProcessorFailures).Once()
-	s.mockBulkProcessor.On("RetrieveKafkaKey", request, mock.Anything, mock.Anything).Return(testKey)
-	s.esProcessor.bulkAfterAction(0, requests, response, &es.GenericError{Details: fmt.Errorf("some error")})
+	s.mockScope.On("IncCounter", metrics.ESProcessorFailures).Once()
+	s.esProcessor.bulkAfterAction(0, requests, response, &bulk.GenericError{Details: fmt.Errorf("some error")})
 }
 
 func (s *esProcessorSuite) TestAckKafkaMsg() {
@@ -286,9 +287,9 @@ func (s *esProcessorSuite) TestAckKafkaMsg() {
 	// no msg in map, nothing called
 	s.esProcessor.ackKafkaMsg(key)
 
-	request := &es.GenericBulkableAddRequest{}
+	request := &bulk.GenericBulkableAddRequest{}
 	mockKafkaMsg := &msgMocks.Message{}
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.mockBulkProcessor.On("Add", request).Return().Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
@@ -304,10 +305,10 @@ func (s *esProcessorSuite) TestNackKafkaMsg() {
 	// no msg in map, nothing called
 	s.esProcessor.nackKafkaMsg(key)
 
-	request := &es.GenericBulkableAddRequest{}
+	request := &bulk.GenericBulkableAddRequest{}
 	mockKafkaMsg := &msgMocks.Message{}
 	s.mockBulkProcessor.On("Add", request).Return().Once()
-	s.mockMetricClient.On("StartTimer", testScope, testMetric).Return(testStopWatch).Once()
+	s.mockScope.On("StartTimer", testMetric).Return(testStopWatch).Once()
 	s.esProcessor.Add(request, key, mockKafkaMsg)
 	s.Equal(1, s.esProcessor.mapToKafkaMsg.Len())
 
@@ -385,19 +386,19 @@ func (s *esProcessorSuite) TestIsResponseRetriable() {
 
 func (s *esProcessorSuite) TestIsErrorRetriable() {
 	tests := []struct {
-		input    *es.GenericError
+		input    *bulk.GenericError
 		expected bool
 	}{
 		{
-			input:    &es.GenericError{Status: 400},
+			input:    &bulk.GenericError{Status: 400},
 			expected: false,
 		},
 		{
-			input:    &es.GenericError{Status: 408},
+			input:    &bulk.GenericError{Status: 408},
 			expected: true,
 		},
 		{
-			input:    &es.GenericError{},
+			input:    &bulk.GenericError{},
 			expected: false,
 		},
 	}

@@ -317,7 +317,12 @@ type Config struct {
 	EnableDebugMode             bool // note that this value is initialized once on service start
 	EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
-	SampleLoggingRate dynamicconfig.IntPropertyFn
+	// Hotshard stuff
+	SampleLoggingRate                     dynamicconfig.IntPropertyFn
+	EnableShardIDMetrics                  dynamicconfig.BoolPropertyFn
+	LargeShardHistorySizeMetricThreshold  dynamicconfig.IntPropertyFn
+	LargeShardHistoryEventMetricThreshold dynamicconfig.IntPropertyFn
+	LargeShardHistoryBlobMetricThreshold  dynamicconfig.IntPropertyFn
 }
 
 // New returns new service config with default values
@@ -555,7 +560,11 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		EnableDebugMode:             dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
 		EnableTaskInfoLogByDomainID: dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.HistoryEnableTaskInfoLogByDomainID),
 
-		SampleLoggingRate: dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
+		SampleLoggingRate:                     dc.GetIntProperty(dynamicconfig.SampleLoggingRate),
+		EnableShardIDMetrics:                  dc.GetBoolProperty(dynamicconfig.EnableShardIDMetrics),
+		LargeShardHistorySizeMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistorySizeMetricThreshold),
+		LargeShardHistoryEventMetricThreshold: dc.GetIntProperty(dynamicconfig.LargeShardHistoryEventMetricThreshold),
+		LargeShardHistoryBlobMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistoryBlobMetricThreshold),
 	}
 
 	return cfg

@@ -301,6 +301,8 @@ const (
 	PersistenceFetchDynamicConfigScope
 	// PersistenceUpdateDynamicConfigScope tracks UpdateDynamicConfig calls made by service to persistence layer
 	PersistenceUpdateDynamicConfigScope
+	// PersistenceShardRequestCountScope tracks number of persistence calls made to each shard
+	PersistenceShardRequestCountScope
 	// HistoryClientStartWorkflowExecutionScope tracks RPC calls to history service
 	HistoryClientStartWorkflowExecutionScope
 	// HistoryClientDescribeHistoryHostScope tracks RPC calls to history service
@@ -741,6 +743,8 @@ const (
 const (
 	// AdminDescribeHistoryHostScope is the metric scope for admin.AdminDescribeHistoryHostScope
 	AdminDescribeHistoryHostScope = iota + NumCommonScopes
+	// AdminDescribeClusterScope is the metric scope for admin.AdminDescribeClusterScope
+	AdminDescribeClusterScope
 	// AdminAddSearchAttributeScope is the metric scope for admin.AdminAddSearchAttributeScope
 	AdminAddSearchAttributeScope
 	// AdminDescribeWorkflowExecutionScope is the metric scope for admin.AdminDescribeWorkflowExecutionScope
@@ -1153,6 +1157,12 @@ const (
 	HistoryReplicationV2TaskScope
 	// SyncActivityTaskScope is the scope used by sync activity information processing
 	SyncActivityTaskScope
+	// LargeExecutionSizeShardScope is the scope to track large history size for hotshard detection
+	LargeExecutionSizeShardScope
+	// LargeExecutionCountShardScope is the scope to track large history count for hotshard detection
+	LargeExecutionCountShardScope
+	// LargeExecutionBlobShardScope is the scope to track large blobs for hotshard detection
+	LargeExecutionBlobShardScope
 
 	NumHistoryScopes
 )
@@ -1324,6 +1334,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		PersistenceGetDLQSizeScope:                                     {operation: "GetDLQSize"},
 		PersistenceFetchDynamicConfigScope:                             {operation: "FetchDynamicConfig"},
 		PersistenceUpdateDynamicConfigScope:                            {operation: "UpdateDynamicConfig"},
+		PersistenceShardRequestCountScope:                              {operation: "ShardIdPersistenceRequest"},
 
 		ClusterMetadataArchivalConfigScope: {operation: "ArchivalConfig"},
 
@@ -1549,6 +1560,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminMergeDLQMessagesScope:                  {operation: "AdminMergeDLQMessages"},
 		AdminDescribeHistoryHostScope:               {operation: "DescribeHistoryHost"},
 		AdminDescribeShardDistributionScope:         {operation: "AdminShardList"},
+		AdminDescribeClusterScope:                   {operation: "DescribeCluster"},
 		AdminAddSearchAttributeScope:                {operation: "AddSearchAttribute"},
 		AdminDescribeWorkflowExecutionScope:         {operation: "DescribeWorkflowExecution"},
 		AdminGetWorkflowExecutionRawHistoryScope:    {operation: "GetWorkflowExecutionRawHistory"},
@@ -1744,6 +1756,9 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		FailoverMarkerScope:                                             {operation: "FailoverMarker"},
 		HistoryReplicationV2TaskScope:                                   {operation: "HistoryReplicationV2Task"},
 		SyncActivityTaskScope:                                           {operation: "SyncActivityTask"},
+		LargeExecutionSizeShardScope:                                    {operation: "LargeExecutionSizeShard"},
+		LargeExecutionCountShardScope:                                   {operation: "LargeExecutionCountShard"},
+		LargeExecutionBlobShardScope:                                    {operation: "LargeExecutionBlobShard"},
 	},
 	// Matching Scope Names
 	Matching: {
@@ -2220,6 +2235,7 @@ const (
 	DirectQueryDispatchClearStickinessSuccessCount
 	DirectQueryDispatchTimeoutBeforeNonStickyCount
 	DecisionTaskQueryLatency
+	ConsistentQueryPerShard
 	ConsistentQueryTimeoutCount
 	QueryBeforeFirstDecisionCount
 	QueryBufferExceededCount
@@ -2240,6 +2256,9 @@ const (
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
 	WorkflowTypeCount
+	LargeHistoryBlobCount
+	LargeHistoryEventCount
+	LargeHistorySizeCount
 
 	NumHistoryMetrics
 )
@@ -2812,6 +2831,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DirectQueryDispatchClearStickinessSuccessCount:               {metricName: "direct_query_dispatch_clear_stickiness_success", metricType: Counter},
 		DirectQueryDispatchTimeoutBeforeNonStickyCount:               {metricName: "direct_query_dispatch_timeout_before_non_sticky", metricType: Counter},
 		DecisionTaskQueryLatency:                                     {metricName: "decision_task_query_latency", metricType: Timer},
+		ConsistentQueryPerShard:                                      {metricName: "consistent_query_per_shard", metricType: Counter},
 		ConsistentQueryTimeoutCount:                                  {metricName: "consistent_query_timeout", metricType: Counter},
 		QueryBeforeFirstDecisionCount:                                {metricName: "query_before_first_decision", metricType: Counter},
 		QueryBufferExceededCount:                                     {metricName: "query_buffer_exceeded", metricType: Counter},
@@ -2836,6 +2856,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
 		WorkflowTypeCount:                                            {metricName: "workflow_type_count", metricType: Gauge},
+		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
+		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
+		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
 	},
 	Matching: {
 		PollSuccessPerTaskListCounter:            {metricName: "poll_success_per_tl", metricRollupName: "poll_success"},

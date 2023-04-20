@@ -367,8 +367,10 @@ func validateConfig(config *FileBasedClientConfig) error {
 	if _, err := os.Stat(config.Filepath); err != nil {
 		return fmt.Errorf("error checking dynamic config file at path %s, error: %v", config.Filepath, err)
 	}
+
+	// check if poll interval needs to be adjusted
 	if config.PollInterval < minPollInterval {
-		return fmt.Errorf("poll interval should be at least %v", minPollInterval)
+		config.PollInterval = minPollInterval
 	}
 	return nil
 }
