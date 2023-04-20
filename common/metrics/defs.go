@@ -1177,6 +1177,8 @@ const (
 	MatchingAddActivityTaskScope
 	// MatchingAddDecisionTaskScope tracks AddDecisionTask API calls received by service
 	MatchingAddDecisionTaskScope
+	// MatchingAddTaskScope tracks both AddActivityTask and AddDevisionTask API calls received by service
+	MatchingAddTaskScope
 	// MatchingTaskListMgrScope is the metrics scope for matching.TaskListManager component
 	MatchingTaskListMgrScope
 	// MatchingQueryWorkflowScope tracks AddDecisionTask API calls received by service
@@ -1766,6 +1768,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingPollForActivityTaskScope:       {operation: "PollForActivityTask"},
 		MatchingAddActivityTaskScope:           {operation: "AddActivityTask"},
 		MatchingAddDecisionTaskScope:           {operation: "AddDecisionTask"},
+		MatchingAddTaskScope:                   {operation: "AddTask"},
 		MatchingTaskListMgrScope:               {operation: "TaskListMgr"},
 		MatchingQueryWorkflowScope:             {operation: "QueryWorkflow"},
 		MatchingRespondQueryTaskCompletedScope: {operation: "RespondQueryTaskCompleted"},
@@ -1876,7 +1879,7 @@ const (
 	CadenceClientFailures
 	CadenceClientLatency
 
-	CadenceDecisionTasklistRequests
+	CadenceTasklistRequests
 
 	CadenceDcRedirectionClientRequests
 	CadenceDcRedirectionClientFailures
@@ -2461,7 +2464,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		CadenceClientRequests:                                        {metricName: "cadence_client_requests", metricType: Counter},
 		CadenceClientFailures:                                        {metricName: "cadence_client_errors", metricType: Counter},
 		CadenceClientLatency:                                         {metricName: "cadence_client_latency", metricType: Timer},
-		CadenceDecisionTasklistRequests:                              {metricName: "cadence_decision_tasklist_request", metricType: Counter},
+		CadenceTasklistRequests:                                      {metricName: "cadence_tasklist_request", metricType: Counter},
 		CadenceDcRedirectionClientRequests:                           {metricName: "cadence_client_requests_redirection", metricType: Counter},
 		CadenceDcRedirectionClientFailures:                           {metricName: "cadence_client_errors_redirection", metricType: Counter},
 		CadenceDcRedirectionClientLatency:                            {metricName: "cadence_client_latency_redirection", metricType: Timer},

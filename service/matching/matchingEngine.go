@@ -28,8 +28,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -298,44 +296,21 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		return false, err
 	}
 
-	var sb strings.Builder
-
+	// get the domainName
 	domainName, err := e.domainCache.GetDomainName(domainID)
 	if err != nil {
 		return false, err
 	}
-	sb.WriteString(domainName)
-	sb.WriteString("+")
-	sb.WriteString(taskList.name)
-	sb.WriteString("+")
-	sb.WriteString(strconv.Itoa(taskList.qualifiedTaskListName.partition))
-
-	taskListID := sb.String()
 
 	// tell if the tasklist is partitioned or sticky
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
-		e.metricsClient.Scope(metrics.MatchingAddDecisionTaskScope).Tagged(metrics.DomainTag(domainName), metrics.TaskListTag(taskListName)).IncCounter(metrics.CadenceDecisionTasklistRequests)
+		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
 		e.logger.Info("Emitting tasklist counter", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
-			tag.Dynamic("taskListCombined", taskListID),
 			tag.Dynamic("taskListBaseName", taskList.baseName),
 			tag.Dynamic("forwardedFrom", request.ForwardedFrom),
 			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 	}
-
-	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom != "" {
-		e.metricsClient.Scope(metrics.MatchingAddDecisionTaskScope).Tagged(metrics.DomainTag(domainName), metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("forwarded")).IncCounter(metrics.CadenceDecisionTasklistRequests)
-		e.logger.Info("Emitting forwarded tasklist", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
-			tag.Dynamic("taskListCombined", taskListID),
-			tag.Dynamic("taskListBaseName", taskList.baseName),
-			tag.Dynamic("forwardedFrom", request.ForwardedFrom),
-			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
-	}
-
-	e.logger.Info("taskListID of Cadence Client Requests", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
-		tag.Dynamic("taskListCombined", taskListID),
-		tag.Dynamic("taskListBaseName", taskList.baseName),
-		tag.Dynamic("forwardedFrom", request.ForwardedFrom),
-		tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
@@ -390,6 +365,22 @@ func (e *matchingEngineImpl) AddActivityTask(
 	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
+	}
+
+	// get the domainName
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return false, err
+	}
+
+	// tell if the tasklist is partitioned or sticky
+	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
+		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
+		e.logger.Info("Emitting tasklist counter", tag.Dynamic("Domain", domainName), tag.Dynamic("tasklistName", request.TaskList.Name),
+			tag.Dynamic("taskListBaseName", taskList.baseName),
+			tag.Dynamic("forwardedFrom", request.ForwardedFrom),
+			tag.Dynamic("tasklistType", int32(request.GetTaskList().GetKind())))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
