@@ -86,12 +86,13 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	}, nil
 }
 
-func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string) (types.IsolationGroupConfiguration, error) {
+func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string, availableIsolationGroups []string) (types.IsolationGroupConfiguration, error) {
 	state, err := z.getByDomainID(ctx, domainID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get isolation group state: %w", err)
 	}
-	return availableIG(z.config.AllIsolationGroups, state.Global, state.Domain), nil
+	isolationGroups := common.IntersectionStringSlice(z.config.AllIsolationGroups, availableIsolationGroups)
+	return availableIG(isolationGroups, state.Global, state.Domain), nil
 }
 
 func (z *defaultIsolationGroupStateHandler) IsDrained(ctx context.Context, domain string, isolationGroup string) (bool, error) {

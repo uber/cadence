@@ -94,6 +94,7 @@ type (
 
 	// Single task list in memory state
 	taskListManagerImpl struct {
+		createTime      time.Time
 		enableIsolation bool
 		taskListID      *taskListID
 		taskListKind    types.TaskListKind // sticky taskList has different process in persistence
@@ -140,6 +141,7 @@ func newTaskListManager(
 	taskList *taskListID,
 	taskListKind *types.TaskListKind,
 	config *Config,
+	createTime time.Time,
 ) (taskListManager, error) {
 
 	taskListConfig, err := newTaskListConfig(taskList, config, e.domainCache)
@@ -159,13 +161,14 @@ func newTaskListManager(
 	db := newTaskListDB(e.taskManager, taskList.domainID, domainName, taskList.name, taskList.taskType, int(*taskListKind), e.logger)
 
 	tlMgr := &taskListManagerImpl{
+		createTime:          createTime,
 		enableIsolation:     taskListConfig.EnableTasklistIsolation(),
 		domainCache:         e.domainCache,
 		clusterMetadata:     e.clusterMetadata,
 		partitioner:         e.partitioner,
 		taskListID:          taskList,
 		taskListKind:        *taskListKind,
-		logger:              e.logger.WithTags(tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
+		logger:              e.logger.WithTags(tag.WorkflowDomainName(domainName), tag.WorkflowTaskListName(taskList.name), tag.WorkflowTaskListType(taskList.taskType)),
 		db:                  db,
 		taskAckManager:      messaging.NewAckManager(e.logger),
 		taskGC:              newTaskGC(db, taskListConfig),
@@ -278,16 +281,7 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return r, err
 		}
 
-		isolationGroup := ""
-		if c.isIsolationEnabled() && len(params.taskInfo.PartitionConfig) > 0 {
-			params.taskInfo.PartitionConfig[partition.WorkflowRunIDKey] = params.taskInfo.RunID
-			group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, params.taskInfo.DomainID, params.taskInfo.PartitionConfig)
-			if err != nil {
-				c.logger.Error("Failed to get isolation group for async match task", tag.Error(err))
-			} else if group != "" {
-				isolationGroup = group
-			}
-		}
+		isolationGroup := c.getIsolationGroupForTask(ctx, params.taskInfo)
 		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
@@ -368,6 +362,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	childCtx, cancel := c.newChildContext(ctx, c.config.LongPollExpirationInterval(), returnEmptyTaskTimeBudget)
 	defer cancel()
 
+	var isolationGroup string
+	if c.isIsolationEnabled() {
+		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
+	}
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
 	if ok && pollerID != "" {
 		// Found pollerID on context, add it to the map to allow it to be canceled in
@@ -384,10 +382,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 
 	identity, ok := ctx.Value(identityKey).(string)
 	if ok && identity != "" {
-		c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+		c.pollerHistory.updatePollerInfo(pollerIdentity(identity), pollerInfo{ratePerSecond: maxDispatchPerSecond, isolationGroup: isolationGroup})
 		defer func() {
 			// to update timestamp of this poller when long poll ends
-			c.pollerHistory.updatePollerInfo(pollerIdentity(identity), maxDispatchPerSecond)
+			c.pollerHistory.updatePollerInfo(pollerIdentity(identity), pollerInfo{ratePerSecond: maxDispatchPerSecond, isolationGroup: isolationGroup})
 		}()
 	}
 
@@ -407,10 +405,6 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	var isolationGroup string
-	if c.isIsolationEnabled() {
-		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
-	}
 	return c.matcher.Poll(childCtx, isolationGroup)
 }
 
@@ -571,6 +565,34 @@ func (c *taskListManagerImpl) isIsolationEnabled() bool {
 
 func (c *taskListManagerImpl) shouldReload() bool {
 	return c.config.EnableTasklistIsolation() != c.enableIsolation && c.taskListKind != types.TaskListKindSticky
+}
+
+func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) string {
+	if c.isIsolationEnabled() && len(taskInfo.PartitionConfig) > 0 {
+		partitionConfig := make(map[string]string)
+		for k, v := range taskInfo.PartitionConfig {
+			partitionConfig[k] = v
+		}
+		partitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
+		pollerIsolationGroups := c.config.AllIsolationGroups
+		// not all poller information are available at the time of task list manager creation,
+		// because we don't persist poller information in database, so in the first minute, we always assume
+		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group
+		if time.Now().Sub(c.createTime) > time.Minute {
+			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
+			if len(pollerIsolationGroups) == 0 {
+				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
+				pollerIsolationGroups = c.config.AllIsolationGroups
+			}
+		}
+		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig, pollerIsolationGroups)
+		if err != nil {
+			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
+		} else {
+			return group
+		}
+	}
+	return ""
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {

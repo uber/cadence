@@ -146,7 +146,7 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 	}
 	tm := newTestTaskManager(logger)
 	mockPartitioner := partition.NewMockPartitioner(controller)
-	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
+	mockPartitioner.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("", nil).AnyTimes()
 	mockDomainCache := cache.NewMockDomainCache(controller)
 	mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry("domainName"), nil).AnyTimes()
 	mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return("domainName", nil).AnyTimes()
@@ -157,7 +157,7 @@ func createTestTaskListManagerWithConfig(controller *gomock.Controller, cfg *Con
 	dID := "domain"
 	tlID := newTestTaskListID(dID, tl, persistence.TaskListTypeActivity)
 	tlKind := types.TaskListKindNormal
-	tlMgr, err := newTaskListManager(me, tlID, &tlKind, cfg)
+	tlMgr, err := newTaskListManager(me, tlID, &tlKind, cfg, time.Now())
 	if err != nil {
 		logger.Fatal("error when createTestTaskListManager", tag.Error(err))
 	}
@@ -200,7 +200,7 @@ func TestDescribeTaskList(t *testing.T) {
 	require.Equal(t, tlm.config.RangeSize, taskIDBlock.GetEndID())
 
 	// Add a poller and complete all tasks
-	tlm.pollerHistory.updatePollerInfo(pollerIdentity(PollerIdentity), nil)
+	tlm.pollerHistory.updatePollerInfo(pollerIdentity(PollerIdentity), pollerInfo{})
 	for i := int64(0); i < taskCount; i++ {
 		tlm.taskAckManager.AckItem(startTaskID + i)
 	}
@@ -212,7 +212,7 @@ func TestDescribeTaskList(t *testing.T) {
 	require.True(t, descResp.Pollers[0].GetRatePerSecond() > (_defaultTaskDispatchRPS-1))
 
 	rps := 5.0
-	tlm.pollerHistory.updatePollerInfo(pollerIdentity(PollerIdentity), &rps)
+	tlm.pollerHistory.updatePollerInfo(pollerIdentity(PollerIdentity), pollerInfo{ratePerSecond: &rps})
 	descResp = tlm.DescribeTaskList(includeTaskStatus)
 	require.Equal(t, 1, len(descResp.GetPollers()))
 	require.Equal(t, PollerIdentity, descResp.Pollers[0].GetIdentity())

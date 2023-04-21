@@ -43,7 +43,7 @@ type State interface {
 
 	// AvailableIsolationGroupsByDomainID returns the available isolation zones for a domain.
 	// Takes into account global and domain zones
-	AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string) (types.IsolationGroupConfiguration, error)
+	AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string, availableIsolationGroups []string) (types.IsolationGroupConfiguration, error)
 
 	Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error
 	Unsubscribe(domainID, key string) error
