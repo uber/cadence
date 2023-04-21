@@ -2884,7 +2884,7 @@ func SerializeIsolationGroups(isolationGroupPartitions []types.IsolationGroupPar
 	for _, v := range isolationGroupPartitions {
 		out = append(out, map[string]interface{}{
 			"name":  v.Name,
-			"state": v.State,
+			"state": int(v.State),
 		})
 	}
 	return out
