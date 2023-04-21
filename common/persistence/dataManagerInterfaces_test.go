@@ -58,3 +58,90 @@ func TestIsTransientError(t *testing.T) {
 		require.False(t, IsTransientError(err))
 	}
 }
+
+func TestIsolationGroupSerialization(t *testing.T) {
+
+	tests := map[string]struct {
+		in          []types.IsolationGroupPartition
+		expectedErr error
+	}{
+		"valid case": {
+			in: []types.IsolationGroupPartition{
+				{Name: "zone-1", State: types.IsolationGroupStateDrained},
+				{Name: "zone-2", State: types.IsolationGroupStateHealthy},
+			},
+		},
+		"empty case": {
+			in: []types.IsolationGroupPartition{},
+		},
+		"nil case": {
+			in: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			out, err := DeserializeIsolationGroups(SerializeIsolationGroups(td.in))
+			assert.Equal(t, td.in, out)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+func TestIsolationGroupDeserialization(t *testing.T) {
+
+	tests := map[string]struct {
+		in          []map[string]interface{}
+		expectedOut []types.IsolationGroupPartition
+		expectedErr error
+	}{
+		"valid case": {
+			in: []map[string]interface{}{
+				{
+					"name":  "zone-1",
+					"state": 2,
+				},
+				{
+					"name":  "zone-2",
+					"state": 1,
+				},
+			},
+			expectedOut: []types.IsolationGroupPartition{
+				{Name: "zone-1", State: types.IsolationGroupStateDrained},
+				{Name: "zone-2", State: types.IsolationGroupStateHealthy},
+			},
+		},
+		"nil case": {
+			in:          nil,
+			expectedOut: nil,
+		},
+		"empty case": {
+			in:          []map[string]interface{}{},
+			expectedOut: []types.IsolationGroupPartition{},
+		},
+		"invalid state case 1": {
+			in: []map[string]interface{}{
+				{
+					"name":  "bad value",
+					"state": "wrong type",
+				},
+			},
+			expectedErr: errors.New("failed to get correct type while deserializing isolation groups: [map[name:bad value state:wrong type]], row: map[name:bad value state:wrong type]"),
+		},
+		"invalid state case 2": {
+			in: []map[string]interface{}{
+				{
+					"name": "missing value",
+				},
+			},
+			expectedErr: errors.New("failed to deserialize isolation groups: [map[name:missing value]], row: map[name:missing value]"),
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			out, err := DeserializeIsolationGroups(td.in)
+			assert.Equal(t, td.expectedOut, out)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}

@@ -2877,6 +2877,9 @@ func (s *ShardInfo) Copy() *ShardInfo {
 
 // SerializeIsolationGroups flattens isolation groups
 func SerializeIsolationGroups(isolationGroupPartitions []types.IsolationGroupPartition) []map[string]interface{} {
+	if isolationGroupPartitions == nil {
+		return nil
+	}
 	out := []map[string]interface{}{}
 	for _, v := range isolationGroupPartitions {
 		out = append(out, map[string]interface{}{
@@ -2885,6 +2888,31 @@ func SerializeIsolationGroups(isolationGroupPartitions []types.IsolationGroupPar
 		})
 	}
 	return out
+}
+
+// DeserializeIsolationGroups pipes isolation groups to their internal datatype
+func DeserializeIsolationGroups(in []map[string]interface{}) ([]types.IsolationGroupPartition, error) {
+	if in == nil {
+		return nil, nil
+	}
+	out := []types.IsolationGroupPartition{}
+	for _, v := range in {
+		nameUntyped, nameOk := v["name"]
+		stateUntyped, stateOk := v["state"]
+		if !nameOk || !stateOk {
+			return nil, fmt.Errorf("failed to deserialize isolation groups: %v, row: %v", in, v)
+		}
+		name, nameOk := nameUntyped.(string)
+		state, stateOk := stateUntyped.(int)
+		if !nameOk || !stateOk {
+			return nil, fmt.Errorf("failed to get correct type while deserializing isolation groups: %v, row: %v", in, v)
+		}
+		out = append(out, types.IsolationGroupPartition{
+			Name:  name,
+			State: types.IsolationGroupState(state),
+		})
+	}
+	return out, nil
 }
 
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable

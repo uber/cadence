@@ -955,13 +955,13 @@ func (d *handlerImpl) getIsolationGroupStatus(
 	updateRequest *types.UpdateDomainRequest,
 ) (config *persistence.DomainConfig, isolationGroupsChanged bool, err error) {
 
-	if updateRequest.IsolationGroupConfiguration == nil {
+	if updateRequest == nil || updateRequest.IsolationGroupConfiguration == nil {
 		return incomingCfg, false, nil
 	}
 
 	// upsert with whatever is present in the request always
-	config.IsolationGroups = updateRequest.IsolationGroupConfiguration.ToPartitionList()
-	return config, true, nil
+	incomingCfg.IsolationGroups = updateRequest.IsolationGroupConfiguration.ToPartitionList()
+	return incomingCfg, true, nil
 }
 
 func getDomainStatus(info *persistence.DomainInfo) *types.DomainStatus {

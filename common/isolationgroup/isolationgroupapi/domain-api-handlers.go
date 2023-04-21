@@ -46,6 +46,7 @@ func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomai
 // UpdateDomainState is the read operation for updating a domain's isolation-groups
 func (z *handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
 	_, err := z.domainManager.UpdateDomain(ctx, &types.UpdateDomainRequest{
+		Name:                        state.Domain,
 		IsolationGroupConfiguration: state.IsolationGroups,
 	})
 	return err

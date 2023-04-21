@@ -1599,6 +1599,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
 		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
 		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
+		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
+		UpdateDomainIsolationGroups:                 {operation: "UpdateDomainIsolationGroups"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},

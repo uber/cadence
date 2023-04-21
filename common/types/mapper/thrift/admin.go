@@ -699,7 +699,9 @@ func FromGetDomainIsolationGroupsRequest(t *types.GetDomainIsolationGroupsReques
 	if t == nil {
 		return nil
 	}
-	return &admin.GetDomainIsolationGroupsRequest{}
+	return &admin.GetDomainIsolationGroupsRequest{
+		Domain: &t.Domain,
+	}
 }
 
 func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsResponse) *admin.GetGlobalIsolationGroupsResponse {

@@ -222,6 +222,7 @@ func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (
 		VisibilityArchivalStatus: ic.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
 		BadBinaries:              *badBinaries,
+		IsolationGroups:          ic.IsolationGroups,
 	}, nil
 }
 
