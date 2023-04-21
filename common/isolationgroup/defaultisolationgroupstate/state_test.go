@@ -81,7 +81,7 @@ func TestIsDrainedHandler(t *testing.T) {
 				).Return(dynamicConfigResponse, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, nil, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil)
 			},
@@ -100,7 +100,7 @@ func TestIsDrainedHandler(t *testing.T) {
 				).Return(dynamicConfigResponse, nil)
 			},
 			domainAffordance: func(mock *cache.MockDomainCache) {
-				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, nil, true, nil, 0, nil)
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
 				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil)
 			},
