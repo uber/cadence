@@ -127,7 +127,9 @@ func (s *shardedNosqlStoreTestSuite) TestStoreSelectionForHistoryShard() {
 	s.True(mockDB1 == storeShard1.db)
 
 	// Getting a non-existing shard should result in an error
-	s.Panics(func() { store.GetStoreShardByHistoryShard(2) })
+	unknownShard, err := store.GetStoreShardByHistoryShard(2)
+	s.ErrorContains(err, "Failed to identify store shard")
+	s.Empty(unknownShard)
 
 	// Ensure the store shard connections created for history shards are available for tasklists, too
 	storeShard1, err = store.GetStoreShardByTaskList("domain1", "tl1", 0)
@@ -205,12 +207,12 @@ func getValidShardedNoSQLConfig() ShardedNoSQL {
 			HistoryShardMapping: []HistoryShardRange{
 				HistoryShardRange{
 					Start: 0,
-					End:   0,
+					End:   1,
 					Shard: "shard-1",
 				},
 				HistoryShardRange{
 					Start: 1,
-					End:   1,
+					End:   2,
 					Shard: "shard-2",
 				},
 			},

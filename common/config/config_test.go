@@ -245,12 +245,12 @@ func getValidShardedNoSQLConfig() *Config {
 							HistoryShardMapping: []HistoryShardRange{
 								HistoryShardRange{
 									Start: 0,
-									End:   0,
+									End:   1,
 									Shard: "shard-1",
 								},
 								HistoryShardRange{
 									Start: 1,
-									End:   1,
+									End:   2,
 									Shard: "shard-2",
 								},
 							},
@@ -336,9 +336,9 @@ func TestInvalidShardedNoSQLConfig_HistoryShardingUnordered(t *testing.T) {
 	cfg := getValidShardedNoSQLConfig()
 	store := cfg.Persistence.DataStores["default"]
 	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].Start = 1
-	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].End = 1
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].End = 2
 	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[1].Start = 0
-	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[1].End = 0
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[1].End = 1
 
 	err := cfg.ValidateAndFillDefaults()
 	require.ErrorContains(t, err, "Non-continuous history shard range")
@@ -347,7 +347,7 @@ func TestInvalidShardedNoSQLConfig_HistoryShardingUnordered(t *testing.T) {
 func TestInvalidShardedNoSQLConfig_HistoryShardingOverlapping(t *testing.T) {
 	cfg := getValidShardedNoSQLConfig()
 	store := cfg.Persistence.DataStores["default"]
-	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].End = 1 // 0-1 overlaps with 1-1
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].End = 2 // 0-2 overlaps with 1-2
 
 	err := cfg.ValidateAndFillDefaults()
 	require.ErrorContains(t, err, "Non-continuous history shard range")
@@ -367,7 +367,7 @@ func TestInvalidShardedNoSQLConfig_HistoryShardingMissingLastShard(t *testing.T)
 	cfg.Persistence.NumHistoryShards = 3 // config only specifies shards 0 and 1, so this is invalid
 
 	err := cfg.ValidateAndFillDefaults()
-	require.ErrorContains(t, err, "Last history shard is 1 while the max is 2")
+	require.ErrorContains(t, err, "Last history shard found in the config is 1 while the max is 2")
 }
 
 func TestInvalidShardedNoSQLConfig_HistoryShardingRefersToUnknownConnection(t *testing.T) {

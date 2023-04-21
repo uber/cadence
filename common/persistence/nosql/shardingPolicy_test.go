@@ -74,9 +74,11 @@ func TestHistorySharding(t *testing.T) {
 	sp, err := newShardingPolicy(log.NewNoop(), cfg)
 	require.NoError(t, err)
 
-	shardName0 := sp.getHistoryShardName(0)
-	shardName1 := sp.getHistoryShardName(1)
+	shardName0, err1 := sp.getHistoryShardName(0)
+	shardName1, err2 := sp.getHistoryShardName(1)
 
+	require.Nil(t, err1)
+	require.Nil(t, err2)
 	require.Equal(t, "shard-1", shardName0, "shard name must be correct for shard 0")
 	require.Equal(t, "shard-2", shardName1, "shard name must be correct for shard 1")
 }
@@ -86,25 +88,29 @@ func TestHistorySharding_UnexpectedGapInHistoryRanges(t *testing.T) {
 	cfg.ShardingPolicy.HistoryShardMapping = []HistoryShardRange{
 		HistoryShardRange{
 			Start: 0,
-			End:   0,
+			End:   1,
 			Shard: "shard-1",
 		},
 		HistoryShardRange{
 			Start: 2,
-			End:   2,
+			End:   3,
 			Shard: "shard-2",
 		},
 	}
 	sp, err := newShardingPolicy(log.NewNoop(), cfg)
 	require.NoError(t, err)
 
-	shardName0 := sp.getHistoryShardName(0)
-	shardName2 := sp.getHistoryShardName(2)
+	shardName0, err1 := sp.getHistoryShardName(0)
+	shardName2, err2 := sp.getHistoryShardName(2)
 
+	require.Nil(t, err1)
+	require.Nil(t, err2)
 	require.Equal(t, "shard-1", shardName0, "shard name must be correct for shard 0")
 	require.Equal(t, "shard-2", shardName2, "shard name must be correct for shard 2")
 
-	require.Panics(t, func() { sp.getHistoryShardName(1) })
+	unknownShard, err := sp.getHistoryShardName(1)
+	require.ErrorContains(t, err, "Failed to identify store shard")
+	require.Empty(t, unknownShard)
 }
 
 func TestHistorySharding_OutOfBounds(t *testing.T) {
@@ -112,8 +118,13 @@ func TestHistorySharding_OutOfBounds(t *testing.T) {
 	sp, err := newShardingPolicy(log.NewNoop(), cfg)
 	require.NoError(t, err)
 
-	require.Panics(t, func() { sp.getHistoryShardName(-1) })
-	require.Panics(t, func() { sp.getHistoryShardName(2) })
+	unknownShard, err := sp.getHistoryShardName(-1)
+	require.ErrorContains(t, err, "Failed to identify store shard")
+	require.Empty(t, unknownShard)
+
+	unknownShard, err = sp.getHistoryShardName(2)
+	require.ErrorContains(t, err, "Failed to identify store shard")
+	require.Empty(t, unknownShard)
 }
 
 func TestTaskListSharding_Simple(t *testing.T) {

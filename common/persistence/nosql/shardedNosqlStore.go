@@ -55,7 +55,7 @@ func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *p.Dyna
 
 	// Connect to the default shard
 	defaultShardName := cfg.DefaultShard
-	store, err := sn.connectToShard(cfg.Connections[defaultShardName].NoSQLPlugin, defaultShardName)
+	store, err := sn.connectToShard(defaultShardName)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,10 @@ func newShardedNosqlStore(cfg config.ShardedNoSQL, logger log.Logger, dc *p.Dyna
 }
 
 func (sn *shardedNosqlStore) GetStoreShardByHistoryShard(shardID int) (*nosqlStore, error) {
-	shardName := sn.shardingPolicy.getHistoryShardName(shardID)
+	shardName, err := sn.shardingPolicy.getHistoryShardName(shardID)
+	if err != nil {
+		return nil, err
+	}
 	return sn.getShard(shardName)
 }
 
@@ -88,8 +91,6 @@ func (sn *shardedNosqlStore) GetDefaultShard() nosqlStore {
 }
 
 func (sn *shardedNosqlStore) Close() {
-	sn.defaultShard.Close()
-
 	for name, shard := range sn.connectedShards {
 		sn.logger.Warn("Closing store shard", tag.StoreShard(name))
 		shard.Close()
@@ -109,7 +110,7 @@ func (sn *shardedNosqlStore) getShard(shardName string) (*nosqlStore, error) {
 		return &shard, nil
 	}
 
-	cfg, ok := sn.config.Connections[shardName]
+	_, ok := sn.config.Connections[shardName]
 	if !ok {
 		return nil, &ShardingError{
 			Message: fmt.Sprintf("Unknown db shard name: %v", shardName),
@@ -122,7 +123,7 @@ func (sn *shardedNosqlStore) getShard(shardName string) (*nosqlStore, error) {
 		return &shard, nil
 	}
 
-	s, err := sn.connectToShard(cfg.NoSQLPlugin, shardName)
+	s, err := sn.connectToShard(shardName)
 	if err != nil {
 		return nil, err
 	}
@@ -132,9 +133,16 @@ func (sn *shardedNosqlStore) getShard(shardName string) (*nosqlStore, error) {
 	return s, nil
 }
 
-func (sn *shardedNosqlStore) connectToShard(cfg *config.NoSQL, shardName string) (*nosqlStore, error) {
+func (sn *shardedNosqlStore) connectToShard(shardName string) (*nosqlStore, error) {
+	cfg, ok := sn.config.Connections[shardName]
+	if !ok {
+		return nil, &ShardingError{
+			Message: fmt.Sprintf("Unknown db shard name: %v", shardName),
+		}
+	}
+
 	sn.logger.Info("Connecting to store shard", tag.StoreShard(shardName))
-	db, err := NewNoSQLDB(cfg, sn.logger, sn.dc)
+	db, err := NewNoSQLDB(cfg.NoSQLPlugin, sn.logger, sn.dc)
 	if err != nil {
 		sn.logger.Error("Failed to connect to store shard", tag.StoreShard(shardName), tag.Error(err))
 		return nil, err

@@ -158,13 +158,13 @@ func (c *Persistence) Validate() error {
 
 			// validate history sharding
 			historyShardMapping := cfg.ShardingPolicy.HistoryShardMapping
-			currentShardID := -1
+			currentShardID := 0
 			for _, shardRange := range historyShardMapping {
 				if _, found := connections[shardRange.Shard]; !found {
 					return fmt.Errorf("ShardedNosql config: Unknown history shard name: %v", shardRange.Shard)
 				}
-				if shardRange.Start != currentShardID+1 {
-					return fmt.Errorf("ShardedNosql config: Non-continuous history shard range %v (%v) found after %v",
+				if shardRange.Start != currentShardID {
+					return fmt.Errorf("ShardedNosql config: Non-continuous history shard range %v (%v) found while expecting %v",
 						shardRange.Start,
 						shardRange.Shard,
 						currentShardID,
@@ -172,9 +172,9 @@ func (c *Persistence) Validate() error {
 				}
 				currentShardID = shardRange.End
 			}
-			if currentShardID != c.NumHistoryShards-1 {
-				return fmt.Errorf("ShardedNosql config: Last history shard is %v while the max is %v",
-					currentShardID,
+			if currentShardID != c.NumHistoryShards {
+				return fmt.Errorf("ShardedNosql config: Last history shard found in the config is %v while the max is %v",
+					currentShardID-1,
 					c.NumHistoryShards-1,
 				)
 			}

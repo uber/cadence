@@ -80,20 +80,22 @@ func (sp *shardingPolicy) parseTaskListShardingPolicy() {
 	sp.hasShardedTasklist = true
 }
 
-func (sp *shardingPolicy) getHistoryShardName(shardID int) string {
+func (sp *shardingPolicy) getHistoryShardName(shardID int) (string, error) {
 	if !sp.hasShardedHistory {
 		sp.logger.Debug("Selected default store shard for history shard", tag.StoreShard(sp.defaultShard), tag.ShardID(shardID))
-		return sp.defaultShard
+		return sp.defaultShard, nil
 	}
 
 	for _, r := range sp.config.ShardingPolicy.HistoryShardMapping {
-		if shardID >= r.Start && shardID <= r.End {
+		if shardID >= r.Start && shardID < r.End {
 			sp.logger.Debug("Selected store shard history shard", tag.StoreShard(r.Shard), tag.ShardID(shardID))
-			return r.Shard
+			return r.Shard, nil
 		}
 	}
 
-	panic(fmt.Sprintf("Failed to identify store shard for shardID %v", shardID))
+	return "", &ShardingError{
+		Message: fmt.Sprintf("Failed to identify store shard for shardID %v", shardID),
+	}
 }
 
 func (sp *shardingPolicy) getTaskListShardName(domainID string, taskListName string, taskType int) string {
