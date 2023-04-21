@@ -302,8 +302,8 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		return false, err
 	}
 
-	// tell if the tasklist is partitioned or sticky
-	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
+	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
+	if (taskListKind != nil && *taskListKind != types.TaskListKindSticky) && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", request.TaskList.Name),
@@ -372,8 +372,8 @@ func (e *matchingEngineImpl) AddActivityTask(
 		return false, err
 	}
 
-	// tell if the tasklist is partitioned or sticky
-	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
+	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
+	if (taskListKind != nil && *taskListKind != types.TaskListKindSticky) && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", request.TaskList.Name),
