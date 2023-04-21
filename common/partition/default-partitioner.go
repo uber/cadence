@@ -78,7 +78,7 @@ func NewDefaultPartitioner(
 	}
 }
 
-func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig) (string, error) {
+func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig, availableIsolationGroups []string) (string, error) {
 	if wfPartitionData == nil {
 		return "", ErrInvalidPartitionConfig
 	}
@@ -87,7 +87,7 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 		return "", ErrInvalidPartitionConfig
 	}
 
-	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID)
+	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID, availableIsolationGroups)
 	if err != nil {
 		return "", fmt.Errorf("failed to get available isolation groups: %w", err)
 	}
