@@ -148,8 +148,6 @@ const (
 		`notification_version ` +
 		`FROM domains_by_name_v2 ` +
 		`WHERE domains_partition = ? `
-
-	templateIsolationGroups = `[(?, ?)]`
 )
 
 // Insert a new record to domain
@@ -196,8 +194,8 @@ func (db *cdb) InsertDomain(
 		row.Config.VisibilityArchivalStatus,
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
-		p.SerializeIsolationGroups(row.Config.IsolationGroups),
 		string(row.Config.BadBinaries.Encoding),
+		p.SerializeIsolationGroups(row.Config.IsolationGroups),
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.IsGlobalDomain,
