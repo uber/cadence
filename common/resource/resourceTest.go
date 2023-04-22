@@ -96,9 +96,9 @@ type (
 		ExecutionMgr    *mocks.ExecutionManager
 		PersistenceBean *persistenceClient.MockBean
 
-		IsolationGroups     isolationgroup.State
+		IsolationGroups     *isolationgroup.MockState
 		IsolationGroupStore configstore.Client
-		Partitioner         partition.Partitioner
+		Partitioner         *partition.MockPartitioner
 
 		Logger log.Logger
 	}
