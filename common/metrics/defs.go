@@ -803,6 +803,10 @@ const (
 	GetGlobalIsolationGroups
 	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
 	UpdateGlobalIsolationGroups
+	// GetDomainIsolationGroups is the scope for getting domain isolation groups
+	GetDomainIsolationGroups
+	// UpdateDomainIsolationGroups is the scope for getting domain isolation groups
+	UpdateDomainIsolationGroups
 
 	NumAdminScopes
 )
@@ -1585,6 +1589,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
 		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
 		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
+		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
+		UpdateDomainIsolationGroups:                 {operation: "UpdateDomainIsolationGroups"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},

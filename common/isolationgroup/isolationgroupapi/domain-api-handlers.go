@@ -28,11 +28,26 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
-func (handlerImpl) GetDomainState(ctx context.Context, request types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
+func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
+	res, err := z.domainManager.DescribeDomain(ctx, &types.DescribeDomainRequest{
+		Name: &request.Domain,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if res == nil || res.Configuration == nil || res.Configuration.IsolationGroups == nil {
+		return nil, nil
+	}
+	return &types.GetDomainIsolationGroupsResponse{
+		IsolationGroups: res.Configuration.IsolationGroups,
+	}, nil
 }
 
 // UpdateDomainState is the read operation for updating a domain's isolation-groups
-func (handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
-	panic("not implemented")
+func (z *handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
+	_, err := z.domainManager.UpdateDomain(ctx, &types.UpdateDomainRequest{
+		Name:                        state.Domain,
+		IsolationGroupConfiguration: state.IsolationGroups,
+	})
+	return err
 }

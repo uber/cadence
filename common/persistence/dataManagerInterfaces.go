@@ -1353,13 +1353,12 @@ type (
 
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
-		ID                   string
-		Name                 string
-		Status               int
-		Description          string
-		OwnerEmail           string
-		Data                 map[string]string
-		IsolationGroupConfig types.IsolationGroupConfiguration
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+		Data        map[string]string
 	}
 
 	// DomainConfig describes the domain configuration
@@ -1372,6 +1371,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
+		IsolationGroups          []types.IsolationGroupPartition
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1435,6 +1435,7 @@ type (
 		FailoverEndTime             *int64
 		LastUpdatedTime             int64
 		NotificationVersion         int64
+		IsolationGroups             []types.IsolationGroupPartition
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table
@@ -2872,6 +2873,46 @@ func (s *ShardInfo) Copy() *ShardInfo {
 		PendingFailoverMarkers:            s.PendingFailoverMarkers,
 		UpdatedAt:                         s.UpdatedAt,
 	}
+}
+
+// SerializeIsolationGroups flattens isolation groups
+func SerializeIsolationGroups(isolationGroupPartitions []types.IsolationGroupPartition) []map[string]interface{} {
+	if isolationGroupPartitions == nil {
+		return nil
+	}
+	out := []map[string]interface{}{}
+	for _, v := range isolationGroupPartitions {
+		out = append(out, map[string]interface{}{
+			"name":  v.Name,
+			"state": int(v.State),
+		})
+	}
+	return out
+}
+
+// DeserializeIsolationGroups pipes isolation groups to their internal datatype
+func DeserializeIsolationGroups(in []map[string]interface{}) ([]types.IsolationGroupPartition, error) {
+	if in == nil {
+		return nil, nil
+	}
+	out := []types.IsolationGroupPartition{}
+	for _, v := range in {
+		nameUntyped, nameOk := v["name"]
+		stateUntyped, stateOk := v["state"]
+		if !nameOk || !stateOk {
+			return nil, fmt.Errorf("failed to deserialize isolation groups: %v, row: %v", in, v)
+		}
+		name, nameOk := nameUntyped.(string)
+		state, stateOk := stateUntyped.(int)
+		if !nameOk || !stateOk {
+			return nil, fmt.Errorf("failed to get correct type while deserializing isolation groups: %v, row: %v", in, v)
+		}
+		out = append(out, types.IsolationGroupPartition{
+			Name:  name,
+			State: types.IsolationGroupState(state),
+		})
+	}
+	return out, nil
 }
 
 // SerializeClusterConfigs makes an array of *ClusterReplicationConfig serializable

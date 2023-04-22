@@ -786,6 +786,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              *DataBlob
+		IsolationGroups          []types.IsolationGroupPartition
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
