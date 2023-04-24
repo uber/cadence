@@ -29,7 +29,7 @@ import (
 )
 
 func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
-	res, err := z.domainManager.DescribeDomain(ctx, &types.DescribeDomainRequest{
+	res, err := z.domainHandler.DescribeDomain(ctx, &types.DescribeDomainRequest{
 		Name: &request.Domain,
 	})
 	if err != nil {
@@ -45,7 +45,7 @@ func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomai
 
 // UpdateDomainState is the read operation for updating a domain's isolation-groups
 func (z *handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
-	_, err := z.domainManager.UpdateDomain(ctx, &types.UpdateDomainRequest{
+	_, err := z.domainHandler.UpdateDomain(ctx, &types.UpdateDomainRequest{
 		Name:                        state.Domain,
 		IsolationGroupConfiguration: state.IsolationGroups,
 	})
