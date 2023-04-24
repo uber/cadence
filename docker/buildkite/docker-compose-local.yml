@@ -217,6 +217,7 @@ services:
       - kafka
     volumes:
       - ../../:/cadence
+      - ${GOMODCACHE:-~/go/pkg/mod}:/go/pkg/mod
     networks:
       services-network:
         aliases:

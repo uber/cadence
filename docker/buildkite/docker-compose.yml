@@ -93,6 +93,7 @@ services:
     volumes:
       - ../../:/cadence
       - /usr/bin/buildkite-agent:/usr/bin/buildkite-agent
+      - ${GOMODCACHE:-~/go/pkg/mod}:/go/pkg/mod
     networks:
       services-network:
         aliases:
