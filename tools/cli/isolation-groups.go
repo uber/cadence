@@ -61,7 +61,11 @@ func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
 		ErrorAndExit("invalid args:", err)
 	}
 
-	cfg, err := parseIsolationGroupCliInputCfg(c.StringSlice(FlagIsolationGroupSetDrains), c.String(FlagIsolationGroupJSONConfigurations))
+	cfg, err := parseIsolationGroupCliInputCfg(
+		c.StringSlice(FlagIsolationGroupSetDrains),
+		c.String(FlagIsolationGroupJSONConfigurations),
+		c.Bool(FlagIsolationGroupsRemoveAllDrains),
+	)
 	if err != nil {
 		ErrorAndExit("failed to parse input:", err)
 	}
@@ -110,7 +114,11 @@ func AdminUpdateDomainIsolationGroups(c *cli.Context) {
 	ctx, cancel := newContext(c)
 	defer cancel()
 
-	cfg, err := parseIsolationGroupCliInputCfg(c.StringSlice(FlagIsolationGroupSetDrains), c.String(FlagIsolationGroupJSONConfigurations))
+	cfg, err := parseIsolationGroupCliInputCfg(
+		c.StringSlice(FlagIsolationGroupSetDrains),
+		c.String(FlagIsolationGroupJSONConfigurations),
+		c.Bool(FlagIsolationGroupsRemoveAllDrains),
+	)
 	if err != nil {
 		ErrorAndExit("failed to parse input:", err)
 	}
@@ -153,16 +161,19 @@ func validateIsolationGroupUpdateArgs(
 		)
 	}
 
-	if removeAllDrainsArgs && (len(setDrainsArgs) != 0 || jsonCfgArgs == "") {
+	if removeAllDrainsArgs && (len(setDrainsArgs) != 0 || jsonCfgArgs != "") {
 		return fmt.Errorf("specify either remove or set-drains, not both")
 	}
 
 	return nil
 }
 
-func parseIsolationGroupCliInputCfg(drains []string, jsonInput string) (*types.IsolationGroupConfiguration, error) {
+func parseIsolationGroupCliInputCfg(drains []string, jsonInput string, removeAllDrains bool) (*types.IsolationGroupConfiguration, error) {
 
 	req := types.IsolationGroupConfiguration{}
+	if removeAllDrains {
+		return &req, nil
+	}
 
 	if len(drains) != 0 {
 		req := types.IsolationGroupConfiguration{}

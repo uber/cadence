@@ -1321,7 +1321,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Usage:    "Use to upsert the configuration for all drains. Note that this is an upsert operation and will overwrite all existing configuration",
 					Required: false,
 				},
-				cli.StringSliceFlag{
+				cli.BoolFlag{
 					Name:     FlagIsolationGroupsRemoveAllDrains,
 					Usage:    "Removes all drains",
 					Required: false,
@@ -1364,7 +1364,7 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Usage:    "Use to upsert the configuration for all drains. Note that this is an upsert operation and will overwrite all existing configuration",
 					Required: false,
 				},
-				cli.StringSliceFlag{
+				cli.BoolFlag{
 					Name:     FlagIsolationGroupsRemoveAllDrains,
 					Usage:    "Removes all drains",
 					Required: false,
