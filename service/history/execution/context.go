@@ -45,6 +45,7 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	dayToSecondMultiplier    = 86400
 	ttlBufferDays            = 15
 )
 
@@ -355,8 +356,8 @@ func (c *contextImpl) CreateWorkflowExecution(
 	domainObj, _ := c.shard.GetDomainCache().GetDomainByID(c.domainID)
 	config := domainObj.GetConfig()
 	retention := time.Duration(config.Retention)
-	ttlInSeconds := (int64(time.Duration(newWorkflow.ExecutionInfo.DecisionStartToCloseTimeout).Seconds()) + int64(retention.Seconds())) + int64(time.Duration(ttlBufferDays).Seconds())
-
+	daysInSeconds := int64((retention + ttlBufferDays) * dayToSecondMultiplier)
+	ttlInSeconds := int64(newWorkflow.ExecutionInfo.DecisionStartToCloseTimeout) + daysInSeconds
 	createRequest := &persistence.CreateWorkflowExecutionRequest{
 		// workflow create mode & prev run ID & version
 		Mode:                     createMode,
