@@ -396,7 +396,7 @@ type IsolationGroupConfiguration map[string]IsolationGroupPartition
 
 // ToPartitionList Renders the isolation group to the less complicated and confusing simple list of isolation groups
 func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition {
-	var out []IsolationGroupPartition
+	out := []IsolationGroupPartition{}
 	for _, v := range i {
 		out = append(out, v)
 	}

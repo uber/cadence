@@ -136,6 +136,7 @@ func TestParseCliInput(t *testing.T) {
 			res, err := parseIsolationGroupCliInputCfg(
 				td.setDrainsArgs,
 				td.jsonConfigArgs,
+				false,
 			)
 			assert.Equal(t, td.expected, res)
 			assert.Equal(t, td.expectedErr, err)
