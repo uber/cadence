@@ -357,6 +357,8 @@ func (c *clientImpl) GetGlobalIsolationGroups(
 	ctx context.Context,
 	request *types.GetGlobalIsolationGroupsRequest,
 	opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
 	return c.client.GetGlobalIsolationGroups(ctx, request, opts...)
 }
 
@@ -364,6 +366,8 @@ func (c *clientImpl) UpdateGlobalIsolationGroups(
 	ctx context.Context,
 	request *types.UpdateGlobalIsolationGroupsRequest,
 	opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
 	return c.client.UpdateGlobalIsolationGroups(ctx, request, opts...)
 }
 
@@ -371,6 +375,8 @@ func (c *clientImpl) GetDomainIsolationGroups(
 	ctx context.Context,
 	request *types.GetDomainIsolationGroupsRequest,
 	opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
 	return c.client.GetDomainIsolationGroups(ctx, request, opts...)
 }
 
@@ -378,6 +384,8 @@ func (c *clientImpl) UpdateDomainIsolationGroups(
 	ctx context.Context,
 	request *types.UpdateDomainIsolationGroupsRequest,
 	opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	ctx, cancel := c.createContext(ctx)
+	defer cancel()
 	return c.client.UpdateDomainIsolationGroups(ctx, request, opts...)
 }
 
