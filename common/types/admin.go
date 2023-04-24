@@ -394,6 +394,7 @@ type IsolationGroupPartition struct {
 // Indicating that task processing isn't to occur within this isolationGroup anymore, but all others are ok.
 type IsolationGroupConfiguration map[string]IsolationGroupPartition
 
+// ToPartitionList Renders the isolation group to the less complicated and confusing simple list of isolation groups
 func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition {
 	var out []IsolationGroupPartition
 	for _, v := range i {
@@ -403,6 +404,19 @@ func (i IsolationGroupConfiguration) ToPartitionList() []IsolationGroupPartition
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].Name < out[j].Name
 	})
+	return out
+}
+
+// FromIsolationGroupPartitionList maps a list of isolation to the internal IsolationGroup configuration type
+// whose map keys tend to be used more for set operations
+func FromIsolationGroupPartitionList(in []IsolationGroupPartition) IsolationGroupConfiguration {
+	if len(in) == 0 {
+		return IsolationGroupConfiguration{}
+	}
+	out := IsolationGroupConfiguration{}
+	for _, v := range in {
+		out[v.Name] = v
+	}
 	return out
 }
 

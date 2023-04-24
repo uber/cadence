@@ -353,6 +353,34 @@ func (c *clientImpl) ListDynamicConfig(
 	return c.client.ListDynamicConfig(ctx, request, opts...)
 }
 
+func (c *clientImpl) GetGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.GetGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	return c.client.GetGlobalIsolationGroups(ctx, request, opts...)
+}
+
+func (c *clientImpl) UpdateGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	return c.client.UpdateGlobalIsolationGroups(ctx, request, opts...)
+}
+
+func (c *clientImpl) GetDomainIsolationGroups(
+	ctx context.Context,
+	request *types.GetDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
+	return c.client.GetDomainIsolationGroups(ctx, request, opts...)
+}
+
+func (c *clientImpl) UpdateDomainIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	return c.client.UpdateDomainIsolationGroups(ctx, request, opts...)
+}
+
 func (c *clientImpl) createContext(parent context.Context) (context.Context, context.CancelFunc) {
 	if parent == nil {
 		return context.WithTimeout(context.Background(), c.timeout)
