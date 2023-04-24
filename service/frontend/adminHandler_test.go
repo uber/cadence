@@ -911,3 +911,134 @@ func Test_IsolationGroupsNotEnabled(t *testing.T) {
 	_, err = handler.UpdateGlobalIsolationGroups(context.Background(), &types.UpdateGlobalIsolationGroupsRequest{})
 	assert.ErrorAs(t, err, &partition.ErrNoIsolationGroupsAvailable)
 }
+
+func Test_GetDomainIsolationGroups(t *testing.T) {
+
+	validResponse := types.GetDomainIsolationGroupsResponse{
+		IsolationGroups: types.IsolationGroupConfiguration{
+			"zone-1": types.IsolationGroupPartition{
+				Name:  "zone-1",
+				State: types.IsolationGroupStateDrained,
+			},
+			"zone-2": types.IsolationGroupPartition{
+				Name:  "zone-2",
+				State: types.IsolationGroupStateHealthy,
+			},
+			"zone-3": types.IsolationGroupPartition{
+				Name:  "zone-3",
+				State: types.IsolationGroupStateDrained,
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		ighandlerAffordance func(mock *isolationgroupapi.MockHandler)
+		expectOut           *types.GetDomainIsolationGroupsResponse
+		expectedErr         error
+	}{
+		"happy-path - no errors and payload is decoded and returned": {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().GetDomainState(gomock.Any(), types.GetDomainIsolationGroupsRequest{
+					Domain: "domain",
+				}).Return(&validResponse, nil)
+			},
+			expectOut: &validResponse,
+		},
+		"an error returned": {
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().GetDomainState(gomock.Any(), types.GetDomainIsolationGroupsRequest{
+					Domain: "domain",
+				}).Return(nil, assert.AnError)
+			},
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+
+			goMock := gomock.NewController(t)
+			igMock := isolationgroupapi.NewMockHandler(goMock)
+			td.ighandlerAffordance(igMock)
+
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        loggerimpl.NewNopLogger(),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				isolationGroups: igMock,
+			}
+
+			res, err := handler.GetDomainIsolationGroups(context.Background(), &types.GetDomainIsolationGroupsRequest{
+				Domain: "domain",
+			})
+
+			assert.Equal(t, td.expectOut, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
+
+func Test_UpdateDomainIsolationGroups(t *testing.T) {
+
+	validConfig := types.UpdateDomainIsolationGroupsRequest{
+		Domain: "domain",
+		IsolationGroups: types.IsolationGroupConfiguration{
+			"zone-1": {
+				Name:  "zone-1",
+				State: types.IsolationGroupStateDrained,
+			},
+			"zone-2": {
+				Name:  "zone-2",
+				State: types.IsolationGroupStateHealthy,
+			},
+			"zone-3": {
+				Name:  "zone-3",
+				State: types.IsolationGroupStateDrained,
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		ighandlerAffordance func(mock *isolationgroupapi.MockHandler)
+		input               *types.UpdateDomainIsolationGroupsRequest
+		expectOut           *types.UpdateDomainIsolationGroupsResponse
+		expectedErr         error
+	}{
+		"happy-path - update to the database": {
+			input: &validConfig,
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().UpdateDomainState(gomock.Any(), validConfig).Return(nil)
+			},
+			expectOut: &types.UpdateDomainIsolationGroupsResponse{},
+		},
+		"happy-path - an error is returned": {
+			input: &validConfig,
+			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
+				mock.EXPECT().UpdateDomainState(gomock.Any(), validConfig).Return(assert.AnError)
+			},
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			goMock := gomock.NewController(t)
+			igMock := isolationgroupapi.NewMockHandler(goMock)
+			td.ighandlerAffordance(igMock)
+
+			handler := adminHandlerImpl{
+				Resource: &resource.Test{
+					Logger:        loggerimpl.NewNopLogger(),
+					MetricsClient: metrics.NewNoopMetricsClient(),
+				},
+				isolationGroups: igMock,
+			}
+
+			res, err := handler.UpdateDomainIsolationGroups(context.Background(), td.input)
+
+			assert.Equal(t, td.expectOut, res)
+			assert.Equal(t, td.expectedErr, err)
+		})
+	}
+}
