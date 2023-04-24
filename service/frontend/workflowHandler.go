@@ -612,13 +612,26 @@ func (wh *WorkflowHandler) PollForActivityTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 
+	isolationGroup := wh.getIsolationGroup(ctx, domainName)
+	if !wh.waitUntilIsolationGroupHealthy(ctx, domainName, isolationGroup) {
+		return &types.PollForActivityTaskResponse{}, nil
+	}
+	// it is possible that we wait for a very long time and the remaining time is not long enough for a long poll
+	// in this case, return an empty response
+	if err := common.ValidateLongPollContextTimeout(
+		ctx,
+		"PollForActivityTask",
+		wh.GetThrottledLogger(),
+	); err != nil {
+		return &types.PollForActivityTaskResponse{}, nil
+	}
 	pollerID := uuid.New()
 	op := func() error {
 		resp, err = wh.GetMatchingClient().PollForActivityTask(ctx, &types.MatchingPollForActivityTaskRequest{
 			DomainUUID:     domainID,
 			PollerID:       pollerID,
 			PollRequest:    pollRequest,
-			IsolationGroup: partition.IsolationGroupFromContext(ctx),
+			IsolationGroup: isolationGroup,
 		})
 		return err
 	}
@@ -728,6 +741,20 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(createServiceBusyError(), scope, tags...)
 	}
 
+	isolationGroup := wh.getIsolationGroup(ctx, domainName)
+	if !wh.waitUntilIsolationGroupHealthy(ctx, domainName, isolationGroup) {
+		return &types.PollForDecisionTaskResponse{}, nil
+	}
+	// it is possible that we wait for a very long time and the remaining time is not long enough for a long poll
+	// in this case, return an empty response
+	if err := common.ValidateLongPollContextTimeout(
+		ctx,
+		"PollForDecisionTask",
+		wh.GetThrottledLogger(),
+	); err != nil {
+		return &types.PollForDecisionTaskResponse{}, nil
+	}
+
 	pollerID := uuid.New()
 	var matchingResp *types.MatchingPollForDecisionTaskResponse
 	op := func() error {
@@ -735,7 +762,7 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 			DomainUUID:     domainID,
 			PollerID:       pollerID,
 			PollRequest:    pollRequest,
-			IsolationGroup: partition.IsolationGroupFromContext(ctx),
+			IsolationGroup: isolationGroup,
 		})
 		return err
 	}
@@ -769,6 +796,57 @@ func (wh *WorkflowHandler) PollForDecisionTask(
 		return nil, wh.error(err, scope, tags...)
 	}
 	return resp, nil
+}
+
+func (wh *WorkflowHandler) getIsolationGroup(ctx context.Context, domainName string) string {
+	if wh.config.EnableTasklistIsolation(domainName) {
+		return partition.IsolationGroupFromContext(ctx)
+	}
+	return ""
+}
+
+func (wh *WorkflowHandler) getPartitionConfig(ctx context.Context, domainName string) map[string]string {
+	if wh.config.EnableTasklistIsolation(domainName) {
+		return partition.ConfigFromContext(ctx)
+	}
+	return nil
+}
+
+func (wh *WorkflowHandler) isIsolationGroupHealthy(ctx context.Context, domainName, isolationGroup string) bool {
+	if wh.GetIsolationGroupState() != nil && wh.config.EnableTasklistIsolation(domainName) {
+		isDrained, err := wh.GetIsolationGroupState().IsDrained(ctx, domainName, isolationGroup)
+		if err != nil {
+			wh.GetLogger().Error("Failed to check if an isolation group is drained, assume it's healthy", tag.Error(err))
+			return true
+		}
+		return !isDrained
+	}
+	return true
+}
+
+func (wh *WorkflowHandler) waitUntilIsolationGroupHealthy(ctx context.Context, domainName, isolationGroup string) bool {
+	if wh.GetIsolationGroupState() != nil && wh.config.EnableTasklistIsolation(domainName) {
+		ticker := time.NewTicker(time.Second * 30)
+		defer ticker.Stop()
+		childCtx, cancel := common.CreateChildContext(ctx, 0.05)
+		defer cancel()
+		for {
+			isDrained, err := wh.GetIsolationGroupState().IsDrained(childCtx, domainName, isolationGroup)
+			if err != nil {
+				wh.GetLogger().Error("Failed to check if an isolation group is drained, assume it's healthy", tag.Error(err))
+				return true
+			}
+			if !isDrained {
+				break
+			}
+			select {
+			case <-childCtx.Done():
+				return false
+			case <-ticker.C:
+			}
+		}
+	}
+	return true
 }
 
 func (wh *WorkflowHandler) checkBadBinary(domainEntry *cache.DomainCacheEntry, binaryChecksum string) error {
@@ -2183,9 +2261,14 @@ func (wh *WorkflowHandler) StartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
+	isolationGroup := wh.getIsolationGroup(ctx, domainName)
+	if !wh.isIsolationGroupHealthy(ctx, domainName, isolationGroup) {
+		return nil, wh.error(&types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}, scope, tags...)
+	}
+
 	wh.GetLogger().Debug("Start workflow execution request domainID", tag.WorkflowDomainID(domainID))
 	historyRequest, err := common.CreateHistoryStartWorkflowRequest(
-		domainID, startRequest, time.Now(), partition.ConfigFromContext(ctx))
+		domainID, startRequest, time.Now(), wh.getPartitionConfig(ctx, domainName))
 	if err != nil {
 		return nil, err
 	}
@@ -2572,6 +2655,11 @@ func (wh *WorkflowHandler) SignalWorkflowExecution(
 		return wh.error(err, scope, tags...)
 	}
 
+	isolationGroup := wh.getIsolationGroup(ctx, domainName)
+	if !wh.isIsolationGroupHealthy(ctx, domainName, isolationGroup) {
+		return wh.error(&types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}, scope, tags...)
+	}
+
 	err = wh.GetHistoryClient().SignalWorkflowExecution(ctx, &types.HistorySignalWorkflowExecutionRequest{
 		DomainUUID:    domainID,
 		SignalRequest: signalRequest,
@@ -2757,10 +2845,15 @@ func (wh *WorkflowHandler) SignalWithStartWorkflowExecution(
 		return nil, wh.error(err, scope, tags...)
 	}
 
+	isolationGroup := wh.getIsolationGroup(ctx, domainName)
+	if !wh.isIsolationGroupHealthy(ctx, domainName, isolationGroup) {
+		return nil, wh.error(&types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}, scope, tags...)
+	}
+
 	resp, err = wh.GetHistoryClient().SignalWithStartWorkflowExecution(ctx, &types.HistorySignalWithStartWorkflowExecutionRequest{
 		DomainUUID:             domainID,
 		SignalWithStartRequest: signalWithStartRequest,
-		PartitionConfig:        partition.ConfigFromContext(ctx),
+		PartitionConfig:        wh.getPartitionConfig(ctx, domainName),
 	})
 	if err != nil {
 		return nil, wh.error(err, scope, tags...)
@@ -3390,6 +3483,11 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 		return nil, wh.error(err, scope, tags...)
 	}
 
+	isolationGroup := wh.getIsolationGroup(ctx, domainName)
+	if !wh.isIsolationGroupHealthy(ctx, domainName, isolationGroup) {
+		return nil, wh.error(&types.BadRequestError{fmt.Sprintf("Domain %s is drained from isolation group %s.", domainName, isolationGroup)}, scope, tags...)
+	}
+
 	history, err := wh.GetWorkflowExecutionHistory(ctx, &types.GetWorkflowExecutionHistoryRequest{
 		Domain: domainName,
 		Execution: &types.WorkflowExecution{
@@ -3403,7 +3501,7 @@ func (wh *WorkflowHandler) RestartWorkflowExecution(ctx context.Context, request
 	}
 	startRequest := constructRestartWorkflowRequest(history.History.Events[0].WorkflowExecutionStartedEventAttributes,
 		domainName, request.Identity, wfExecution.WorkflowID)
-	req, err := common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now(), partition.ConfigFromContext(ctx))
+	req, err := common.CreateHistoryStartWorkflowRequest(domainID, startRequest, time.Now(), wh.getPartitionConfig(ctx, domainName))
 	if err != nil {
 		return nil, err
 	}
