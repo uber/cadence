@@ -396,6 +396,49 @@ copyright: $(BIN)/copyright | $(BUILD) ## update copyright headers
 	$(BIN)/copyright
 	$Q touch $(BUILD)/copyright
 
+# release-oriented helpers because docker is so verbose
+
+define confirm
+$Q ( read -p "$(1) [y/N]: " answer && case "$$answer" in [yY]) true;; *) echo 'Stopping'; false;; esac )
+endef
+
+TAG_NAME ?= dev
+.PHONY: docker-build docker-push docker-clean
+docker-build: ## builds docker images for publishing.  use TAG_NAME= to use a custom tag name / semver string, defaults to "dev"
+	$Q echo 'This will start new builds for images named like "ubercadence/server:$(TAG_NAME)".'
+	$Q $(call confirm,Are you ready?)
+	$Q echo 'Building base server image...'
+	docker build . -t ubercadence/server:$(TAG_NAME) --build-arg TARGET=server --build-arg RELEASE_VERSION=$(TAG_NAME)
+	$Q echo 'Doing basic verification:'
+	docker run ubercadence/server:$(TAG_NAME) cadence-server --version
+	$Q $(call confirm,Does that look correct?) # generally if this works, they all work
+	$Q echo 'Building derived images...'
+	docker build . -t ubercadence/server:$(TAG_NAME)-auto-setup --build-arg TARGET=auto-setup --build-arg RELEASE_VERSION=$(TAG_NAME)
+	docker build . -t ubercadence/cli:$(TAG_NAME) --build-arg TARGET=cli --build-arg RELEASE_VERSION=$(TAG_NAME)
+	docker build . -t ubercadence/cadence-canary:$(TAG_NAME) --build-arg TARGET=canary
+	docker build . -t ubercadence/cadence-bench:$(TAG_NAME) --build-arg TARGET=bench
+	$Q echo 'Final manual steps:'
+	$Q echo '1. To test, use the new version in our compose files with: `'"sed -i 's#ubercadence/server:master-auto-setup#ubercadence/server:$(TAG_NAME)-auto-setup#g' docker/*.yml"'`'
+	$Q echo '2. ^^^^^ VERIFY, AND THEN UNDO THIS (`git checkout -- docker`) BEFORE YOU DO THE NEXT STEPS ^^^^^.'
+	$Q echo '   You can `make docker-clean` and optionally a `docker image prune` to force a re-build.'
+	$Q echo '3. Find the latest tagged cadence-web version on https://hub.docker.com/r/ubercadence/web/tags,'
+	$Q echo '   and pin it in the compose files with: `'"sed -i 's#ubercadence/web:latest#ubercadence/web:<THAT_VERSION>#g' docker/*.yml"'`'
+	$Q echo '   These changes SHOULD be included in the following step.'
+	$Q echo '4. Then gzip that folder and include it in the release: `cd docker; tar -czvf docker.tar.gz *`'
+	$Q echo '5. Lastly, `docker login` and run `make docker-push` to publish all images.'
+
+ALL_DOCKER_IMAGES = ubercadence/server:$(TAG_NAME)-auto-setup ubercadence/server:$(TAG_NAME) ubercadence/cli:$(TAG_NAME) ubercadence/cadence-canary:$(TAG_NAME) ubercadence/cadence-bench:$(TAG_NAME)
+docker-push: ## publishes all images built with 'docker-build'.  uses the same TAG_NAME variable.
+	$Q echo 'This will push the following tags, assuming you have run `docker login`.'
+	$Q echo 'These should be valid semver tags, plus [semver]-auto-setup:'
+	$Q echo -e ' $(foreach imagename,$(ALL_DOCKER_IMAGES),- $(imagename)\n)'
+	$Q $(call confirm,Are you ready to publish those images?)
+	for name in $(ALL_DOCKER_IMAGES); do docker push $$name || break; done
+
+docker-clean: ## removes all images built with 'docker-build'.  uses the same TAG_NAME variable.
+	$Q echo -e 'Trying to delete images (not-found errors are fine)...\n'
+	docker image rm $(ALL_DOCKER_IMAGES)
+
 # ====================================
 # binaries to build
 # ====================================
