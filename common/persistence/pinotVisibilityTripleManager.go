@@ -38,6 +38,7 @@ type (
 		pinotVisibilityManager VisibilityManager
 		esVisibilityManager    VisibilityManager
 		readModeIsFromPinot    dynamicconfig.BoolPropertyFnWithDomainFilter
+		readModeIsFromES       dynamicconfig.BoolPropertyFnWithDomainFilter
 		writeMode              dynamicconfig.StringPropertyFn
 	}
 )
@@ -98,6 +99,9 @@ func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionStarted(
 			return v.dbVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 		},
 		func() error {
+			return v.esVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
+		},
+		func() error {
 			return v.pinotVisibilityManager.RecordWorkflowExecutionStarted(ctx, request)
 		},
 	)
@@ -111,6 +115,9 @@ func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionClosed(
 		ctx,
 		func() error {
 			return v.dbVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
+		},
+		func() error {
+			return v.esVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
 		},
 		func() error {
 			return v.pinotVisibilityManager.RecordWorkflowExecutionClosed(ctx, request)
@@ -128,6 +135,9 @@ func (v *pinotVisibilityTripleManager) RecordWorkflowExecutionUninitialized(
 			return v.dbVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
 		},
 		func() error {
+			return v.esVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
+		},
+		func() error {
 			return v.pinotVisibilityManager.RecordWorkflowExecutionUninitialized(ctx, request)
 		},
 	)
@@ -141,6 +151,9 @@ func (v *pinotVisibilityTripleManager) DeleteWorkflowExecution(
 		ctx,
 		func() error {
 			return v.dbVisibilityManager.DeleteWorkflowExecution(ctx, request)
+		},
+		func() error {
+			return v.esVisibilityManager.DeleteWorkflowExecution(ctx, request)
 		},
 		func() error {
 			return v.pinotVisibilityManager.DeleteWorkflowExecution(ctx, request)
@@ -158,6 +171,9 @@ func (v *pinotVisibilityTripleManager) DeleteUninitializedWorkflowExecution(
 			return v.dbVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
 		},
 		func() error {
+			return v.esVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
+		},
+		func() error {
 			return v.pinotVisibilityManager.DeleteUninitializedWorkflowExecution(ctx, request)
 		},
 	)
@@ -171,6 +187,9 @@ func (v *pinotVisibilityTripleManager) UpsertWorkflowExecution(
 		ctx,
 		func() error {
 			return v.dbVisibilityManager.UpsertWorkflowExecution(ctx, request)
+		},
+		func() error {
+			return v.esVisibilityManager.UpsertWorkflowExecution(ctx, request)
 		},
 		func() error {
 			return v.pinotVisibilityManager.UpsertWorkflowExecution(ctx, request)
@@ -191,7 +210,7 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityModeForAdmin() string {
 	}
 }
 
-func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Context, dbVisFunc, pinotVisFunc func() error) error {
+func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx context.Context, dbVisFunc, esVisFunc, pinotVisFunc func() error) error {
 	var writeMode string
 	if v.writeMode != nil {
 		writeMode = v.writeMode()
@@ -218,6 +237,22 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForWrite(ctx conte
 	case common.AdvancedVisibilityWritingModeDual:
 		if v.pinotVisibilityManager != nil {
 			if err := pinotVisFunc(); err != nil {
+				return err
+			}
+			if v.dbVisibilityManager != nil {
+				return dbVisFunc()
+			}
+			v.logger.Warn("basic visibility is not available to write")
+			return nil
+		}
+		v.logger.Warn("advanced visibility is not available to write")
+		return dbVisFunc()
+	case common.AdvacnedVisibilityWritingModeTriple:
+		if v.pinotVisibilityManager != nil && v.esVisibilityManager != nil {
+			if err := pinotVisFunc(); err != nil {
+				return err
+			}
+			if err := esVisFunc(); err != nil {
 				return err
 			}
 			if v.dbVisibilityManager != nil {
@@ -331,6 +366,14 @@ func (v *pinotVisibilityTripleManager) chooseVisibilityManagerForRead(domain str
 		} else {
 			visibilityMgr = v.dbVisibilityManager
 			v.logger.Warn("domain is configured to read from advanced visibility(Pinot based) but it's not available, fall back to basic visibility",
+				tag.WorkflowDomainName(domain))
+		}
+	} else if v.readModeIsFromES(domain) {
+		if v.esVisibilityManager != nil {
+			visibilityMgr = v.esVisibilityManager
+		} else {
+			visibilityMgr = v.dbVisibilityManager
+			v.logger.Warn("domain is configured to read from advanced visibility(ElasticSearch based) but it's not available, fall back to basic visibility",
 				tag.WorkflowDomainName(domain))
 		}
 	} else {
