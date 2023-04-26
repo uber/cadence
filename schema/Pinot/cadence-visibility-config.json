@@ -23,7 +23,10 @@
       "realtime.segment.flush.threshold.rows": 30,
       "realtime.segment.flush.threshold.time": "24h",
       "realtime.segment.flush.threshold.segment.size": "50M"
-    }
+    },
+    "noDictionaryColumns": [
+      "Attr"
+    ]
   },
   "routing": {
     "instanceSelectorType": "strictReplicaGroup"
@@ -31,5 +34,12 @@
   "upsertConfig": {
     "mode": "FULL"
   },
-  "metadata": {}
+  "metadata": {},
+  "fieldConfigList":[
+    {
+      "name":"Attr",
+      "encodingType":"RAW",
+      "indexTypes":["TEXT"]
+    }
+  ]
 }
