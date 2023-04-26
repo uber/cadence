@@ -194,7 +194,7 @@ func newTaskListManager(
 		fwdr = newForwarder(&taskListConfig.forwarderConfig, taskList, *taskListKind, e.matchingClient)
 	}
 	var isolationGroups []string
-	if tlMgr.isIsolationEnabled() {
+	if tlMgr.isIsolationMatcherEnabled() {
 		isolationGroups = config.AllIsolationGroups
 	}
 	tlMgr.matcher = newTaskMatcher(taskListConfig, fwdr, tlMgr.scope, isolationGroups)
@@ -281,7 +281,10 @@ func (c *taskListManagerImpl) AddTask(ctx context.Context, params addTaskParams)
 			return r, err
 		}
 
-		isolationGroup := c.getIsolationGroupForTask(ctx, params.taskInfo)
+		isolationGroup, err := c.getIsolationGroupForTask(ctx, params.taskInfo)
+		if err != nil {
+			return false, err
+		}
 		// active task, try sync match first
 		syncMatch, err = c.trySyncMatch(ctx, params, isolationGroup)
 		if syncMatch {
@@ -362,10 +365,7 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 	childCtx, cancel := c.newChildContext(ctx, c.config.LongPollExpirationInterval(), returnEmptyTaskTimeBudget)
 	defer cancel()
 
-	var isolationGroup string
-	if c.isIsolationEnabled() {
-		isolationGroup, _ = ctx.Value(_isolationGroupKey).(string)
-	}
+	isolationGroup, _ := ctx.Value(_isolationGroupKey).(string)
 	pollerID, ok := ctx.Value(pollerIDKey).(string)
 	if ok && pollerID != "" {
 		// Found pollerID on context, add it to the map to allow it to be canceled in
@@ -405,7 +405,10 @@ func (c *taskListManagerImpl) getTask(ctx context.Context, maxDispatchPerSecond 
 		return c.matcher.PollForQuery(childCtx)
 	}
 
-	return c.matcher.Poll(childCtx, isolationGroup)
+	if c.isIsolationMatcherEnabled() {
+		return c.matcher.Poll(childCtx, isolationGroup)
+	}
+	return c.matcher.Poll(childCtx, "")
 }
 
 // GetAllPollerInfo returns all pollers that polled from this tasklist in last few minutes
@@ -559,7 +562,7 @@ func (c *taskListManagerImpl) isFowardingAllowed(taskList *taskListID, kind type
 	return !taskList.IsRoot() && kind != types.TaskListKindSticky
 }
 
-func (c *taskListManagerImpl) isIsolationEnabled() bool {
+func (c *taskListManagerImpl) isIsolationMatcherEnabled() bool {
 	return c.taskListKind != types.TaskListKindSticky && c.enableIsolation
 }
 
@@ -567,18 +570,19 @@ func (c *taskListManagerImpl) shouldReload() bool {
 	return c.config.EnableTasklistIsolation() != c.enableIsolation && c.taskListKind != types.TaskListKindSticky
 }
 
-func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) string {
-	if c.isIsolationEnabled() && len(taskInfo.PartitionConfig) > 0 {
+func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) (string, error) {
+	if c.enableIsolation && len(taskInfo.PartitionConfig) > 0 {
 		partitionConfig := make(map[string]string)
 		for k, v := range taskInfo.PartitionConfig {
 			partitionConfig[k] = v
 		}
 		partitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
 		pollerIsolationGroups := c.config.AllIsolationGroups
-		// not all poller information are available at the time of task list manager creation,
+		// Not all poller information are available at the time of task list manager creation,
 		// because we don't persist poller information in database, so in the first minute, we always assume
-		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group
-		if time.Now().Sub(c.createTime) > time.Minute {
+		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group.
+		// Besides, for sticky tasklists, not all poller information are available, we also use all isolation group.
+		if time.Now().Sub(c.createTime) > time.Minute && c.taskListKind != types.TaskListKindSticky {
 			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
 			if len(pollerIsolationGroups) == 0 {
 				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
@@ -587,12 +591,30 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		}
 		group, err := c.partitioner.GetIsolationGroupByDomainID(ctx, taskInfo.DomainID, partitionConfig, pollerIsolationGroups)
 		if err != nil {
+			// For a sticky tasklist, return StickyUnavailableError to let it be added to the non-sticky tasklist.
+			if err == partition.ErrNoIsolationGroupsAvailable && c.taskListKind == types.TaskListKindSticky {
+				return "", _stickyPollerUnavailableError
+			}
+			// if we're unable to get the isolation group, log the error and fallback to no isolation
 			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
-		} else {
-			return group
+			return "", nil
 		}
+		// For a sticky tasklist, it is possible that when an isolation group is undrained, the tasks from one workflow is reassigned
+		// to the isolation group undrained. If there is no poller from the isolation group, we should return StickyUnavailableError
+		// to let the task to be re-enqueued to the non-sticky tasklist. If there is poller, just return an empty isolation group, because
+		// there is at most one isolation group for sticky tasklist and we could just use empty isolation group for matching.
+		if c.taskListKind == types.TaskListKindSticky {
+			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
+			for _, pollerGroup := range pollerIsolationGroups {
+				if group == pollerGroup {
+					return "", nil
+				}
+			}
+			return "", _stickyPollerUnavailableError
+		}
+		return group, nil
 	}
-	return ""
+	return "", nil
 }
 
 func getTaskListTypeTag(taskListType int) metrics.Tag {
