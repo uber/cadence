@@ -484,7 +484,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 func createVisibilityMessage(
-// common parameters
+	// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -499,11 +499,11 @@ func createVisibilityMessage(
 	NumClusters int16,
 	searchAttributes string,
 	visibilityOperation common.VisibilityOperation,
-// specific to certain status
-	closeTimeUnixNano int64,                           // close execution
+	// specific to certain status
+	closeTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64,                               // close execution
-	updateTimeUnixNano int64,                          // update execution,
+	historyLength int64, // close execution
+	updateTimeUnixNano int64, // update execution,
 	shardID int64,
 ) *indexer.PinotMessage {
 	status := int(closeStatus)
