@@ -117,11 +117,12 @@ func (s *matchingEngineSuite) SetupTest() {
 	s.taskManager = newTestTaskManager(s.logger)
 	s.mockDomainCache = cache.NewMockDomainCache(s.controller)
 	s.mockDomainCache.EXPECT().GetDomainByID(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
+	s.mockDomainCache.EXPECT().GetDomain(gomock.Any()).Return(cache.CreateDomainCacheEntry(matchingTestDomainName), nil).AnyTimes()
 	s.mockDomainCache.EXPECT().GetDomainName(gomock.Any()).Return(matchingTestDomainName, nil).AnyTimes()
 	s.mockIsolationStore = dynamicconfig.NewMockClient(s.controller)
 	dcClient := dynamicconfig.NewInMemoryClient()
 	dcClient.UpdateValue(dynamicconfig.EnableTasklistIsolation, true)
-	dcClient.UpdateValue(dynamicconfig.AllIsolationGroups, []string{"datacenterA", "datacenterB"})
+	dcClient.UpdateValue(dynamicconfig.AllIsolationGroups, []interface{}{"datacenterA", "datacenterB"})
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
 	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore)
 	s.partitioner = partition.NewDefaultPartitioner(s.logger, isolationGroupState, partition.Config{})
@@ -513,7 +514,7 @@ func (s *matchingEngineSuite) AddAndPollTasks(taskType int, enableIsolation bool
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
-			PartitionConfig:               map[string]string{"datacenter": isolationGroups[int(i)%len(isolationGroups)]},
+			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups[int(i)%len(isolationGroups)]},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 		s.NoError(err)
@@ -629,7 +630,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
-			PartitionConfig:               map[string]string{"datacenter": group},
+			PartitionConfig:               map[string]string{partition.IsolationGroupKey: group},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 		wg.Wait()
@@ -660,7 +661,7 @@ func (s *matchingEngineSuite) SyncMatchTasks(taskType int, enableIsolation bool)
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
-			PartitionConfig:               map[string]string{"datacenter": group},
+			PartitionConfig:               map[string]string{partition.IsolationGroupKey: group},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 		wg.Wait()
@@ -788,7 +789,7 @@ func (s *matchingEngineSuite) ConcurrentAddAndPollTasks(taskType int, workerCoun
 					ScheduleID:                    scheduleID,
 					TaskList:                      testParam.TaskList,
 					ScheduleToStartTimeoutSeconds: 1,
-					PartitionConfig:               map[string]string{"datacenter": group},
+					PartitionConfig:               map[string]string{partition.IsolationGroupKey: group},
 				}
 				_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 				if err != nil {
@@ -1306,6 +1307,11 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 	testParam := newTestParam(taskType)
 	s.taskManager.getTaskListManager(testParam.TaskListID).rangeID = initialRangeID
 	s.matchingEngine.config.RangeSize = rangeSize // override to low number for the test
+	mgr, err := s.matchingEngine.getTaskListManager(testParam.TaskListID, testParam.TaskList.Kind)
+	s.NoError(err)
+	tlMgr, ok := mgr.(*taskListManagerImpl)
+	s.True(ok)
+	tlMgr.createTime = time.Now().Add(-time.Minute)
 
 	s.setupGetDrainStatus()
 
@@ -1318,7 +1324,7 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 			ScheduleID:                    scheduleID,
 			TaskList:                      testParam.TaskList,
 			ScheduleToStartTimeoutSeconds: 1,
-			PartitionConfig:               map[string]string{"datacenter": isolationGroups[int(i)%len(isolationGroups)]},
+			PartitionConfig:               map[string]string{partition.IsolationGroupKey: isolationGroups[int(i)%len(isolationGroups)]},
 		}
 		_, err := addTask(s.matchingEngine, s.handlerContext, addRequest)
 		s.NoError(err)
