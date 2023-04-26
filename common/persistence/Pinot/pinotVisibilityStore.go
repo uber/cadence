@@ -484,7 +484,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 func createVisibilityMessage(
-	// common parameters
+// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -499,11 +499,11 @@ func createVisibilityMessage(
 	NumClusters int16,
 	searchAttributes string,
 	visibilityOperation common.VisibilityOperation,
-	// specific to certain status
-	closeTimeUnixNano int64, // close execution
+// specific to certain status
+	closeTimeUnixNano int64,                           // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64, // close execution
-	updateTimeUnixNano int64, // update execution,
+	historyLength int64,                               // close execution
+	updateTimeUnixNano int64,                          // update execution,
 	shardID int64,
 ) *indexer.PinotMessage {
 	status := int(closeStatus)
@@ -677,8 +677,9 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		query.concatSorter(requestQuery)
 		query.addLimits(request.PageSize)
 	} else {
+		// checks every case of 'and'
 		reg := regexp.MustCompile("(?i)(and)")
-		queryList := reg.Split(requestQuery, -1) //TODO: CAREFUL!!! do we need to check others like "AND" & "And" ?
+		queryList := reg.Split(requestQuery, -1)
 
 		for _, element := range queryList {
 			element := strings.TrimSpace(element)
