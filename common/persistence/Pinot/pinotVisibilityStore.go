@@ -115,18 +115,6 @@ func NewPinotVisibilityStore(
 	}
 }
 
-func iniSet() map[string]bool {
-	set := make(map[string]bool)
-	msg := visibilityMessage{}
-	values := reflect.ValueOf(msg)
-	typesOf := values.Type()
-	for i := 0; i < values.NumField(); i++ {
-		fieldName := typesOf.Field(i).Name
-		set[fieldName] = true
-	}
-	return set
-}
-
 func (v *pinotVisibilityStore) Close() {
 	return // TODO: need to double check what is close trace do. Does it close the client?
 }
@@ -495,7 +483,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 func createVisibilityMessage(
-// common parameters
+	// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -510,11 +498,11 @@ func createVisibilityMessage(
 	NumClusters int16,
 	searchAttributes string,
 	visibilityOperation common.VisibilityOperation,
-// specific to certain status
-	closeTimeUnixNano int64,                           // close execution
+	// specific to certain status
+	closeTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64,                               // close execution
-	updateTimeUnixNano int64,                          // update execution,
+	historyLength int64, // close execution
+	updateTimeUnixNano int64, // update execution,
 	shardID int64,
 ) *indexer.PinotMessage {
 	status := int(closeStatus)
