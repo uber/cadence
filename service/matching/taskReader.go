@@ -64,7 +64,7 @@ type (
 		handleErr                func(error) error
 		onFatalErr               func()
 		dispatchTask             func(context.Context, *InternalTask) error
-		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) string
+		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
 	}
 )
 
@@ -133,11 +133,24 @@ dispatchLoop:
 			}
 			for {
 				// find isolation group of the task
-				isolationGroup := tr.getIsolationGroupForTask(tr.cancelCtx, taskInfo)
+				isolationGroup, err := tr.getIsolationGroupForTask(tr.cancelCtx, taskInfo)
+				if err != nil {
+					// it only errors when the tasklist is a sticky tasklist and
+					// the sticky pollers are not available, in this case, we just complete the task
+					// and let the decision get timed out and rescheduled to non-sticky tasklist
+					if err == _stickyPollerUnavailableError {
+						tr.completeTask(taskInfo, nil)
+					} else {
+						// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
+						tr.logger.Error("taskReader: unexpected error getting isolation group", tag.Error(err))
+						tr.completeTask(taskInfo, err)
+					}
+					break
+				}
 				task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil, isolationGroup)
 				dispatchCtx, cancel := tr.newDispatchContext(isolationGroup)
 				timerScope := tr.scope.StartTimer(metrics.AsyncMatchLatencyPerTaskList)
-				err := tr.dispatchTask(dispatchCtx, task)
+				err = tr.dispatchTask(dispatchCtx, task)
 				timerScope.Stop()
 				cancel()
 				if err == nil {
