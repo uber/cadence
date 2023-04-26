@@ -70,19 +70,60 @@ func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
 }
 
 func TestGetListWorkflowExecutionQuery(t *testing.T) {
+	testValidMap := make(map[string]interface{})
+	testValidMap["CustomizedKeyword"] = types.IndexedValueTypeKeyword
+	testValidMap["CustomizedString"] = types.IndexedValueTypeString
+	testValidMap["IndexedValueTypeInt"] = types.IndexedValueTypeInt
+	testValidMap["IndexedValueTypeDouble"] = types.IndexedValueTypeDouble
+	testValidMap["IndexedValueTypeBool"] = types.IndexedValueTypeBool
+	testValidMap["IndexedValueTypeDatetime"] = types.IndexedValueTypeDatetime
+
 	tests := map[string]struct {
 		input          *p.ListWorkflowExecutionsByQueryRequest
 		expectedOutput string
 	}{
-		"complete request with empty query": {
+		"complete request with keyword query only": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
 				DomainUUID:    testDomainID,
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "",
+				Query:         "CustomizedKeyword = keywordCustomized",
 			},
-			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nLIMIT 10\n", testTableName),
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nAND TEXT_MATCH(Attr, 'CustomizedKeyword')\nAND TEXT_MATCH(Attr, 'keywordCustomized')\nLIMIT 10\n", testTableName),
+		},
+
+		"complete request with keyword query and other customized query": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "CustomizedKeyword = keywordCustomized and CustomizedString = stringCustmized",
+			},
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nAND TEXT_MATCH(Attr, 'CustomizedKeyword')\nAND TEXT_MATCH(Attr, 'keywordCustomized')\nAND TEXT_MATCH(Attr, 'CustomizedString')\nAND Attr LIKE '%%stringCustmized%%'\nLIMIT 10\n", testTableName),
+		},
+
+		"complete request with customized query with not registered attribute": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "CustomizedKeyword = keywordCustomized and CustomizedString = stringCustmized and unregistered <= 100",
+			},
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nAND TEXT_MATCH(Attr, 'CustomizedKeyword')\nAND TEXT_MATCH(Attr, 'keywordCustomized')\nAND TEXT_MATCH(Attr, 'CustomizedString')\nAND Attr LIKE '%%stringCustmized%%'\nLIMIT 10\n", testTableName),
+		},
+
+		"complete request with customized query with everything with all cases AND": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "CloseStatus < 0 and CustomizedKeyword = keywordCustomized AND CustomizedString = stringCustmized And unregistered <= 100 aNd Order by DomainId Desc",
+			},
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nAND CloseStatus < 0\nAND TEXT_MATCH(Attr, 'CustomizedKeyword')\nAND TEXT_MATCH(Attr, 'keywordCustomized')\nAND TEXT_MATCH(Attr, 'CustomizedString')\nAND Attr LIKE '%%stringCustmized%%'\nOrder by DomainId Desc\nLIMIT 10\n", testTableName),
 		},
 
 		"complete request with order by query": {
@@ -102,9 +143,20 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "Status < 0",
+				Query:         "CloseStatus < 0",
 			},
-			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nAND Status < 0\nLIMIT 10\n", testTableName),
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nAND CloseStatus < 0\nLIMIT 10\n", testTableName),
+		},
+
+		"complete request with empty query": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "",
+			},
+			expectedOutput: fmt.Sprintf("SELECT *\nFROM %s\nWHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'\nLIMIT 10\n", testTableName),
 		},
 
 		"empty request": {
@@ -121,7 +173,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				output := getListWorkflowExecutionsByQueryQuery(testTableName, test.input)
+				output := getListWorkflowExecutionsByQueryQuery(testTableName, test.input, testValidMap)
 				assert.Equal(t, test.expectedOutput, output)
 			})
 		})
