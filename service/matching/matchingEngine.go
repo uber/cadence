@@ -309,6 +309,16 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName),
 			tag.Dynamic("tasklistType", *taskListKind))
+	} else {
+		if domainName == "compliance-process-pipeline-manager-v2" {
+			if request.ForwardedFrom == "" {
+				e.logger.Info("forwardedFrom working as expected")
+			}
+			if taskListKind != nil && *taskListKind != types.TaskListKindSticky {
+				e.logger.Info("tasklistKind check sticky working as expected")
+			}
+		}
+
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
@@ -376,7 +386,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 	if taskListKind != nil && *taskListKind != types.TaskListKindSticky && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
-		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task", tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName),
 			tag.Dynamic("tasklistType", *taskListKind))
 	}
