@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -676,7 +677,8 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		query.concatSorter(requestQuery)
 		query.addLimits(request.PageSize)
 	} else {
-		queryList := strings.Split(requestQuery, "and") //TODO: CAREFUL!!! do we need to check others like "AND" & "And" ?
+		reg := regexp.MustCompile("(?i)(and)")
+		queryList := reg.Split(requestQuery, -1) //TODO: CAREFUL!!! do we need to check others like "AND" & "And" ?
 
 		for _, element := range queryList {
 			element := strings.TrimSpace(element)
@@ -694,9 +696,7 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 				continue
 			}
 
-			valType, ok := validMap[key]
-
-			if ok {
+			if valType, ok := validMap[key]; ok {
 				val := pair[2]
 				indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
 				isKeyWord := indexValType == types.IndexedValueTypeKeyword
