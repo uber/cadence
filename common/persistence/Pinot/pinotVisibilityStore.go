@@ -24,6 +24,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/uber/cadence/.gen/go/indexer"
@@ -46,22 +48,26 @@ const (
 	DescendingOrder = "DESC"
 	AcendingOrder   = "ASC"
 
-	DomainID            = "DomainID"
-	WorkflowID          = "WorkflowID"
-	RunID               = "RunID"
-	WorkflowType        = "WorkflowType"
-	StartTime           = "StartTime"
-	ExecutionTime       = "ExecutionTime"
-	CloseTime           = "CloseTime"
-	CloseStatus         = "CloseStatus"
-	HistoryLength       = "HistoryLength"
-	Encoding            = "Encoding"
-	TaskList            = "TaskList"
-	IsCron              = "IsCron"
-	NumClusters         = "NumClusters"
+	DocID         = "DocID"
+	DomainID      = "DomainID"
+	WorkflowID    = "WorkflowID"
+	RunID         = "RunID"
+	WorkflowType  = "WorkflowType"
+	CloseStatus   = "CloseStatus"
+	HistoryLength = "HistoryLength"
+	TaskList      = "TaskList"
+	IsCron        = "IsCron"
+	NumClusters   = "NumClusters"
+	ShardID       = "ShardID"
+	Attr          = "Attr"
+	StartTime     = "StartTime"
+	CloseTime     = "CloseTime"
+	UpdateTime    = "UpdateTime"
+	ExecutionTime = "ExecutionTime"
+
+	Encoding = "Encoding"
+
 	VisibilityOperation = "VisibilityOperation"
-	UpdateTime          = "UpdateTime"
-	ShardID             = "ShardID"
 )
 
 type (
@@ -410,8 +416,8 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 	checkPageSize(request)
 
 	// TODO: need to check next page token in the future
-
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	validMap := v.config.ValidSearchAttributes()
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -428,7 +434,8 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 
 	// TODO: need to check next page token in the future
 
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request)
+	validMap := v.config.ValidSearchAttributes()
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -621,6 +628,18 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
+func (f *PinotQueryFilter) addExactMatch(key string, val string) {
+	f.checkFirstFilter()
+	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
+	f.string += fmt.Sprintf("AND TEXT_MATCH(%s, '%s')\n", Attr, val)
+}
+
+func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
+	f.checkFirstFilter()
+	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
+	f.string += fmt.Sprintf("AND %s LIKE '%%%s%%'\n", Attr, val)
+}
+
 func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
 	if request == nil {
 		return ""
@@ -639,11 +658,13 @@ func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowE
 	return query.String()
 }
 
-func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest) string {
+func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
 
+	// TODO: switch to v.logger or something
+	queryQueryLogger := log.NewNoop()
 	query := NewPinotQuery(tableName)
 
 	// need to add Domain ID
@@ -656,11 +677,59 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		query.concatSorter(requestQuery)
 		query.addLimits(request.PageSize)
 	} else {
-		query.filters.addQuery(request.Query)
+		// checks every case of 'and'
+		reg := regexp.MustCompile("(?i)(and)")
+		queryList := reg.Split(requestQuery, -1)
+
+		for _, element := range queryList {
+			element := strings.TrimSpace(element)
+			pair := strings.Split(element, " ")
+			key := pair[0]
+
+			// case: when order by query also passed in
+			if strings.ToLower(key) == "order" && strings.ToLower(pair[1]) == "by" {
+				query.concatSorter(element)
+				continue
+			}
+
+			if pinotContainsKey(key) {
+				query.filters.addQuery(element)
+				continue
+			}
+
+			if valType, ok := validMap[key]; ok {
+				val := pair[2]
+				indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
+				isKeyWord := indexValType == types.IndexedValueTypeKeyword
+				if isKeyWord {
+					query.filters.addExactMatch(key, val)
+				} else {
+					query.filters.addPartialMatch(key, val)
+				}
+			} else {
+				queryQueryLogger.Error("Unregistered field!!")
+			}
+
+		}
+
 		query.addLimits(request.PageSize)
 	}
 
 	return query.String()
+}
+
+// hard coded for this PoC. Will use dynamic configs later.
+func pinotContainsKey(key string) bool {
+	msg := visibilityMessage{}
+	values := reflect.ValueOf(msg)
+	typesOf := values.Type()
+	for i := 0; i < values.NumField(); i++ {
+		fieldName := typesOf.Field(i).Name
+		if fieldName == key {
+			return true
+		}
+	}
+	return false
 }
 
 func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {
