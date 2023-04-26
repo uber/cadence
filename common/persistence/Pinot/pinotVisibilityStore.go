@@ -47,7 +47,7 @@ const (
 	DescendingOrder = "DESC"
 	AcendingOrder   = "ASC"
 
-	DocId         = "DocID"
+	DocID         = "DocID"
 	DomainID      = "DomainID"
 	WorkflowID    = "WorkflowID"
 	RunID         = "RunID"
