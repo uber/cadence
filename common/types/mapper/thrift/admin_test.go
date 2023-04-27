@@ -26,6 +26,8 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/uber/cadence/.gen/go/shared"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -51,15 +53,15 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 				},
 			},
 			expected: &admin.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: []*admin.IsolationGroupPartition{
+				IsolationGroups: &shared.IsolationGroupConfiguration{
+					IsolationGroups: []*shared.IsolationGroupPartition{
 						{
 							Name:  strPtr("zone 0"),
-							State: igStatePtr(admin.IsolationGroupStateHealthy),
+							State: igStatePtr(shared.IsolationGroupStateHealthy),
 						},
 						{
 							Name:  strPtr("zone 1"),
-							State: igStatePtr(admin.IsolationGroupStateDrained),
+							State: igStatePtr(shared.IsolationGroupStateDrained),
 						},
 					},
 				},
@@ -131,15 +133,15 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 				},
 			},
 			expected: &admin.GetDomainIsolationGroupsResponse{
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: []*admin.IsolationGroupPartition{
+				IsolationGroups: &shared.IsolationGroupConfiguration{
+					IsolationGroups: []*shared.IsolationGroupPartition{
 						{
 							Name:  strPtr("zone 0"),
-							State: igStatePtr(admin.IsolationGroupStateHealthy),
+							State: igStatePtr(shared.IsolationGroupStateHealthy),
 						},
 						{
 							Name:  strPtr("zone 1"),
-							State: igStatePtr(admin.IsolationGroupStateDrained),
+							State: igStatePtr(shared.IsolationGroupStateDrained),
 						},
 					},
 				},
@@ -150,8 +152,8 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 				IsolationGroups: types.IsolationGroupConfiguration{},
 			},
 			expected: &admin.GetDomainIsolationGroupsResponse{
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: []*admin.IsolationGroupPartition{},
+				IsolationGroups: &shared.IsolationGroupConfiguration{
+					IsolationGroups: []*shared.IsolationGroupPartition{},
 				},
 			},
 		},
@@ -231,15 +233,15 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 	}{
 		"Valid mapping": {
 			in: &admin.UpdateGlobalIsolationGroupsRequest{
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: []*admin.IsolationGroupPartition{
+				IsolationGroups: &shared.IsolationGroupConfiguration{
+					IsolationGroups: []*shared.IsolationGroupPartition{
 						{
 							Name:  strPtr("zone 1"),
-							State: igStatePtr(admin.IsolationGroupStateHealthy),
+							State: igStatePtr(shared.IsolationGroupStateHealthy),
 						},
 						{
 							Name:  strPtr("zone 2"),
-							State: igStatePtr(admin.IsolationGroupStateDrained),
+							State: igStatePtr(shared.IsolationGroupStateDrained),
 						},
 					},
 				},
@@ -311,15 +313,15 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 		"valid": {
 			in: &admin.UpdateDomainIsolationGroupsRequest{
 				Domain: strPtr("test-domain"),
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: []*admin.IsolationGroupPartition{
+				IsolationGroups: &shared.IsolationGroupConfiguration{
+					IsolationGroups: []*shared.IsolationGroupPartition{
 						{
 							Name:  strPtr("zone-1"),
-							State: igStatePtr(admin.IsolationGroupStateHealthy),
+							State: igStatePtr(shared.IsolationGroupStateHealthy),
 						},
 						{
 							Name:  strPtr("zone-2"),
-							State: igStatePtr(admin.IsolationGroupStateDrained),
+							State: igStatePtr(shared.IsolationGroupStateDrained),
 						},
 					},
 				},
@@ -359,15 +361,15 @@ func TestToGetGlobalIsolationGroupsResponse(t *testing.T) {
 	}{
 		"valid": {
 			in: &admin.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: &admin.IsolationGroupConfiguration{
-					IsolationGroups: []*admin.IsolationGroupPartition{
+				IsolationGroups: &shared.IsolationGroupConfiguration{
+					IsolationGroups: []*shared.IsolationGroupPartition{
 						{
 							Name:  strPtr("zone-1"),
-							State: igStatePtr(admin.IsolationGroupStateDrained),
+							State: igStatePtr(shared.IsolationGroupStateDrained),
 						},
 						{
 							Name:  strPtr("zone-2"),
-							State: igStatePtr(admin.IsolationGroupStateHealthy),
+							State: igStatePtr(shared.IsolationGroupStateHealthy),
 						},
 					},
 				},

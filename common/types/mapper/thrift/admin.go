@@ -23,6 +23,8 @@ package thrift
 import (
 	"sort"
 
+	"github.com/uber/cadence/.gen/go/shared"
+
 	"github.com/uber/cadence/common/types"
 
 	"github.com/uber/cadence/.gen/go/admin"
@@ -810,15 +812,15 @@ func ToUpdateDomainIsolationGroupsRequest(t *admin.UpdateDomainIsolationGroupsRe
 	}
 }
 
-func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *admin.IsolationGroupConfiguration {
+func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
-	var out []*admin.IsolationGroupPartition
+	var out []*shared.IsolationGroupPartition
 	for _, v := range in {
-		out = append(out, &admin.IsolationGroupPartition{
+		out = append(out, &shared.IsolationGroupPartition{
 			Name:  strPtr(v.Name),
-			State: igStatePtr(admin.IsolationGroupState(v.State)),
+			State: igStatePtr(shared.IsolationGroupState(v.State)),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -827,12 +829,12 @@ func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *admin.Isol
 		}
 		return *out[i].Name < *out[j].Name
 	})
-	return &admin.IsolationGroupConfiguration{
+	return &shared.IsolationGroupConfiguration{
 		IsolationGroups: out,
 	}
 }
 
-func isolationGroupConfigFromIDL(in *admin.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+func isolationGroupConfigFromIDL(in *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
@@ -846,5 +848,5 @@ func isolationGroupConfigFromIDL(in *admin.IsolationGroupConfiguration) *types.I
 	return &out
 }
 
-func strPtr(s string) *string                                           { return &s }
-func igStatePtr(s admin.IsolationGroupState) *admin.IsolationGroupState { return &s }
+func strPtr(s string) *string                                             { return &s }
+func igStatePtr(s shared.IsolationGroupState) *shared.IsolationGroupState { return &s }
