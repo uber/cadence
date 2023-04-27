@@ -307,8 +307,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
-			tag.Dynamic("taskListBaseName", taskList.baseName),
-			tag.Dynamic("tasklistType", *taskListKind))
+			tag.Dynamic("taskListBaseName", taskList.baseName))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
