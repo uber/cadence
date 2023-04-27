@@ -377,8 +377,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task", tag.Dynamic("tasklistName", taskListName),
-			tag.Dynamic("taskListBaseName", taskList.baseName),
-			tag.Dynamic("tasklistType", *taskListKind))
+			tag.Dynamic("taskListBaseName", taskList.baseName))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
