@@ -27,6 +27,9 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/uber/cadence/common/elasticsearch"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 
@@ -271,7 +274,6 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
-
 	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
 
 	req := &pnt.SearchRequest{
@@ -279,8 +281,8 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     request,
 	}
-
 	return v.pinotClient.Search(req)
 }
 
@@ -299,6 +301,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     request,
 	}
 
 	return v.pinotClient.Search(req)
@@ -316,6 +319,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Cont
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -333,6 +337,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -350,6 +355,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx contex
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -367,6 +373,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx cont
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -384,6 +391,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -397,6 +405,14 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 		IsOpen:          true,
 		Filter:          nil,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{ // create a new request to avoid nil pointer exceptions
+			DomainUUID:    request.DomainUUID,
+			Domain:        request.Domain,
+			EarliestTime:  time.Time{},
+			LatestTime:    time.Time{},
+			PageSize:      1,
+			NextPageToken: nil,
+		},
 	}
 
 	resp, err := v.pinotClient.Search(req)
@@ -424,6 +440,14 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 		IsOpen:          true,
 		Filter:          nil,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{
+			DomainUUID:    request.DomainUUID,
+			Domain:        request.Domain,
+			EarliestTime:  time.Time{},
+			LatestTime:    time.Time{},
+			NextPageToken: request.NextPageToken,
+			PageSize:      request.PageSize,
+		},
 	}
 
 	return v.pinotClient.Search(req)
@@ -431,8 +455,6 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
-
-	// TODO: need to check next page token in the future
 
 	validMap := v.config.ValidSearchAttributes()
 	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
@@ -442,6 +464,14 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 		IsOpen:          true,
 		Filter:          nil,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{
+			DomainUUID:    request.DomainUUID,
+			Domain:        request.Domain,
+			EarliestTime:  time.Time{},
+			LatestTime:    time.Time{},
+			NextPageToken: request.NextPageToken,
+			PageSize:      request.PageSize,
+		},
 	}
 
 	return v.pinotClient.Search(req)
@@ -587,6 +617,10 @@ func (q *PinotQuery) addLimits(limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d\n", limit)
 }
 
+func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
+	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
+}
+
 type PinotQueryFilter struct {
 	string
 }
@@ -663,6 +697,11 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		return ""
 	}
 
+	token, err := elasticsearch.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
 	// TODO: switch to v.logger or something
 	queryQueryLogger := log.NewNoop()
 	query := NewPinotQuery(tableName)
@@ -672,10 +711,10 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 
 	requestQuery := strings.TrimSpace(request.Query)
 	if requestQuery == "" {
-		query.addLimits(request.PageSize)
+		query.addOffsetAndLimits(token.From, request.PageSize)
 	} else if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
-		query.addLimits(request.PageSize)
+		query.addOffsetAndLimits(token.From, request.PageSize)
 	} else {
 		// checks every case of 'and'
 		reg := regexp.MustCompile("(?i)(and)")
@@ -712,7 +751,7 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 
 		}
 
-		query.addLimits(request.PageSize)
+		query.addOffsetAndLimits(token.From, request.PageSize)
 	}
 
 	return query.String()
@@ -737,6 +776,14 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 		return ""
 	}
 
+	token, err := elasticsearch.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
+	from := token.From
+	pageSize := request.PageSize
+
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
@@ -749,6 +796,9 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
 	query.addPinotSorter(RunID, DescendingOrder)
+
+	query.addOffsetAndLimits(from, pageSize)
+
 	return query.String()
 }
 

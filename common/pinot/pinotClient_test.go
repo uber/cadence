@@ -119,7 +119,7 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 	}
 
 	// Cannot use a table test, because they are not checking the same fields
-	result, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, nil)
+	result, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, nil, nil, 10, 10)
 
 	assert.Equal(t, "wfid1", result.Executions[0].WorkflowID)
 	assert.Equal(t, "rid1", result.Executions[0].RunID)
@@ -155,12 +155,12 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return false
 	}
-	emptyResult, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, isRecordValid)
+	emptyResult, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, isRecordValid, nil, 10, 10)
 	assert.Equal(t, 0, len(emptyResult.Executions))
 	assert.Nil(t, err)
 
 	// check nil input
-	nilResult, err := client.getInternalListWorkflowExecutionsResponse(nil, isRecordValid)
+	nilResult, err := client.getInternalListWorkflowExecutionsResponse(nil, isRecordValid, nil, 10, 10)
 	assert.Nil(t, nilResult)
 	assert.Nil(t, err)
 }

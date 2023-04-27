@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uber/cadence/common/elasticsearch"
+
 	"github.com/startreedata/pinot-client-go/pinot"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -60,7 +62,15 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 		}
 	}
 
-	return c.getInternalListWorkflowExecutionsResponse(resp, request.Filter)
+	token, err := elasticsearch.GetNextPageToken(request.ListRequest.NextPageToken)
+
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("Get NextPage token failed, %v", err),
+		}
+	}
+
+	return c.getInternalListWorkflowExecutionsResponse(resp, request.Filter, token, request.ListRequest.PageSize, request.MaxResultWindow)
 }
 
 func (c *PinotClient) CountByQuery(query string) (int64, error) {
@@ -172,6 +182,9 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
+	token *elasticsearch.ElasticVisibilityPageToken,
+	pageSize int,
+	maxResultWindow int,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	if resp == nil {
 		return nil, nil
@@ -194,29 +207,23 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		}
 	}
 
-	//if numOfActualHits == pageSize { // this means the response is not the last page
-	//	var nextPageToken []byte
-	//	var err error
-	//
-	//	// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
-	//	// to retrieve deeper pages, use ES SearchAfter
-	//	if searchHits.TotalHits <= int64(maxResultWindow-pageSize) { // use ES Search From+Size
-	//		nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
-	//	} else { // use ES Search After
-	//		var sortVal interface{}
-	//		sortVals := actualHits[len(response.Executions)-1].Sort
-	//		sortVal = sortVals[0]
-	//		tieBreaker := sortVals[1].(string)
-	//
-	//		nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{SortValue: sortVal, TieBreaker: tieBreaker})
-	//	}
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	response.NextPageToken = make([]byte, len(nextPageToken))
-	//	copy(response.NextPageToken, nextPageToken)
-	//}
+	if numOfActualHits == pageSize { // this means the response is not the last page
+		var nextPageToken []byte
+		var err error
+
+		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
+		// TODO: need to confirm if pinot has similar settings
+		// don't need to retrieve deeper pages in pinot, and no functions like ES SearchAfter
+		if resp.NumDocsScanned <= int64(maxResultWindow-pageSize) { // use pinot Search From+Size
+			nextPageToken, err = elasticsearch.SerializePageToken(&elasticsearch.ElasticVisibilityPageToken{From: token.From + numOfActualHits})
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		response.NextPageToken = make([]byte, len(nextPageToken))
+		copy(response.NextPageToken, nextPageToken)
+	}
 
 	return response, nil
 }
