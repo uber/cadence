@@ -25,9 +25,10 @@ package pinotVisibility
 import (
 	"encoding/json"
 	"fmt"
-	pnt "github.com/uber/cadence/common/pinot"
 	"testing"
 	"time"
+
+	pnt "github.com/uber/cadence/common/pinot"
 
 	"github.com/stretchr/testify/assert"
 
