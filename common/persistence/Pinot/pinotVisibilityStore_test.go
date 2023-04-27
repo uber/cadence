@@ -25,10 +25,9 @@ package pinotVisibility
 import (
 	"encoding/json"
 	"fmt"
+	pnt "github.com/uber/cadence/common/pinot"
 	"testing"
 	"time"
-
-	"github.com/uber/cadence/common/elasticsearch"
 
 	"github.com/stretchr/testify/assert"
 
@@ -81,11 +80,8 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 	testValidMap["IndexedValueTypeBool"] = types.IndexedValueTypeBool
 	testValidMap["IndexedValueTypeDatetime"] = types.IndexedValueTypeDatetime
 
-	token := elasticsearch.ElasticVisibilityPageToken{
-		From:       11,
-		SortValue:  nil,
-		TieBreaker: "",
-		ScrollID:   "",
+	token := pnt.PinotVisibilityPageToken{
+		From: 11,
 	}
 
 	serializedToken, err := json.Marshal(token)

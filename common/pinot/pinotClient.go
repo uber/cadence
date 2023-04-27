@@ -27,8 +27,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/uber/cadence/common/elasticsearch"
-
 	"github.com/startreedata/pinot-client-go/pinot"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -62,7 +60,7 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 		}
 	}
 
-	token, err := elasticsearch.GetNextPageToken(request.ListRequest.NextPageToken)
+	token, err := GetNextPageToken(request.ListRequest.NextPageToken)
 
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -182,7 +180,7 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
-	token *elasticsearch.ElasticVisibilityPageToken,
+	token *PinotVisibilityPageToken,
 	pageSize int,
 	maxResultWindow int,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
@@ -215,7 +213,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		// TODO: need to confirm if pinot has similar settings
 		// don't need to retrieve deeper pages in pinot, and no functions like ES SearchAfter
 		if resp.NumDocsScanned <= int64(maxResultWindow-pageSize) { // use pinot Search From+Size
-			nextPageToken, err = elasticsearch.SerializePageToken(&elasticsearch.ElasticVisibilityPageToken{From: token.From + numOfActualHits})
+			nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
 		}
 		if err != nil {
 			return nil, err

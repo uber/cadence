@@ -29,8 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/elasticsearch"
-
 	"github.com/uber/cadence/.gen/go/indexer"
 
 	workflow "github.com/uber/cadence/.gen/go/shared"
@@ -697,7 +695,7 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		return ""
 	}
 
-	token, err := elasticsearch.GetNextPageToken(request.NextPageToken)
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
 		panic(fmt.Sprintf("deserialize next page token error: %s", err))
 	}
@@ -776,7 +774,7 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 		return ""
 	}
 
-	token, err := elasticsearch.GetNextPageToken(request.NextPageToken)
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
 	if err != nil {
 		panic(fmt.Sprintf("deserialize next page token error: %s", err))
 	}

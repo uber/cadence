@@ -27,8 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/uber/cadence/common/elasticsearch"
-
 	"github.com/startreedata/pinot-client-go/pinot"
 	"github.com/stretchr/testify/assert"
 
@@ -127,11 +125,8 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 		MinConsumingFreshnessTimeMs: 1,
 	}
 
-	token := &elasticsearch.ElasticVisibilityPageToken{
-		From:       0,
-		SortValue:  nil,
-		TieBreaker: "",
-		ScrollID:   "",
+	token := &PinotVisibilityPageToken{
+		From: 0,
 	}
 
 	// Cannot use a table test, because they are not checking the same fields
@@ -168,7 +163,7 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 	assert.Nil(t, err)
 
 	responseToken := result.NextPageToken
-	unmarshalResponseToken, err := elasticsearch.GetNextPageToken(responseToken)
+	unmarshalResponseToken, err := GetNextPageToken(responseToken)
 	if err != nil {
 		panic(fmt.Sprintf("Unmarshal error in PinotClient test %s", err))
 	}
