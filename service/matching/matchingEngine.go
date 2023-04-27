@@ -296,6 +296,21 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		return false, err
 	}
 
+	// get the domainName
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return false, err
+	}
+
+	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
+	if taskListKind != nil && *taskListKind != types.TaskListKindSticky && request.ForwardedFrom == "" {
+		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
+			tag.Dynamic("taskListBaseName", taskList.baseName),
+			tag.Dynamic("tasklistType", *taskListKind))
+	}
+
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
 	if err != nil {
 		return false, err
@@ -349,6 +364,21 @@ func (e *matchingEngineImpl) AddActivityTask(
 	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
+	}
+
+	// get the domainName
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return false, err
+	}
+
+	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
+	if taskListKind != nil && *taskListKind != types.TaskListKindSticky && request.ForwardedFrom == "" {
+		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
+			tag.Dynamic("taskListBaseName", taskList.baseName),
+			tag.Dynamic("tasklistType", *taskListKind))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)

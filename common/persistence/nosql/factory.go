@@ -26,14 +26,13 @@ import (
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
-	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin"
 )
 
 type (
 	// Factory vends datastore implementations backed by cassandra
 	Factory struct {
 		sync.RWMutex
-		cfg              config.Cassandra
+		cfg              config.ShardedNoSQL
 		clusterName      string
 		logger           log.Logger
 		execStoreFactory *executionStoreFactory
@@ -41,14 +40,14 @@ type (
 	}
 
 	executionStoreFactory struct {
-		db     nosqlplugin.DB
-		logger log.Logger
+		logger            log.Logger
+		shardedNosqlStore shardedNosqlStore
 	}
 )
 
 // NewFactory returns an instance of a factory object which can be used to create
 // datastores that are backed by cassandra
-func NewFactory(cfg config.Cassandra, clusterName string, logger log.Logger, dc *p.DynamicConfiguration) *Factory {
+func NewFactory(cfg config.ShardedNoSQL, clusterName string, logger log.Logger, dc *p.DynamicConfiguration) *Factory {
 	return &Factory{
 		cfg:         cfg,
 		clusterName: clusterName,
@@ -133,29 +132,31 @@ func (f *Factory) executionStoreFactory() (*executionStoreFactory, error) {
 
 // newExecutionStoreFactory is used to create an instance of ExecutionStoreFactory implementation
 func newExecutionStoreFactory(
-	cfg config.Cassandra,
+	cfg config.ShardedNoSQL,
 	logger log.Logger,
 	dc *p.DynamicConfiguration,
 ) (*executionStoreFactory, error) {
-
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &executionStoreFactory{
-		db:     db,
-		logger: logger,
+		logger:            logger,
+		shardedNosqlStore: *s,
 	}, nil
 }
 
 func (f *executionStoreFactory) close() {
-	f.db.Close()
+	f.shardedNosqlStore.Close()
 }
 
 // new implements ExecutionStoreFactory interface
 func (f *executionStoreFactory) new(shardID int) (p.ExecutionStore, error) {
-	pmgr, err := NewExecutionStore(shardID, f.db, f.logger)
+	storeShard, err := f.shardedNosqlStore.GetStoreShardByHistoryShard(shardID)
+	if err != nil {
+		return nil, err
+	}
+	pmgr, err := NewExecutionStore(shardID, storeShard.db, f.logger)
 	if err != nil {
 		return nil, err
 	}
