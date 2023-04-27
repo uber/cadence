@@ -25,9 +25,10 @@ package pinotVisibility
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/uber/cadence/common/elasticsearch"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/common/elasticsearch"
 
 	"github.com/stretchr/testify/assert"
 
