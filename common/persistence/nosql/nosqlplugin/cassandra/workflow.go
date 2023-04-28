@@ -135,6 +135,7 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
 	shardCondition *nosqlplugin.ShardCondition,
+	ttlInSeconds int,
 ) error {
 	shardID := shardCondition.ShardID
 	var domainID, workflowID string
@@ -159,7 +160,7 @@ func (db *cdb) UpdateWorkflowExecutionWithTasks(
 	}
 
 	if mutatedExecution != nil {
-		err = db.updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(batch, shardID, domainID, workflowID, mutatedExecution)
+		err = db.updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(batch, shardID, domainID, workflowID, mutatedExecution, ttlInSeconds)
 		if err != nil {
 			return err
 		}

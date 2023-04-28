@@ -1062,7 +1062,7 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
+	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution, 0)
 	if err != nil {
 		return err
 	}
@@ -1151,8 +1151,9 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
+	ttlInSeconds int,
 ) error {
-	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
+	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution, ttlInSeconds)
 	if err != nil {
 		return err
 	}
@@ -1202,11 +1203,13 @@ func (db *cdb) updateWorkflowExecution(
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
+	ttlInSeconds int,
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
 
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
+		ttlInSeconds,
 		domainID,
 		workflowID,
 		execution.RunID,

@@ -45,6 +45,8 @@ import (
 
 const (
 	defaultRemoteCallTimeout = 30 * time.Second
+	ttlBufferDays            = 15
+	dayToSecondMultiplier    = 86400
 )
 
 type conflictError struct {
@@ -1215,6 +1217,15 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		return err
 	}
 
+	//Calculating the TTL for workflow Execution.
+	domainObj, _ := c.shard.GetDomainCache().GetDomainByID(c.domainID)
+	config := domainObj.GetConfig()
+	retention := time.Duration(config.Retention)
+	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
+	//leftover := int(time.Now().Sub(request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp))
+	//int(time.Duration(request.NewWorkflowSnapshot.ExecutionInfo.DecisionStartToCloseTimeout).Seconds())
+	request.TTLInSeconds = daysInSeconds
+	fmt.Print("Testing calculation", request.TTLInSeconds)
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// timeout error is not retryable for update workflow execution

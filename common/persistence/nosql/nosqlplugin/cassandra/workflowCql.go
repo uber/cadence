@@ -315,7 +315,7 @@ workflow_state = ? ` +
 		`and type = ?`
 
 	templateUpdateWorkflowExecutionWithVersionHistoriesQuery = `UPDATE executions ` +
-		`SET execution = ` + templateWorkflowExecutionType +
+		`USING TTL ? SET execution = ` + templateWorkflowExecutionType +
 		`, next_event_id = ? ` +
 		`, version_histories = ? ` +
 		`, version_histories_encoding = ? ` +

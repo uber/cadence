@@ -415,6 +415,8 @@ type (
 		UpdateWorkflowMutation InternalWorkflowMutation
 
 		NewWorkflowSnapshot *InternalWorkflowSnapshot
+
+		TTLInSeconds int
 	}
 
 	// InternalConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface

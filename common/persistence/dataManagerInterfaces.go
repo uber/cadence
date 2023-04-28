@@ -964,6 +964,8 @@ type (
 		Encoding common.EncodingType // optional binary encoding type
 
 		DomainName string
+
+		TTLInSeconds int
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run

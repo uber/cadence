@@ -332,7 +332,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 		ctx, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, nil, // no workflow to reset here
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
-		shardCondition)
+		shardCondition, request.TTLInSeconds)
 
 	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
@@ -472,7 +472,7 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		ctx, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, resetExecution,
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
-		shardCondition)
+		shardCondition, 0)
 	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
 

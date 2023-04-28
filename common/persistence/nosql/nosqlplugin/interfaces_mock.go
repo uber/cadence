@@ -1241,17 +1241,17 @@ func (mr *MockDBMockRecorder) UpdateVisibility(ctx, ttlSeconds, row interface{})
 }
 
 // UpdateWorkflowExecutionWithTasks mocks base method.
-func (m *MockDB) UpdateWorkflowExecutionWithTasks(ctx context.Context, currentWorkflowRequest *CurrentWorkflowWriteRequest, mutatedExecution, insertedExecution, resetExecution *WorkflowExecutionRequest, transferTasks []*TransferTask, crossClusterTasks []*CrossClusterTask, replicationTasks []*ReplicationTask, timerTasks []*TimerTask, shardCondition *ShardCondition) error {
+func (m *MockDB) UpdateWorkflowExecutionWithTasks(ctx context.Context, currentWorkflowRequest *CurrentWorkflowWriteRequest, mutatedExecution, insertedExecution, resetExecution *WorkflowExecutionRequest, transferTasks []*TransferTask, crossClusterTasks []*CrossClusterTask, replicationTasks []*ReplicationTask, timerTasks []*TimerTask, shardCondition *ShardCondition, ttlInSeconds int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionWithTasks", ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition)
+	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionWithTasks", ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateWorkflowExecutionWithTasks indicates an expected call of UpdateWorkflowExecutionWithTasks.
-func (mr *MockDBMockRecorder) UpdateWorkflowExecutionWithTasks(ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition interface{}) *gomock.Call {
+func (mr *MockDBMockRecorder) UpdateWorkflowExecutionWithTasks(ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithTasks", reflect.TypeOf((*MockDB)(nil).UpdateWorkflowExecutionWithTasks), ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithTasks", reflect.TypeOf((*MockDB)(nil).UpdateWorkflowExecutionWithTasks), ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds)
 }
 
 // MocktableCRUD is a mock of tableCRUD interface.
@@ -2271,17 +2271,17 @@ func (mr *MocktableCRUDMockRecorder) UpdateVisibility(ctx, ttlSeconds, row inter
 }
 
 // UpdateWorkflowExecutionWithTasks mocks base method.
-func (m *MocktableCRUD) UpdateWorkflowExecutionWithTasks(ctx context.Context, currentWorkflowRequest *CurrentWorkflowWriteRequest, mutatedExecution, insertedExecution, resetExecution *WorkflowExecutionRequest, transferTasks []*TransferTask, crossClusterTasks []*CrossClusterTask, replicationTasks []*ReplicationTask, timerTasks []*TimerTask, shardCondition *ShardCondition) error {
+func (m *MocktableCRUD) UpdateWorkflowExecutionWithTasks(ctx context.Context, currentWorkflowRequest *CurrentWorkflowWriteRequest, mutatedExecution, insertedExecution, resetExecution *WorkflowExecutionRequest, transferTasks []*TransferTask, crossClusterTasks []*CrossClusterTask, replicationTasks []*ReplicationTask, timerTasks []*TimerTask, shardCondition *ShardCondition, ttlInSeconds int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionWithTasks", ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition)
+	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionWithTasks", ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateWorkflowExecutionWithTasks indicates an expected call of UpdateWorkflowExecutionWithTasks.
-func (mr *MocktableCRUDMockRecorder) UpdateWorkflowExecutionWithTasks(ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition interface{}) *gomock.Call {
+func (mr *MocktableCRUDMockRecorder) UpdateWorkflowExecutionWithTasks(ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithTasks", reflect.TypeOf((*MocktableCRUD)(nil).UpdateWorkflowExecutionWithTasks), ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithTasks", reflect.TypeOf((*MocktableCRUD)(nil).UpdateWorkflowExecutionWithTasks), ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds)
 }
 
 // MockClientErrorChecker is a mock of ClientErrorChecker interface.
@@ -3489,17 +3489,17 @@ func (mr *MockWorkflowCRUDMockRecorder) SelectWorkflowExecution(ctx, shardID, do
 }
 
 // UpdateWorkflowExecutionWithTasks mocks base method.
-func (m *MockWorkflowCRUD) UpdateWorkflowExecutionWithTasks(ctx context.Context, currentWorkflowRequest *CurrentWorkflowWriteRequest, mutatedExecution, insertedExecution, resetExecution *WorkflowExecutionRequest, transferTasks []*TransferTask, crossClusterTasks []*CrossClusterTask, replicationTasks []*ReplicationTask, timerTasks []*TimerTask, shardCondition *ShardCondition) error {
+func (m *MockWorkflowCRUD) UpdateWorkflowExecutionWithTasks(ctx context.Context, currentWorkflowRequest *CurrentWorkflowWriteRequest, mutatedExecution, insertedExecution, resetExecution *WorkflowExecutionRequest, transferTasks []*TransferTask, crossClusterTasks []*CrossClusterTask, replicationTasks []*ReplicationTask, timerTasks []*TimerTask, shardCondition *ShardCondition, ttlInSeconds int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionWithTasks", ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition)
+	ret := m.ctrl.Call(m, "UpdateWorkflowExecutionWithTasks", ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateWorkflowExecutionWithTasks indicates an expected call of UpdateWorkflowExecutionWithTasks.
-func (mr *MockWorkflowCRUDMockRecorder) UpdateWorkflowExecutionWithTasks(ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition interface{}) *gomock.Call {
+func (mr *MockWorkflowCRUDMockRecorder) UpdateWorkflowExecutionWithTasks(ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithTasks", reflect.TypeOf((*MockWorkflowCRUD)(nil).UpdateWorkflowExecutionWithTasks), ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateWorkflowExecutionWithTasks", reflect.TypeOf((*MockWorkflowCRUD)(nil).UpdateWorkflowExecutionWithTasks), ctx, currentWorkflowRequest, mutatedExecution, insertedExecution, resetExecution, transferTasks, crossClusterTasks, replicationTasks, timerTasks, shardCondition, ttlInSeconds)
 }
 
 // MockConfigStoreCRUD is a mock of ConfigStoreCRUD interface.
