@@ -45,6 +45,7 @@ import (
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/resource"
 	"github.com/uber/cadence/common/service"
@@ -246,6 +247,54 @@ func (s *workflowHandlerSuite) TestPollForTask_Failed_ContextTimeoutTooShort() {
 	})
 	s.Error(err)
 	s.Equal(common.ErrContextTimeoutTooShort, err)
+}
+
+func (s *workflowHandlerSuite) TestPollForDecisionTask_IsolationGroupDrained() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableTasklistIsolation = dc.GetBoolPropertyFnFilteredByDomain(true)
+	wh := s.getWorkflowHandler(config)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	isolationGroup := "dca1"
+	ctx = partition.ContextWithIsolationGroup(ctx, isolationGroup)
+
+	s.mockDomainCache.EXPECT().GetDomain(s.testDomain).Return(cache.NewLocalDomainCacheEntryForTest(
+		&persistence.DomainInfo{Name: s.testDomain},
+		&persistence.DomainConfig{},
+		"",
+	), nil)
+	s.mockResource.IsolationGroups.EXPECT().IsDrained(gomock.Any(), s.testDomain, isolationGroup).Return(true, nil).AnyTimes()
+	resp, err := wh.PollForDecisionTask(ctx, &types.PollForDecisionTaskRequest{
+		Domain: s.testDomain,
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+	})
+	s.NoError(err)
+	s.Equal(&types.PollForDecisionTaskResponse{}, resp)
+}
+
+func (s *workflowHandlerSuite) TestPollForActivityTask_IsolationGroupDrained() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableTasklistIsolation = dc.GetBoolPropertyFnFilteredByDomain(true)
+	wh := s.getWorkflowHandler(config)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	isolationGroup := "dca1"
+	ctx = partition.ContextWithIsolationGroup(ctx, isolationGroup)
+
+	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+	s.mockResource.IsolationGroups.EXPECT().IsDrained(gomock.Any(), s.testDomain, isolationGroup).Return(true, nil).AnyTimes()
+	resp, err := wh.PollForActivityTask(ctx, &types.PollForActivityTaskRequest{
+		Domain: s.testDomain,
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+	})
+	s.NoError(err)
+	s.Equal(&types.PollForActivityTaskResponse{}, resp)
 }
 
 func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_RequestIdNotSet() {
@@ -494,6 +543,41 @@ func (s *workflowHandlerSuite) TestStartWorkflowExecution_Failed_InvalidTaskStar
 	_, err := wh.StartWorkflowExecution(context.Background(), startWorkflowExecutionRequest)
 	s.Error(err)
 	s.Equal(errInvalidTaskStartToCloseTimeoutSeconds, err)
+}
+
+func (s *workflowHandlerSuite) TestStartWorkflowExecution_IsolationGroupDrained() {
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.UserRPS = dc.GetIntPropertyFn(10)
+	config.EnableTasklistIsolation = dc.GetBoolPropertyFnFilteredByDomain(true)
+	wh := s.getWorkflowHandler(config)
+
+	startWorkflowExecutionRequest := &types.StartWorkflowExecutionRequest{
+		Domain:     s.testDomain,
+		WorkflowID: "workflow-id",
+		WorkflowType: &types.WorkflowType{
+			Name: "workflow-type",
+		},
+		TaskList: &types.TaskList{
+			Name: "task-list",
+		},
+		ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(1),
+		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
+		RetryPolicy: &types.RetryPolicy{
+			InitialIntervalInSeconds:    1,
+			BackoffCoefficient:          2,
+			MaximumIntervalInSeconds:    2,
+			MaximumAttempts:             1,
+			ExpirationIntervalInSeconds: 1,
+		},
+		RequestID: uuid.New(),
+	}
+	isolationGroup := "dca1"
+	ctx := partition.ContextWithIsolationGroup(context.Background(), isolationGroup)
+	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+	s.mockResource.IsolationGroups.EXPECT().IsDrained(gomock.Any(), s.testDomain, isolationGroup).Return(true, nil)
+	_, err := wh.StartWorkflowExecution(ctx, startWorkflowExecutionRequest)
+	s.Error(err)
+	s.IsType(err, &types.BadRequestError{})
 }
 
 func (s *workflowHandlerSuite) TestRegisterDomain_Failure_MissingDomainDataKey() {
@@ -1233,6 +1317,28 @@ func (s *workflowHandlerSuite) TestGetWorkflowExecutionHistory__Success__RawHist
 		StartedEvent:   &types.HistoryEvent{ID: nextEventID + 1},
 		ScheduledEvent: &types.HistoryEvent{ID: nextEventID},
 	}, []*types.HistoryEvent{{}, {}, {}})
+}
+
+func (s *workflowHandlerSuite) TestRestartWorkflowExecution_IsolationGroupDrained() {
+	dynamicClient := dc.NewInMemoryClient()
+	err := dynamicClient.UpdateValue(dc.SendRawWorkflowHistory, false)
+	s.NoError(err)
+	config := s.newConfig(dc.NewInMemoryClient())
+	config.EnableTasklistIsolation = dc.GetBoolPropertyFnFilteredByDomain(true)
+	wh := s.getWorkflowHandler(config)
+	isolationGroup := "dca1"
+	ctx := partition.ContextWithIsolationGroup(context.Background(), isolationGroup)
+	s.mockDomainCache.EXPECT().GetDomainID(s.testDomain).Return(s.testDomainID, nil)
+	s.mockResource.IsolationGroups.EXPECT().IsDrained(gomock.Any(), s.testDomain, isolationGroup).Return(true, nil)
+	_, err = wh.RestartWorkflowExecution(ctx, &types.RestartWorkflowExecutionRequest{
+		Domain: s.testDomain,
+		WorkflowExecution: &types.WorkflowExecution{
+			WorkflowID: testWorkflowID,
+		},
+		Identity: "",
+	})
+	s.Error(err)
+	s.IsType(err, &types.BadRequestError{})
 }
 
 func (s *workflowHandlerSuite) TestRestartWorkflowExecution__Success() {

@@ -177,3 +177,23 @@ func (t thriftClient) ListDynamicConfig(ctx context.Context, request *types.List
 	response, err := t.c.ListDynamicConfig(ctx, thrift.FromListDynamicConfigRequest(request), opts...)
 	return thrift.ToListDynamicConfigResponse(response), thrift.ToError(err)
 }
+
+func (t thriftClient) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetGlobalIsolationGroupsResponse, error) {
+	res, err := t.c.GetGlobalIsolationGroups(ctx, thrift.FromGetGlobalIsolationGroupsRequest(request), opts...)
+	return thrift.ToGetGlobalIsolationGroupsResponse(res), thrift.ToError(err)
+}
+
+func (t thriftClient) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	res, err := t.c.UpdateGlobalIsolationGroups(ctx, thrift.FromUpdateGlobalIsolationGroupsRequest(request), opts...)
+	return thrift.ToUpdateGlobalIsolationGroupsResponse(res), thrift.ToError(err)
+}
+
+func (t thriftClient) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.GetDomainIsolationGroupsResponse, error) {
+	res, err := t.c.GetDomainIsolationGroups(ctx, thrift.FromGetDomainIsolationGroupsRequest(request), opts...)
+	return thrift.ToGetDomainIsolationGroupsResponse(res), thrift.ToError(err)
+}
+
+func (t thriftClient) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest, opts ...yarpc.CallOption) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	res, err := t.c.UpdateDomainIsolationGroups(ctx, thrift.FromUpdateDomainIsolationGroupsRequest(request), opts...)
+	return thrift.ToUpdateDomainIsolationGroupsResponse(res), thrift.ToError(err)
+}

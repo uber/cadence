@@ -402,7 +402,7 @@ func TestUpdateRequest(t *testing.T) {
 				{
 					Value: &types.DataBlob{
 						EncodingType: types.EncodingTypeJSON.Ptr(),
-						Data:         []byte(`null`),
+						Data:         []byte(`[]`),
 					},
 					Filters: nil,
 				},
