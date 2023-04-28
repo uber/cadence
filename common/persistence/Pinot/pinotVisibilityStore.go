@@ -480,7 +480,7 @@ func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, requ
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
+			Message: fmt.Sprintf("CountClosedWorkflowExecutions failed, %v", err),
 		}
 	}
 

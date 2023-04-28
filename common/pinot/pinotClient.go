@@ -75,11 +75,18 @@ func (c *PinotClient) CountByQuery(query string) (int64, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, query)
 	if err != nil {
 		return 0, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
+			Message: fmt.Sprintf("CountWorkflowExecutions ExecuteSQL failed, %v", err),
 		}
 	}
 
-	return int64(resp.ResultTable.GetRowCount()), nil
+	count, err := resp.ResultTable.Rows[0][0].(json.Number).Int64()
+	if err == nil {
+		return count, nil
+	}
+
+	return -1, &types.InternalServiceError{
+		Message: fmt.Sprintf("can't convert result to integer!, query = %s, query result = %v, err = %v", query, resp.ResultTable.Rows[0][0], err),
+	}
 }
 
 func (c *PinotClient) GetTableName() string {
