@@ -278,6 +278,13 @@ func (m *sqlDomainStore) UpdateDomain(
 		badBinariesEncoding = string(request.Config.BadBinaries.GetEncoding())
 	}
 
+	var isolationGroups []byte
+	isolationGroupsEncoding := string(common.EncodingTypeEmpty)
+	if request.Config.IsolationGroups != nil {
+		isolationGroups = request.Config.IsolationGroups.Data
+		isolationGroupsEncoding = string(request.Config.IsolationGroups.Encoding)
+	}
+
 	domainInfo := &serialization.DomainInfo{
 		Status:                      int32(request.Info.Status),
 		Description:                 request.Info.Description,
@@ -302,6 +309,8 @@ func (m *sqlDomainStore) UpdateDomain(
 		LastUpdatedTimestamp:        request.LastUpdatedTime,
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
+		IsolationGroups:             isolationGroups,
+		IsolationGroupsEncoding:     isolationGroupsEncoding,
 	}
 
 	blob, err := m.parser.DomainInfoToBlob(domainInfo)

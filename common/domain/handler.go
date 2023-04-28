@@ -673,11 +673,6 @@ func (d *handlerImpl) createResponse(
 		UUID:        info.ID,
 	}
 
-	isolationGroupConfiguration := make(types.IsolationGroupConfiguration)
-	for _, g := range config.IsolationGroups {
-		isolationGroupConfiguration[g.Name] = g
-	}
-
 	configResult := &types.DomainConfiguration{
 		EmitMetric:                             config.EmitMetric,
 		WorkflowExecutionRetentionPeriodInDays: config.Retention,
@@ -686,7 +681,7 @@ func (d *handlerImpl) createResponse(
 		VisibilityArchivalStatus:               config.VisibilityArchivalStatus.Ptr(),
 		VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 		BadBinaries:                            &config.BadBinaries,
-		IsolationGroups:                        isolationGroupConfiguration,
+		IsolationGroups:                        config.IsolationGroups,
 	}
 
 	clusters := []*types.ClusterReplicationConfiguration{}
@@ -960,7 +955,7 @@ func (d *handlerImpl) getIsolationGroupStatus(
 	}
 
 	// upsert with whatever is present in the request always
-	incomingCfg.IsolationGroups = updateRequest.IsolationGroupConfiguration.ToPartitionList()
+	incomingCfg.IsolationGroups = updateRequest.IsolationGroupConfiguration
 	return incomingCfg, true, nil
 }
 

@@ -294,7 +294,8 @@ CREATE TYPE domain_config (
   visibility_archival_uri text,
   bad_binaries    blob,
   bad_binaries_encoding blob,
-  isolation_groups frozen<list<isolation_group_partition>>,
+  isolation_group blob,
+  isolation_group_encoding text,
 );
 
 CREATE TYPE cluster_replication_config (

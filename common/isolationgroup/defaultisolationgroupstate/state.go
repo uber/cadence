@@ -164,7 +164,11 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 
-	domainState := types.FromIsolationGroupPartitionList(domainData.GetConfig().IsolationGroups)
+	domainCfg := domainData.GetConfig()
+	var domainState types.IsolationGroupConfiguration
+	if domainCfg != nil && domainCfg.IsolationGroups != nil {
+		domainState = *domainCfg.IsolationGroups
+	}
 
 	globalCfg, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {

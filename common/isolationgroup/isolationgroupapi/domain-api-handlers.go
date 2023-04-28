@@ -39,7 +39,7 @@ func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomai
 		return nil, nil
 	}
 	return &types.GetDomainIsolationGroupsResponse{
-		IsolationGroups: res.Configuration.IsolationGroups,
+		IsolationGroups: *res.Configuration.IsolationGroups,
 	}, nil
 }
 
@@ -47,7 +47,7 @@ func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomai
 func (z *handlerImpl) UpdateDomainState(ctx context.Context, state types.UpdateDomainIsolationGroupsRequest) error {
 	_, err := z.domainHandler.UpdateDomain(ctx, &types.UpdateDomainRequest{
 		Name:                        state.Domain,
-		IsolationGroupConfiguration: state.IsolationGroups,
+		IsolationGroupConfiguration: &state.IsolationGroups,
 	})
 	return err
 }

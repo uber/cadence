@@ -73,6 +73,9 @@ type (
 		// serialize/deserialize DynamicConfigBlob
 		SerializeDynamicConfigBlob(blob *types.DynamicConfigBlob, encodingType common.EncodingType) (*DataBlob, error)
 		DeserializeDynamicConfigBlob(data *DataBlob) (*types.DynamicConfigBlob, error)
+
+		SerializeIsolationGroups(event *types.IsolationGroupConfiguration, encodingType common.EncodingType) (*DataBlob, error)
+		DeserializeIsolationGroups(data *DataBlob) (*types.IsolationGroupConfiguration, error)
 	}
 
 	// CadenceSerializationError is an error type for cadence serialization
@@ -260,6 +263,28 @@ func (t *serializerImpl) DeserializeDynamicConfigBlob(data *DataBlob) (*types.Dy
 	return &blob, err
 }
 
+func (t *serializerImpl) SerializeIsolationGroups(c *types.IsolationGroupConfiguration, encodingType common.EncodingType) (*DataBlob, error) {
+	if c == nil {
+		return nil, nil
+	}
+	return t.serialize(c, encodingType)
+}
+
+func (t *serializerImpl) DeserializeIsolationGroups(data *DataBlob) (*types.IsolationGroupConfiguration, error) {
+	if data == nil {
+		return nil, nil
+	}
+
+	var blob []types.IsolationGroupPartition
+	if len(data.Data) == 0 {
+		return nil, nil
+	}
+
+	err := t.deserialize(data, &blob)
+	cfg := types.FromIsolationGroupPartitionList(blob)
+	return &cfg, err
+}
+
 func (t *serializerImpl) serialize(input interface{}, encodingType common.EncodingType) (*DataBlob, error) {
 	if input == nil {
 		return nil, nil
@@ -285,6 +310,12 @@ func (t *serializerImpl) serialize(input interface{}, encodingType common.Encodi
 }
 
 func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
+
+	encodable, canEncode := input.(types.ThriftEncodable)
+	if canEncode {
+		return encodable.EncodeThrift()
+	}
+
 	switch input := input.(type) {
 	case []*types.HistoryEvent:
 		return t.thriftrwEncoder.Encode(&workflow.History{Events: thrift.FromHistoryEventArray(input)})

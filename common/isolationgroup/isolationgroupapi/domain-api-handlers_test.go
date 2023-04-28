@@ -74,7 +74,7 @@ func TestUpdateDomainState(t *testing.T) {
 			domainHandlerAffordance: func(h *domain.MockHandler) {
 				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
 					Name: "domain",
-					IsolationGroupConfiguration: types.IsolationGroupConfiguration{
+					IsolationGroupConfiguration: &types.IsolationGroupConfiguration{
 						"zone-1": {Name: "zone-1", State: types.IsolationGroupStateHealthy},
 						"zone-2": {Name: "zone-2", State: types.IsolationGroupStateDrained},
 					},
@@ -89,7 +89,7 @@ func TestUpdateDomainState(t *testing.T) {
 			domainHandlerAffordance: func(h *domain.MockHandler) {
 				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
 					Name:                        "domain",
-					IsolationGroupConfiguration: types.IsolationGroupConfiguration{},
+					IsolationGroupConfiguration: &types.IsolationGroupConfiguration{},
 				}).Return(nil, nil)
 			},
 		},
@@ -167,7 +167,7 @@ func TestGetDomainState(t *testing.T) {
 					Name: &domainName,
 				}).Return(&types.DescribeDomainResponse{
 					Configuration: &types.DomainConfiguration{
-						IsolationGroups: validCfg,
+						IsolationGroups: &validCfg,
 					},
 				}, nil)
 			},
@@ -195,7 +195,7 @@ func TestGetDomainState(t *testing.T) {
 					Name: &domainName,
 				}).Return(&types.DescribeDomainResponse{
 					Configuration: &types.DomainConfiguration{
-						IsolationGroups: types.IsolationGroupConfiguration{},
+						IsolationGroups: &types.IsolationGroupConfiguration{},
 					},
 				}, nil)
 			},

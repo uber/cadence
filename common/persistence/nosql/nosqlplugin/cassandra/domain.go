@@ -60,7 +60,8 @@ const (
 		`visibility_archival_uri: ?, ` +
 		`bad_binaries: ?,` +
 		`bad_binaries_encoding: ?,` +
-		`isolation_groups: ?` +
+		`isolation_groups: ?,` +
+		`isolation_groups_encoding: ?` +
 		`}`
 
 	templateDomainReplicationConfigType = `{` +
@@ -91,6 +92,7 @@ const (
 		`config.bad_binaries, config.bad_binaries_encoding, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`config.isolation_groups,` +
+		`config.isolation_groups_encoding,` +
 		`is_global_domain, ` +
 		`config_version, ` +
 		`failover_version, ` +
@@ -177,6 +179,8 @@ func (db *cdb) InsertDomain(
 	if row.FailoverEndTime != nil {
 		failoverEndTime = row.FailoverEndTime.UnixNano()
 	}
+	isolationGroupData, isolationGroupEncoding := getIsolationGroupFields(row)
+
 	batch.Query(templateCreateDomainByNameQueryWithinBatchV2,
 		constDomainPartition,
 		row.Info.Name,
@@ -196,7 +200,8 @@ func (db *cdb) InsertDomain(
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
 		string(row.Config.BadBinaries.Encoding),
-		p.SerializeIsolationGroups(row.Config.IsolationGroups),
+		isolationGroupData,
+		isolationGroupEncoding,
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.IsGlobalDomain,
@@ -278,6 +283,9 @@ func (db *cdb) UpdateDomain(
 	if row.FailoverEndTime != nil {
 		failoverEndTime = row.FailoverEndTime.UnixNano()
 	}
+
+	isolationGroupData, isolationGroupEncoding := getIsolationGroupFields(row)
+
 	batch.Query(templateUpdateDomainByNameQueryWithinBatchV2,
 		row.Info.ID,
 		row.Info.Name,
@@ -295,7 +303,8 @@ func (db *cdb) UpdateDomain(
 		row.Config.VisibilityArchivalURI,
 		row.Config.BadBinaries.Data,
 		string(row.Config.BadBinaries.Encoding),
-		p.SerializeIsolationGroups(row.Config.IsolationGroups),
+		isolationGroupData,
+		isolationGroupEncoding,
 		row.ReplicationConfig.ActiveClusterName,
 		p.SerializeClusterConfigs(row.ReplicationConfig.Clusters),
 		row.ConfigVersion,
@@ -367,7 +376,8 @@ func (db *cdb) SelectDomain(
 	var configVersion int64
 	var isGlobalDomain bool
 	var retentionDays int32
-	var isolationGroupPartitions []map[string]interface{}
+	var isolationGroupData []byte
+	var isolationGroupEncoding string
 
 	query = db.session.Query(templateGetDomainByNameQueryV2, constDomainPartition, domainName).WithContext(ctx)
 	err = query.Scan(
@@ -389,7 +399,8 @@ func (db *cdb) SelectDomain(
 		&badBinariesDataEncoding,
 		&replicationConfig.ActiveClusterName,
 		&replicationClusters,
-		&isolationGroupPartitions,
+		&isolationGroupData,
+		&isolationGroupEncoding,
 		&isGlobalDomain,
 		&configVersion,
 		&failoverVersion,
@@ -404,13 +415,9 @@ func (db *cdb) SelectDomain(
 		return nil, err
 	}
 
+	config.IsolationGroups = p.NewDataBlob(isolationGroupData, common.EncodingType(isolationGroupEncoding))
 	config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 	config.Retention = common.DaysToDuration(retentionDays)
-	ig, err := p.DeserializeIsolationGroups(isolationGroupPartitions)
-	if err != nil {
-		return nil, err
-	}
-	config.IsolationGroups = ig
 	replicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 
 	dr := &nosqlplugin.DomainRow{
@@ -585,4 +592,14 @@ func (db *cdb) deleteDomain(
 
 	query = db.session.Query(templateDeleteDomainQuery, ID).WithContext(ctx)
 	return db.executeWithConsistencyAll(query)
+}
+
+func getIsolationGroupFields(row *nosqlplugin.DomainRow) ([]byte, string) {
+	var d []byte
+	var e string
+	if row != nil && row.Config != nil && row.Config.IsolationGroups != nil {
+		d = row.Config.IsolationGroups.GetData()
+		e = row.Config.IsolationGroups.GetEncodingString()
+	}
+	return d, e
 }
