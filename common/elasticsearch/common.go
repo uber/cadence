@@ -24,11 +24,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	esaws "github.com/olivere/elastic/aws/v4"
-
 	"github.com/uber/cadence/common/config"
 )
 
@@ -55,18 +50,6 @@ func buildTLSHTTPClient(config config.TLS) (*http.Client, error) {
 	return tlsClient, nil
 }
 
-func buildAWSSigningClient(awsconfig config.AWSSigning) (*http.Client, error) {
-	if err := config.CheckAWSSigningConfig(awsconfig); err != nil {
-		return nil, err
-	}
-
-	if awsconfig.EnvironmentCredential != nil {
-		return signingClientFromEnv(*awsconfig.EnvironmentCredential)
-	}
-
-	return signingClientFromStatic(*awsconfig.StaticCredential)
-}
-
 func GetESDocIDSizeLimit() int {
 	return esDocIDSizeLimit
 }
@@ -81,24 +64,4 @@ func GetESDocDelimiter() string {
 
 func GenerateDocID(wid, rid string) string {
 	return wid + esDocIDDelimiter + rid
-}
-
-// refer to https://github.com/olivere/elastic/blob/release-branch.v7/recipes/aws-connect-v4/main.go
-func signingClientFromStatic(credentialConfig config.AWSStaticCredential) (*http.Client, error) {
-	awsCredentials := credentials.NewStaticCredentials(
-		credentialConfig.AccessKey,
-		credentialConfig.SecretKey,
-		credentialConfig.SessionToken,
-	)
-	return esaws.NewV4SigningClient(awsCredentials, credentialConfig.Region), nil
-}
-
-func signingClientFromEnv(credentialConfig config.AWSEnvironmentCredential) (*http.Client, error) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(credentialConfig.Region)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return esaws.NewV4SigningClient(sess.Config.Credentials, credentialConfig.Region), nil
 }

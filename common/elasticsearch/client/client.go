@@ -54,17 +54,23 @@ type Client interface {
 
 // Response is used to pass data retrieved from Elasticsearch/OpenSearch to upper layer
 type Response struct {
-	TookInMillis int64
+	TookInMillis int64 `json:"took,omitempty"`
 	TotalHits    int64
-	Hits         *SearchHits // response from ES server as bytes, used to unmarshal to internal structs
-	Aggregations map[string]json.RawMessage
-	Sort         []interface{}
-	ScrollID     string
+	Hits         *SearchHits
+	Aggregations map[string]json.RawMessage `json:"aggregations,omitempty"`
+	Sort         []interface{}              `json:"sort,omitempty"` // sort information
+	ScrollID     string                     `json:"_scroll_id,omitempty"`
 }
 
 // SearchHits specifies the list of search hits.
 type SearchHits struct {
-	Hits []*SearchHit `json:"hits,omitempty"` // the actual hits returned
+	TotalHits *TotalHits   `json:"total,omitempty"` // total number of hits found
+	Hits      []*SearchHit `json:"hits,omitempty"`  // the actual hits returned
+}
+
+// TotalHits specifies total number of hits and its relation
+type TotalHits struct {
+	Value int64 `json:"value"` // value of the total hit count
 }
 
 // SearchHit is a single hit.

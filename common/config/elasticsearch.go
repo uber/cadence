@@ -21,8 +21,13 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 
 	"github.com/uber/cadence/common"
 )
@@ -66,8 +71,8 @@ type (
 	// See more in https://github.com/aws/aws-sdk-go/blob/master/aws/credentials/static_provider.go#L21
 	AWSStaticCredential struct {
 		AccessKey    string `yaml:"accessKey"`
-		SecretKey    string `yaml:"secretKey"`
 		Region       string `yaml:"region"`
+		SecretKey    string `yaml:"secretKey"`
 		SessionToken string `yaml:"sessionToken"`
 	}
 
@@ -93,13 +98,44 @@ func (cfg *ElasticSearchConfig) SetUsernamePassword() {
 	}
 }
 
-// CheckAWSSigningConfig checks if the AWSSigning configuration is valid
-func CheckAWSSigningConfig(config AWSSigning) error {
-	if config.EnvironmentCredential == nil && config.StaticCredential == nil {
+func (a AWSSigning) Validate() error {
+	if a.EnvironmentCredential == nil && a.StaticCredential == nil {
 		return errAWSSigningCredential
 	}
-	if config.EnvironmentCredential != nil && config.StaticCredential != nil {
+	if a.EnvironmentCredential != nil && a.StaticCredential != nil {
 		return errAWSSigningCredential
 	}
+
+	if a.EnvironmentCredential != nil && len(a.EnvironmentCredential.Region) == 0 {
+		return errors.New("missing region in environmentCredential")
+	}
+
+	if a.StaticCredential != nil && len(a.StaticCredential.Region) == 0 {
+		return errors.New("missing region in staticCredential")
+	}
+
 	return nil
+}
+
+func (a AWSSigning) GetCredentials() (*credentials.Credentials, *string, error) {
+	if err := a.Validate(); err != nil {
+		return nil, nil, err
+	}
+	// refer to https://github.com/olivere/elastic/blob/release-branch.v7/recipes/aws-connect-v4/main.go
+	if a.EnvironmentCredential != nil {
+		sess, err := session.NewSession(&aws.Config{Region: &a.EnvironmentCredential.Region})
+		if err != nil {
+			return nil, nil, fmt.Errorf("creating aws session: %w", err)
+		}
+
+		return sess.Config.Credentials, sess.Config.Region, nil
+	}
+
+	awsCredentials := credentials.NewStaticCredentials(
+		a.StaticCredential.AccessKey,
+		a.StaticCredential.SecretKey,
+		a.StaticCredential.SessionToken,
+	)
+
+	return awsCredentials, &a.StaticCredential.Region, nil
 }

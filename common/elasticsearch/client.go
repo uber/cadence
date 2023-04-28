@@ -66,7 +66,6 @@ func (c *ESClient) Search(ctx context.Context, request *SearchRequest) (*SearchR
 	if err != nil {
 		return nil, err
 	}
-
 	searchResult, err := c.getSearchResult(
 		ctx,
 		request.Index,
@@ -147,7 +146,12 @@ func (c *ESClient) ScanByQuery(ctx context.Context, request *ScanByQueryRequest)
 			Message: fmt.Sprintf("ScanByQuery failed. Error: %v", err),
 		}
 	}
+
 	response := &p.InternalListWorkflowExecutionsResponse{}
+	if searchResult == nil {
+		return response, nil
+	}
+
 	actualHits := searchResult.Hits.Hits
 	numOfActualHits := len(actualHits)
 	response.Executions = c.esHitsToExecutions(searchResult.Hits, nil /* no filter */)
