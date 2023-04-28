@@ -1222,10 +1222,14 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	config := domainObj.GetConfig()
 	retention := time.Duration(config.Retention)
 	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
-	//leftover := int(time.Now().Sub(request.NewWorkflowSnapshot.ExecutionInfo.StartTimestamp))
-	//int(time.Duration(request.NewWorkflowSnapshot.ExecutionInfo.DecisionStartToCloseTimeout).Seconds())
-	request.TTLInSeconds = daysInSeconds
-	fmt.Print("Testing calculation", request.TTLInSeconds)
+
+	ptr := request.UpdateWorkflowMutation.ExecutionInfo.StartTimestamp
+	if time.Time.IsZero(ptr) {
+		request.TTLInSeconds = daysInSeconds
+	} else {
+		request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(ptr).Seconds()) + daysInSeconds
+	}
+
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// timeout error is not retryable for update workflow execution
