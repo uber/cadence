@@ -139,6 +139,7 @@ var (
 	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
 	errInvalidJitterStartSeconds                  = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (negative)."}
 	errInvalidJitterStartSeconds2                 = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (larger than cron duration)."}
+	errInvalidDomainName						  = &types.BadRequestError{Message: "Domain name can only include alphanumeric and dash characters."}												
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
