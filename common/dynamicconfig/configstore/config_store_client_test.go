@@ -304,10 +304,6 @@ func (s *configStoreClientSuite) SetupTest() {
 			PluginName: "cassandra",
 		},
 	}
-	dbConfig := config.ShardedNoSQL{
-		DefaultShard: config.NonShardedStoreName,
-		Connections:  connections,
-	}
 
 	var err error
 	s.client, err = newConfigStoreClient(
@@ -317,8 +313,10 @@ func (s *configStoreClientSuite) SetupTest() {
 			FetchTimeout:        time.Second * 1,
 			UpdateTimeout:       time.Second * 1,
 		},
-		&config.NoSQL{
-			PluginName: "cassandra",
+
+		&config.ShardedNoSQL{
+			DefaultShard: config.NonShardedStoreName,
+			Connections:  connections,
 		}, log.NewNoop(), p.DynamicConfig)
 	s.Require().NoError(err)
 
