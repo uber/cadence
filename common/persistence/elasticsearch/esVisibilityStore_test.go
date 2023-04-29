@@ -40,6 +40,7 @@ import (
 	"github.com/uber/cadence/common/dynamicconfig"
 	es "github.com/uber/cadence/common/elasticsearch"
 	esMocks "github.com/uber/cadence/common/elasticsearch/mocks"
+	"github.com/uber/cadence/common/elasticsearch/query"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/mocks"
 	p "github.com/uber/cadence/common/persistence"
@@ -83,6 +84,12 @@ var (
 	esIndexMaxResultWindow = 3
 )
 
+type Source struct {
+	Match map[string]struct {
+		Query interface{} `json:"query"`
+	} `json:"match"`
+}
+
 func TestESVisibilitySuite(t *testing.T) {
 	suite.Run(t, new(ESVisibilitySuite))
 }
@@ -98,7 +105,7 @@ func (s *ESVisibilitySuite) SetupTest() {
 	}
 
 	s.mockProducer = &mocks.KafkaProducer{}
-	mgr := NewElasticSearchVisibilityStore(s.mockESClient, testIndex, s.mockProducer, config, loggerimpl.NewNopLogger())
+	mgr := NewElasticSearchVisibilityStore(s.mockESClient, testIndex, s.mockProducer, config, loggerimpl.NewLoggerForTest(s.Suite))
 	s.visibilityStore = mgr.(*esVisibilityStore)
 }
 
@@ -326,8 +333,9 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutions() {
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.True(input.IsOpen)
-		s.Equal(es.WorkflowType, input.MatchQuery.Name)
-		s.Equal(testWorkflowType, input.MatchQuery.Text)
+		source, err := matchQueryData(*input.MatchQuery)
+		s.NoError(err)
+		s.Equal(source.Match[es.WorkflowType].Query, testWorkflowType)
 		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
@@ -354,8 +362,11 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByType() {
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)
-		s.Equal(es.WorkflowType, input.MatchQuery.Name)
-		s.Equal(testWorkflowType, input.MatchQuery.Text)
+
+		source, err := matchQueryData(*input.MatchQuery)
+		s.NoError(err)
+
+		s.Equal(source.Match[es.WorkflowType].Query, testWorkflowType)
 		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
@@ -382,8 +393,10 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByType() {
 func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.True(input.IsOpen)
-		s.Equal(es.WorkflowID, input.MatchQuery.Name)
-		s.Equal(testWorkflowID, input.MatchQuery.Text)
+
+		source, err := matchQueryData(*input.MatchQuery)
+		s.NoError(err)
+		s.Equal(source.Match[es.WorkflowID].Query, testWorkflowID)
 		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
@@ -410,8 +423,10 @@ func (s *ESVisibilitySuite) TestListOpenWorkflowExecutionsByWorkflowID() {
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)
-		s.Equal(es.WorkflowID, input.MatchQuery.Name)
-		s.Equal(testWorkflowID, input.MatchQuery.Text)
+
+		source, err := matchQueryData(*input.MatchQuery)
+		s.NoError(err)
+		s.Equal(source.Match[es.WorkflowID].Query, testWorkflowID)
 		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
@@ -438,8 +453,10 @@ func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByWorkflowID() {
 func (s *ESVisibilitySuite) TestListClosedWorkflowExecutionsByStatus() {
 	s.mockESClient.On("Search", mock.Anything, mock.MatchedBy(func(input *es.SearchRequest) bool {
 		s.False(input.IsOpen)
-		s.Equal(es.CloseStatus, input.MatchQuery.Name)
-		s.Equal(testCloseStatus, input.MatchQuery.Text)
+		source, err := matchQueryData(*input.MatchQuery)
+		s.NoError(err)
+		cs := (int32)(source.Match[es.CloseStatus].Query.(float64))
+		s.Equal(testCloseStatus, cs)
 		s.Equal(esIndexMaxResultWindow, input.MaxResultWindow)
 		return true
 	})).Return(testSearchResult, nil).Once()
@@ -1077,4 +1094,20 @@ func (s *ESVisibilitySuite) TestCleanDSL() {
 	res = cleanDSL(dsl)
 	expected = `{"query":{"bool":{"must":[{"match_phrase":{"DomainID":{"query":"2b8344db-0ed6-47a4-92fd-bdeb6ead93e3"}}},{"bool":{"must":[{"range":{"Attr.CustomIntField":{"from":"1","to":"5"}}},{"range":{"Attr.CustomDoubleField":{"from":"1.0","to":"2.0"}}},{"range":{"StartTime":{"gt":"0"}}}]}}]}},"from":0,"size":10,"sort":[{"StartTime":"desc"},{"RunID":"desc"}]}`
 	s.Equal(expected, res)
+}
+
+func matchQueryData(matchQuery query.MatchQuery) (Source, error) {
+	source, err := matchQuery.Source()
+	if err != nil {
+		return Source{}, err
+	}
+	d, err := json.Marshal(source)
+	if err != nil {
+		return Source{}, err
+	}
+	to := Source{}
+	if err = json.Unmarshal(d, &to); err != nil {
+		return Source{}, err
+	}
+	return to, nil
 }

@@ -298,6 +298,17 @@ func (s *configStoreClientSuite) SetupTest() {
 		},
 	}
 
+	connections := make(map[string]config.DBShardConnection)
+	connections[config.NonShardedStoreName] = config.DBShardConnection{
+		NoSQLPlugin: &config.NoSQL{
+			PluginName: "cassandra",
+		},
+	}
+	dbConfig := config.ShardedNoSQL{
+		DefaultShard: config.NonShardedStoreName,
+		Connections:  connections,
+	}
+
 	var err error
 	s.client, err = newConfigStoreClient(
 		&c.ClientConfig{

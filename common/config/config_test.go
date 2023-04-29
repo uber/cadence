@@ -228,3 +228,162 @@ func TestGetServiceConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, svc)
 }
+
+func getValidShardedNoSQLConfig() *Config {
+	metadata := validClusterGroupMetadata()
+	cfg := &Config{
+		ClusterGroupMetadata: metadata,
+		Persistence: Persistence{
+			NumHistoryShards:        2,
+			DefaultStore:            "default",
+			AdvancedVisibilityStore: "visibility",
+			DataStores: map[string]DataStore{
+				"default": {
+					ShardedNoSQL: &ShardedNoSQL{
+						DefaultShard: "shard-1",
+						ShardingPolicy: ShardingPolicy{
+							HistoryShardMapping: []HistoryShardRange{
+								HistoryShardRange{
+									Start: 0,
+									End:   1,
+									Shard: "shard-1",
+								},
+								HistoryShardRange{
+									Start: 1,
+									End:   2,
+									Shard: "shard-2",
+								},
+							},
+							TaskListHashing: TasklistHashing{
+								ShardOrder: []string{
+									"shard-1",
+									"shard-2",
+								},
+							},
+						},
+						Connections: map[string]DBShardConnection{
+							"shard-1": {
+								NoSQLPlugin: &NoSQL{
+									PluginName: "cassandra",
+									Hosts:      "127.0.0.1",
+									Keyspace:   "unit-test",
+									Port:       1234,
+								},
+							},
+							"shard-2": {
+								NoSQLPlugin: &NoSQL{
+									PluginName: "cassandra",
+									Hosts:      "127.0.0.1",
+									Keyspace:   "unit-test",
+									Port:       5678,
+								},
+							},
+						},
+					},
+				},
+				"visibility": {
+					ElasticSearch: &ElasticSearchConfig{
+						Version: "v7",
+						URL: url.URL{Scheme: "http",
+							Host: "127.0.0.1:9200",
+						},
+						Indices: map[string]string{
+							"visibility": "cadence-visibility-dev",
+						},
+					},
+				},
+			},
+		},
+	}
+	return cfg
+}
+
+func TestValidShardedNoSQLConfig(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	err := cfg.ValidateAndFillDefaults()
+	require.NoError(t, err)
+}
+
+func TestInvalidShardedNoSQLConfig_MultipleConfigTypes(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.NoSQL = &NoSQL{}
+	cfg.Persistence.DataStores["default"] = store
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "must provide exactly one type of config, but provided 2")
+}
+
+func TestInvalidShardedNoSQLConfig_MissingDefaultShard(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.ShardedNoSQL.DefaultShard = ""
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "defaultShard can not be empty")
+}
+
+func TestInvalidShardedNoSQLConfig_UnknownDefaultShard(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	delete(store.ShardedNoSQL.Connections, store.ShardedNoSQL.DefaultShard)
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "defaultShard (shard-1) is not defined in connections list")
+}
+
+func TestInvalidShardedNoSQLConfig_HistoryShardingUnordered(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].Start = 1
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].End = 2
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[1].Start = 0
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[1].End = 1
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "Non-continuous history shard range")
+}
+
+func TestInvalidShardedNoSQLConfig_HistoryShardingOverlapping(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].End = 2 // 0-2 overlaps with 1-2
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "Non-continuous history shard range")
+}
+
+func TestInvalidShardedNoSQLConfig_HistoryShardingMissingFirstShard(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping = store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[1:]
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "Non-continuous history shard range")
+}
+
+func TestInvalidShardedNoSQLConfig_HistoryShardingMissingLastShard(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	cfg.Persistence.NumHistoryShards = 3 // config only specifies shards 0 and 1, so this is invalid
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "Last history shard found in the config is 1 while the max is 2")
+}
+
+func TestInvalidShardedNoSQLConfig_HistoryShardingRefersToUnknownConnection(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.ShardedNoSQL.ShardingPolicy.HistoryShardMapping[0].Shard = "unknown-shard-name"
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "Unknown history shard name")
+}
+
+func TestInvalidShardedNoSQLConfig_TasklistShardingRefersToUnknownConnection(t *testing.T) {
+	cfg := getValidShardedNoSQLConfig()
+	store := cfg.Persistence.DataStores["default"]
+	store.ShardedNoSQL.ShardingPolicy.TaskListHashing.ShardOrder[1] = "unknown-shard-name"
+
+	err := cfg.ValidateAndFillDefaults()
+	require.ErrorContains(t, err, "Unknown tasklist shard name")
+}

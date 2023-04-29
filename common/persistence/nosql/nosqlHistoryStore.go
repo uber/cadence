@@ -22,6 +22,7 @@ package nosql
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/uber/cadence/common"
@@ -35,40 +36,22 @@ import (
 
 type (
 	nosqlHistoryStore struct {
-		nosqlStore
+		shardedNosqlStore
 	}
 )
 
-// NewNoSQLHistoryStoreFromSession returns new HistoryStore
-func NewNoSQLHistoryStoreFromSession(
-	db nosqlplugin.DB,
-	logger log.Logger,
-) p.HistoryStore {
-
-	return &nosqlHistoryStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
-	}
-}
-
 // newNoSQLHistoryStore is used to create an instance of HistoryStore implementation
 func newNoSQLHistoryStore(
-	cfg config.NoSQL,
+	cfg config.ShardedNoSQL,
 	logger log.Logger,
 	dc *p.DynamicConfiguration,
 ) (p.HistoryStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &nosqlHistoryStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
+		shardedNosqlStore: *s,
 	}, nil
 }
 
@@ -88,7 +71,6 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 		}
 	}
 
-	var err error
 	var treeRow *nosqlplugin.HistoryTreeRow
 	if request.IsNewBranch {
 		var ancestors []*types.HistoryBranchRange
@@ -111,10 +93,16 @@ func (h *nosqlHistoryStore) AppendHistoryNodes(
 		DataEncoding: string(request.Events.Encoding),
 		ShardID:      request.ShardID,
 	}
-	err = h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nodeRow)
+
+	storeShard, err := h.GetStoreShardByHistoryShard(request.ShardID)
+	if err != nil {
+		return err
+	}
+
+	err = storeShard.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nodeRow)
 
 	if err != nil {
-		return convertCommonErrors(h.db, "AppendHistoryNodes", err)
+		return convertCommonErrors(storeShard.db, "AppendHistoryNodes", err)
 	}
 	return nil
 }
@@ -134,9 +122,15 @@ func (h *nosqlHistoryStore) ReadHistoryBranch(
 		NextPageToken: request.NextPageToken,
 		PageSize:      request.PageSize,
 	}
-	rows, pagingToken, err := h.db.SelectFromHistoryNode(ctx, filter)
+
+	storeShard, err := h.GetStoreShardByHistoryShard(request.ShardID)
 	if err != nil {
-		return nil, convertCommonErrors(h.db, "SelectFromHistoryNode", err)
+		return nil, err
+	}
+
+	rows, pagingToken, err := storeShard.db.SelectFromHistoryNode(ctx, filter)
+	if err != nil {
+		return nil, convertCommonErrors(storeShard.db, "SelectFromHistoryNode", err)
 	}
 
 	history := make([]*p.DataBlob, 0, int(request.PageSize))
@@ -297,9 +291,14 @@ func (h *nosqlHistoryStore) ForkHistoryBranch(
 		Info:            request.Info,
 	}
 
-	err := h.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nil)
+	storeShard, err := h.GetStoreShardByHistoryShard(request.ShardID)
 	if err != nil {
-		return nil, convertCommonErrors(h.db, "ForkHistoryBranch", err)
+		return nil, err
+	}
+
+	err = storeShard.db.InsertIntoHistoryTreeAndNode(ctx, treeRow, nil)
+	if err != nil {
+		return nil, convertCommonErrors(storeShard.db, "ForkHistoryBranch", err)
 	}
 	return resp, nil
 }
@@ -363,9 +362,14 @@ func (h *nosqlHistoryStore) DeleteHistoryBranch(
 		}
 	}
 
-	err = h.db.DeleteFromHistoryTreeAndNode(ctx, treeFilter, nodeFilters)
+	storeShard, err := h.GetStoreShardByHistoryShard(request.ShardID)
 	if err != nil {
-		return convertCommonErrors(h.db, "DeleteHistoryBranch", err)
+		return err
+	}
+
+	err = storeShard.db.DeleteFromHistoryTreeAndNode(ctx, treeFilter, nodeFilters)
+	if err != nil {
+		return convertCommonErrors(storeShard.db, "DeleteHistoryBranch", err)
 	}
 	return nil
 }
@@ -374,9 +378,17 @@ func (h *nosqlHistoryStore) GetAllHistoryTreeBranches(
 	ctx context.Context,
 	request *p.GetAllHistoryTreeBranchesRequest,
 ) (*p.GetAllHistoryTreeBranchesResponse, error) {
-	dbBranches, pagingToken, err := h.db.SelectAllHistoryTrees(ctx, request.NextPageToken, request.PageSize)
+
+	if h.shardingPolicy.hasShardedHistory {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("SelectAllHistoryTrees is not supported on sharded nosql db"),
+		}
+	}
+
+	storeShard := h.GetDefaultShard()
+	dbBranches, pagingToken, err := storeShard.db.SelectAllHistoryTrees(ctx, request.NextPageToken, request.PageSize)
 	if err != nil {
-		return nil, convertCommonErrors(h.db, "SelectAllHistoryTrees", err)
+		return nil, convertCommonErrors(storeShard.db, "SelectAllHistoryTrees", err)
 	}
 
 	branchDetails := make([]p.HistoryBranchDetail, 0, int(request.PageSize))
@@ -407,14 +419,17 @@ func (h *nosqlHistoryStore) GetHistoryTree(
 ) (*p.InternalGetHistoryTreeResponse, error) {
 
 	treeID := request.TreeID
-
-	dbBranches, err := h.db.SelectFromHistoryTree(ctx,
+	storeShard, err := h.GetStoreShardByHistoryShard(*request.ShardID)
+	if err != nil {
+		return nil, err
+	}
+	dbBranches, err := storeShard.db.SelectFromHistoryTree(ctx,
 		&nosqlplugin.HistoryTreeFilter{
 			ShardID: *request.ShardID,
 			TreeID:  treeID,
 		})
 	if err != nil {
-		return nil, convertCommonErrors(h.db, "SelectFromHistoryTree", err)
+		return nil, convertCommonErrors(storeShard.db, "SelectFromHistoryTree", err)
 	}
 
 	branches := make([]*types.HistoryBranch, 0)

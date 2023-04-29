@@ -198,6 +198,8 @@ type (
 		SQL *SQL `yaml:"sql"`
 		// NoSQL contains the config for a NoSQL based datastore
 		NoSQL *NoSQL `yaml:"nosql"`
+		// ShardedNoSQL contains the config for a collection of NoSQL datastores that are used as a single datastore
+		ShardedNoSQL *ShardedNoSQL `yaml:"shardedNosql"`
 		// ElasticSearch contains the config for a ElasticSearch datastore
 		ElasticSearch *ElasticSearchConfig `yaml:"elasticsearch"`
 	}
@@ -237,6 +239,47 @@ type (
 		// Otherwise please add new fields to the struct for better documentation
 		// If being used in any database, update this comment here to make it clear
 		ConnectAttributes map[string]string `yaml:"connectAttributes"`
+	}
+
+	// ShardedNoSQL contains configuration to connect to a set of NoSQL Database clusters in a sharded manner
+	ShardedNoSQL struct {
+		// DefaultShard is the DB shard where the non-sharded tables (ie. cluster metadata) are stored
+		DefaultShard string `yaml:"defaultShard"`
+		// ShardingPolicy is the configuration for the sharding strategy used
+		ShardingPolicy ShardingPolicy `yaml:"shardingPolicy"`
+		// Connections is the collection of NoSQL DB plugins that are used to connect to the shard
+		Connections map[string]DBShardConnection `yaml:"connections"`
+	}
+
+	// ShardingPolicy contains configuration for physical DB sharding
+	ShardingPolicy struct {
+		// HistoryShardMapping defines the ranges of history shards stored by each DB shard. Ranges listed here *MUST*
+		// be continuous and non-overlapping, such that the first range in the list starts from Shard 0, each following
+		// range starts with <prevRange.End> + 1, and the last range ends with <NumHistoryHosts>-1.
+		HistoryShardMapping []HistoryShardRange `yaml:"historyShardMapping"`
+		// TaskListHashing defines the parameters needed for shard ownership calculation based on hashing
+		TaskListHashing TasklistHashing `yaml:"taskListHashing"`
+	}
+
+	// HistoryShardRange contains configuration for one NoSQL DB Shard
+	HistoryShardRange struct {
+		// Start defines the inclusive lower bound for the history shard range
+		Start int `yaml:"start"`
+		// End defines the exclusive upper bound for the history shard range
+		End int `yaml:"end"`
+		// Shard defines the shard that owns this range
+		Shard string `yaml:"shard"`
+	}
+
+	TasklistHashing struct {
+		// ShardOrder defines the order of shards to be used when hashing tasklists to shards
+		ShardOrder []string `yaml:"shardOrder"`
+	}
+
+	// DBShardConnection contains configuration for one NoSQL DB Shard
+	DBShardConnection struct {
+		// NoSQLPlugin is the NoSQL plugin used for connecting to the DB shard
+		NoSQLPlugin *NoSQL `yaml:"nosqlPlugin"`
 	}
 
 	// SQL is the configuration for connecting to a SQL backed datastore
@@ -516,6 +559,23 @@ type (
 		URI string `yaml:"URI"`
 	}
 )
+
+const (
+	// NonShardedStoreName is the shard name used for singular (non-sharded) stores
+	NonShardedStoreName = "NonShardedStore"
+)
+
+func (n *NoSQL) ConvertToShardedNoSQLConfig() *ShardedNoSQL {
+	connections := make(map[string]DBShardConnection)
+	connections[NonShardedStoreName] = DBShardConnection{
+		NoSQLPlugin: n,
+	}
+
+	return &ShardedNoSQL{
+		DefaultShard: NonShardedStoreName,
+		Connections:  connections,
+	}
+}
 
 // ValidateAndFillDefaults validates this config and fills default values if needed
 func (c *Config) ValidateAndFillDefaults() error {
