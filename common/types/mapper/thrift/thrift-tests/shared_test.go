@@ -21,8 +21,9 @@
 package thrifttests
 
 import (
-	"github.com/uber/cadence/.gen/go/shared"
 	"testing"
+
+	"github.com/uber/cadence/.gen/go/shared"
 
 	"github.com/stretchr/testify/assert"
 

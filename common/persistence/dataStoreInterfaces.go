@@ -945,7 +945,7 @@ func (d *DataBlob) GetEncodingString() string {
 
 // GetData is a safe way to get the byte array or nil
 func (d *DataBlob) GetData() []byte {
-	if d != nil || d.Data == nil {
+	if d == nil || d.Data == nil {
 		return []byte{}
 	}
 	return d.Data

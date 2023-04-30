@@ -22,6 +22,7 @@ package persistence
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
@@ -563,4 +564,31 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 	startWG.Done()
 	succ := common.AwaitWaitGroup(&doneWG, 10*time.Second)
 	s.True(succ, "test timed out")
+}
+
+func TestDataBlob_GetData(t *testing.T) {
+
+	tests := map[string]struct {
+		in          *DataBlob
+		expectedOut []byte
+	}{
+		"valid data": {
+			in:          &DataBlob{Data: []byte("dat")},
+			expectedOut: []byte("dat"),
+		},
+		"empty data": {
+			in:          &DataBlob{Data: nil},
+			expectedOut: []byte{},
+		},
+		"empty data 2": {
+			in:          nil,
+			expectedOut: []byte{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expectedOut, td.in.GetData())
+		})
+	}
 }

@@ -36,7 +36,7 @@ func (z *handlerImpl) GetDomainState(ctx context.Context, request types.GetDomai
 		return nil, err
 	}
 	if res == nil || res.Configuration == nil || res.Configuration.IsolationGroups == nil {
-		return nil, nil
+		return &types.GetDomainIsolationGroupsResponse{}, nil
 	}
 	return &types.GetDomainIsolationGroupsResponse{
 		IsolationGroups: *res.Configuration.IsolationGroups,
