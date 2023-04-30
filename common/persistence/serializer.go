@@ -275,13 +275,12 @@ func (t *serializerImpl) DeserializeIsolationGroups(data *DataBlob) (*types.Isol
 		return nil, nil
 	}
 
-	var blob []types.IsolationGroupPartition
+	var cfg types.IsolationGroupConfiguration
 	if len(data.Data) == 0 {
 		return nil, nil
 	}
 
-	err := t.deserialize(data, &blob)
-	cfg := types.FromIsolationGroupPartitionList(blob)
+	err := t.deserialize(data, &cfg)
 	return &cfg, err
 }
 
@@ -311,11 +310,6 @@ func (t *serializerImpl) serialize(input interface{}, encodingType common.Encodi
 
 func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 
-	encodable, canEncode := input.(types.ThriftEncodable)
-	if canEncode {
-		return encodable.EncodeThrift()
-	}
-
 	switch input := input.(type) {
 	case []*types.HistoryEvent:
 		return t.thriftrwEncoder.Encode(&workflow.History{Events: thrift.FromHistoryEventArray(input)})
@@ -335,6 +329,8 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 		return t.thriftrwEncoder.Encode(thrift.FromProcessingQueueStates(input))
 	case *types.DynamicConfigBlob:
 		return t.thriftrwEncoder.Encode(thrift.FromDynamicConfigBlob(input))
+	case *types.IsolationGroupConfiguration:
+		return t.thriftrwEncoder.Encode(thrift.ToIsolationGroupConfigBlob(input))
 	default:
 		return nil, nil
 	}
@@ -428,6 +424,13 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 			return err
 		}
 		*target = *thrift.ToDynamicConfigBlob(&thriftTarget)
+		return nil
+	case *types.IsolationGroupConfiguration:
+		thriftTarget := workflow.IsolationGroupConfiguration{}
+		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
+			return err
+		}
+		*target = *thrift.FromIsolationGroupConfigBlob(&thriftTarget)
 		return nil
 	default:
 		return nil

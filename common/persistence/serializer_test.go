@@ -186,6 +186,19 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 		},
 	}
 
+	isolationGroupCfg0 := &types.IsolationGroupConfiguration{
+		"zone-1": {
+			Name:  "zone-1",
+			State: types.IsolationGroupStateDrained,
+		},
+		"zone-2": {
+			Name:  "zone-2",
+			State: types.IsolationGroupStateHealthy,
+		},
+	}
+
+	isolationGroupCfg1 := &types.IsolationGroupConfiguration{}
+
 	for i := 0; i < concurrency; i++ {
 
 		go func() {
@@ -359,6 +372,18 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.NotNil(resetPointsEmpty)
 
+			isolationGroupConfiguration0Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg0, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration0Thrift)
+
+			isolationGroupConfiguration1Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg1, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration1Thrift)
+
+			isolationGroupConfiguration2Thrift, err := serializer.SerializeIsolationGroups(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.Nil(isolationGroupConfiguration2Thrift)
+
 			// deserialize reset points
 
 			dNilResetPoints1, err := serializer.DeserializeResetPoints(nil)
@@ -521,6 +546,17 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.Equal(dDynamicConfigBlobThrift, dcBlob)
 
+			isolationGroups0FromThrift, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration0Thrift)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg0, isolationGroups0FromThrift)
+
+			isolationGroups1FromThrift, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration1Thrift)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg1, isolationGroups1FromThrift)
+
+			isolationGroups2FromThrift, err := serializer.DeserializeIsolationGroups(nil)
+			s.Nil(err)
+			s.Nil(isolationGroups2FromThrift)
 		}()
 	}
 

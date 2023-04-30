@@ -7936,3 +7936,42 @@ func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *typ
 		Message: t.Message,
 	}
 }
+
+func ToIsolationGroupConfigBlob(t *types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
+	if t == nil {
+		return nil
+	}
+	list := t.ToPartitionList()
+	out := shared.IsolationGroupConfiguration{}
+	partitions := make([]*shared.IsolationGroupPartition, len(list))
+	for i, v := range list {
+		state := shared.IsolationGroupState(v.State)
+		name := v.Name
+		partitions[i] = &shared.IsolationGroupPartition{
+			Name:  &name,
+			State: &state,
+		}
+	}
+	out.IsolationGroups = partitions
+	return &out
+}
+
+func FromIsolationGroupConfigBlob(i *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+	if i == nil {
+		return nil
+	}
+	if i.IsolationGroups == nil {
+		return &types.IsolationGroupConfiguration{}
+	}
+	out := make(types.IsolationGroupConfiguration, len(i.IsolationGroups))
+	for _, v := range i.IsolationGroups {
+		if v.Name == nil || v.State == nil {
+			continue
+		}
+		out[*v.Name] = types.IsolationGroupPartition{
+			Name:  *v.Name,
+			State: types.IsolationGroupState(*v.State),
+		}
+	}
+	return &out
+}
