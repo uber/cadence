@@ -35,7 +35,7 @@ import (
 type (
 	// Implements ShardStore
 	nosqlShardStore struct {
-		nosqlStore
+		shardedNosqlStore
 		currentClusterName string
 	}
 )
@@ -44,47 +44,30 @@ var _ p.ShardStore = (*nosqlShardStore)(nil)
 
 // newNoSQLShardStore is used to create an instance of ShardStore implementation
 func newNoSQLShardStore(
-	cfg config.NoSQL,
+	cfg config.ShardedNoSQL,
 	clusterName string,
 	logger log.Logger,
 	dc *p.DynamicConfiguration,
 ) (p.ShardStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	s, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &nosqlShardStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
+		shardedNosqlStore:  *s,
 		currentClusterName: clusterName,
 	}, nil
-}
-
-// NewNoSQLShardStoreFromSession is used to create an instance of ShardStore implementation
-// It is being used by some admin toolings
-func NewNoSQLShardStoreFromSession(
-	db nosqlplugin.DB,
-	clusterName string,
-	logger log.Logger,
-) p.ShardStore {
-	return &nosqlShardStore{
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
-		currentClusterName: clusterName,
-	}
 }
 
 func (sh *nosqlShardStore) CreateShard(
 	ctx context.Context,
 	request *p.InternalCreateShardRequest,
 ) error {
-
-	err := sh.db.InsertShard(ctx, request.ShardInfo)
+	storeShard, err := sh.GetStoreShardByHistoryShard(request.ShardInfo.ShardID)
+	if err != nil {
+		return err
+	}
+	err = storeShard.db.InsertShard(ctx, request.ShardInfo)
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
@@ -93,7 +76,7 @@ func (sh *nosqlShardStore) CreateShard(
 					request.ShardInfo.ShardID, request.ShardInfo.RangeID, conditionFailure.RangeID, conditionFailure.Details),
 			}
 		}
-		return convertCommonErrors(sh.db, "CreateShard", err)
+		return convertCommonErrors(storeShard.db, "CreateShard", err)
 	}
 
 	return nil
@@ -104,16 +87,20 @@ func (sh *nosqlShardStore) GetShard(
 	request *p.InternalGetShardRequest,
 ) (*p.InternalGetShardResponse, error) {
 	shardID := request.ShardID
-	rangeID, shardInfo, err := sh.db.SelectShard(ctx, shardID, sh.currentClusterName)
+	storeShard, err := sh.GetStoreShardByHistoryShard(shardID)
+	if err != nil {
+		return nil, err
+	}
+	rangeID, shardInfo, err := storeShard.db.SelectShard(ctx, shardID, sh.currentClusterName)
 
 	if err != nil {
-		if sh.db.IsNotFoundError(err) {
+		if storeShard.db.IsNotFoundError(err) {
 			return nil, &types.EntityNotExistsError{
 				Message: fmt.Sprintf("Shard not found.  ShardId: %v", shardID),
 			}
 		}
 
-		return nil, convertCommonErrors(sh.db, "GetShard", err)
+		return nil, convertCommonErrors(storeShard.db, "GetShard", err)
 	}
 
 	shardInfoRangeID := shardInfo.RangeID
@@ -150,8 +137,11 @@ func (sh *nosqlShardStore) updateRangeID(
 	rangeID int64,
 	previousRangeID int64,
 ) error {
-
-	err := sh.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
+	storeShard, err := sh.GetStoreShardByHistoryShard(shardID)
+	if err != nil {
+		return err
+	}
+	err = storeShard.db.UpdateRangeID(ctx, shardID, rangeID, previousRangeID)
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
@@ -161,7 +151,7 @@ func (sh *nosqlShardStore) updateRangeID(
 					previousRangeID, conditionFailure.RangeID, conditionFailure.Details),
 			}
 		}
-		return convertCommonErrors(sh.db, "UpdateRangeID", err)
+		return convertCommonErrors(storeShard.db, "UpdateRangeID", err)
 	}
 
 	return nil
@@ -171,7 +161,11 @@ func (sh *nosqlShardStore) UpdateShard(
 	ctx context.Context,
 	request *p.InternalUpdateShardRequest,
 ) error {
-	err := sh.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
+	storeShard, err := sh.GetStoreShardByHistoryShard(request.ShardInfo.ShardID)
+	if err != nil {
+		return err
+	}
+	err = storeShard.db.UpdateShard(ctx, request.ShardInfo, request.PreviousRangeID)
 	if err != nil {
 		conditionFailure, ok := err.(*nosqlplugin.ShardOperationConditionFailure)
 		if ok {
@@ -181,7 +175,7 @@ func (sh *nosqlShardStore) UpdateShard(
 					request.PreviousRangeID, conditionFailure.RangeID, conditionFailure.Details),
 			}
 		}
-		return convertCommonErrors(sh.db, "UpdateShard", err)
+		return convertCommonErrors(storeShard.db, "UpdateShard", err)
 	}
 
 	return nil

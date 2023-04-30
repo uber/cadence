@@ -48,21 +48,17 @@ type (
 // newNoSQLVisibilityStore is used to create an instance of VisibilityStore implementation
 func newNoSQLVisibilityStore(
 	listClosedOrderingByCloseTime bool,
-	cfg config.NoSQL,
+	cfg config.ShardedNoSQL,
 	logger log.Logger,
 	dc *p.DynamicConfiguration,
 ) (p.VisibilityStore, error) {
-	db, err := NewNoSQLDB(&cfg, logger, dc)
+	shardedStore, err := newShardedNosqlStore(cfg, logger, dc)
 	if err != nil {
 		return nil, err
 	}
-
 	return &nosqlVisibilityStore{
 		sortByCloseTime: listClosedOrderingByCloseTime,
-		nosqlStore: nosqlStore{
-			db:     db,
-			logger: logger,
-		},
+		nosqlStore:      shardedStore.GetDefaultShard(),
 	}, nil
 }
 
