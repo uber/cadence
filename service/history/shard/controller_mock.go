@@ -30,6 +30,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
 	engine "github.com/uber/cadence/service/history/engine"
 )
 
