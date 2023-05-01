@@ -358,7 +358,6 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 			HistoryArchivalURI:       historyArchivalURI,
 			VisibilityArchivalStatus: visibilityArchivalStatus,
 			VisibilityArchivalURI:    visibilityArchivalURI,
-			IsolationGroups:          map[string]types.IsolationGroupPartition{},
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -710,6 +709,16 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			ClusterName: clusterStandby,
 		},
 	}
+	isolationGroup := types.IsolationGroupConfiguration{
+		"zone-1": types.IsolationGroupPartition{
+			Name:  "zone-1",
+			State: types.IsolationGroupStateDrained,
+		},
+		"zone-2": types.IsolationGroupPartition{
+			Name:  "zone-2",
+			State: types.IsolationGroupStateHealthy,
+		},
+	}
 
 	resp1, err1 := m.CreateDomain(
 		ctx,
@@ -803,6 +812,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 			VisibilityArchivalStatus: updatedVisibilityArchivalStatus,
 			VisibilityArchivalURI:    updatedVisibilityArchivalURI,
 			BadBinaries:              testBinaries,
+			IsolationGroups:          isolationGroup,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: updateClusterActive,
@@ -876,6 +886,7 @@ func (m *MetadataPersistenceSuiteV2) TestUpdateDomain() {
 	m.Equal(notificationVersion, resp5.NotificationVersion)
 	m.Equal(&failoverEndTime, resp5.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp5.LastUpdatedTime)
+	m.Equal(isolationGroup, resp5.Config.IsolationGroups)
 
 	notificationVersion++
 	lastUpdateTime++
