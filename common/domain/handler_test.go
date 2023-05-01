@@ -356,7 +356,6 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-				IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName1,
@@ -382,7 +381,6 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-				IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName2,

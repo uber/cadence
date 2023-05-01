@@ -99,9 +99,10 @@ func TestUpdateDomainState(t *testing.T) {
 				IsolationGroups: nil,
 			},
 			domainHandlerAffordance: func(h *domain.MockHandler) {
+				var ig types.IsolationGroupConfiguration
 				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
 					Name:                        "domain",
-					IsolationGroupConfiguration: nil,
+					IsolationGroupConfiguration: &ig, // nil
 				}).Return(nil, nil)
 			},
 		},
@@ -111,9 +112,10 @@ func TestUpdateDomainState(t *testing.T) {
 				IsolationGroups: nil,
 			},
 			domainHandlerAffordance: func(h *domain.MockHandler) {
+				var ig types.IsolationGroupConfiguration
 				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
 					Name:                        "domain",
-					IsolationGroupConfiguration: nil,
+					IsolationGroupConfiguration: &ig,
 				}).Return(nil, assert.AnError)
 			},
 			expectedErr: assert.AnError,
@@ -173,7 +175,7 @@ func TestGetDomainState(t *testing.T) {
 			},
 			expected: &types.GetDomainIsolationGroupsResponse{IsolationGroups: validCfg},
 		},
-		"normal value being returned - no config present - should just return nil": {
+		"normal value being returned - no config present - should just return empty": {
 			in: types.GetDomainIsolationGroupsRequest{
 				Domain: domainName,
 			},
@@ -184,7 +186,7 @@ func TestGetDomainState(t *testing.T) {
 					Configuration: &types.DomainConfiguration{},
 				}, nil)
 			},
-			expected: nil,
+			expected: &types.GetDomainIsolationGroupsResponse{},
 		},
 		"normal value being returned - no config present - should just return nil - 2": {
 			in: types.GetDomainIsolationGroupsRequest{
@@ -224,7 +226,7 @@ func TestGetDomainState(t *testing.T) {
 					}).
 					Return(nil, nil)
 			},
-			expected: nil,
+			expected: &types.GetDomainIsolationGroupsResponse{},
 		},
 	}
 

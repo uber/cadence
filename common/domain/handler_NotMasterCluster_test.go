@@ -165,7 +165,6 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 		VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 		VisibilityArchivalURI:                  "",
 		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-		IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 	}, resp.Configuration)
 	s.Equal(&types.DomainReplicationConfiguration{
 		ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -233,7 +232,6 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestRegisterGet
 		VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 		VisibilityArchivalURI:                  "",
 		BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-		IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 	}, resp.Configuration)
 	s.Equal(&types.DomainReplicationConfiguration{
 		ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -291,7 +289,6 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 			VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 			VisibilityArchivalURI:                  "",
 			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-			IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 		}, config)
 		s.Equal(&types.DomainReplicationConfiguration{
 			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -368,7 +365,6 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 			VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 			VisibilityArchivalURI:                  "",
 			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-			IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 		}, config)
 		s.Equal(&types.DomainReplicationConfiguration{
 			ActiveClusterName: s.ClusterMetadata.GetCurrentClusterName(),
@@ -700,7 +696,6 @@ func (s *domainHandlerGlobalDomainEnabledNotPrimaryClusterSuite) TestUpdateGetDo
 			VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 			VisibilityArchivalURI:                  "",
 			BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
-			IsolationGroups:                        map[string]types.IsolationGroupPartition{},
 		}, config)
 		s.Equal(&types.DomainReplicationConfiguration{
 			ActiveClusterName: nextActiveClusterName,
