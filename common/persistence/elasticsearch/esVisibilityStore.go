@@ -31,8 +31,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/elasticsearch/query"
-
 	"github.com/cch123/elasticsql"
 	"github.com/valyala/fastjson"
 
@@ -249,11 +247,14 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByType(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:           v.index,
-		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
-		IsOpen:          true,
-		Filter:          isRecordValid,
-		MatchQuery:      query.NewMatchQuery(es.WorkflowType, request.WorkflowTypeName),
+		Index:       v.index,
+		ListRequest: &request.InternalListWorkflowExecutionsRequest,
+		IsOpen:      true,
+		Filter:      isRecordValid,
+		MatchQuery: &es.GenericMatch{
+			Name: es.WorkflowType,
+			Text: request.WorkflowTypeName,
+		},
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
@@ -273,11 +274,14 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByType(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:           v.index,
-		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
-		IsOpen:          false,
-		Filter:          isRecordValid,
-		MatchQuery:      query.NewMatchQuery(es.WorkflowType, request.WorkflowTypeName),
+		Index:       v.index,
+		ListRequest: &request.InternalListWorkflowExecutionsRequest,
+		IsOpen:      false,
+		Filter:      isRecordValid,
+		MatchQuery: &es.GenericMatch{
+			Name: es.WorkflowType,
+			Text: request.WorkflowTypeName,
+		},
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
@@ -297,11 +301,14 @@ func (v *esVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:           v.index,
-		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
-		IsOpen:          true,
-		Filter:          isRecordValid,
-		MatchQuery:      query.NewMatchQuery(es.WorkflowID, request.WorkflowID),
+		Index:       v.index,
+		ListRequest: &request.InternalListWorkflowExecutionsRequest,
+		IsOpen:      true,
+		Filter:      isRecordValid,
+		MatchQuery: &es.GenericMatch{
+			Name: es.WorkflowID,
+			Text: request.WorkflowID,
+		},
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
@@ -321,11 +328,14 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:           v.index,
-		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
-		IsOpen:          false,
-		Filter:          isRecordValid,
-		MatchQuery:      query.NewMatchQuery(es.WorkflowID, request.WorkflowID),
+		Index:       v.index,
+		ListRequest: &request.InternalListWorkflowExecutionsRequest,
+		IsOpen:      false,
+		Filter:      isRecordValid,
+		MatchQuery: &es.GenericMatch{
+			Name: es.WorkflowID,
+			Text: request.WorkflowID,
+		},
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {
@@ -345,11 +355,14 @@ func (v *esVisibilityStore) ListClosedWorkflowExecutionsByStatus(
 	}
 
 	resp, err := v.esClient.Search(ctx, &es.SearchRequest{
-		Index:           v.index,
-		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
-		IsOpen:          false,
-		Filter:          isRecordValid,
-		MatchQuery:      query.NewMatchQuery(es.CloseStatus, int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status))),
+		Index:       v.index,
+		ListRequest: &request.InternalListWorkflowExecutionsRequest,
+		IsOpen:      false,
+		Filter:      isRecordValid,
+		MatchQuery: &es.GenericMatch{
+			Name: es.CloseStatus,
+			Text: int32(*thrift.FromWorkflowExecutionCloseStatus(&request.Status)),
+		},
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
 	})
 	if err != nil {

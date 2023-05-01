@@ -20,31 +20,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package v7
+package elasticsearch
 
 import (
 	"context"
-	"time"
-
-	"github.com/olivere/elastic/v7"
 
 	"github.com/uber/cadence/common/elasticsearch/bulk"
+
+	"github.com/olivere/elastic/v7"
 )
 
-type // bulkProcessorParametersV7 holds all required and optional parameters for executing bulk service
-bulkProcessorParametersV7 struct {
-	Name          string
-	NumOfWorkers  int
-	BulkActions   int
-	BulkSize      int
-	FlushInterval time.Duration
-	Backoff       elastic.Backoff
-	BeforeFunc    elastic.BulkBeforeFunc
-	AfterFunc     elastic.BulkAfterFunc
-}
+var _ bulk.GenericBulkProcessor = (*v7BulkProcessor)(nil)
 
 type v7BulkProcessor struct {
 	processor *elastic.BulkProcessor
+}
+
+func (c *elasticV7) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
+	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
+		parameters.BeforeFunc(executionId, fromV7ToGenericBulkableRequests(requests))
+	}
+
+	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
+		gerr := convertV7ErrorToGenericError(err)
+		parameters.AfterFunc(
+			executionId,
+			fromV7ToGenericBulkableRequests(requests),
+			fromV7toGenericBulkResponse(response),
+			gerr)
+	}
+
+	processor, err := c.client.BulkProcessor().
+		Name(parameters.Name).
+		Workers(parameters.NumOfWorkers).
+		BulkActions(parameters.BulkActions).
+		BulkSize(parameters.BulkSize).
+		FlushInterval(parameters.FlushInterval).
+		Backoff(parameters.Backoff).
+		Before(beforeFunc).
+		After(afterFunc).
+		Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v7BulkProcessor{
+		processor: processor,
+	}, nil
+}
+
+func (v *v7BulkProcessor) Flush() error {
+	return v.processor.Flush()
 }
 
 func (v *v7BulkProcessor) Start(ctx context.Context) error {
@@ -65,14 +91,12 @@ func (v *v7BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 	case bulk.BulkableDeleteRequest:
 		req = elastic.NewBulkDeleteRequest().
 			Index(request.Index).
-			Type(request.Type).
 			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version)
 	case bulk.BulkableIndexRequest:
 		req = elastic.NewBulkIndexRequest().
 			Index(request.Index).
-			Type(request.Type).
 			Id(request.ID).
 			VersionType(request.VersionType).
 			Version(request.Version).
@@ -83,7 +107,6 @@ func (v *v7BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 		req = elastic.NewBulkIndexRequest().
 			OpType("create").
 			Index(request.Index).
-			Type(request.Type).
 			Id(request.ID).
 			VersionType("internal").
 			Doc(request.Doc)
@@ -91,27 +114,19 @@ func (v *v7BulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 	v.processor.Add(req)
 }
 
-func (v *v7BulkProcessor) Flush() error {
-	return v.processor.Flush()
-}
-
-func (c *ElasticV7) runBulkProcessor(ctx context.Context, p *bulkProcessorParametersV7) (*v7BulkProcessor, error) {
-	processor, err := c.client.BulkProcessor().
-		Name(p.Name).
-		Workers(p.NumOfWorkers).
-		BulkActions(p.BulkActions).
-		BulkSize(p.BulkSize).
-		FlushInterval(p.FlushInterval).
-		Backoff(p.Backoff).
-		Before(p.BeforeFunc).
-		After(p.AfterFunc).
-		Do(ctx)
-	if err != nil {
-		return nil, err
+func convertV7ErrorToGenericError(err error) *bulk.GenericError {
+	if err == nil {
+		return nil
 	}
-	return &v7BulkProcessor{
-		processor: processor,
-	}, nil
+	status := bulk.UnknownStatusCode
+	switch e := err.(type) {
+	case *elastic.Error:
+		status = e.Status
+	}
+	return &bulk.GenericError{
+		Status:  status,
+		Details: err,
+	}
 }
 
 func fromV7toGenericBulkResponse(response *elastic.BulkResponse) *bulk.GenericBulkResponse {
@@ -164,44 +179,4 @@ func fromV7ToGenericBulkableRequests(requests []elastic.BulkableRequest) []bulk.
 		v7Reqs = append(v7Reqs, req)
 	}
 	return v7Reqs
-}
-
-func (c *ElasticV7) RunBulkProcessor(ctx context.Context, parameters *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
-	beforeFunc := func(executionId int64, requests []elastic.BulkableRequest) {
-		parameters.BeforeFunc(executionId, fromV7ToGenericBulkableRequests(requests))
-	}
-
-	afterFunc := func(executionId int64, requests []elastic.BulkableRequest, response *elastic.BulkResponse, err error) {
-		gerr := errorToGenericError(err)
-		parameters.AfterFunc(
-			executionId,
-			fromV7ToGenericBulkableRequests(requests),
-			fromV7toGenericBulkResponse(response),
-			gerr)
-	}
-
-	return c.runBulkProcessor(ctx, &bulkProcessorParametersV7{
-		Name:          parameters.Name,
-		NumOfWorkers:  parameters.NumOfWorkers,
-		BulkActions:   parameters.BulkActions,
-		BulkSize:      parameters.BulkSize,
-		FlushInterval: parameters.FlushInterval,
-		Backoff:       parameters.Backoff,
-		BeforeFunc:    beforeFunc,
-		AfterFunc:     afterFunc,
-	})
-}
-func errorToGenericError(err error) *bulk.GenericError {
-	if err == nil {
-		return nil
-	}
-	status := bulk.UnknownStatusCode
-	switch e := err.(type) {
-	case *elastic.Error:
-		status = e.Status
-	}
-	return &bulk.GenericError{
-		Status:  status,
-		Details: err,
-	}
 }
