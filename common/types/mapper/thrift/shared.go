@@ -7937,7 +7937,7 @@ func ToStickyWorkerUnavailableError(t *shared.StickyWorkerUnavailableError) *typ
 	}
 }
 
-func ToIsolationGroupConfigBlob(t *types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
+func FromIsolationGroup(t *types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
 	if t == nil {
 		return nil
 	}
@@ -7956,7 +7956,7 @@ func ToIsolationGroupConfigBlob(t *types.IsolationGroupConfiguration) *shared.Is
 	return &out
 }
 
-func FromIsolationGroupConfigBlob(i *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+func ToIsolationGroupConfig(i *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
 	if i == nil {
 		return nil
 	}

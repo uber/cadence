@@ -374,18 +374,6 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.NotNil(resetPointsEmpty)
 
-			isolationGroupConfiguration0Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg0, common.EncodingTypeThriftRW)
-			s.Nil(err)
-			s.NotNil(isolationGroupConfiguration0Thrift)
-
-			isolationGroupConfiguration1Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg1, common.EncodingTypeThriftRW)
-			s.Nil(err)
-			s.NotNil(isolationGroupConfiguration1Thrift)
-
-			isolationGroupConfiguration2Thrift, err := serializer.SerializeIsolationGroups(nil, common.EncodingTypeThriftRW)
-			s.Nil(err)
-			s.Nil(isolationGroupConfiguration2Thrift)
-
 			// deserialize reset points
 
 			dNilResetPoints1, err := serializer.DeserializeResetPoints(nil)
@@ -548,6 +536,18 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.Equal(dDynamicConfigBlobThrift, dcBlob)
 
+			isolationGroupConfiguration0Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg0, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration0Thrift)
+
+			isolationGroupConfiguration1Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg1, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration1Thrift)
+
+			isolationGroupConfiguration2Thrift, err := serializer.SerializeIsolationGroups(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.Nil(isolationGroupConfiguration2Thrift)
+
 			isolationGroups0FromThrift, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration0Thrift)
 			s.Nil(err)
 			s.Equal(isolationGroupCfg0, isolationGroups0FromThrift)
@@ -559,6 +559,31 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			isolationGroups2FromThrift, err := serializer.DeserializeIsolationGroups(nil)
 			s.Nil(err)
 			s.Nil(isolationGroups2FromThrift)
+
+			// JSON
+			isolationGroupConfiguration0JSON, err := serializer.SerializeIsolationGroups(isolationGroupCfg0, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration0JSON)
+
+			isolationGroupConfiguration1JSON, err := serializer.SerializeIsolationGroups(isolationGroupCfg1, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration1JSON)
+
+			isolationGroupConfiguration2JSON, err := serializer.SerializeIsolationGroups(nil, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.Nil(isolationGroupConfiguration2JSON)
+
+			isolationGroups0FromJSON, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration0JSON)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg0, isolationGroups0FromJSON)
+
+			isolationGroups1FromJSON, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration1JSON)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg1, isolationGroups1FromJSON)
+
+			isolationGroups2FromJSON, err := serializer.DeserializeIsolationGroups(nil)
+			s.Nil(err)
+			s.Nil(isolationGroups2FromJSON)
 		}()
 	}
 

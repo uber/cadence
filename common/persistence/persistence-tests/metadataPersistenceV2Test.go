@@ -358,6 +358,7 @@ func (m *MetadataPersistenceSuiteV2) TestGetDomain() {
 			HistoryArchivalURI:       historyArchivalURI,
 			VisibilityArchivalStatus: visibilityArchivalStatus,
 			VisibilityArchivalURI:    visibilityArchivalURI,
+			IsolationGroups:          map[string]types.IsolationGroupPartition{},
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,

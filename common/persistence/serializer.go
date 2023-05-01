@@ -277,7 +277,7 @@ func (t *serializerImpl) DeserializeIsolationGroups(data *DataBlob) (*types.Isol
 
 	var cfg types.IsolationGroupConfiguration
 	if len(data.Data) == 0 {
-		return nil, nil
+		return &cfg, nil
 	}
 
 	err := t.deserialize(data, &cfg)
@@ -330,7 +330,7 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 	case *types.DynamicConfigBlob:
 		return t.thriftrwEncoder.Encode(thrift.FromDynamicConfigBlob(input))
 	case *types.IsolationGroupConfiguration:
-		return t.thriftrwEncoder.Encode(thrift.ToIsolationGroupConfigBlob(input))
+		return t.thriftrwEncoder.Encode(thrift.FromIsolationGroup(input))
 	default:
 		return nil, nil
 	}
@@ -430,7 +430,7 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
 			return err
 		}
-		*target = *thrift.FromIsolationGroupConfigBlob(&thriftTarget)
+		*target = *thrift.ToIsolationGroupConfig(&thriftTarget)
 		return nil
 	default:
 		return nil

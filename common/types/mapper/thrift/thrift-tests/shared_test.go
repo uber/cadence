@@ -259,9 +259,9 @@ func TestIsolationGroupToDomainBlob(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			out := thrift.ToIsolationGroupConfigBlob(td.in)
+			out := thrift.FromIsolationGroup(td.in)
 			assert.Equal(t, td.expectedOut, out)
-			roundTrip := thrift.FromIsolationGroupConfigBlob(out)
+			roundTrip := thrift.ToIsolationGroupConfig(out)
 			assert.Equal(t, td.in, roundTrip)
 		})
 	}
@@ -316,9 +316,9 @@ func TestIsolationGroupFromDomainBlob(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			out := thrift.FromIsolationGroupConfigBlob(td.in)
+			out := thrift.ToIsolationGroupConfig(td.in)
 			assert.Equal(t, td.expectedOut, out)
-			roundTrip := thrift.ToIsolationGroupConfigBlob(out)
+			roundTrip := thrift.FromIsolationGroup(out)
 			assert.Equal(t, td.in, roundTrip)
 		})
 	}
