@@ -1371,7 +1371,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
-		IsolationGroups          *types.IsolationGroupConfiguration
+		IsolationGroups          types.IsolationGroupConfiguration
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration

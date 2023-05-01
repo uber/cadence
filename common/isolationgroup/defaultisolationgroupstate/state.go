@@ -167,7 +167,7 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	domainCfg := domainData.GetConfig()
 	var domainState types.IsolationGroupConfiguration
 	if domainCfg != nil && domainCfg.IsolationGroups != nil {
-		domainState = *domainCfg.IsolationGroups
+		domainState = domainCfg.IsolationGroups
 	}
 
 	globalCfg, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)

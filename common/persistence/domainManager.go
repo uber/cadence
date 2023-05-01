@@ -191,7 +191,7 @@ func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDom
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
-	isolationGroups, err := m.serializer.SerializeIsolationGroups(c.IsolationGroups, common.EncodingTypeThriftRW)
+	isolationGroups, err := m.serializer.SerializeIsolationGroups(&c.IsolationGroups, common.EncodingTypeThriftRW)
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
@@ -215,9 +215,13 @@ func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (
 	if err != nil {
 		return DomainConfig{}, err
 	}
-	isolationGroups, err := m.serializer.DeserializeIsolationGroups(ic.IsolationGroups)
+	var isolationGroups types.IsolationGroupConfiguration
+	igRes, err := m.serializer.DeserializeIsolationGroups(ic.IsolationGroups)
 	if err != nil {
 		return DomainConfig{}, err
+	}
+	if igRes != nil {
+		isolationGroups = *igRes
 	}
 
 	if badBinaries.Binaries == nil {

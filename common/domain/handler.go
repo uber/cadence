@@ -681,7 +681,7 @@ func (d *handlerImpl) createResponse(
 		VisibilityArchivalStatus:               config.VisibilityArchivalStatus.Ptr(),
 		VisibilityArchivalURI:                  config.VisibilityArchivalURI,
 		BadBinaries:                            &config.BadBinaries,
-		IsolationGroups:                        config.IsolationGroups,
+		IsolationGroups:                        &config.IsolationGroups,
 	}
 
 	clusters := []*types.ClusterReplicationConfiguration{}
@@ -955,7 +955,7 @@ func (d *handlerImpl) getIsolationGroupStatus(
 	}
 
 	// upsert with whatever is present in the request always
-	incomingCfg.IsolationGroups = updateRequest.IsolationGroupConfiguration
+	incomingCfg.IsolationGroups = *updateRequest.IsolationGroupConfiguration
 	return incomingCfg, true, nil
 }
 

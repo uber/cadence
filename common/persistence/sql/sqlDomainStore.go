@@ -282,7 +282,7 @@ func (m *sqlDomainStore) UpdateDomain(
 	isolationGroupsEncoding := string(common.EncodingTypeEmpty)
 	if request.Config.IsolationGroups != nil {
 		isolationGroups = request.Config.IsolationGroups.Data
-		isolationGroupsEncoding = string(request.Config.IsolationGroups.Encoding)
+		isolationGroupsEncoding = request.Config.IsolationGroups.GetEncodingString()
 	}
 
 	domainInfo := &serialization.DomainInfo{
