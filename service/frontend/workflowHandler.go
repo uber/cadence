@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"sync/atomic"
 	"time"
 
@@ -160,6 +161,8 @@ var (
 	errIdentityTooLong     = &types.BadRequestError{Message: "Identity length exceeds limit."}
 
 	frontendServiceRetryPolicy = common.CreateFrontendServiceRetryPolicy()
+
+	domainNameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -321,6 +324,10 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 
 	if registerRequest.GetName() == "" {
 		return errDomainNotSet
+	}
+
+	if !domainNameRegex.MatchString(registerRequest.GetName()) {
+		return errInvalidDomainName
 	}
 
 	err := wh.domainHandler.RegisterDomain(ctx, registerRequest)
