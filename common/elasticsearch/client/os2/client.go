@@ -168,22 +168,21 @@ func (c *OS2) CreateIndex(ctx context.Context, index string) error {
 }
 
 func (c *OS2) Count(ctx context.Context, index, query string) (int64, error) {
-	countRequest := osapi.CountRequest{
-		Index: []string{index},
-		Query: query,
+
+	resp, err := c.client.Count(c.client.Count.WithIndex(index), c.client.Count.WithBody(strings.NewReader(query)))
+
+	if err != nil {
+		return 0, fmt.Errorf("OpenSearch Count: %w", err)
+	}
+
+	defer closeBody(resp)
+	if resp.IsError() {
+		return 0, c.parseError(resp)
 	}
 
 	type CountResponse struct {
 		Count int64 `json:"count"`
 	}
-
-	resp, err := countRequest.Do(ctx, c.client)
-
-	if err != nil {
-		return 0, err
-	}
-
-	defer closeBody(resp)
 
 	count := &CountResponse{}
 	if err := c.decoder.Decode(resp.Body, count); err != nil {
@@ -203,7 +202,6 @@ func (c *OS2) ClearScroll(ctx context.Context, scrollID string) error {
 	}
 
 	defer closeBody(resp)
-	resp.Status()
 	if resp.IsError() {
 		return c.parseError(resp)
 	}
