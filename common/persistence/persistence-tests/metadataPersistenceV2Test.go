@@ -170,6 +170,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 	m.Nil(resp1.FailoverEndTime)
 	m.Equal(lastUpdateTime, resp1.LastUpdatedTime)
 
+	var isolationgroups types.IsolationGroupConfiguration
 	resp2, err2 := m.CreateDomain(
 		ctx,
 		&p.DomainInfo{
@@ -187,6 +188,7 @@ func (m *MetadataPersistenceSuiteV2) TestCreateDomain() {
 			HistoryArchivalURI:       "",
 			VisibilityArchivalStatus: types.ArchivalStatusDisabled,
 			VisibilityArchivalURI:    "",
+			IsolationGroups:          isolationgroups,
 		},
 		&p.DomainReplicationConfig{},
 		isGlobalDomain,
@@ -986,6 +988,7 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 	historyArchivalURI := "test://history/uri"
 	visibilityArchivalStatus := types.ArchivalStatusEnabled
 	visibilityArchivalURI := "test://visibility/uri"
+	var isolationGroups types.IsolationGroupConfiguration
 
 	clusterActive := "some random active cluster name"
 	clusterStandby := "some random standby cluster name"
@@ -1018,6 +1021,7 @@ func (m *MetadataPersistenceSuiteV2) TestDeleteDomain() {
 			HistoryArchivalURI:       historyArchivalURI,
 			VisibilityArchivalStatus: visibilityArchivalStatus,
 			VisibilityArchivalURI:    visibilityArchivalURI,
+			IsolationGroups:          isolationGroups,
 		},
 		&p.DomainReplicationConfig{
 			ActiveClusterName: clusterActive,
@@ -1139,7 +1143,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 		},
 	}
 
-	isolationGroups := types.IsolationGroupConfiguration{}
+	var isolationGroups types.IsolationGroupConfiguration
 	inputDomains := []*p.GetDomainResponse{
 		{
 			Info: &p.DomainInfo{
