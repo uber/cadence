@@ -1435,7 +1435,6 @@ type (
 		FailoverEndTime             *int64
 		LastUpdatedTime             int64
 		NotificationVersion         int64
-		IsolationGroups             []types.IsolationGroupPartition
 	}
 
 	// DeleteDomainRequest is used to delete domain entry from domains table

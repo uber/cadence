@@ -135,11 +135,6 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 	if info == nil {
 		return nil
 	}
-	isolationGroups := info.IsolationGroupsConfiguration
-	var isolationGroupsEncoding string
-	if info.IsolationGroupsConfigurationEncoding != nil {
-		isolationGroupsEncoding = *info.IsolationGroupsConfigurationEncoding
-	}
 	return &DomainInfo{
 		Name:                        info.GetName(),
 		Description:                 info.GetDescription(),
@@ -165,8 +160,8 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		Retention:                   common.DaysToDuration(int32(info.GetRetentionDays())),
 		FailoverEndTimestamp:        timePtr(info.FailoverEndTime),
 		LastUpdatedTimestamp:        timeFromUnixNano(info.GetLastUpdatedTime()),
-		IsolationGroups:             isolationGroups,
-		IsolationGroupsEncoding:     isolationGroupsEncoding,
+		IsolationGroups:             info.GetIsolationGroupsConfiguration(),
+		IsolationGroupsEncoding:     info.GetIsolationGroupsConfigurationEncoding(),
 	}
 }
 

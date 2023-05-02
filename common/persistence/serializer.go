@@ -330,7 +330,7 @@ func (t *serializerImpl) thriftrwEncode(input interface{}) ([]byte, error) {
 	case *types.DynamicConfigBlob:
 		return t.thriftrwEncoder.Encode(thrift.FromDynamicConfigBlob(input))
 	case *types.IsolationGroupConfiguration:
-		return t.thriftrwEncoder.Encode(thrift.FromIsolationGroup(input))
+		return t.thriftrwEncoder.Encode(thrift.IsolationGroupConfigToIDL(input))
 	default:
 		return nil, nil
 	}
@@ -430,7 +430,7 @@ func (t *serializerImpl) thriftrwDecode(data []byte, target interface{}) error {
 		if err := t.thriftrwEncoder.Decode(data, &thriftTarget); err != nil {
 			return err
 		}
-		*target = *thrift.ToIsolationGroupConfig(&thriftTarget)
+		*target = *thrift.IsolationGroupConfigFromIDL(&thriftTarget)
 		return nil
 	default:
 		return nil
