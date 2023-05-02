@@ -338,6 +338,8 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 		}
 	}
 	delete(domains, common.SystemLocalDomainName)
+
+	var isolationGroups types.IsolationGroupConfiguration
 	s.Equal(map[string]*types.DescribeDomainResponse{
 		domainName1: {
 			DomainInfo: &types.DomainInfo{
@@ -356,6 +358,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:                        &isolationGroups,
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName1,
@@ -381,6 +384,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 				VisibilityArchivalStatus:               types.ArchivalStatusDisabled.Ptr(),
 				VisibilityArchivalURI:                  "",
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:                        &isolationGroups,
 			},
 			ReplicationConfiguration: &types.DomainReplicationConfiguration{
 				ActiveClusterName: activeClusterName2,
