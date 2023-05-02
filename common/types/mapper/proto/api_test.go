@@ -207,6 +207,11 @@ func TestDescribeDomainRequest(t *testing.T) {
 }
 func TestDescribeDomainResponse_Domain(t *testing.T) {
 	for _, item := range []*types.DescribeDomainResponse{nil, &testdata.DescribeDomainResponse} {
+		// we don't expose isolation-groups via this API
+		// Todo (David.porter) Add this to the IDL
+		if item != nil && item.Configuration != nil {
+			item.Configuration.IsolationGroups = nil
+		}
 		assert.Equal(t, item, ToDescribeDomainResponseDomain(FromDescribeDomainResponseDomain(item)))
 	}
 }
