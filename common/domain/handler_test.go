@@ -339,7 +339,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 	}
 	delete(domains, common.SystemLocalDomainName)
 
-	var isolationGroups types.IsolationGroupConfiguration
+	isolationGroups := types.IsolationGroupConfiguration{}
 	s.Equal(map[string]*types.DescribeDomainResponse{
 		domainName1: {
 			DomainInfo: &types.DomainInfo{
