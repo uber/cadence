@@ -102,36 +102,43 @@ func domainInfoToThrift(info *DomainInfo) *sqlblobs.DomainInfo {
 		return nil
 	}
 	return &sqlblobs.DomainInfo{
-		Name:                        &info.Name,
-		Description:                 &info.Description,
-		Owner:                       &info.Owner,
-		Status:                      &info.Status,
-		EmitMetric:                  &info.EmitMetric,
-		ArchivalBucket:              &info.ArchivalBucket,
-		ArchivalStatus:              &info.ArchivalStatus,
-		ConfigVersion:               &info.ConfigVersion,
-		NotificationVersion:         &info.NotificationVersion,
-		FailoverNotificationVersion: &info.FailoverNotificationVersion,
-		FailoverVersion:             &info.FailoverVersion,
-		ActiveClusterName:           &info.ActiveClusterName,
-		Clusters:                    info.Clusters,
-		Data:                        info.Data,
-		BadBinaries:                 info.BadBinaries,
-		BadBinariesEncoding:         &info.BadBinariesEncoding,
-		HistoryArchivalStatus:       &info.HistoryArchivalStatus,
-		HistoryArchivalURI:          &info.HistoryArchivalURI,
-		VisibilityArchivalStatus:    &info.VisibilityArchivalStatus,
-		VisibilityArchivalURI:       &info.VisibilityArchivalURI,
-		PreviousFailoverVersion:     &info.PreviousFailoverVersion,
-		RetentionDays:               durationToDaysInt16Ptr(info.Retention),
-		FailoverEndTime:             unixNanoPtr(info.FailoverEndTimestamp),
-		LastUpdatedTime:             timeToUnixNanoPtr(info.LastUpdatedTimestamp),
+		Name:                                 &info.Name,
+		Description:                          &info.Description,
+		Owner:                                &info.Owner,
+		Status:                               &info.Status,
+		EmitMetric:                           &info.EmitMetric,
+		ArchivalBucket:                       &info.ArchivalBucket,
+		ArchivalStatus:                       &info.ArchivalStatus,
+		ConfigVersion:                        &info.ConfigVersion,
+		NotificationVersion:                  &info.NotificationVersion,
+		FailoverNotificationVersion:          &info.FailoverNotificationVersion,
+		FailoverVersion:                      &info.FailoverVersion,
+		ActiveClusterName:                    &info.ActiveClusterName,
+		Clusters:                             info.Clusters,
+		Data:                                 info.Data,
+		BadBinaries:                          info.BadBinaries,
+		BadBinariesEncoding:                  &info.BadBinariesEncoding,
+		HistoryArchivalStatus:                &info.HistoryArchivalStatus,
+		HistoryArchivalURI:                   &info.HistoryArchivalURI,
+		VisibilityArchivalStatus:             &info.VisibilityArchivalStatus,
+		VisibilityArchivalURI:                &info.VisibilityArchivalURI,
+		PreviousFailoverVersion:              &info.PreviousFailoverVersion,
+		RetentionDays:                        durationToDaysInt16Ptr(info.Retention),
+		FailoverEndTime:                      unixNanoPtr(info.FailoverEndTimestamp),
+		LastUpdatedTime:                      timeToUnixNanoPtr(info.LastUpdatedTimestamp),
+		IsolationGroupsConfiguration:         info.IsolationGroups,
+		IsolationGroupsConfigurationEncoding: &info.IsolationGroupsEncoding,
 	}
 }
 
 func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 	if info == nil {
 		return nil
+	}
+	isolationGroups := info.IsolationGroupsConfiguration
+	var isolationGroupsEncoding string
+	if info.IsolationGroupsConfigurationEncoding != nil {
+		isolationGroupsEncoding = *info.IsolationGroupsConfigurationEncoding
 	}
 	return &DomainInfo{
 		Name:                        info.GetName(),
@@ -158,6 +165,8 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		Retention:                   common.DaysToDuration(int32(info.GetRetentionDays())),
 		FailoverEndTimestamp:        timePtr(info.FailoverEndTime),
 		LastUpdatedTimestamp:        timeFromUnixNano(info.GetLastUpdatedTime()),
+		IsolationGroups:             isolationGroups,
+		IsolationGroupsEncoding:     isolationGroupsEncoding,
 	}
 }
 

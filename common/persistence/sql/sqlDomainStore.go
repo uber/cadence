@@ -105,6 +105,13 @@ func (m *sqlDomainStore) CreateDomain(
 		badBinariesEncoding = string(request.Config.BadBinaries.GetEncoding())
 	}
 
+	var isolationGroups []byte
+	var isolationGroupsEncoding string
+	if request.Config != nil && request.Config.IsolationGroups != nil {
+		isolationGroups = request.Config.IsolationGroups.GetData()
+		isolationGroupsEncoding = request.Config.IsolationGroups.GetEncodingString()
+	}
+
 	domainInfo := &serialization.DomainInfo{
 		Name:                        request.Info.Name,
 		Status:                      int32(request.Info.Status),
@@ -129,6 +136,8 @@ func (m *sqlDomainStore) CreateDomain(
 		LastUpdatedTimestamp:        request.LastUpdatedTime,
 		BadBinaries:                 badBinaries,
 		BadBinariesEncoding:         badBinariesEncoding,
+		IsolationGroups:             isolationGroups,
+		IsolationGroupsEncoding:     isolationGroupsEncoding,
 	}
 
 	blob, err := m.parser.DomainInfoToBlob(domainInfo)
@@ -226,6 +235,11 @@ func (m *sqlDomainStore) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) 
 		badBinaries = persistence.NewDataBlob(domainInfo.BadBinaries, common.EncodingType(domainInfo.GetBadBinariesEncoding()))
 	}
 
+	var isolationGroups *persistence.DataBlob
+	if domainInfo.IsolationGroups != nil {
+		isolationGroups = persistence.NewDataBlob(domainInfo.IsolationGroups, common.EncodingType(domainInfo.IsolationGroupsEncoding))
+	}
+
 	return &persistence.InternalGetDomainResponse{
 		Info: &persistence.DomainInfo{
 			ID:          row.ID.String(),
@@ -245,6 +259,7 @@ func (m *sqlDomainStore) domainRowToGetDomainResponse(row *sqlplugin.DomainRow) 
 			VisibilityArchivalStatus: types.ArchivalStatus(domainInfo.GetVisibilityArchivalStatus()),
 			VisibilityArchivalURI:    domainInfo.GetVisibilityArchivalURI(),
 			BadBinaries:              badBinaries,
+			IsolationGroups:          isolationGroups,
 		},
 		ReplicationConfig: &persistence.DomainReplicationConfig{
 			ActiveClusterName: cluster.GetOrUseDefaultActiveCluster(m.activeClusterName, domainInfo.GetActiveClusterName()),
