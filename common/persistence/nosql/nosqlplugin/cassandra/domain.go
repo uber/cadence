@@ -140,6 +140,7 @@ const (
 		`config.history_archival_status, config.history_archival_uri, ` +
 		`config.visibility_archival_status, config.visibility_archival_uri, ` +
 		`config.bad_binaries, config.bad_binaries_encoding, ` +
+		`config.isolation_groups, config.isolation_groups_encoding, ` +
 		`replication_config.active_cluster_name, replication_config.clusters, ` +
 		`is_global_domain, ` +
 		`config_version, ` +
@@ -462,6 +463,8 @@ func (db *cdb) SelectAllDomains(
 	var replicationClusters []map[string]interface{}
 	var badBinariesData []byte
 	var badBinariesDataEncoding string
+	var isolationGroups []byte
+	var isolationGroupsEncoding string
 	var retentionDays int32
 	var failoverEndTime int64
 	var lastUpdateTime int64
@@ -484,6 +487,8 @@ func (db *cdb) SelectAllDomains(
 		&domain.Config.VisibilityArchivalURI,
 		&badBinariesData,
 		&badBinariesDataEncoding,
+		&isolationGroups,
+		&isolationGroupsEncoding,
 		&domain.ReplicationConfig.ActiveClusterName,
 		&replicationClusters,
 		&domain.IsGlobalDomain,
@@ -500,6 +505,7 @@ func (db *cdb) SelectAllDomains(
 			domain.Config.BadBinaries = p.NewDataBlob(badBinariesData, common.EncodingType(badBinariesDataEncoding))
 			domain.ReplicationConfig.Clusters = p.DeserializeClusterConfigs(replicationClusters)
 			domain.Config.Retention = common.DaysToDuration(retentionDays)
+			domain.Config.IsolationGroups = p.NewDataBlob(isolationGroups, common.EncodingType(isolationGroupsEncoding))
 			domain.LastUpdatedTime = time.Unix(0, lastUpdateTime)
 			if failoverEndTime > emptyFailoverEndTime {
 				domain.FailoverEndTime = common.TimePtr(time.Unix(0, failoverEndTime))

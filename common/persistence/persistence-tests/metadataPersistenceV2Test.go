@@ -1143,7 +1143,7 @@ func (m *MetadataPersistenceSuiteV2) TestListDomains() {
 		},
 	}
 
-	var isolationGroups types.IsolationGroupConfiguration
+	isolationGroups := types.IsolationGroupConfiguration{}
 	inputDomains := []*p.GetDomainResponse{
 		{
 			Info: &p.DomainInfo{
