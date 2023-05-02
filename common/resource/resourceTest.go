@@ -93,6 +93,8 @@ type (
 		ExecutionMgr    *mocks.ExecutionManager
 		PersistenceBean *persistenceClient.MockBean
 
+		HostName string
+
 		Logger log.Logger
 	}
 )
@@ -378,6 +380,11 @@ func (s *Test) GetExecutionManager(
 // GetPersistenceBean for testing
 func (s *Test) GetPersistenceBean() persistenceClient.Bean {
 	return s.PersistenceBean
+}
+
+// GetHostName for testing
+func (s *Test) GetHostName() string {
+	return s.HostName
 }
 
 // loggers
