@@ -84,8 +84,6 @@ func (s *Service) Start() {
 	logger := s.GetLogger()
 	logger.Info("matching starting")
 
-	logger.Info("Hostname at service.go (OSS): " + s.GetHostName())
-
 	engine := NewEngine(
 		s.GetTaskManager(),
 		s.GetClusterMetadata(),
