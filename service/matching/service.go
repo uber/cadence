@@ -73,6 +73,7 @@ func NewService(
 		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		stopC:    make(chan struct{}),
+		hostname: params.HostName,
 	}, nil
 }
 
@@ -84,6 +85,8 @@ func (s *Service) Start() {
 
 	logger := s.GetLogger()
 	logger.Info("matching starting")
+
+	logger.Info("Hostname at service.go (OSS): " + s.GetHostName())
 
 	engine := NewEngine(
 		s.GetTaskManager(),
