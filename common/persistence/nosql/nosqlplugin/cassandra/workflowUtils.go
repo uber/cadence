@@ -1207,7 +1207,11 @@ func (db *cdb) updateWorkflowExecution(
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
-
+	if !db.dc.EnableExecutionTTL(domainID) || ttlInSeconds < 0 {
+		//0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
+		ttlInSeconds = 0
+		db.logger.Info("The TTL is not enabled on the Domain or a negative value was passed into it.")
+	}
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
 		ttlInSeconds,
 		domainID,
