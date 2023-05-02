@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       gettext-base \
       libyaml-dev \
-	  python3-pip \
+      python3-pip \
       python-setuptools \
       time \
       unzip \
