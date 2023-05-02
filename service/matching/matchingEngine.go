@@ -308,10 +308,11 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
-			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
-		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
+			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task"),
+			metrics.MatchingHostTag(e.hostName)).IncCounter(metrics.CadenceTasklistRequests)
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task",
+			tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName))
-		e.logger.Info("Hostinfo for decision tasklist", tag.Dynamic("host", e.hostName), tag.Dynamic("tasklistName", taskListName))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
@@ -378,8 +379,10 @@ func (e *matchingEngineImpl) AddActivityTask(
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
-			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task")).IncCounter(metrics.CadenceTasklistRequests)
-		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task", tag.Dynamic("tasklistName", taskListName),
+			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task"),
+			metrics.MatchingHostTag(e.hostName)).IncCounter(metrics.CadenceTasklistRequests)
+		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task",
+			tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName))
 	}
 
