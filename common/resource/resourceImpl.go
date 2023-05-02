@@ -133,6 +133,8 @@ func New(
 	serviceConfig *service.Config,
 ) (impl *Impl, retError error) {
 
+	hostname := params.HostName
+
 	logger := params.Logger
 	throttledLogger := loggerimpl.NewThrottledLogger(logger, serviceConfig.ThrottledLoggerMaxRPS)
 
@@ -283,6 +285,9 @@ func New(
 
 		// persistence clients
 		persistenceBean: persistenceBean,
+
+		// hostname
+		hostName: hostname,
 
 		// loggers
 

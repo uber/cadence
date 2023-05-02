@@ -34,11 +34,10 @@ import (
 type Service struct {
 	resource.Resource
 
-	status   int32
-	handler  Handler
-	stopC    chan struct{}
-	config   *Config
-	hostname string
+	status  int32
+	handler Handler
+	stopC   chan struct{}
+	config  *Config
 }
 
 // NewService builds a new cadence-matching service
@@ -73,7 +72,6 @@ func NewService(
 		status:   common.DaemonStatusInitialized,
 		config:   serviceConfig,
 		stopC:    make(chan struct{}),
-		hostname: params.HostName,
 	}, nil
 }
 
