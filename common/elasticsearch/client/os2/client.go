@@ -271,7 +271,7 @@ func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response,
 
 	if resp.IsError() {
 		return nil, types.InternalServiceError{
-			Message: fmt.Sprintf("OpenSearch Error: %v", resp.Status()),
+			Message: fmt.Sprintf("OpenSearch Error: %v", c.parseError(resp)),
 		}
 	}
 
