@@ -16,9 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# pip 21+ drops support for python2 entirely, we seem to need at least 19 to build cqlsh
 RUN pip install cqlsh
-RUN pip install futures
 # verbose test output from `make`, can be disabled with V=0
 ENV V=1
 
