@@ -110,6 +110,17 @@ func NewClient(
 		return nil, fmt.Errorf("creating OpenSearch client: %w", err)
 	}
 
+	// initial health check
+	resp, err := osClient.Ping()
+
+	if err != nil {
+		return nil, fmt.Errorf("OpenSearch client unable to ping: %w", err)
+	}
+
+	if resp.IsError() {
+		return nil, fmt.Errorf("OpenSearch client received error on ping: %s", resp)
+	}
+
 	return &OS2{
 		client:  osClient,
 		logger:  logger,
@@ -266,7 +277,6 @@ func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response,
 		return nil, fmt.Errorf("OpenSearch Search: %w", err)
 	}
 	defer closeBody(resp)
-
 	if resp.IsError() {
 		return nil, types.InternalServiceError{
 			Message: fmt.Sprintf("OpenSearch Error: %v", c.parseError(resp)),
