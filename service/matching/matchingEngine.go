@@ -312,6 +312,11 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	if err != nil {
 		return false, err
 	}
+	//
+	//host, err := e.membershipResolver.Lookup(service.Matching, partitionKey)
+	//if err != nil {
+	//	return "", err
+	//}
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
@@ -319,7 +324,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task")).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task", tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName))
-		e.logger.Info("Hostinfo for decision tasklist", tag.Dynamic("host", parHost))
+		e.logger.Info("Hostinfo for decision tasklist", tag.Dynamic("host", parHost), tag.Dynamic("tasklistName", taskListName))
 	}
 
 	tlMgr, err := e.getTaskListManager(taskList, taskListKind)
