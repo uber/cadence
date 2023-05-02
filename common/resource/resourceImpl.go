@@ -106,6 +106,9 @@ type (
 		// persistence clients
 		persistenceBean persistenceClient.Bean
 
+		// hostName
+		hostName string
+
 		// loggers
 		logger          log.Logger
 		throttledLogger log.Logger
@@ -527,6 +530,10 @@ func (h *Impl) GetExecutionManager(
 // GetPersistenceBean return persistence bean
 func (h *Impl) GetPersistenceBean() persistenceClient.Bean {
 	return h.persistenceBean
+}
+
+func (h *Impl) GetHostName() string {
+	return h.hostName
 }
 
 // loggers

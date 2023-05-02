@@ -34,10 +34,11 @@ import (
 type Service struct {
 	resource.Resource
 
-	status  int32
-	handler Handler
-	stopC   chan struct{}
-	config  *Config
+	status   int32
+	handler  Handler
+	stopC    chan struct{}
+	config   *Config
+	hostname string
 }
 
 // NewService builds a new cadence-matching service
@@ -94,6 +95,7 @@ func (s *Service) Start() {
 		s.GetMetricsClient(),
 		s.GetDomainCache(),
 		s.GetMembershipResolver(),
+		s.GetHostName(),
 	)
 
 	s.handler = NewHandler(engine, s.config, s.GetDomainCache(), s.GetMetricsClient(), s.GetLogger(), s.GetThrottledLogger())
