@@ -25,7 +25,6 @@ package defaultisolationgroupstate
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
@@ -45,8 +44,6 @@ type defaultIsolationGroupStateHandler struct {
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains dynamicconfig.Client
 	config                     defaultConfig
-	subscriptionMu             sync.Mutex
-	valuesMu                   sync.RWMutex
 	lastSeen                   *isolationGroups
 	updateCB                   func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
@@ -81,8 +78,6 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 		status:                     common.DaemonStatusInitialized,
 		log:                        logger,
 		config:                     config,
-		subscriptionMu:             sync.Mutex{},
-		subscriptions:              make(map[string]map[string]chan<- isolationgroup.ChangeEvent),
 	}, nil
 }
 
@@ -129,21 +124,6 @@ func (z *defaultIsolationGroupStateHandler) Stop() {
 	close(z.done)
 }
 
-func (z *defaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- isolationgroup.ChangeEvent) error {
-	z.subscriptionMu.Lock()
-	defer z.subscriptionMu.Unlock()
-
-	panic("not implemented")
-	return nil
-}
-
-func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) error {
-	z.subscriptionMu.Lock()
-	defer z.subscriptionMu.Unlock()
-	panic("not implemented")
-	return nil
-}
-
 func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, domainID string) (*isolationGroups, error) {
 	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
@@ -186,15 +166,6 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	}
 
 	return ig, nil
-}
-
-func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
-	// todo (david.porter)
-	// check new values against existing cached ones
-	// get the difference
-	// if any difference, notify subscribers for whom the change is applicable
-	// ie, global changes for all, domain changes for the domain-listeners
-	panic("not implemented")
 }
 
 // A simple explicit deny-based isolation group implementation
