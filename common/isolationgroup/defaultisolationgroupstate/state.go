@@ -25,7 +25,6 @@ package defaultisolationgroupstate
 import (
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 
 	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
@@ -45,8 +44,6 @@ type defaultIsolationGroupStateHandler struct {
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains dynamicconfig.Client
 	config                     defaultConfig
-	subscriptionMu             sync.Mutex
-	valuesMu                   sync.RWMutex
 	lastSeen                   *isolationGroups
 	updateCB                   func()
 	// subscriptions is a map of domains->subscription-keys-> subscription channels
@@ -81,8 +78,6 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 		status:                     common.DaemonStatusInitialized,
 		log:                        logger,
 		config:                     config,
-		subscriptionMu:             sync.Mutex{},
-		subscriptions:              make(map[string]map[string]chan<- isolationgroup.ChangeEvent),
 	}, nil
 }
 
