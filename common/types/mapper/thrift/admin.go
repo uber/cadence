@@ -710,7 +710,7 @@ func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := IsolationGroupConfigToIDL(&t.IsolationGroups)
+	cfg := FromIsolationGroupConfig(&t.IsolationGroups)
 	if cfg == nil || cfg.GetIsolationGroups() == nil {
 		return &admin.GetGlobalIsolationGroupsResponse{}
 	}
@@ -726,7 +726,7 @@ func ToGetGlobalIsolationGroupsResponse(t *admin.GetGlobalIsolationGroupsRespons
 	if t.IsolationGroups == nil {
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
-	ig := IsolationGroupConfigFromIDL(t.IsolationGroups)
+	ig := ToIsolationGroupConfig(t.IsolationGroups)
 	if ig == nil || len(*ig) == 0 {
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
@@ -742,7 +742,7 @@ func ToGetDomainIsolationGroupsResponse(t *admin.GetDomainIsolationGroupsRespons
 	if t.IsolationGroups == nil {
 		return &types.GetDomainIsolationGroupsResponse{}
 	}
-	ig := IsolationGroupConfigFromIDL(t.IsolationGroups)
+	ig := ToIsolationGroupConfig(t.IsolationGroups)
 	if ig == nil || len(*ig) == 0 {
 		return &types.GetDomainIsolationGroupsResponse{}
 	}
@@ -762,7 +762,7 @@ func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := IsolationGroupConfigToIDL(&t.IsolationGroups)
+	cfg := FromIsolationGroupConfig(&t.IsolationGroups)
 	return &admin.GetDomainIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -790,7 +790,7 @@ func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroups
 		return &admin.UpdateGlobalIsolationGroupsRequest{}
 	}
 	return &admin.UpdateGlobalIsolationGroupsRequest{
-		IsolationGroups: IsolationGroupConfigToIDL(&t.IsolationGroups),
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
 }
 
@@ -803,7 +803,7 @@ func FromUpdateDomainIsolationGroupsRequest(t *types.UpdateDomainIsolationGroups
 	}
 	return &admin.UpdateDomainIsolationGroupsRequest{
 		Domain:          &t.Domain,
-		IsolationGroups: IsolationGroupConfigToIDL(&t.IsolationGroups),
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
 }
 
@@ -811,7 +811,7 @@ func ToUpdateGlobalIsolationGroupsRequest(t *admin.UpdateGlobalIsolationGroupsRe
 	if t == nil {
 		return nil
 	}
-	cfg := IsolationGroupConfigFromIDL(t.IsolationGroups)
+	cfg := ToIsolationGroupConfig(t.IsolationGroups)
 	if cfg == nil {
 		return &types.UpdateGlobalIsolationGroupsRequest{}
 	}
@@ -845,7 +845,7 @@ func ToUpdateDomainIsolationGroupsRequest(t *admin.UpdateDomainIsolationGroupsRe
 	if t == nil {
 		return nil
 	}
-	cfg := IsolationGroupConfigFromIDL(t.IsolationGroups)
+	cfg := ToIsolationGroupConfig(t.IsolationGroups)
 	if cfg == nil {
 		return &types.UpdateDomainIsolationGroupsRequest{
 			Domain: t.GetDomain(),
@@ -857,7 +857,7 @@ func ToUpdateDomainIsolationGroupsRequest(t *admin.UpdateDomainIsolationGroupsRe
 	}
 }
 
-func IsolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
+func FromIsolationGroupConfig(in *types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
@@ -879,7 +879,7 @@ func IsolationGroupConfigToIDL(in *types.IsolationGroupConfiguration) *shared.Is
 	}
 }
 
-func IsolationGroupConfigFromIDL(in *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+func ToIsolationGroupConfig(in *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
