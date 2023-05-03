@@ -78,6 +78,16 @@ var (
 		HistoryArchivalURI:                     HistoryArchivalURI,
 		VisibilityArchivalStatus:               &ArchivalStatus,
 		VisibilityArchivalURI:                  VisibilityArchivalURI,
+		IsolationGroups: &types.IsolationGroupConfiguration{
+			"zone-1": {
+				Name:  "zone-1",
+				State: types.IsolationGroupStateHealthy,
+			},
+			"zone-2": {
+				Name:  "zone-2",
+				State: types.IsolationGroupStateDrained,
+			},
+		},
 	}
 	DomainReplicationConfiguration = types.DomainReplicationConfiguration{
 		ActiveClusterName: ClusterName1,

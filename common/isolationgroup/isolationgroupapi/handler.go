@@ -31,13 +31,13 @@ import (
 type handlerImpl struct {
 	log                        log.Logger
 	globalIsolationGroupDrains dynamicconfig.Client
-	domainManager              domain.Handler
+	domainHandler              domain.Handler
 }
 
 func New(log log.Logger, igConfigStore dynamicconfig.Client, dh domain.Handler) Handler {
 	return &handlerImpl{
 		log:                        log,
 		globalIsolationGroupDrains: igConfigStore,
-		domainManager:              dh,
+		domainHandler:              dh,
 	}
 }

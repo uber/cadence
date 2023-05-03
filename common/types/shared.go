@@ -1785,14 +1785,14 @@ type DomainCacheInfo struct {
 
 // DomainConfiguration is an internal type (TBD...)
 type DomainConfiguration struct {
-	WorkflowExecutionRetentionPeriodInDays int32                       `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
-	EmitMetric                             bool                        `json:"emitMetric,omitempty"`
-	BadBinaries                            *BadBinaries                `json:"badBinaries,omitempty"`
-	HistoryArchivalStatus                  *ArchivalStatus             `json:"historyArchivalStatus,omitempty"`
-	HistoryArchivalURI                     string                      `json:"historyArchivalURI,omitempty"`
-	VisibilityArchivalStatus               *ArchivalStatus             `json:"visibilityArchivalStatus,omitempty"`
-	VisibilityArchivalURI                  string                      `json:"visibilityArchivalURI,omitempty"`
-	IsolationGroups                        IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays int32                        `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                             bool                         `json:"emitMetric,omitempty"`
+	BadBinaries                            *BadBinaries                 `json:"badBinaries,omitempty"`
+	HistoryArchivalStatus                  *ArchivalStatus              `json:"historyArchivalStatus,omitempty"`
+	HistoryArchivalURI                     string                       `json:"historyArchivalURI,omitempty"`
+	VisibilityArchivalStatus               *ArchivalStatus              `json:"visibilityArchivalStatus,omitempty"`
+	VisibilityArchivalURI                  string                       `json:"visibilityArchivalURI,omitempty"`
+	IsolationGroups                        *IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
@@ -6750,7 +6750,7 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
-	IsolationGroupConfiguration            IsolationGroupConfiguration        `json:"isolationGroupConfiguration,omitempty"`
+	IsolationGroupConfiguration            *IsolationGroupConfiguration       `json:"isolationGroupConfiguration,omitempty"`
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {

@@ -24,6 +24,8 @@ import (
 	"sort"
 	"testing"
 
+	v1 "github.com/uber/cadence-idl/go/proto/api/v1"
+
 	"github.com/stretchr/testify/assert"
 
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
@@ -227,23 +229,27 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 				},
 			},
 			expected: &adminv1.GetGlobalIsolationGroupsResponse{
-				IsolationGroups: &adminv1.IsolationGroupConfiguration{
-					IsolationGroups: []*adminv1.IsolationGroupPartition{
+				IsolationGroups: &v1.IsolationGroupConfiguration{
+					IsolationGroups: []*v1.IsolationGroupPartition{
 						{
 							Name:  "zone 0",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
 						},
 						{
 							Name:  "zone 1",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
 						},
 					},
 				},
 			},
 		},
 		"nil - 1": {
-			in:       &types.GetGlobalIsolationGroupsResponse{},
-			expected: &adminv1.GetGlobalIsolationGroupsResponse{},
+			in: &types.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: types.IsolationGroupConfiguration{},
+			},
+			expected: &adminv1.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: &v1.IsolationGroupConfiguration{},
+			},
 		},
 		"nil - 2": {
 			expected: nil,
@@ -304,15 +310,15 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 				},
 			},
 			expected: &adminv1.GetDomainIsolationGroupsResponse{
-				IsolationGroups: &adminv1.IsolationGroupConfiguration{
-					IsolationGroups: []*adminv1.IsolationGroupPartition{
+				IsolationGroups: &v1.IsolationGroupConfiguration{
+					IsolationGroups: []*v1.IsolationGroupPartition{
 						{
 							Name:  "zone 0",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
 						},
 						{
 							Name:  "zone 1",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
 						},
 					},
 				},
@@ -323,8 +329,8 @@ func TestFromGetDomainIsolationGroupsResponse(t *testing.T) {
 				IsolationGroups: types.IsolationGroupConfiguration{},
 			},
 			expected: &adminv1.GetDomainIsolationGroupsResponse{
-				IsolationGroups: &adminv1.IsolationGroupConfiguration{
-					IsolationGroups: []*adminv1.IsolationGroupPartition{},
+				IsolationGroups: &v1.IsolationGroupConfiguration{
+					IsolationGroups: []*v1.IsolationGroupPartition{},
 				},
 			},
 		},
@@ -404,15 +410,15 @@ func TestToUpdateGlobalIsolationGroupsRequest(t *testing.T) {
 	}{
 		"Valid mapping": {
 			in: &adminv1.UpdateGlobalIsolationGroupsRequest{
-				IsolationGroups: &adminv1.IsolationGroupConfiguration{
-					IsolationGroups: []*adminv1.IsolationGroupPartition{
+				IsolationGroups: &v1.IsolationGroupConfiguration{
+					IsolationGroups: []*v1.IsolationGroupPartition{
 						{
 							Name:  "zone 1",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
 						},
 						{
 							Name:  "zone 2",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
 						},
 					},
 				},
@@ -484,15 +490,15 @@ func TestToUpdateDomainIsolationGroupsRequest(t *testing.T) {
 		"valid": {
 			in: &adminv1.UpdateDomainIsolationGroupsRequest{
 				Domain: "test-domain",
-				IsolationGroups: &adminv1.IsolationGroupConfiguration{
-					IsolationGroups: []*adminv1.IsolationGroupPartition{
+				IsolationGroups: &v1.IsolationGroupConfiguration{
+					IsolationGroups: []*v1.IsolationGroupPartition{
 						{
 							Name:  "zone-1",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_HEALTHY,
 						},
 						{
 							Name:  "zone-2",
-							State: adminv1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
+							State: v1.IsolationGroupState_ISOLATION_GROUP_STATE_DRAINED,
 						},
 					},
 				},

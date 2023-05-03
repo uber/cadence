@@ -24,6 +24,7 @@ import (
 	"sort"
 
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -1170,7 +1171,7 @@ func FromGetGlobalIsolationGroupsResponse(t *types.GetGlobalIsolationGroupsRespo
 		return nil
 	}
 	return &adminv1.GetGlobalIsolationGroupsResponse{
-		IsolationGroups: isolationGroupConfigToIDL(t.IsolationGroups),
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
 }
 
@@ -1182,7 +1183,7 @@ func FromUpdateGlobalIsolationGroupsRequest(t *types.UpdateGlobalIsolationGroups
 		return &adminv1.UpdateGlobalIsolationGroupsRequest{}
 	}
 	return &adminv1.UpdateGlobalIsolationGroupsRequest{
-		IsolationGroups: isolationGroupConfigToIDL(t.IsolationGroups),
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
 }
 
@@ -1194,7 +1195,7 @@ func FromUpdateDomainIsolationGroupsRequest(t *types.UpdateDomainIsolationGroups
 		return &adminv1.UpdateDomainIsolationGroupsRequest{}
 	}
 	return &adminv1.UpdateDomainIsolationGroupsRequest{
-		IsolationGroups: isolationGroupConfigToIDL(t.IsolationGroups),
+		IsolationGroups: FromIsolationGroupConfig(&t.IsolationGroups),
 	}
 }
 
@@ -1225,7 +1226,7 @@ func ToGetGlobalIsolationGroupsResponse(t *adminv1.GetGlobalIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
+	ig := ToIsolationGroupConfig(t.IsolationGroups)
 	if ig == nil {
 		return &types.GetGlobalIsolationGroupsResponse{}
 	}
@@ -1238,7 +1239,7 @@ func ToGetDomainIsolationGroupsResponse(t *adminv1.GetDomainIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	ig := isolationGroupConfigFromIDL(t.IsolationGroups)
+	ig := ToIsolationGroupConfig(t.IsolationGroups)
 	if ig == nil {
 		return &types.GetDomainIsolationGroupsResponse{}
 	}
@@ -1251,7 +1252,7 @@ func FromGetDomainIsolationGroupsResponse(t *types.GetDomainIsolationGroupsRespo
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigToIDL(t.IsolationGroups)
+	cfg := FromIsolationGroupConfig(&t.IsolationGroups)
 	return &adminv1.GetDomainIsolationGroupsResponse{
 		IsolationGroups: cfg,
 	}
@@ -1275,7 +1276,7 @@ func ToUpdateGlobalIsolationGroupsRequest(t *adminv1.UpdateGlobalIsolationGroups
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigFromIDL(t.IsolationGroups)
+	cfg := ToIsolationGroupConfig(t.IsolationGroups)
 	if cfg == nil {
 		return &types.UpdateGlobalIsolationGroupsRequest{}
 	}
@@ -1309,7 +1310,7 @@ func ToUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationGroups
 	if t == nil {
 		return nil
 	}
-	cfg := isolationGroupConfigFromIDL(t.IsolationGroups)
+	cfg := ToIsolationGroupConfig(t.IsolationGroups)
 	if cfg == nil {
 		return &types.UpdateDomainIsolationGroupsRequest{
 			Domain: t.Domain,
@@ -1321,15 +1322,15 @@ func ToUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationGroups
 	}
 }
 
-func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *adminv1.IsolationGroupConfiguration {
+func FromIsolationGroupConfig(in *types.IsolationGroupConfiguration) *apiv1.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
-	var out []*adminv1.IsolationGroupPartition
-	for _, v := range in {
-		out = append(out, &adminv1.IsolationGroupPartition{
+	var out []*apiv1.IsolationGroupPartition
+	for _, v := range *in {
+		out = append(out, &apiv1.IsolationGroupPartition{
 			Name:  v.Name,
-			State: adminv1.IsolationGroupState(v.State),
+			State: apiv1.IsolationGroupState(v.State),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -1338,12 +1339,12 @@ func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *adminv1.Is
 		}
 		return out[i].Name < out[j].Name
 	})
-	return &adminv1.IsolationGroupConfiguration{
+	return &apiv1.IsolationGroupConfiguration{
 		IsolationGroups: out,
 	}
 }
 
-func isolationGroupConfigFromIDL(in *adminv1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+func ToIsolationGroupConfig(in *apiv1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}

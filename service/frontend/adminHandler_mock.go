@@ -221,6 +221,21 @@ func (mr *MockAdminHandlerMockRecorder) GetDLQReplicationMessages(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockAdminHandler)(nil).GetDLQReplicationMessages), arg0, arg1)
 }
 
+// GetDomainIsolationGroups mocks base method.
+func (m *MockAdminHandler) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainIsolationGroups", ctx, request)
+	ret0, _ := ret[0].(*types.GetDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainIsolationGroups indicates an expected call of GetDomainIsolationGroups.
+func (mr *MockAdminHandlerMockRecorder) GetDomainIsolationGroups(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainIsolationGroups", reflect.TypeOf((*MockAdminHandler)(nil).GetDomainIsolationGroups), ctx, request)
+}
+
 // GetDomainReplicationMessages mocks base method.
 func (m *MockAdminHandler) GetDomainReplicationMessages(arg0 context.Context, arg1 *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
@@ -491,6 +506,21 @@ func (m *MockAdminHandler) Stop() {
 func (mr *MockAdminHandlerMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockAdminHandler)(nil).Stop))
+}
+
+// UpdateDomainIsolationGroups mocks base method.
+func (m *MockAdminHandler) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDomainIsolationGroups", ctx, request)
+	ret0, _ := ret[0].(*types.UpdateDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainIsolationGroups indicates an expected call of UpdateDomainIsolationGroups.
+func (mr *MockAdminHandlerMockRecorder) UpdateDomainIsolationGroups(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainIsolationGroups", reflect.TypeOf((*MockAdminHandler)(nil).UpdateDomainIsolationGroups), ctx, request)
 }
 
 // UpdateDynamicConfig mocks base method.

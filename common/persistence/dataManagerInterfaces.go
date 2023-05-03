@@ -1353,13 +1353,12 @@ type (
 
 	// DomainInfo describes the domain entity
 	DomainInfo struct {
-		ID                   string
-		Name                 string
-		Status               int
-		Description          string
-		OwnerEmail           string
-		Data                 map[string]string
-		IsolationGroupConfig types.IsolationGroupConfiguration
+		ID          string
+		Name        string
+		Status      int
+		Description string
+		OwnerEmail  string
+		Data        map[string]string
 	}
 
 	// DomainConfig describes the domain configuration
@@ -1372,6 +1371,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
+		IsolationGroups          types.IsolationGroupConfiguration
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration

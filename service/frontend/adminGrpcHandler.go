@@ -188,15 +188,15 @@ func (g adminGRPCHandler) GetGlobalIsolationGroups(ctx context.Context, request 
 
 func (g adminGRPCHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *adminv1.UpdateGlobalIsolationGroupsRequest) (*adminv1.UpdateGlobalIsolationGroupsResponse, error) {
 	res, err := g.h.UpdateGlobalIsolationGroups(ctx, proto.ToUpdateGlobalIsolationGroupsRequest(request))
-	return proto.FromUpdateGlobalIsolationGroupsResponse(res), err
+	return proto.FromUpdateGlobalIsolationGroupsResponse(res), proto.FromError(err)
 }
 
 func (g adminGRPCHandler) GetDomainIsolationGroups(ctx context.Context, request *adminv1.GetDomainIsolationGroupsRequest) (*adminv1.GetDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
-	return nil, nil
+	res, err := g.h.GetDomainIsolationGroups(ctx, proto.ToGetDomainIsolationGroupsRequest(request))
+	return proto.FromGetDomainIsolationGroupsResponse(res), proto.FromError(err)
 }
 
 func (g adminGRPCHandler) UpdateDomainIsolationGroups(ctx context.Context, request *adminv1.UpdateDomainIsolationGroupsRequest) (*adminv1.UpdateDomainIsolationGroupsResponse, error) {
-	panic("not implemented")
-	return nil, nil
+	res, err := g.h.UpdateDomainIsolationGroups(ctx, proto.ToUpdateDomainIsolationGroupsRequest(request))
+	return proto.FromUpdateDomainIsolationGroupsResponse(res), proto.FromError(err)
 }
