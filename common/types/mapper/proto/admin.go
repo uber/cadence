@@ -24,6 +24,7 @@ import (
 	"sort"
 
 	adminv1 "github.com/uber/cadence-idl/go/proto/admin/v1"
+	v1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common/types"
 )
 
@@ -1321,15 +1322,15 @@ func ToUpdateDomainIsolationGroupsRequest(t *adminv1.UpdateDomainIsolationGroups
 	}
 }
 
-func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *adminv1.IsolationGroupConfiguration {
+func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *v1.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}
-	var out []*adminv1.IsolationGroupPartition
+	var out []*v1.IsolationGroupPartition
 	for _, v := range in {
-		out = append(out, &adminv1.IsolationGroupPartition{
+		out = append(out, &v1.IsolationGroupPartition{
 			Name:  v.Name,
-			State: adminv1.IsolationGroupState(v.State),
+			State: v1.IsolationGroupState(v.State),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -1338,12 +1339,12 @@ func isolationGroupConfigToIDL(in types.IsolationGroupConfiguration) *adminv1.Is
 		}
 		return out[i].Name < out[j].Name
 	})
-	return &adminv1.IsolationGroupConfiguration{
+	return &v1.IsolationGroupConfiguration{
 		IsolationGroups: out,
 	}
 }
 
-func isolationGroupConfigFromIDL(in *adminv1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+func isolationGroupConfigFromIDL(in *v1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
 	if in == nil {
 		return nil
 	}

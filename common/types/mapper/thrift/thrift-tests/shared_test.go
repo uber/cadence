@@ -246,10 +246,8 @@ func TestIsolationGroupToDomainBlob(t *testing.T) {
 			},
 		},
 		"empty input": {
-			in: &types.IsolationGroupConfiguration{},
-			expectedOut: &shared.IsolationGroupConfiguration{
-				IsolationGroups: []*shared.IsolationGroupPartition{},
-			},
+			in:          &types.IsolationGroupConfiguration{},
+			expectedOut: &shared.IsolationGroupConfiguration{},
 		},
 		"nil input": {
 			in:          nil,
@@ -303,9 +301,7 @@ func TestIsolationGroupFromDomainBlob(t *testing.T) {
 			},
 		},
 		"empty input": {
-			in: &shared.IsolationGroupConfiguration{
-				IsolationGroups: []*shared.IsolationGroupPartition{},
-			},
+			in:          &shared.IsolationGroupConfiguration{},
 			expectedOut: &types.IsolationGroupConfiguration{},
 		},
 		"nil input": {
