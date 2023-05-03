@@ -1057,14 +1057,9 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 	if t == nil {
 		return nil
 	}
-	var ig *apiv1.IsolationGroupConfiguration
-	if t.Configuration != nil && t.Configuration.IsolationGroups != nil {
-		ig = isolationGroupConfigToIDL(*t.Configuration.IsolationGroups)
-	}
 	domain := apiv1.Domain{
 		FailoverVersion: t.FailoverVersion,
 		IsGlobalDomain:  t.IsGlobalDomain,
-		IsolationGroups: ig,
 	}
 	if info := t.DomainInfo; info != nil {
 		domain.Id = info.UUID
@@ -1075,6 +1070,7 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 		domain.Data = info.Data
 	}
 	if config := t.Configuration; config != nil {
+		domain.IsolationGroups = IsolationGroupConfigToIDL(config.IsolationGroups)
 		domain.WorkflowExecutionRetentionPeriod = daysToDuration(&config.WorkflowExecutionRetentionPeriodInDays)
 		domain.BadBinaries = FromBadBinaries(config.BadBinaries)
 		domain.HistoryArchivalStatus = FromArchivalStatus(config.HistoryArchivalStatus)
@@ -1122,7 +1118,7 @@ func ToDescribeDomainResponseDomain(t *apiv1.Domain) *types.DescribeDomainRespon
 			HistoryArchivalURI:                     t.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.VisibilityArchivalUri,
-			IsolationGroups:                        isolationGroupConfigFromIDL(t.IsolationGroups),
+			IsolationGroups:                        IsolationGroupConfigFromIDL(t.IsolationGroups),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.ActiveClusterName,
@@ -4218,11 +4214,6 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *apiv1.UpdateDomain
 		FailoverVersion: t.FailoverVersion,
 		IsGlobalDomain:  t.IsGlobalDomain,
 	}
-	var ig *apiv1.IsolationGroupConfiguration
-	if t.Configuration != nil && t.Configuration.IsolationGroups != nil {
-		ig = isolationGroupConfigToIDL(*t.Configuration.IsolationGroups)
-	}
-	domain.IsolationGroups = ig
 	if info := t.DomainInfo; info != nil {
 		domain.Id = info.UUID
 		domain.Name = info.Name
@@ -4232,6 +4223,7 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *apiv1.UpdateDomain
 		domain.Data = info.Data
 	}
 	if config := t.Configuration; config != nil {
+		domain.IsolationGroups = IsolationGroupConfigToIDL(config.IsolationGroups)
 		domain.WorkflowExecutionRetentionPeriod = daysToDuration(&config.WorkflowExecutionRetentionPeriodInDays)
 		domain.BadBinaries = FromBadBinaries(config.BadBinaries)
 		domain.HistoryArchivalStatus = FromArchivalStatus(config.HistoryArchivalStatus)
@@ -4269,7 +4261,7 @@ func ToUpdateDomainResponse(t *apiv1.UpdateDomainResponse) *types.UpdateDomainRe
 			HistoryArchivalURI:                     t.Domain.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.Domain.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.Domain.VisibilityArchivalUri,
-			IsolationGroups:                        isolationGroupConfigFromIDL(t.GetDomain().GetIsolationGroups()),
+			IsolationGroups:                        IsolationGroupConfigFromIDL(t.GetDomain().GetIsolationGroups()),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.Domain.ActiveClusterName,
