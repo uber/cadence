@@ -22,13 +22,15 @@ package domain
 
 import (
 	"context"
-	"github.com/golang/mock/gomock"
-	"github.com/uber/cadence/common/messaging"
-	"github.com/uber/cadence/service/history/constants"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/golang/mock/gomock"
+
+	"github.com/uber/cadence/common/messaging"
+	"github.com/uber/cadence/service/history/constants"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
