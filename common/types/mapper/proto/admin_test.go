@@ -244,8 +244,12 @@ func TestFromGetGlobalIsolationGroupsResponse(t *testing.T) {
 			},
 		},
 		"nil - 1": {
-			in:       &types.GetGlobalIsolationGroupsResponse{},
-			expected: &adminv1.GetGlobalIsolationGroupsResponse{},
+			in: &types.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: types.IsolationGroupConfiguration{},
+			},
+			expected: &adminv1.GetGlobalIsolationGroupsResponse{
+				IsolationGroups: &v1.IsolationGroupConfiguration{},
+			},
 		},
 		"nil - 2": {
 			expected: nil,

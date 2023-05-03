@@ -634,13 +634,6 @@ func TestIsolationGroupUpdating(t *testing.T) {
 		},
 	}
 
-	domainLookupResponse := &persistence.GetDomainResponse{
-		Info:              info,
-		Config:            &persistence.DomainConfig{},
-		IsGlobalDomain:    true,
-		ReplicationConfig: replicationCfg,
-	}
-
 	tests := map[string]struct {
 		in                      *types.UpdateDomainRequest
 		domainManagerAffordance func(m *persistence.MockDomainManager)
@@ -658,7 +651,12 @@ func TestIsolationGroupUpdating(t *testing.T) {
 				m.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{}, nil)
 				m.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{
 					Name: "domain",
-				}).Return(domainLookupResponse, nil)
+				}).Return(&persistence.GetDomainResponse{
+					Info:              info,
+					Config:            &persistence.DomainConfig{},
+					IsGlobalDomain:    true,
+					ReplicationConfig: replicationCfg,
+				}, nil)
 
 				m.EXPECT().UpdateDomain(gomock.Any(), &persistence.UpdateDomainRequest{
 					Info:              info,
@@ -690,7 +688,12 @@ func TestIsolationGroupUpdating(t *testing.T) {
 				m.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{}, nil)
 				m.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{
 					Name: "domain",
-				}).Return(domainLookupResponse, nil)
+				}).Return(&persistence.GetDomainResponse{
+					Info:              info,
+					Config:            &persistence.DomainConfig{},
+					IsGlobalDomain:    true,
+					ReplicationConfig: replicationCfg,
+				}, nil)
 
 				m.EXPECT().UpdateDomain(gomock.Any(), &persistence.UpdateDomainRequest{
 					Info:              info,
@@ -722,7 +725,12 @@ func TestIsolationGroupUpdating(t *testing.T) {
 				m.EXPECT().GetMetadata(gomock.Any()).Return(&persistence.GetMetadataResponse{}, nil)
 				m.EXPECT().GetDomain(gomock.Any(), &persistence.GetDomainRequest{
 					Name: "domain",
-				}).Return(domainLookupResponse, nil)
+				}).Return(&persistence.GetDomainResponse{
+					Info:              info,
+					Config:            &persistence.DomainConfig{},
+					IsGlobalDomain:    true,
+					ReplicationConfig: replicationCfg,
+				}, nil)
 
 				m.EXPECT().UpdateDomain(gomock.Any(), &persistence.UpdateDomainRequest{
 					Info: &persistence.DomainInfo{
@@ -740,6 +748,7 @@ func TestIsolationGroupUpdating(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
+
 			ctrl := gomock.NewController(t)
 			logger := loggerimpl.NewNopLogger()
 			domainConfig := Config{
