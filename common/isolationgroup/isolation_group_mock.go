@@ -126,31 +126,3 @@ func (mr *MockStateMockRecorder) Stop() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockState)(nil).Stop))
 }
-
-// Subscribe mocks base method.
-func (m *MockState) Subscribe(domainID, key string, notifyChannel chan<- ChangeEvent) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Subscribe", domainID, key, notifyChannel)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Subscribe indicates an expected call of Subscribe.
-func (mr *MockStateMockRecorder) Subscribe(domainID, key, notifyChannel interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subscribe", reflect.TypeOf((*MockState)(nil).Subscribe), domainID, key, notifyChannel)
-}
-
-// Unsubscribe mocks base method.
-func (m *MockState) Unsubscribe(domainID, key string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Unsubscribe", domainID, key)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Unsubscribe indicates an expected call of Unsubscribe.
-func (mr *MockStateMockRecorder) Unsubscribe(domainID, key interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unsubscribe", reflect.TypeOf((*MockState)(nil).Unsubscribe), domainID, key)
-}

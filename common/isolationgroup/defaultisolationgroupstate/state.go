@@ -129,21 +129,6 @@ func (z *defaultIsolationGroupStateHandler) Stop() {
 	close(z.done)
 }
 
-func (z *defaultIsolationGroupStateHandler) Subscribe(domainID, key string, notifyChannel chan<- isolationgroup.ChangeEvent) error {
-	z.subscriptionMu.Lock()
-	defer z.subscriptionMu.Unlock()
-
-	panic("not implemented")
-	return nil
-}
-
-func (z *defaultIsolationGroupStateHandler) Unsubscribe(domainID, key string) error {
-	z.subscriptionMu.Lock()
-	defer z.subscriptionMu.Unlock()
-	panic("not implemented")
-	return nil
-}
-
 func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, domainID string) (*isolationGroups, error) {
 	domain, err := z.domainCache.GetDomainByID(domainID)
 	if err != nil {
@@ -186,15 +171,6 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	}
 
 	return ig, nil
-}
-
-func (z *defaultIsolationGroupStateHandler) checkIfChanged() {
-	// todo (david.porter)
-	// check new values against existing cached ones
-	// get the difference
-	// if any difference, notify subscribers for whom the change is applicable
-	// ie, global changes for all, domain changes for the domain-listeners
-	panic("not implemented")
 }
 
 // A simple explicit deny-based isolation group implementation
