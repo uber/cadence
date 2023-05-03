@@ -954,6 +954,12 @@ func (d *handlerImpl) getIsolationGroupStatus(
 		return incomingCfg, false, nil
 	}
 
+	if incomingCfg == nil || incomingCfg.IsolationGroups == nil {
+		return &persistence.DomainConfig{
+			IsolationGroups: *updateRequest.IsolationGroupConfiguration,
+		}, true, nil
+	}
+
 	// upsert with whatever is present in the request always
 	incomingCfg.IsolationGroups = *updateRequest.IsolationGroupConfiguration
 	return incomingCfg, true, nil
