@@ -9,7 +9,6 @@ require (
 	github.com/hexdigest/gowrap v1.2.5
 	github.com/mattn/goveralls v0.0.11
 	github.com/mgechev/revive v1.2.2-0.20220724073416-db56db0b6a11
-	github.com/uber/tcheck v1.1.0
 	github.com/vektra/mockery/v2 v2.0.3
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.58.0
@@ -53,7 +52,6 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20210408094314-bf0c5240ed99 // indirect
 	github.com/alexkohler/prealloc v1.0.0 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
-	github.com/apache/thrift v0.13.0 // indirect
 	github.com/apex/log v1.9.0 // indirect
 	github.com/ashanbrown/forbidigo v1.3.0 // indirect
 	github.com/ashanbrown/makezero v1.1.1 // indirect
@@ -231,7 +229,6 @@ require (
 	github.com/timakin/bodyclose v0.0.0-20210704033933-f49887972144 // indirect
 	github.com/tomarrell/wrapcheck/v2 v2.6.1 // indirect
 	github.com/tommy-muehle/go-mnd/v2 v2.5.0 // indirect
-	github.com/uber/tchannel-go v1.22.0 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/ultraware/funlen v0.0.3 // indirect
 	github.com/ultraware/whitespace v0.0.5 // indirect
