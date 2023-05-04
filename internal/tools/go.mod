@@ -9,6 +9,7 @@ require (
 	github.com/hexdigest/gowrap v1.2.5
 	github.com/mattn/goveralls v0.0.11
 	github.com/mgechev/revive v1.2.2-0.20220724073416-db56db0b6a11
+	github.com/apache/thrift v0.13.0
 	github.com/vektra/mockery/v2 v2.0.3
 	go.uber.org/thriftrw v1.29.2
 	go.uber.org/yarpc v1.58.0
@@ -270,3 +271,6 @@ require (
 	mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b // indirect
 	mvdan.cc/unparam v0.0.0-20211214103731-d0ef000c54e5 // indirect
 )
+
+// ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version
+replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7

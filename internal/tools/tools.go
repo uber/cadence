@@ -47,4 +47,6 @@ import (
 	_ "github.com/mgechev/revive"
 	// coverage reporting
 	_ "github.com/mattn/goveralls"
+
+	_ "github.com/apache/thrift"
 )
