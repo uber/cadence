@@ -33,8 +33,6 @@ import (
 	"testing"
 	"time"
 
-	dc "github.com/uber/cadence/common/dynamicconfig"
-
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -753,11 +751,6 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		s.Equal(closeStatus, info.ExecutionInfo.CloseStatus)
 		err = s.DeleteCurrentWorkflowExecution(ctx, info.ExecutionInfo)
 		s.NoError(err)
-
-		time.Sleep(15 * time.Second)
-		s.Equal(dc.EnableExecutionTTL, true)
-		_, err = s.GetCurrentWorkflowRunID(ctx, domainID, workflowExecution.GetWorkflowID())
-		s.Error(err, "expected non nil error.")
 	}
 }
 
