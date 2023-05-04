@@ -69,6 +69,7 @@ const (
 	Encoding = "Encoding"
 
 	VisibilityOperation = "VisibilityOperation"
+	LikeStatement       = "%s LIKE '%%%s%%'\n"
 )
 
 type (
@@ -453,7 +454,6 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	// TODO: need to check next page token in the future
 	validMap := v.config.ValidSearchAttributes()
 	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
 	//panic(fmt.Sprintf("query = %s", query))
@@ -479,8 +479,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	validMap := v.config.ValidSearchAttributes()
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -501,7 +500,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
+	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -630,6 +629,7 @@ func createVisibilityMessage(
 
 // check if value is time.Time type
 // if it is, convert it to unixMilli
+// if it isn't time, return the original value
 func isTimeStruct(value []byte) ([]byte, error) {
 	var time time.Time
 	err := json.Unmarshal(value, &time)
@@ -640,7 +640,6 @@ func isTimeStruct(value []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
-	// if it is not time, return the original value
 	return value, nil
 }
 
@@ -739,12 +738,15 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 
 func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
-	f.string += "AND Attr LIKE '%%String field is for text%%'"
-	//panic("AND Attr LIKE '%%String field is for text%%'")
+	f.string += getPartialFormatString(key, val)
+	//panic(fmt.Sprintf(LikeStatement, key, val))
 }
 
-func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
+func getPartialFormatString(key string, val string) string {
+	return fmt.Sprintf(LikeStatement, key, val)
+}
+
+func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
@@ -755,8 +757,17 @@ func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowE
 	query.filters.addEqual(DomainID, request.DomainUUID)
 
 	requestQuery := strings.TrimSpace(request.Query)
-	if requestQuery != "" {
-		query.filters.addQuery(request.Query)
+
+	// if customized query is empty, directly return
+	if requestQuery == "" {
+		return query.String()
+	}
+
+	// when customized query is not empty
+	if common.IsJustOrderByClause(requestQuery) {
+		query.concatSorter(requestQuery)
+	} else { // check if it has a complete customized query
+		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
 	}
 
 	return query.String()
@@ -829,13 +840,10 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 		// need to trim key. Before trim, it is something like: `Attr.CustomStringField`
 		key = trimKey(key)
 
-		//valType, ok := validMap[key]
-		//panic(fmt.Sprintf("key = %s, valType = %s, val = %s， ok = %v", key, valType, val, ok))
 		if valType, ok := validMap[key]; ok {
 			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
 			val = removeQoute(val)
 
-			//panic(fmt.Sprintf("key = %s, indexValType = %s, val = %s", key, indexValType, val))
 			if indexValType == types.IndexedValueTypeKeyword {
 				query.filters.addEqual(key, val)
 			} else {
