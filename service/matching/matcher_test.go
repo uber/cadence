@@ -58,7 +58,7 @@ func TestMatcherSuite(t *testing.T) {
 func (t *MatcherTestSuite) SetupTest() {
 	t.controller = gomock.NewController(t.T())
 	t.client = matching.NewMockClient(t.controller)
-	cfg := NewConfig(dynamicconfig.NewNopCollection())
+	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	t.taskList = newTestTaskListID(uuid.New(), common.ReservedTaskListPrefix+"tl0/1", persistence.TaskListTypeDecision)
 	tlCfg, err := newTaskListConfig(t.taskList, cfg, t.newDomainCache())
 	t.NoError(err)

@@ -53,6 +53,7 @@ const (
 	signalName             = "signalName"
 	workflowVersion        = "workflow_version"
 	shardID                = "shard_id"
+	matchingHost           = "matching_host"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -210,4 +211,8 @@ func SignalNameAllTag() Tag {
 // WorkflowVersionTag returns a new WorkflowVersion tag
 func WorkflowVersionTag(value string) Tag {
 	return metricWithUnknown(workflowVersion, value)
+}
+
+func MatchingHostTag(value string) Tag {
+	return metricWithUnknown(matchingHost, value)
 }
