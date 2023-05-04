@@ -581,8 +581,19 @@ func createVisibilityMessage(
 	m[ShardID] = shardID
 
 	for key, value := range rawSearchAttributes {
+
+		var time time.Time
+		err := json.Unmarshal(value, &time)
+		if err == nil {
+			unixTime := time.UnixMilli()
+			value, err = json.Marshal(unixTime)
+			if err != nil {
+				panic("marshal unix time error in createVisibilityMessage")
+			}
+		}
+
 		var val interface{}
-		err := json.Unmarshal(value, &val)
+		err = json.Unmarshal(value, &val)
 		if err != nil {
 			return nil
 		}
