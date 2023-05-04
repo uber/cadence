@@ -690,9 +690,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID:      s.ShardInfo.RangeID,
-		TTLInSeconds: 10,
-		Mode:         p.UpdateWorkflowModeUpdateCurrent,
+		RangeID: s.ShardInfo.RangeID,
+		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.NoError(err)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -712,9 +711,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 				ExecutionStats: updatedStats,
 				Condition:      nextEventID,
 			},
-			RangeID:      s.ShardInfo.RangeID,
-			Mode:         p.UpdateWorkflowModeUpdateCurrent,
-			TTLInSeconds: 10,
+			RangeID: s.ShardInfo.RangeID,
+			Mode:    p.UpdateWorkflowModeUpdateCurrent,
 		})
 		s.IsType(&types.InternalServiceError{}, err)
 	}
@@ -745,6 +743,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			},
 			RangeID:      s.ShardInfo.RangeID,
 			TTLInSeconds: 10,
+			Mode:         p.UpdateWorkflowModeUpdateCurrent,
 		})
 		s.Nil(err)
 		info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -757,7 +756,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		time.Sleep(15 * time.Second)
 		s.Equal(dc.EnableExecutionTTL, true)
 		_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-		s.Nil(err, "expected non nil error.")
+		s.Error(err, "expected non nil error.")
 	}
 }
 
