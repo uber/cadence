@@ -25,7 +25,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	dc "github.com/uber/cadence/common/dynamicconfig"
 	"math"
 	"math/rand"
 	"os"
@@ -33,6 +32,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	dc "github.com/uber/cadence/common/dynamicconfig"
 
 	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
@@ -755,7 +756,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 
 		time.Sleep(15 * time.Second)
 		s.Equal(dc.EnableExecutionTTL, true)
-		_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+		_, err = s.GetCurrentWorkflowRunID(ctx, domainID, workflowExecution.GetWorkflowID())
 		s.Error(err, "expected non nil error.")
 	}
 }

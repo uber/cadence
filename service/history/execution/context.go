@@ -1227,8 +1227,8 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	if time.Time.IsZero(startTime) {
 		request.TTLInSeconds = daysInSeconds
 	} else {
-		//request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
-		request.TTLInSeconds = 10
+		request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
+		c.logger.SampleInfo("Calculated TTL", request.TTLInSeconds)
 	}
 
 	isRetryable := func(err error) bool {
