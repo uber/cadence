@@ -45,8 +45,7 @@ import (
 
 var (
 	errDomainUpdateTooFrequent = &types.ServiceBusyError{Message: "Domain update too frequent."}
-	errInvalidDomainNameTest = &types.BadRequestError{Message: "Domain name can only include alphanumeric and dash characters"}
-
+	errInvalidDomainNameTest   = &types.BadRequestError{Message: "Domain name can only include alphanumeric and dash characters"}
 )
 
 type (
