@@ -427,6 +427,11 @@ func StoreError(storeErr error) Tag {
 	return newErrorTag("store-error", storeErr)
 }
 
+// StoreShard returns tag for StoreShard
+func StoreShard(storeShard string) Tag {
+	return newPredefinedStringTag("store-shard", storeShard)
+}
+
 // ClientError returns tag for ClientError
 func ClientError(clientErr error) Tag {
 	return newErrorTag("client-error", clientErr)
