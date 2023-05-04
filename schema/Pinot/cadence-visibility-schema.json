@@ -49,6 +49,78 @@
     {
       "name": "Attr",
       "dataType": "JSON"
+    },
+    {
+      "name": "CustomStringField",
+      "dataType": "STRING"
+    },
+    {
+      "name": "CustomKeywordField",
+      "dataType": "STRING"
+    },
+    {
+      "name": "CustomIntField",
+      "dataType": "INT"
+    },
+    {
+      "name": "CustomDoubleField",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "CustomBoolField",
+      "dataType": "BOOLEAN"
+    },
+    {
+      "name": "CustomDatetimeField",
+      "dataType": "LONG"
+    },
+    {
+      "name": "project",
+      "dataType": "STRING"
+    },
+    {
+      "name": "service",
+      "dataType": "STRING"
+    },
+    {
+      "name": "environment",
+      "dataType": "STRING"
+    },
+    {
+      "name": "addon",
+      "dataType": "STRING"
+    },
+    {
+      "name": "addon-type",
+      "dataType": "STRING"
+    },
+    {
+      "name": "user",
+      "dataType": "STRING"
+    },
+    {
+      "name": "CustomDomain",
+      "dataType": "STRING"
+    },
+    {
+      "name": "Operator",
+      "dataType": "STRING"
+    },
+    {
+      "name": "RolloutID",
+      "dataType": "STRING"
+    },
+    {
+      "name": "CadenceChangeVersion",
+      "dataType": "STRING"
+    },
+    {
+      "name": "BinaryChecksums",
+      "dataType": "STRING"
+    },
+    {
+      "name": "Passed",
+      "dataType": "BOOLEAN"
     }
   ],
   "dateTimeFieldSpecs": [{
