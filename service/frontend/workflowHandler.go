@@ -289,6 +289,9 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) (retError error) {
+	logger := wh.GetLogger().WithTags(
+		tag.OperationName("RegisterDomain"))
+	logger.Info(fmt.Sprintf("RegisterDomain with wh pointer is called"))
 	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendRegisterDomainScope)
