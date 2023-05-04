@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	dc "github.com/uber/cadence/common/dynamicconfig"
 	"math"
 	"math/rand"
 	"os"
@@ -689,8 +690,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
+		RangeID:      s.ShardInfo.RangeID,
+		TTLInSeconds: 10,
+		Mode:         p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.NoError(err)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -710,8 +712,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 				ExecutionStats: updatedStats,
 				Condition:      nextEventID,
 			},
-			RangeID: s.ShardInfo.RangeID,
-			Mode:    p.UpdateWorkflowModeUpdateCurrent,
+			RangeID:      s.ShardInfo.RangeID,
+			Mode:         p.UpdateWorkflowModeUpdateCurrent,
+			TTLInSeconds: 10,
 		})
 		s.IsType(&types.InternalServiceError{}, err)
 	}
@@ -742,7 +745,6 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			},
 			RangeID:      s.ShardInfo.RangeID,
 			TTLInSeconds: 10,
-			Mode:         p.UpdateWorkflowModeUpdateCurrent,
 		})
 		s.Nil(err)
 		info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -753,8 +755,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		s.NoError(err)
 
 		time.Sleep(15 * time.Second)
+		s.Equal(dc.EnableExecutionTTL, true)
 		_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-		s.Error(err, "expected non nil error.")
+		s.Nil(err, "expected non nil error.")
 	}
 }
 
