@@ -67,6 +67,8 @@ func NewService(
 		return nil, err
 	}
 
+	serviceConfig.HostName = params.HostName
+
 	return &Service{
 		Resource: serviceResource,
 		status:   common.DaemonStatusInitialized,
@@ -94,7 +96,6 @@ func (s *Service) Start() {
 		s.GetMetricsClient(),
 		s.GetDomainCache(),
 		s.GetMembershipResolver(),
-		s.GetHostName(),
 	)
 
 	s.handler = NewHandler(engine, s.config, s.GetDomainCache(), s.GetMetricsClient(), s.GetLogger(), s.GetThrottledLogger())

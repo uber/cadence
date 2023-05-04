@@ -90,7 +90,6 @@ type (
 		domainCache          cache.DomainCache
 		versionChecker       client.VersionChecker
 		membershipResolver   membership.Resolver
-		hostName             string
 	}
 )
 
@@ -124,7 +123,6 @@ func NewEngine(taskManager persistence.TaskManager,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
 	resolver membership.Resolver,
-	hostName string,
 ) Engine {
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
@@ -140,7 +138,6 @@ func NewEngine(taskManager persistence.TaskManager,
 		domainCache:          domainCache,
 		versionChecker:       client.NewVersionChecker(),
 		membershipResolver:   resolver,
-		hostName:             hostName,
 	}
 }
 
@@ -309,7 +306,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("decision_task"),
-			metrics.MatchingHostTag(e.hostName)).IncCounter(metrics.CadenceTasklistRequests)
+			metrics.MatchingHostTag(e.config.HostName)).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on decision task",
 			tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName))
@@ -380,7 +377,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
 		e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 			metrics.TaskListTag(taskListName), metrics.TaskListTypeTag("activity_task"),
-			metrics.MatchingHostTag(e.hostName)).IncCounter(metrics.CadenceTasklistRequests)
+			metrics.MatchingHostTag(e.config.HostName)).IncCounter(metrics.CadenceTasklistRequests)
 		e.emitInfoOrDebugLog(domainID, "Emitting tasklist counter on activity task",
 			tag.Dynamic("tasklistName", taskListName),
 			tag.Dynamic("taskListBaseName", taskList.baseName))

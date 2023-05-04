@@ -69,6 +69,9 @@ type (
 		EnableTaskInfoLogByDomainID dynamicconfig.BoolPropertyFnWithDomainIDFilter
 
 		ActivityTaskSyncMatchWaitTime dynamicconfig.DurationPropertyFnWithDomainFilter
+
+		// hostname info
+		HostName string
 	}
 
 	forwarderConfig struct {
@@ -130,6 +133,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
 		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID),
 		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
+		HostName:                        "",
 	}
 }
 
