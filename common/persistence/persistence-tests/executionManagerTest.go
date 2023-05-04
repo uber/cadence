@@ -751,7 +751,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		s.Equal(closeStatus, info.ExecutionInfo.CloseStatus)
 		log.Info("Workflow execution last updated: %v", info.ExecutionInfo.LastUpdatedTimestamp)
 
-		time.Sleep(20)
+		time.Sleep(15 * time.Second)
 
 		_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
 		s.Error(err, "expected non nil error.")
