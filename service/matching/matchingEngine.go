@@ -332,6 +332,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
 	}
+
 	return tlMgr.AddTask(hCtx.Context, addTaskParams{
 		execution:     request.Execution,
 		taskInfo:      taskInfo,
@@ -396,6 +397,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
 	}
+
 	return tlMgr.AddTask(hCtx.Context, addTaskParams{
 		execution:                request.Execution,
 		taskInfo:                 taskInfo,
