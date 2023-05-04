@@ -328,6 +328,7 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 	if registerRequest.GetName() == "" {
 		return errDomainNotSet
 	}
+
 	logger2 := wh.GetLogger().WithTags(
 		tag.OperationName("RegisterDomain"))
 	logger2.Info(fmt.Sprintf("RegisterDomain with wh pointer is called"))

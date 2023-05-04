@@ -25,7 +25,6 @@ package domain
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -126,6 +125,7 @@ func (d *handlerImpl) RegisterDomain(
 	ctx context.Context,
 	registerRequest *types.RegisterDomainRequest,
 ) error {
+
 	// cluster global domain enabled
 	if !d.clusterMetadata.IsPrimaryCluster() && registerRequest.GetIsGlobalDomain() {
 		return errNotPrimaryCluster
