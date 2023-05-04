@@ -115,7 +115,7 @@ type Config struct {
 	// Emit signal related metrics with signal name tag. Be aware of cardinality.
 	EmitSignalNameMetricsTag dynamicconfig.BoolPropertyFnWithDomainFilter
 
-	// HostName addition
+	// HostName for machine running the service
 	HostName string
 }
 

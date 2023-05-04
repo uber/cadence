@@ -324,7 +324,7 @@ type Config struct {
 	LargeShardHistoryEventMetricThreshold dynamicconfig.IntPropertyFn
 	LargeShardHistoryBlobMetricThreshold  dynamicconfig.IntPropertyFn
 
-	// Hostname addition
+	// HostName for machine running the service
 	HostName string
 }
 
