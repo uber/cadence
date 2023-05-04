@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"sync/atomic"
 	"time"
 
@@ -140,7 +139,6 @@ var (
 	errInvalidDelayStartSeconds                   = &types.BadRequestError{Message: "A valid DelayStartSeconds is not set on request."}
 	errInvalidJitterStartSeconds                  = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (negative)."}
 	errInvalidJitterStartSeconds2                 = &types.BadRequestError{Message: "A valid JitterStartSeconds is not set on request (larger than cron duration)."}
-	errInvalidDomainName                          = &types.BadRequestError{Message: "Domain name can only include alphanumeric and dash characters."}
 	errQueryDisallowedForDomain                   = &types.BadRequestError{Message: "Domain is not allowed to query, please contact cadence team to re-enable queries."}
 	errClusterNameNotSet                          = &types.BadRequestError{Message: "Cluster name is not set."}
 	errEmptyReplicationInfo                       = &types.BadRequestError{Message: "Replication task info is not set."}
@@ -161,8 +159,6 @@ var (
 	errIdentityTooLong     = &types.BadRequestError{Message: "Identity length exceeds limit."}
 
 	frontendServiceRetryPolicy = common.CreateFrontendServiceRetryPolicy()
-
-	domainNameRegex = regexp.MustCompile("^[a-zA-Z0-9-]+$")
 )
 
 // NewWorkflowHandler creates a thrift handler for the cadence service
@@ -293,9 +289,6 @@ func (wh *WorkflowHandler) Health(ctx context.Context) (*types.HealthStatus, err
 // acts as a sandbox and provides isolation for all resources within the domain.  All resources belongs to exactly one
 // domain.
 func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *types.RegisterDomainRequest) (retError error) {
-	logger := wh.GetLogger().WithTags(
-		tag.OperationName("RegisterDomain"))
-	logger.Info(fmt.Sprintf("RegisterDomain with wh pointer is called"))
 	defer func() { log.CapturePanic(recover(), wh.GetLogger(), &retError) }()
 
 	scope, sw := wh.startRequestProfile(ctx, metrics.FrontendRegisterDomainScope)
@@ -329,14 +322,6 @@ func (wh *WorkflowHandler) RegisterDomain(ctx context.Context, registerRequest *
 		return errDomainNotSet
 	}
 
-	logger2 := wh.GetLogger().WithTags(
-		tag.OperationName("RegisterDomain"))
-	logger2.Info(fmt.Sprintf("RegisterDomain with wh pointer is called"))
-	if !domainNameRegex.MatchString(registerRequest.GetName()) {
-		logger2.Debug("domain name did not match regex")
-		return errInvalidDomainName
-	}
-	logger2.Info(fmt.Sprintf("domain name matched regex"))
 	err := wh.domainHandler.RegisterDomain(ctx, registerRequest)
 	if err != nil {
 		return wh.error(err, scope)
