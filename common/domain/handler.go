@@ -284,7 +284,7 @@ func (d *handlerImpl) RegisterDomain(
 		}
 	}
 
-	d.logger.Info("Register domain succeeded",
+	d.logger.Info("Register domain succeeded test123",
 		tag.WorkflowDomainName(registerRequest.GetName()),
 		tag.WorkflowDomainID(domainResponse.ID),
 	)
