@@ -153,7 +153,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		return err
 	}
 
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -175,6 +175,11 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		int64(request.ShardID),
 		request.SearchAttributes,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
@@ -185,7 +190,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		return err
 	}
 
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -207,12 +212,17 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		int64(request.ShardID),
 		request.SearchAttributes,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.Context, request *p.InternalRecordWorkflowExecutionUninitializedRequest) error {
 	v.checkProducer()
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -234,6 +244,11 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		request.ShardID,
 		nil,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
@@ -244,7 +259,7 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		return err
 	}
 
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -266,6 +281,11 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.ShardID,
 		request.SearchAttributes,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
@@ -539,7 +559,7 @@ func createVisibilityMessage(
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
-) *indexer.PinotMessage {
+) (*indexer.PinotMessage, error) {
 	//status := int(closeStatus)
 	//
 	//rawMsg := visibilityMessage{
@@ -580,37 +600,48 @@ func createVisibilityMessage(
 	m[UpdateTime] = updateTimeUnixNano
 	m[ShardID] = shardID
 
+	var err error
 	for key, value := range rawSearchAttributes {
-
-		var time time.Time
-		err := json.Unmarshal(value, &time)
-		if err == nil {
-			unixTime := time.UnixMilli()
-			value, err = json.Marshal(unixTime)
-			if err != nil {
-				panic("marshal unix time error in createVisibilityMessage")
-			}
+		value, err = isTimeStruct(value)
+		if err != nil {
+			return nil, err
 		}
 
 		var val interface{}
 		err = json.Unmarshal(value, &val)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		m[key] = val
 	}
 
 	serializedMsg, err := json.Marshal(m)
 	if err != nil {
-		panic("serialize msg error!")
+		return nil, err
 	}
 
 	msg := &indexer.PinotMessage{
 		WorkflowID: common.StringPtr(wid),
 		Payload:    serializedMsg,
 	}
-	return msg
+	return msg, nil
 
+}
+
+// check if value is time.Time type
+// if it is, convert it to unixMilli
+func isTimeStruct(value []byte) ([]byte, error) {
+	var time time.Time
+	err := json.Unmarshal(value, &time)
+	if err == nil {
+		unixTime := time.UnixMilli()
+		value, err = json.Marshal(unixTime)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// if it is not time, return the original value
+	return value, nil
 }
 
 /****************************** Request Translator ******************************/
