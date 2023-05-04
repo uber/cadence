@@ -1223,11 +1223,11 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	retention := time.Duration(config.Retention)
 	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
 
-	ptr := request.UpdateWorkflowMutation.ExecutionInfo.StartTimestamp
-	if time.Time.IsZero(ptr) {
+	startTime := request.UpdateWorkflowMutation.ExecutionInfo.StartTimestamp
+	if time.Time.IsZero(startTime) {
 		request.TTLInSeconds = daysInSeconds
 	} else {
-		request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(ptr).Seconds()) + daysInSeconds
+		request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
 	}
 
 	isRetryable := func(err error) bool {
