@@ -22,6 +22,7 @@ package bench
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"go.uber.org/cadence/worker"
@@ -73,7 +74,7 @@ func NewWorker(cfg *lib.Config) (lib.Runnable, error) {
 // Run runs the worker
 func (w *loadTestWorker) Run() error {
 	if err := w.createDomains(); err != nil {
-		w.runtime.Logger.Error("Failed to create bench domain", zap.Error(err))
+		return fmt.Errorf("creating bench domain: %w", err)
 	}
 
 	worker.SetStickyWorkflowCacheSize(stickyWorkflowCacheSize)
