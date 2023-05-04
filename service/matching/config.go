@@ -99,6 +99,8 @@ type (
 		MaxTaskBatchSize                func() int
 		NumWritePartitions              func() int
 		NumReadPartitions               func() int
+		// hostname
+		HostName string
 	}
 )
 
@@ -198,5 +200,6 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 				return common.MaxInt(1, config.ForwarderMaxChildrenPerNode(domainName, taskListName, taskType))
 			},
 		},
+		HostName: config.HostName,
 	}, nil
 }
