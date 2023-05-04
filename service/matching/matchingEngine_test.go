@@ -1249,6 +1249,12 @@ func (s *matchingEngineSuite) assertPollTaskResponse(taskType int, param *testPa
 	}
 }
 
+func (s *matchingEngineSuite) TestConfigDefaultHostName() {
+	configEmpty := Config{}
+	s.NotEqualValues(s.matchingEngine.config.HostName, configEmpty.HostName)
+	s.EqualValues(configEmpty.HostName, "")
+}
+
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,
 	scheduleAttributes *types.ScheduleActivityTaskDecisionAttributes) *types.HistoryEvent {
 	historyEvent := newHistoryEvent(eventID, types.EventTypeActivityTaskScheduled)
