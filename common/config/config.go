@@ -75,8 +75,6 @@ type (
 		Authorization Authorization `yaml:"authorization"`
 		// HeaderForwardingRules defines which inbound headers to include or exclude on outbound calls
 		HeaderForwardingRules []HeaderRule `yaml:"headerForwardingRules"`
-		// HostName contains the server/cluster hosting cadence
-		HostName string `yaml:"hostName"`
 	}
 
 	HeaderRule struct {
