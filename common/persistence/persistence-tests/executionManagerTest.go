@@ -749,8 +749,6 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		s.Nil(err)
 		s.Equal(p.WorkflowStateCompleted, info.ExecutionInfo.State)
 		s.Equal(closeStatus, info.ExecutionInfo.CloseStatus)
-		err = s.DeleteCurrentWorkflowExecution(ctx, info.ExecutionInfo)
-		s.NoError(err)
 	}
 }
 
