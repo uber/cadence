@@ -47,10 +47,6 @@
       "dataType": "INT"
     },
     {
-      "name": "Attr",
-      "dataType": "JSON"
-    },
-    {
       "name": "CustomStringField",
       "dataType": "STRING"
     },

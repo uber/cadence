@@ -179,7 +179,7 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 
 	// check nil input
 	nilResult, err := client.getInternalListWorkflowExecutionsResponse(nil, isRecordValid, nil, 10, 33)
-	assert.Nil(t, nilResult)
+	assert.Equal(t, &p.InternalListWorkflowExecutionsResponse{}, nilResult)
 	assert.Nil(t, err)
 }
 

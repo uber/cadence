@@ -45,31 +45,26 @@ import (
 
 const (
 	pinotPersistenceName = "pinot"
-
-	DescendingOrder = "DESC"
-	AcendingOrder   = "ASC"
-
-	DocID         = "DocID"
-	DomainID      = "DomainID"
-	WorkflowID    = "WorkflowID"
-	RunID         = "RunID"
-	WorkflowType  = "WorkflowType"
-	CloseStatus   = "CloseStatus"
-	HistoryLength = "HistoryLength"
-	TaskList      = "TaskList"
-	IsCron        = "IsCron"
-	NumClusters   = "NumClusters"
-	ShardID       = "ShardID"
-	Attr          = "Attr"
-	StartTime     = "StartTime"
-	CloseTime     = "CloseTime"
-	UpdateTime    = "UpdateTime"
-	ExecutionTime = "ExecutionTime"
-
-	Encoding = "Encoding"
-
-	VisibilityOperation = "VisibilityOperation"
-	LikeStatement       = "%s LIKE '%%%s%%'\n"
+	DescendingOrder      = "DESC"
+	AcendingOrder        = "ASC"
+	DocID                = "DocID"
+	DomainID             = "DomainID"
+	WorkflowID           = "WorkflowID"
+	RunID                = "RunID"
+	WorkflowType         = "WorkflowType"
+	CloseStatus          = "CloseStatus"
+	HistoryLength        = "HistoryLength"
+	TaskList             = "TaskList"
+	IsCron               = "IsCron"
+	NumClusters          = "NumClusters"
+	ShardID              = "ShardID"
+	Attr                 = "Attr"
+	StartTime            = "StartTime"
+	CloseTime            = "CloseTime"
+	UpdateTime           = "UpdateTime"
+	ExecutionTime        = "ExecutionTime"
+	Encoding             = "Encoding"
+	LikeStatement        = "%s LIKE '%%%s%%'\n"
 )
 
 type (
@@ -92,7 +87,6 @@ type (
 		TaskID        int64  `json:"TaskID,omitempty"`
 		IsCron        bool   `json:"IsCron,omitempty"`
 		NumClusters   int64  `json:"NumClusters,omitempty"`
-		Attr          string `json:"Attr,omitempty"`
 		UpdateTime    int64  `json:"UpdateTime,omitempty"` // update execution,
 		ShardID       int64  `json:"ShardID,omitempty"`
 		// specific to certain status
@@ -148,11 +142,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	//attr, err := json.Marshal(request.SearchAttributes)
-	attr, err := decodeAttr(request.SearchAttributes)
-	if err != nil {
-		return err
-	}
 
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
@@ -167,10 +156,8 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		string(attr),
-		common.RecordStarted,
-		0,                                   // will not be used
-		0,                                   // will not be used
+		-1,                                  // represent invalid close time, means open workflow execution
+		-1,                                  // represent invalid close status, means open workflow execution
 		0,                                   // will not be used
 		request.UpdateTimestamp.UnixMilli(), // will be updated when workflow execution updates
 		int64(request.ShardID),
@@ -186,10 +173,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context, request *p.InternalRecordWorkflowExecutionClosedRequest) error {
 	v.checkProducer()
-	attr, err := decodeAttr(request.SearchAttributes)
-	if err != nil {
-		return err
-	}
 
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
@@ -204,8 +187,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		string(attr),
-		common.RecordClosed,
 		request.CloseTimestamp.UnixMilli(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
@@ -236,10 +217,8 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		"",
 		false,
 		0,
-		"",
-		"",
-		0,
-		0,
+		-1, // represent invalid close time, means open workflow execution
+		-1, // represent invalid close status, means open workflow execution
 		0,
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
@@ -255,11 +234,6 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
 	v.checkProducer()
-	attr, err := decodeAttr(request.SearchAttributes)
-	if err != nil {
-		return err
-	}
-
 	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
@@ -273,11 +247,9 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		string(attr),
-		common.UpsertSearchAttributes,
-		0, // will not be used
-		0, // will not be used
-		0, // will not be used
+		-1, // represent invalid close time, means open workflow execution
+		-1, // represent invalid close status, means open workflow execution
+		0,  // will not be used
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
 		request.SearchAttributes,
@@ -548,9 +520,7 @@ func createVisibilityMessage(
 	memo []byte,
 	encoding common.EncodingType,
 	isCron bool,
-	NumClusters int16,
-	searchAttributes string,
-	visibilityOperation common.VisibilityOperation,
+	numClusters int16,
 	// specific to certain status
 	closeTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
@@ -559,27 +529,6 @@ func createVisibilityMessage(
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 ) (*indexer.PinotMessage, error) {
-	//status := int(closeStatus)
-	//
-	//rawMsg := visibilityMessage{
-	//	DocID:         wid + "-" + rid,
-	//	DomainID:      domainID,
-	//	WorkflowID:    wid,
-	//	RunID:         rid,
-	//	WorkflowType:  workflowTypeName,
-	//	TaskList:      taskList,
-	//	StartTime:     startTimeUnixNano,
-	//	ExecutionTime: executionTimeUnixNano,
-	//	IsCron:        isCron,
-	//	NumClusters:   int64(NumClusters),
-	//	Attr:          searchAttributes,
-	//	CloseTime:     closeTimeUnixNano,
-	//	CloseStatus:   int64(status),
-	//	HistoryLength: historyLength,
-	//	UpdateTime:    updateTimeUnixNano,
-	//	ShardID:       shardID,
-	//}
-
 	m := make(map[string]interface{})
 	//loop through all input parameters
 	m[DocID] = wid + "-" + rid
@@ -591,8 +540,7 @@ func createVisibilityMessage(
 	m[StartTime] = startTimeUnixNano
 	m[ExecutionTime] = executionTimeUnixNano
 	m[IsCron] = isCron
-	m["NumClusters"] = NumClusters
-	m[Attr] = searchAttributes
+	m[NumClusters] = numClusters
 	m[CloseTime] = closeTimeUnixNano
 	m[CloseStatus] = int(closeStatus)
 	m[HistoryLength] = historyLength

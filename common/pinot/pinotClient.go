@@ -196,11 +196,10 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	pageSize int,
 	maxResultWindow int,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if resp == nil {
-		return nil, nil
-	}
-
 	response := &p.InternalListWorkflowExecutionsResponse{}
+	if resp == nil || resp.ResultTable == nil || resp.ResultTable.GetRowCount() == 0 {
+		return response, nil
+	}
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	//columnDataTypes := schema.ColumnDataTypes
 	columnNames := schema.ColumnNames
