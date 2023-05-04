@@ -25,6 +25,7 @@ package pinot
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/startreedata/pinot-client-go/pinot"
@@ -99,7 +100,11 @@ func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
 	resMap := make(map[string]interface{})
 
 	for i := 0; i < len(columnNames); i++ {
-		resMap[columnNames[i]] = hit[i]
+		key := columnNames[i]
+		// checks if it is system key, if yes, put it into the map
+		if ok, _ := isSystemKey(key); ok {
+			resMap[key] = hit[i]
+		}
 	}
 
 	return resMap
@@ -248,4 +253,18 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	response.Execution = c.convertSearchResultToVisibilityRecord(actualHits[0], columnNames)
 
 	return response, nil
+}
+
+// checks if a string is system key
+func isSystemKey(key string) (bool, string) {
+	msg := VisibilityRecord{}
+	values := reflect.ValueOf(msg)
+	typesOf := values.Type()
+	for i := 0; i < values.NumField(); i++ {
+		fieldName := typesOf.Field(i).Name
+		if fieldName == key {
+			return true, typesOf.Field(i).Type.String()
+		}
+	}
+	return false, "nil"
 }

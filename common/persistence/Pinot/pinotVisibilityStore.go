@@ -173,6 +173,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		0,                                   // will not be used
 		request.UpdateTimestamp.UnixMilli(), // will be updated when workflow execution updates
 		int64(request.ShardID),
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -204,6 +205,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -230,6 +232,7 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		0,
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
+		nil,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -261,6 +264,7 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		0, // will not be used
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
+		request.SearchAttributes,
 	)
 	return v.producer.Publish(ctx, msg)
 }
@@ -432,6 +436,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 	// TODO: need to check next page token in the future
 	validMap := v.config.ValidSearchAttributes()
 	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
+	//panic(fmt.Sprintf("query = %s", query))
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -533,29 +538,58 @@ func createVisibilityMessage(
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
+	rawSearchAttributes map[string][]byte,
 ) *indexer.PinotMessage {
-	status := int(closeStatus)
+	//status := int(closeStatus)
+	//
+	//rawMsg := visibilityMessage{
+	//	DocID:         wid + "-" + rid,
+	//	DomainID:      domainID,
+	//	WorkflowID:    wid,
+	//	RunID:         rid,
+	//	WorkflowType:  workflowTypeName,
+	//	TaskList:      taskList,
+	//	StartTime:     startTimeUnixNano,
+	//	ExecutionTime: executionTimeUnixNano,
+	//	IsCron:        isCron,
+	//	NumClusters:   int64(NumClusters),
+	//	Attr:          searchAttributes,
+	//	CloseTime:     closeTimeUnixNano,
+	//	CloseStatus:   int64(status),
+	//	HistoryLength: historyLength,
+	//	UpdateTime:    updateTimeUnixNano,
+	//	ShardID:       shardID,
+	//}
 
-	rawMsg := visibilityMessage{
-		DocID:         wid + "-" + rid,
-		DomainID:      domainID,
-		WorkflowID:    wid,
-		RunID:         rid,
-		WorkflowType:  workflowTypeName,
-		TaskList:      taskList,
-		StartTime:     startTimeUnixNano,
-		ExecutionTime: executionTimeUnixNano,
-		IsCron:        isCron,
-		NumClusters:   int64(NumClusters),
-		Attr:          searchAttributes,
-		CloseTime:     closeTimeUnixNano,
-		CloseStatus:   int64(status),
-		HistoryLength: historyLength,
-		UpdateTime:    updateTimeUnixNano,
-		ShardID:       shardID,
+	m := make(map[string]interface{})
+	//loop through all input parameters
+	m[DocID] = wid + "-" + rid
+	m[DomainID] = domainID
+	m[WorkflowID] = wid
+	m[RunID] = rid
+	m[WorkflowType] = workflowTypeName
+	m[TaskList] = taskList
+	m[StartTime] = startTimeUnixNano
+	m[ExecutionTime] = executionTimeUnixNano
+	m[IsCron] = isCron
+	m["NumClusters"] = NumClusters
+	m[Attr] = searchAttributes
+	m[CloseTime] = closeTimeUnixNano
+	m[CloseStatus] = int(closeStatus)
+	m[HistoryLength] = historyLength
+	m[UpdateTime] = updateTimeUnixNano
+	m[ShardID] = shardID
+
+	for key, value := range rawSearchAttributes {
+		var val interface{}
+		err := json.Unmarshal(value, &val)
+		if err != nil {
+			return nil
+		}
+		m[key] = val
 	}
 
-	serializedMsg, err := json.Marshal(rawMsg)
+	serializedMsg, err := json.Marshal(m)
 	if err != nil {
 		panic("serialize msg error!")
 	}
@@ -565,6 +599,7 @@ func createVisibilityMessage(
 		Payload:    serializedMsg,
 	}
 	return msg
+
 }
 
 /****************************** Request Translator ******************************/
@@ -660,16 +695,11 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
-func (f *PinotQueryFilter) addExactMatch(key string, val string) {
-	f.checkFirstFilter()
-	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
-	f.string += fmt.Sprintf("AND TEXT_MATCH(%s, '%s')\n", Attr, val)
-}
-
 func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
 	f.checkFirstFilter()
 	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
-	f.string += fmt.Sprintf("AND %s LIKE '%%%s%%'\n", Attr, val)
+	f.string += "AND Attr LIKE '%%String field is for text%%'"
+	//panic("AND Attr LIKE '%%String field is for text%%'")
 }
 
 func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
@@ -700,73 +730,120 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		panic(fmt.Sprintf("deserialize next page token error: %s", err))
 	}
 
-	// TODO: switch to v.logger or something
-	queryQueryLogger := log.NewNoop()
 	query := NewPinotQuery(tableName)
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
 
 	requestQuery := strings.TrimSpace(request.Query)
+
+	// if customized query is empty, directly return
 	if requestQuery == "" {
 		query.addOffsetAndLimits(token.From, request.PageSize)
-	} else if common.IsJustOrderByClause(requestQuery) {
-		query.concatSorter(requestQuery)
-		query.addOffsetAndLimits(token.From, request.PageSize)
-	} else {
-		// checks every case of 'and'
-		reg := regexp.MustCompile("(?i)(and)")
-		queryList := reg.Split(requestQuery, -1)
-
-		for _, element := range queryList {
-			element := strings.TrimSpace(element)
-			pair := strings.Split(element, " ")
-			key := pair[0]
-
-			// case: when order by query also passed in
-			if strings.ToLower(key) == "order" && strings.ToLower(pair[1]) == "by" {
-				query.concatSorter(element)
-				continue
-			}
-
-			if pinotContainsKey(key) {
-				query.filters.addQuery(element)
-				continue
-			}
-
-			if valType, ok := validMap[key]; ok {
-				val := pair[2]
-				indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
-				isKeyWord := indexValType == types.IndexedValueTypeKeyword
-				if isKeyWord {
-					query.filters.addExactMatch(key, val)
-				} else {
-					query.filters.addPartialMatch(key, val)
-				}
-			} else {
-				queryQueryLogger.Error("Unregistered field!!")
-			}
-
-		}
-
-		query.addOffsetAndLimits(token.From, request.PageSize)
+		return query.String()
 	}
 
+	// when customized query is not empty
+	if common.IsJustOrderByClause(requestQuery) {
+		query.concatSorter(requestQuery)
+	} else { // check if it has a complete customized query
+		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+	}
+
+	query.addOffsetAndLimits(token.From, request.PageSize)
 	return query.String()
 }
 
-// hard coded for this PoC. Will use dynamic configs later.
-func pinotContainsKey(key string) bool {
+func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
+	// TODO: switch to v.logger or something
+	queryQueryLogger := log.NewNoop()
+
+	// checks every case of 'and'
+	reg := regexp.MustCompile("(?i)(and)")
+	queryList := reg.Split(requestQuery, -1)
+
+	for _, element := range queryList {
+		element := strings.TrimSpace(element)
+		pair := strings.Split(element, " ")
+		key := pair[0]
+
+		// case: when order by query also passed in
+		if strings.ToLower(key) == "order" && strings.ToLower(pair[1]) == "by" {
+			query.concatSorter(element)
+			continue
+		}
+
+		valArray := pair[2:len(pair)]
+		val := strings.Join(valArray, " ")
+
+		if ok, structType := isSystemKey(key); ok {
+			if structType == "string" {
+				val = addSingleQoute(val)
+			}
+			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, pair[1], val))
+			continue
+		}
+
+		// need to trim key. Before trim, it is something like: `Attr.CustomStringField`
+		key = trimKey(key)
+
+		//valType, ok := validMap[key]
+		//panic(fmt.Sprintf("key = %s, valType = %s, val = %s， ok = %v", key, valType, val, ok))
+		if valType, ok := validMap[key]; ok {
+			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
+			val = removeQoute(val)
+
+			//panic(fmt.Sprintf("key = %s, indexValType = %s, val = %s", key, indexValType, val))
+			if indexValType == types.IndexedValueTypeKeyword {
+				query.filters.addEqual(key, val)
+			} else {
+				query.filters.addPartialMatch(key, val)
+			}
+		} else {
+			queryQueryLogger.Error("Unregistered field!!")
+		}
+	}
+
+	return query
+}
+
+func trimKey(key string) string {
+	if strings.HasPrefix(key, fmt.Sprintf("`%s.", Attr)) {
+		return key[len(Attr)+2 : len(key)-1]
+	}
+	return key
+}
+
+func removeQoute(val string) string {
+	if val[0] == '"' && val[len(val)-1] == '"' {
+		val = fmt.Sprintf("%s", val[1:len(val)-1])
+	} else if val[0] == '\'' && val[len(val)-1] == '\'' {
+		val = fmt.Sprintf("%s", val[1:len(val)-1])
+	}
+	return fmt.Sprintf("%s", val)
+}
+
+func addSingleQoute(val string) string {
+	if val[0] == '"' && val[len(val)-1] == '"' {
+		val = fmt.Sprintf("'%s'", val[1:len(val)-1])
+	} else if val[0] != '\'' && val[0] != '"' {
+		val = fmt.Sprintf("'%s'", val)
+	}
+	return fmt.Sprintf("%s", val)
+}
+
+// checks if a string is system key
+func isSystemKey(key string) (bool, string) {
 	msg := visibilityMessage{}
 	values := reflect.ValueOf(msg)
 	typesOf := values.Type()
 	for i := 0; i < values.NumField(); i++ {
 		fieldName := typesOf.Field(i).Name
 		if fieldName == key {
-			return true
+			return true, typesOf.Field(i).Type.String()
 		}
 	}
-	return false
+	return false, "nil"
 }
 
 func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {

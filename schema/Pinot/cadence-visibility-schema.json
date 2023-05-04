@@ -48,7 +48,7 @@
     },
     {
       "name": "Attr",
-      "dataType": "STRING"
+      "dataType": "JSON"
     }
   ],
   "dateTimeFieldSpecs": [{
