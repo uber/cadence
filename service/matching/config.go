@@ -103,7 +103,7 @@ type (
 )
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection) *Config {
+func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 	return &Config{
 		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS),
 		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS),
@@ -133,7 +133,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		EnableDebugMode:                 dc.GetBoolProperty(dynamicconfig.EnableDebugMode)(),
 		EnableTaskInfoLogByDomainID:     dc.GetBoolPropertyFilteredByDomainID(dynamicconfig.MatchingEnableTaskInfoLogByDomainID),
 		ActivityTaskSyncMatchWaitTime:   dc.GetDurationPropertyFilteredByDomain(dynamicconfig.MatchingActivityTaskSyncMatchWaitTime),
-		HostName:                        "",
+		HostName:                        hostName,
 	}
 }
 
