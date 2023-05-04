@@ -125,14 +125,9 @@ func NewBeanFromFactory(
 		return nil, err
 	}
 
-	var configStoreMgr persistence.ConfigStoreManager
-	if datastore, ok := params.PersistenceConfig.DataStores[params.PersistenceConfig.DefaultStore]; ok {
-		if datastore.NoSQL != nil && datastore.NoSQL.PluginName == config.StoreTypeCassandra {
-			configStoreMgr, err = factory.NewConfigStoreManager()
-			if err != nil {
-				return nil, err
-			}
-		}
+	configStoreMgr, err := factory.NewConfigStoreManager()
+	if err != nil {
+		return nil, err
 	}
 
 	return NewBean(
