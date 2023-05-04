@@ -394,7 +394,7 @@ func (s *domainHandlerCommonSuite) TestListDomain() {
 
 func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidRetentionPeriod() {
 	registerRequest := &types.RegisterDomainRequest{
-		Name:                                   "random domain name",
+		Name:                                   "random-domain-name",
 		Description:                            "random domain name",
 		WorkflowExecutionRetentionPeriodInDays: int32(0),
 		IsGlobalDomain:                         false,
@@ -404,7 +404,7 @@ func (s *domainHandlerCommonSuite) TestRegisterDomain_InvalidRetentionPeriod() {
 }
 
 func (s *domainHandlerCommonSuite) TestUpdateDomain_InvalidRetentionPeriod() {
-	domain := "random domain name"
+	domain := "random-domain-name"
 	registerRequest := &types.RegisterDomainRequest{
 		Name:                                   domain,
 		Description:                            domain,
