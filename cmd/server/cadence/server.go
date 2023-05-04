@@ -104,6 +104,7 @@ func (s *server) startService() common.Daemon {
 	}
 
 	params := resource.Params{}
+	params.HostName = s.cfg.HostName
 	params.Name = service.FullName(s.name)
 
 	zapLogger, err := s.cfg.Log.NewZapLogger()
