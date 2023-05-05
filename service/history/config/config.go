@@ -323,10 +323,13 @@ type Config struct {
 	LargeShardHistorySizeMetricThreshold  dynamicconfig.IntPropertyFn
 	LargeShardHistoryEventMetricThreshold dynamicconfig.IntPropertyFn
 	LargeShardHistoryBlobMetricThreshold  dynamicconfig.IntPropertyFn
+
+	// HostName for machine running the service
+	HostName string
 }
 
 // New returns new service config with default values
-func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, storeType string, isAdvancedVisConfigExist bool) *Config {
+func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, storeType string, isAdvancedVisConfigExist bool, hostname string) *Config {
 	cfg := &Config{
 		NumberOfShards:                       numberOfShards,
 		IsAdvancedVisConfigExist:             isAdvancedVisConfigExist,
@@ -565,6 +568,8 @@ func New(dc *dynamicconfig.Collection, numberOfShards int, maxMessageSize int, s
 		LargeShardHistorySizeMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistorySizeMetricThreshold),
 		LargeShardHistoryEventMetricThreshold: dc.GetIntProperty(dynamicconfig.LargeShardHistoryEventMetricThreshold),
 		LargeShardHistoryBlobMetricThreshold:  dc.GetIntProperty(dynamicconfig.LargeShardHistoryBlobMetricThreshold),
+
+		HostName: hostname,
 	}
 
 	return cfg
@@ -594,7 +599,7 @@ func NewForTestByShardNumber(shardNumber int) *Config {
 	panicIfErr(inMem.UpdateValue(dynamicconfig.NormalDecisionScheduleToStartMaxAttempts, 3))
 	panicIfErr(inMem.UpdateValue(dynamicconfig.EnablePendingActivityValidation, true))
 	dc := dynamicconfig.NewCollection(inMem, log.NewNoop())
-	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false)
+	config := New(dc, shardNumber, 1024*1024, config.StoreTypeCassandra, false, "")
 	// reduce the duration of long poll to increase test speed
 	config.LongPollExpirationInterval = dc.GetDurationPropertyFilteredByDomain(dynamicconfig.HistoryLongPollExpirationInterval)
 	config.EnableConsistentQueryByDomain = dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableConsistentQueryByDomain)
