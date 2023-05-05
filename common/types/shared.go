@@ -7896,6 +7896,14 @@ func (v *CrossClusterStartChildExecutionRequestAttributes) GetTargetRunID() (o s
 	return
 }
 
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
+	}
+	return
+}
+
 // CrossClusterStartChildExecutionResponseAttributes is an internal type (TBD...)
 type CrossClusterStartChildExecutionResponseAttributes struct {
 	RunID string `json:"runID,omitempty"`
@@ -7905,14 +7913,6 @@ type CrossClusterStartChildExecutionResponseAttributes struct {
 func (v *CrossClusterStartChildExecutionResponseAttributes) GetRunID() (o string) {
 	if v != nil {
 		return v.RunID
-	}
-	return
-}
-
-// GetTargetRunID is an internal getter (TBD...)
-func (v *CrossClusterStartChildExecutionRequestAttributes) GetPartitionConfig() (o map[string]string) {
-	if v != nil && v.PartitionConfig != nil {
-		return v.PartitionConfig
 	}
 	return
 }
