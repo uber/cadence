@@ -80,8 +80,8 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 	testValidMap := make(map[string]interface{})
 	testValidMap["CustomizedKeyword"] = types.IndexedValueTypeKeyword
 	testValidMap["CustomStringField"] = types.IndexedValueTypeString
-	testValidMap["IndexedValueTypeInt"] = types.IndexedValueTypeInt
-	testValidMap["IndexedValueTypeDouble"] = types.IndexedValueTypeDouble
+	testValidMap["CustomIntField"] = types.IndexedValueTypeInt
+	testValidMap["CustomKeywordField"] = types.IndexedValueTypeDouble
 	testValidMap["IndexedValueTypeBool"] = types.IndexedValueTypeBool
 	testValidMap["IndexedValueTypeDatetime"] = types.IndexedValueTypeDatetime
 
@@ -104,7 +104,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = keywordCustomized",
+				Query:         "CustomizedKeyword = 'keywordCustomized'",
 			},
 			expectedOutput: fmt.Sprintf(
 				`SELECT *
@@ -115,13 +115,32 @@ LIMIT 0, 10
 `, testTableName),
 		},
 
+		"complete request from search attribute worker": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "CustomIntField=2 and CustomKeywordField='Update2' order by CustomDatetimeField DESC",
+			},
+			expectedOutput: fmt.Sprintf(
+				`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND CustomIntField = 2
+AND CustomKeywordField = 'Update2'
+order by CustomDatetimeField DESC
+LIMIT 0, 10
+`, testTableName),
+		},
+
 		"complete request with keyword query and other customized query": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
 				DomainUUID:    testDomainID,
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = keywordCustomized and CustomStringField = String field is for text",
+				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text'",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
@@ -138,7 +157,7 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = keywordCustomized and CustomStringField = String field is for text and unregistered <= 100",
+				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text' and unregistered <= 100",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
@@ -149,19 +168,19 @@ LIMIT 0, 10
 `, testTableName),
 		},
 
-		"complete request with customized query with all customized attributes with all cases AND": {
+		"complete request with customized query with all customized attributes with all cases AND & a invalid string input": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
 				DomainUUID:    testDomainID,
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CloseStatus < 0 anD WorkflowType = some-test-workflow and CustomizedKeyword = keywordCustomized AND CustomStringField = String field is for text And unregistered <= 100 aNd Order by DomainId Desc",
+				Query:         "CloseStatus < 0 anD WorkflowType = some-test-workflow and CustomizedKeyword = 'keywordCustomized' AND CustomStringField = 'String field is for text' And unregistered <= 100 aNd Order by DomainId Desc",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseStatus < 0
-AND WorkflowType = 'some-test-workflow'
+AND WorkflowType = some-test-workflow
 AND CustomizedKeyword = 'keywordCustomized'
 AND CustomStringField LIKE '%%String field is for text%%'
 Order by DomainId Desc
@@ -175,13 +194,14 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: serializedToken,
-				Query:         "CloseStatus < 0 and CustomizedKeyword = keywordCustomized AND CustomStringField = String field is for text And unregistered <= 100 aNd Order by DomainId Desc",
+				Query:         "CloseStatus < 0 and CustomizedKeyword = 'keywordCustomized' AND CustomIntField<=10 and CustomStringField = 'String field is for text' And unregistered <= 100 aNd Order by DomainId Desc",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseStatus < 0
 AND CustomizedKeyword = 'keywordCustomized'
+AND CustomIntField <= 10
 AND CustomStringField LIKE '%%String field is for text%%'
 Order by DomainId Desc
 LIMIT 11, 10
@@ -475,16 +495,6 @@ AND WorkflowID = ''
 	}
 }
 
-func TestCheckIfValueSurroundedByQuote(t *testing.T) {
-	notSurroundedVal := "testVal"
-	singeQuoteVal := "'testVal'"
-	doubleQuoteVal := "\"testVal\""
-
-	assert.Equal(t, addSingleQuote(notSurroundedVal), addSingleQuote(singeQuoteVal))
-	assert.Equal(t, addSingleQuote(notSurroundedVal), addSingleQuote(doubleQuoteVal))
-	assert.Equal(t, addSingleQuote(doubleQuoteVal), addSingleQuote(singeQuoteVal))
-}
-
 func TestStringFormatting(t *testing.T) {
 	key := "CustomizedStringField"
 	val := "When query; select * from users_secret_table;"
@@ -537,6 +547,75 @@ func TestParseLastElement(t *testing.T) {
 				element, orderBy := parseLastElement(test.input)
 				assert.Equal(t, test.expectedElement, element)
 				assert.Equal(t, test.expectedOrderBy, orderBy)
+			})
+		})
+	}
+}
+
+func TestSplitElement(t *testing.T) {
+	tests := map[string]struct {
+		input       string
+		expectedKey string
+		expectedVal string
+		expectedOp  string
+	}{
+		"Case1-1: A=B": {
+			input:       "CustomizedTestField=Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  "=",
+		},
+		"Case1-2: A=\"B\"": {
+			input:       "CustomizedTestField=\"Test\"",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "\"Test\"",
+			expectedOp:  "=",
+		},
+		"Case1-3: A='B'": {
+			input:       "CustomizedTestField='Test'",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "'Test'",
+			expectedOp:  "=",
+		},
+		"Case2: A<=B": {
+			input:       "CustomizedTestField<=Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  "<=",
+		},
+		"Case3: A>=B": {
+			input:       "CustomizedTestField>=Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  ">=",
+		},
+		"Case4: A = B": {
+			input:       "CustomizedTestField = Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  "=",
+		},
+		"Case5: A <= B": {
+			input:       "CustomizedTestField <= Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  "<=",
+		},
+		"Case6: A >= B": {
+			input:       "CustomizedTestField >= Test",
+			expectedKey: "CustomizedTestField",
+			expectedVal: "Test",
+			expectedOp:  ">=",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				key, val, op := splitElement(test.input)
+				assert.Equal(t, test.expectedKey, key)
+				assert.Equal(t, test.expectedVal, val)
+				assert.Equal(t, test.expectedOp, op)
 			})
 		})
 	}
