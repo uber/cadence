@@ -273,6 +273,7 @@ var (
 		SearchAttributes:                    &SearchAttributes,
 		PrevAutoResetPoints:                 &ResetPoints,
 		Header:                              &Header,
+		PartitionConfig:                     PartitionConfig,
 	}
 	WorkflowExecutionCompletedEventAttributes = types.WorkflowExecutionCompletedEventAttributes{
 		Result:                       Payload1,

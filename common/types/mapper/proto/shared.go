@@ -1234,6 +1234,7 @@ func FromCrossClusterStartChildExecutionRequestAttributes(t *types.CrossClusterS
 		InitiatedEventId:         t.InitiatedEventID,
 		InitiatedEventAttributes: FromStartChildWorkflowExecutionInitiatedEventAttributes(t.InitiatedEventAttributes),
 		TargetRunId:              t.GetTargetRunID(),
+		PartitionConfig:          t.PartitionConfig,
 	}
 }
 
@@ -1248,6 +1249,7 @@ func ToCrossClusterStartChildExecutionRequestAttributes(t *adminv1.CrossClusterS
 		InitiatedEventID:         t.InitiatedEventId,
 		InitiatedEventAttributes: ToStartChildWorkflowExecutionInitiatedEventAttributes(t.InitiatedEventAttributes),
 		TargetRunID:              &t.TargetRunId,
+		PartitionConfig:          t.PartitionConfig,
 	}
 }
 
