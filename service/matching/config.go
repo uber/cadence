@@ -74,6 +74,8 @@ type (
 		// isolation configuration
 		EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
 		AllIsolationGroups      []string
+		// hostname info
+		HostName string
 	}
 
 	forwarderConfig struct {
@@ -105,11 +107,13 @@ type (
 		// isolation configuration
 		EnableTasklistIsolation func() bool
 		AllIsolationGroups      []string
+		// hostname
+		HostName string
 	}
 )
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection) *Config {
+func NewConfig(dc *dynamicconfig.Collection, hostName string) *Config {
 	return &Config{
 		PersistenceMaxQPS:               dc.GetIntProperty(dynamicconfig.MatchingPersistenceMaxQPS),
 		PersistenceGlobalMaxQPS:         dc.GetIntProperty(dynamicconfig.MatchingPersistenceGlobalMaxQPS),
@@ -142,6 +146,7 @@ func NewConfig(dc *dynamicconfig.Collection) *Config {
 		EnableTasklistIsolation:         dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		AllIsolationGroups:              mapIGs(dc.GetListProperty(dynamicconfig.AllIsolationGroups)()),
 		AsyncTaskDispatchTimeout:        dc.GetDurationPropertyFilteredByTaskListInfo(dynamicconfig.AsyncTaskDispatchTimeout),
+		HostName:                        hostName,
 	}
 }
 
@@ -224,5 +229,6 @@ func newTaskListConfig(id *taskListID, config *Config, domainCache cache.DomainC
 				return common.MaxInt(1, config.ForwarderMaxChildrenPerNode(domainName, taskListName, taskType))
 			},
 		},
+		HostName: config.HostName,
 	}, nil
 }

@@ -1534,6 +1534,12 @@ func (s *matchingEngineSuite) assertPollTaskResponse(taskType int, param *testPa
 	}
 }
 
+func (s *matchingEngineSuite) TestConfigDefaultHostName() {
+	configEmpty := Config{}
+	s.NotEqualValues(s.matchingEngine.config.HostName, configEmpty.HostName)
+	s.EqualValues(configEmpty.HostName, "")
+}
+
 func newActivityTaskScheduledEvent(eventID int64, decisionTaskCompletedEventID int64,
 	scheduleAttributes *types.ScheduleActivityTaskDecisionAttributes) *types.HistoryEvent {
 	historyEvent := newHistoryEvent(eventID, types.EventTypeActivityTaskScheduled)
@@ -1874,7 +1880,7 @@ func validateTimeRange(t time.Time, expectedDuration time.Duration) bool {
 }
 
 func defaultTestConfig() *Config {
-	config := NewConfig(dynamicconfig.NewNopCollection())
+	config := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(100 * time.Millisecond)
 	config.MaxTaskDeleteBatchSize = dynamicconfig.GetIntPropertyFilteredByTaskListInfo(1)
 	config.AllIsolationGroups = []string{"datacenterA", "datacenterB"}

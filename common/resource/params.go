@@ -51,6 +51,7 @@ type (
 		InstanceID      string
 		Logger          log.Logger
 		ThrottledLogger log.Logger
+		HostName        string
 
 		MetricScope              tally.Scope
 		MembershipResolver       membership.Resolver

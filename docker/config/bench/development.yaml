@@ -9,4 +9,4 @@ bench:
 
 cadence:
   service: "cadence-frontend"
-  host: "host.docker.internal:7933" # see https://docs.docker.com/desktop/mac/networking/
+  host: "${CADENCE_FRONTEND_ADDRESS:host.docker.internal:7933}" # see https://docs.docker.com/desktop/mac/networking/

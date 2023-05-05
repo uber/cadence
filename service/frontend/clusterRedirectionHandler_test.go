@@ -104,6 +104,7 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 		),
 		0,
 		false,
+		"hostname",
 	)
 	dh := domain.NewMockHandler(s.controller)
 	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, client.NewVersionChecker(), dh)

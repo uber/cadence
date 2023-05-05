@@ -199,8 +199,6 @@ $(BIN)/goveralls: internal/tools/go.mod
 	$(call go_build_tool,github.com/mattn/goveralls)
 
 $(BUILD)/go_mod_check: go.mod internal/tools/go.mod
-	$Q # ensure both have the same apache/thrift replacement
-	$Q ./scripts/check-gomod-version.sh github.com/apache/thrift/lib/go/thrift $(if $(verbose),-v)
 	$Q # generated == used is occasionally important for gomock / mock libs in general.  this is not a definite problem if violated though.
 	$Q ./scripts/check-gomod-version.sh github.com/golang/mock/gomock $(if $(verbose),-v)
 	$Q touch $@

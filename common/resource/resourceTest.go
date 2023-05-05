@@ -99,8 +99,8 @@ type (
 		IsolationGroups     *isolationgroup.MockState
 		IsolationGroupStore configstore.Client
 		Partitioner         *partition.MockPartitioner
-
-		Logger log.Logger
+		HostName            string
+		Logger              log.Logger
 	}
 )
 
@@ -394,6 +394,11 @@ func (s *Test) GetExecutionManager(
 // GetPersistenceBean for testing
 func (s *Test) GetPersistenceBean() persistenceClient.Bean {
 	return s.PersistenceBean
+}
+
+// GetHostName for testing
+func (s *Test) GetHostName() string {
+	return s.HostName
 }
 
 // loggers
