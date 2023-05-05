@@ -106,6 +106,9 @@ type (
 		// persistence clients
 		persistenceBean persistenceClient.Bean
 
+		// hostName
+		hostName string
+
 		// loggers
 		logger          log.Logger
 		throttledLogger log.Logger
@@ -129,6 +132,8 @@ func New(
 	serviceName string,
 	serviceConfig *service.Config,
 ) (impl *Impl, retError error) {
+
+	hostname := params.HostName
 
 	logger := params.Logger
 	throttledLogger := loggerimpl.NewThrottledLogger(logger, serviceConfig.ThrottledLoggerMaxRPS)
@@ -280,6 +285,9 @@ func New(
 
 		// persistence clients
 		persistenceBean: persistenceBean,
+
+		// hostname
+		hostName: hostname,
 
 		// loggers
 
@@ -527,6 +535,10 @@ func (h *Impl) GetExecutionManager(
 // GetPersistenceBean return persistence bean
 func (h *Impl) GetPersistenceBean() persistenceClient.Bean {
 	return h.persistenceBean
+}
+
+func (h *Impl) GetHostName() string {
+	return h.hostName
 }
 
 // loggers

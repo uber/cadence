@@ -233,7 +233,7 @@ func TestCheckIdleTaskList(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	cfg := NewConfig(dynamicconfig.NewNopCollection())
+	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	// Idle
@@ -289,7 +289,7 @@ func TestAddTaskStandby(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	cfg := NewConfig(dynamicconfig.NewNopCollection())
+	cfg := NewConfig(dynamicconfig.NewNopCollection(), "some random hostname")
 	cfg.IdleTasklistCheckInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 
 	tlm := createTestTaskListManagerWithConfig(controller, cfg)

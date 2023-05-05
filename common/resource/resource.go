@@ -96,6 +96,9 @@ type (
 		GetExecutionManager(int) (persistence.ExecutionManager, error)
 		GetPersistenceBean() persistenceClient.Bean
 
+		// GetHostName get host name
+		GetHostName() string
+
 		// loggers
 
 		GetLogger() log.Logger

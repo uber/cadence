@@ -86,6 +86,7 @@ type (
 		DomainReplicationMaxRetryDuration   dynamicconfig.DurationPropertyFn
 		EnableESAnalyzer                    dynamicconfig.BoolPropertyFn
 		EnableWatchDog                      dynamicconfig.BoolPropertyFn
+		HostName                            string
 	}
 )
 
@@ -189,6 +190,7 @@ func NewConfig(params *resource.Params) *Config {
 		PersistenceGlobalMaxQPS:             dc.GetIntProperty(dynamicconfig.WorkerPersistenceGlobalMaxQPS),
 		PersistenceMaxQPS:                   dc.GetIntProperty(dynamicconfig.WorkerPersistenceMaxQPS),
 		DomainReplicationMaxRetryDuration:   dc.GetDurationProperty(dynamicconfig.WorkerReplicationTaskMaxRetryDuration),
+		HostName:                            params.HostName,
 	}
 	advancedVisWritingMode := dc.GetStringProperty(
 		dynamicconfig.AdvancedVisibilityWritingMode,
