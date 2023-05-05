@@ -428,7 +428,6 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 
 	validMap := v.config.ValidSearchAttributes()
 	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
-	//panic(fmt.Sprintf("query = %s", query))
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -473,6 +472,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
 	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
 		return nil, &types.InternalServiceError{
@@ -489,7 +489,7 @@ func (v *pinotVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
-	return p.ErrVisibilityOperationNotSupported
+	return &types.BadRequestError{Message: "Operation is not supported. Pinot doesn't support this operation so far."}
 }
 
 func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
@@ -497,7 +497,7 @@ func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	// temporary: not implemented, only implemented for ES
-	return p.ErrVisibilityOperationNotSupported
+	return &types.BadRequestError{Message: "Operation is not supported. Pinot doesn't support this operation so far."}
 }
 
 func (v *pinotVisibilityStore) checkProducer() {
@@ -687,7 +687,6 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
 	f.checkFirstFilter()
 	f.string += getPartialFormatString(key, val)
-	//panic(fmt.Sprintf(LikeStatement, key, val))
 }
 
 func getPartialFormatString(key string, val string) string {
@@ -710,6 +709,8 @@ func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowE
 	if requestQuery == "" {
 		return query.String()
 	}
+
+	requestQuery = filterPrefix(requestQuery)
 
 	// when customized query is not empty
 	if common.IsJustOrderByClause(requestQuery) {
@@ -744,6 +745,8 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		return query.String()
 	}
 
+	requestQuery = filterPrefix(requestQuery)
+
 	// when customized query is not empty
 	if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
@@ -753,6 +756,14 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 
 	query.addOffsetAndLimits(token.From, request.PageSize)
 	return query.String()
+}
+
+func filterPrefix(query string) string {
+	prefix := fmt.Sprintf("`%s.", Attr)
+	postfix := "`"
+
+	query = strings.ReplaceAll(query, prefix, "")
+	return strings.ReplaceAll(query, postfix, "")
 }
 
 func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
@@ -774,32 +785,23 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 			continue
 		}
 
-		pair := strings.Split(element, " ")
-		key := pair[0]
-		valArray := pair[2:len(pair)]
-		val := strings.Join(valArray, " ")
+		key, val, op := splitElement(element)
 
 		// case 2: when key is a system key
-		if ok, structType := isSystemKey(key); ok {
-			if structType == "string" {
-				val = addSingleQuote(val)
-			}
-			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, pair[1], val))
+		if ok, _ := isSystemKey(key); ok {
+			query.filters.addQuery(element)
 			continue
 		}
-
-		// need to trim key. Before trim, it is something like: `Attr.CustomStringField`
-		key = trimKey(key)
 
 		// case 3: when key is valid within validMap
 		if valType, ok := validMap[key]; ok {
 			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
-			val = removeQuote(val)
 
-			if indexValType == types.IndexedValueTypeKeyword {
-				query.filters.addEqual(key, val)
-			} else {
+			if indexValType == types.IndexedValueTypeString {
+				val = removeQuote(val)
 				query.filters.addPartialMatch(key, val)
+			} else {
+				query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
 			}
 		} else {
 			queryQueryLogger.Error("Unregistered field!!")
@@ -811,6 +813,48 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 	}
 
 	return query
+}
+
+/*
+Can have cases:
+1. A=B
+2. A<=B
+3. A>=B
+4. A <= B
+5. A >= B
+*/
+func splitElement(element string) (string, string, string) {
+	if element == "" {
+		return "", "", ""
+	}
+
+	listLE := strings.Split(element, "<=")
+	listGE := strings.Split(element, ">=")
+	listE := strings.Split(element, "=")
+	listL := strings.Split(element, "<")
+	listG := strings.Split(element, ">")
+
+	if len(listLE) > 1 {
+		return strings.TrimSpace(listLE[0]), strings.TrimSpace(listLE[1]), "<="
+	}
+
+	if len(listGE) > 1 {
+		return strings.TrimSpace(listGE[0]), strings.TrimSpace(listGE[1]), ">="
+	}
+
+	if len(listE) > 1 {
+		return strings.TrimSpace(listE[0]), strings.TrimSpace(listE[1]), "="
+	}
+
+	if len(listL) > 1 {
+		return strings.TrimSpace(listL[0]), strings.TrimSpace(listL[1]), "<"
+	}
+
+	if len(listG) > 1 {
+		return strings.TrimSpace(listG[0]), strings.TrimSpace(listG[1]), ">"
+	}
+
+	return "", "", ""
 }
 
 /*
@@ -860,27 +904,11 @@ func findLastOrderBy(list []string) int {
 	return 0
 }
 
-func trimKey(key string) string {
-	if strings.HasPrefix(key, fmt.Sprintf("`%s.", Attr)) {
-		return key[len(Attr)+2 : len(key)-1]
-	}
-	return key
-}
-
 func removeQuote(val string) string {
 	if val[0] == '"' && val[len(val)-1] == '"' {
 		val = fmt.Sprintf("%s", val[1:len(val)-1])
 	} else if val[0] == '\'' && val[len(val)-1] == '\'' {
 		val = fmt.Sprintf("%s", val[1:len(val)-1])
-	}
-	return fmt.Sprintf("%s", val)
-}
-
-func addSingleQuote(val string) string {
-	if val[0] == '"' && val[len(val)-1] == '"' {
-		val = fmt.Sprintf("'%s'", val[1:len(val)-1])
-	} else if val[0] != '\'' && val[0] != '"' {
-		val = fmt.Sprintf("'%s'", val)
 	}
 	return fmt.Sprintf("%s", val)
 }
