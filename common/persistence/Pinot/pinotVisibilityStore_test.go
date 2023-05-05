@@ -104,7 +104,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = 'keywordCustomized'",
+				Query:         "`Attr.CustomizedKeyword` = 'keywordCustomized'",
 			},
 			expectedOutput: fmt.Sprintf(
 				`SELECT *
@@ -121,7 +121,7 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomIntField=2 and CustomKeywordField='Update2' order by CustomDatetimeField DESC",
+				Query:         "CustomIntField=2 and CustomKeywordField='Update2' order by `Attr.CustomDatetimeField` DESC",
 			},
 			expectedOutput: fmt.Sprintf(
 				`SELECT *
