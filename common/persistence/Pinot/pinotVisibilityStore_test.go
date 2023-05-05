@@ -492,3 +492,52 @@ func TestStringFormatting(t *testing.T) {
 	assert.Equal(t, `CustomizedStringField LIKE '%When query; select * from users_secret_table;%'
 `, getPartialFormatString(key, val))
 }
+
+func TestParseLastElement(t *testing.T) {
+	tests := map[string]struct {
+		input           string
+		expectedElement string
+		expectedOrderBy string
+	}{
+		"Case1: only contains order by": {
+			input:           "Order by TestInt DESC",
+			expectedElement: "",
+			expectedOrderBy: "Order by TestInt DESC",
+		},
+		"Case2: only contains order by": {
+			input:           "TestString = 'cannot be used in order by'",
+			expectedElement: "TestString = 'cannot be used in order by'",
+			expectedOrderBy: "",
+		},
+		"Case3: not contains any order by": {
+			input:           "TestInt = 1",
+			expectedElement: "TestInt = 1",
+			expectedOrderBy: "",
+		},
+		"Case4-1: with order by in string & real order by": {
+			input:           "TestString = 'cannot be used in order by' Order by TestInt DESC",
+			expectedElement: "TestString = 'cannot be used in order by'",
+			expectedOrderBy: "Order by TestInt DESC",
+		},
+		"Case4-2: with non-string attribute & real order by": {
+			input:           "TestDouble = 1.0 Order by TestInt DESC",
+			expectedElement: "TestDouble = 1.0",
+			expectedOrderBy: "Order by TestInt DESC",
+		},
+		"Case5: with random case order by": {
+			input:           "TestString = 'cannot be used in OrDer by' ORdeR by TestInt DESC",
+			expectedElement: "TestString = 'cannot be used in OrDer by'",
+			expectedOrderBy: "ORdeR by TestInt DESC",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				element, orderBy := parseLastElement(test.input)
+				assert.Equal(t, test.expectedElement, element)
+				assert.Equal(t, test.expectedOrderBy, orderBy)
+			})
+		})
+	}
+}

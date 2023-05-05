@@ -762,21 +762,24 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 	// checks every case of 'and'
 	reg := regexp.MustCompile("(?i)(and)")
 	queryList := reg.Split(requestQuery, -1)
+	var orderBy string
 
-	for _, element := range queryList {
+	for index, element := range queryList {
 		element := strings.TrimSpace(element)
-		pair := strings.Split(element, " ")
-		key := pair[0]
-
-		// case: when order by query also passed in
-		if strings.ToLower(key) == "order" && strings.ToLower(pair[1]) == "by" {
-			query.concatSorter(element)
+		// special case: when element is the last one
+		if index == len(queryList)-1 {
+			element, orderBy = parseLastElement(element)
+		}
+		if len(element) == 0 {
 			continue
 		}
 
+		pair := strings.Split(element, " ")
+		key := pair[0]
 		valArray := pair[2:len(pair)]
 		val := strings.Join(valArray, " ")
 
+		// case 2: when key is a system key
 		if ok, structType := isSystemKey(key); ok {
 			if structType == "string" {
 				val = addSingleQoute(val)
@@ -788,6 +791,7 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 		// need to trim key. Before trim, it is something like: `Attr.CustomStringField`
 		key = trimKey(key)
 
+		// case 3: when key is valid within validMap
 		if valType, ok := validMap[key]; ok {
 			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
 			val = removeQoute(val)
@@ -802,7 +806,58 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 		}
 	}
 
+	if orderBy != "" {
+		query.concatSorter(orderBy)
+	}
+
 	return query
+}
+
+/*
+   Order by XXX DESC
+   -> if startWith("Order by") -> return "", element
+
+   CustomizedString = 'cannot be used in order by'
+   -> if last character is ‘ -> return element, ""
+
+   CustomizedInt = 1 (without order by clause)
+   -> if !contains("Order by") -> return element, ""
+
+   CustomizedString = 'cannot be used in order by' Order by XXX DESC
+   -> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
+
+   CustomizedInt = 1 Order by XXX DESC
+   -> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
+*/
+func parseLastElement(element string) (string, string) {
+	// case 1: when order by query also passed in
+	if common.IsJustOrderByClause(element) {
+		return "", element
+	}
+
+	// case 2: when last element is a string
+	if element[len(element)-1] == '\'' {
+		return element, ""
+	}
+
+	// case 3: when last element doesn't contain "order by"
+	if !strings.Contains(strings.ToLower(element), "order by") {
+		return element, ""
+	}
+
+	// case 4: general case
+	elementArray := strings.Split(element, " ")
+	orderByIndex := findLastOrderBy(elementArray) // find the last appearance of "order by" is the answer
+	return strings.Join(elementArray[:orderByIndex], " "), strings.Join(elementArray[orderByIndex:], " ")
+}
+
+func findLastOrderBy(list []string) int {
+	for i := len(list) - 2; i >= 0; i-- {
+		if strings.ToLower(list[i]) == "order" && strings.ToLower(list[i+1]) == "by" {
+			return i
+		}
+	}
+	return 0
 }
 
 func trimKey(key string) string {
