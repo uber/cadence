@@ -818,7 +818,7 @@ Order by XXX DESC
 -> if startWith("Order by") -> return "", element
 
 CustomizedString = 'cannot be used in order by'
--> if last character is ‘ -> return element, ""
+-> if last character is ‘ or " -> return element, ""
 
 CustomizedInt = 1 (without order by clause)
 -> if !contains("Order by") -> return element, ""
@@ -836,7 +836,7 @@ func parseLastElement(element string) (string, string) {
 	}
 
 	// case 2: when last element is a string
-	if element[len(element)-1] == '\'' {
+	if element[len(element)-1] == '\'' || element[len(element)-1] == '"' {
 		return element, ""
 	}
 
