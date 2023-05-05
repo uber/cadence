@@ -241,6 +241,7 @@ message StartWorkflowExecutionRequest {
   api.v1.Failure continued_failure = 7;
   api.v1.Payload last_completion_result = 8;
   google.protobuf.Duration first_decision_task_backoff = 9;
+  map<string, string> partition_config = 10;
 }
 
 message StartWorkflowExecutionResponse {
@@ -263,6 +264,7 @@ message SignalWorkflowExecutionResponse {
 message SignalWithStartWorkflowExecutionRequest {
   api.v1.SignalWithStartWorkflowExecutionRequest request = 1;
   string domain_id = 2;
+  map<string, string> partition_config = 3;
 }
 
 message SignalWithStartWorkflowExecutionResponse {
