@@ -40,6 +40,7 @@ var (
 		ScheduleToStartTimeoutSeconds: &Duration1,
 		Source:                        types.TaskSourceDbBacklog.Ptr(),
 		ForwardedFrom:                 ForwardedFrom,
+		PartitionConfig:               PartitionConfig,
 	}
 	MatchingAddDecisionTaskRequest = types.AddDecisionTaskRequest{
 		DomainUUID:                    DomainID,
@@ -49,6 +50,7 @@ var (
 		ScheduleToStartTimeoutSeconds: &Duration1,
 		Source:                        types.TaskSourceDbBacklog.Ptr(),
 		ForwardedFrom:                 ForwardedFrom,
+		PartitionConfig:               PartitionConfig,
 	}
 	MatchingCancelOutstandingPollRequest = types.CancelOutstandingPollRequest{
 		DomainUUID:   DomainID,
@@ -73,10 +75,11 @@ var (
 		DecisionTaskListPartitions: TaskListPartitionMetadataArray,
 	}
 	MatchingPollForActivityTaskRequest = types.MatchingPollForActivityTaskRequest{
-		DomainUUID:    DomainID,
-		PollerID:      PollerID,
-		PollRequest:   &PollForActivityTaskRequest,
-		ForwardedFrom: ForwardedFrom,
+		DomainUUID:     DomainID,
+		PollerID:       PollerID,
+		PollRequest:    &PollForActivityTaskRequest,
+		ForwardedFrom:  ForwardedFrom,
+		IsolationGroup: IsolationGroup,
 	}
 	MatchingPollForActivityTaskResponse = types.PollForActivityTaskResponse{
 		TaskToken:                       TaskToken,
@@ -97,10 +100,11 @@ var (
 		Header:                          &Header,
 	}
 	MatchingPollForDecisionTaskRequest = types.MatchingPollForDecisionTaskRequest{
-		DomainUUID:    DomainID,
-		PollerID:      PollerID,
-		PollRequest:   &PollForDecisionTaskRequest,
-		ForwardedFrom: ForwardedFrom,
+		DomainUUID:     DomainID,
+		PollerID:       PollerID,
+		PollRequest:    &PollForDecisionTaskRequest,
+		ForwardedFrom:  ForwardedFrom,
+		IsolationGroup: IsolationGroup,
 	}
 	MatchingPollForDecisionTaskResponse = types.MatchingPollForDecisionTaskResponse{
 		TaskToken:                 TaskToken,
