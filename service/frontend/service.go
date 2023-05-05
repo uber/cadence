@@ -114,10 +114,13 @@ type Config struct {
 
 	// Emit signal related metrics with signal name tag. Be aware of cardinality.
 	EmitSignalNameMetricsTag dynamicconfig.BoolPropertyFnWithDomainFilter
+
+	// HostName for machine running the service
+	HostName string
 }
 
 // NewConfig returns new service config with default values
-func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVisConfigExist bool) *Config {
+func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVisConfigExist bool, hostName string) *Config {
 	return &Config{
 		NumHistoryShards:                            numHistoryShards,
 		IsAdvancedVisConfigExist:                    isAdvancedVisConfigExist,
@@ -179,6 +182,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 			FailoverCoolDown:       dc.GetDurationPropertyFilteredByDomain(dynamicconfig.FrontendFailoverCoolDown),
 			RequiredDomainDataKeys: dc.GetMapProperty(dynamicconfig.RequiredDomainDataKeys),
 		},
+		HostName: hostName,
 	}
 }
 
@@ -219,6 +223,7 @@ func NewService(
 		),
 		params.PersistenceConfig.NumHistoryShards,
 		isAdvancedVisExistInConfig,
+		params.HostName,
 	)
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
 

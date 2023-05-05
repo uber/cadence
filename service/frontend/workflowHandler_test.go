@@ -1211,6 +1211,7 @@ func (s *workflowHandlerSuite) TestRestartWorkflowExecution__Success() {
 				s.mockResource.GetLogger()),
 			numHistoryShards,
 			false,
+			"hostname",
 		),
 	)
 	ctx := context.Background()
@@ -1262,6 +1263,7 @@ func (s *workflowHandlerSuite) getWorkflowExecutionHistory(nextEventID int64, tr
 				s.mockResource.GetLogger()),
 			numHistoryShards,
 			false,
+			"hostname",
 		),
 	)
 	ctx := context.Background()
@@ -1559,6 +1561,7 @@ func (s *workflowHandlerSuite) newConfig(dynamicClient dc.Client) *Config {
 		),
 		numHistoryShards,
 		false,
+		"hostname",
 	)
 	config.EmitSignalNameMetricsTag = dc.GetBoolPropertyFnFilteredByDomain(true)
 	return config
