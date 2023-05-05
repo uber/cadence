@@ -782,7 +782,7 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 		// case 2: when key is a system key
 		if ok, structType := isSystemKey(key); ok {
 			if structType == "string" {
-				val = addSingleQoute(val)
+				val = addSingleQuote(val)
 			}
 			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, pair[1], val))
 			continue
@@ -794,7 +794,7 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 		// case 3: when key is valid within validMap
 		if valType, ok := validMap[key]; ok {
 			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
-			val = removeQoute(val)
+			val = removeQuote(val)
 
 			if indexValType == types.IndexedValueTypeKeyword {
 				query.filters.addEqual(key, val)
@@ -814,20 +814,20 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 }
 
 /*
-   Order by XXX DESC
-   -> if startWith("Order by") -> return "", element
+Order by XXX DESC
+-> if startWith("Order by") -> return "", element
 
-   CustomizedString = 'cannot be used in order by'
-   -> if last character is ‘ -> return element, ""
+CustomizedString = 'cannot be used in order by'
+-> if last character is ‘ -> return element, ""
 
-   CustomizedInt = 1 (without order by clause)
-   -> if !contains("Order by") -> return element, ""
+CustomizedInt = 1 (without order by clause)
+-> if !contains("Order by") -> return element, ""
 
-   CustomizedString = 'cannot be used in order by' Order by XXX DESC
-   -> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
+CustomizedString = 'cannot be used in order by' Order by XXX DESC
+-> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
 
-   CustomizedInt = 1 Order by XXX DESC
-   -> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
+CustomizedInt = 1 Order by XXX DESC
+-> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
 */
 func parseLastElement(element string) (string, string) {
 	// case 1: when order by query also passed in
@@ -867,7 +867,7 @@ func trimKey(key string) string {
 	return key
 }
 
-func removeQoute(val string) string {
+func removeQuote(val string) string {
 	if val[0] == '"' && val[len(val)-1] == '"' {
 		val = fmt.Sprintf("%s", val[1:len(val)-1])
 	} else if val[0] == '\'' && val[len(val)-1] == '\'' {
@@ -876,7 +876,7 @@ func removeQoute(val string) string {
 	return fmt.Sprintf("%s", val)
 }
 
-func addSingleQoute(val string) string {
+func addSingleQuote(val string) string {
 	if val[0] == '"' && val[len(val)-1] == '"' {
 		val = fmt.Sprintf("'%s'", val[1:len(val)-1])
 	} else if val[0] != '\'' && val[0] != '"' {

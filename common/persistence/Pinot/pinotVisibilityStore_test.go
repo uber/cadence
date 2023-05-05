@@ -475,14 +475,14 @@ AND WorkflowID = ''
 	}
 }
 
-func TestCheckIfValueSurroundedByQoute(t *testing.T) {
+func TestCheckIfValueSurroundedByQuote(t *testing.T) {
 	notSurroundedVal := "testVal"
 	singeQuoteVal := "'testVal'"
 	doubleQuoteVal := "\"testVal\""
 
-	assert.Equal(t, addSingleQoute(notSurroundedVal), addSingleQoute(singeQuoteVal))
-	assert.Equal(t, addSingleQoute(notSurroundedVal), addSingleQoute(doubleQuoteVal))
-	assert.Equal(t, addSingleQoute(doubleQuoteVal), addSingleQoute(singeQuoteVal))
+	assert.Equal(t, addSingleQuote(notSurroundedVal), addSingleQuote(singeQuoteVal))
+	assert.Equal(t, addSingleQuote(notSurroundedVal), addSingleQuote(doubleQuoteVal))
+	assert.Equal(t, addSingleQuote(doubleQuoteVal), addSingleQuote(singeQuoteVal))
 }
 
 func TestStringFormatting(t *testing.T) {
