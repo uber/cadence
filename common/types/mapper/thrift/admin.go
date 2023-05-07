@@ -685,3 +685,42 @@ func ToListDynamicConfigResponse(t *admin.ListDynamicConfigResponse) *types.List
 		Entries: ToDynamicConfigEntryArray(t.Entries),
 	}
 }
+
+func FromIsolationGroupConfig(in *types.IsolationGroupConfiguration) *shared.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	var out []*shared.IsolationGroupPartition
+	for _, v := range *in {
+		out = append(out, &shared.IsolationGroupPartition{
+			Name:  strPtr(v.Name),
+			State: igStatePtr(shared.IsolationGroupState(v.State)),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i] == nil || out[j] == nil {
+			return false
+		}
+		return *out[i].Name < *out[j].Name
+	})
+	return &shared.IsolationGroupConfiguration{
+		IsolationGroups: out,
+	}
+}
+
+func ToIsolationGroupConfig(in *shared.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	out := make(types.IsolationGroupConfiguration)
+	for v := range in.IsolationGroups {
+		out[in.IsolationGroups[v].GetName()] = types.IsolationGroupPartition{
+			Name:  in.IsolationGroups[v].GetName(),
+			State: types.IsolationGroupState(in.IsolationGroups[v].GetState()),
+		}
+	}
+	return &out
+}
+
+func strPtr(s string) *string                                             { return &s }
+func igStatePtr(s shared.IsolationGroupState) *shared.IsolationGroupState { return &s }

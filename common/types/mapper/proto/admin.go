@@ -1162,3 +1162,39 @@ func ToDynamicConfigFilter(t *adminv1.DynamicConfigFilter) *types.DynamicConfigF
 		Value: ToDataBlob(t.Value),
 	}
 }
+
+func FromIsolationGroupConfig(in *types.IsolationGroupConfiguration) *apiv1.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	var out []*apiv1.IsolationGroupPartition
+	for _, v := range *in {
+		out = append(out, &apiv1.IsolationGroupPartition{
+			Name:  v.Name,
+			State: apiv1.IsolationGroupState(v.State),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i] == nil || out[j] == nil {
+			return false
+		}
+		return out[i].Name < out[j].Name
+	})
+	return &apiv1.IsolationGroupConfiguration{
+		IsolationGroups: out,
+	}
+}
+
+func ToIsolationGroupConfig(in *apiv1.IsolationGroupConfiguration) *types.IsolationGroupConfiguration {
+	if in == nil {
+		return nil
+	}
+	out := make(types.IsolationGroupConfiguration)
+	for v := range in.IsolationGroups {
+		out[in.IsolationGroups[v].Name] = types.IsolationGroupPartition{
+			Name:  in.IsolationGroups[v].Name,
+			State: types.IsolationGroupState(in.IsolationGroups[v].State),
+		}
+	}
+	return &out
+}
