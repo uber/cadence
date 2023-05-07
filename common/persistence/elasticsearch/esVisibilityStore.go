@@ -947,6 +947,12 @@ func timeProcessFunc(obj *fastjson.Object, key string, value *fastjson.Value) er
 
 		// first check if already in int64 format
 		if _, err := strconv.ParseInt(timeStr, 10, 64); err == nil {
+			// In case of seconds, milliseconds, microseconds it is padded with zeros. Otherwise, you would only get a response in the case of strict nano format
+			if len(timeStr) > 9 && len(timeStr) < 19 {
+				padding := strings.Repeat("0", 19-len(timeStr))
+				timeStr = timeStr + padding
+				obj.Set(key, fastjson.MustParse(fmt.Sprintf(`"%v"`, timeStr)))
+			}
 			return nil
 		}
 
