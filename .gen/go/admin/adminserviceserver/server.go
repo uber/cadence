@@ -199,8 +199,8 @@ type Interface interface {
 // New prepares an implementation of the AdminService service for
 // registration.
 //
-//	handler := AdminServiceHandler{}
-//	dispatcher.Register(adminserviceserver.New(handler))
+// 	handler := AdminServiceHandler{}
+// 	dispatcher.Register(adminserviceserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{

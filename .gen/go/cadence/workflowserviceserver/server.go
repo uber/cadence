@@ -247,8 +247,8 @@ type Interface interface {
 // New prepares an implementation of the WorkflowService service for
 // registration.
 //
-//	handler := WorkflowServiceHandler{}
-//	dispatcher.Register(workflowserviceserver.New(handler))
+// 	handler := WorkflowServiceHandler{}
+// 	dispatcher.Register(workflowserviceserver.New(handler))
 func New(impl Interface, opts ...thrift.RegisterOption) []transport.Procedure {
 	h := handler{impl}
 	service := thrift.Service{
