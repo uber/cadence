@@ -1223,6 +1223,7 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 	retention := time.Duration(config.Retention)
 	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
 
+	//TODO Move the ttl value to attach it to the workflow mutation.
 	startTime := request.UpdateWorkflowMutation.ExecutionInfo.StartTimestamp
 	if time.Time.IsZero(startTime) {
 		//Default state of TTL, means there is no TTL attached.

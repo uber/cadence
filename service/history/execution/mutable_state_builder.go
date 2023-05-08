@@ -4062,7 +4062,7 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// currently, the updates done inside workflowExecutionContext.resetWorkflowExecution doesn't
 	// impact the checksum calculation
 	checksum := e.generateChecksum()
-
+	//TODO: Add TTL calculation here.
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,
