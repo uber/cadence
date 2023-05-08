@@ -207,3 +207,19 @@ func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admi
 	response, err := t.h.ListDynamicConfig(ctx, thrift.ToListDynamicConfigRequest(request))
 	return thrift.FromListDynamicConfigResponse(response), thrift.FromError(err)
 }
+
+func (t AdminThriftHandler) GetGlobalIsolationGroups(ctx context.Context, request *admin.GetGlobalIsolationGroupsRequest) (*admin.GetGlobalIsolationGroupsResponse, error) {
+	panic("not implemented")
+}
+
+func (t AdminThriftHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *admin.UpdateGlobalIsolationGroupsRequest) (*admin.UpdateGlobalIsolationGroupsResponse, error) {
+	panic("not implemented")
+}
+
+func (t AdminThriftHandler) GetDomainIsolationGroups(ctx context.Context, request *admin.GetDomainIsolationGroupsRequest) (*admin.GetDomainIsolationGroupsResponse, error) {
+	panic("not implemented")
+}
+
+func (t AdminThriftHandler) UpdateDomainIsolationGroups(ctx context.Context, request *admin.UpdateDomainIsolationGroupsRequest) (*admin.UpdateDomainIsolationGroupsResponse, error) {
+	panic("not implemented")
+}
