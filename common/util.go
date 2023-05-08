@@ -519,10 +519,12 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
+	partitionConfig map[string]string,
 ) (*types.HistoryStartWorkflowExecutionRequest, error) {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID:   domainID,
-		StartRequest: startRequest,
+		DomainUUID:      domainID,
+		StartRequest:    startRequest,
+		PartitionConfig: partitionConfig,
 	}
 
 	delayStartSeconds := startRequest.GetDelayStartSeconds()
