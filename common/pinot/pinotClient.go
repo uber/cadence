@@ -25,6 +25,7 @@ package pinot
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/startreedata/pinot-client-go/pinot"
@@ -60,18 +61,33 @@ func (c *PinotClient) Search(request *SearchRequest) (*SearchResponse, error) {
 		}
 	}
 
-	return c.getInternalListWorkflowExecutionsResponse(resp, request.Filter)
+	token, err := GetNextPageToken(request.ListRequest.NextPageToken)
+
+	if err != nil {
+		return nil, &types.InternalServiceError{
+			Message: fmt.Sprintf("Get NextPage token failed, %v", err),
+		}
+	}
+
+	return c.getInternalListWorkflowExecutionsResponse(resp, request.Filter, token, request.ListRequest.PageSize, request.MaxResultWindow)
 }
 
 func (c *PinotClient) CountByQuery(query string) (int64, error) {
 	resp, err := c.client.ExecuteSQL(c.tableName, query)
 	if err != nil {
 		return 0, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
+			Message: fmt.Sprintf("CountWorkflowExecutions ExecuteSQL failed, %v", err),
 		}
 	}
 
-	return int64(resp.ResultTable.GetRowCount()), nil
+	count, err := resp.ResultTable.Rows[0][0].(json.Number).Int64()
+	if err == nil {
+		return count, nil
+	}
+
+	return -1, &types.InternalServiceError{
+		Message: fmt.Sprintf("can't convert result to integer!, query = %s, query result = %v, err = %v", query, resp.ResultTable.Rows[0][0], err),
+	}
 }
 
 func (c *PinotClient) GetTableName() string {
@@ -84,7 +100,11 @@ func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
 	resMap := make(map[string]interface{})
 
 	for i := 0; i < len(columnNames); i++ {
-		resMap[columnNames[i]] = hit[i]
+		key := columnNames[i]
+		// checks if it is system key, if yes, put it into the map
+		if ok, _ := isSystemKey(key); ok {
+			resMap[key] = hit[i]
+		}
 	}
 
 	return resMap
@@ -172,12 +192,14 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
+	token *PinotVisibilityPageToken,
+	pageSize int,
+	maxResultWindow int,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
-	if resp == nil {
-		return nil, nil
-	}
-
 	response := &p.InternalListWorkflowExecutionsResponse{}
+	if resp == nil || resp.ResultTable == nil || resp.ResultTable.GetRowCount() == 0 {
+		return response, nil
+	}
 	schema := resp.ResultTable.DataSchema // get the schema to map results
 	//columnDataTypes := schema.ColumnDataTypes
 	columnNames := schema.ColumnNames
@@ -194,29 +216,23 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		}
 	}
 
-	//if numOfActualHits == pageSize { // this means the response is not the last page
-	//	var nextPageToken []byte
-	//	var err error
-	//
-	//	// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
-	//	// to retrieve deeper pages, use ES SearchAfter
-	//	if searchHits.TotalHits <= int64(maxResultWindow-pageSize) { // use ES Search From+Size
-	//		nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{From: token.From + numOfActualHits})
-	//	} else { // use ES Search After
-	//		var sortVal interface{}
-	//		sortVals := actualHits[len(response.Executions)-1].Sort
-	//		sortVal = sortVals[0]
-	//		tieBreaker := sortVals[1].(string)
-	//
-	//		nextPageToken, err = SerializePageToken(&ElasticVisibilityPageToken{SortValue: sortVal, TieBreaker: tieBreaker})
-	//	}
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//
-	//	response.NextPageToken = make([]byte, len(nextPageToken))
-	//	copy(response.NextPageToken, nextPageToken)
-	//}
+	if numOfActualHits == pageSize { // this means the response is not the last page
+		var nextPageToken []byte
+		var err error
+
+		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
+		// TODO: need to confirm if pinot has similar settings
+		// don't need to retrieve deeper pages in pinot, and no functions like ES SearchAfter
+		if resp.NumDocsScanned <= int64(maxResultWindow-pageSize) { // use pinot Search From+Size
+			nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		response.NextPageToken = make([]byte, len(nextPageToken))
+		copy(response.NextPageToken, nextPageToken)
+	}
 
 	return response, nil
 }
@@ -236,4 +252,18 @@ func (c *PinotClient) getInternalGetClosedWorkflowExecutionResponse(resp *pinot.
 	response.Execution = c.convertSearchResultToVisibilityRecord(actualHits[0], columnNames)
 
 	return response, nil
+}
+
+// checks if a string is system key
+func isSystemKey(key string) (bool, string) {
+	msg := VisibilityRecord{}
+	values := reflect.ValueOf(msg)
+	typesOf := values.Type()
+	for i := 0; i < values.NumField(); i++ {
+		fieldName := typesOf.Field(i).Name
+		if fieldName == key {
+			return true, typesOf.Field(i).Type.String()
+		}
+	}
+	return false, "nil"
 }

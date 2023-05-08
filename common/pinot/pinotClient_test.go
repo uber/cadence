@@ -23,6 +23,7 @@
 package pinot
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -87,6 +88,9 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
 	hit1 := []interface{}{"wfid1", "rid1", "wftype1", "domainid1", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode1", "tsklst1", true, 1, testEarliestTime, "null"}
 	hit2 := []interface{}{"wfid2", "rid2", "wftype2", "domainid2", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode2", "tsklst2", false, 1, testEarliestTime, "null"}
+	hit3 := []interface{}{"wfid3", "rid3", "wftype3", "domainid3", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode3", "tsklst3", false, 1, testEarliestTime, "null"}
+	hit4 := []interface{}{"wfid4", "rid4", "wftype4", "domainid4", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode4", "tsklst4", false, 1, testEarliestTime, "null"}
+	hit5 := []interface{}{"wfid5", "rid5", "wftype5", "domainid5", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode5", "tsklst5", false, 1, testEarliestTime, "null"}
 
 	brokerResponse := &pinot.BrokerResponse{
 		AggregationResults: nil,
@@ -99,6 +103,9 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 			Rows: [][]interface{}{
 				hit1,
 				hit2,
+				hit3,
+				hit4,
+				hit5,
 			},
 		},
 		Exceptions:                  nil,
@@ -109,7 +116,7 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 		NumSegmentsProcessed:        1,
 		NumSegmentsMatched:          1,
 		NumConsumingSegmentsQueried: 1,
-		NumDocsScanned:              1,
+		NumDocsScanned:              10,
 		NumEntriesScannedInFilter:   1,
 		NumEntriesScannedPostFilter: 1,
 		NumGroupsLimitReached:       false,
@@ -118,8 +125,12 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 		MinConsumingFreshnessTimeMs: 1,
 	}
 
+	token := &PinotVisibilityPageToken{
+		From: 0,
+	}
+
 	// Cannot use a table test, because they are not checking the same fields
-	result, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, nil)
+	result, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, nil, token, 5, 33)
 
 	assert.Equal(t, "wfid1", result.Executions[0].WorkflowID)
 	assert.Equal(t, "rid1", result.Executions[0].RunID)
@@ -151,17 +162,24 @@ func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
 
 	assert.Nil(t, err)
 
+	responseToken := result.NextPageToken
+	unmarshalResponseToken, err := GetNextPageToken(responseToken)
+	if err != nil {
+		panic(fmt.Sprintf("Unmarshal error in PinotClient test %s", err))
+	}
+	assert.Equal(t, 5, unmarshalResponseToken.From)
+
 	// check if record is not valid
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return false
 	}
-	emptyResult, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, isRecordValid)
+	emptyResult, err := client.getInternalListWorkflowExecutionsResponse(brokerResponse, isRecordValid, nil, 10, 33)
 	assert.Equal(t, 0, len(emptyResult.Executions))
 	assert.Nil(t, err)
 
 	// check nil input
-	nilResult, err := client.getInternalListWorkflowExecutionsResponse(nil, isRecordValid)
-	assert.Nil(t, nilResult)
+	nilResult, err := client.getInternalListWorkflowExecutionsResponse(nil, isRecordValid, nil, 10, 33)
+	assert.Equal(t, &p.InternalListWorkflowExecutionsResponse{}, nilResult)
 	assert.Nil(t, err)
 }
 
