@@ -240,7 +240,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessActivityTask_Success() {
 	persistenceMutableState, err := test.CreatePersistenceMutableState(mutableState, event.ID, event.Version)
 	s.NoError(err)
 	s.mockExecutionMgr.On("GetWorkflowExecution", mock.Anything, mock.Anything).Return(&persistence.GetWorkflowExecutionResponse{State: persistenceMutableState}, nil)
-	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai)).Return(nil).Times(1)
+	s.mockMatchingClient.EXPECT().AddActivityTask(gomock.Any(), createAddActivityTaskRequest(transferTask, ai, mutableState.GetExecutionInfo().PartitionConfig)).Return(nil).Times(1)
 
 	err = s.transferActiveTaskExecutor.Execute(transferTask, true)
 	s.Nil(err)
@@ -1209,6 +1209,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Success
 				event.StartChildWorkflowExecutionInitiatedEventAttributes,
 				childInfo.CreateRequestID,
 				s.mockShard.GetTimeSource().Now(),
+				mutableState.GetExecutionInfo().PartitionConfig,
 			)
 			require.NoError(s.T(), err)
 			s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).Return(&types.StartWorkflowExecutionResponse{RunID: childExecution.RunID}, nil).Times(1)
@@ -1249,6 +1250,7 @@ func (s *transferActiveTaskExecutorSuite) TestProcessStartChildExecution_Failure
 				event.StartChildWorkflowExecutionInitiatedEventAttributes,
 				childInfo.CreateRequestID,
 				s.mockShard.GetTimeSource().Now(),
+				mutableState.GetExecutionInfo().PartitionConfig,
 			)
 			require.NoError(s.T(), err)
 			s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).Return(nil, &types.WorkflowExecutionAlreadyStartedError{}).Times(1)
@@ -1612,6 +1614,7 @@ func (s *transferActiveTaskExecutorSuite) newTransferTaskFromInfo(
 func createAddActivityTaskRequest(
 	transferTask Task,
 	ai *persistence.ActivityInfo,
+	partitionConfig map[string]string,
 ) *types.AddActivityTaskRequest {
 
 	taskInfo := transferTask.GetInfo().(*persistence.TransferTaskInfo)
@@ -1628,6 +1631,7 @@ func createAddActivityTaskRequest(
 		TaskList:                      taskList,
 		ScheduleID:                    taskInfo.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(ai.ScheduleToStartTimeout),
+		PartitionConfig:               partitionConfig,
 	}
 }
 
@@ -1656,6 +1660,7 @@ func createAddDecisionTaskRequest(
 		TaskList:                      taskList,
 		ScheduleID:                    taskInfo.ScheduleID,
 		ScheduleToStartTimeoutSeconds: common.Int32Ptr(timeout),
+		PartitionConfig:               executionInfo.PartitionConfig,
 	}
 }
 
@@ -1762,6 +1767,7 @@ func createTestChildWorkflowExecutionRequest(
 	attributes *types.StartChildWorkflowExecutionInitiatedEventAttributes,
 	requestID string,
 	now time.Time,
+	partitionConfig map[string]string,
 ) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
 	workflowExecution := types.WorkflowExecution{
@@ -1790,7 +1796,7 @@ func createTestChildWorkflowExecutionRequest(
 	}
 
 	historyStartReq, err := common.CreateHistoryStartWorkflowRequest(
-		taskInfo.TargetDomainID, frontendStartReq, now)
+		taskInfo.TargetDomainID, frontendStartReq, now, partitionConfig)
 	if err != nil {
 		return nil, err
 	}

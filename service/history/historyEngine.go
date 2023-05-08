@@ -894,7 +894,7 @@ UpdateWorkflowLoop:
 		}
 
 		if signalWithStartRequest != nil {
-			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest)
+			startRequest, err = getStartRequest(domainID, signalWithStartRequest.SignalWithStartRequest, signalWithStartRequest.PartitionConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -1635,6 +1635,7 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 			IsCron:           len(executionInfo.CronSchedule) > 0,
 			UpdateTime:       common.Int64Ptr(executionInfo.LastUpdatedTimestamp.UnixNano()),
 			SearchAttributes: &types.SearchAttributes{IndexedFields: executionInfo.SearchAttributes},
+			PartitionConfig:  executionInfo.PartitionConfig,
 		},
 	}
 
@@ -2598,7 +2599,7 @@ func (e *historyEngineImpl) SignalWithStartWorkflowExecution(
 	}
 
 	// Start workflow and signal
-	startRequest, err := getStartRequest(domainID, sRequest)
+	startRequest, err := getStartRequest(domainID, sRequest, signalWithStartRequest.PartitionConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -3273,6 +3274,7 @@ func getScheduleID(
 func getStartRequest(
 	domainID string,
 	request *types.SignalWithStartWorkflowExecutionRequest,
+	partitionConfig map[string]string,
 ) (*types.HistoryStartWorkflowExecutionRequest, error) {
 
 	req := &types.StartWorkflowExecutionRequest{
@@ -3295,7 +3297,7 @@ func getStartRequest(
 		JitterStartSeconds:                  request.JitterStartSeconds,
 	}
 
-	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now())
+	return common.CreateHistoryStartWorkflowRequest(domainID, req, time.Now(), partitionConfig)
 }
 
 func (e *historyEngineImpl) applyWorkflowIDReusePolicyForSigWithStart(
