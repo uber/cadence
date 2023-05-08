@@ -58,10 +58,10 @@ type Result struct {
 // Client provides a Meta client to an Fx application using the given name
 // for routing.
 //
-// 	fx.Provide(
-// 		metafx.Client("..."),
-// 		newHandler,
-// 	)
+//	fx.Provide(
+//		metafx.Client("..."),
+//		newHandler,
+//	)
 func Client(name string, opts ...thrift.ClientOption) interface{} {
 	return func(p Params) Result {
 		cc := p.Provider.ClientConfig(name)

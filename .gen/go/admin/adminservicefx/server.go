@@ -54,12 +54,12 @@ type ServerResult struct {
 // Server provides procedures for AdminService to an Fx application. It expects a
 // adminservicefx.Interface to be present in the container.
 //
-// 	fx.Provide(
-// 		func(h *MyAdminServiceHandler) adminserviceserver.Interface {
-// 			return h
-// 		},
-// 		adminservicefx.Server(),
-// 	)
+//	fx.Provide(
+//		func(h *MyAdminServiceHandler) adminserviceserver.Interface {
+//			return h
+//		},
+//		adminservicefx.Server(),
+//	)
 func Server(opts ...thrift.RegisterOption) interface{} {
 	return func(p ServerParams) ServerResult {
 		procedures := adminserviceserver.New(p.Handler, opts...)
