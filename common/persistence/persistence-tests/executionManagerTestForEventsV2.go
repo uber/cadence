@@ -316,8 +316,11 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 		WorkflowID: "continue-as-new-workflow-test",
 		RunID:      "551c88d2-d9e6-404f-8131-9eec14f36643",
 	}
+	partitionConfig := map[string]string{
+		"userID": uuid.New(),
+	}
 	decisionScheduleID := int64(2)
-	_, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, decisionScheduleID, nil)
+	_, err0 := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, decisionScheduleID, nil, partitionConfig)
 	s.NoError(err0)
 
 	state0, err1 := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -379,6 +382,7 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
 				BranchToken:                 []byte("branchToken1"),
+				PartitionConfig:             partitionConfig,
 			},
 			ExecutionStats:   &p.ExecutionStats{},
 			TransferTasks:    nil,
@@ -394,19 +398,23 @@ func (s *ExecutionManagerSuiteForEventsV2) TestContinueAsNew() {
 	prevExecutionState, err3 := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
 	s.NoError(err3)
 	prevExecutionInfo := prevExecutionState.ExecutionInfo
+	s.Equal("551c88d2-d9e6-404f-8131-9eec14f36643", prevExecutionInfo.FirstExecutionRunID)
 	s.Equal(p.WorkflowStateCompleted, prevExecutionInfo.State)
 	s.Equal(int64(5), prevExecutionInfo.NextEventID)
 	s.Equal(int64(2), prevExecutionInfo.LastProcessedEvent)
+	s.Equal(partitionConfig, prevExecutionInfo.PartitionConfig)
 
 	newExecutionState, err4 := s.GetWorkflowExecutionInfo(ctx, domainID, newWorkflowExecution)
 	s.NoError(err4)
 	newExecutionInfo := newExecutionState.ExecutionInfo
+	s.Equal("551c88d2-d9e6-404f-8131-9eec14f36643", newExecutionInfo.FirstExecutionRunID)
 	s.Equal(p.WorkflowStateRunning, newExecutionInfo.State)
 	s.Equal(p.WorkflowCloseStatusNone, newExecutionInfo.CloseStatus)
 	s.Equal(int64(3), newExecutionInfo.NextEventID)
 	s.Equal(common.EmptyEventID, newExecutionInfo.LastProcessedEvent)
 	s.Equal(int64(2), newExecutionInfo.DecisionScheduleID)
 	s.Equal([]byte("branchToken1"), newExecutionInfo.BranchToken)
+	s.Equal(partitionConfig, newExecutionInfo.PartitionConfig)
 
 	newRunID, err5 := s.GetCurrentWorkflowRunID(ctx, domainID, workflowExecution.WorkflowID)
 	s.NoError(err5)

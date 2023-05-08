@@ -90,6 +90,7 @@ message PollForDecisionTaskRequest {
   string domain_id = 2;
   string poller_id = 3;
   string forwarded_from = 4;
+  string isolation_group = 5;
 }
 
 message PollForDecisionTaskResponse {
@@ -117,6 +118,7 @@ message PollForActivityTaskRequest {
   string domain_id = 2;
   string poller_id = 3;
   string forwarded_from = 4;
+  string isolation_group = 5;
 }
 
 message PollForActivityTaskResponse {
@@ -146,6 +148,7 @@ message AddDecisionTaskRequest {
   google.protobuf.Duration schedule_to_start_timeout = 5;
   shared.v1.TaskSource source = 6;
   string forwarded_from = 7;
+  map<string, string> partition_config = 8;
 }
 
 message AddDecisionTaskResponse {
@@ -161,6 +164,7 @@ message AddActivityTaskRequest {
   shared.v1.TaskSource source = 7;
   string forwarded_from = 8;
   ActivityTaskDispatchInfo activityTaskDispatchInfo = 9;
+  map<string, string> partition_config = 10;
 }
 
 

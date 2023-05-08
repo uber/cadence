@@ -81,7 +81,8 @@ const (
 		`cron_schedule: ?, ` +
 		`expiration_seconds: ?, ` +
 		`search_attributes: ?, ` +
-		`memo: ? ` +
+		`memo: ?, ` +
+		`partition_config: ? ` +
 		`}`
 
 	templateTransferTaskType = `{` +

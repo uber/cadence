@@ -327,6 +327,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 	decisionScheduleID int64,
 	branchToken []byte,
 	timerTasks []persistence.Task,
+	partitionConfig map[string]string,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	now := time.Now()
@@ -358,6 +359,7 @@ func (s *TestBase) CreateWorkflowExecutionWithBranchToken(
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
 				BranchToken:                 branchToken,
+				PartitionConfig:             partitionConfig,
 			},
 			ExecutionStats: &persistence.ExecutionStats{},
 			TransferTasks: []persistence.Task{
@@ -393,17 +395,18 @@ func (s *TestBase) CreateWorkflowExecution(
 	lastProcessedEventID int64,
 	decisionScheduleID int64,
 	timerTasks []persistence.Task,
+	partitionConfig map[string]string,
 ) (*persistence.CreateWorkflowExecutionResponse, error) {
 
 	return s.CreateWorkflowExecutionWithBranchToken(ctx, domainID, workflowExecution, taskList, wType, wTimeout, decisionTimeout,
-		executionContext, nextEventID, lastProcessedEventID, decisionScheduleID, nil, timerTasks)
+		executionContext, nextEventID, lastProcessedEventID, decisionScheduleID, nil, timerTasks, partitionConfig)
 }
 
 // CreateChildWorkflowExecution is a utility method to create child workflow executions
 func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
 	parentDomainID string, parentExecution types.WorkflowExecution, initiatedID int64, taskList, wType string,
 	wTimeout int32, decisionTimeout int32, executionContext []byte, nextEventID int64, lastProcessedEventID int64,
-	decisionScheduleID int64, timerTasks []persistence.Task) (*persistence.CreateWorkflowExecutionResponse, error) {
+	decisionScheduleID int64, timerTasks []persistence.Task, partitionConfig map[string]string) (*persistence.CreateWorkflowExecutionResponse, error) {
 	now := time.Now()
 	versionHistory := persistence.NewVersionHistory([]byte{}, []*persistence.VersionHistoryItem{
 		{decisionScheduleID, common.EmptyVersion},
@@ -436,6 +439,7 @@ func (s *TestBase) CreateChildWorkflowExecution(ctx context.Context, domainID st
 				DecisionScheduleID:          decisionScheduleID,
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
+				PartitionConfig:             partitionConfig,
 			},
 			ExecutionStats: &persistence.ExecutionStats{},
 			TransferTasks: []persistence.Task{
@@ -556,6 +560,7 @@ func (s *TestBase) ContinueAsNewExecution(
 				DecisionStartedID:           common.EmptyEventID,
 				DecisionTimeout:             1,
 				AutoResetPoints:             prevResetPoints,
+				PartitionConfig:             updatedInfo.PartitionConfig,
 			},
 			ExecutionStats:   updatedStats,
 			TransferTasks:    nil,
@@ -1648,7 +1653,7 @@ func (s *TestBase) RangeCompleteTimerTask(ctx context.Context, inclusiveBeginTim
 
 // CreateDecisionTask is a utility method to create a task
 func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution, taskList string,
-	decisionScheduleID int64) (int64, error) {
+	decisionScheduleID int64, partitionConfig map[string]string) (int64, error) {
 	leaseResponse, err := s.TaskMgr.LeaseTaskList(ctx, &persistence.LeaseTaskListRequest{
 		DomainID: domainID,
 		TaskList: taskList,
@@ -1667,11 +1672,12 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 			TaskID:    taskID,
 			Execution: workflowExecution,
 			Data: &persistence.TaskInfo{
-				DomainID:   domainID,
-				WorkflowID: workflowExecution.WorkflowID,
-				RunID:      workflowExecution.RunID,
-				TaskID:     taskID,
-				ScheduleID: decisionScheduleID,
+				DomainID:        domainID,
+				WorkflowID:      workflowExecution.WorkflowID,
+				RunID:           workflowExecution.RunID,
+				TaskID:          taskID,
+				ScheduleID:      decisionScheduleID,
+				PartitionConfig: partitionConfig,
 			},
 		},
 	}
@@ -1690,7 +1696,7 @@ func (s *TestBase) CreateDecisionTask(ctx context.Context, domainID string, work
 
 // CreateActivityTasks is a utility method to create tasks
 func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, workflowExecution types.WorkflowExecution,
-	activities map[int64]string) ([]int64, error) {
+	activities map[int64]string, partitionConfig map[string]string) ([]int64, error) {
 
 	taskLists := make(map[string]*persistence.TaskListInfo)
 	for _, tl := range activities {
@@ -1722,6 +1728,7 @@ func (s *TestBase) CreateActivityTasks(ctx context.Context, domainID string, wor
 					TaskID:                 taskID,
 					ScheduleID:             activityScheduleID,
 					ScheduleToStartTimeout: defaultScheduleToStartTimeout,
+					PartitionConfig:        partitionConfig,
 				},
 			},
 		}
