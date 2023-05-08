@@ -27,6 +27,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/uber/cadence/.gen/go/indexer"
 
@@ -44,30 +45,26 @@ import (
 
 const (
 	pinotPersistenceName = "pinot"
-
-	DescendingOrder = "DESC"
-	AcendingOrder   = "ASC"
-
-	DocID         = "DocID"
-	DomainID      = "DomainID"
-	WorkflowID    = "WorkflowID"
-	RunID         = "RunID"
-	WorkflowType  = "WorkflowType"
-	CloseStatus   = "CloseStatus"
-	HistoryLength = "HistoryLength"
-	TaskList      = "TaskList"
-	IsCron        = "IsCron"
-	NumClusters   = "NumClusters"
-	ShardID       = "ShardID"
-	Attr          = "Attr"
-	StartTime     = "StartTime"
-	CloseTime     = "CloseTime"
-	UpdateTime    = "UpdateTime"
-	ExecutionTime = "ExecutionTime"
-
-	Encoding = "Encoding"
-
-	VisibilityOperation = "VisibilityOperation"
+	DescendingOrder      = "DESC"
+	AcendingOrder        = "ASC"
+	DocID                = "DocID"
+	DomainID             = "DomainID"
+	WorkflowID           = "WorkflowID"
+	RunID                = "RunID"
+	WorkflowType         = "WorkflowType"
+	CloseStatus          = "CloseStatus"
+	HistoryLength        = "HistoryLength"
+	TaskList             = "TaskList"
+	IsCron               = "IsCron"
+	NumClusters          = "NumClusters"
+	ShardID              = "ShardID"
+	Attr                 = "Attr"
+	StartTime            = "StartTime"
+	CloseTime            = "CloseTime"
+	UpdateTime           = "UpdateTime"
+	ExecutionTime        = "ExecutionTime"
+	Encoding             = "Encoding"
+	LikeStatement        = "%s LIKE '%%%s%%'\n"
 )
 
 type (
@@ -90,7 +87,6 @@ type (
 		TaskID        int64  `json:"TaskID,omitempty"`
 		IsCron        bool   `json:"IsCron,omitempty"`
 		NumClusters   int64  `json:"NumClusters,omitempty"`
-		Attr          string `json:"Attr,omitempty"`
 		UpdateTime    int64  `json:"UpdateTime,omitempty"` // update execution,
 		ShardID       int64  `json:"ShardID,omitempty"`
 		// specific to certain status
@@ -146,13 +142,8 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
 ) error {
 	v.checkProducer()
-	//attr, err := json.Marshal(request.SearchAttributes)
-	attr, err := decodeAttr(request.SearchAttributes)
-	if err != nil {
-		return err
-	}
 
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -165,25 +156,25 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		string(attr),
-		common.RecordStarted,
-		0,                                   // will not be used
-		0,                                   // will not be used
+		-1,                                  // represent invalid close time, means open workflow execution
+		-1,                                  // represent invalid close status, means open workflow execution
 		0,                                   // will not be used
 		request.UpdateTimestamp.UnixMilli(), // will be updated when workflow execution updates
 		int64(request.ShardID),
+		request.SearchAttributes,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context, request *p.InternalRecordWorkflowExecutionClosedRequest) error {
 	v.checkProducer()
-	attr, err := decodeAttr(request.SearchAttributes)
-	if err != nil {
-		return err
-	}
 
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -196,20 +187,24 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionClosed(ctx context.Context
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		string(attr),
-		common.RecordClosed,
 		request.CloseTimestamp.UnixMilli(),
 		*thrift.FromWorkflowExecutionCloseStatus(&request.Status),
 		request.HistoryLength,
 		request.UpdateTimestamp.UnixMilli(),
 		int64(request.ShardID),
+		request.SearchAttributes,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
 func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.Context, request *p.InternalRecordWorkflowExecutionUninitializedRequest) error {
 	v.checkProducer()
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -222,25 +217,24 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		"",
 		false,
 		0,
-		"",
-		"",
-		0,
-		0,
+		-1, // represent invalid close time, means open workflow execution
+		-1, // represent invalid close status, means open workflow execution
 		0,
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
+		nil,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
 func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, request *p.InternalUpsertWorkflowExecutionRequest) error {
 	v.checkProducer()
-	attr, err := decodeAttr(request.SearchAttributes)
-	if err != nil {
-		return err
-	}
-
-	msg := createVisibilityMessage(
+	msg, err := createVisibilityMessage(
 		request.DomainUUID,
 		request.WorkflowID,
 		request.RunID,
@@ -253,14 +247,18 @@ func (v *pinotVisibilityStore) UpsertWorkflowExecution(ctx context.Context, requ
 		request.Memo.GetEncoding(),
 		request.IsCron,
 		request.NumClusters,
-		string(attr),
-		common.UpsertSearchAttributes,
-		0, // will not be used
-		0, // will not be used
-		0, // will not be used
+		-1, // represent invalid close time, means open workflow execution
+		-1, // represent invalid close status, means open workflow execution
+		0,  // will not be used
 		request.UpdateTimestamp.UnixMilli(),
 		request.ShardID,
+		request.SearchAttributes,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return v.producer.Publish(ctx, msg)
 }
 
@@ -271,7 +269,6 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
 		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
 	}
-
 	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
 
 	req := &pnt.SearchRequest{
@@ -279,8 +276,8 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     request,
 	}
-
 	return v.pinotClient.Search(req)
 }
 
@@ -299,6 +296,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     request,
 	}
 
 	return v.pinotClient.Search(req)
@@ -316,6 +314,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Cont
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -333,6 +332,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -350,6 +350,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx contex
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -367,6 +368,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByWorkflowID(ctx cont
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -384,6 +386,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByStatus(ctx context.
 		IsOpen:          true,
 		Filter:          isRecordValid,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest:     &request.InternalListWorkflowExecutionsRequest,
 	}
 
 	return v.pinotClient.Search(req)
@@ -397,6 +400,14 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 		IsOpen:          true,
 		Filter:          nil,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{ // create a new request to avoid nil pointer exceptions
+			DomainUUID:    request.DomainUUID,
+			Domain:        request.Domain,
+			EarliestTime:  time.Time{},
+			LatestTime:    time.Time{},
+			PageSize:      1,
+			NextPageToken: nil,
+		},
 	}
 
 	resp, err := v.pinotClient.Search(req)
@@ -415,7 +426,6 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	// TODO: need to check next page token in the future
 	validMap := v.config.ValidSearchAttributes()
 	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
 
@@ -424,6 +434,14 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 		IsOpen:          true,
 		Filter:          nil,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{
+			DomainUUID:    request.DomainUUID,
+			Domain:        request.Domain,
+			EarliestTime:  time.Time{},
+			LatestTime:    time.Time{},
+			NextPageToken: request.NextPageToken,
+			PageSize:      request.PageSize,
+		},
 	}
 
 	return v.pinotClient.Search(req)
@@ -432,27 +450,33 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	// TODO: need to check next page token in the future
-
-	validMap := v.config.ValidSearchAttributes()
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	req := &pnt.SearchRequest{
 		Query:           query,
 		IsOpen:          true,
 		Filter:          nil,
 		MaxResultWindow: v.config.ESIndexMaxResultWindow(),
+		ListRequest: &p.InternalListWorkflowExecutionsRequest{
+			DomainUUID:    request.DomainUUID,
+			Domain:        request.Domain,
+			EarliestTime:  time.Time{},
+			LatestTime:    time.Time{},
+			NextPageToken: request.NextPageToken,
+			PageSize:      request.PageSize,
+		},
 	}
 
 	return v.pinotClient.Search(req)
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request)
+	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
 		return nil, &types.InternalServiceError{
-			Message: fmt.Sprintf("ListClosedWorkflowExecutions failed, %v", err),
+			Message: fmt.Sprintf("CountClosedWorkflowExecutions failed, %v", err),
 		}
 	}
 
@@ -465,7 +489,7 @@ func (v *pinotVisibilityStore) DeleteWorkflowExecution(
 	ctx context.Context,
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
-	return p.ErrVisibilityOperationNotSupported
+	return &types.BadRequestError{Message: "Operation is not supported. Pinot doesn't support this operation so far."}
 }
 
 func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
@@ -473,7 +497,7 @@ func (v *pinotVisibilityStore) DeleteUninitializedWorkflowExecution(
 	request *p.VisibilityDeleteWorkflowExecutionRequest,
 ) error {
 	// temporary: not implemented, only implemented for ES
-	return p.ErrVisibilityOperationNotSupported
+	return &types.BadRequestError{Message: "Operation is not supported. Pinot doesn't support this operation so far."}
 }
 
 func (v *pinotVisibilityStore) checkProducer() {
@@ -496,47 +520,75 @@ func createVisibilityMessage(
 	memo []byte,
 	encoding common.EncodingType,
 	isCron bool,
-	NumClusters int16,
-	searchAttributes string,
-	visibilityOperation common.VisibilityOperation,
+	numClusters int16,
 	// specific to certain status
 	closeTimeUnixNano int64, // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
 	historyLength int64, // close execution
 	updateTimeUnixNano int64, // update execution,
 	shardID int64,
-) *indexer.PinotMessage {
-	status := int(closeStatus)
+	rawSearchAttributes map[string][]byte,
+) (*indexer.PinotMessage, error) {
+	m := make(map[string]interface{})
+	//loop through all input parameters
+	m[DocID] = wid + "-" + rid
+	m[DomainID] = domainID
+	m[WorkflowID] = wid
+	m[RunID] = rid
+	m[WorkflowType] = workflowTypeName
+	m[TaskList] = taskList
+	m[StartTime] = startTimeUnixNano
+	m[ExecutionTime] = executionTimeUnixNano
+	m[IsCron] = isCron
+	m[NumClusters] = numClusters
+	m[CloseTime] = closeTimeUnixNano
+	m[CloseStatus] = int(closeStatus)
+	m[HistoryLength] = historyLength
+	m[UpdateTime] = updateTimeUnixNano
+	m[ShardID] = shardID
 
-	rawMsg := visibilityMessage{
-		DocID:         wid + "-" + rid,
-		DomainID:      domainID,
-		WorkflowID:    wid,
-		RunID:         rid,
-		WorkflowType:  workflowTypeName,
-		TaskList:      taskList,
-		StartTime:     startTimeUnixNano,
-		ExecutionTime: executionTimeUnixNano,
-		IsCron:        isCron,
-		NumClusters:   int64(NumClusters),
-		Attr:          searchAttributes,
-		CloseTime:     closeTimeUnixNano,
-		CloseStatus:   int64(status),
-		HistoryLength: historyLength,
-		UpdateTime:    updateTimeUnixNano,
-		ShardID:       shardID,
+	var err error
+	for key, value := range rawSearchAttributes {
+		value, err = isTimeStruct(value)
+		if err != nil {
+			return nil, err
+		}
+
+		var val interface{}
+		err = json.Unmarshal(value, &val)
+		if err != nil {
+			return nil, err
+		}
+		m[key] = val
 	}
 
-	serializedMsg, err := json.Marshal(rawMsg)
+	serializedMsg, err := json.Marshal(m)
 	if err != nil {
-		panic("serialize msg error!")
+		return nil, err
 	}
 
 	msg := &indexer.PinotMessage{
 		WorkflowID: common.StringPtr(wid),
 		Payload:    serializedMsg,
 	}
-	return msg
+	return msg, nil
+
+}
+
+// check if value is time.Time type
+// if it is, convert it to unixMilli
+// if it isn't time, return the original value
+func isTimeStruct(value []byte) ([]byte, error) {
+	var time time.Time
+	err := json.Unmarshal(value, &time)
+	if err == nil {
+		unixTime := time.UnixMilli()
+		value, err = json.Marshal(unixTime)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return value, nil
 }
 
 /****************************** Request Translator ******************************/
@@ -587,6 +639,10 @@ func (q *PinotQuery) addLimits(limit int) {
 	q.limits += fmt.Sprintf("LIMIT %d\n", limit)
 }
 
+func (q *PinotQuery) addOffsetAndLimits(offset int, limit int) {
+	q.limits += fmt.Sprintf("LIMIT %d, %d\n", offset, limit)
+}
+
 type PinotQueryFilter struct {
 	string
 }
@@ -628,19 +684,16 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 	f.string += fmt.Sprintf("%s BETWEEN %v AND %v\n", obj, earliest, latest)
 }
 
-func (f *PinotQueryFilter) addExactMatch(key string, val string) {
-	f.checkFirstFilter()
-	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
-	f.string += fmt.Sprintf("AND TEXT_MATCH(%s, '%s')\n", Attr, val)
-}
-
 func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("TEXT_MATCH(%s, '%s')\n", Attr, key)
-	f.string += fmt.Sprintf("AND %s LIKE '%%%s%%'\n", Attr, val)
+	f.string += getPartialFormatString(key, val)
 }
 
-func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest) string {
+func getPartialFormatString(key string, val string) string {
+	return fmt.Sprintf(LikeStatement, key, val)
+}
+
+func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
@@ -651,8 +704,19 @@ func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowE
 	query.filters.addEqual(DomainID, request.DomainUUID)
 
 	requestQuery := strings.TrimSpace(request.Query)
-	if requestQuery != "" {
-		query.filters.addQuery(request.Query)
+
+	// if customized query is empty, directly return
+	if requestQuery == "" {
+		return query.String()
+	}
+
+	requestQuery = filterPrefix(requestQuery)
+
+	// when customized query is not empty
+	if common.IsJustOrderByClause(requestQuery) {
+		query.concatSorter(requestQuery)
+	} else { // check if it has a complete customized query
+		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
 	}
 
 	return query.String()
@@ -663,79 +727,218 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		return ""
 	}
 
-	// TODO: switch to v.logger or something
-	queryQueryLogger := log.NewNoop()
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
 	query := NewPinotQuery(tableName)
 
 	// need to add Domain ID
 	query.filters.addEqual(DomainID, request.DomainUUID)
 
 	requestQuery := strings.TrimSpace(request.Query)
+
+	// if customized query is empty, directly return
 	if requestQuery == "" {
-		query.addLimits(request.PageSize)
-	} else if common.IsJustOrderByClause(requestQuery) {
-		query.concatSorter(requestQuery)
-		query.addLimits(request.PageSize)
-	} else {
-		// checks every case of 'and'
-		reg := regexp.MustCompile("(?i)(and)")
-		queryList := reg.Split(requestQuery, -1)
-
-		for _, element := range queryList {
-			element := strings.TrimSpace(element)
-			pair := strings.Split(element, " ")
-			key := pair[0]
-
-			// case: when order by query also passed in
-			if strings.ToLower(key) == "order" && strings.ToLower(pair[1]) == "by" {
-				query.concatSorter(element)
-				continue
-			}
-
-			if pinotContainsKey(key) {
-				query.filters.addQuery(element)
-				continue
-			}
-
-			if valType, ok := validMap[key]; ok {
-				val := pair[2]
-				indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
-				isKeyWord := indexValType == types.IndexedValueTypeKeyword
-				if isKeyWord {
-					query.filters.addExactMatch(key, val)
-				} else {
-					query.filters.addPartialMatch(key, val)
-				}
-			} else {
-				queryQueryLogger.Error("Unregistered field!!")
-			}
-
-		}
-
-		query.addLimits(request.PageSize)
+		query.addOffsetAndLimits(token.From, request.PageSize)
+		return query.String()
 	}
 
+	requestQuery = filterPrefix(requestQuery)
+
+	// when customized query is not empty
+	if common.IsJustOrderByClause(requestQuery) {
+		query.concatSorter(requestQuery)
+	} else { // check if it has a complete customized query
+		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+	}
+
+	query.addOffsetAndLimits(token.From, request.PageSize)
 	return query.String()
 }
 
-// hard coded for this PoC. Will use dynamic configs later.
-func pinotContainsKey(key string) bool {
+func filterPrefix(query string) string {
+	prefix := fmt.Sprintf("`%s.", Attr)
+	postfix := "`"
+
+	query = strings.ReplaceAll(query, prefix, "")
+	return strings.ReplaceAll(query, postfix, "")
+}
+
+func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
+	// TODO: switch to v.logger or something
+	queryQueryLogger := log.NewNoop()
+
+	// checks every case of 'and'
+	reg := regexp.MustCompile("(?i)(and)")
+	queryList := reg.Split(requestQuery, -1)
+	var orderBy string
+
+	for index, element := range queryList {
+		element := strings.TrimSpace(element)
+		// special case: when element is the last one
+		if index == len(queryList)-1 {
+			element, orderBy = parseLastElement(element)
+		}
+		if len(element) == 0 {
+			continue
+		}
+
+		key, val, op := splitElement(element)
+
+		// case 2: when key is a system key
+		if ok, _ := isSystemKey(key); ok {
+			query.filters.addQuery(element)
+			continue
+		}
+
+		// case 3: when key is valid within validMap
+		if valType, ok := validMap[key]; ok {
+			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
+
+			if indexValType == types.IndexedValueTypeString {
+				val = removeQuote(val)
+				query.filters.addPartialMatch(key, val)
+			} else {
+				query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
+			}
+		} else {
+			queryQueryLogger.Error("Unregistered field!!")
+		}
+	}
+
+	if orderBy != "" {
+		query.concatSorter(orderBy)
+	}
+
+	return query
+}
+
+/*
+Can have cases:
+1. A=B
+2. A<=B
+3. A>=B
+4. A <= B
+5. A >= B
+*/
+func splitElement(element string) (string, string, string) {
+	if element == "" {
+		return "", "", ""
+	}
+
+	listLE := strings.Split(element, "<=")
+	listGE := strings.Split(element, ">=")
+	listE := strings.Split(element, "=")
+	listL := strings.Split(element, "<")
+	listG := strings.Split(element, ">")
+
+	if len(listLE) > 1 {
+		return strings.TrimSpace(listLE[0]), strings.TrimSpace(listLE[1]), "<="
+	}
+
+	if len(listGE) > 1 {
+		return strings.TrimSpace(listGE[0]), strings.TrimSpace(listGE[1]), ">="
+	}
+
+	if len(listE) > 1 {
+		return strings.TrimSpace(listE[0]), strings.TrimSpace(listE[1]), "="
+	}
+
+	if len(listL) > 1 {
+		return strings.TrimSpace(listL[0]), strings.TrimSpace(listL[1]), "<"
+	}
+
+	if len(listG) > 1 {
+		return strings.TrimSpace(listG[0]), strings.TrimSpace(listG[1]), ">"
+	}
+
+	return "", "", ""
+}
+
+/*
+Order by XXX DESC
+-> if startWith("Order by") -> return "", element
+
+CustomizedString = 'cannot be used in order by'
+-> if last character is ‘ or " -> return element, ""
+
+CustomizedInt = 1 (without order by clause)
+-> if !contains("Order by") -> return element, ""
+
+CustomizedString = 'cannot be used in order by' Order by XXX DESC
+-> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
+
+CustomizedInt = 1 Order by XXX DESC
+-> Find the index x of last appearance of "order by" -> return element[0, x], element[x, len]
+*/
+func parseLastElement(element string) (string, string) {
+	// case 1: when order by query also passed in
+	if common.IsJustOrderByClause(element) {
+		return "", element
+	}
+
+	// case 2: when last element is a string
+	if element[len(element)-1] == '\'' || element[len(element)-1] == '"' {
+		return element, ""
+	}
+
+	// case 3: when last element doesn't contain "order by"
+	if !strings.Contains(strings.ToLower(element), "order by") {
+		return element, ""
+	}
+
+	// case 4: general case
+	elementArray := strings.Split(element, " ")
+	orderByIndex := findLastOrderBy(elementArray) // find the last appearance of "order by" is the answer
+	return strings.Join(elementArray[:orderByIndex], " "), strings.Join(elementArray[orderByIndex:], " ")
+}
+
+func findLastOrderBy(list []string) int {
+	for i := len(list) - 2; i >= 0; i-- {
+		if strings.ToLower(list[i]) == "order" && strings.ToLower(list[i+1]) == "by" {
+			return i
+		}
+	}
+	return 0
+}
+
+func removeQuote(val string) string {
+	if val[0] == '"' && val[len(val)-1] == '"' {
+		val = fmt.Sprintf("%s", val[1:len(val)-1])
+	} else if val[0] == '\'' && val[len(val)-1] == '\'' {
+		val = fmt.Sprintf("%s", val[1:len(val)-1])
+	}
+	return fmt.Sprintf("%s", val)
+}
+
+// checks if a string is system key
+func isSystemKey(key string) (bool, string) {
 	msg := visibilityMessage{}
 	values := reflect.ValueOf(msg)
 	typesOf := values.Type()
 	for i := 0; i < values.NumField(); i++ {
 		fieldName := typesOf.Field(i).Name
 		if fieldName == key {
-			return true
+			return true, typesOf.Field(i).Type.String()
 		}
 	}
-	return false
+	return false, "nil"
 }
 
 func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWorkflowExecutionsRequest, isClosed bool) string {
 	if request == nil {
 		return ""
 	}
+
+	token, err := pnt.GetNextPageToken(request.NextPageToken)
+	if err != nil {
+		panic(fmt.Sprintf("deserialize next page token error: %s", err))
+	}
+
+	from := token.From
+	pageSize := request.PageSize
 
 	query := NewPinotQuery(tableName)
 
@@ -749,6 +952,9 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
 	query.addPinotSorter(RunID, DescendingOrder)
+
+	query.addOffsetAndLimits(from, pageSize)
+
 	return query.String()
 }
 
