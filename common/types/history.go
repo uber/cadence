@@ -855,12 +855,21 @@ func (v *ShardOwnershipLostError) GetOwner() (o string) {
 type HistorySignalWithStartWorkflowExecutionRequest struct {
 	DomainUUID             string                                   `json:"domainUUID,omitempty"`
 	SignalWithStartRequest *SignalWithStartWorkflowExecutionRequest `json:"signalWithStartRequest,omitempty"`
+	PartitionConfig        map[string]string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
 func (v *HistorySignalWithStartWorkflowExecutionRequest) GetDomainUUID() (o string) {
 	if v != nil {
 		return v.DomainUUID
+	}
+	return
+}
+
+// GetPartitionConfig is an internal getter (TBD...)
+func (v *HistorySignalWithStartWorkflowExecutionRequest) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
 	}
 	return
 }
@@ -901,6 +910,7 @@ type HistoryStartWorkflowExecutionRequest struct {
 	ContinuedFailureDetails         []byte                         `json:"continuedFailureDetails,omitempty"`
 	LastCompletionResult            []byte                         `json:"lastCompletionResult,omitempty"`
 	FirstDecisionTaskBackoffSeconds *int32                         `json:"firstDecisionTaskBackoffSeconds,omitempty"`
+	PartitionConfig                 map[string]string
 }
 
 // GetDomainUUID is an internal getter (TBD...)
@@ -931,6 +941,14 @@ func (v *HistoryStartWorkflowExecutionRequest) GetExpirationTimestamp() (o int64
 func (v *HistoryStartWorkflowExecutionRequest) GetFirstDecisionTaskBackoffSeconds() (o int32) {
 	if v != nil && v.FirstDecisionTaskBackoffSeconds != nil {
 		return *v.FirstDecisionTaskBackoffSeconds
+	}
+	return
+}
+
+// GetPartitionConfig is an internal getter (TBD...)
+func (v *HistoryStartWorkflowExecutionRequest) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
 	}
 	return
 }
