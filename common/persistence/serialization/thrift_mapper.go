@@ -247,6 +247,7 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		VersionHistories:                        info.VersionHistories,
 		VersionHistoriesEncoding:                &info.VersionHistoriesEncoding,
 		FirstExecutionRunID:                     info.FirstExecutionRunID,
+		PartitionConfig:                         info.PartitionConfig,
 	}
 }
 
@@ -314,6 +315,7 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		VersionHistories:                   info.VersionHistories,
 		VersionHistoriesEncoding:           info.GetVersionHistoriesEncoding(),
 		FirstExecutionRunID:                info.FirstExecutionRunID,
+		PartitionConfig:                    info.PartitionConfig,
 	}
 }
 
@@ -523,6 +525,7 @@ func taskInfoToThrift(info *TaskInfo) *sqlblobs.TaskInfo {
 		ScheduleID:       &info.ScheduleID,
 		ExpiryTimeNanos:  timeToUnixNanoPtr(info.ExpiryTimestamp),
 		CreatedTimeNanos: timeToUnixNanoPtr(info.CreatedTimestamp),
+		PartitionConfig:  info.PartitionConfig,
 	}
 }
 
@@ -536,6 +539,7 @@ func taskInfoFromThrift(info *sqlblobs.TaskInfo) *TaskInfo {
 		ScheduleID:       info.GetScheduleID(),
 		ExpiryTimestamp:  timeFromUnixNano(info.GetExpiryTimeNanos()),
 		CreatedTimestamp: timeFromUnixNano(info.GetCreatedTimeNanos()),
+		PartitionConfig:  info.PartitionConfig,
 	}
 }
 
