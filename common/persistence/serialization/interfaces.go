@@ -162,6 +162,7 @@ type (
 		VersionHistories                   []byte
 		VersionHistoriesEncoding           string
 		FirstExecutionRunID                UUID
+		PartitionConfig                    map[string]string
 	}
 
 	// ActivityInfo blob in a serialization agnostic format
@@ -249,6 +250,7 @@ type (
 		ScheduleID       int64
 		ExpiryTimestamp  time.Time
 		CreatedTimestamp time.Time
+		PartitionConfig  map[string]string
 	}
 
 	// TaskListInfo blob in a serialization agnostic format

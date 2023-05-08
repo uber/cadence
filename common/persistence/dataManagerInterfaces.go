@@ -343,6 +343,7 @@ type (
 		AutoResetPoints                    *types.ResetPoints
 		Memo                               map[string][]byte
 		SearchAttributes                   map[string][]byte
+		PartitionConfig                    map[string]string
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -461,6 +462,7 @@ type (
 		ScheduleToStartTimeout int32
 		Expiry                 time.Time
 		CreatedTime            time.Time
+		PartitionConfig        map[string]string
 	}
 
 	// TaskKey gives primary key info for a specific task
