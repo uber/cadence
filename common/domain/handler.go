@@ -25,6 +25,7 @@ package domain
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -44,6 +45,7 @@ import (
 
 var (
 	errDomainUpdateTooFrequent = &types.ServiceBusyError{Message: "Domain update too frequent."}
+	errInvalidDomainName       = &types.BadRequestError{Message: "Domain name can only include alphanumeric and dash characters."}
 )
 
 type (
@@ -142,6 +144,15 @@ func (d *handlerImpl) RegisterDomain(
 	default:
 		// other err
 		return err
+	}
+
+	// input validation on domain name
+	matchedRegex, err := regexp.MatchString("^[a-zA-Z0-9-]+$", registerRequest.GetName())
+	if err != nil {
+		return err
+	}
+	if !matchedRegex {
+		return errInvalidDomainName
 	}
 
 	activeClusterName := d.clusterMetadata.GetCurrentClusterName()
