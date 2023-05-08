@@ -55,7 +55,7 @@ func (db *mdb) UpdateWorkflowExecutionWithTasks(
 	replicationTasks []*nosqlplugin.ReplicationTask,
 	timerTasks []*nosqlplugin.TimerTask,
 	shardCondition *nosqlplugin.ShardCondition,
-	ttl int,
+	ttlInSeconds int,
 ) error {
 	panic("TODO")
 }

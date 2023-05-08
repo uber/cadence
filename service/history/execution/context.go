@@ -1225,7 +1225,8 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 
 	startTime := request.UpdateWorkflowMutation.ExecutionInfo.StartTimestamp
 	if time.Time.IsZero(startTime) {
-		request.TTLInSeconds = daysInSeconds
+		//Default state of TTL, means there is no TTL attached.
+		request.TTLInSeconds = 0
 	} else {
 		request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
 		c.logger.SampleInfo("Calculated TTL", request.TTLInSeconds)
