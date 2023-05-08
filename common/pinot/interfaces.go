@@ -49,6 +49,7 @@ type (
 		IsOpen          bool
 		Filter          IsRecordValidFilter
 		MaxResultWindow int
+		ListRequest     *p.InternalListWorkflowExecutionsRequest
 	}
 
 	// GenericMatch is a match struct
