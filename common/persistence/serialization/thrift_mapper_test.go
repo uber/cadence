@@ -131,6 +131,22 @@ func TestDomainInfo(t *testing.T) {
 	assert.Equal(t, expected.LastUpdatedTimestamp.Sub(actual.LastUpdatedTimestamp), time.Duration(0))
 }
 
+func TestDomainInfoRoundtripPanictest(t *testing.T) {
+	tests := map[string]struct {
+		in *DomainInfo
+	}{
+		"empty roundtrip": {
+			in: &DomainInfo{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.in, domainInfoFromThrift(domainInfoToThrift(td.in)))
+		})
+	}
+}
+
 func TestHistoryTreeInfo(t *testing.T) {
 	expected := &HistoryTreeInfo{
 		CreatedTimestamp: time.Now(),

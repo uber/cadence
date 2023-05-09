@@ -84,6 +84,8 @@ type (
 		FailoverEndTimestamp        *time.Time // TODO: There is logic checking if it's nil, should revisit this
 		PreviousFailoverVersion     int64
 		LastUpdatedTimestamp        time.Time
+		IsolationGroups             []byte
+		IsolationGroupsEncoding     string
 	}
 
 	// HistoryBranchRange blob in a serialization agnostic format
