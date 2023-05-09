@@ -65,6 +65,7 @@ func StartWorkflow(
 				ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(2),
 				TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 			},
+			PartitionConfig: map[string]string{"userid": uuid.New()},
 		},
 	)
 	if err != nil {
