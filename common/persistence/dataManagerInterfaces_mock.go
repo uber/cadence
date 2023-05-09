@@ -1546,30 +1546,30 @@ func (mr *MockConfigStoreManagerMockRecorder) Close() *gomock.Call {
 }
 
 // FetchDynamicConfig mocks base method.
-func (m *MockConfigStoreManager) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+func (m *MockConfigStoreManager) FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FetchDynamicConfig", ctx)
+	ret := m.ctrl.Call(m, "FetchDynamicConfig", ctx, cfgType)
 	ret0, _ := ret[0].(*FetchDynamicConfigResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // FetchDynamicConfig indicates an expected call of FetchDynamicConfig.
-func (mr *MockConfigStoreManagerMockRecorder) FetchDynamicConfig(ctx interface{}) *gomock.Call {
+func (mr *MockConfigStoreManagerMockRecorder) FetchDynamicConfig(ctx, cfgType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchDynamicConfig", reflect.TypeOf((*MockConfigStoreManager)(nil).FetchDynamicConfig), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchDynamicConfig", reflect.TypeOf((*MockConfigStoreManager)(nil).FetchDynamicConfig), ctx, cfgType)
 }
 
 // UpdateDynamicConfig mocks base method.
-func (m *MockConfigStoreManager) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+func (m *MockConfigStoreManager) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateDynamicConfig", ctx, request)
+	ret := m.ctrl.Call(m, "UpdateDynamicConfig", ctx, request, cfgType)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateDynamicConfig indicates an expected call of UpdateDynamicConfig.
-func (mr *MockConfigStoreManagerMockRecorder) UpdateDynamicConfig(ctx, request interface{}) *gomock.Call {
+func (mr *MockConfigStoreManagerMockRecorder) UpdateDynamicConfig(ctx, request, cfgType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockConfigStoreManager)(nil).UpdateDynamicConfig), ctx, request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockConfigStoreManager)(nil).UpdateDynamicConfig), ctx, request, cfgType)
 }
