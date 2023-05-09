@@ -32,6 +32,9 @@ import (
 )
 
 func (z *handlerImpl) UpdateGlobalState(ctx context.Context, in types.UpdateGlobalIsolationGroupsRequest) error {
+	if z.globalIsolationGroupDrains == nil {
+		return &types.BadRequestError{"global isolation group drain is not supported in this cluster"}
+	}
 	mappedInput, err := MapUpdateGlobalIsolationGroupsRequest(in.IsolationGroups)
 	if err != nil {
 		return err
@@ -43,6 +46,9 @@ func (z *handlerImpl) UpdateGlobalState(ctx context.Context, in types.UpdateGlob
 }
 
 func (z *handlerImpl) GetGlobalState(ctx context.Context) (*types.GetGlobalIsolationGroupsResponse, error) {
+	if z.globalIsolationGroupDrains == nil {
+		return nil, &types.BadRequestError{"global isolation group drain is not supported in this cluster"}
+	}
 	res, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
 	if err != nil {
 		var e types.EntityNotExistsError

@@ -56,7 +56,7 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	logger log.Logger,
 	dc *dynamicconfig.Collection,
 	domainCache cache.DomainCache,
-	cfgStoreClient dynamicconfig.Client,
+	cfgStoreClient dynamicconfig.Client, // can be nil, which means global drain is unsupported
 ) (isolationgroup.State, error) {
 	stopChan := make(chan struct{})
 
@@ -149,20 +149,21 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	if domainCfg != nil && domainCfg.IsolationGroups != nil {
 		domainState = domainCfg.IsolationGroups
 	}
-
-	globalCfg, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve global drains in %w", err)
-	}
-
-	globalState, err := isolationgroupapi.MapDynamicConfigResponse(globalCfg)
-	if err != nil {
-		return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
-	}
-
 	ig := &isolationGroups{
-		Global: globalState,
 		Domain: domainState,
+	}
+
+	if z.globalIsolationGroupDrains != nil {
+		globalCfg, err := z.globalIsolationGroupDrains.GetListValue(dynamicconfig.DefaultIsolationGroupConfigStoreManagerGlobalMapping, nil)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve global drains in %w", err)
+		}
+
+		globalState, err := isolationgroupapi.MapDynamicConfigResponse(globalCfg)
+		if err != nil {
+			return nil, fmt.Errorf("could not resolve global drains in isolationGroup handler: %w", err)
+		}
+		ig.Global = globalState
 	}
 
 	return ig, nil
