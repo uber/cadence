@@ -81,8 +81,8 @@ func NewGenericClient(
 	}
 
 	return &ESClient{
-		client: esClient,
-		logger: logger,
+		Client: esClient,
+		Logger: logger,
 	}, nil
 }
 
