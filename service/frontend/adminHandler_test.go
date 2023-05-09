@@ -807,7 +807,7 @@ func Test_GetGlobalIsolationGroups(t *testing.T) {
 			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().GetGlobalState(gomock.Any()).Return(nil, assert.AnError)
 			},
-			expectedErr: assert.AnError,
+			expectedErr: &types.InternalServiceError{Message: assert.AnError.Error()},
 		},
 	}
 
@@ -871,7 +871,7 @@ func Test_UpdateGlobalIsolationGroups(t *testing.T) {
 			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().UpdateGlobalState(gomock.Any(), validConfig).Return(assert.AnError)
 			},
-			expectedErr: assert.AnError,
+			expectedErr: &types.InternalServiceError{Message: assert.AnError.Error()},
 		},
 	}
 
@@ -950,7 +950,7 @@ func Test_GetDomainIsolationGroups(t *testing.T) {
 					Domain: "domain",
 				}).Return(nil, assert.AnError)
 			},
-			expectedErr: assert.AnError,
+			expectedErr: &types.InternalServiceError{Message: assert.AnError.Error()},
 		},
 	}
 
@@ -1017,7 +1017,7 @@ func Test_UpdateDomainIsolationGroups(t *testing.T) {
 			ighandlerAffordance: func(mock *isolationgroupapi.MockHandler) {
 				mock.EXPECT().UpdateDomainState(gomock.Any(), validConfig).Return(assert.AnError)
 			},
-			expectedErr: assert.AnError,
+			expectedErr: &types.InternalServiceError{Message: assert.AnError.Error()},
 		},
 	}
 

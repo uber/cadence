@@ -1743,11 +1743,12 @@ func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, reque
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.isolationGroups == nil {
-		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
-	}
 
-	return adh.isolationGroups.GetGlobalState(ctx)
+	resp, err := adh.isolationGroups.GetGlobalState(ctx)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
 }
 
 func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
@@ -1757,12 +1758,9 @@ func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, re
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.isolationGroups == nil {
-		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
-	}
 	err := adh.isolationGroups.UpdateGlobalState(ctx, *request)
 	if err != nil {
-		return nil, err
+		return nil, adh.error(err, scope)
 	}
 	return &types.UpdateGlobalIsolationGroupsResponse{}, nil
 }
@@ -1775,11 +1773,12 @@ func (adh *adminHandlerImpl) GetDomainIsolationGroups(ctx context.Context, reque
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.isolationGroups == nil {
-		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
-	}
 
-	return adh.isolationGroups.GetDomainState(ctx, types.GetDomainIsolationGroupsRequest{Domain: request.Domain})
+	resp, err := adh.isolationGroups.GetDomainState(ctx, types.GetDomainIsolationGroupsRequest{Domain: request.Domain})
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
 }
 
 func (adh *adminHandlerImpl) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (_ *types.UpdateDomainIsolationGroupsResponse, retError error) {
@@ -1789,12 +1788,9 @@ func (adh *adminHandlerImpl) UpdateDomainIsolationGroups(ctx context.Context, re
 	if request == nil {
 		return nil, adh.error(errRequestNotSet, scope)
 	}
-	if adh.isolationGroups == nil {
-		return nil, adh.error(types.BadRequestError{Message: "isolation groups are not enabled in this cluster"}, scope)
-	}
 	err := adh.isolationGroups.UpdateDomainState(ctx, *request)
 	if err != nil {
-		return nil, err
+		return nil, adh.error(err, scope)
 	}
 	return &types.UpdateDomainIsolationGroupsResponse{}, nil
 }
