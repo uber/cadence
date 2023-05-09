@@ -278,11 +278,6 @@ CREATE TYPE domain (
   owner_email text,
 );
 
-CREATE TYPE isolation_group_partition (
-  name text,
-  state int,
-);
-
 CREATE TYPE domain_config (
   retention   int,
   emit_metric boolean,
