@@ -23,13 +23,12 @@ package cadence
 import (
 	"log"
 	"time"
-
+	
+	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 	"github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/service/worker"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	"go.uber.org/cadence/compatibility"
-
-	apiv1 "github.com/uber/cadence-idl/go/proto/api/v1"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/archiver"
