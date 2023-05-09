@@ -369,8 +369,7 @@ func (csc *configStoreClient) Stop() {
 func (csc *configStoreClient) Start() {
 	err := csc.startUpdate()
 	if err != nil {
-		csc.logger.Error("could not start config store", tag.Error(err))
-		return
+		csc.logger.Fatal("could not start config store", tag.Error(err))
 	}
 	if !atomic.CompareAndSwapInt32(&csc.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
