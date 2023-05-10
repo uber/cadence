@@ -1011,6 +1011,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	release(nil)
 
 	if recordStart {
+		t.metricsClient.IncCounter(metrics.TransferActiveTaskRecordWorkflowStartedScope, metrics.WorkflowStartedCount)
 		return t.recordWorkflowStarted(
 			ctx,
 			task.DomainID,

@@ -2261,6 +2261,7 @@ const (
 	HistoryFailoverCallbackCount
 	WorkflowVersionCount
 	WorkflowTypeCount
+	WorkflowStartedCount
 	LargeHistoryBlobCount
 	LargeHistoryEventCount
 	LargeHistorySizeCount
@@ -2862,6 +2863,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ReplicationTasksCount:                                        {metricName: "replication_tasks_count", metricType: Timer},
 		WorkflowVersionCount:                                         {metricName: "workflow_version_count", metricType: Gauge},
 		WorkflowTypeCount:                                            {metricName: "workflow_type_count", metricType: Gauge},
+		WorkflowStartedCount:                                         {metricName: "workflow_started_count", metricType: Counter},
 		LargeHistoryBlobCount:                                        {metricName: "large_history_blob_count", metricType: Counter},
 		LargeHistoryEventCount:                                       {metricName: "large_history_event_count", metricType: Counter},
 		LargeHistorySizeCount:                                        {metricName: "large_history_size_count", metricType: Counter},
