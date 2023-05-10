@@ -44,11 +44,6 @@ type defaultIsolationGroupStateHandler struct {
 	domainCache                cache.DomainCache
 	globalIsolationGroupDrains dynamicconfig.Client
 	config                     defaultConfig
-	lastSeen                   *isolationGroups
-	updateCB                   func()
-	// subscriptions is a map of domains->subscription-keys-> subscription channels
-	// for notifying when there's a state change
-	subscriptions map[string]map[string]chan<- isolationgroup.ChangeEvent
 }
 
 // NewDefaultIsolationGroupStateWatcherWithConfigStoreClient Is a constructor which allows passing in the dynamic config client
@@ -111,7 +106,6 @@ func (z *defaultIsolationGroupStateHandler) Start() {
 	if !atomic.CompareAndSwapInt32(&z.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
 		return
 	}
-	go z.updateCB()
 }
 
 func (z *defaultIsolationGroupStateHandler) Stop() {

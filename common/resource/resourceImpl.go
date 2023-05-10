@@ -662,8 +662,5 @@ func ensurePartitionerOrDefault(params *Params, dc *dynamicconfig.Collection, st
 	if params.Partitioner != nil {
 		return params.Partitioner
 	}
-	cfg := partition.Config{
-		IsolationGroupEnabled: dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
-	}
-	return partition.NewDefaultPartitioner(params.Logger, state, cfg)
+	return partition.NewDefaultPartitioner(params.Logger, state)
 }

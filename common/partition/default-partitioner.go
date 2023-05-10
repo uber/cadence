@@ -38,7 +38,7 @@ import (
 
 const (
 	IsolationGroupKey = "isolation-group"
-	WorkflowRunIDKey  = "wf-run-id"
+	WorkflowIDKey     = "wf-id"
 )
 
 // ErrNoIsolationGroupsAvailable is returned when there are no available isolation-groups
@@ -51,17 +51,16 @@ var ErrInvalidPartitionConfig = errors.New("invalid partition config")
 
 // DefaultWorkflowPartitionConfig Is the default dataset expected to be passed around in the
 // execution records for workflows which is used for partitioning. It contains the IsolationGroup
-// where the workflow was started, and is expected to be pinned, and a RunID for a fallback means
+// where the workflow was started, and is expected to be pinned, and a workflow ID  for a fallback means
 // to partition data deterministically.
 type defaultWorkflowPartitionConfig struct {
 	WorkflowStartIsolationGroup string
-	RunID                       string
+	WFID                        string
 }
 
 // defaultPartitioner is a business-agnostic implementation of partitioning
 // which is used by the Cadence system to allocate workflows in matching by isolation-group
 type defaultPartitioner struct {
-	config              Config
 	log                 log.Logger
 	isolationGroupState isolationgroup.State
 }
@@ -69,11 +68,9 @@ type defaultPartitioner struct {
 func NewDefaultPartitioner(
 	logger log.Logger,
 	isolationGroupState isolationgroup.State,
-	cfg Config,
 ) Partitioner {
 	return &defaultPartitioner{
 		log:                 logger,
-		config:              cfg,
 		isolationGroupState: isolationGroupState,
 	}
 }
@@ -83,7 +80,7 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 		return "", ErrInvalidPartitionConfig
 	}
 	wfPartition := mapPartitionConfigToDefaultPartitionConfig(wfPartitionData)
-	if wfPartition.WorkflowStartIsolationGroup == "" || wfPartition.RunID == "" {
+	if wfPartition.WorkflowStartIsolationGroup == "" || wfPartition.WFID == "" {
 		return "", ErrInvalidPartitionConfig
 	}
 
@@ -102,10 +99,10 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 
 func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultWorkflowPartitionConfig {
 	isolationGroup, _ := config[IsolationGroupKey]
-	runID, _ := config[WorkflowRunIDKey]
+	wfID, _ := config[WorkflowIDKey]
 	return defaultWorkflowPartitionConfig{
 		WorkflowStartIsolationGroup: isolationGroup,
-		RunID:                       runID,
+		WFID:                        wfID,
 	}
 }
 
@@ -135,6 +132,6 @@ func pickIsolationGroupFallback(available []string, wfConfig defaultWorkflowPart
 	if len(available) == 0 {
 		return ""
 	}
-	hashv := farm.Hash32([]byte(wfConfig.RunID))
+	hashv := farm.Hash32([]byte(wfConfig.WFID))
 	return available[int(hashv)%len(available)]
 }

@@ -71,7 +71,7 @@ func TestPickingAZone(t *testing.T) {
 			availablePartitionGroups: isolationGroupsAllHealthy,
 			wfPartitionCfg: defaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: igA,
-				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
+				WFID:                        "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
 			expected: igA,
 		},
@@ -79,7 +79,7 @@ func TestPickingAZone(t *testing.T) {
 			availablePartitionGroups: isolationGroupsAllHealthy,
 			wfPartitionCfg: defaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: string("something-else"),
-				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
+				WFID:                        "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
 			expected: igC,
 		},
@@ -87,7 +87,7 @@ func TestPickingAZone(t *testing.T) {
 			availablePartitionGroups: isolationGroupsAllHealthy,
 			wfPartitionCfg: defaultWorkflowPartitionConfig{
 				WorkflowStartIsolationGroup: string("something-else"),
-				RunID:                       "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
+				WFID:                        "BDF3D8D9-5235-4CE8-BBDF-6A37589C9DC7",
 			},
 			expected: igC,
 		},
@@ -115,7 +115,7 @@ func TestDefaultPartitionerFallbackPickerDistribution(t *testing.T) {
 	for i := 0; i < 100000; i++ {
 		result := pickIsolationGroupFallback(isolationGroups, defaultWorkflowPartitionConfig{
 			WorkflowStartIsolationGroup: "not-a-present-isolationGroup", // always force a fallback to the simple hash
-			RunID:                       uuid.New().String(),
+			WFID:                        uuid.New().String(),
 		})
 
 		c, ok := count[result]
@@ -155,7 +155,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 		"happy path - zone is available - zone pinning": {
 			partitionKeyPassedIn: PartitionConfig{
 				IsolationGroupKey: "zone-2",
-				WorkflowRunIDKey:  "run-123",
+				WorkflowIDKey:     "wf-id",
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
@@ -166,7 +166,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 		"happy path - zone is not - zone fallback": {
 			partitionKeyPassedIn: PartitionConfig{
 				IsolationGroupKey: "zone-1",
-				WorkflowRunIDKey:  "run-123",
+				WorkflowIDKey:     "wf-id",
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
@@ -177,7 +177,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 		"Error condition - No zones listed though the feature is enabled": {
 			partitionKeyPassedIn: PartitionConfig{
 				IsolationGroupKey: "zone-1",
-				WorkflowRunIDKey:  "run-123",
+				WorkflowIDKey:     "wf-id",
 			},
 			incomingContext: context.Background(),
 			stateAffordance: func(state *isolationgroup.MockState) {
@@ -208,9 +208,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			ig := isolationgroup.NewMockState(ctrl)
 			td.stateAffordance(ig)
-			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig, Config{
-				IsolationGroupEnabled: func(domain string) bool { return true },
-			})
+			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig)
 			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, domainID, td.partitionKeyPassedIn, isolationGroups)
 
 			assert.Equal(t, td.expectedValue, res)

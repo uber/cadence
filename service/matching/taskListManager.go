@@ -576,7 +576,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		for k, v := range taskInfo.PartitionConfig {
 			partitionConfig[k] = v
 		}
-		partitionConfig[partition.WorkflowRunIDKey] = taskInfo.RunID
+		partitionConfig[partition.WorkflowIDKey] = taskInfo.WorkflowID
 		pollerIsolationGroups := c.config.AllIsolationGroups
 		// Not all poller information are available at the time of task list manager creation,
 		// because we don't persist poller information in database, so in the first minute, we always assume
