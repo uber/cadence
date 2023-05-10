@@ -97,7 +97,7 @@ type (
 		PersistenceBean *persistenceClient.MockBean
 
 		IsolationGroups     *isolationgroup.MockState
-		IsolationGroupStore configstore.Client
+		IsolationGroupStore *configstore.MockClient
 		Partitioner         *partition.MockPartitioner
 		HostName            string
 		Logger              log.Logger
