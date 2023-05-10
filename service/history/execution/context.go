@@ -382,7 +382,7 @@ func (c *contextImpl) CreateWorkflowExecution(
 		domainName,
 		resp.MutableStateUpdateSessionStats,
 	)
-	c.logger.Info("CreateWorkflowExecution called", tag.WorkflowID(newWorkflow.ExecutionInfo.WorkflowID), tag.WorkflowDomainName(c.GetDomainName()), tag.WorkflowType(newWorkflow.ExecutionInfo.WorkflowTypeName))
+	c.logger.Info("CreateWorkflowExecution called", tag.WorkflowID(newWorkflow.ExecutionInfo.WorkflowID), tag.WorkflowDomainName(c.GetDomainName()), tag.WorkflowType(newWorkflow.ExecutionInfo.WorkflowTypeName), tag.WorkflowDomainID(c.GetDomainID()))
 	return nil
 }
 
