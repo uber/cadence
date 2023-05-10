@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -185,6 +187,19 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			},
 		},
 	}
+
+	isolationGroupCfg0 := &types.IsolationGroupConfiguration{
+		"zone-1": {
+			Name:  "zone-1",
+			State: types.IsolationGroupStateDrained,
+		},
+		"zone-2": {
+			Name:  "zone-2",
+			State: types.IsolationGroupStateHealthy,
+		},
+	}
+
+	isolationGroupCfg1 := &types.IsolationGroupConfiguration{}
 
 	for i := 0; i < concurrency; i++ {
 
@@ -521,10 +536,85 @@ func (s *cadenceSerializerSuite) TestSerializer() {
 			s.Nil(err)
 			s.Equal(dDynamicConfigBlobThrift, dcBlob)
 
+			isolationGroupConfiguration0Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg0, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration0Thrift)
+
+			isolationGroupConfiguration1Thrift, err := serializer.SerializeIsolationGroups(isolationGroupCfg1, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration1Thrift)
+
+			isolationGroupConfiguration2Thrift, err := serializer.SerializeIsolationGroups(nil, common.EncodingTypeThriftRW)
+			s.Nil(err)
+			s.Nil(isolationGroupConfiguration2Thrift)
+
+			isolationGroups0FromThrift, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration0Thrift)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg0, isolationGroups0FromThrift)
+
+			isolationGroups1FromThrift, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration1Thrift)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg1, isolationGroups1FromThrift)
+
+			isolationGroups2FromThrift, err := serializer.DeserializeIsolationGroups(nil)
+			s.Nil(err)
+			s.Nil(isolationGroups2FromThrift)
+
+			// JSON
+			isolationGroupConfiguration0JSON, err := serializer.SerializeIsolationGroups(isolationGroupCfg0, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration0JSON)
+
+			isolationGroupConfiguration1JSON, err := serializer.SerializeIsolationGroups(isolationGroupCfg1, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.NotNil(isolationGroupConfiguration1JSON)
+
+			isolationGroupConfiguration2JSON, err := serializer.SerializeIsolationGroups(nil, common.EncodingTypeJSON)
+			s.Nil(err)
+			s.Nil(isolationGroupConfiguration2JSON)
+
+			isolationGroups0FromJSON, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration0JSON)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg0, isolationGroups0FromJSON)
+
+			isolationGroups1FromJSON, err := serializer.DeserializeIsolationGroups(isolationGroupConfiguration1JSON)
+			s.Nil(err)
+			s.Equal(isolationGroupCfg1, isolationGroups1FromJSON)
+
+			isolationGroups2FromJSON, err := serializer.DeserializeIsolationGroups(nil)
+			s.Nil(err)
+			s.Nil(isolationGroups2FromJSON)
 		}()
 	}
 
 	startWG.Done()
 	succ := common.AwaitWaitGroup(&doneWG, 10*time.Second)
 	s.True(succ, "test timed out")
+}
+
+func TestDataBlob_GetData(t *testing.T) {
+
+	tests := map[string]struct {
+		in          *DataBlob
+		expectedOut []byte
+	}{
+		"valid data": {
+			in:          &DataBlob{Data: []byte("dat")},
+			expectedOut: []byte("dat"),
+		},
+		"empty data": {
+			in:          &DataBlob{Data: nil},
+			expectedOut: []byte{},
+		},
+		"empty data 2": {
+			in:          nil,
+			expectedOut: []byte{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expectedOut, td.in.GetData())
+		})
+	}
 }
