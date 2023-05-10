@@ -1011,7 +1011,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	release(nil)
 
 	if recordStart {
-		t.logger.Info("processRecordWorkflowStartedOrUpsertHelper called")
+		t.logger.Info("processRecordWorkflowStartedOrUpsertHelper called", tag.WorkflowDomainID(task.DomainID), tag.WorkflowID(task.WorkflowID))
 		return t.recordWorkflowStarted(
 			ctx,
 			task.DomainID,
