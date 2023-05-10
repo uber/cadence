@@ -154,6 +154,8 @@ func NewHistoryPersistenceMetricsClient(
 	metricClient metrics.Client,
 	logger log.Logger,
 	cfg *config.Persistence,
+	sampleLoggingRate dynamicconfig.IntPropertyFn,
+	enableShardIDMetrics dynamicconfig.BoolPropertyFn,
 ) HistoryManager {
 	return &historyPersistenceClient{
 		persistence: persistence,
@@ -161,6 +163,8 @@ func NewHistoryPersistenceMetricsClient(
 			metricClient:                  metricClient,
 			logger:                        logger,
 			enableLatencyHistogramMetrics: cfg.EnablePersistenceLatencyHistogramMetrics,
+			sampleLoggingRate:             sampleLoggingRate,
+			enableShardIDMetrics:          enableShardIDMetrics,
 		},
 	}
 }
@@ -1454,7 +1458,13 @@ func (p *historyPersistenceClient) ReadHistoryBranch(
 		}
 		return err
 	}
-	err := p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
+	var err error
+	if p.enableShardIDMetrics() && request.ShardID != nil {
+		err = p.callWithDomainAndShardScope(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName),
+			metrics.ShardIDTag(strconv.Itoa(*request.ShardID)))
+	} else {
+		err = p.call(metrics.PersistenceReadHistoryBranchScope, op, metrics.DomainTag(request.DomainName))
+	}
 	if err != nil {
 		return nil, err
 	}

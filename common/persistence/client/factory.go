@@ -209,7 +209,7 @@ func (f *factoryImpl) NewHistoryManager() (p.HistoryManager, error) {
 		result = p.NewHistoryPersistenceRateLimitedClient(result, ds.ratelimit, f.logger)
 	}
 	if f.metricsClient != nil {
-		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config)
+		result = p.NewHistoryPersistenceMetricsClient(result, f.metricsClient, f.logger, f.config, f.dc.PersistenceSampleLoggingRate, f.dc.EnableShardIDMetrics)
 	}
 	return result, nil
 }
