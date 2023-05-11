@@ -55,15 +55,16 @@ type (
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
 		// the shutdown channel. To optimize on efficiency, we instead create one and tag it on the struct
 		// so the cancel can be called directly on shutdown.
-		cancelCtx     context.Context
-		cancelFunc    context.CancelFunc
-		stopped       int64 // set to 1 if the reader is stopped or is shutting down
-		logger        log.Logger
-		scope         metrics.Scope
-		throttleRetry *backoff.ThrottleRetry
-		handleErr     func(error) error
-		onFatalErr    func()
-		dispatchTask  func(context.Context, *InternalTask) error
+		cancelCtx                context.Context
+		cancelFunc               context.CancelFunc
+		stopped                  int64 // set to 1 if the reader is stopped or is shutting down
+		logger                   log.Logger
+		scope                    metrics.Scope
+		throttleRetry            *backoff.ThrottleRetry
+		handleErr                func(error) error
+		onFatalErr               func()
+		dispatchTask             func(context.Context, *InternalTask) error
+		getIsolationGroupForTask func(context.Context, *persistence.TaskInfo) (string, error)
 	}
 )
 
@@ -82,12 +83,13 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		notifyC:        make(chan struct{}, 1),
 		// we always dequeue the head of the buffer and try to dispatch it to a poller
 		// so allocate one less than desired target buffer size
-		taskBuffer:   make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
-		logger:       tlMgr.logger,
-		scope:        tlMgr.scope,
-		handleErr:    tlMgr.handleErr,
-		onFatalErr:   tlMgr.Stop,
-		dispatchTask: tlMgr.DispatchTask,
+		taskBuffer:               make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
+		logger:                   tlMgr.logger,
+		scope:                    tlMgr.scope,
+		handleErr:                tlMgr.handleErr,
+		onFatalErr:               tlMgr.Stop,
+		dispatchTask:             tlMgr.DispatchTask,
+		getIsolationGroupForTask: tlMgr.getIsolationGroupForTask,
 		throttleRetry: backoff.NewThrottleRetry(
 			backoff.WithRetryPolicy(persistenceOperationRetryPolicy),
 			backoff.WithRetryableError(persistence.IsTransientError),
@@ -129,15 +131,43 @@ dispatchLoop:
 			if !ok { // Task list getTasks pump is shutdown
 				break dispatchLoop
 			}
-			task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil)
 			for {
-				err := tr.dispatchTask(tr.cancelCtx, task)
+				// find isolation group of the task
+				isolationGroup, err := tr.getIsolationGroupForTask(tr.cancelCtx, taskInfo)
+				if err != nil {
+					// it only errors when the tasklist is a sticky tasklist and
+					// the sticky pollers are not available, in this case, we just complete the task
+					// and let the decision get timed out and rescheduled to non-sticky tasklist
+					if err == _stickyPollerUnavailableError {
+						tr.completeTask(taskInfo, nil)
+					} else {
+						// it should never happen, unless there is a bug in 'getIsolationGroupForTask' method
+						tr.logger.Error("taskReader: unexpected error getting isolation group", tag.Error(err))
+						tr.completeTask(taskInfo, err)
+					}
+					break
+				}
+				task := newInternalTask(taskInfo, tr.completeTask, types.TaskSourceDbBacklog, "", false, nil, isolationGroup)
+				dispatchCtx, cancel := tr.newDispatchContext(isolationGroup)
+				timerScope := tr.scope.StartTimer(metrics.AsyncMatchLatencyPerTaskList)
+				err = tr.dispatchTask(dispatchCtx, task)
+				timerScope.Stop()
+				cancel()
 				if err == nil {
 					break
 				}
 				if err == context.Canceled {
 					tr.logger.Info("Tasklist manager context is cancelled, shutting down")
 					break dispatchLoop
+				}
+				if err == context.DeadlineExceeded {
+					// it only happens when isolation is enabled and there is no pollers from the given isolation group
+					// if this happens, we don't want to block the task dispatching, because there might be pollers from
+					// other isolation groups, we just simply continue and dispatch the task to a new isolation group which
+					// has pollers
+					tr.logger.Warn("Async task dispatch timed out")
+					tr.scope.IncCounter(metrics.AsyncMatchDispatchTimeoutCounterPerTaskList)
+					continue
 				}
 				// this should never happen unless there is a bug - don't drop the task
 				tr.scope.IncCounter(metrics.BufferThrottlePerTaskListCounter)
@@ -327,4 +357,11 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 	}
 	ackLevel := tr.taskAckManager.AckItem(task.TaskID)
 	tr.taskGC.Run(ackLevel)
+}
+
+func (tr *taskReader) newDispatchContext(isolationGroup string) (context.Context, context.CancelFunc) {
+	if isolationGroup != "" {
+		return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+	}
+	return tr.cancelCtx, func() {}
 }
