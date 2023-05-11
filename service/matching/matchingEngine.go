@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/cluster"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/service"
 
 	"github.com/pborman/uuid"
@@ -58,8 +59,9 @@ const _stickyPollerUnavailableWindow = 10 * time.Second
 // TODO: Switch implementation from lock/channel based to a partitioned agent
 // to simplify code and reduce possibility of synchronization errors.
 type (
-	pollerIDCtxKey string
-	identityCtxKey string
+	pollerIDCtxKey       string
+	identityCtxKey       string
+	isolationGroupCtxKey string
 
 	queryResult struct {
 		workerResponse *types.MatchingRespondQueryTaskCompletedRequest
@@ -90,6 +92,7 @@ type (
 		domainCache          cache.DomainCache
 		versionChecker       client.VersionChecker
 		membershipResolver   membership.Resolver
+		partitioner          partition.Partitioner
 	}
 )
 
@@ -105,8 +108,9 @@ var (
 	ErrNoTasks    = errors.New("no tasks")
 	errPumpClosed = errors.New("task list pump closed its channel")
 
-	pollerIDKey pollerIDCtxKey = "pollerID"
-	identityKey identityCtxKey = "identity"
+	pollerIDKey        pollerIDCtxKey       = "pollerID"
+	identityKey        identityCtxKey       = "identity"
+	_isolationGroupKey isolationGroupCtxKey = "isolationGroup"
 
 	_stickyPollerUnavailableError = &types.StickyWorkerUnavailableError{Message: "sticky worker is unavailable, please use non-sticky task list."}
 )
@@ -123,6 +127,7 @@ func NewEngine(taskManager persistence.TaskManager,
 	metricsClient metrics.Client,
 	domainCache cache.DomainCache,
 	resolver membership.Resolver,
+	partitioner partition.Partitioner,
 ) Engine {
 	return &matchingEngineImpl{
 		taskManager:          taskManager,
@@ -138,6 +143,7 @@ func NewEngine(taskManager persistence.TaskManager,
 		domainCache:          domainCache,
 		versionChecker:       client.NewVersionChecker(),
 		membershipResolver:   resolver,
+		partitioner:          partitioner,
 	}
 }
 
@@ -206,7 +212,7 @@ func (e *matchingEngineImpl) getTaskListManager(
 	)
 
 	logger.Info("Task list manager state changed", tag.LifeCycleStarting)
-	mgr, err := newTaskListManager(e, taskList, taskListKind, e.config)
+	mgr, err := newTaskListManager(e, taskList, taskListKind, e.config, time.Now())
 	if err != nil {
 		e.taskListsLock.Unlock()
 		logger.Info("Task list manager state changed", tag.LifeCycleStartFailed, tag.Error(err))
@@ -331,6 +337,7 @@ func (e *matchingEngineImpl) AddDecisionTask(
 		ScheduleID:             request.GetScheduleID(),
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
+		PartitionConfig:        request.GetPartitionConfig(),
 	}
 
 	return tlMgr.AddTask(hCtx.Context, addTaskParams{
@@ -396,6 +403,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 		ScheduleID:             request.GetScheduleID(),
 		ScheduleToStartTimeout: request.GetScheduleToStartTimeoutSeconds(),
 		CreatedTime:            time.Now(),
+		PartitionConfig:        request.GetPartitionConfig(),
 	}
 
 	return tlMgr.AddTask(hCtx.Context, addTaskParams{
@@ -436,6 +444,7 @@ pollLoop:
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(hCtx.Context, pollerIDKey, pollerID)
 		pollerCtx = context.WithValue(pollerCtx, identityKey, request.GetIdentity())
+		pollerCtx = context.WithValue(pollerCtx, _isolationGroupKey, req.GetIsolationGroup())
 		task, err := e.getTask(pollerCtx, taskList, nil, taskListKind)
 		if err != nil {
 			// TODO: Is empty poll the best reply for errPumpClosed?
@@ -545,6 +554,7 @@ pollLoop:
 		// long-poll when frontend calls CancelOutstandingPoll API
 		pollerCtx := context.WithValue(hCtx.Context, pollerIDKey, pollerID)
 		pollerCtx = context.WithValue(pollerCtx, identityKey, request.GetIdentity())
+		pollerCtx = context.WithValue(pollerCtx, _isolationGroupKey, req.GetIsolationGroup())
 		taskListKind := request.TaskList.Kind
 		task, err := e.getTask(pollerCtx, taskList, maxDispatch, taskListKind)
 		if err != nil {
