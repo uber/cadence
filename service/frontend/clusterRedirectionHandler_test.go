@@ -24,6 +24,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/uber/cadence/common/domain"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -104,7 +106,8 @@ func (s *clusterRedirectionHandlerSuite) SetupTest() {
 		false,
 		"hostname",
 	)
-	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, nil, client.NewVersionChecker())
+	dh := domain.NewMockHandler(s.controller)
+	frontendHandler := NewWorkflowHandler(s.mockResource, s.config, client.NewVersionChecker(), dh)
 
 	s.mockFrontendHandler = NewMockHandler(s.controller)
 	s.handler = NewClusterRedirectionHandler(frontendHandler, s.mockResource, s.config, config.ClusterRedirectionPolicy{})
