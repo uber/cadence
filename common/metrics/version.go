@@ -23,4 +23,4 @@
 package metrics
 
 // VersionString the current release version
-const VersionString = "0.26.x"
+const VersionString = "1.1.x"
