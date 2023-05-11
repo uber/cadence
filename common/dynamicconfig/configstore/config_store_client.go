@@ -41,6 +41,8 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination configstore_mock.go -self_package github.com/uber/cadence/common/dynamicconfig/configstore
+
 var _ dc.Client = (*configStoreClient)(nil)
 
 // Client is a stateful config store
