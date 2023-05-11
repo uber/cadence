@@ -42,7 +42,6 @@ import (
 	"github.com/uber/cadence/common/elasticsearch/validator"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
@@ -166,8 +165,8 @@ var (
 func NewWorkflowHandler(
 	resource resource.Resource,
 	config *Config,
-	replicationMessageSink messaging.Producer,
 	versionChecker client.VersionChecker,
+	domainHandler domain.Handler,
 ) *WorkflowHandler {
 	return &WorkflowHandler{
 		Resource:        resource,
@@ -208,16 +207,7 @@ func NewWorkflowHandler(
 			}),
 		),
 		versionChecker: versionChecker,
-		domainHandler: domain.NewHandler(
-			config.domainConfig,
-			resource.GetLogger(),
-			resource.GetDomainManager(),
-			resource.GetClusterMetadata(),
-			domain.NewDomainReplicator(replicationMessageSink, resource.GetLogger()),
-			resource.GetArchivalMetadata(),
-			resource.GetArchiverProvider(),
-			resource.GetTimeSource(),
-		),
+		domainHandler:  domainHandler,
 		visibilityQueryValidator: validator.NewQueryValidator(
 			config.ValidSearchAttributes,
 			config.EnableQueryAttributeValidation,

@@ -70,6 +70,7 @@ type (
 		mockResource      *resource.Test
 		mockDomainCache   *cache.MockDomainCache
 		mockHistoryClient *history.MockClient
+		domainHandler     domain.Handler
 
 		mockProducer           *mocks.KafkaProducer
 		mockMessagingClient    messaging.Client
@@ -120,6 +121,19 @@ func (s *workflowHandlerSuite) SetupTest() {
 	s.mockVisibilityArchiver = &archiver.VisibilityArchiverMock{}
 	s.mockVersionChecker = client.NewMockVersionChecker(s.controller)
 
+	// these tests don't mock the domain handler
+	config := s.newConfig(dc.NewInMemoryClient())
+	s.domainHandler = domain.NewHandler(
+		config.domainConfig,
+		s.mockResource.GetLogger(),
+		s.mockResource.GetDomainManager(),
+		s.mockResource.GetClusterMetadata(),
+		domain.NewDomainReplicator(s.mockProducer, s.mockResource.GetLogger()),
+		s.mockResource.GetArchivalMetadata(),
+		s.mockResource.GetArchiverProvider(),
+		s.mockResource.GetTimeSource(),
+	)
+
 	mockMonitor := s.mockResource.MembershipResolver
 	mockMonitor.EXPECT().MemberCount(service.Frontend).Return(5, nil).AnyTimes()
 	s.mockVersionChecker.EXPECT().ClientSupported(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -134,7 +148,7 @@ func (s *workflowHandlerSuite) TearDownTest() {
 }
 
 func (s *workflowHandlerSuite) getWorkflowHandler(config *Config) *WorkflowHandler {
-	return NewWorkflowHandler(s.mockResource, config, s.mockProducer, s.mockVersionChecker)
+	return NewWorkflowHandler(s.mockResource, config, s.mockVersionChecker, s.domainHandler)
 }
 
 func (s *workflowHandlerSuite) TestDisableListVisibilityByFilter() {
@@ -776,6 +790,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Failure_InvalidArchivalURI() {
 		nil,
 		nil,
 	)
+
 	_, err := wh.UpdateDomain(context.Background(), updateReq)
 	s.Error(err)
 }
@@ -943,6 +958,7 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_ArchivalNeverEnabledToEn
 	s.Equal(types.ArchivalStatusEnabled, result.Configuration.GetVisibilityArchivalStatus())
 	s.Equal(testVisibilityArchivalURI, result.Configuration.GetVisibilityArchivalURI())
 }
+
 func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
 	s.mockMetadataMgr.On("GetMetadata", mock.Anything).Return(&persistence.GetMetadataResponse{
 		NotificationVersion: int64(0),
@@ -952,9 +968,28 @@ func (s *workflowHandlerSuite) TestUpdateDomain_Success_FailOver() {
 		&domain.ArchivalState{Status: types.ArchivalStatusDisabled, URI: ""},
 	)
 
+	// This test is simulating a domain failover from the point of view of the 'standby' cluster
+	// for a domain where the cluster 'active' is being failed over to 'standby'. The test is executing
+	// in the 'standby' cluster, so the above is setting the configuration to appear that way.
+	s.mockResource.ClusterMetadata = cluster.TestPassiveClusterMetadata
+
+	// Re-instantiate the domain-handler object due to it relying on it
+	// pulling in the mock cluster metadata object mutated above.
+	// Todo (David.Porter) consider refactoring these tests
+	// to be setup without mutation and without as long dependency chains
+	s.domainHandler = domain.NewHandler(
+		s.newConfig(dc.NewInMemoryClient()).domainConfig,
+		s.mockResource.GetLogger(),
+		s.mockResource.GetDomainManager(),
+		s.mockResource.GetClusterMetadata(),
+		domain.NewDomainReplicator(s.mockProducer, s.mockResource.GetLogger()),
+		s.mockResource.GetArchivalMetadata(),
+		s.mockResource.GetArchiverProvider(),
+		s.mockResource.GetTimeSource(),
+	)
+
 	s.mockMetadataMgr.On("GetDomain", mock.Anything, mock.Anything).Return(getDomainResp, nil)
 	s.mockMetadataMgr.On("UpdateDomain", mock.Anything, mock.Anything).Return(nil)
-	s.mockResource.ClusterMetadata = cluster.TestPassiveClusterMetadata
 	s.mockArchivalMetadata.On("GetHistoryConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("disabled"), false, dc.GetBoolPropertyFn(false), "disabled", "some random URI"))
 	s.mockArchivalMetadata.On("GetVisibilityConfig").Return(archiver.NewArchivalConfig("enabled", dc.GetStringPropertyFn("disabled"), false, dc.GetBoolPropertyFn(false), "disabled", "some random URI"))
 	s.mockProducer.On("Publish", mock.Anything, mock.Anything).Return(nil).Once()

@@ -807,6 +807,14 @@ const (
 	AdminDeleteWorkflowScope
 	// MaintainCorruptWorkflowScope is the metric scope for admin.MaintainCorruptWorkflow
 	MaintainCorruptWorkflowScope
+	// GetGlobalIsolationGroups is the scope for getting global isolation groups
+	GetGlobalIsolationGroups
+	// UpdateGlobalIsolationGroups is the scope for getting global isolation groups
+	UpdateGlobalIsolationGroups
+	// GetDomainIsolationGroups is the scope for getting domain isolation groups
+	GetDomainIsolationGroups
+	// UpdateDomainIsolationGroups is the scope for getting domain isolation groups
+	UpdateDomainIsolationGroups
 
 	NumAdminScopes
 )
@@ -1593,6 +1601,10 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		AdminListDynamicConfigScope:                 {operation: "AdminListDynamicConfig"},
 		AdminDeleteWorkflowScope:                    {operation: "AdminDeleteWorkflow"},
 		MaintainCorruptWorkflowScope:                {operation: "MaintainCorruptWorkflow"},
+		GetGlobalIsolationGroups:                    {operation: "GetGlobalIsolationGroups"},
+		UpdateGlobalIsolationGroups:                 {operation: "UpdateGlobalIsolationGroups"},
+		GetDomainIsolationGroups:                    {operation: "GetDomainIsolationGroups"},
+		UpdateDomainIsolationGroups:                 {operation: "UpdateDomainIsolationGroups"},
 
 		FrontendRestartWorkflowExecutionScope:           {operation: "RestartWorkflowExecution"},
 		FrontendStartWorkflowExecutionScope:             {operation: "StartWorkflowExecution"},
