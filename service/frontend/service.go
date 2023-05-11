@@ -66,6 +66,9 @@ type Config struct {
 	ShutdownDrainDuration             dynamicconfig.DurationPropertyFn
 	Lockdown                          dynamicconfig.BoolPropertyFnWithDomainFilter
 
+	// isolation configuration
+	EnableTasklistIsolation dynamicconfig.BoolPropertyFnWithDomainFilter
+
 	// id length limits
 	MaxIDLengthWarnLimit  dynamicconfig.IntPropertyFn
 	DomainNameMaxLength   dynamicconfig.IntPropertyFnWithDomainFilter
@@ -175,6 +178,7 @@ func NewConfig(dc *dynamicconfig.Collection, numHistoryShards int, isAdvancedVis
 		DecisionResultCountLimit:                    dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendDecisionResultCountLimit),
 		EmitSignalNameMetricsTag:                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.FrontendEmitSignalNameMetricsTag),
 		Lockdown:                                    dc.GetBoolPropertyFilteredByDomain(dynamicconfig.Lockdown),
+		EnableTasklistIsolation:                     dc.GetBoolPropertyFilteredByDomain(dynamicconfig.EnableTasklistIsolation),
 		domainConfig: domain.Config{
 			MaxBadBinaryCount:      dc.GetIntPropertyFilteredByDomain(dynamicconfig.FrontendMaxBadBinaries),
 			MinRetentionDays:       dc.GetIntProperty(dynamicconfig.MinRetentionDays),
