@@ -1360,6 +1360,13 @@ const (
 	// KeyName: system.largeShardHistoryBlobMetricThreshold
 	// Value type: Int
 	// Default value: 262144 (1/4mb)
+
+	// IsolationGroupStateUpdateRetryAttempts
+	// KeyName: system.isolationGroupStateUpdateRetryAttempts
+	// Value type: int
+	// Default value: 2
+	IsolationGroupStateUpdateRetryAttempts
+
 	LargeShardHistoryBlobMetricThreshold
 	// LastIntKey must be the last one in this const group
 	LastIntKey
@@ -1817,6 +1824,14 @@ const (
 	EnablePendingActivityValidation
 
 	EnableCassandraAllConsistencyLevelDelete
+
+	// EnableTasklistIsolation Is a feature to enable subdivision of workflows by units called 'isolation-groups'
+	// and to control their movement and blast radius. This has some nontrivial operational overheads in management
+	// and a good understanding of poller distribution, so probably not worth enabling unless it's well understood.
+	// KeyName: system.enableTasklistIsolation
+	// Value type: bool
+	// Default value: false
+	EnableTasklistIsolation
 
 	// EnableShardIDMetrics turns on or off shardId metrics
 	// KeyName: system.enableShardIDMetrics
@@ -2509,6 +2524,28 @@ const (
 	// Value type: Duration
 	// Default value: 30 minutes
 	ESAnalyzerBufferWaitTime
+	// IsolationGroupStateRefreshInterval
+	// KeyName: system.isolationGroupStateRefreshInterval
+	// Value type: Duration
+	// Default value: 30 seconds
+	IsolationGroupStateRefreshInterval
+	// IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value
+	// KeyName: system.isolationGroupStateFetchTimeout
+	// Value type: Duration
+	// Default value: 30 seconds
+	IsolationGroupStateFetchTimeout
+	// IsolationGroupStateUpdateTimeout is the dynamic config DB update timeout value
+	// KeyName: system.isolationGroupStateUpdateTimeout
+	// Value type: Duration
+	// Default value: 30 seconds
+	IsolationGroupStateUpdateTimeout
+
+	// AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match
+	// KeyName: matching.asyncTaskDispatchTimeout
+	// Value type: Duration
+	// Default value: 30 seconds
+	// Allowed filters: domainName, taskListName, taskListType
+	AsyncTaskDispatchTimeout
 
 	// LastDurationKey must be the last one in this const group
 	LastDurationKey
@@ -2576,9 +2613,21 @@ const (
 	// Value type: []rpc.HeaderRule or an []interface{} containing `map[string]interface{}{"Add":bool,"Match":string}` values.
 	// Default value: forward all headers.  (this is a problematic value, and it will be changing as we reduce to a list of known values)
 	HeaderForwardingRules
+	// AllIsolationGroups is the list of all possible isolation groups in a service
+	// KeyName: system.allIsolationGroups
+	// Value type: []string
+	// Default value: N/A
+	// Allowed filters: N/A
+	AllIsolationGroups
 
 	LastListKey
 )
+
+// DefaultIsolationGroupConfigStoreManagerGlobalMapping is the dynamic config value for isolation groups
+// Note: This is not typically used for normal dynamic config (type 0), but instead
+// it's used only for IsolationGroup config (type 1).
+// KeyName: system.defaultIsolationGroupConfigStoreManagerGlobalMapping
+const DefaultIsolationGroupConfigStoreManagerGlobalMapping ListKey = -1 // This is a hack to put it in a different list due to it being a different config type
 
 var IntKeys = map[IntKey]DynamicInt{
 	TestGetIntPropertyKey: DynamicInt{
@@ -3483,6 +3532,11 @@ var IntKeys = map[IntKey]DynamicInt{
 		Description:  "defines the threshold for what consititutes a large history blob write to alert on, default is 1/4mb",
 		DefaultValue: 262144,
 	},
+	IsolationGroupStateUpdateRetryAttempts: DynamicInt{
+		KeyName:      "system.isolationGroupStateUpdateRetryAttempts",
+		Description:  "The number of attempts to push Isolation group configuration to the config store",
+		DefaultValue: 2,
+	},
 }
 
 var BoolKeys = map[BoolKey]DynamicBool{
@@ -3819,6 +3873,11 @@ var BoolKeys = map[BoolKey]DynamicBool{
 	EnableAuthorization: DynamicBool{
 		KeyName:      "system.enableAuthorization",
 		Description:  "EnableAuthorization is the key to enable authorization for a domain, only for extension binary:",
+		DefaultValue: false,
+	},
+	EnableTasklistIsolation: DynamicBool{
+		KeyName:      "system.enableTasklistIsolation",
+		Description:  "EnableTasklistIsolation is a feature to enable isolation-groups for a domain. Should not be enabled without a deep understanding of this feature",
 		DefaultValue: false,
 	},
 	EnableServiceAuthorization: DynamicBool{
@@ -4430,10 +4489,30 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 		Description:  "ESAnalyzerTimeWindow defines the time window ElasticSearch Analyzer will consider while taking workflow averages",
 		DefaultValue: time.Hour * 24 * 30,
 	},
+	IsolationGroupStateRefreshInterval: DynamicDuration{
+		KeyName:      "system.isolationGroupStateRefreshInterval",
+		Description:  "the frequency by which the IsolationGroupState handler will poll configuration",
+		DefaultValue: time.Second * 30,
+	},
+	IsolationGroupStateFetchTimeout: DynamicDuration{
+		KeyName:      "system.IsolationGroupStateFetchTimeout",
+		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB fetch timeout value",
+		DefaultValue: time.Second * 30,
+	},
+	IsolationGroupStateUpdateTimeout: DynamicDuration{
+		KeyName:      "system.IsolationGroupStateUpdateTimeout",
+		Description:  "IsolationGroupStateFetchTimeout is the dynamic config DB update timeout value",
+		DefaultValue: time.Second * 30,
+	},
 	ESAnalyzerBufferWaitTime: DynamicDuration{
 		KeyName:      "worker.ESAnalyzerBufferWaitTime",
 		Description:  "ESAnalyzerBufferWaitTime controls min time required to consider a worklow stuck",
 		DefaultValue: time.Minute * 30,
+	},
+	AsyncTaskDispatchTimeout: DynamicDuration{
+		KeyName:      "matching.asyncTaskDispatchTimeout",
+		Description:  "AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match",
+		DefaultValue: time.Second * 30,
 	},
 }
 
@@ -4475,6 +4554,15 @@ var MapKeys = map[MapKey]DynamicMap{
 }
 
 var ListKeys = map[ListKey]DynamicList{
+	AllIsolationGroups: {
+		KeyName:     "system.allIsolationGroups",
+		Description: "A list of all the isolation groups in a system",
+	},
+	DefaultIsolationGroupConfigStoreManagerGlobalMapping: {
+		KeyName: "system.defaultIsolationGroupConfigStoreManagerGlobalMapping",
+		Description: "A configuration store for global isolation groups - used in isolation-group config only, not normal dynamic config." +
+			"Not intended for use in normal dynamic config",
+	},
 	HeaderForwardingRules: {
 		KeyName: "admin.HeaderForwardingRules", // make a new scope for global?
 		Description: "Only loaded at startup.  " +

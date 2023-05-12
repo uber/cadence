@@ -63,6 +63,16 @@ func workflowListFilterType(listFilterType string) Tag {
 
 // general
 
+// ClientImpl returns tag for ClientImpl
+func ClientImpl(clientImpl string) Tag {
+	return newStringTag("client-impl", clientImpl)
+}
+
+// ClientFeatureVersion returns tag for ClientFeatureVersion
+func ClientFeatureVersion(clientFeatureVersion string) Tag {
+	return newStringTag("client-feature-version", clientFeatureVersion)
+}
+
 // WorkflowError returns tag for WorkflowError
 func WorkflowError(error error) Tag {
 	return newErrorTag("wf-error", error)

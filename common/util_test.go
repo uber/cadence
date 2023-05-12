@@ -367,3 +367,26 @@ func TestToServiceTransientError(t *testing.T) {
 		assert.True(t, IsServiceTransientError(ToServiceTransientError(err)))
 	})
 }
+
+func TestIntersectionStringSlice(t *testing.T) {
+	t.Run("it returns all items", func(t *testing.T) {
+		a := []string{"a", "b", "c"}
+		b := []string{"a", "b", "c"}
+		c := IntersectionStringSlice(a, b)
+		assert.ElementsMatch(t, []string{"a", "b", "c"}, c)
+	})
+
+	t.Run("it returns no item", func(t *testing.T) {
+		a := []string{"a", "b", "c"}
+		b := []string{"d", "e", "f"}
+		c := IntersectionStringSlice(a, b)
+		assert.ElementsMatch(t, []string{}, c)
+	})
+
+	t.Run("it returns intersection", func(t *testing.T) {
+		a := []string{"a", "b", "c"}
+		b := []string{"c", "b", "f"}
+		c := IntersectionStringSlice(a, b)
+		assert.ElementsMatch(t, []string{"c", "b"}, c)
+	})
+}

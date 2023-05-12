@@ -786,6 +786,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              *DataBlob
+		IsolationGroups          *DataBlob
 	}
 
 	// InternalCreateDomainRequest is used to create the domain
@@ -940,6 +941,14 @@ func (d *DataBlob) ToNilSafeDataBlob() *DataBlob {
 
 func (d *DataBlob) GetEncodingString() string {
 	return string(d.Encoding)
+}
+
+// GetData is a safe way to get the byte array or nil
+func (d *DataBlob) GetData() []byte {
+	if d == nil || d.Data == nil {
+		return []byte{}
+	}
+	return d.Data
 }
 
 // GetEncoding returns encoding type
