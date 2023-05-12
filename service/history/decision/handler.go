@@ -730,6 +730,8 @@ func (handler *handlerImpl) handleBufferedQueries(
 		buffered := queryRegistry.GetBufferedIDs()
 		handler.logger.Info(
 			"failing query because worker does not support consistent query",
+			tag.Dynamic("clientImpl", clientImpl),
+			tag.Dynamic("clientFeatureVersion", clientFeatureVersion),
 			tag.WorkflowDomainName(domain),
 			tag.WorkflowID(workflowID),
 			tag.WorkflowRunID(runID),
