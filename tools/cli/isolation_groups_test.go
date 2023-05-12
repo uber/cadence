@@ -143,3 +143,49 @@ func TestParseCliInput(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderIsolationGroupNormalOutput(t *testing.T) {
+
+	tests := map[string]struct {
+		input          types.IsolationGroupConfiguration
+		expectedOutput string
+	}{
+		"valid inputs for doing a drain": {
+			input: types.IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  "zone-1",
+					State: types.IsolationGroupStateHealthy,
+				},
+				"zone-2": {
+					Name:  "zone-2",
+					State: types.IsolationGroupStateDrained,
+				},
+				"zone-3-a-very-long-name": {
+					Name:  "zone-3-a-very-long-name",
+					State: types.IsolationGroupStateDrained,
+				},
+				"zone-4": {
+					Name:  "zone-4",
+					State: 5,
+				},
+			},
+			expectedOutput: `Isolation Groups        State
+zone-1                  Healthy
+zone-2                  Drained
+zone-3-a-very-long-name Drained
+zone-4                  Unknown state: 5
+`,
+		},
+		"nothing": {
+			input: types.IsolationGroupConfiguration{},
+			expectedOutput: `-- No groups found --
+`,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.expectedOutput, renderIsolationGroups(td.input))
+		})
+	}
+}

@@ -1302,7 +1302,12 @@ func newAdminIsolationGroupCommands() []cli.Command {
 		{
 			Name:  "get-global",
 			Usage: "gets the global isolation groups",
-			Flags: []cli.Flag{},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagFormat,
+					Usage: `output format`,
+				},
+			},
 			Action: func(c *cli.Context) {
 				AdminGetGlobalIsolationGroups(c)
 			},
@@ -1339,6 +1344,10 @@ func newAdminIsolationGroupCommands() []cli.Command {
 					Name:     FlagDomain,
 					Usage:    `The domain to operate on`,
 					Required: true,
+				},
+				cli.StringFlag{
+					Name:  FlagFormat,
+					Usage: `output format`,
 				},
 			},
 			Action: func(c *cli.Context) {

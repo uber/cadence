@@ -21,8 +21,10 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"text/tabwriter"
 
 	"github.com/uber/cadence/common/types"
 
@@ -40,7 +42,14 @@ func AdminGetGlobalIsolationGroups(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("failed to get isolation-groups:", err)
 	}
-	prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+
+	format := c.String(FlagFormat)
+	switch format {
+	case "json":
+		prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+	default:
+		fmt.Print(renderIsolationGroups(igs.IsolationGroups))
+	}
 }
 
 func AdminUpdateGlobalIsolationGroups(c *cli.Context) {
@@ -92,7 +101,14 @@ func AdminGetDomainIsolationGroups(c *cli.Context) {
 	if err != nil {
 		ErrorAndExit("failed to get isolation-groups:", err)
 	}
-	prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+
+	format := c.String(FlagFormat)
+	switch format {
+	case "json":
+		prettyPrintJSONObject(igs.IsolationGroups.ToPartitionList())
+	default:
+		fmt.Print(renderIsolationGroups(igs.IsolationGroups))
+	}
 }
 
 func AdminUpdateDomainIsolationGroups(c *cli.Context) {
@@ -203,4 +219,29 @@ examples:
 	}
 
 	return &req, nil
+}
+
+func renderIsolationGroups(igs types.IsolationGroupConfiguration) string {
+	output := &bytes.Buffer{}
+	w := tabwriter.NewWriter(output, 0, 0, 1, ' ', 0)
+	fmt.Fprintln(w, "Isolation Groups\tState")
+	if len(igs) == 0 {
+		return "-- No groups found --\n"
+	}
+	for _, v := range igs.ToPartitionList() {
+		fmt.Fprintf(w, "%s\t%s\n", v.Name, convertIsolationGroupStateToString(v.State))
+	}
+	w.Flush()
+	return output.String()
+}
+
+func convertIsolationGroupStateToString(state types.IsolationGroupState) string {
+	switch state {
+	case types.IsolationGroupStateDrained:
+		return "Drained"
+	case types.IsolationGroupStateHealthy:
+		return "Healthy"
+	default:
+		return fmt.Sprintf("Unknown state: %d", state)
+	}
 }
