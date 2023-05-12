@@ -492,6 +492,7 @@ pollLoop:
 			return e.createPollForDecisionTaskResponse(task, resp, hCtx.scope), nil
 		}
 
+		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordDecisionTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
@@ -576,6 +577,7 @@ pollLoop:
 			return e.createSyncMatchPollForActivityTaskResponse(task, task.activityTaskDispatchInfo), nil
 		}
 
+		e.emitTaskIsolationMetrics(hCtx.scope, task.event.PartitionConfig, req.GetIsolationGroup())
 		resp, err := e.recordActivityTaskStarted(hCtx.Context, request, task)
 		if err != nil {
 			switch err.(type) {
@@ -1057,6 +1059,16 @@ func (e *matchingEngineImpl) emitForwardedFromStats(
 		scope.IncCounter(metrics.LocalToRemoteMatchPerTaskListCounter)
 	default:
 		scope.IncCounter(metrics.LocalToLocalMatchPerTaskListCounter)
+	}
+}
+
+func (e *matchingEngineImpl) emitTaskIsolationMetrics(
+	scope metrics.Scope,
+	partitionConfig map[string]string,
+	pollerIsolationGroup string,
+) {
+	if len(partitionConfig) > 0 {
+		scope.Tagged(metrics.PartitionConfigTags(partitionConfig)...).Tagged(metrics.PollerIsolationGroupTag(pollerIsolationGroup)).IncCounter(metrics.IsolationTaskMatchPerTaskListCounter)
 	}
 }
 
