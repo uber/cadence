@@ -599,6 +599,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 			c.logger.Error("Failed to get isolation group from partition library", tag.WorkflowID(taskInfo.WorkflowID), tag.WorkflowRunID(taskInfo.RunID), tag.TaskID(taskInfo.TaskID), tag.Error(err))
 			return "", nil
 		}
+		c.logger.Debug("get isolation group", tag.PollerGroups(pollerIsolationGroups), tag.IsolationGroup(group), tag.PartitionConfig(partitionConfig))
 		// For a sticky tasklist, it is possible that when an isolation group is undrained, the tasks from one workflow is reassigned
 		// to the isolation group undrained. If there is no poller from the isolation group, we should return StickyUnavailableError
 		// to let the task to be re-enqueued to the non-sticky tasklist. If there is poller, just return an empty isolation group, because
