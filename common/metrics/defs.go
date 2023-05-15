@@ -2322,6 +2322,7 @@ const (
 	LocalToRemoteMatchPerTaskListCounter
 	RemoteToLocalMatchPerTaskListCounter
 	RemoteToRemoteMatchPerTaskListCounter
+	IsolationTaskMatchPerTaskListCounter
 	PollerPerTaskListCounter
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
@@ -2921,6 +2922,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		LocalToRemoteMatchPerTaskListCounter:        {metricName: "local_to_remote_matches_per_tl", metricRollupName: "local_to_remote_matches"},
 		RemoteToLocalMatchPerTaskListCounter:        {metricName: "remote_to_local_matches_per_tl", metricRollupName: "remote_to_local_matches"},
 		RemoteToRemoteMatchPerTaskListCounter:       {metricName: "remote_to_remote_matches_per_tl", metricRollupName: "remote_to_remote_matches"},
+		IsolationTaskMatchPerTaskListCounter:        {metricName: "isolation_task_matches_per_tl", metricType: Counter},
 		PollerPerTaskListCounter:                    {metricName: "poller_count_per_tl", metricRollupName: "poller_count"},
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
