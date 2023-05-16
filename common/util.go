@@ -519,10 +519,12 @@ func CreateHistoryStartWorkflowRequest(
 	domainID string,
 	startRequest *types.StartWorkflowExecutionRequest,
 	now time.Time,
+	partitionConfig map[string]string,
 ) (*types.HistoryStartWorkflowExecutionRequest, error) {
 	histRequest := &types.HistoryStartWorkflowExecutionRequest{
-		DomainUUID:   domainID,
-		StartRequest: startRequest,
+		DomainUUID:      domainID,
+		StartRequest:    startRequest,
+		PartitionConfig: partitionConfig,
 	}
 
 	delayStartSeconds := startRequest.GetDelayStartSeconds()
@@ -1045,4 +1047,19 @@ func GetTaskPriority(
 	subClass int,
 ) int {
 	return class | subClass
+}
+
+// IntersectionStringSlice get the intersection of 2 string slices
+func IntersectionStringSlice(a, b []string) []string {
+	var result []string
+	m := make(map[string]struct{})
+	for _, item := range a {
+		m[item] = struct{}{}
+	}
+	for _, item := range b {
+		if _, ok := m[item]; ok {
+			result = append(result, item)
+		}
+	}
+	return result
 }

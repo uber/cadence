@@ -133,6 +133,7 @@ func (t *taskManager) toInternalTaskInfo(taskInfo *TaskInfo) *InternalTaskInfo {
 		ScheduleToStartTimeout: common.SecondsToDuration(int64(taskInfo.ScheduleToStartTimeout)),
 		Expiry:                 taskInfo.Expiry,
 		CreatedTime:            taskInfo.CreatedTime,
+		PartitionConfig:        taskInfo.PartitionConfig,
 	}
 }
 func (t *taskManager) fromInternalTaskInfo(internalTaskInfo *InternalTaskInfo) *TaskInfo {
@@ -148,5 +149,6 @@ func (t *taskManager) fromInternalTaskInfo(internalTaskInfo *InternalTaskInfo) *
 		ScheduleToStartTimeout: int32(internalTaskInfo.ScheduleToStartTimeout.Seconds()),
 		Expiry:                 internalTaskInfo.Expiry,
 		CreatedTime:            internalTaskInfo.CreatedTime,
+		PartitionConfig:        internalTaskInfo.PartitionConfig,
 	}
 }

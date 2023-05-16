@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.35",
+  "MinCompatibleVersion": "0.35",
+  "Description": "Added partition config to workflow execution and task type",
+  "SchemaUpdateCqlFiles": [
+    "partition_config.cql"
+  ]
+}

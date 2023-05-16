@@ -1731,11 +1731,11 @@ func (p *queuePersistenceClient) Close() {
 	p.persistence.Close()
 }
 
-func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
+func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context, configType ConfigType) (*FetchDynamicConfigResponse, error) {
 	var resp *FetchDynamicConfigResponse
 	op := func() error {
 		var err error
-		resp, err = p.persistence.FetchDynamicConfig(ctx)
+		resp, err = p.persistence.FetchDynamicConfig(ctx, configType)
 		return err
 	}
 	err := p.call(metrics.PersistenceFetchDynamicConfigScope, op)
@@ -1745,9 +1745,9 @@ func (p *configStorePersistenceClient) FetchDynamicConfig(ctx context.Context) (
 	return resp, nil
 }
 
-func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+func (p *configStorePersistenceClient) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, configType ConfigType) error {
 	op := func() error {
-		return p.persistence.UpdateDynamicConfig(ctx, request)
+		return p.persistence.UpdateDynamicConfig(ctx, request, configType)
 	}
 	return p.call(metrics.PersistenceUpdateDynamicConfigScope, op)
 }

@@ -53,8 +53,8 @@ func (m *configStoreManagerImpl) Close() {
 	m.persistence.Close()
 }
 
-func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error) {
-	values, err := m.persistence.FetchConfig(ctx, DynamicConfig)
+func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error) {
+	values, err := m.persistence.FetchConfig(ctx, cfgType)
 	if err != nil || values == nil {
 		return nil, err
 	}
@@ -70,14 +70,14 @@ func (m *configStoreManagerImpl) FetchDynamicConfig(ctx context.Context) (*Fetch
 	}}, nil
 }
 
-func (m *configStoreManagerImpl) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error {
+func (m *configStoreManagerImpl) UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error {
 	blob, err := m.serializer.SerializeDynamicConfigBlob(request.Snapshot.Values, common.EncodingTypeThriftRW)
 	if err != nil {
 		return err
 	}
 
 	entry := &InternalConfigStoreEntry{
-		RowType:   int(DynamicConfig),
+		RowType:   int(cfgType),
 		Version:   request.Snapshot.Version,
 		Timestamp: time.Now(),
 		Values:    blob,

@@ -392,6 +392,7 @@ func (m *sqlTaskStore) CreateTasks(
 			ScheduleID:       v.Data.ScheduleID,
 			ExpiryTimestamp:  expiryTime,
 			CreatedTimestamp: time.Now(),
+			PartitionConfig:  v.Data.PartitionConfig,
 		})
 		if err != nil {
 			return nil, err
@@ -471,13 +472,14 @@ func (m *sqlTaskStore) GetTasks(
 			return nil, err
 		}
 		tasks[i] = &persistence.InternalTaskInfo{
-			DomainID:    request.DomainID,
-			WorkflowID:  info.GetWorkflowID(),
-			RunID:       info.RunID.String(),
-			TaskID:      v.TaskID,
-			ScheduleID:  info.GetScheduleID(),
-			Expiry:      info.GetExpiryTimestamp(),
-			CreatedTime: info.GetCreatedTimestamp(),
+			DomainID:        request.DomainID,
+			WorkflowID:      info.GetWorkflowID(),
+			RunID:           info.RunID.String(),
+			TaskID:          v.TaskID,
+			ScheduleID:      info.GetScheduleID(),
+			Expiry:          info.GetExpiryTimestamp(),
+			CreatedTime:     info.GetCreatedTimestamp(),
+			PartitionConfig: info.GetPartitionConfig(),
 		}
 	}
 

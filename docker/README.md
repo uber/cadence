@@ -21,8 +21,7 @@ docker pull ubercadence/server:master-auto-setup
 ```
 
 * View Cadence-Web at http://localhost:8088  
-* View metrics at http://localhost:3000 , with default username/password: admin/admin    
-  * Configure Prometheus as datasource: use `http://host.docker.internal:9090` as URL of prometheus.
+* View metrics at http://localhost:3000
 
 Using different docker-compose files
 -----------------------

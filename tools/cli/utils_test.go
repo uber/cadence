@@ -22,6 +22,7 @@ package cli
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -91,4 +92,35 @@ func Test_ParseIntMultiRange(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_anyToStringWorksWithTime(t *testing.T) {
+	tm := time.Date(2020, 1, 15, 14, 30, 45, 0, time.UTC)
+
+	assert.Equal(
+		t,
+		"2020-01-15 14:30:45 +0000 UTC",
+		anyToString(tm, false, 100),
+	)
+	assert.Equal(
+		t,
+		"2020-01-15 ...  +0000 UTC",
+		anyToString(tm, false, 20),
+		"trimming should work for time.Time as well",
+	)
+}
+
+func Test_anyToString(t *testing.T) {
+	info := struct {
+		Name   string
+		Number int
+		Time   time.Time
+	}{
+		"Joel",
+		1234,
+		time.Date(2019, 1, 15, 14, 30, 45, 0, time.UTC),
+	}
+
+	res := anyToString(info, false, 100)
+	assert.Equal(t, "{Name:Joel, Number:1234, Time:2019-01-15 14:30:45 +0000 UTC}", res)
 }

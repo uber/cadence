@@ -282,6 +282,7 @@ func (m *nosqlDomainStore) toNoSQLInternalDomainConfig(
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
 		BadBinaries:              domainConfig.BadBinaries,
+		IsolationGroups:          domainConfig.IsolationGroups,
 	}, nil
 }
 
@@ -298,5 +299,6 @@ func (m *nosqlDomainStore) fromNoSQLInternalDomainConfig(
 		VisibilityArchivalStatus: domainConfig.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    domainConfig.VisibilityArchivalURI,
 		BadBinaries:              domainConfig.BadBinaries,
+		IsolationGroups:          domainConfig.IsolationGroups,
 	}, nil
 }
