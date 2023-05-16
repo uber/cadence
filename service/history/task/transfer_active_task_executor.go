@@ -952,6 +952,9 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	recordStart bool,
 ) (retError error) {
 
+	workflowStartedScope := t.metricsClient.Scope(metrics.TransferActiveTaskRecordWorkflowStartedScope,
+								metrics.DomainTag(task.DomainID))
+
 	wfContext, release, err := t.executionCache.GetOrCreateWorkflowExecutionWithTimeout(
 		task.DomainID,
 		getWorkflowExecution(task),
@@ -1011,11 +1014,7 @@ func (t *transferActiveTaskExecutor) processRecordWorkflowStartedOrUpsertHelper(
 	release(nil)
 
 	if recordStart {
-		t.metricsClient.IncCounter(metrics.TransferActiveTaskRecordWorkflowStartedScope, metrics.WorkflowStartedCount)
-		t.logger.Info("WorkflowStartedCount metric emitted",
-			tag.WorkflowID(task.WorkflowID),
-			tag.WorkflowDomainID(task.DomainID),
-		)
+		workflowStartedScope.IncCounter(metrics.WorkflowStartedCount)
 		return t.recordWorkflowStarted(
 			ctx,
 			task.DomainID,
