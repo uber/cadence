@@ -120,23 +120,6 @@ func (v *pinotVisibilityStore) GetName() string {
 	return pinotPersistenceName
 }
 
-func decodeAttr(attr map[string][]byte) ([]byte, error) {
-	if attr == nil {
-		return nil, nil
-	}
-
-	decodedMap := make(map[string]interface{})
-	for key, value := range attr {
-		var val interface{}
-		err := json.Unmarshal(value, &val)
-		if err != nil {
-			return nil, err
-		}
-		decodedMap[key] = val
-	}
-	return json.Marshal(decodedMap)
-}
-
 func (v *pinotVisibilityStore) RecordWorkflowExecutionStarted(
 	ctx context.Context,
 	request *p.InternalRecordWorkflowExecutionStartedRequest,
@@ -426,8 +409,7 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	validMap := v.config.ValidSearchAttributes()
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, validMap)
+	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -508,7 +490,7 @@ func (v *pinotVisibilityStore) checkProducer() {
 }
 
 func createVisibilityMessage(
-	// common parameters
+// common parameters
 	domainID string,
 	wid,
 	rid string,
@@ -521,11 +503,11 @@ func createVisibilityMessage(
 	encoding common.EncodingType,
 	isCron bool,
 	numClusters int16,
-	// specific to certain status
-	closeTimeUnixNano int64, // close execution
+// specific to certain status
+	closeTimeUnixNano int64,                           // close execution
 	closeStatus workflow.WorkflowExecutionCloseStatus, // close execution
-	historyLength int64, // close execution
-	updateTimeUnixNano int64, // update execution,
+	historyLength int64,                               // close execution
+	updateTimeUnixNano int64,                          // update execution,
 	shardID int64,
 	rawSearchAttributes map[string][]byte,
 ) (*indexer.PinotMessage, error) {
