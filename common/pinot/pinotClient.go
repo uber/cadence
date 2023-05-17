@@ -153,16 +153,16 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 	}
 
 	attr := make(map[string]interface{})
-	if source.Attr != "null" {
-		err = json.Unmarshal([]byte(source.Attr), &attr)
-
-		if err != nil { // log and skip error
-			c.logger.Error("unable to Unmarshal source.Attr",
-				tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-			)
-			return nil
-		}
-	}
+	//if source.Attr != "null" {
+	//	err = json.Unmarshal([]byte(source.Attr), &attr)
+	//
+	//	if err != nil { // log and skip error
+	//		c.logger.Error("unable to Unmarshal source.Attr",
+	//			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
+	//		)
+	//		return nil
+	//	}
+	//}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		DomainID:         source.DomainID,
