@@ -581,9 +581,9 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		// Not all poller information are available at the time of task list manager creation,
 		// because we don't persist poller information in database, so in the first minute, we always assume
 		// pollers are available in all isolation groups to avoid the risk of leaking a task to another isolation group.
-		// Besides, for sticky tasklists, not all poller information are available, we also use all isolation group.
-		if time.Now().Sub(c.createTime) > time.Minute && c.taskListKind != types.TaskListKindSticky {
-			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
+		// Besides, for sticky and scalable tasklists, not all poller information are available, we also use all isolation group.
+		if time.Now().Sub(c.createTime) > time.Minute && c.taskListKind != types.TaskListKindSticky && c.taskListID.IsRoot() {
+			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Time{}) // the lookback window must be larger than the timeout of poller requests (2 mins), otherwise we don't get all pollers
 			if len(pollerIsolationGroups) == 0 {
 				// we don't have any pollers, use all isolation groups and wait for pollers' arriving
 				pollerIsolationGroups = c.config.AllIsolationGroups
