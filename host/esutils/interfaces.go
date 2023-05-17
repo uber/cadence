@@ -22,8 +22,9 @@ package esutils
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
+
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -49,6 +50,8 @@ func CreateESClient(s suite.Suite, url string, version string) ESClient {
 		client, err = newV6Client(url)
 	case "v7":
 		client, err = newV7Client(url)
+	case "os2":
+		client, err = newOS2Client(url)
 	default:
 		s.FailNow("not supported ES version", tag.Value(version))
 	}
