@@ -140,13 +140,14 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text'",
+				Query:         "CustomizedKeyword = 'keywordCustomized' and CustomStringField = 'String field is for text' Order by CloseTime DESC, RunID DESC",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CustomizedKeyword = 'keywordCustomized'
 AND CustomStringField LIKE '%%String field is for text%%'
+Order by CloseTime DESC, RunID DESC
 LIMIT 0, 10
 `, testTableName),
 		},
