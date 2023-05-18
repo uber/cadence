@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"github.com/uber/cadence/common/backoff"
+	"github.com/uber/cadence/common/cache"
+	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/messaging"
@@ -41,15 +43,17 @@ var epochStartTime = time.Unix(0, 0)
 
 type (
 	taskReader struct {
-		taskBuffer     chan *persistence.TaskInfo // tasks loaded from persistence
-		notifyC        chan struct{}              // Used as signal to notify pump of new tasks
-		tlMgr          *taskListManagerImpl
-		taskListID     *taskListID
-		config         *taskListConfig
-		db             *taskListDB
-		taskWriter     *taskWriter
-		taskGC         *taskGC
-		taskAckManager messaging.AckManager
+		taskBuffer      chan *persistence.TaskInfo // tasks loaded from persistence
+		notifyC         chan struct{}              // Used as signal to notify pump of new tasks
+		tlMgr           *taskListManagerImpl
+		taskListID      *taskListID
+		config          *taskListConfig
+		db              *taskListDB
+		taskWriter      *taskWriter
+		taskGC          *taskGC
+		taskAckManager  messaging.AckManager
+		domainCache     cache.DomainCache
+		clusterMetadata cluster.Metadata
 		// The cancel objects are to cancel the ratelimiter Wait in dispatchBufferedTasks. The ideal
 		// approach is to use request-scoped contexts and use a unique one for each call to Wait. However
 		// in order to cancel it on shutdown, we need a new goroutine for each call that would wait on
@@ -84,6 +88,8 @@ func newTaskReader(tlMgr *taskListManagerImpl) *taskReader {
 		// we always dequeue the head of the buffer and try to dispatch it to a poller
 		// so allocate one less than desired target buffer size
 		taskBuffer:               make(chan *persistence.TaskInfo, tlMgr.config.GetTasksBatchSize()-1),
+		domainCache:              tlMgr.domainCache,
+		clusterMetadata:          tlMgr.clusterMetadata,
 		logger:                   tlMgr.logger,
 		scope:                    tlMgr.scope,
 		handleErr:                tlMgr.handleErr,
@@ -361,7 +367,15 @@ func (tr *taskReader) completeTask(task *persistence.TaskInfo, err error) {
 
 func (tr *taskReader) newDispatchContext(isolationGroup string) (context.Context, context.CancelFunc) {
 	if isolationGroup != "" {
-		return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+		domainEntry, err := tr.domainCache.GetDomainByID(tr.taskListID.domainID)
+		if err != nil {
+			// we don't know if the domain is active in the current cluster, assume it is active and set the timeout
+			return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+		}
+		if _, err := domainEntry.IsActiveIn(tr.clusterMetadata.GetCurrentClusterName()); err == nil {
+			// if the domain is active in the current cluster, set the timeout
+			return context.WithTimeout(tr.cancelCtx, tr.config.AsyncTaskDispatchTimeout())
+		}
 	}
 	return tr.cancelCtx, func() {}
 }

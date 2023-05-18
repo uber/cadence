@@ -905,3 +905,15 @@ func VisibilityQuery(query string) Tag {
 func Dynamic(key string, v interface{}) Tag {
 	return newPredefinedDynamicTag(key, v)
 }
+
+func IsolationGroup(group string) Tag {
+	return newStringTag("isolation-group", group)
+}
+
+func PartitionConfig(p map[string]string) Tag {
+	return newObjectTag("partition-config", p)
+}
+
+func PollerGroups(pollers []string) Tag {
+	return newObjectTag("poller-isolation-groups", pollers)
+}
