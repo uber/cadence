@@ -47,6 +47,17 @@ const (
 	ClientImplHeaderName = "cadence-client-name"
 	// AuthorizationTokenHeaderName refers to the jwt token in the request
 	AuthorizationTokenHeaderName = "cadence-authorization"
+
+	// AutoforwardingClusterHeaderName refers to the name of the header that contains the source cluster of the auto-forwarding request
+	AutoforwardingClusterHeaderName = "cadence-forwarding-cluster"
+
+	// PartitionConfigHeaderName refers to the name of the header that contains the json encoded partition config of the request
+	PartitionConfigHeaderName = "cadence-workflow-partition-config"
+	// IsolationGroupHeaderName refers to the name of the header that contains the isolation group of the client
+	IsolationGroupHeaderName = "cadence-worker-isolation-group"
+
+	// ClientZoneHeaderName refers to the name of the header that contaains the zone which the client request is from
+	ClientZoneHeaderName = "cadence-client-zone"
 )
 
 type (

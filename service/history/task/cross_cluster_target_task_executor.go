@@ -168,6 +168,7 @@ func (t *crossClusterTargetTaskExecutor) executeStartChildExecutionTask(
 			targetDomainName,
 			attributes.RequestID,
 			attributes.GetInitiatedEventAttributes(),
+			attributes.GetPartitionConfig(),
 		)
 		if err != nil {
 			return nil, err

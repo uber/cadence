@@ -57,7 +57,8 @@ func NewService(
 		params.PersistenceConfig.NumHistoryShards,
 		params.RPCFactory.GetMaxMessageSize(),
 		params.PersistenceConfig.DefaultStoreType(),
-		params.PersistenceConfig.IsAdvancedVisibilityConfigExist())
+		params.PersistenceConfig.IsAdvancedVisibilityConfigExist(),
+		params.HostName)
 
 	params.PersistenceConfig.HistoryMaxConns = serviceConfig.HistoryMgrNumConns()
 

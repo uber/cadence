@@ -180,3 +180,23 @@ func (g adminGRPCHandler) ListDynamicConfig(ctx context.Context, request *adminv
 	response, err := g.h.ListDynamicConfig(ctx, proto.ToListDynamicConfigRequest(request))
 	return proto.FromListDynamicConfigResponse(response), proto.FromError(err)
 }
+
+func (g adminGRPCHandler) GetGlobalIsolationGroups(ctx context.Context, request *adminv1.GetGlobalIsolationGroupsRequest) (*adminv1.GetGlobalIsolationGroupsResponse, error) {
+	res, err := g.h.GetGlobalIsolationGroups(ctx, proto.ToGetGlobalIsolationGroupsRequest(request))
+	return proto.FromGetGlobalIsolationGroupsResponse(res), proto.FromError(err)
+}
+
+func (g adminGRPCHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *adminv1.UpdateGlobalIsolationGroupsRequest) (*adminv1.UpdateGlobalIsolationGroupsResponse, error) {
+	res, err := g.h.UpdateGlobalIsolationGroups(ctx, proto.ToUpdateGlobalIsolationGroupsRequest(request))
+	return proto.FromUpdateGlobalIsolationGroupsResponse(res), proto.FromError(err)
+}
+
+func (g adminGRPCHandler) GetDomainIsolationGroups(ctx context.Context, request *adminv1.GetDomainIsolationGroupsRequest) (*adminv1.GetDomainIsolationGroupsResponse, error) {
+	res, err := g.h.GetDomainIsolationGroups(ctx, proto.ToGetDomainIsolationGroupsRequest(request))
+	return proto.FromGetDomainIsolationGroupsResponse(res), proto.FromError(err)
+}
+
+func (g adminGRPCHandler) UpdateDomainIsolationGroups(ctx context.Context, request *adminv1.UpdateDomainIsolationGroupsRequest) (*adminv1.UpdateDomainIsolationGroupsResponse, error) {
+	res, err := g.h.UpdateDomainIsolationGroups(ctx, proto.ToUpdateDomainIsolationGroupsRequest(request))
+	return proto.FromUpdateDomainIsolationGroupsResponse(res), proto.FromError(err)
+}

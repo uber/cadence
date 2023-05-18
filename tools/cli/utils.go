@@ -39,18 +39,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/pagination"
-
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/types"
-
 	"github.com/cristalhq/jwt/v3"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/pagination"
+	"github.com/uber/cadence/common/types"
 )
 
 // JSONHistorySerializer is used to encode history event in JSON
@@ -157,6 +155,13 @@ func HistoryEventToString(e *types.HistoryEvent, printFully bool, maxFieldLength
 }
 
 func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
+	// fields related to schedule are of time.Time type, and we shouldn't dive
+	// into it with reflection - it's fields are private.
+	tm, ok := d.(time.Time)
+	if ok {
+		return trimText(tm.String(), maxFieldLength)
+	}
+
 	v := reflect.ValueOf(d)
 	switch v.Kind() {
 	case reflect.Ptr:

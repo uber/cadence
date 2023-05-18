@@ -24,6 +24,8 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/yarpc"
+
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
@@ -43,6 +45,7 @@ type (
 		redirectionPolicy  ClusterRedirectionPolicy
 		tokenSerializer    common.TaskTokenSerializer
 		frontendHandler    Handler
+		callOptions        []yarpc.CallOption
 	}
 )
 
@@ -66,6 +69,7 @@ func NewClusterRedirectionHandler(
 		redirectionPolicy:  dcRedirectionPolicy,
 		tokenSerializer:    common.NewJSONTaskTokenSerializer(),
 		frontendHandler:    wfHandler,
+		callOptions:        []yarpc.CallOption{yarpc.WithHeader(common.AutoforwardingClusterHeaderName, resource.GetClusterMetadata().GetCurrentClusterName())},
 	}
 }
 
@@ -180,7 +184,7 @@ func (handler *ClusterRedirectionHandlerImpl) DescribeTaskList(
 			resp, err = handler.frontendHandler.DescribeTaskList(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.DescribeTaskList(ctx, request)
+			resp, err = remoteClient.DescribeTaskList(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -210,7 +214,7 @@ func (handler *ClusterRedirectionHandlerImpl) DescribeWorkflowExecution(
 			resp, err = handler.frontendHandler.DescribeWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.DescribeWorkflowExecution(ctx, request)
+			resp, err = remoteClient.DescribeWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -240,7 +244,7 @@ func (handler *ClusterRedirectionHandlerImpl) GetWorkflowExecutionHistory(
 			resp, err = handler.frontendHandler.GetWorkflowExecutionHistory(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.GetWorkflowExecutionHistory(ctx, request)
+			resp, err = remoteClient.GetWorkflowExecutionHistory(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -270,7 +274,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListArchivedWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListArchivedWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListArchivedWorkflowExecutions(ctx, request)
+			resp, err = remoteClient.ListArchivedWorkflowExecutions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -300,7 +304,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListClosedWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListClosedWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListClosedWorkflowExecutions(ctx, request)
+			resp, err = remoteClient.ListClosedWorkflowExecutions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -330,7 +334,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListOpenWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListOpenWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListOpenWorkflowExecutions(ctx, request)
+			resp, err = remoteClient.ListOpenWorkflowExecutions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -360,7 +364,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListWorkflowExecutions(
 			resp, err = handler.frontendHandler.ListWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListWorkflowExecutions(ctx, request)
+			resp, err = remoteClient.ListWorkflowExecutions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -389,7 +393,7 @@ func (handler *ClusterRedirectionHandlerImpl) ScanWorkflowExecutions(
 			resp, err = handler.frontendHandler.ScanWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ScanWorkflowExecutions(ctx, request)
+			resp, err = remoteClient.ScanWorkflowExecutions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -419,7 +423,7 @@ func (handler *ClusterRedirectionHandlerImpl) CountWorkflowExecutions(
 			resp, err = handler.frontendHandler.CountWorkflowExecutions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.CountWorkflowExecutions(ctx, request)
+			resp, err = remoteClient.CountWorkflowExecutions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -464,7 +468,7 @@ func (handler *ClusterRedirectionHandlerImpl) PollForActivityTask(
 			resp, err = handler.frontendHandler.PollForActivityTask(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.PollForActivityTask(ctx, request)
+			resp, err = remoteClient.PollForActivityTask(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -494,7 +498,7 @@ func (handler *ClusterRedirectionHandlerImpl) PollForDecisionTask(
 			resp, err = handler.frontendHandler.PollForDecisionTask(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.PollForDecisionTask(ctx, request)
+			resp, err = remoteClient.PollForDecisionTask(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -530,7 +534,7 @@ func (handler *ClusterRedirectionHandlerImpl) QueryWorkflow(
 			resp, err = handler.frontendHandler.QueryWorkflow(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.QueryWorkflow(ctx, request)
+			resp, err = remoteClient.QueryWorkflow(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -565,7 +569,7 @@ func (handler *ClusterRedirectionHandlerImpl) RecordActivityTaskHeartbeat(
 			resp, err = handler.frontendHandler.RecordActivityTaskHeartbeat(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RecordActivityTaskHeartbeat(ctx, request)
+			resp, err = remoteClient.RecordActivityTaskHeartbeat(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -595,7 +599,7 @@ func (handler *ClusterRedirectionHandlerImpl) RecordActivityTaskHeartbeatByID(
 			resp, err = handler.frontendHandler.RecordActivityTaskHeartbeatByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RecordActivityTaskHeartbeatByID(ctx, request)
+			resp, err = remoteClient.RecordActivityTaskHeartbeatByID(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -625,7 +629,7 @@ func (handler *ClusterRedirectionHandlerImpl) RequestCancelWorkflowExecution(
 			err = handler.frontendHandler.RequestCancelWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RequestCancelWorkflowExecution(ctx, request)
+			err = remoteClient.RequestCancelWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -655,7 +659,7 @@ func (handler *ClusterRedirectionHandlerImpl) ResetStickyTaskList(
 			resp, err = handler.frontendHandler.ResetStickyTaskList(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ResetStickyTaskList(ctx, request)
+			resp, err = remoteClient.ResetStickyTaskList(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -685,7 +689,7 @@ func (handler *ClusterRedirectionHandlerImpl) ResetWorkflowExecution(
 			resp, err = handler.frontendHandler.ResetWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ResetWorkflowExecution(ctx, request)
+			resp, err = remoteClient.ResetWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -720,7 +724,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCanceled(
 			err = handler.frontendHandler.RespondActivityTaskCanceled(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCanceled(ctx, request)
+			err = remoteClient.RespondActivityTaskCanceled(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -750,7 +754,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCanceledByID(
 			err = handler.frontendHandler.RespondActivityTaskCanceledByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCanceledByID(ctx, request)
+			err = remoteClient.RespondActivityTaskCanceledByID(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -785,7 +789,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCompleted(
 			err = handler.frontendHandler.RespondActivityTaskCompleted(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCompleted(ctx, request)
+			err = remoteClient.RespondActivityTaskCompleted(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -815,7 +819,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskCompletedByID(
 			err = handler.frontendHandler.RespondActivityTaskCompletedByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskCompletedByID(ctx, request)
+			err = remoteClient.RespondActivityTaskCompletedByID(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -850,7 +854,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskFailed(
 			err = handler.frontendHandler.RespondActivityTaskFailed(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskFailed(ctx, request)
+			err = remoteClient.RespondActivityTaskFailed(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -880,7 +884,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondActivityTaskFailedByID(
 			err = handler.frontendHandler.RespondActivityTaskFailedByID(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondActivityTaskFailedByID(ctx, request)
+			err = remoteClient.RespondActivityTaskFailedByID(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -915,7 +919,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondDecisionTaskCompleted(
 			resp, err = handler.frontendHandler.RespondDecisionTaskCompleted(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RespondDecisionTaskCompleted(ctx, request)
+			resp, err = remoteClient.RespondDecisionTaskCompleted(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -950,7 +954,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondDecisionTaskFailed(
 			err = handler.frontendHandler.RespondDecisionTaskFailed(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondDecisionTaskFailed(ctx, request)
+			err = remoteClient.RespondDecisionTaskFailed(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -985,7 +989,7 @@ func (handler *ClusterRedirectionHandlerImpl) RespondQueryTaskCompleted(
 			err = handler.frontendHandler.RespondQueryTaskCompleted(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RespondQueryTaskCompleted(ctx, request)
+			err = remoteClient.RespondQueryTaskCompleted(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1010,7 +1014,7 @@ func (handler *ClusterRedirectionHandlerImpl) RestartWorkflowExecution(ctx conte
 			resp, err = handler.frontendHandler.RestartWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.RestartWorkflowExecution(ctx, request)
+			resp, err = remoteClient.RestartWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1040,7 +1044,7 @@ func (handler *ClusterRedirectionHandlerImpl) SignalWithStartWorkflowExecution(
 			resp, err = handler.frontendHandler.SignalWithStartWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.SignalWithStartWorkflowExecution(ctx, request)
+			resp, err = remoteClient.SignalWithStartWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1070,7 +1074,7 @@ func (handler *ClusterRedirectionHandlerImpl) SignalWorkflowExecution(
 			err = handler.frontendHandler.SignalWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.SignalWorkflowExecution(ctx, request)
+			err = remoteClient.SignalWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1099,7 +1103,7 @@ func (handler *ClusterRedirectionHandlerImpl) StartWorkflowExecution(
 			resp, err = handler.frontendHandler.StartWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.StartWorkflowExecution(ctx, request)
+			resp, err = remoteClient.StartWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1129,7 +1133,7 @@ func (handler *ClusterRedirectionHandlerImpl) TerminateWorkflowExecution(
 			err = handler.frontendHandler.TerminateWorkflowExecution(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.TerminateWorkflowExecution(ctx, request)
+			err = remoteClient.TerminateWorkflowExecution(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1159,7 +1163,7 @@ func (handler *ClusterRedirectionHandlerImpl) ListTaskListPartitions(
 			resp, err = handler.frontendHandler.ListTaskListPartitions(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.ListTaskListPartitions(ctx, request)
+			resp, err = remoteClient.ListTaskListPartitions(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1189,7 +1193,7 @@ func (handler *ClusterRedirectionHandlerImpl) GetTaskListsByDomain(
 			resp, err = handler.frontendHandler.GetTaskListsByDomain(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			resp, err = remoteClient.GetTaskListsByDomain(ctx, request)
+			resp, err = remoteClient.GetTaskListsByDomain(ctx, request, handler.callOptions...)
 		}
 		return err
 	})
@@ -1219,7 +1223,7 @@ func (handler *ClusterRedirectionHandlerImpl) RefreshWorkflowTasks(
 			err = handler.frontendHandler.RefreshWorkflowTasks(ctx, request)
 		default:
 			remoteClient := handler.GetRemoteFrontendClient(targetDC)
-			err = remoteClient.RefreshWorkflowTasks(ctx, request)
+			err = remoteClient.RefreshWorkflowTasks(ctx, request, handler.callOptions...)
 		}
 		return err
 	})

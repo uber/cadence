@@ -114,31 +114,37 @@ type (
 
 	pushActivityToMatchingInfo struct {
 		activityScheduleToStartTimeout int32
+		partitionConfig                map[string]string
 	}
 
 	pushDecisionToMatchingInfo struct {
 		decisionScheduleToStartTimeout int32
 		tasklist                       types.TaskList
+		partitionConfig                map[string]string
 	}
 )
 
 func newPushActivityToMatchingInfo(
 	activityScheduleToStartTimeout int32,
+	partitionConfig map[string]string,
 ) *pushActivityToMatchingInfo {
 
 	return &pushActivityToMatchingInfo{
 		activityScheduleToStartTimeout: activityScheduleToStartTimeout,
+		partitionConfig:                partitionConfig,
 	}
 }
 
 func newPushDecisionToMatchingInfo(
 	decisionScheduleToStartTimeout int32,
 	tasklist types.TaskList,
+	partitionConfig map[string]string,
 ) *pushDecisionToMatchingInfo {
 
 	return &pushDecisionToMatchingInfo{
 		decisionScheduleToStartTimeout: decisionScheduleToStartTimeout,
 		tasklist:                       tasklist,
+		partitionConfig:                partitionConfig,
 	}
 }
 

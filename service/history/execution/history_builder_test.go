@@ -123,9 +123,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderDynamicSuccess() {
 		WorkflowID: id,
 		RunID:      rid,
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
-	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	di := s.addDecisionTaskScheduledEvent()
@@ -432,9 +435,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowStartFailures() {
 		WorkflowID: id,
 		RunID:      rid,
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
-	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	di := s.addDecisionTaskScheduledEvent()
@@ -481,9 +487,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionScheduledFailures() {
 		WorkflowID: id,
 		RunID:      rid,
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
-	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	di := s.addDecisionTaskScheduledEvent()
@@ -516,9 +525,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderDecisionStartedFailures() {
 		WorkflowID: id,
 		RunID:      rid,
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
-	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	_, _, err := s.msBuilder.AddDecisionTaskStartedEvent(2, uuid.New(), &types.PollForDecisionTaskRequest{
@@ -572,10 +584,13 @@ func (s *historyBuilderSuite) TestHistoryBuilderFlushBufferedEvents() {
 		WorkflowID: id,
 		RunID:      rid,
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
 	// 1 execution started
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity)
-	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(we, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, wt, tl, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	// 2 decision scheduled
@@ -741,13 +756,13 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationRequested() 
 		WorkflowID: "some random workflow ID",
 		RunID:      uuid.New(),
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
-		workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
-	)
-	s.validateWorkflowExecutionStartedEvent(
-		workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
-	)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity, partitionConfig)
+
 	s.Equal(int64(2), s.getNextEventID())
 
 	decisionInfo := s.addDecisionTaskScheduledEvent()
@@ -812,13 +827,12 @@ func (s *historyBuilderSuite) TestHistoryBuilderWorkflowCancellationFailed() {
 		WorkflowID: "some random workflow ID",
 		RunID:      uuid.New(),
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
-		workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
-	)
-	s.validateWorkflowExecutionStartedEvent(
-		workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
-	)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	decisionInfo := s.addDecisionTaskScheduledEvent()
@@ -888,13 +902,12 @@ func (s *historyBuilderSuite) TestHistoryBuilder_DecisionTaskTimedOut() {
 		WorkflowID: "some random workflow ID",
 		RunID:      uuid.New(),
 	}
+	partitionConfig := map[string]string{
+		"zone": "dca1",
+	}
 
-	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(
-		workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
-	)
-	s.validateWorkflowExecutionStartedEvent(
-		workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity,
-	)
+	workflowStartedEvent := s.addWorkflowExecutionStartedEvent(workflowExecution, workflowType, tasklist, input, execTimeout, taskTimeout, identity, partitionConfig)
+	s.validateWorkflowExecutionStartedEvent(workflowStartedEvent, workflowType, tasklist, input, execTimeout, taskTimeout, identity, partitionConfig)
 	s.Equal(int64(2), s.getNextEventID())
 
 	decisionInfo := s.addDecisionTaskScheduledEvent()
@@ -952,7 +965,7 @@ func (s *historyBuilderSuite) getPreviousDecisionStartedEventID() int64 {
 
 func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.WorkflowExecution, workflowType,
 	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32,
-	identity string) *types.HistoryEvent {
+	identity string, partitionConfig map[string]string) *types.HistoryEvent {
 
 	request := &types.StartWorkflowExecutionRequest{
 		WorkflowID:                          we.WorkflowID,
@@ -967,8 +980,9 @@ func (s *historyBuilderSuite) addWorkflowExecutionStartedEvent(we types.Workflow
 	event, err := s.msBuilder.AddWorkflowExecutionStartedEvent(
 		we,
 		&types.HistoryStartWorkflowExecutionRequest{
-			DomainUUID:   s.domainID,
-			StartRequest: request,
+			DomainUUID:      s.domainID,
+			StartRequest:    request,
+			PartitionConfig: partitionConfig,
 		},
 	)
 	s.Nil(err)
@@ -1149,7 +1163,7 @@ func (s *historyBuilderSuite) addRequestCancelExternalWorkflowExecutionFailedEve
 }
 
 func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *types.HistoryEvent, workflowType,
-	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string) {
+	taskList string, input []byte, executionStartToCloseTimeout, taskStartToCloseTimeout int32, identity string, partitionConfig map[string]string) {
 	s.NotNil(event)
 	s.Equal(types.EventTypeWorkflowExecutionStarted, *event.EventType)
 	s.Equal(common.FirstEventID, event.ID)
@@ -1161,6 +1175,7 @@ func (s *historyBuilderSuite) validateWorkflowExecutionStartedEvent(event *types
 	s.Equal(executionStartToCloseTimeout, *attributes.ExecutionStartToCloseTimeoutSeconds)
 	s.Equal(taskStartToCloseTimeout, *attributes.TaskStartToCloseTimeoutSeconds)
 	s.Equal(identity, attributes.Identity)
+	s.Equal(partitionConfig, attributes.PartitionConfig)
 	if attributes.CronSchedule == "" {
 		s.Nil(attributes.FirstScheduleTime)
 	} else {

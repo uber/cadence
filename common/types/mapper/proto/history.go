@@ -1271,8 +1271,9 @@ func FromHistorySignalWithStartWorkflowExecutionRequest(t *types.HistorySignalWi
 		return nil
 	}
 	return &historyv1.SignalWithStartWorkflowExecutionRequest{
-		Request:  FromSignalWithStartWorkflowExecutionRequest(t.SignalWithStartRequest),
-		DomainId: t.DomainUUID,
+		Request:         FromSignalWithStartWorkflowExecutionRequest(t.SignalWithStartRequest),
+		DomainId:        t.DomainUUID,
+		PartitionConfig: t.PartitionConfig,
 	}
 }
 
@@ -1283,6 +1284,7 @@ func ToHistorySignalWithStartWorkflowExecutionRequest(t *historyv1.SignalWithSta
 	return &types.HistorySignalWithStartWorkflowExecutionRequest{
 		SignalWithStartRequest: ToSignalWithStartWorkflowExecutionRequest(t.Request),
 		DomainUUID:             t.DomainId,
+		PartitionConfig:        t.PartitionConfig,
 	}
 }
 
@@ -1342,6 +1344,7 @@ func FromHistoryStartWorkflowExecutionRequest(t *types.HistoryStartWorkflowExecu
 		ContinuedFailure:         FromFailure(t.ContinuedFailureReason, t.ContinuedFailureDetails),
 		LastCompletionResult:     FromPayload(t.LastCompletionResult),
 		FirstDecisionTaskBackoff: secondsToDuration(t.FirstDecisionTaskBackoffSeconds),
+		PartitionConfig:          t.PartitionConfig,
 	}
 }
 
@@ -1360,6 +1363,7 @@ func ToHistoryStartWorkflowExecutionRequest(t *historyv1.StartWorkflowExecutionR
 		ContinuedFailureDetails:         ToFailureDetails(t.ContinuedFailure),
 		LastCompletionResult:            ToPayload(t.LastCompletionResult),
 		FirstDecisionTaskBackoffSeconds: durationToSeconds(t.FirstDecisionTaskBackoff),
+		PartitionConfig:                 t.PartitionConfig,
 	}
 }
 

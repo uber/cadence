@@ -26,9 +26,10 @@ import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
 	publicservicetest "go.uber.org/cadence/.gen/go/cadence/workflowservicetest"
-
 	"go.uber.org/yarpc"
 	"go.uber.org/zap"
+
+	"github.com/uber/cadence/common/dynamicconfig/configstore"
 
 	"github.com/uber/cadence/client"
 	"github.com/uber/cadence/client/admin"
@@ -42,12 +43,14 @@ import (
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/cluster"
 	"github.com/uber/cadence/common/domain"
+	"github.com/uber/cadence/common/isolationgroup"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/membership"
 	"github.com/uber/cadence/common/messaging"
 	"github.com/uber/cadence/common/metrics"
 	"github.com/uber/cadence/common/mocks"
+	"github.com/uber/cadence/common/partition"
 	"github.com/uber/cadence/common/persistence"
 	persistenceClient "github.com/uber/cadence/common/persistence/client"
 )
@@ -93,7 +96,11 @@ type (
 		ExecutionMgr    *mocks.ExecutionManager
 		PersistenceBean *persistenceClient.MockBean
 
-		Logger log.Logger
+		IsolationGroups     *isolationgroup.MockState
+		IsolationGroupStore *configstore.MockClient
+		Partitioner         *partition.MockPartitioner
+		HostName            string
+		Logger              log.Logger
 	}
 )
 
@@ -148,6 +155,13 @@ func NewTest(
 	persistenceBean.EXPECT().GetShardManager().Return(shardMgr).AnyTimes()
 	persistenceBean.EXPECT().GetExecutionManager(gomock.Any()).Return(executionMgr, nil).AnyTimes()
 
+	isolationGroupMock := isolationgroup.NewMockState(controller)
+	isolationGroupMock.EXPECT().Stop().AnyTimes()
+
+	partitionMock := partition.NewMockPartitioner(controller)
+	mockZone := "zone1"
+	partitionMock.EXPECT().GetIsolationGroupByDomainID(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(mockZone, nil)
+
 	scope := tally.NewTestScope("test", nil)
 
 	return &Test{
@@ -190,6 +204,8 @@ func NewTest(
 		HistoryMgr:      historyMgr,
 		ExecutionMgr:    executionMgr,
 		PersistenceBean: persistenceBean,
+		IsolationGroups: isolationGroupMock,
+		Partitioner:     partitionMock,
 
 		// logger
 
@@ -380,6 +396,11 @@ func (s *Test) GetPersistenceBean() persistenceClient.Bean {
 	return s.PersistenceBean
 }
 
+// GetHostName for testing
+func (s *Test) GetHostName() string {
+	return s.HostName
+}
+
 // loggers
 
 // GetLogger for testing
@@ -395,6 +416,22 @@ func (s *Test) GetThrottledLogger() log.Logger {
 // GetDispatcher for testing
 func (s *Test) GetDispatcher() *yarpc.Dispatcher {
 	panic("user should implement this method for test")
+}
+
+// GetIsolationGroupState returns the isolationGroupState for testing
+func (s *Test) GetIsolationGroupState() isolationgroup.State {
+	return s.IsolationGroups
+}
+
+// GetPartitioner returns the partitioner
+func (s *Test) GetPartitioner() partition.Partitioner {
+	return s.Partitioner
+}
+
+// GetIsolationGroupStore returns the config store for their
+// isolation-group stores
+func (s *Test) GetIsolationGroupStore() configstore.Client {
+	return s.IsolationGroupStore
 }
 
 // Finish checks whether expectations are met

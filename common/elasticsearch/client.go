@@ -45,20 +45,20 @@ import (
 var _ GenericClient = (*ESClient)(nil)
 
 type ESClient struct {
-	client client.Client
-	logger log.Logger
+	Client client.Client
+	Logger log.Logger
 }
 
 func (c *ESClient) RunBulkProcessor(ctx context.Context, p *bulk.BulkProcessorParameters) (bulk.GenericBulkProcessor, error) {
-	return c.client.RunBulkProcessor(ctx, p)
+	return c.Client.RunBulkProcessor(ctx, p)
 }
 
 func (c *ESClient) CreateIndex(ctx context.Context, index string) error {
-	return c.client.CreateIndex(ctx, index)
+	return c.Client.CreateIndex(ctx, index)
 }
 
 func (c *ESClient) IsNotFoundError(err error) bool {
-	return c.client.IsNotFoundError(err)
+	return c.Client.IsNotFoundError(err)
 }
 
 func (c *ESClient) Search(ctx context.Context, request *SearchRequest) (*SearchResponse, error) {
@@ -88,7 +88,7 @@ func (c *ESClient) SearchByQuery(ctx context.Context, request *SearchByQueryRequ
 	if err != nil {
 		return nil, err
 	}
-	searchResult, err := c.client.Search(ctx, request.Index, request.Query)
+	searchResult, err := c.Client.Search(ctx, request.Index, request.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (c *ESClient) SearchByQuery(ctx context.Context, request *SearchByQueryRequ
 }
 
 func (c *ESClient) SearchRaw(ctx context.Context, index, query string) (*RawResponse, error) {
-	response, err := c.client.Search(ctx, index, query)
+	response, err := c.Client.Search(ctx, index, query)
 	if err != nil {
 		return nil, err
 	}
@@ -134,13 +134,13 @@ func (c *ESClient) ScanByQuery(ctx context.Context, request *ScanByQueryRequest)
 	if err != nil {
 		return nil, err
 	}
-	searchResult, err := c.client.Scroll(ctx, request.Index, request.Query, token.ScrollID)
+	searchResult, err := c.Client.Scroll(ctx, request.Index, request.Query, token.ScrollID)
 
 	isLastPage := false
 	if err == io.EOF { // no more result
 		isLastPage = true
-		if err := c.client.ClearScroll(ctx, searchResult.ScrollID); err != nil {
-			c.logger.Warn("scroll clear failed", tag.Error(err))
+		if err := c.Client.ClearScroll(ctx, searchResult.ScrollID); err != nil {
+			c.Logger.Warn("scroll clear failed", tag.Error(err))
 		}
 	} else if err != nil {
 		return nil, &types.InternalServiceError{
@@ -182,7 +182,7 @@ func (c *ESClient) SearchForOneClosedExecution(ctx context.Context, index string
 		return nil, fmt.Errorf("getting body from query builder: %w", err)
 	}
 
-	searchResult, err := c.client.Search(ctx, index, body)
+	searchResult, err := c.Client.Search(ctx, index, body)
 	if err != nil {
 		return nil, &types.InternalServiceError{
 			Message: fmt.Sprintf("SearchForOneClosedExecution failed. Error: %v", err),
@@ -200,7 +200,7 @@ func (c *ESClient) SearchForOneClosedExecution(ctx context.Context, index string
 }
 
 func (c *ESClient) CountByQuery(ctx context.Context, index, query string) (int64, error) {
-	return c.client.Count(ctx, index, query)
+	return c.Client.Count(ctx, index, query)
 }
 
 func (c *ESClient) PutMapping(ctx context.Context, index, root, key, valueType string) error {
@@ -210,7 +210,7 @@ func (c *ESClient) PutMapping(ctx context.Context, index, root, key, valueType s
 		return err
 	}
 
-	return c.client.PutMapping(ctx, index, string(body))
+	return c.Client.PutMapping(ctx, index, string(body))
 }
 
 func (c *ESClient) getListWorkflowExecutionsResponse(
@@ -348,7 +348,7 @@ func (c *ESClient) getSearchResult(
 		return nil, fmt.Errorf("getting body from query builder: %w", err)
 	}
 
-	return c.client.Search(ctx, index, body)
+	return c.Client.Search(ctx, index, body)
 }
 
 func buildPutMappingBody(root, key, valueType string) map[string]interface{} {

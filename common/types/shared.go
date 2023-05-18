@@ -1785,13 +1785,14 @@ type DomainCacheInfo struct {
 
 // DomainConfiguration is an internal type (TBD...)
 type DomainConfiguration struct {
-	WorkflowExecutionRetentionPeriodInDays int32           `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
-	EmitMetric                             bool            `json:"emitMetric,omitempty"`
-	BadBinaries                            *BadBinaries    `json:"badBinaries,omitempty"`
-	HistoryArchivalStatus                  *ArchivalStatus `json:"historyArchivalStatus,omitempty"`
-	HistoryArchivalURI                     string          `json:"historyArchivalURI,omitempty"`
-	VisibilityArchivalStatus               *ArchivalStatus `json:"visibilityArchivalStatus,omitempty"`
-	VisibilityArchivalURI                  string          `json:"visibilityArchivalURI,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays int32                        `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                             bool                         `json:"emitMetric,omitempty"`
+	BadBinaries                            *BadBinaries                 `json:"badBinaries,omitempty"`
+	HistoryArchivalStatus                  *ArchivalStatus              `json:"historyArchivalStatus,omitempty"`
+	HistoryArchivalURI                     string                       `json:"historyArchivalURI,omitempty"`
+	VisibilityArchivalStatus               *ArchivalStatus              `json:"visibilityArchivalStatus,omitempty"`
+	VisibilityArchivalURI                  string                       `json:"visibilityArchivalURI,omitempty"`
+	IsolationGroups                        *IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
@@ -6749,6 +6750,7 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
+	IsolationGroupConfiguration            *IsolationGroupConfiguration       `json:"isolationGroupConfiguration,omitempty"`
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
@@ -7157,6 +7159,7 @@ type WorkflowExecutionInfo struct {
 	TaskList          string                        `json:"taskList,omitempty"`
 	IsCron            bool                          `json:"isCron,omitempty"`
 	UpdateTime        *int64                        `json:"updateTime,omitempty"`
+	PartitionConfig   map[string]string
 }
 
 // GetExecution is an internal getter (TBD...)
@@ -7223,6 +7226,14 @@ func (v *WorkflowExecutionInfo) GetSearchAttributes() (o *SearchAttributes) {
 	return
 }
 
+// GetPartitionConfig is an internal getter (TBD...)
+func (v *WorkflowExecutionInfo) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
+	}
+	return
+}
+
 // WorkflowExecutionSignaledEventAttributes is an internal type (TBD...)
 type WorkflowExecutionSignaledEventAttributes struct {
 	SignalName string `json:"signalName,omitempty"`
@@ -7284,6 +7295,7 @@ type WorkflowExecutionStartedEventAttributes struct {
 	PrevAutoResetPoints                 *ResetPoints            `json:"prevAutoResetPoints,omitempty"`
 	Header                              *Header                 `json:"header,omitempty"`
 	JitterStartSeconds                  *int32                  `json:"jitterStartSeconds,omitempty"`
+	PartitionConfig                     map[string]string
 }
 
 // GetParentWorkflowDomain is an internal getter (TBD...)
@@ -7409,6 +7421,14 @@ func (v *WorkflowExecutionStartedEventAttributes) GetSearchAttributes() (o *Sear
 func (v *WorkflowExecutionStartedEventAttributes) GetPrevAutoResetPoints() (o *ResetPoints) {
 	if v != nil && v.PrevAutoResetPoints != nil {
 		return v.PrevAutoResetPoints
+	}
+	return
+}
+
+// GetPartitionConfig is an internal getter (TBD...)
+func (v *WorkflowExecutionStartedEventAttributes) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
 	}
 	return
 }
@@ -7851,6 +7871,7 @@ type CrossClusterStartChildExecutionRequestAttributes struct {
 	InitiatedEventID         int64                                                `json:"initiatedEventID,omitempty"`
 	InitiatedEventAttributes *StartChildWorkflowExecutionInitiatedEventAttributes `json:"initiatedEventAttributes,omitempty"`
 	TargetRunID              *string                                              `json:"targetRunID,omitempty"`
+	PartitionConfig          map[string]string
 }
 
 // GetRequestID is an internal getter (TBD...)
@@ -7873,6 +7894,14 @@ func (v *CrossClusterStartChildExecutionRequestAttributes) GetInitiatedEventAttr
 func (v *CrossClusterStartChildExecutionRequestAttributes) GetTargetRunID() (o string) {
 	if v != nil && v.TargetRunID != nil {
 		return *v.TargetRunID
+	}
+	return
+}
+
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
 	}
 	return
 }

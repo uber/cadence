@@ -212,7 +212,7 @@ func validDatabaseCheck(cfg config.Persistence) bool {
 }
 
 func (s *ConfigStorePersistenceSuite) FetchDynamicConfig(ctx context.Context) (*p.DynamicConfigSnapshot, error) {
-	response, err := s.ConfigStoreManager.FetchDynamicConfig(ctx)
+	response, err := s.ConfigStoreManager.FetchDynamicConfig(ctx, p.DynamicConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -223,5 +223,5 @@ func (s *ConfigStorePersistenceSuite) FetchDynamicConfig(ctx context.Context) (*
 }
 
 func (s *ConfigStorePersistenceSuite) UpdateDynamicConfig(ctx context.Context, snapshot *p.DynamicConfigSnapshot) error {
-	return s.ConfigStoreManager.UpdateDynamicConfig(ctx, &p.UpdateDynamicConfigRequest{Snapshot: snapshot})
+	return s.ConfigStoreManager.UpdateDynamicConfig(ctx, &p.UpdateDynamicConfigRequest{Snapshot: snapshot}, p.DynamicConfig)
 }
