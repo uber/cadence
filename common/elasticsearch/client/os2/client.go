@@ -288,8 +288,13 @@ func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response,
 		return nil, fmt.Errorf("decoding Opensearch result to client.Response: %w", err)
 	}
 
+	var sort []interface{}
 	if cr.Hits != nil && cr.Hits.TotalHits != nil {
+		for _, h := range cr.Hits.Hits {
+			sort = h.Sort
+		}
 		cr.TotalHits = cr.Hits.TotalHits.Value
+		cr.Sort = sort
 	}
 
 	return &cr, nil
