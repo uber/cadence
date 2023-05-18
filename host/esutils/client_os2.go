@@ -67,7 +67,7 @@ func (os2 *os2Client) PutIndexTemplate(s suite.Suite, templateConfigFile, templa
 
 	resp, err := req.Do(createContext(), os2.client)
 	s.Require().NoError(err)
-	s.Require().False(resp.IsError())
+	s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 	if resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -86,7 +86,7 @@ func (os2 *os2Client) CreateIndex(s suite.Suite, indexName string) {
 		}
 		resp, err := deleteReq.Do(createContext(), os2.client)
 		s.Require().Nil(err)
-		s.Require().False(resp.IsError())
+		s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 
 	}
 	if resp.Body != nil {
@@ -100,7 +100,7 @@ func (os2 *os2Client) CreateIndex(s suite.Suite, indexName string) {
 	resp, err = createReq.Do(createContext(), os2.client)
 
 	s.Require().NoError(err)
-	s.Require().False(resp.IsError())
+	s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 }
 
 func (os2 *os2Client) DeleteIndex(s suite.Suite, indexName string) {
@@ -109,7 +109,7 @@ func (os2 *os2Client) DeleteIndex(s suite.Suite, indexName string) {
 	}
 	resp, err := deleteReq.Do(createContext(), os2.client)
 	s.Require().Nil(err)
-	s.Require().False(resp.IsError())
+	s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
 
 	if resp.Body != nil {
 		resp.Body.Close()
@@ -142,14 +142,14 @@ func (os2 *os2Client) GetMaxResultWindow(indexName string) (string, error) {
 		return "", errors.New(res.String())
 	}
 
-	var data map[string]interface{}
+	var data map[string]map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&data)
 	if err != nil {
 		return "", err
 	}
 
-	if info, ok := data[indexName].(map[string]interface{}); ok {
-		return info["settings"].(map[string]interface{})["max_result_window"].(string), nil
+	if info, ok := data[indexName]["settings"].(map[string]interface{}); ok {
+		return info["index"].(map[string]interface{})["max_result_window"].(string), nil
 	}
 
 	return "", fmt.Errorf("no settings for index %q", indexName)
