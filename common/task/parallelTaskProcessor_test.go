@@ -307,3 +307,20 @@ func (s *parallelTaskProcessorSuite) TestProcessorContract() {
 		s.NotEqual(TaskStatePending, status)
 	}
 }
+
+func (s *parallelTaskProcessorSuite) TestExecuteTask_PanicHandling() {
+	mockTask := NewMockTask(s.controller)
+	mockTask.EXPECT().Execute().Do(func() {
+		panic("A panic occurred")
+	})
+	mockTask.EXPECT().HandleErr(gomock.Any()).Return(errRetryable).AnyTimes()
+	done := make(chan struct{})
+	workerShutdownCh := make(chan struct{})
+	go func() {
+		s.processor.executeTask(mockTask, workerShutdownCh)
+		close(done)
+	}()
+	time.Sleep(100 * time.Millisecond)
+	close(workerShutdownCh)
+	<-done
+}
