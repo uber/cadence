@@ -36,7 +36,7 @@ services:
           - elasticsearch
     environment:
       - discovery.type=single-node
-      - plugins.security.disabled=true
+      - "DISABLE_SECURITY_PLUGIN=true"
 
   integration-test-cassandra:
     build:
