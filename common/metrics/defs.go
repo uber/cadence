@@ -1802,7 +1802,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
 		MatchingListTaskListPartitionsScope:    {operation: "ListTaskListPartitions"},
 		MatchingGetTaskListsByDomainScope:      {operation: "GetTaskListsByDomain"},
-		MatchingPartitionerDefaultPartitioner:  {operation: "Partitioner"},
+		MatchingPartitionerDefaultPartitioner:  {operation: "GetIsolationGroupByDomainID"},
 	},
 	// Worker Scope Names
 	Worker: {

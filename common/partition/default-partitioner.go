@@ -132,10 +132,10 @@ func (r *defaultPartitioner) pickIsolationGroup(wfPartition defaultWorkflowParti
 	})
 	r.metrics.IncCounter(metrics.PartitionerUnPinnedTask)
 	fallback := pickIsolationGroupFallback(availableList, wfPartition)
-	r.log.Debug("isolation group falling back to an available zone:",
+	r.log.Debug("isolation group falling back to an available zone",
 		tag.FallbackIsolationGroup(fallback),
 		tag.IsolationGroup(wfPartition.WorkflowStartIsolationGroup),
-		tag.Dynamic("available-isolation-groups", available),
+		tag.PollerGroupsConfiguration(available),
 	)
 	return fallback
 }
