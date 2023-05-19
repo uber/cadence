@@ -834,22 +834,22 @@ func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) con
 }
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
-	return newTimedContex(c, defaultContextTimeout)
+	return newTimedContext(c, defaultContextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
-	return newTimedContex(c, defaultContextTimeoutForLongPoll)
+	return newTimedContext(c, defaultContextTimeoutForLongPoll)
 }
 
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	if c.GlobalIsSet(FlagContextTimeout) {
-		return newTimedContex(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
+		return newTimedContext(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
 	}
 
 	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
 }
 
-func newTimedContex(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if c.GlobalIsSet(FlagContextTimeout) {
 		timeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
 	}
