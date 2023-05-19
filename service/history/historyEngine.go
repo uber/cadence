@@ -498,12 +498,17 @@ func (e *historyEngineImpl) registerDomainFailoverCallback() {
 				domainFailoverNotificationVersion := nextDomain.GetFailoverNotificationVersion()
 				domainActiveCluster := nextDomain.GetReplicationConfig().ActiveClusterName
 				previousFailoverVersion := nextDomain.GetPreviousFailoverVersion()
+				previousClusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion)
+				if err != nil {
+					e.logger.Error("Failed to handle graceful failover", tag.WorkflowDomainID(nextDomain.GetInfo().ID))
+					continue
+				}
 
 				if nextDomain.IsGlobalDomain() &&
 					domainFailoverNotificationVersion >= shardNotificationVersion &&
 					domainActiveCluster != e.currentClusterName &&
 					previousFailoverVersion != common.InitialPreviousFailoverVersion &&
-					e.clusterMetadata.ClusterNameForFailoverVersion(previousFailoverVersion) == e.currentClusterName {
+					previousClusterName == e.currentClusterName {
 					// the visibility timestamp will be set in shard context
 					failoverMarkerTasks = append(failoverMarkerTasks, &persistence.FailoverMarkerTask{
 						Version:  nextDomain.GetFailoverVersion(),
@@ -599,10 +604,14 @@ func (e *historyEngineImpl) newDomainNotActiveError(
 	failoverVersion int64,
 ) error {
 	clusterMetadata := e.shard.GetService().GetClusterMetadata()
+	clusterName, err := clusterMetadata.ClusterNameForFailoverVersion(failoverVersion)
+	if err != nil {
+		clusterName = "_unknown_"
+	}
 	return ce.NewDomainNotActiveError(
 		domainName,
 		clusterMetadata.GetCurrentClusterName(),
-		clusterMetadata.ClusterNameForFailoverVersion(failoverVersion),
+		clusterName,
 	)
 }
 
@@ -2995,8 +3004,10 @@ func (e *historyEngineImpl) NotifyNewTransferTasks(
 
 	if len(info.Tasks) > 0 {
 		task := info.Tasks[0]
-		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.txProcessor.NotifyNewTask(clusterName, info)
+		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+		if err == nil {
+			e.txProcessor.NotifyNewTask(clusterName, info)
+		}
 	}
 }
 
@@ -3006,8 +3017,10 @@ func (e *historyEngineImpl) NotifyNewTimerTasks(
 
 	if len(info.Tasks) > 0 {
 		task := info.Tasks[0]
-		clusterName := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
-		e.timerProcessor.NotifyNewTask(clusterName, info)
+		clusterName, err := e.clusterMetadata.ClusterNameForFailoverVersion(task.GetVersion())
+		if err == nil {
+			e.timerProcessor.NotifyNewTask(clusterName, info)
+		}
 	}
 }
 
