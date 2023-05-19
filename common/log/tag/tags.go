@@ -927,3 +927,7 @@ func PartitionConfig(p map[string]string) Tag {
 func PollerGroups(pollers []string) Tag {
 	return newObjectTag("poller-isolation-groups", pollers)
 }
+
+func FallbackIsolationGroup(group string) Tag {
+	return newStringTag("fallback-isolation-group", group)
+}

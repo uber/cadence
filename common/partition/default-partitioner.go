@@ -26,6 +26,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uber/cadence/common/log/tag"
+	"github.com/uber/cadence/common/metrics"
 	"sort"
 
 	"github.com/uber/cadence/common/isolationgroup"
@@ -63,15 +65,18 @@ type defaultWorkflowPartitionConfig struct {
 type defaultPartitioner struct {
 	log                 log.Logger
 	isolationGroupState isolationgroup.State
+	metrics             metrics.Scope
 }
 
 func NewDefaultPartitioner(
 	logger log.Logger,
 	isolationGroupState isolationgroup.State,
+	metricsClient metrics.Client,
 ) Partitioner {
 	return &defaultPartitioner{
 		log:                 logger,
 		isolationGroupState: isolationGroupState,
+		metrics:             metricsClient.Scope(metrics.MatchingPartitionerDefaultPartitioner),
 	}
 }
 
@@ -93,7 +98,7 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 		return "", ErrNoIsolationGroupsAvailable
 	}
 
-	ig := pickIsolationGroup(wfPartition, available)
+	ig := r.pickIsolationGroup(wfPartition, available)
 	return ig, nil
 }
 
@@ -108,9 +113,10 @@ func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultW
 
 // picks an isolation group to run in. if the workflow was started there, it'll attempt to pin it, unless there is an explicit
 // drain.
-func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) string {
+func (r *defaultPartitioner) pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) string {
 	_, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
 	if isAvailable {
+		r.metrics.IncCounter(metrics.PartitionerPinnedTask)
 		return wfPartition.WorkflowStartIsolationGroup
 	}
 
@@ -123,7 +129,14 @@ func pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available ty
 	sort.Slice(availableList, func(i int, j int) bool {
 		return availableList[i] > availableList[j]
 	})
-	return pickIsolationGroupFallback(availableList, wfPartition)
+	r.metrics.IncCounter(metrics.PartitionerUnPinnedTask)
+	fallback := pickIsolationGroupFallback(availableList, wfPartition)
+	r.log.Debug("isolation group falling back to an available zone:",
+		tag.FallbackIsolationGroup(fallback),
+		tag.IsolationGroup(wfPartition.WorkflowStartIsolationGroup),
+		tag.Dynamic("poller-available-isolation-groups", available),
+	)
+	return fallback
 }
 
 // Simple deterministic isolationGroup picker

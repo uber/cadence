@@ -1209,6 +1209,8 @@ const (
 	MatchingListTaskListPartitionsScope
 	// MatchingGetTaskListsByDomainScope tracks GetTaskListsByDomain API calls received by service
 	MatchingGetTaskListsByDomainScope
+	// MatchingPartitionerDefaultPartitioner
+	MatchingPartitionerDefaultPartitioner
 
 	NumMatchingScopes
 )
@@ -1800,6 +1802,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		MatchingDescribeTaskListScope:          {operation: "DescribeTaskList"},
 		MatchingListTaskListPartitionsScope:    {operation: "ListTaskListPartitions"},
 		MatchingGetTaskListsByDomainScope:      {operation: "GetTaskListsByDomain"},
+		MatchingPartitionerDefaultPartitioner:  {operation: "Partitioner"},
 	},
 	// Worker Scope Names
 	Worker: {
@@ -2327,6 +2330,8 @@ const (
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
+	PartitionerPinnedTask
+	PartitionerUnPinnedTask
 
 	NumMatchingMetrics
 )
@@ -2927,6 +2932,8 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
+		PartitionerPinnedTask:                       {metricName: "partitioner_pinned_task", metricType: Counter},
+		PartitionerUnPinnedTask:                     {metricName: "partitioner_pinned_task", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
