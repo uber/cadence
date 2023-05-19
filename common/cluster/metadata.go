@@ -154,16 +154,16 @@ func (m Metadata) GetRemoteClusterInfo() map[string]config.ClusterInformation {
 }
 
 // ClusterNameForFailoverVersion return the corresponding cluster name for a given failover version
-func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) string {
+func (m Metadata) ClusterNameForFailoverVersion(failoverVersion int64) (string, error) {
 	if failoverVersion == common.EmptyVersion {
-		return m.currentClusterName
+		return m.currentClusterName, nil
 	}
 	server, err := m.resolveServerName(failoverVersion)
 	if err != nil {
 		m.metrics.IncCounter(metrics.ClusterMetadataResolvingFailoverVersionCounter)
-		panic(fmt.Sprintf("failed to resolve failover version: %v", err))
+		return "", fmt.Errorf("failed to resolve failover version: %v", err)
 	}
-	return server
+	return server, nil
 }
 
 // gets the initial failover version for a cluster / domain
