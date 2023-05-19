@@ -26,9 +26,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/uber/cadence/common/log/tag"
 	"github.com/uber/cadence/common/metrics"
-	"sort"
 
 	"github.com/uber/cadence/common/isolationgroup"
 
@@ -80,7 +81,7 @@ func NewDefaultPartitioner(
 	}
 }
 
-func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig, availableIsolationGroups []string) (string, error) {
+func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, domainID string, wfPartitionData PartitionConfig, availablePollerIsolationGroups []string) (string, error) {
 	if wfPartitionData == nil {
 		return "", ErrInvalidPartitionConfig
 	}
@@ -89,7 +90,7 @@ func (r *defaultPartitioner) GetIsolationGroupByDomainID(ctx context.Context, do
 		return "", ErrInvalidPartitionConfig
 	}
 
-	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID, availableIsolationGroups)
+	available, err := r.isolationGroupState.AvailableIsolationGroupsByDomainID(ctx, domainID, availablePollerIsolationGroups)
 	if err != nil {
 		return "", fmt.Errorf("failed to get available isolation groups: %w", err)
 	}
@@ -134,7 +135,7 @@ func (r *defaultPartitioner) pickIsolationGroup(wfPartition defaultWorkflowParti
 	r.log.Debug("isolation group falling back to an available zone:",
 		tag.FallbackIsolationGroup(fallback),
 		tag.IsolationGroup(wfPartition.WorkflowStartIsolationGroup),
-		tag.Dynamic("poller-available-isolation-groups", available),
+		tag.Dynamic("available-isolation-groups", available),
 	)
 	return fallback
 }
