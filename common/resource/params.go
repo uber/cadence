@@ -23,7 +23,7 @@ package resource
 import (
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
-	
+
 	"github.com/uber/cadence/common/dynamicconfig/configstore"
 
 	"github.com/uber/cadence/common/isolationgroup"
