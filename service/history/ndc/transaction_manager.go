@@ -275,9 +275,12 @@ func (r *transactionManagerImpl) backfillWorkflowEventsReapply(
 		return 0, execution.TransactionPolicyActive, err
 	}
 	isWorkflowRunning := targetWorkflow.GetMutableState().IsWorkflowExecutionRunning()
-	targetWorkflowActiveCluster := r.clusterMetadata.ClusterNameForFailoverVersion(
+	targetWorkflowActiveCluster, err := r.clusterMetadata.ClusterNameForFailoverVersion(
 		targetWorkflow.GetMutableState().GetDomainEntry().GetFailoverVersion(),
 	)
+	if err != nil {
+		return 0, execution.TransactionPolicyActive, err
+	}
 	currentCluster := r.clusterMetadata.GetCurrentClusterName()
 	isActiveCluster := targetWorkflowActiveCluster == currentCluster
 
