@@ -2933,7 +2933,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
 		PartitionerPinnedTask:                       {metricName: "partitioner_pinned_task", metricType: Counter},
-		PartitionerUnPinnedTask:                     {metricName: "partitioner_pinned_task", metricType: Counter},
+		PartitionerUnPinnedTask:                     {metricName: "partitioner_unpinned_task", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},
