@@ -314,6 +314,7 @@ func (s *parallelTaskProcessorSuite) TestExecuteTask_PanicHandling() {
 		panic("A panic occurred")
 	})
 	mockTask.EXPECT().HandleErr(gomock.Any()).Return(errRetryable).AnyTimes()
+	mockTask.EXPECT().Nack().Times(1)
 	done := make(chan struct{})
 	workerShutdownCh := make(chan struct{})
 	go func() {

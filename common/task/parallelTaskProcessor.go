@@ -159,6 +159,7 @@ func (p *parallelTaskProcessorImpl) executeTask(task Task, shutdownCh chan struc
 		if r := recover(); r != nil {
 			p.logger.Error("recovered panic in task execution", tag.Dynamic("recovered-panic", r))
 			task.HandleErr(fmt.Errorf("recovered panic: %v", r))
+			task.Nack()
 		}
 	}()
 
