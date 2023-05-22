@@ -190,6 +190,9 @@ func NewCliApp() *cli.App {
 			Subcommands: newClusterCommands(),
 		},
 	}
+	app.CommandNotFound = func(context *cli.Context, command string) {
+		printMessage("command not found: " + command)
+	}
 
 	// set builder if not customized
 	if cFactory == nil {
