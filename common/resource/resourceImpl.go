@@ -654,6 +654,7 @@ func ensureIsolationGroupStateHandlerOrDefault(
 		dc,
 		domainCache,
 		isolationGroupStore,
+		params.MetricsClient,
 	)
 }
 
@@ -662,5 +663,5 @@ func ensurePartitionerOrDefault(params *Params, state isolationgroup.State) part
 	if params.Partitioner != nil {
 		return params.Partitioner
 	}
-	return partition.NewDefaultPartitioner(params.Logger, state, params.MetricsClient)
+	return partition.NewDefaultPartitioner(params.Logger, state)
 }

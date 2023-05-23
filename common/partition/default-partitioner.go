@@ -28,10 +28,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/uber/cadence/common/log/tag"
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/uber/cadence/common/isolationgroup"
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/dgryski/go-farm"
 
@@ -66,18 +64,15 @@ type defaultWorkflowPartitionConfig struct {
 type defaultPartitioner struct {
 	log                 log.Logger
 	isolationGroupState isolationgroup.State
-	metrics             metrics.Scope
 }
 
 func NewDefaultPartitioner(
 	logger log.Logger,
 	isolationGroupState isolationgroup.State,
-	metricsClient metrics.Client,
 ) Partitioner {
 	return &defaultPartitioner{
 		log:                 logger,
 		isolationGroupState: isolationGroupState,
-		metrics:             metricsClient.Scope(metrics.MatchingPartitionerDefaultPartitioner),
 	}
 }
 
@@ -117,7 +112,6 @@ func mapPartitionConfigToDefaultPartitionConfig(config PartitionConfig) defaultW
 func (r *defaultPartitioner) pickIsolationGroup(wfPartition defaultWorkflowPartitionConfig, available types.IsolationGroupConfiguration) string {
 	_, isAvailable := available[wfPartition.WorkflowStartIsolationGroup]
 	if isAvailable {
-		r.metrics.IncCounter(metrics.PartitionerPinnedTask)
 		return wfPartition.WorkflowStartIsolationGroup
 	}
 
@@ -130,7 +124,6 @@ func (r *defaultPartitioner) pickIsolationGroup(wfPartition defaultWorkflowParti
 	sort.Slice(availableList, func(i int, j int) bool {
 		return availableList[i] > availableList[j]
 	})
-	r.metrics.IncCounter(metrics.PartitionerUnPinnedTask)
 	fallback := pickIsolationGroupFallback(availableList, wfPartition)
 	r.log.Debug("isolation group falling back to an available zone",
 		tag.FallbackIsolationGroup(fallback),

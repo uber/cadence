@@ -28,6 +28,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/uber/cadence/common/metrics"
+
 	"github.com/golang/mock/gomock"
 
 	"github.com/uber/cadence/common/cache"
@@ -169,47 +171,51 @@ func TestAvailableIsolationGroups(t *testing.T) {
 		},
 	}
 
-	isolationGroupsSetBDrained := types.IsolationGroupConfiguration{
-		igA: {
-			Name:  igA,
-			State: types.IsolationGroupStateDrained,
-		},
-		igB: {
-			Name:  igB,
-			State: types.IsolationGroupStateDrained,
-		},
-	}
-
 	tests := map[string]struct {
-		globalIGCfg types.IsolationGroupConfiguration
-		domainIGCfg types.IsolationGroupConfiguration
-		expected    types.IsolationGroupConfiguration
+		globalIGCfg      types.IsolationGroupConfiguration
+		domainIGCfg      types.IsolationGroupConfiguration
+		availablePollers types.IsolationGroupConfiguration
+		expected         types.IsolationGroupConfiguration
 	}{
 		"default behaviour - no drains - everything should be healthy": {
+			globalIGCfg:      types.IsolationGroupConfiguration{},
+			domainIGCfg:      types.IsolationGroupConfiguration{},
+			availablePollers: isolationGroupsAllHealthy,
+			expected:         isolationGroupsAllHealthy,
+		},
+		"default behaviour - no drains - only one zone is healthy in terms of pollers, should only return that": {
 			globalIGCfg: types.IsolationGroupConfiguration{},
 			domainIGCfg: types.IsolationGroupConfiguration{},
-			expected:    isolationGroupsAllHealthy,
+			availablePollers: types.IsolationGroupConfiguration{
+				igC: types.IsolationGroupPartition{
+					Name:  igC,
+					State: types.IsolationGroupStateHealthy,
+				},
+			},
+			expected: types.IsolationGroupConfiguration{
+				igC: types.IsolationGroupPartition{
+					Name:  igC,
+					State: types.IsolationGroupStateHealthy,
+				},
+			},
 		},
-		"default behaviour - one is not healthy - should return remaining 1/2": {
-			globalIGCfg: types.IsolationGroupConfiguration{},
-			domainIGCfg: isolationGroupsSetC, // C is drained
-			expected:    isolationGroupsSetB, // A and B
+		"default behaviour - one is drained - should return remaining 1/2": {
+			globalIGCfg:      types.IsolationGroupConfiguration{},
+			availablePollers: isolationGroupsAllHealthy,
+			domainIGCfg:      isolationGroupsSetC, // C is drained
+			expected:         isolationGroupsSetB, // A and B
 		},
-		"default behaviour - one is not healthy - should return remaining 2/2": {
-			globalIGCfg: isolationGroupsSetC, // C is drained
-			domainIGCfg: types.IsolationGroupConfiguration{},
-			expected:    isolationGroupsSetB, // A and B
-		},
-		"both": {
-			globalIGCfg: isolationGroupsSetC,                 // C is drained
-			domainIGCfg: isolationGroupsSetBDrained,          // A, B
-			expected:    types.IsolationGroupConfiguration{}, // nothing should be available
+		"default behaviour - one is drained - should return remaining 2/2": {
+			globalIGCfg:      isolationGroupsSetC, // C is drained
+			availablePollers: isolationGroupsAllHealthy,
+			domainIGCfg:      types.IsolationGroupConfiguration{},
+			expected:         isolationGroupsSetB, // A and B
 		},
 	}
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expected, availableIG(all, td.globalIGCfg, td.domainIGCfg))
+			assert.Equal(t, td.expected, availableIG(all, td.availablePollers, td.globalIGCfg, td.domainIGCfg, metrics.NewNoopMetricsClient().Scope(0)))
 		})
 	}
 }
