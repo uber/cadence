@@ -23,9 +23,12 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/backoff"
@@ -151,6 +154,14 @@ func (p *parallelTaskProcessorImpl) taskWorker(shutdownCh chan struct{}) {
 func (p *parallelTaskProcessorImpl) executeTask(task Task, shutdownCh chan struct{}) {
 	sw := p.metricsScope.StartTimer(metrics.ParallelTaskTaskProcessingLatency)
 	defer sw.Stop()
+
+	defer func() {
+		if r := recover(); r != nil {
+			p.logger.Error("recovered panic in task execution", tag.Dynamic("recovered-panic", r))
+			task.HandleErr(fmt.Errorf("recovered panic: %v", r))
+			task.Nack()
+		}
+	}()
 
 	op := func() error {
 		if err := task.Execute(); err != nil {

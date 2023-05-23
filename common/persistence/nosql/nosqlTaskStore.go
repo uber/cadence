@@ -241,14 +241,15 @@ func (t *nosqlTaskStore) CreateTasks(
 	var tasks []*nosqlplugin.TaskRowForInsert
 	for _, t := range request.Tasks {
 		task := &nosqlplugin.TaskRow{
-			DomainID:     request.TaskListInfo.DomainID,
-			TaskListName: request.TaskListInfo.Name,
-			TaskListType: request.TaskListInfo.TaskType,
-			TaskID:       t.TaskID,
-			WorkflowID:   t.Execution.GetWorkflowID(),
-			RunID:        t.Execution.GetRunID(),
-			ScheduledID:  t.Data.ScheduleID,
-			CreatedTime:  now,
+			DomainID:        request.TaskListInfo.DomainID,
+			TaskListName:    request.TaskListInfo.Name,
+			TaskListType:    request.TaskListInfo.TaskType,
+			TaskID:          t.TaskID,
+			WorkflowID:      t.Execution.GetWorkflowID(),
+			RunID:           t.Execution.GetRunID(),
+			ScheduledID:     t.Data.ScheduleID,
+			CreatedTime:     now,
+			PartitionConfig: t.Data.PartitionConfig,
 		}
 		ttl := int(t.Data.ScheduleToStartTimeout.Seconds())
 		tasks = append(tasks, &nosqlplugin.TaskRowForInsert{
@@ -329,12 +330,13 @@ func (t *nosqlTaskStore) GetTasks(
 
 func toTaskInfo(t *nosqlplugin.TaskRow) *p.InternalTaskInfo {
 	return &p.InternalTaskInfo{
-		DomainID:    t.DomainID,
-		WorkflowID:  t.WorkflowID,
-		RunID:       t.RunID,
-		TaskID:      t.TaskID,
-		ScheduleID:  t.ScheduledID,
-		CreatedTime: t.CreatedTime,
+		DomainID:        t.DomainID,
+		WorkflowID:      t.WorkflowID,
+		RunID:           t.RunID,
+		TaskID:          t.TaskID,
+		ScheduleID:      t.ScheduledID,
+		CreatedTime:     t.CreatedTime,
+		PartitionConfig: t.PartitionConfig,
 	}
 }
 

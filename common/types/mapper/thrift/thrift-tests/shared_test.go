@@ -23,6 +23,8 @@ package thrifttests
 import (
 	"testing"
 
+	"github.com/uber/cadence/.gen/go/shared"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/uber/cadence/common/types"
@@ -206,4 +208,114 @@ func TestCrossClusterApplyParentClosePolicyResponse(t *testing.T) {
 			thrift.FromCrossClusterApplyParentClosePolicyResponseAttributes(&item),
 		),
 	)
+}
+
+func TestIsolationGroupToDomainBlob(t *testing.T) {
+
+	zone1 := "zone-1"
+	zone2 := "zone-2"
+	drained := shared.IsolationGroupStateDrained
+	healthy := shared.IsolationGroupStateHealthy
+
+	tests := map[string]struct {
+		in          *types.IsolationGroupConfiguration
+		expectedOut *shared.IsolationGroupConfiguration
+	}{
+		"valid input": {
+			in: &types.IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  zone1,
+					State: types.IsolationGroupStateDrained,
+				},
+				"zone-2": {
+					Name:  zone2,
+					State: types.IsolationGroupStateHealthy,
+				},
+			},
+			expectedOut: &shared.IsolationGroupConfiguration{
+				IsolationGroups: []*shared.IsolationGroupPartition{
+					{
+						Name:  &zone1,
+						State: &drained,
+					},
+					{
+						Name:  &zone2,
+						State: &healthy,
+					},
+				},
+			},
+		},
+		"empty input": {
+			in:          &types.IsolationGroupConfiguration{},
+			expectedOut: &shared.IsolationGroupConfiguration{},
+		},
+		"nil input": {
+			in:          nil,
+			expectedOut: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			out := thrift.FromIsolationGroupConfig(td.in)
+			assert.Equal(t, td.expectedOut, out)
+			roundTrip := thrift.ToIsolationGroupConfig(out)
+			assert.Equal(t, td.in, roundTrip)
+		})
+	}
+}
+
+func TestIsolationGroupFromDomainBlob(t *testing.T) {
+
+	zone1 := "zone-1"
+	zone2 := "zone-2"
+	drained := shared.IsolationGroupStateDrained
+	healthy := shared.IsolationGroupStateHealthy
+
+	tests := map[string]struct {
+		in          *shared.IsolationGroupConfiguration
+		expectedOut *types.IsolationGroupConfiguration
+	}{
+		"valid input": {
+			in: &shared.IsolationGroupConfiguration{
+				IsolationGroups: []*shared.IsolationGroupPartition{
+					{
+						Name:  &zone1,
+						State: &drained,
+					},
+					{
+						Name:  &zone2,
+						State: &healthy,
+					},
+				},
+			},
+			expectedOut: &types.IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  zone1,
+					State: types.IsolationGroupStateDrained,
+				},
+				"zone-2": {
+					Name:  zone2,
+					State: types.IsolationGroupStateHealthy,
+				},
+			},
+		},
+		"empty input": {
+			in:          &shared.IsolationGroupConfiguration{},
+			expectedOut: &types.IsolationGroupConfiguration{},
+		},
+		"nil input": {
+			in:          nil,
+			expectedOut: nil,
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			out := thrift.ToIsolationGroupConfig(td.in)
+			assert.Equal(t, td.expectedOut, out)
+			roundTrip := thrift.FromIsolationGroupConfig(out)
+			assert.Equal(t, td.in, roundTrip)
+		})
+	}
 }

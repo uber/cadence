@@ -102,30 +102,32 @@ func domainInfoToThrift(info *DomainInfo) *sqlblobs.DomainInfo {
 		return nil
 	}
 	return &sqlblobs.DomainInfo{
-		Name:                        &info.Name,
-		Description:                 &info.Description,
-		Owner:                       &info.Owner,
-		Status:                      &info.Status,
-		EmitMetric:                  &info.EmitMetric,
-		ArchivalBucket:              &info.ArchivalBucket,
-		ArchivalStatus:              &info.ArchivalStatus,
-		ConfigVersion:               &info.ConfigVersion,
-		NotificationVersion:         &info.NotificationVersion,
-		FailoverNotificationVersion: &info.FailoverNotificationVersion,
-		FailoverVersion:             &info.FailoverVersion,
-		ActiveClusterName:           &info.ActiveClusterName,
-		Clusters:                    info.Clusters,
-		Data:                        info.Data,
-		BadBinaries:                 info.BadBinaries,
-		BadBinariesEncoding:         &info.BadBinariesEncoding,
-		HistoryArchivalStatus:       &info.HistoryArchivalStatus,
-		HistoryArchivalURI:          &info.HistoryArchivalURI,
-		VisibilityArchivalStatus:    &info.VisibilityArchivalStatus,
-		VisibilityArchivalURI:       &info.VisibilityArchivalURI,
-		PreviousFailoverVersion:     &info.PreviousFailoverVersion,
-		RetentionDays:               durationToDaysInt16Ptr(info.Retention),
-		FailoverEndTime:             unixNanoPtr(info.FailoverEndTimestamp),
-		LastUpdatedTime:             timeToUnixNanoPtr(info.LastUpdatedTimestamp),
+		Name:                                 &info.Name,
+		Description:                          &info.Description,
+		Owner:                                &info.Owner,
+		Status:                               &info.Status,
+		EmitMetric:                           &info.EmitMetric,
+		ArchivalBucket:                       &info.ArchivalBucket,
+		ArchivalStatus:                       &info.ArchivalStatus,
+		ConfigVersion:                        &info.ConfigVersion,
+		NotificationVersion:                  &info.NotificationVersion,
+		FailoverNotificationVersion:          &info.FailoverNotificationVersion,
+		FailoverVersion:                      &info.FailoverVersion,
+		ActiveClusterName:                    &info.ActiveClusterName,
+		Clusters:                             info.Clusters,
+		Data:                                 info.Data,
+		BadBinaries:                          info.BadBinaries,
+		BadBinariesEncoding:                  &info.BadBinariesEncoding,
+		HistoryArchivalStatus:                &info.HistoryArchivalStatus,
+		HistoryArchivalURI:                   &info.HistoryArchivalURI,
+		VisibilityArchivalStatus:             &info.VisibilityArchivalStatus,
+		VisibilityArchivalURI:                &info.VisibilityArchivalURI,
+		PreviousFailoverVersion:              &info.PreviousFailoverVersion,
+		RetentionDays:                        durationToDaysInt16Ptr(info.Retention),
+		FailoverEndTime:                      unixNanoPtr(info.FailoverEndTimestamp),
+		LastUpdatedTime:                      timeToUnixNanoPtr(info.LastUpdatedTimestamp),
+		IsolationGroupsConfiguration:         info.IsolationGroups,
+		IsolationGroupsConfigurationEncoding: &info.IsolationGroupsEncoding,
 	}
 }
 
@@ -158,6 +160,8 @@ func domainInfoFromThrift(info *sqlblobs.DomainInfo) *DomainInfo {
 		Retention:                   common.DaysToDuration(int32(info.GetRetentionDays())),
 		FailoverEndTimestamp:        timePtr(info.FailoverEndTime),
 		LastUpdatedTimestamp:        timeFromUnixNano(info.GetLastUpdatedTime()),
+		IsolationGroups:             info.GetIsolationGroupsConfiguration(),
+		IsolationGroupsEncoding:     info.GetIsolationGroupsConfigurationEncoding(),
 	}
 }
 
@@ -247,6 +251,7 @@ func workflowExecutionInfoToThrift(info *WorkflowExecutionInfo) *sqlblobs.Workfl
 		VersionHistories:                        info.VersionHistories,
 		VersionHistoriesEncoding:                &info.VersionHistoriesEncoding,
 		FirstExecutionRunID:                     info.FirstExecutionRunID,
+		PartitionConfig:                         info.PartitionConfig,
 	}
 }
 
@@ -314,6 +319,7 @@ func workflowExecutionInfoFromThrift(info *sqlblobs.WorkflowExecutionInfo) *Work
 		VersionHistories:                   info.VersionHistories,
 		VersionHistoriesEncoding:           info.GetVersionHistoriesEncoding(),
 		FirstExecutionRunID:                info.FirstExecutionRunID,
+		PartitionConfig:                    info.PartitionConfig,
 	}
 }
 
@@ -523,6 +529,7 @@ func taskInfoToThrift(info *TaskInfo) *sqlblobs.TaskInfo {
 		ScheduleID:       &info.ScheduleID,
 		ExpiryTimeNanos:  timeToUnixNanoPtr(info.ExpiryTimestamp),
 		CreatedTimeNanos: timeToUnixNanoPtr(info.CreatedTimestamp),
+		PartitionConfig:  info.PartitionConfig,
 	}
 }
 
@@ -536,6 +543,7 @@ func taskInfoFromThrift(info *sqlblobs.TaskInfo) *TaskInfo {
 		ScheduleID:       info.GetScheduleID(),
 		ExpiryTimestamp:  timeFromUnixNano(info.GetExpiryTimeNanos()),
 		CreatedTimestamp: timeFromUnixNano(info.GetCreatedTimeNanos()),
+		PartitionConfig:  info.PartitionConfig,
 	}
 }
 

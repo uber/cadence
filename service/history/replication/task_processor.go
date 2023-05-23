@@ -582,7 +582,10 @@ func (p *taskProcessorImpl) triggerDataInconsistencyScan(replicationTask *types.
 	default:
 		return nil
 	}
-	clusterName := p.shard.GetClusterMetadata().ClusterNameForFailoverVersion(failoverVersion)
+	clusterName, err := p.shard.GetClusterMetadata().ClusterNameForFailoverVersion(failoverVersion)
+	if err != nil {
+		return err
+	}
 	client := p.shard.GetService().GetClientBean().GetRemoteFrontendClient(clusterName)
 	fixExecution := entity.Execution{
 		DomainID:   domainID,

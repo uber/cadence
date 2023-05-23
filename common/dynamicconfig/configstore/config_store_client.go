@@ -29,6 +29,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/uber/cadence/common"
+
 	"github.com/uber/cadence/common/config"
 	dc "github.com/uber/cadence/common/dynamicconfig"
 	csc "github.com/uber/cadence/common/dynamicconfig/configstore/config"
@@ -39,7 +41,15 @@ import (
 	"github.com/uber/cadence/common/types"
 )
 
+//go:generate mockgen -package $GOPACKAGE -source $GOFILE -destination configstore_mock.go -self_package github.com/uber/cadence/common/dynamicconfig/configstore
+
 var _ dc.Client = (*configStoreClient)(nil)
+
+// Client is a stateful config store
+type Client interface {
+	common.Daemon
+	dc.Client
+}
 
 const (
 	configStoreMinPollInterval = time.Second * 2
@@ -53,6 +63,8 @@ var defaultConfigValues = &csc.ClientConfig{
 }
 
 type configStoreClient struct {
+	status             int32
+	configStoreType    persistence.ConfigType
 	values             atomic.Value
 	lastUpdatedTime    time.Time
 	config             *csc.ClientConfig
@@ -68,7 +80,11 @@ type cacheEntry struct {
 }
 
 // NewConfigStoreClient creates a config store client
-func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Persistence, logger log.Logger, doneCh chan struct{}) (dc.Client, error) {
+func NewConfigStoreClient(clientCfg *csc.ClientConfig,
+	persistenceCfg *config.Persistence,
+	logger log.Logger,
+	configType persistence.ConfigType,
+) (Client, error) {
 	if persistenceCfg == nil {
 		return nil, errors.New("persistence cfg is nil")
 	}
@@ -95,7 +111,7 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Pe
 		dsConfig = ds.NoSQL.ConvertToShardedNoSQLConfig()
 	}
 
-	client, err := newConfigStoreClient(clientCfg, dsConfig, logger, doneCh)
+	client, err := newConfigStoreClient(clientCfg, dsConfig, logger, configType)
 	if err != nil {
 		return nil, err
 	}
@@ -106,17 +122,25 @@ func NewConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.Pe
 	return client, nil
 }
 
-func newConfigStoreClient(clientCfg *csc.ClientConfig, persistenceCfg *config.ShardedNoSQL, logger log.Logger, doneCh chan struct{}) (*configStoreClient, error) {
+func newConfigStoreClient(
+	clientCfg *csc.ClientConfig,
+	persistenceCfg *config.ShardedNoSQL,
+	logger log.Logger,
+	configType persistence.ConfigType,
+) (*configStoreClient, error) {
 	store, err := nosql.NewNoSQLConfigStore(*persistenceCfg, logger, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	doneCh := make(chan struct{})
 	client := &configStoreClient{
+		status:             common.DaemonStatusStarted,
 		config:             clientCfg,
 		doneCh:             doneCh,
 		configStoreManager: persistence.NewConfigStoreManagerImpl(store, logger),
 		logger:             logger,
+		configStoreType:    configType,
 	}
 
 	return client, nil
@@ -337,6 +361,23 @@ func (csc *configStoreClient) ListValue(name dc.Key) ([]*types.DynamicConfigEntr
 	return resList, nil
 }
 
+func (csc *configStoreClient) Stop() {
+	if !atomic.CompareAndSwapInt32(&csc.status, common.DaemonStatusStarted, common.DaemonStatusStopped) {
+		return
+	}
+	close(csc.doneCh)
+}
+
+func (csc *configStoreClient) Start() {
+	err := csc.startUpdate()
+	if err != nil {
+		csc.logger.Fatal("could not start config store", tag.Error(err))
+	}
+	if !atomic.CompareAndSwapInt32(&csc.status, common.DaemonStatusInitialized, common.DaemonStatusStarted) {
+		return
+	}
+}
+
 func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.DynamicConfigValue, retryAttempts int) error {
 	//since values are not unique, no way to know if you are trying to update a specific value
 	//or if you want to add another of the same value with different filters.
@@ -413,7 +454,7 @@ func (csc *configStoreClient) updateValue(name dc.Key, dcValues []*types.Dynamic
 		ctx,
 		&persistence.UpdateDynamicConfigRequest{
 			Snapshot: newSnapshot,
-		},
+		}, csc.configStoreType,
 	)
 
 	select {
@@ -506,7 +547,7 @@ func (csc *configStoreClient) update() error {
 	ctx, cancel := context.WithTimeout(context.Background(), csc.config.FetchTimeout)
 	defer cancel()
 
-	res, err := csc.configStoreManager.FetchDynamicConfig(ctx)
+	res, err := csc.configStoreManager.FetchDynamicConfig(ctx, csc.configStoreType)
 
 	select {
 	case <-ctx.Done():
@@ -670,6 +711,10 @@ func validateKeyDataBlobPair(key dc.Key, blob *types.DataBlob) error {
 		}
 	case dc.MapKey:
 		if _, ok := value.(map[string]interface{}); !ok {
+			return err
+		}
+	case dc.ListKey:
+		if _, ok := value.([]interface{}); !ok {
 			return err
 		}
 	default:

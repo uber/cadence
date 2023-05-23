@@ -131,6 +131,22 @@ func TestDomainInfo(t *testing.T) {
 	assert.Equal(t, expected.LastUpdatedTimestamp.Sub(actual.LastUpdatedTimestamp), time.Duration(0))
 }
 
+func TestDomainInfoRoundtripPanictest(t *testing.T) {
+	tests := map[string]struct {
+		in *DomainInfo
+	}{
+		"empty roundtrip": {
+			in: &DomainInfo{},
+		},
+	}
+
+	for name, td := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, td.in, domainInfoFromThrift(domainInfoToThrift(td.in)))
+		})
+	}
+}
+
 func TestHistoryTreeInfo(t *testing.T) {
 	expected := &HistoryTreeInfo{
 		CreatedTimestamp: time.Now(),
@@ -214,6 +230,8 @@ func TestWorkflowExecutionInfo(t *testing.T) {
 		Memo:                               map[string][]byte{"key_1": []byte("Memo")},
 		VersionHistories:                   []byte("VersionHistories"),
 		VersionHistoriesEncoding:           "VersionHistoriesEncoding",
+		FirstExecutionRunID:                UUID(uuid.New()),
+		PartitionConfig:                    map[string]string{"zone": "dca1"},
 	}
 	actual := workflowExecutionInfoFromThrift(workflowExecutionInfoToThrift(expected))
 	assert.Equal(t, expected.ParentDomainID, actual.ParentDomainID)
@@ -273,6 +291,8 @@ func TestWorkflowExecutionInfo(t *testing.T) {
 	assert.True(t, (expected.RetryInitialInterval-actual.RetryInitialInterval) < time.Second)
 	assert.True(t, (expected.RetryMaximumInterval-actual.RetryMaximumInterval) < time.Second)
 	assert.True(t, (expected.RetryExpiration-actual.RetryExpiration) < time.Second)
+	assert.Equal(t, expected.FirstExecutionRunID, actual.FirstExecutionRunID)
+	assert.Equal(t, expected.PartitionConfig, actual.PartitionConfig)
 }
 
 func TestActivityInfo(t *testing.T) {
@@ -408,6 +428,7 @@ func TestTaskInfo(t *testing.T) {
 		ScheduleID:       int64(rand.Intn(1000)),
 		ExpiryTimestamp:  time.Now(),
 		CreatedTimestamp: time.Now(),
+		PartitionConfig:  map[string]string{"zone": "dca1"},
 	}
 	actual := taskInfoFromThrift(taskInfoToThrift(expected))
 	assert.Equal(t, expected.WorkflowID, actual.WorkflowID)
@@ -415,6 +436,7 @@ func TestTaskInfo(t *testing.T) {
 	assert.Equal(t, expected.ScheduleID, actual.ScheduleID)
 	assert.Equal(t, expected.ExpiryTimestamp.Sub(actual.ExpiryTimestamp), time.Duration(0))
 	assert.Equal(t, expected.CreatedTimestamp.Sub(actual.CreatedTimestamp), time.Duration(0))
+	assert.Equal(t, expected.PartitionConfig, actual.PartitionConfig)
 }
 
 func TestTaskListInfo(t *testing.T) {

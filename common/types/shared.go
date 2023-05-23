@@ -1785,13 +1785,14 @@ type DomainCacheInfo struct {
 
 // DomainConfiguration is an internal type (TBD...)
 type DomainConfiguration struct {
-	WorkflowExecutionRetentionPeriodInDays int32           `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
-	EmitMetric                             bool            `json:"emitMetric,omitempty"`
-	BadBinaries                            *BadBinaries    `json:"badBinaries,omitempty"`
-	HistoryArchivalStatus                  *ArchivalStatus `json:"historyArchivalStatus,omitempty"`
-	HistoryArchivalURI                     string          `json:"historyArchivalURI,omitempty"`
-	VisibilityArchivalStatus               *ArchivalStatus `json:"visibilityArchivalStatus,omitempty"`
-	VisibilityArchivalURI                  string          `json:"visibilityArchivalURI,omitempty"`
+	WorkflowExecutionRetentionPeriodInDays int32                        `json:"workflowExecutionRetentionPeriodInDays,omitempty"`
+	EmitMetric                             bool                         `json:"emitMetric,omitempty"`
+	BadBinaries                            *BadBinaries                 `json:"badBinaries,omitempty"`
+	HistoryArchivalStatus                  *ArchivalStatus              `json:"historyArchivalStatus,omitempty"`
+	HistoryArchivalURI                     string                       `json:"historyArchivalURI,omitempty"`
+	VisibilityArchivalStatus               *ArchivalStatus              `json:"visibilityArchivalStatus,omitempty"`
+	VisibilityArchivalURI                  string                       `json:"visibilityArchivalURI,omitempty"`
+	IsolationGroups                        *IsolationGroupConfiguration `json:"isolationGroupConfiguration,omitempty"`
 }
 
 // GetWorkflowExecutionRetentionPeriodInDays is an internal getter (TBD...)
@@ -6749,6 +6750,7 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
+	IsolationGroupConfiguration            *IsolationGroupConfiguration       `json:"isolationGroupConfiguration,omitempty"`
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
@@ -7896,6 +7898,14 @@ func (v *CrossClusterStartChildExecutionRequestAttributes) GetTargetRunID() (o s
 	return
 }
 
+// GetTargetRunID is an internal getter (TBD...)
+func (v *CrossClusterStartChildExecutionRequestAttributes) GetPartitionConfig() (o map[string]string) {
+	if v != nil && v.PartitionConfig != nil {
+		return v.PartitionConfig
+	}
+	return
+}
+
 // CrossClusterStartChildExecutionResponseAttributes is an internal type (TBD...)
 type CrossClusterStartChildExecutionResponseAttributes struct {
 	RunID string `json:"runID,omitempty"`
@@ -7905,14 +7915,6 @@ type CrossClusterStartChildExecutionResponseAttributes struct {
 func (v *CrossClusterStartChildExecutionResponseAttributes) GetRunID() (o string) {
 	if v != nil {
 		return v.RunID
-	}
-	return
-}
-
-// GetTargetRunID is an internal getter (TBD...)
-func (v *CrossClusterStartChildExecutionRequestAttributes) GetPartitionConfig() (o map[string]string) {
-	if v != nil && v.PartitionConfig != nil {
-		return v.PartitionConfig
 	}
 	return
 }
