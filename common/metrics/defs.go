@@ -2638,7 +2638,7 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
 
 		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
-		IsolationGroupStateDrained:           {metricName: "isolation_group_Drained", metricType: Counter},
+		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
 	},
 	History: {
