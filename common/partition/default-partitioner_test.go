@@ -28,8 +28,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/uber/cadence/common/metrics"
-
 	"github.com/golang/mock/gomock"
 
 	"github.com/uber/cadence/common/isolationgroup"
@@ -100,7 +98,6 @@ func TestPickingAZone(t *testing.T) {
 			partitioner := defaultPartitioner{
 				log:                 loggerimpl.NewNopLogger(),
 				isolationGroupState: nil,
-				metrics:             metrics.NewNoopMetricsClient().Scope(0),
 			}
 			res := partitioner.pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
 			assert.Equal(t, td.expected, res)
@@ -215,7 +212,7 @@ func TestDefaultPartitioner_GetIsolationGroupByDomainID(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			ig := isolationgroup.NewMockState(ctrl)
 			td.stateAffordance(ig)
-			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig, metrics.NewNoopMetricsClient())
+			partitioner := NewDefaultPartitioner(loggerimpl.NewNopLogger(), ig)
 			res, err := partitioner.GetIsolationGroupByDomainID(td.incomingContext, domainID, td.partitionKeyPassedIn, isolationGroups)
 
 			assert.Equal(t, td.expectedValue, res)
