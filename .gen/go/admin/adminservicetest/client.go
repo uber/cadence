@@ -392,6 +392,39 @@ func (mr *_MockClientRecorder) GetDLQReplicationMessages(
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetDLQReplicationMessages", args...)
 }
 
+// GetDomainIsolationGroups responds to a GetDomainIsolationGroups call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetDomainIsolationGroups(gomock.Any(), ...).Return(...)
+// 	... := client.GetDomainIsolationGroups(...)
+func (m *MockClient) GetDomainIsolationGroups(
+	ctx context.Context,
+	_Request *admin.GetDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetDomainIsolationGroupsResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetDomainIsolationGroups", args...)
+	success, _ = ret[i].(*admin.GetDomainIsolationGroupsResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetDomainIsolationGroups(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetDomainIsolationGroups", args...)
+}
+
 // GetDomainReplicationMessages responds to a GetDomainReplicationMessages call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -456,6 +489,39 @@ func (mr *_MockClientRecorder) GetDynamicConfig(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "GetDynamicConfig", args...)
+}
+
+// GetGlobalIsolationGroups responds to a GetGlobalIsolationGroups call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().GetGlobalIsolationGroups(gomock.Any(), ...).Return(...)
+// 	... := client.GetGlobalIsolationGroups(...)
+func (m *MockClient) GetGlobalIsolationGroups(
+	ctx context.Context,
+	_Request *admin.GetGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.GetGlobalIsolationGroupsResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "GetGlobalIsolationGroups", args...)
+	success, _ = ret[i].(*admin.GetGlobalIsolationGroupsResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) GetGlobalIsolationGroups(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "GetGlobalIsolationGroups", args...)
 }
 
 // GetReplicationMessages responds to a GetReplicationMessages call based on the mock expectations. This
@@ -906,6 +972,39 @@ func (mr *_MockClientRecorder) RestoreDynamicConfig(
 	return mr.mock.ctrl.RecordCall(mr.mock, "RestoreDynamicConfig", args...)
 }
 
+// UpdateDomainIsolationGroups responds to a UpdateDomainIsolationGroups call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().UpdateDomainIsolationGroups(gomock.Any(), ...).Return(...)
+// 	... := client.UpdateDomainIsolationGroups(...)
+func (m *MockClient) UpdateDomainIsolationGroups(
+	ctx context.Context,
+	_Request *admin.UpdateDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.UpdateDomainIsolationGroupsResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "UpdateDomainIsolationGroups", args...)
+	success, _ = ret[i].(*admin.UpdateDomainIsolationGroupsResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) UpdateDomainIsolationGroups(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateDomainIsolationGroups", args...)
+}
+
 // UpdateDynamicConfig responds to a UpdateDynamicConfig call based on the mock expectations. This
 // call will fail if the mock does not expect this call. Use EXPECT to expect
 // a call to this function.
@@ -935,4 +1034,37 @@ func (mr *_MockClientRecorder) UpdateDynamicConfig(
 ) *gomock.Call {
 	args := append([]interface{}{ctx, _Request}, opts...)
 	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateDynamicConfig", args...)
+}
+
+// UpdateGlobalIsolationGroups responds to a UpdateGlobalIsolationGroups call based on the mock expectations. This
+// call will fail if the mock does not expect this call. Use EXPECT to expect
+// a call to this function.
+//
+// 	client.EXPECT().UpdateGlobalIsolationGroups(gomock.Any(), ...).Return(...)
+// 	... := client.UpdateGlobalIsolationGroups(...)
+func (m *MockClient) UpdateGlobalIsolationGroups(
+	ctx context.Context,
+	_Request *admin.UpdateGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (success *admin.UpdateGlobalIsolationGroupsResponse, err error) {
+
+	args := []interface{}{ctx, _Request}
+	for _, o := range opts {
+		args = append(args, o)
+	}
+	i := 0
+	ret := m.ctrl.Call(m, "UpdateGlobalIsolationGroups", args...)
+	success, _ = ret[i].(*admin.UpdateGlobalIsolationGroupsResponse)
+	i++
+	err, _ = ret[i].(error)
+	return
+}
+
+func (mr *_MockClientRecorder) UpdateGlobalIsolationGroups(
+	ctx interface{},
+	_Request interface{},
+	opts ...interface{},
+) *gomock.Call {
+	args := append([]interface{}{ctx, _Request}, opts...)
+	return mr.mock.ctrl.RecordCall(mr.mock, "UpdateGlobalIsolationGroups", args...)
 }

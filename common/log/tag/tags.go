@@ -63,6 +63,16 @@ func workflowListFilterType(listFilterType string) Tag {
 
 // general
 
+// ClientImpl returns tag for ClientImpl
+func ClientImpl(clientImpl string) Tag {
+	return newStringTag("client-impl", clientImpl)
+}
+
+// ClientFeatureVersion returns tag for ClientFeatureVersion
+func ClientFeatureVersion(clientFeatureVersion string) Tag {
+	return newStringTag("client-feature-version", clientFeatureVersion)
+}
+
 // WorkflowError returns tag for WorkflowError
 func WorkflowError(error error) Tag {
 	return newErrorTag("wf-error", error)
@@ -904,4 +914,16 @@ func VisibilityQuery(query string) Tag {
 // for not very performant logging
 func Dynamic(key string, v interface{}) Tag {
 	return newPredefinedDynamicTag(key, v)
+}
+
+func IsolationGroup(group string) Tag {
+	return newStringTag("isolation-group", group)
+}
+
+func PartitionConfig(p map[string]string) Tag {
+	return newObjectTag("partition-config", p)
+}
+
+func PollerGroups(pollers []string) Tag {
+	return newObjectTag("poller-isolation-groups", pollers)
 }

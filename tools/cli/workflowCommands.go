@@ -846,6 +846,7 @@ type workflowExecutionInfo struct {
 	Memo             *types.Memo
 	SearchAttributes map[string]interface{}
 	AutoResetPoints  *types.ResetPoints
+	PartitionConfig  map[string]string
 }
 
 // pendingActivityInfo has same fields as types.PendingActivityInfo, but different field type for better display
@@ -889,6 +890,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 		Memo:             info.Memo,
 		SearchAttributes: convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c),
 		AutoResetPoints:  info.AutoResetPoints,
+		PartitionConfig:  info.PartitionConfig,
 	}
 
 	var pendingActs []*pendingActivityInfo

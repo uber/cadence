@@ -147,10 +147,11 @@ type (
 		TaskListType int
 		TaskID       int64
 
-		WorkflowID  string
-		RunID       string
-		ScheduledID int64
-		CreatedTime time.Time
+		WorkflowID      string
+		RunID           string
+		ScheduledID     int64
+		CreatedTime     time.Time
+		PartitionConfig map[string]string
 	}
 
 	// TaskListFilter is for filtering tasklist
@@ -217,6 +218,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              *persistence.DataBlob
+		IsolationGroups          *persistence.DataBlob
 	}
 
 	// SelectMessagesBetweenRequest is a request struct for SelectMessagesBetween

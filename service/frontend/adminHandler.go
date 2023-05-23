@@ -31,6 +31,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/uber/cadence/common/isolationgroup/isolationgroupapi"
+
 	"github.com/pborman/uuid"
 
 	"github.com/uber/cadence/.gen/go/shared"
@@ -96,6 +98,10 @@ type (
 		ListDynamicConfig(context.Context, *types.ListDynamicConfigRequest) (*types.ListDynamicConfigResponse, error)
 		DeleteWorkflow(context.Context, *types.AdminDeleteWorkflowRequest) (*types.AdminDeleteWorkflowResponse, error)
 		MaintainCorruptWorkflow(context.Context, *types.AdminMaintainWorkflowRequest) (*types.AdminMaintainWorkflowResponse, error)
+		GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (*types.GetGlobalIsolationGroupsResponse, error)
+		UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (*types.UpdateGlobalIsolationGroupsResponse, error)
+		GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error)
+		UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (*types.UpdateDomainIsolationGroupsResponse, error)
 	}
 
 	// adminHandlerImpl is an implementation for admin service independent of wire protocol
@@ -110,6 +116,7 @@ type (
 		eventSerializer       persistence.PayloadSerializer
 		esClient              elasticsearch.GenericClient
 		throttleRetry         *backoff.ThrottleRetry
+		isolationGroups       isolationgroupapi.Handler
 	}
 
 	workflowQueryTemplate struct {
@@ -140,11 +147,12 @@ var (
 	}
 )
 
-// NewAdminHandler creates a thrift handler for the cadence admin service
+// NewAdminHandler creates a thrift service for the cadence admin service
 func NewAdminHandler(
 	resource resource.Resource,
 	params *resource.Params,
 	config *Config,
+	domainHandler domain.Handler,
 ) AdminHandler {
 
 	domainReplicationTaskExecutor := domain.NewReplicationTaskExecutor(
@@ -152,6 +160,7 @@ func NewAdminHandler(
 		resource.GetTimeSource(),
 		resource.GetLogger(),
 	)
+
 	return &adminHandlerImpl{
 		Resource:              resource,
 		numberOfHistoryShards: params.PersistenceConfig.NumHistoryShards,
@@ -178,6 +187,7 @@ func NewAdminHandler(
 			backoff.WithRetryPolicy(adminServiceRetryPolicy),
 			backoff.WithRetryableError(common.IsServiceTransientError),
 		),
+		isolationGroups: isolationgroupapi.New(resource.GetLogger(), resource.GetIsolationGroupStore(), domainHandler),
 	}
 }
 
@@ -1723,6 +1733,66 @@ func (adh *adminHandlerImpl) ListDynamicConfig(ctx context.Context, request *typ
 	return &types.ListDynamicConfigResponse{
 		Entries: entries,
 	}, nil
+}
+
+func (adh *adminHandlerImpl) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (_ *types.GetGlobalIsolationGroupsResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.GetGlobalIsolationGroups)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	resp, err := adh.isolationGroups.GetGlobalState(ctx)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
+}
+
+func (adh *adminHandlerImpl) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (_ *types.UpdateGlobalIsolationGroupsResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateGlobalIsolationGroups)
+	defer sw.Stop()
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	err := adh.isolationGroups.UpdateGlobalState(ctx, *request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return &types.UpdateGlobalIsolationGroupsResponse{}, nil
+}
+
+func (adh *adminHandlerImpl) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (_ *types.GetDomainIsolationGroupsResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.GetDomainIsolationGroups)
+	defer sw.Stop()
+
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+
+	resp, err := adh.isolationGroups.GetDomainState(ctx, types.GetDomainIsolationGroupsRequest{Domain: request.Domain})
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return resp, nil
+}
+
+func (adh *adminHandlerImpl) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (_ *types.UpdateDomainIsolationGroupsResponse, retError error) {
+	defer func() { log.CapturePanic(recover(), adh.GetLogger(), &retError) }()
+	scope, sw := adh.startRequestProfile(ctx, metrics.UpdateDomainIsolationGroups)
+	defer sw.Stop()
+	if request == nil {
+		return nil, adh.error(errRequestNotSet, scope)
+	}
+	err := adh.isolationGroups.UpdateDomainState(ctx, *request)
+	if err != nil {
+		return nil, adh.error(err, scope)
+	}
+	return &types.UpdateDomainIsolationGroupsResponse{}, nil
 }
 
 func convertFromDataBlob(blob *types.DataBlob) (interface{}, error) {

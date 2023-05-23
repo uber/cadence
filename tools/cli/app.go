@@ -158,6 +158,12 @@ func NewCliApp() *cli.App {
 					Subcommands: newAdminClusterCommands(),
 				},
 				{
+					Name:        "isolation-groups",
+					Aliases:     []string{"ig"},
+					Usage:       "Run admin operation on isolation-groups",
+					Subcommands: newAdminIsolationGroupCommands(),
+				},
+				{
 					Name:        "dlq",
 					Aliases:     []string{"dlq"},
 					Usage:       "Run admin operation on DLQ",

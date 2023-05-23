@@ -228,6 +228,9 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	branchToken := []byte("other random branch token")
 	targetBranchToken := []byte("some other random branch token")
 	now := time.Now()
+	partitionConfig := map[string]string{
+		"userid": uuid.New(),
+	}
 
 	targetDomainID := uuid.New()
 	targetDomainName := "other random domain name"
@@ -247,6 +250,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 			ExecutionStartToCloseTimeoutSeconds: common.Int32Ptr(123),
 			TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(233),
 			Identity:                            "some random identity",
+			PartitionConfig:                     partitionConfig,
 		},
 	}}
 	events2 := []*types.HistoryEvent{{
@@ -325,6 +329,7 @@ func (s *stateRebuilderSuite) TestRebuild() {
 	s.Equal(targetDomainID, rebuildExecutionInfo.DomainID)
 	s.Equal(targetWorkflowID, rebuildExecutionInfo.WorkflowID)
 	s.Equal(targetRunID, rebuildExecutionInfo.RunID)
+	s.Equal(partitionConfig, rebuildExecutionInfo.PartitionConfig)
 	s.Equal(int64(historySize1+historySize2), rebuiltHistorySize)
 	s.Equal(persistence.NewVersionHistories(
 		persistence.NewVersionHistory(

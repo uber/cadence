@@ -21,6 +21,7 @@
 package metrics
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -54,6 +55,7 @@ const (
 	workflowVersion        = "workflow_version"
 	shardID                = "shard_id"
 	matchingHost           = "matching_host"
+	pollerIsolationGroup   = "poller_isolation_group"
 
 	allValue     = "all"
 	unknownValue = "_unknown_"
@@ -215,4 +217,24 @@ func WorkflowVersionTag(value string) Tag {
 
 func MatchingHostTag(value string) Tag {
 	return metricWithUnknown(matchingHost, value)
+}
+
+// PollerIsolationGroupTag returns a new PollerIsolationGroup tag
+func PollerIsolationGroupTag(value string) Tag {
+	return metricWithUnknown(pollerIsolationGroup, value)
+}
+
+// PartitionConfigTags returns a list of partition config tags
+func PartitionConfigTags(partitionConfig map[string]string) []Tag {
+	tags := make([]Tag, 0, len(partitionConfig))
+	for k, v := range partitionConfig {
+		if len(k) == 0 {
+			continue
+		}
+		if len(v) == 0 {
+			v = unknownValue
+		}
+		tags = append(tags, simpleMetric{key: sanitizer.Value(fmt.Sprintf("pk_%s", k)), value: sanitizer.Value(v)})
+	}
+	return tags
 }
