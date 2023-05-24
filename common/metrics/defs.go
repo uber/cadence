@@ -743,8 +743,8 @@ const (
 	DomainReplicationQueueScope
 	// ClusterMetadataScope is used for the cluster metadata
 	ClusterMetadataScope
-	// DefaultIsolationGroupStateHandlerGetAvailableIsolationGroupsScope is the metric for the default partitioner's getIsolationGroups operation
-	DefaultIsolationGroupStateHandlerGetAvailableIsolationGroupsScope
+	// GetAvailableIsolationGroupsScope is the metric for the default partitioner's getIsolationGroups operation
+	GetAvailableIsolationGroupsScope
 
 	NumCommonScopes
 )
@@ -1567,7 +1567,7 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
-		DefaultIsolationGroupStateHandlerGetAvailableIsolationGroupsScope: {operation: "DefaultIsolationGroupStateHandlerGetAvailableIsolationGroups"},
+		GetAvailableIsolationGroupsScope: {operation: "GetAvailableIsolationGroups"},
 
 		DomainFailoverScope:         {operation: "DomainFailover"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
@@ -2334,8 +2334,6 @@ const (
 	TaskListManagersGauge
 	TaskLagPerTaskListGauge
 	TaskBacklogPerTaskListGauge
-	PartitionerPinnedTask
-	PartitionerUnPinnedTask
 
 	NumMatchingMetrics
 )
@@ -2939,8 +2937,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		TaskListManagersGauge:                       {metricName: "tasklist_managers", metricType: Gauge},
 		TaskLagPerTaskListGauge:                     {metricName: "task_lag_per_tl", metricType: Gauge},
 		TaskBacklogPerTaskListGauge:                 {metricName: "task_backlog_per_tl", metricType: Gauge},
-		PartitionerPinnedTask:                       {metricName: "partitioner_pinned_task", metricType: Counter},
-		PartitionerUnPinnedTask:                     {metricName: "partitioner_unpinned_task", metricType: Counter},
 	},
 	Worker: {
 		ReplicatorMessages:                            {metricName: "replicator_messages"},

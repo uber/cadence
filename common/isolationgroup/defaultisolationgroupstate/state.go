@@ -87,7 +87,7 @@ func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(c
 		return nil, fmt.Errorf("unable to get isolation group state: %w", err)
 	}
 	availableIsolationGroupsCfg := isolationGroupHealthyListToConfig(availableIsolationGroups)
-	scope := z.createAvailableisolationGroupMetricsScope(domainID, availableIsolationGroups)
+	scope := z.createAvailableisolationGroupMetricsScope(domainID)
 	return availableIG(z.config.AllIsolationGroups, availableIsolationGroupsCfg, state.Global, state.Domain, scope), nil
 }
 
@@ -169,12 +169,9 @@ func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain stri
 	return ig, nil
 }
 
-func (z *defaultIsolationGroupStateHandler) createAvailableisolationGroupMetricsScope(domainID string, availableIsolationGroups []string) metrics.Scope {
-	domainName, err := z.domainCache.GetDomainName(domainID)
-	if err != nil {
-		domainName = "unknown-domain"
-	}
-	return z.metricsClient.Scope(metrics.DefaultIsolationGroupStateHandlerGetAvailableIsolationGroupsScope).Tagged(metrics.DomainTag(domainName))
+func (z *defaultIsolationGroupStateHandler) createAvailableisolationGroupMetricsScope(domainID string) metrics.Scope {
+	domainName, _ := z.domainCache.GetDomainName(domainID)
+	return z.metricsClient.Scope(metrics.GetAvailableIsolationGroupsScope).Tagged(metrics.DomainTag(domainName))
 }
 
 // A simple explicit deny-based isolation group implementation
