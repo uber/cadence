@@ -129,6 +129,7 @@ func (r *defaultPartitioner) pickIsolationGroup(wfPartition defaultWorkflowParti
 		tag.FallbackIsolationGroup(fallback),
 		tag.IsolationGroup(wfPartition.WorkflowStartIsolationGroup),
 		tag.PollerGroupsConfiguration(available),
+		tag.WorkflowID(wfPartition.WFID),
 	)
 	return fallback
 }
