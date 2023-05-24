@@ -448,7 +448,7 @@ func (c *cadenceImpl) startFrontend(hosts map[string][]membership.HostInfo, star
 		pinotDataStoreName := "pinot-visibility"
 		params.PersistenceConfig.AdvancedVisibilityStore = pinotDataStoreName
 		params.PersistenceConfig.DataStores[pinotDataStoreName] = config.DataStore{
-			ElasticSearch: c.esConfig,
+			Pinot: c.pinotConfig,
 		}
 	} else if c.esConfig != nil {
 		esDataStoreName := "es-visibility"
@@ -514,7 +514,14 @@ func (c *cadenceImpl) startHistory(
 			c.logger.Fatal("Failed to copy persistence config for history", tag.Error(err))
 		}
 
-		if c.esConfig != nil {
+		if c.pinotConfig != nil {
+			pinotDataStoreName := "pinot-visibility"
+			params.PersistenceConfig.AdvancedVisibilityStore = pinotDataStoreName
+			params.PersistenceConfig.DataStores[pinotDataStoreName] = config.DataStore{
+				Pinot:         c.pinotConfig,
+				ElasticSearch: c.esConfig,
+			}
+		} else if c.esConfig != nil {
 			esDataStoreName := "es-visibility"
 			params.PersistenceConfig.AdvancedVisibilityStore = esDataStoreName
 			params.PersistenceConfig.DataStores[esDataStoreName] = config.DataStore{
