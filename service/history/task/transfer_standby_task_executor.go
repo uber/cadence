@@ -139,6 +139,7 @@ func (t *transferStandbyTaskExecutor) processActivityTask(
 		if activityInfo.StartedID == common.EmptyEventID {
 			return newPushActivityToMatchingInfo(
 				activityInfo.ScheduleToStartTimeout,
+				mutableState.GetExecutionInfo().PartitionConfig,
 			), nil
 		}
 
@@ -193,6 +194,7 @@ func (t *transferStandbyTaskExecutor) processDecisionTask(
 			return newPushDecisionToMatchingInfo(
 				decisionTimeout,
 				types.TaskList{Name: executionInfo.TaskList}, // at standby, always use non-sticky tasklist
+				mutableState.GetExecutionInfo().PartitionConfig,
 			), nil
 		}
 
@@ -589,6 +591,7 @@ func (t *transferStandbyTaskExecutor) pushActivity(
 		ctx,
 		task.(*persistence.TransferTaskInfo),
 		timeout,
+		pushActivityInfo.partitionConfig,
 	)
 }
 
@@ -610,6 +613,7 @@ func (t *transferStandbyTaskExecutor) pushDecision(
 		task.(*persistence.TransferTaskInfo),
 		&pushDecisionInfo.tasklist,
 		timeout,
+		pushDecisionInfo.partitionConfig,
 	)
 }
 

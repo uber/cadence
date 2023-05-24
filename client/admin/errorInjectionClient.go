@@ -772,3 +772,107 @@ func (c *errorInjectionClient) ListDynamicConfig(
 	}
 	return resp, clientErr
 }
+
+func (c *errorInjectionClient) GetGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.GetGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetGlobalIsolationGroupsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetGlobalIsolationGroupsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetGlobalIsolationGroups(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetGlobalIsolationGroups,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) UpdateGlobalIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateGlobalIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.UpdateGlobalIsolationGroupsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.UpdateGlobalIsolationGroups(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationUpdateGlobalIsolationGroups,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) GetDomainIsolationGroups(
+	ctx context.Context,
+	request *types.GetDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.GetDomainIsolationGroupsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.GetDomainIsolationGroupsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.GetDomainIsolationGroups(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationGetDomainIsolationGroups,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}
+
+func (c *errorInjectionClient) UpdateDomainIsolationGroups(
+	ctx context.Context,
+	request *types.UpdateDomainIsolationGroupsRequest,
+	opts ...yarpc.CallOption,
+) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	fakeErr := errors.GenerateFakeError(c.errorRate)
+
+	var resp *types.UpdateDomainIsolationGroupsResponse
+	var clientErr error
+	var forwardCall bool
+	if forwardCall = errors.ShouldForwardCall(fakeErr); forwardCall {
+		resp, clientErr = c.client.UpdateDomainIsolationGroups(ctx, request, opts...)
+	}
+
+	if fakeErr != nil {
+		c.logger.Error(msgInjectedFakeErr,
+			tag.AdminClientOperationUpdateDomainIsolationGroups,
+			tag.Error(fakeErr),
+			tag.Bool(forwardCall),
+			tag.ClientError(clientErr),
+		)
+		return nil, fakeErr
+	}
+	return resp, clientErr
+}

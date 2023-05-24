@@ -191,6 +191,10 @@ func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDom
 	if err != nil {
 		return InternalDomainConfig{}, err
 	}
+	isolationGroups, err := m.serializer.SerializeIsolationGroups(&c.IsolationGroups, common.EncodingTypeThriftRW)
+	if err != nil {
+		return InternalDomainConfig{}, err
+	}
 	return InternalDomainConfig{
 		Retention:                common.DaysToDuration(c.Retention),
 		EmitMetric:               c.EmitMetric,
@@ -199,6 +203,7 @@ func (m *domainManagerImpl) toInternalDomainConfig(c *DomainConfig) (InternalDom
 		VisibilityArchivalStatus: c.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    c.VisibilityArchivalURI,
 		BadBinaries:              badBinaries,
+		IsolationGroups:          isolationGroups,
 	}, nil
 }
 
@@ -210,6 +215,15 @@ func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (
 	if err != nil {
 		return DomainConfig{}, err
 	}
+	var isolationGroups types.IsolationGroupConfiguration
+	igRes, err := m.serializer.DeserializeIsolationGroups(ic.IsolationGroups)
+	if err != nil {
+		return DomainConfig{}, err
+	}
+	if igRes != nil {
+		isolationGroups = *igRes
+	}
+
 	if badBinaries.Binaries == nil {
 		badBinaries.Binaries = map[string]*types.BadBinaryInfo{}
 	}
@@ -221,6 +235,7 @@ func (m *domainManagerImpl) fromInternalDomainConfig(ic *InternalDomainConfig) (
 		VisibilityArchivalStatus: ic.VisibilityArchivalStatus,
 		VisibilityArchivalURI:    ic.VisibilityArchivalURI,
 		BadBinaries:              *badBinaries,
+		IsolationGroups:          isolationGroups,
 	}, nil
 }
 

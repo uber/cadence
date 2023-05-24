@@ -137,6 +137,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) erro
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
 			Source:                        &task.source,
 			ForwardedFrom:                 fwdr.taskListID.name,
+			PartitionConfig:               task.event.PartitionConfig,
 		})
 	case persistence.TaskListTypeActivity:
 		err = fwdr.client.AddActivityTask(ctx, &types.AddActivityTaskRequest{
@@ -151,6 +152,7 @@ func (fwdr *Forwarder) ForwardTask(ctx context.Context, task *InternalTask) erro
 			ScheduleToStartTimeoutSeconds: &task.event.ScheduleToStartTimeout,
 			Source:                        &task.source,
 			ForwardedFrom:                 fwdr.taskListID.name,
+			PartitionConfig:               task.event.PartitionConfig,
 		})
 	default:
 		return errInvalidTaskListType
@@ -200,6 +202,7 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 
 	pollerID, _ := ctx.Value(pollerIDKey).(string)
 	identity, _ := ctx.Value(identityKey).(string)
+	isolationGroup, _ := ctx.Value(_isolationGroupKey).(string)
 
 	switch fwdr.taskListID.taskType {
 	case persistence.TaskListTypeDecision:
@@ -213,7 +216,8 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 				},
 				Identity: identity,
 			},
-			ForwardedFrom: fwdr.taskListID.name,
+			ForwardedFrom:  fwdr.taskListID.name,
+			IsolationGroup: isolationGroup,
 		})
 		if err != nil {
 			return nil, fwdr.handleErr(err)
@@ -230,7 +234,8 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 				},
 				Identity: identity,
 			},
-			ForwardedFrom: fwdr.taskListID.name,
+			ForwardedFrom:  fwdr.taskListID.name,
+			IsolationGroup: isolationGroup,
 		})
 		if err != nil {
 			return nil, fwdr.handleErr(err)

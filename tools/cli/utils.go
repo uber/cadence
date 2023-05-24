@@ -39,18 +39,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/uber/cadence/common/pagination"
-
-	"github.com/uber/cadence/client/frontend"
-	"github.com/uber/cadence/common/types"
-
 	"github.com/cristalhq/jwt/v3"
 	"github.com/fatih/color"
 	"github.com/urfave/cli"
 	"github.com/valyala/fastjson"
 
+	"github.com/uber/cadence/client/frontend"
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/authorization"
+	"github.com/uber/cadence/common/pagination"
+	"github.com/uber/cadence/common/types"
 )
 
 // JSONHistorySerializer is used to encode history event in JSON
@@ -157,6 +155,13 @@ func HistoryEventToString(e *types.HistoryEvent, printFully bool, maxFieldLength
 }
 
 func anyToString(d interface{}, printFully bool, maxFieldLength int) string {
+	// fields related to schedule are of time.Time type, and we shouldn't dive
+	// into it with reflection - it's fields are private.
+	tm, ok := d.(time.Time)
+	if ok {
+		return trimText(tm.String(), maxFieldLength)
+	}
+
 	v := reflect.ValueOf(d)
 	switch v.Kind() {
 	case reflect.Ptr:
@@ -833,29 +838,27 @@ func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) con
 }
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
-	contextTimeout := defaultContextTimeout
-	if c.GlobalInt(FlagContextTimeout) > 0 {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-	}
-	ctx := populateContextFromCLIContext(context.Background(), c)
-	return context.WithTimeout(ctx, contextTimeout)
+	return newTimedContext(c, defaultContextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
-	contextTimeout := defaultContextTimeoutForLongPoll
-	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-	}
-	return context.WithTimeout(context.Background(), contextTimeout)
+	return newTimedContext(c, defaultContextTimeoutForLongPoll)
 }
 
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout := time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-		return context.WithTimeout(context.Background(), contextTimeout)
+		return newTimedContext(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
 	}
 
-	return context.WithCancel(context.Background())
+	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
+}
+
+func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if c.GlobalIsSet(FlagContextTimeout) {
+		timeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	ctx := populateContextFromCLIContext(context.Background(), c)
+	return context.WithTimeout(ctx, timeout)
 }
 
 // process and validate input provided through cmd or file

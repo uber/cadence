@@ -190,7 +190,7 @@ func showHistoryHelper(c *cli.Context, wid, rid string) {
 	})
 	if err != nil {
 		if _, ok := err.(*types.EntityNotExistsError); ok {
-			fmt.Println("History Source: History Archival")
+			fmt.Printf("%s %s\n", colorRed("Error:"), err)
 			return
 		}
 		ErrorAndExit("Describe workflow execution failed, cannot get information of pending activities", err)
@@ -846,6 +846,7 @@ type workflowExecutionInfo struct {
 	Memo             *types.Memo
 	SearchAttributes map[string]interface{}
 	AutoResetPoints  *types.ResetPoints
+	PartitionConfig  map[string]string
 }
 
 // pendingActivityInfo has same fields as types.PendingActivityInfo, but different field type for better display
@@ -889,6 +890,7 @@ func convertDescribeWorkflowExecutionResponse(resp *types.DescribeWorkflowExecut
 		Memo:             info.Memo,
 		SearchAttributes: convertSearchAttributesToMapOfInterface(info.SearchAttributes, wfClient, c),
 		AutoResetPoints:  info.AutoResetPoints,
+		PartitionConfig:  info.PartitionConfig,
 	}
 
 	var pendingActs []*pendingActivityInfo
