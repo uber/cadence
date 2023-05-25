@@ -592,6 +592,10 @@ func intSliceToSet(s []int) map[int]struct{} {
 	return ret
 }
 
+func printMessage(msg string) {
+	fmt.Printf("%s %s\n", "cadence:", msg)
+}
+
 func printError(msg string, err error) {
 	if err != nil {
 		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
@@ -834,29 +838,27 @@ func populateContextFromCLIContext(ctx context.Context, cliCtx *cli.Context) con
 }
 
 func newContext(c *cli.Context) (context.Context, context.CancelFunc) {
-	contextTimeout := defaultContextTimeout
-	if c.GlobalInt(FlagContextTimeout) > 0 {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-	}
-	ctx := populateContextFromCLIContext(context.Background(), c)
-	return context.WithTimeout(ctx, contextTimeout)
+	return newTimedContext(c, defaultContextTimeout)
 }
 
 func newContextForLongPoll(c *cli.Context) (context.Context, context.CancelFunc) {
-	contextTimeout := defaultContextTimeoutForLongPoll
-	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-	}
-	return context.WithTimeout(context.Background(), contextTimeout)
+	return newTimedContext(c, defaultContextTimeoutForLongPoll)
 }
 
 func newIndefiniteContext(c *cli.Context) (context.Context, context.CancelFunc) {
 	if c.GlobalIsSet(FlagContextTimeout) {
-		contextTimeout := time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
-		return context.WithTimeout(context.Background(), contextTimeout)
+		return newTimedContext(c, time.Duration(c.GlobalInt(FlagContextTimeout))*time.Second)
 	}
 
-	return context.WithCancel(context.Background())
+	return context.WithCancel(populateContextFromCLIContext(context.Background(), c))
+}
+
+func newTimedContext(c *cli.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if c.GlobalIsSet(FlagContextTimeout) {
+		timeout = time.Duration(c.GlobalInt(FlagContextTimeout)) * time.Second
+	}
+	ctx := populateContextFromCLIContext(context.Background(), c)
+	return context.WithTimeout(ctx, timeout)
 }
 
 // process and validate input provided through cmd or file

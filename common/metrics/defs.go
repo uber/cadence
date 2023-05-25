@@ -1830,7 +1830,6 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 const (
 	CadenceRequests = iota
 	CadenceFailures
-	CadenceCriticalFailures
 	CadenceLatency
 	CadenceErrBadRequestCounter
 	CadenceErrDomainNotActiveCounter
@@ -2422,7 +2421,6 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 	Common: {
 		CadenceRequests:                                              {metricName: "cadence_requests", metricType: Counter},
 		CadenceFailures:                                              {metricName: "cadence_errors", metricType: Counter},
-		CadenceCriticalFailures:                                      {metricName: "cadence_errors_critical", metricType: Counter},
 		CadenceLatency:                                               {metricName: "cadence_latency", metricType: Timer},
 		CadenceErrBadRequestCounter:                                  {metricName: "cadence_errors_bad_request", metricType: Counter},
 		CadenceErrDomainNotActiveCounter:                             {metricName: "cadence_errors_domain_not_active", metricType: Counter},
