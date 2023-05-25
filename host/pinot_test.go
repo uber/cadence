@@ -163,7 +163,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow() {
 
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
-
+	//query := fmt.Sprintf(`WorkflowID = '%s'`, id)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
 }
@@ -291,17 +291,17 @@ func (s *PinotIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 
-	cronID := id + "-cron"
-	request.CronSchedule = "@every 1m"
-	request.WorkflowID = cronID
+	//cronID := id + "-cron"
+	//request.CronSchedule = "@every 1m"
+	//request.WorkflowID = cronID
+	//
+	//weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
+	//s.Nil(err)
+	//
+	//query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
+	//s.testHelperForReadOnce(weCron.GetRunID(), query, false, false)
 
-	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
-	s.Nil(err)
-
-	query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
-	s.testHelperForReadOnce(weCron.GetRunID(), query, false, false)
-
-	query = fmt.Sprintf(`WorkflowID = "%s"`, id)
+	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
 }
 

@@ -94,18 +94,22 @@ func (c *PinotClient) GetTableName() string {
 
 /****************************** Response Translator ******************************/
 
-func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
-	resMap := make(map[string]interface{})
+func buildMap(hit []interface{}, columnNames []string) (map[string]interface{}, map[string]interface{}) {
+	systemKeyMap := make(map[string]interface{})
+	customKeyMap := make(map[string]interface{})
 
 	for i := 0; i < len(columnNames); i++ {
 		key := columnNames[i]
-		// checks if it is system key, if yes, put it into the map
-		if ok, _ := isSystemKey(key); ok {
-			resMap[key] = hit[i]
+		// checks if it is system key, if yes, put it into the system map; otherwise put it into custom map
+		ok, _ := isSystemKey(key)
+		if ok {
+			systemKeyMap[key] = hit[i]
+		} else {
+			customKeyMap[key] = hit[i]
 		}
 	}
 
-	return resMap
+	return systemKeyMap, customKeyMap
 }
 
 // VisibilityRecord is a struct of doc for deserialization
@@ -132,35 +136,23 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 		return nil
 	}
 
-	columnNameToValue := buildMap(hit, columnNames)
-	jsonColumnNameToValue, err := json.Marshal(columnNameToValue)
+	systemKeyMap, customKeyMap := buildMap(hit, columnNames)
+	jsonSystemKeyMap, err := json.Marshal(systemKeyMap)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to marshal columnNameToValue",
+		c.logger.Error("unable to marshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
 	}
 
 	var source *VisibilityRecord
-	err = json.Unmarshal(jsonColumnNameToValue, &source)
+	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to Unmarshal columnNameToValue",
+		c.logger.Error("unable to Unmarshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
 	}
-
-	attr := make(map[string]interface{})
-	//if source.Attr != "null" {
-	//	err = json.Unmarshal([]byte(source.Attr), &attr)
-	//
-	//	if err != nil { // log and skip error
-	//		c.logger.Error("unable to Unmarshal source.Attr",
-	//			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-	//		)
-	//		return nil
-	//	}
-	//}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		DomainID:         source.DomainID,
@@ -173,7 +165,7 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
 		NumClusters:      source.NumClusters,
-		SearchAttributes: attr,
+		SearchAttributes: customKeyMap,
 	}
 	if source.UpdateTime != 0 {
 		record.UpdateTime = time.UnixMilli(source.UpdateTime)
