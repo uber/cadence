@@ -1942,6 +1942,7 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *apiv1.PendingActivit
 		ExpirationTime:     unixNanoToTime(t.ExpirationTimestamp),
 		LastFailure:        FromFailure(t.LastFailureReason, t.LastFailureDetails),
 		LastWorkerIdentity: t.LastWorkerIdentity,
+		//StartedWorkerIdentity: t.StartedWorkerIdentity,
 	}
 }
 
@@ -1963,6 +1964,7 @@ func ToPendingActivityInfo(t *apiv1.PendingActivityInfo) *types.PendingActivityI
 		LastFailureReason:      ToFailureReason(t.LastFailure),
 		LastFailureDetails:     ToFailureDetails(t.LastFailure),
 		LastWorkerIdentity:     t.LastWorkerIdentity,
+		//StartedWorkerIdentity: t.StartedWorkerIdentity,
 	}
 }
 
