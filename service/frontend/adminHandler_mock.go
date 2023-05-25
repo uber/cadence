@@ -221,6 +221,21 @@ func (mr *MockAdminHandlerMockRecorder) GetDLQReplicationMessages(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDLQReplicationMessages", reflect.TypeOf((*MockAdminHandler)(nil).GetDLQReplicationMessages), arg0, arg1)
 }
 
+// GetDomainIsolationGroups mocks base method.
+func (m *MockAdminHandler) GetDomainIsolationGroups(ctx context.Context, request *types.GetDomainIsolationGroupsRequest) (*types.GetDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDomainIsolationGroups", ctx, request)
+	ret0, _ := ret[0].(*types.GetDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDomainIsolationGroups indicates an expected call of GetDomainIsolationGroups.
+func (mr *MockAdminHandlerMockRecorder) GetDomainIsolationGroups(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDomainIsolationGroups", reflect.TypeOf((*MockAdminHandler)(nil).GetDomainIsolationGroups), ctx, request)
+}
+
 // GetDomainReplicationMessages mocks base method.
 func (m *MockAdminHandler) GetDomainReplicationMessages(arg0 context.Context, arg1 *types.GetDomainReplicationMessagesRequest) (*types.GetDomainReplicationMessagesResponse, error) {
 	m.ctrl.T.Helper()
@@ -249,6 +264,21 @@ func (m *MockAdminHandler) GetDynamicConfig(arg0 context.Context, arg1 *types.Ge
 func (mr *MockAdminHandlerMockRecorder) GetDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).GetDynamicConfig), arg0, arg1)
+}
+
+// GetGlobalIsolationGroups mocks base method.
+func (m *MockAdminHandler) GetGlobalIsolationGroups(ctx context.Context, request *types.GetGlobalIsolationGroupsRequest) (*types.GetGlobalIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGlobalIsolationGroups", ctx, request)
+	ret0, _ := ret[0].(*types.GetGlobalIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGlobalIsolationGroups indicates an expected call of GetGlobalIsolationGroups.
+func (mr *MockAdminHandlerMockRecorder) GetGlobalIsolationGroups(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGlobalIsolationGroups", reflect.TypeOf((*MockAdminHandler)(nil).GetGlobalIsolationGroups), ctx, request)
 }
 
 // GetReplicationMessages mocks base method.
@@ -478,6 +508,21 @@ func (mr *MockAdminHandlerMockRecorder) Stop() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockAdminHandler)(nil).Stop))
 }
 
+// UpdateDomainIsolationGroups mocks base method.
+func (m *MockAdminHandler) UpdateDomainIsolationGroups(ctx context.Context, request *types.UpdateDomainIsolationGroupsRequest) (*types.UpdateDomainIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateDomainIsolationGroups", ctx, request)
+	ret0, _ := ret[0].(*types.UpdateDomainIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateDomainIsolationGroups indicates an expected call of UpdateDomainIsolationGroups.
+func (mr *MockAdminHandlerMockRecorder) UpdateDomainIsolationGroups(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomainIsolationGroups", reflect.TypeOf((*MockAdminHandler)(nil).UpdateDomainIsolationGroups), ctx, request)
+}
+
 // UpdateDynamicConfig mocks base method.
 func (m *MockAdminHandler) UpdateDynamicConfig(arg0 context.Context, arg1 *types.UpdateDynamicConfigRequest) error {
 	m.ctrl.T.Helper()
@@ -490,4 +535,19 @@ func (m *MockAdminHandler) UpdateDynamicConfig(arg0 context.Context, arg1 *types
 func (mr *MockAdminHandlerMockRecorder) UpdateDynamicConfig(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDynamicConfig", reflect.TypeOf((*MockAdminHandler)(nil).UpdateDynamicConfig), arg0, arg1)
+}
+
+// UpdateGlobalIsolationGroups mocks base method.
+func (m *MockAdminHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *types.UpdateGlobalIsolationGroupsRequest) (*types.UpdateGlobalIsolationGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateGlobalIsolationGroups", ctx, request)
+	ret0, _ := ret[0].(*types.UpdateGlobalIsolationGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateGlobalIsolationGroups indicates an expected call of UpdateGlobalIsolationGroups.
+func (mr *MockAdminHandlerMockRecorder) UpdateGlobalIsolationGroups(ctx, request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGlobalIsolationGroups", reflect.TypeOf((*MockAdminHandler)(nil).UpdateGlobalIsolationGroups), ctx, request)
 }

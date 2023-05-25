@@ -158,6 +158,12 @@ func NewCliApp() *cli.App {
 					Subcommands: newAdminClusterCommands(),
 				},
 				{
+					Name:        "isolation-groups",
+					Aliases:     []string{"ig"},
+					Usage:       "Run admin operation on isolation-groups",
+					Subcommands: newAdminIsolationGroupCommands(),
+				},
+				{
 					Name:        "dlq",
 					Aliases:     []string{"dlq"},
 					Usage:       "Run admin operation on DLQ",
@@ -189,6 +195,9 @@ func NewCliApp() *cli.App {
 			Usage:       "Operate cadence cluster",
 			Subcommands: newClusterCommands(),
 		},
+	}
+	app.CommandNotFound = func(context *cli.Context, command string) {
+		printMessage("command not found: " + command)
 	}
 
 	// set builder if not customized

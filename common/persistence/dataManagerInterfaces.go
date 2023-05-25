@@ -222,6 +222,7 @@ type ConfigType int
 
 const (
 	DynamicConfig ConfigType = iota
+	GlobalIsolationGroupConfig
 )
 
 type (
@@ -343,6 +344,7 @@ type (
 		AutoResetPoints                    *types.ResetPoints
 		Memo                               map[string][]byte
 		SearchAttributes                   map[string][]byte
+		PartitionConfig                    map[string]string
 		// for retry
 		Attempt            int32
 		HasRetryPolicy     bool
@@ -461,6 +463,7 @@ type (
 		ScheduleToStartTimeout int32
 		Expiry                 time.Time
 		CreatedTime            time.Time
+		PartitionConfig        map[string]string
 	}
 
 	// TaskKey gives primary key info for a specific task
@@ -1368,6 +1371,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
+		IsolationGroups          types.IsolationGroupConfiguration
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1864,8 +1868,8 @@ type (
 
 	ConfigStoreManager interface {
 		Closeable
-		FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error)
-		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error
+		FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error
 		//can add functions for config types other than dynamic config
 	}
 )

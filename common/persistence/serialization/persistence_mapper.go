@@ -73,6 +73,7 @@ func ToInternalWorkflowExecutionInfo(info *WorkflowExecutionInfo) *persistence.I
 		SearchAttributes:                   info.GetSearchAttributes(),
 		HistorySize:                        info.GetHistorySize(),
 		FirstExecutionRunID:                info.FirstExecutionRunID.String(),
+		PartitionConfig:                    info.PartitionConfig,
 	}
 	if info.ParentDomainID != nil {
 		result.ParentDomainID = info.ParentDomainID.String()
@@ -154,6 +155,7 @@ func FromInternalWorkflowExecutionInfo(executionInfo *persistence.InternalWorkfl
 		VersionHistoriesEncoding:           string(common.EncodingTypeEmpty),
 		InitiatedID:                        common.EmptyEventID,
 		FirstExecutionRunID:                MustParseUUID(executionInfo.FirstExecutionRunID),
+		PartitionConfig:                    executionInfo.PartitionConfig,
 	}
 
 	if executionInfo.CompletionEvent != nil {

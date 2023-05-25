@@ -365,6 +365,7 @@ func CopyWorkflowExecutionInfo(sourceInfo *persistence.WorkflowExecutionInfo) *p
 		AutoResetPoints:                    sourceInfo.AutoResetPoints,
 		Memo:                               sourceInfo.Memo,
 		SearchAttributes:                   sourceInfo.SearchAttributes,
+		PartitionConfig:                    sourceInfo.PartitionConfig,
 		Attempt:                            sourceInfo.Attempt,
 		HasRetryPolicy:                     sourceInfo.HasRetryPolicy,
 		InitialInterval:                    sourceInfo.InitialInterval,

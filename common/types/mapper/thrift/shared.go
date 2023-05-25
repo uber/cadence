@@ -1856,6 +1856,7 @@ func FromDomainConfiguration(t *types.DomainConfiguration) *shared.DomainConfigu
 		HistoryArchivalURI:                     &t.HistoryArchivalURI,
 		VisibilityArchivalStatus:               FromArchivalStatus(t.VisibilityArchivalStatus),
 		VisibilityArchivalURI:                  &t.VisibilityArchivalURI,
+		Isolationgroups:                        FromIsolationGroupConfig(t.IsolationGroups),
 	}
 }
 
@@ -1872,6 +1873,7 @@ func ToDomainConfiguration(t *shared.DomainConfiguration) *types.DomainConfigura
 		HistoryArchivalURI:                     t.GetHistoryArchivalURI(),
 		VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 		VisibilityArchivalURI:                  t.GetVisibilityArchivalURI(),
+		IsolationGroups:                        ToIsolationGroupConfig(t.Isolationgroups),
 	}
 }
 

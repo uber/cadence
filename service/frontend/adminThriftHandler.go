@@ -207,3 +207,23 @@ func (t AdminThriftHandler) ListDynamicConfig(ctx context.Context, request *admi
 	response, err := t.h.ListDynamicConfig(ctx, thrift.ToListDynamicConfigRequest(request))
 	return thrift.FromListDynamicConfigResponse(response), thrift.FromError(err)
 }
+
+func (t AdminThriftHandler) GetGlobalIsolationGroups(ctx context.Context, request *admin.GetGlobalIsolationGroupsRequest) (*admin.GetGlobalIsolationGroupsResponse, error) {
+	res, err := t.h.GetGlobalIsolationGroups(ctx, thrift.ToGetGlobalIsolationGroupsRequest(request))
+	return thrift.FromGetGlobalIsolationGroupsResponse(res), thrift.FromError(err)
+}
+
+func (t AdminThriftHandler) UpdateGlobalIsolationGroups(ctx context.Context, request *admin.UpdateGlobalIsolationGroupsRequest) (*admin.UpdateGlobalIsolationGroupsResponse, error) {
+	res, err := t.h.UpdateGlobalIsolationGroups(ctx, thrift.ToUpdateGlobalIsolationGroupsRequest(request))
+	return thrift.FromUpdateGlobalIsolationGroupsResponse(res), thrift.FromError(err)
+}
+
+func (t AdminThriftHandler) GetDomainIsolationGroups(ctx context.Context, request *admin.GetDomainIsolationGroupsRequest) (*admin.GetDomainIsolationGroupsResponse, error) {
+	res, err := t.h.GetDomainIsolationGroups(ctx, thrift.ToGetDomainIsolationGroupsRequest(request))
+	return thrift.FromGetDomainIsolationGroupsResponse(res), thrift.FromError(err)
+}
+
+func (t AdminThriftHandler) UpdateDomainIsolationGroups(ctx context.Context, request *admin.UpdateDomainIsolationGroupsRequest) (*admin.UpdateDomainIsolationGroupsResponse, error) {
+	res, err := t.h.UpdateDomainIsolationGroups(ctx, thrift.ToUpdateDomainIsolationGroupsRequest(request))
+	return thrift.FromUpdateDomainIsolationGroupsResponse(res), thrift.FromError(err)
+}

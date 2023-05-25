@@ -1,0 +1,8 @@
+{
+  "CurrVersion": "0.36",
+  "MinCompatibleVersion": "0.36",
+  "Description": "Adding the domain configuration for isolation-groups",
+  "SchemaUpdateCqlFiles": [
+    "isolation_groups.cql"
+  ]
+}

@@ -84,6 +84,8 @@ type (
 		FailoverEndTimestamp        *time.Time // TODO: There is logic checking if it's nil, should revisit this
 		PreviousFailoverVersion     int64
 		LastUpdatedTimestamp        time.Time
+		IsolationGroups             []byte
+		IsolationGroupsEncoding     string
 	}
 
 	// HistoryBranchRange blob in a serialization agnostic format
@@ -162,6 +164,7 @@ type (
 		VersionHistories                   []byte
 		VersionHistoriesEncoding           string
 		FirstExecutionRunID                UUID
+		PartitionConfig                    map[string]string
 	}
 
 	// ActivityInfo blob in a serialization agnostic format
@@ -249,6 +252,7 @@ type (
 		ScheduleID       int64
 		ExpiryTimestamp  time.Time
 		CreatedTimestamp time.Time
+		PartitionConfig  map[string]string
 	}
 
 	// TaskListInfo blob in a serialization agnostic format
