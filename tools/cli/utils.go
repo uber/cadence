@@ -592,6 +592,10 @@ func intSliceToSet(s []int) map[int]struct{} {
 	return ret
 }
 
+func printMessage(msg string) {
+	fmt.Printf("%s %s\n", "cadence:", msg)
+}
+
 func printError(msg string, err error) {
 	if err != nil {
 		fmt.Printf("%s %s\n%s %+v\n", colorRed("Error:"), msg, colorMagenta("Error Details:"), err)
