@@ -30,12 +30,10 @@ import (
 
 	"github.com/startreedata/pinot-client-go/pinot"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type PinotClient struct {
@@ -119,7 +117,7 @@ type VisibilityRecord struct {
 	StartTime     int64
 	ExecutionTime int64
 	CloseTime     int64
-	CloseStatus   workflow.WorkflowExecutionCloseStatus
+	CloseStatus   int
 	HistoryLength int64
 	Encoding      string
 	TaskList      string
@@ -182,11 +180,38 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 	}
 	if source.CloseTime != 0 {
 		record.CloseTime = time.UnixMilli(source.CloseTime)
-		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
+		record.Status = toWorkflowExecutionCloseStatus(source.CloseStatus)
 		record.HistoryLength = source.HistoryLength
 	}
 
 	return record
+}
+
+func toWorkflowExecutionCloseStatus(status int) *types.WorkflowExecutionCloseStatus {
+	if status < 0 {
+		return nil
+	}
+	switch status {
+	case 0:
+		v := types.WorkflowExecutionCloseStatusCompleted
+		return &v
+	case 1:
+		v := types.WorkflowExecutionCloseStatusFailed
+		return &v
+	case 2:
+		v := types.WorkflowExecutionCloseStatusCanceled
+		return &v
+	case 3:
+		v := types.WorkflowExecutionCloseStatusTerminated
+		return &v
+	case 4:
+		v := types.WorkflowExecutionCloseStatusContinuedAsNew
+		return &v
+	case 5:
+		v := types.WorkflowExecutionCloseStatusTimedOut
+		return &v
+	}
+	panic("unexpected enum value")
 }
 
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
