@@ -187,11 +187,6 @@ func availableIG(
 		_, hasAvailablePollers := availablePollers[isolationGroup]
 		globalCfg, hasGlobalConfig := global[isolationGroup]
 		domainCfg, hasDomainConfig := domain[isolationGroup]
-		if !hasAvailablePollers {
-			// we don't attempt to dispatch tasks to isolation groups where there are no pollers
-			scope.Tagged(metrics.PollerIsolationGroupTag(isolationGroup)).IncCounter(metrics.IsolationGroupStatePollerUnavailable)
-			continue
-		}
 		if hasGlobalConfig {
 			if globalCfg.State == types.IsolationGroupStateDrained {
 				scope.Tagged(metrics.PollerIsolationGroupTag(isolationGroup)).IncCounter(metrics.IsolationGroupStateDrained)
@@ -203,6 +198,11 @@ func availableIG(
 				scope.Tagged(metrics.PollerIsolationGroupTag(isolationGroup)).IncCounter(metrics.IsolationGroupStateDrained)
 				continue
 			}
+		}
+		if !hasAvailablePollers {
+			// we don't attempt to dispatch tasks to isolation groups where there are no pollers
+			scope.Tagged(metrics.PollerIsolationGroupTag(isolationGroup)).IncCounter(metrics.IsolationGroupStatePollerUnavailable)
+			continue
 		}
 		scope.Tagged(metrics.PollerIsolationGroupTag(isolationGroup)).IncCounter(metrics.IsolationGroupStateHealthy)
 		out[isolationGroup] = types.IsolationGroupPartition{
