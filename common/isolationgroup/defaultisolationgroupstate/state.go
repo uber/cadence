@@ -136,7 +136,7 @@ func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, d
 // will return nil, nil when it is not enabled
 func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain string) (*isolationGroups, error) {
 	if !z.config.IsolationGroupEnabled(domain) {
-		return nil, nil
+		return &isolationGroups{}, nil
 	}
 
 	domainData, err := z.domainCache.GetDomain(domain)
