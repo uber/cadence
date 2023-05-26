@@ -743,6 +743,8 @@ const (
 	DomainReplicationQueueScope
 	// ClusterMetadataScope is used for the cluster metadata
 	ClusterMetadataScope
+	// GetAvailableIsolationGroupsScope is the metric for the default partitioner's getIsolationGroups operation
+	GetAvailableIsolationGroupsScope
 
 	NumCommonScopes
 )
@@ -1565,6 +1567,8 @@ var ScopeDefs = map[ServiceIdx]map[int]scopeDefinition{
 		BlobstoreClientDeleteScope:          {operation: "BlobstoreClientDelete", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 		BlobstoreClientDirectoryExistsScope: {operation: "BlobstoreClientDirectoryExists", tags: map[string]string{CadenceRoleTagName: BlobstoreRoleTagValue}},
 
+		GetAvailableIsolationGroupsScope: {operation: "GetAvailableIsolationGroups"},
+
 		DomainFailoverScope:         {operation: "DomainFailover"},
 		DomainReplicationQueueScope: {operation: "DomainReplicationQueue"},
 		ClusterMetadataScope:        {operation: "ClusterMetadata"},
@@ -2015,6 +2019,10 @@ const (
 
 	ParentClosePolicyProcessorSuccess
 	ParentClosePolicyProcessorFailures
+
+	IsolationGroupStatePollerUnavailable
+	IsolationGroupStateDrained
+	IsolationGroupStateHealthy
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2628,6 +2636,10 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		DomainReplicationQueueSizeErrorCount: {metricName: "domain_replication_queue_failed", metricType: Counter},
 		ParentClosePolicyProcessorSuccess:    {metricName: "parent_close_policy_processor_requests", metricType: Counter},
 		ParentClosePolicyProcessorFailures:   {metricName: "parent_close_policy_processor_errors", metricType: Counter},
+
+		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
+		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
+		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},

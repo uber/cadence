@@ -269,7 +269,7 @@ func New(
 	if err != nil {
 		return nil, err
 	}
-	partitioner := ensurePartitionerOrDefault(params, dynamicCollection, isolationGroupState)
+	partitioner := ensurePartitionerOrDefault(params, isolationGroupState)
 
 	impl = &Impl{
 		status: common.DaemonStatusInitialized,
@@ -654,11 +654,12 @@ func ensureIsolationGroupStateHandlerOrDefault(
 		dc,
 		domainCache,
 		isolationGroupStore,
+		params.MetricsClient,
 	)
 }
 
 // Use the provided partitioner or the default one
-func ensurePartitionerOrDefault(params *Params, dc *dynamicconfig.Collection, state isolationgroup.State) partition.Partitioner {
+func ensurePartitionerOrDefault(params *Params, state isolationgroup.State) partition.Partitioner {
 	if params.Partitioner != nil {
 		return params.Partitioner
 	}
