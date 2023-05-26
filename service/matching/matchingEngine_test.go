@@ -124,7 +124,7 @@ func (s *matchingEngineSuite) SetupTest() {
 	dcClient.UpdateValue(dynamicconfig.EnableTasklistIsolation, true)
 	dcClient.UpdateValue(dynamicconfig.AllIsolationGroups, []interface{}{"datacenterA", "datacenterB"})
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
-	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore)
+	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore, metrics.NewNoopMetricsClient())
 	s.partitioner = partition.NewDefaultPartitioner(s.logger, isolationGroupState)
 	s.handlerContext = newHandlerContext(
 		context.Background(),

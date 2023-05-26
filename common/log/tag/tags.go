@@ -23,6 +23,8 @@ package tag
 import (
 	"fmt"
 	"time"
+
+	"github.com/uber/cadence/common/types"
 )
 
 // All logging tags are defined in this file.
@@ -926,4 +928,12 @@ func PartitionConfig(p map[string]string) Tag {
 
 func PollerGroups(pollers []string) Tag {
 	return newObjectTag("poller-isolation-groups", pollers)
+}
+
+func FallbackIsolationGroup(group string) Tag {
+	return newStringTag("fallback-isolation-group", group)
+}
+
+func PollerGroupsConfiguration(pollers types.IsolationGroupConfiguration) Tag {
+	return newObjectTag("poller-isolation-groups", pollers.ToPartitionList())
 }
