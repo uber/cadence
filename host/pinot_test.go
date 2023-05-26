@@ -237,6 +237,10 @@ Retry:
 	s.Equal(runID, openExecution.GetExecution().GetRunID())
 	s.True(openExecution.GetExecutionTime() >= openExecution.GetStartTime())
 	if openExecution.SearchAttributes != nil && len(openExecution.SearchAttributes.GetIndexedFields()) > 0 {
+
+		//marshalRes, _ := json.Marshal(openExecution.SearchAttributes)
+		//panic(fmt.Sprintf("ABCDDDDBUG: %s", marshalRes))
+
 		searchValBytes := openExecution.SearchAttributes.GetIndexedFields()[s.testSearchAttributeKey]
 		var searchVal string
 		json.Unmarshal(searchValBytes, &searchVal)
@@ -787,6 +791,15 @@ func (s *PinotIntegrationSuite) TestScanWorkflow() {
 		Identity:                            identity,
 	}
 
+	// TODO: because right we return everything in the Attr map, we have to add this attribute in order to pass the test
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	searchAttr := &types.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+	request.SearchAttributes = searchAttr
+
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
@@ -834,6 +847,15 @@ func (s *PinotIntegrationSuite) TestScanWorkflow_PageToken() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 	}
+
+	// TODO: because right we return everything in the Attr map, we have to add this attribute in order to pass the test
+	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
+	searchAttr := &types.SearchAttributes{
+		IndexedFields: map[string][]byte{
+			s.testSearchAttributeKey: attrValBytes,
+		},
+	}
+	request.SearchAttributes = searchAttr
 
 	numOfWorkflows := 4
 	pageSize := 3
