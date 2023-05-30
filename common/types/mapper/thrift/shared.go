@@ -3312,7 +3312,7 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *shared.PendingActivi
 		LastFailureReason:      t.LastFailureReason,
 		LastWorkerIdentity:     &t.LastWorkerIdentity,
 		LastFailureDetails:     t.LastFailureDetails,
-		//StartedWorkerIdentity:  &t.StartedWorkerIdentity,
+		StartedWorkerIdentity:  &t.StartedWorkerIdentity,
 	}
 }
 
@@ -3335,7 +3335,7 @@ func ToPendingActivityInfo(t *shared.PendingActivityInfo) *types.PendingActivity
 		LastFailureReason:      t.LastFailureReason,
 		LastWorkerIdentity:     t.GetLastWorkerIdentity(),
 		LastFailureDetails:     t.LastFailureDetails,
-		//StartedWorkerIdentity:  t.GetStartedWorkerIdentity(),
+		StartedWorkerIdentity:  t.GetStartedWorkerIdentity(),
 	}
 }
 
