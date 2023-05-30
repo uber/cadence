@@ -228,6 +228,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 
 	for i := 0; i < numOfActualHits; i++ {
 		workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(actualHits[i], columnNames)
+
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
 			response.Executions = append(response.Executions, workflowExecutionInfo)
 		}
@@ -250,7 +251,8 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		response.NextPageToken = make([]byte, len(nextPageToken))
 		copy(response.NextPageToken, nextPageToken)
 	}
-
+	//m, _ := json.Marshal(response.Executions)
+	//panic(fmt.Sprintf("ABCDDDBUG: %s", m))
 	return response, nil
 }
 

@@ -65,6 +65,9 @@ const (
 	ExecutionTime        = "ExecutionTime"
 	Encoding             = "Encoding"
 	LikeStatement        = "%s LIKE '%%%s%%'\n"
+
+	// used to be micro second
+	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 )
 
 type (
@@ -250,7 +253,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
 
@@ -287,7 +290,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Context, request *p.InternalListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	query := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, false)
@@ -323,7 +326,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	query := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, false)
@@ -923,13 +926,18 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	pageSize := request.PageSize
 
 	query := NewPinotQuery(tableName)
-
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+
+	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+
 	if isClosed {
+		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, "0")
 	} else {
+		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, "0")
+		query.filters.addEqual(CloseTime, "-1")
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -949,11 +957,16 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(WorkflowType, request.WorkflowTypeName)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+
 	if isClosed {
+		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, "0")
 	} else {
+		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, "0")
+		query.filters.addEqual(CloseTime, "-1")
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -970,11 +983,16 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(WorkflowID, request.WorkflowID)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+
 	if isClosed {
+		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, "0")
 	} else {
+		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, "0")
+		query.filters.addEqual(CloseTime, "-1")
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)

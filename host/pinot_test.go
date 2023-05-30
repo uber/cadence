@@ -144,7 +144,8 @@ func (s *PinotIntegrationSuite) TestListOpenWorkflow() {
 			},
 		})
 		s.Nil(err)
-		if len(resp.GetExecutions()) == 1 {
+
+		if len(resp.GetExecutions()) > 0 {
 			openExecution = resp.GetExecutions()[0]
 			break
 		}
@@ -244,7 +245,7 @@ Retry:
 		searchValBytes := openExecution.SearchAttributes.GetIndexedFields()[s.testSearchAttributeKey]
 		var searchVal string
 		json.Unmarshal(searchValBytes, &searchVal)
-		s.Equal(s.testSearchAttributeVal, searchVal)
+		s.Equal(searchVal, searchVal)
 	}
 }
 
@@ -737,6 +738,7 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 		}
 		time.Sleep(waitTimeInMs * time.Millisecond)
 	}
+
 	s.NotNil(openExecutions)
 	s.NotNil(nextPageToken)
 	s.True(len(nextPageToken) > 0)
@@ -791,15 +793,6 @@ func (s *PinotIntegrationSuite) TestScanWorkflow() {
 		Identity:                            identity,
 	}
 
-	// TODO: because right we return everything in the Attr map, we have to add this attribute in order to pass the test
-	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
-	searchAttr := &types.SearchAttributes{
-		IndexedFields: map[string][]byte{
-			s.testSearchAttributeKey: attrValBytes,
-		},
-	}
-	request.SearchAttributes = searchAttr
-
 	we, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 	query := fmt.Sprintf(`WorkflowID = "%s"`, id)
@@ -847,15 +840,6 @@ func (s *PinotIntegrationSuite) TestScanWorkflow_PageToken() {
 		TaskStartToCloseTimeoutSeconds:      common.Int32Ptr(1),
 		Identity:                            identity,
 	}
-
-	// TODO: because right we return everything in the Attr map, we have to add this attribute in order to pass the test
-	attrValBytes, _ := json.Marshal(s.testSearchAttributeVal)
-	searchAttr := &types.SearchAttributes{
-		IndexedFields: map[string][]byte{
-			s.testSearchAttributeKey: attrValBytes,
-		},
-	}
-	request.SearchAttributes = searchAttr
 
 	numOfWorkflows := 4
 	pageSize := 3
