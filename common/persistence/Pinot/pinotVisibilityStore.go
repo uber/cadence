@@ -739,6 +739,11 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
 	}
 
+	// MUST HAVE! because pagination wouldn't work without order by clause!
+	if query.sorters == "" {
+		query.addPinotSorter("CloseTime", "DESC")
+	}
+
 	query.addOffsetAndLimits(token.From, request.PageSize)
 	return query.String()
 }

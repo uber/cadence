@@ -756,6 +756,10 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 			resp, err = s.engine.ListWorkflowExecutions(createContext(), listRequest)
 		}
 		s.Nil(err)
+
+		//ans, _ := json.Marshal(resp.GetExecutions())
+		//panic(fmt.Sprintf("ABUCSDK: %s", ans))
+
 		if len(resp.GetExecutions()) == numOfWorkflows-pageSize {
 			inIf = true
 			openExecutions = resp.GetExecutions()

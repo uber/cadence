@@ -241,9 +241,9 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// TODO: need to confirm if pinot has similar settings
 		// don't need to retrieve deeper pages in pinot, and no functions like ES SearchAfter
-		if resp.NumDocsScanned <= int64(maxResultWindow-pageSize) { // use pinot Search From+Size
-			nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
-		}
+
+		nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
+
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +252,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		copy(response.NextPageToken, nextPageToken)
 	}
 	//m, _ := json.Marshal(response.Executions)
-	//panic(fmt.Sprintf("ABCDDDBUG: %s", m))
+	//panic(fmt.Sprintf("ABCDDDBUG: %s", response.NextPageToken))
 	return response, nil
 }
 
