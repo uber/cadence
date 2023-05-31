@@ -567,7 +567,7 @@ func (c *taskListManagerImpl) isIsolationMatcherEnabled() bool {
 }
 
 func (c *taskListManagerImpl) shouldReload() bool {
-	return c.config.EnableTasklistIsolation() != c.enableIsolation && c.taskListKind != types.TaskListKindSticky
+	return c.config.EnableTasklistIsolation() != c.enableIsolation
 }
 
 func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) (string, error) {
@@ -605,7 +605,7 @@ func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, task
 		// to let the task to be re-enqueued to the non-sticky tasklist. If there is poller, just return an empty isolation group, because
 		// there is at most one isolation group for sticky tasklist and we could just use empty isolation group for matching.
 		if c.taskListKind == types.TaskListKindSticky {
-			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Now().Add(-time.Minute))
+			pollerIsolationGroups = c.pollerHistory.getPollerIsolationGroups(time.Time{})
 			for _, pollerGroup := range pollerIsolationGroups {
 				if group == pollerGroup {
 					return "", nil
