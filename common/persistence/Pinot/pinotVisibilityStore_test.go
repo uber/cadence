@@ -111,6 +111,7 @@ func TestGetListWorkflowExecutionQuery(t *testing.T) {
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CustomizedKeyword = 'keywordCustomized'
+Order BY CloseTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -152,6 +153,41 @@ LIMIT 0, 10
 `, testTableName),
 		},
 
+		"complete request with or query & customized attributes": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "CustomStringField = 'String' or CustomStringField = 'field' Order by CloseTime DESC, RunID DESC",
+			},
+			expectedOutput: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND (CustomStringField LIKE '%%String%%' or CustomStringField LIKE '%%field%%')
+Order by CloseTime DESC, RunID DESC
+LIMIT 0, 10
+`, testTableName),
+		},
+
+		"complete request with or query & all attributes": {
+			input: &p.ListWorkflowExecutionsByQueryRequest{
+				DomainUUID:    testDomainID,
+				Domain:        testDomain,
+				PageSize:      testPageSize,
+				NextPageToken: nil,
+				Query:         "(DocID = 'String' or CustomStringField = 'field' or CustomIntField = 10) and RunID='test-runid' Order by CloseTime DESC, RunID DESC",
+			},
+			expectedOutput: fmt.Sprintf(`SELECT *
+FROM %s
+WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
+AND (DocID = 'String' or CustomStringField LIKE '%%field%%' or CustomIntField = 10)
+AND RunID='test-runid'
+Order by CloseTime DESC, RunID DESC
+LIMIT 0, 10
+`, testTableName),
+		},
+
 		"complete request with customized query with not registered attribute": {
 			input: &p.ListWorkflowExecutionsByQueryRequest{
 				DomainUUID:    testDomainID,
@@ -165,6 +201,7 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CustomizedKeyword = 'keywordCustomized'
 AND CustomStringField LIKE '%%String field is for text%%'
+Order BY CloseTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -237,6 +274,7 @@ LIMIT 0, 10
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseStatus < 0
+Order BY CloseTime DESC
 LIMIT 0, 10
 `, testTableName),
 		},
@@ -297,7 +335,7 @@ func TestGetListWorkflowExecutionsQuery(t *testing.T) {
 	expectCloseResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY CloseTime DESC
 , RunID DESC
@@ -306,8 +344,9 @@ LIMIT 0, 10
 	expectOpenResult := fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
+AND CloseTime = '-1'
 Order BY CloseTime DESC
 , RunID DESC
 LIMIT 0, 10
@@ -339,7 +378,7 @@ func TestGetListWorkflowExecutionsByTypeQuery(t *testing.T) {
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowType = 'test-wf-type'
-AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY CloseTime DESC
 , RunID DESC
@@ -348,8 +387,9 @@ Order BY CloseTime DESC
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowType = 'test-wf-type'
-AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
+AND CloseTime = '-1'
 Order BY CloseTime DESC
 , RunID DESC
 `, testTableName)
@@ -380,7 +420,7 @@ func TestGetListWorkflowExecutionsByWorkflowIDQuery(t *testing.T) {
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowID = 'test-wid'
-AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY CloseTime DESC
 , RunID DESC
@@ -389,8 +429,9 @@ Order BY CloseTime DESC
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowID = 'test-wid'
-AND CloseTime BETWEEN 1547596872371 AND 2547596872371
+AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
+AND CloseTime = '-1'
 Order BY CloseTime DESC
 , RunID DESC
 `, testTableName)
@@ -500,8 +541,7 @@ func TestStringFormatting(t *testing.T) {
 	key := "CustomizedStringField"
 	val := "When query; select * from users_secret_table;"
 
-	assert.Equal(t, `CustomizedStringField LIKE '%When query; select * from users_secret_table;%'
-`, getPartialFormatString(key, val))
+	assert.Equal(t, `CustomizedStringField LIKE '%When query; select * from users_secret_table;%'`, getPartialFormatString(key, val))
 }
 
 func TestParseLastElement(t *testing.T) {

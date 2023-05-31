@@ -39,7 +39,7 @@
       "dataType": "BOOLEAN"
     },
     {
-      "name": "NumCluster",
+      "name": "NumClusters",
       "dataType": "INT"
     },
     {

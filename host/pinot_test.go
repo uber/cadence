@@ -303,10 +303,10 @@ func (s *PinotIntegrationSuite) TestListWorkflow_ExecutionTime() {
 	weCron, err := s.engine.StartWorkflowExecution(createContext(), request)
 	s.Nil(err)
 
-	query := fmt.Sprintf(`(WorkflowID = "%s" or WorkflowID = "%s") and ExecutionTime < %v`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
+	query := fmt.Sprintf(`(WorkflowID = '%s' or WorkflowID = '%s') and ExecutionTime < %v and ExecutionTime > 0`, id, cronID, time.Now().UnixNano()+int64(time.Minute))
 	s.testHelperForReadOnce(weCron.GetRunID(), query, false, false)
 
-	query = fmt.Sprintf(`WorkflowID = "%s"`, id)
+	query = fmt.Sprintf(`WorkflowID = '%s'`, id)
 	s.testHelperForReadOnce(we.GetRunID(), query, false, false)
 }
 
@@ -655,15 +655,15 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrderBy() {
 				v2, _ = currVal.(json.Number).Int64()
 				s.True(v1.(int64) >= v2.(int64))
 			case definition.CustomDoubleField:
-				v1, _ = prevVal.(json.Number).Float64()
-				v2, _ = currVal.(json.Number).Float64()
-				s.True(v1.(float64) >= v2.(float64))
+				v1, _ := strconv.ParseFloat(fmt.Sprint(prevVal), 64)
+				v2, _ := strconv.ParseFloat(fmt.Sprint(currVal), 64)
+				s.True(v1 >= v2)
 			case definition.CustomKeywordField:
 				s.True(prevVal.(string) >= currVal.(string))
 			case definition.CustomDatetimeField:
-				v1, _ = time.Parse(time.RFC3339, prevVal.(string))
-				v2, _ = time.Parse(time.RFC3339, currVal.(string))
-				s.True(v1.(time.Time).After(v2.(time.Time)))
+				v1, _ = strconv.ParseInt(fmt.Sprint(prevVal), 10, 64)
+				v2, _ = strconv.ParseInt(fmt.Sprint(currVal), 10, 64)
+				s.True(v1.(int64) >= v2.(int64))
 			}
 			prevVal = currVal
 		}

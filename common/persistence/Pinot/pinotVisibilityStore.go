@@ -64,7 +64,7 @@ const (
 	UpdateTime           = "UpdateTime"
 	ExecutionTime        = "ExecutionTime"
 	Encoding             = "Encoding"
-	LikeStatement        = "%s LIKE '%%%s%%'\n"
+	LikeStatement        = "%s LIKE '%%%s%%'"
 
 	// used to be micro second
 	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
@@ -413,7 +413,6 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 	checkPageSize(request)
 
 	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
-
 	req := &pnt.SearchRequest{
 		Query:           query,
 		IsOpen:          true,
@@ -671,7 +670,7 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 
 func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
 	f.checkFirstFilter()
-	f.string += getPartialFormatString(key, val)
+	f.string += fmt.Sprintf("%s\n", getPartialFormatString(key, val))
 }
 
 func getPartialFormatString(key string, val string) string {
@@ -757,11 +756,8 @@ func filterPrefix(query string) string {
 }
 
 func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
-	// TODO: switch to v.logger or something
-	queryQueryLogger := log.NewNoop()
-
 	// checks every case of 'and'
-	reg := regexp.MustCompile("(?i)(and)")
+	reg := regexp.MustCompile("(?i)( and )")
 	queryList := reg.Split(requestQuery, -1)
 	var orderBy string
 
@@ -775,31 +771,97 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 			continue
 		}
 
-		key, val, op := splitElement(element)
-
-		// case 2: when key is a system key
-		if ok, _ := isSystemKey(key); ok {
-			query.filters.addQuery(element)
-			continue
-		}
-
-		// case 3: when key is valid within validMap
-		if valType, ok := validMap[key]; ok {
-			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
-
-			if indexValType == types.IndexedValueTypeString {
-				val = removeQuote(val)
-				query.filters.addPartialMatch(key, val)
-			} else {
-				query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
-			}
+		if strings.Contains(strings.ToLower(element), " or ") {
+			query = dealWithOrClause(element, query, validMap)
 		} else {
-			queryQueryLogger.Error("Unregistered field!!")
+			query = dealWithoutOrClause(element, query, validMap)
 		}
 	}
 
 	if orderBy != "" {
 		query.concatSorter(orderBy)
+	}
+
+	return query
+}
+
+func convertRawToPinotQuery(element string, validMap map[string]interface{}) string {
+	key, val, op := splitElement(element)
+
+	// case 1: when key is a system key
+	if ok, _ := isSystemKey(key); ok {
+		return element
+	}
+
+	// case 2: when key is valid within validMap
+	if valType, ok := validMap[key]; ok {
+		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
+
+		if indexValType == types.IndexedValueTypeString {
+			val = removeQuote(val)
+			return getPartialFormatString(key, val)
+		} else {
+			return fmt.Sprintf("%s %s %s", key, op, val)
+		}
+	}
+
+	return ""
+}
+
+func trimElement(element string) string {
+	if len(element) < 2 {
+		return ""
+	}
+
+	if element[0] == '(' && element[len(element)-1] == ')' {
+		element = element[1 : len(element)-1]
+	}
+
+	return element
+}
+
+func dealWithOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
+	element = trimElement(element)
+
+	elementArray := strings.Split(element, " or ")
+
+	orQuery := "("
+	for index, value := range elementArray {
+		orQuery += convertRawToPinotQuery(value, validMap)
+		if index != len(elementArray)-1 {
+			orQuery += " or "
+		}
+	}
+	orQuery += ")"
+
+	query.filters.addQuery(orQuery)
+	return query
+}
+
+func dealWithoutOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
+	// TODO: switch to v.logger or something
+	queryQueryLogger := log.NewNoop()
+
+	key, val, op := splitElement(element)
+
+	// case 1: when key is a system key
+	if ok, _ := isSystemKey(key); ok {
+		query.filters.addQuery(element)
+		return query
+	}
+
+	// case 2: when key is valid within validMap
+	if valType, ok := validMap[key]; ok {
+		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
+
+		if indexValType == types.IndexedValueTypeString {
+			val = removeQuote(val)
+			query.filters.addPartialMatch(key, val)
+		} else {
+			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
+		}
+	} else {
+		queryQueryLogger.Error("Unregistered field!!")
 	}
 
 	return query
