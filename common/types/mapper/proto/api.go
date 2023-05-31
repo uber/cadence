@@ -1070,6 +1070,7 @@ func FromDescribeDomainResponseDomain(t *types.DescribeDomainResponse) *apiv1.Do
 		domain.Data = info.Data
 	}
 	if config := t.Configuration; config != nil {
+		domain.IsolationGroups = FromIsolationGroupConfig(config.IsolationGroups)
 		domain.WorkflowExecutionRetentionPeriod = daysToDuration(&config.WorkflowExecutionRetentionPeriodInDays)
 		domain.BadBinaries = FromBadBinaries(config.BadBinaries)
 		domain.HistoryArchivalStatus = FromArchivalStatus(config.HistoryArchivalStatus)
@@ -1117,6 +1118,7 @@ func ToDescribeDomainResponseDomain(t *apiv1.Domain) *types.DescribeDomainRespon
 			HistoryArchivalURI:                     t.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.VisibilityArchivalUri,
+			IsolationGroups:                        ToIsolationGroupConfig(t.IsolationGroups),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.ActiveClusterName,
@@ -4221,6 +4223,7 @@ func FromUpdateDomainResponse(t *types.UpdateDomainResponse) *apiv1.UpdateDomain
 		domain.Data = info.Data
 	}
 	if config := t.Configuration; config != nil {
+		domain.IsolationGroups = FromIsolationGroupConfig(config.IsolationGroups)
 		domain.WorkflowExecutionRetentionPeriod = daysToDuration(&config.WorkflowExecutionRetentionPeriodInDays)
 		domain.BadBinaries = FromBadBinaries(config.BadBinaries)
 		domain.HistoryArchivalStatus = FromArchivalStatus(config.HistoryArchivalStatus)
@@ -4258,6 +4261,7 @@ func ToUpdateDomainResponse(t *apiv1.UpdateDomainResponse) *types.UpdateDomainRe
 			HistoryArchivalURI:                     t.Domain.HistoryArchivalUri,
 			VisibilityArchivalStatus:               ToArchivalStatus(t.Domain.VisibilityArchivalStatus),
 			VisibilityArchivalURI:                  t.Domain.VisibilityArchivalUri,
+			IsolationGroups:                        ToIsolationGroupConfig(t.GetDomain().GetIsolationGroups()),
 		},
 		ReplicationConfiguration: &types.DomainReplicationConfiguration{
 			ActiveClusterName: t.Domain.ActiveClusterName,

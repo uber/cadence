@@ -222,6 +222,7 @@ type ConfigType int
 
 const (
 	DynamicConfig ConfigType = iota
+	GlobalIsolationGroupConfig
 )
 
 type (
@@ -1372,6 +1373,7 @@ type (
 		VisibilityArchivalStatus types.ArchivalStatus
 		VisibilityArchivalURI    string
 		BadBinaries              types.BadBinaries
+		IsolationGroups          types.IsolationGroupConfiguration
 	}
 
 	// DomainReplicationConfig describes the cross DC domain replication configuration
@@ -1868,8 +1870,8 @@ type (
 
 	ConfigStoreManager interface {
 		Closeable
-		FetchDynamicConfig(ctx context.Context) (*FetchDynamicConfigResponse, error)
-		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest) error
+		FetchDynamicConfig(ctx context.Context, cfgType ConfigType) (*FetchDynamicConfigResponse, error)
+		UpdateDynamicConfig(ctx context.Context, request *UpdateDynamicConfigRequest, cfgType ConfigType) error
 		//can add functions for config types other than dynamic config
 	}
 )

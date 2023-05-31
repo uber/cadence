@@ -269,6 +269,7 @@ func newWorkflowCommands() []cli.Command {
 			Name: "reset-batch",
 			Usage: "reset workflow in batch by resetType: " + strings.Join(mapKeysToArray(resetTypesMap), ",") +
 				"To get base workflowIDs/runIDs to reset, source is from input file or visibility query.",
+			ArgsUsage: "\n\t To reset workflows specify --input_file <csv_file> of workflow_id and run_id and run: cadence wf reset-batch --input_file <csv_file>",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  FlagInputFileWithAlias,
@@ -359,6 +360,10 @@ func newWorkflowCommands() []cli.Command {
 			Name:        "batch",
 			Usage:       "batch operation on a list of workflows from query.",
 			Subcommands: newBatchCommands(),
+			ArgsUsage: "\n\t To make a batch operation use wf batch start command and specify --batch_type to terminate/signal/cancel workflows.\n" +
+				"\t ex: to batch terminate workflows run: cadence batch start --batch_type terminate --query <targeted_workflows_query>\n" +
+				"\t cadence wf batch terminate - is used to terminate a batch operation not workflows.\n" +
+				"\t To inspect the progress run: cadence wf batch desc --job_id <your_job_id>",
 		},
 	}
 }

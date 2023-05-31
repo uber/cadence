@@ -28,6 +28,7 @@ import (
 	"testing/quick"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log/loggerimpl"
@@ -822,7 +823,8 @@ func TestServerResolution(t *testing.T) {
 			nextFailoverVersion = fo
 		}
 		// do a round-trip
-		clusterNameResolved := impl.ClusterNameForFailoverVersion(nextFailoverVersion)
+		clusterNameResolved, err := impl.ClusterNameForFailoverVersion(nextFailoverVersion)
+		require.NoError(t, err)
 		return clusterName1 == clusterNameResolved
 	}, &quick.Config{})
 	assert.NoError(t, err)
@@ -937,7 +939,9 @@ func TestFailoverVersionResolution(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			assert.Equal(t, td.expectedOut, sut.ClusterNameForFailoverVersion(td.in))
+			out, err := sut.ClusterNameForFailoverVersion(td.in)
+			assert.NoError(t, err)
+			assert.Equal(t, td.expectedOut, out)
 		})
 	}
 }

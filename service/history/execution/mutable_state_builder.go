@@ -1678,6 +1678,7 @@ func (e *mutableStateBuilder) addWorkflowExecutionStartedEventForContinueAsNew(
 		ContinuedFailureDetails:         attributes.FailureDetails,
 		ContinueAsNewInitiator:          attributes.Initiator,
 		FirstDecisionTaskBackoffSeconds: attributes.BackoffStartIntervalInSeconds,
+		PartitionConfig:                 previousExecutionInfo.PartitionConfig,
 	}
 
 	// if ContinueAsNew as Cron or decider, recalculate the expiration timestamp and set attempts to 0
@@ -1845,6 +1846,7 @@ func (e *mutableStateBuilder) ReplicateWorkflowExecutionStartedEvent(
 	if event.SearchAttributes != nil {
 		e.executionInfo.SearchAttributes = event.SearchAttributes.GetIndexedFields()
 	}
+	e.executionInfo.PartitionConfig = event.PartitionConfig
 
 	e.writeEventToCache(startEvent)
 
@@ -2233,6 +2235,7 @@ func (e *mutableStateBuilder) tryDispatchActivityTask(
 			WorkflowDomain:                  e.GetDomainEntry().GetInfo().Name,
 			ScheduledTimestampOfThisAttempt: common.Int64Ptr(ai.ScheduledTime.UnixNano()),
 		},
+		PartitionConfig: e.executionInfo.PartitionConfig,
 	})
 	if err == nil {
 		taggedScope.IncCounter(metrics.DecisionTypeScheduleActivityDispatchSucceedCounter)
@@ -4344,7 +4347,10 @@ func (e *mutableStateBuilder) eventsToReplicationTask(
 	lastEvent := events[len(events)-1]
 	version := firstEvent.Version
 
-	sourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(version)
+	sourceCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(version)
+	if err != nil {
+		return nil, err
+	}
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	if currentCluster != sourceCluster {
@@ -4505,8 +4511,14 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 		)}
 	}
 
-	lastWriteSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
-	currentVersionCluster := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
+	lastWriteSourceCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(lastWriteVersion)
+	if err != nil {
+		return false, err
+	}
+	currentVersionCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(currentVersion)
+	if err != nil {
+		return false, err
+	}
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	// there are 4 cases for version changes (based on version from domain cache)
@@ -4521,7 +4533,10 @@ func (e *mutableStateBuilder) startTransactionHandleDecisionFailover(
 	// is missing and the missing history replicate back from remote cluster via resending approach => nothing to do
 
 	// handle case 5
-	incomingTaskSourceCluster := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
+	incomingTaskSourceCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(incomingTaskVersion)
+	if err != nil {
+		return false, err
+	}
 	if incomingTaskVersion != common.EmptyVersion &&
 		currentVersionCluster != currentCluster &&
 		incomingTaskSourceCluster == currentCluster {
@@ -4585,7 +4600,10 @@ func (e *mutableStateBuilder) closeTransactionWithPolicyCheck(
 		return nil
 	}
 
-	activeCluster := e.clusterMetadata.ClusterNameForFailoverVersion(e.GetCurrentVersion())
+	activeCluster, err := e.clusterMetadata.ClusterNameForFailoverVersion(e.GetCurrentVersion())
+	if err != nil {
+		return err
+	}
 	currentCluster := e.clusterMetadata.GetCurrentClusterName()
 
 	if activeCluster != currentCluster {

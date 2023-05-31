@@ -51,6 +51,8 @@ services:
       - cadence
   grafana:
     image: grafana/grafana
+    volumes:
+      - ./grafana:/etc/grafana
     user: "1000"
     depends_on:
       - prometheus

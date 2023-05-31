@@ -1296,3 +1296,92 @@ func newAdminConfigStoreCommands() []cli.Command {
 		},
 	}
 }
+
+func newAdminIsolationGroupCommands() []cli.Command {
+	return []cli.Command{
+		{
+			Name:  "get-global",
+			Usage: "gets the global isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FlagFormat,
+					Usage: `output format`,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetGlobalIsolationGroups(c)
+			},
+		},
+		{
+			Name:  "update-global",
+			Usage: "sets the global isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagIsolationGroupJSONConfigurations,
+					Usage:    `the configurations to upsert: eg: [{"Name": "zone-1": "State": 2}]. To remove groups, specify an empty configuration`,
+					Required: false,
+				},
+				cli.StringSliceFlag{
+					Name:     FlagIsolationGroupSetDrains,
+					Usage:    "Use to upsert the configuration for all drains. Note that this is an upsert operation and will overwrite all existing configuration",
+					Required: false,
+				},
+				cli.BoolFlag{
+					Name:     FlagIsolationGroupsRemoveAllDrains,
+					Usage:    "Removes all drains",
+					Required: false,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateGlobalIsolationGroups(c)
+			},
+		},
+		{
+			Name:  "get-domain",
+			Usage: "gets the domain isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagDomain,
+					Usage:    `The domain to operate on`,
+					Required: true,
+				},
+				cli.StringFlag{
+					Name:  FlagFormat,
+					Usage: `output format`,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminGetDomainIsolationGroups(c)
+			},
+		},
+		{
+			Name:  "update-domain",
+			Usage: "sets the domain isolation groups",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     FlagDomain,
+					Usage:    `The domain to operate on`,
+					Required: true,
+				},
+				cli.StringFlag{
+					Name:     FlagIsolationGroupJSONConfigurations,
+					Usage:    `the configurations to upsert: eg: [{"Name": "zone-1": "State": 2}]. To remove groups, specify an empty configuration`,
+					Required: false,
+				},
+				cli.StringSliceFlag{
+					Name:     FlagIsolationGroupSetDrains,
+					Usage:    "Use to upsert the configuration for all drains. Note that this is an upsert operation and will overwrite all existing configuration",
+					Required: false,
+				},
+				cli.BoolFlag{
+					Name:     FlagIsolationGroupsRemoveAllDrains,
+					Usage:    "Removes all drains",
+					Required: false,
+				},
+			},
+			Action: func(c *cli.Context) {
+				AdminUpdateDomainIsolationGroups(c)
+			},
+		},
+	}
+}

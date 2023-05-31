@@ -136,6 +136,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartC
 		task.request.StartChildExecutionAttributes.InitiatedEventAttributes,
 		task.request.StartChildExecutionAttributes.GetRequestID(),
 		s.mockShard.GetTimeSource().Now(),
+		task.request.StartChildExecutionAttributes.GetPartitionConfig(),
 	)
 	require.NoError(s.T(), err)
 	targetRunID := "random target runID"
@@ -162,6 +163,7 @@ func (s *crossClusterTargetTaskExecutorSuite) TestStartChildExecutionTask_StartC
 		task.request.StartChildExecutionAttributes.InitiatedEventAttributes,
 		task.request.StartChildExecutionAttributes.GetRequestID(),
 		s.mockShard.GetTimeSource().Now(),
+		task.request.StartChildExecutionAttributes.GetPartitionConfig(),
 	)
 	require.NoError(s.T(), err)
 	s.mockHistoryClient.EXPECT().StartWorkflowExecution(gomock.Any(), historyReq).

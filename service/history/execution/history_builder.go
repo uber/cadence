@@ -99,6 +99,7 @@ func (b *HistoryBuilder) AddWorkflowExecutionStartedEvent(startRequest *types.Hi
 		Memo:                                request.Memo,
 		SearchAttributes:                    request.SearchAttributes,
 		JitterStartSeconds:                  request.JitterStartSeconds,
+		PartitionConfig:                     startRequest.PartitionConfig,
 	}
 	if parentInfo := startRequest.ParentExecutionInfo; parentInfo != nil {
 		attributes.ParentWorkflowDomainID = &parentInfo.DomainUUID
