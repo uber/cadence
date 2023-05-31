@@ -83,6 +83,30 @@ func TestAvailableIsolationGroupsHandler(t *testing.T) {
 		expected                       types.IsolationGroupConfiguration
 		expectedErr                    error
 	}{
+		"normal case - feature is disabled": {
+			availablePollerIsolationGroups: []string{"zone-1", "zone-2"},
+			cfg: defaultConfig{
+				IsolationGroupEnabled: func(string) bool { return false },
+				AllIsolationGroups:    []string{"zone-1", "zone-2", "zone-3"},
+			},
+			dcAffordance: func(client *dynamicconfig.MockClient) {},
+			domainAffordance: func(mock *cache.MockDomainCache) {
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
+				mock.EXPECT().GetDomainName("domain-id").Return("domain", nil)
+			},
+			expected: types.IsolationGroupConfiguration{
+				"zone-1": {
+					Name:  "zone-1",
+					State: types.IsolationGroupStateHealthy,
+				},
+				"zone-2": {
+					Name:  "zone-2",
+					State: types.IsolationGroupStateHealthy,
+				},
+			},
+		},
+
 		"normal case - no drains present - no configuration specifying a drain - feature is enabled": {
 			availablePollerIsolationGroups: []string{"zone-1", "zone-2"},
 			cfg: defaultConfig{
@@ -364,6 +388,19 @@ func TestIsDrainedHandler(t *testing.T) {
 				mock.EXPECT().GetDomain("domain").Return(domainResponse, nil)
 			},
 			expected: true,
+		},
+		"normal case - feature is disabled": {
+			requestIsolationgroup: "zone-2", // no config specified for this
+			cfg: defaultConfig{
+				IsolationGroupEnabled: func(string) bool { return false },
+				AllIsolationGroups:    []string{"zone-1", "zone-2", "zone-3"},
+			},
+			dcAffordance: func(client *dynamicconfig.MockClient) {},
+			domainAffordance: func(mock *cache.MockDomainCache) {
+				domainResponse := cache.NewDomainCacheEntryForTest(&persistence.DomainInfo{ID: "domain-id", Name: "domain"}, &persistence.DomainConfig{}, true, nil, 0, nil)
+				mock.EXPECT().GetDomainByID("domain-id").Return(domainResponse, nil)
+			},
+			expected: false,
 		},
 	}
 
