@@ -447,7 +447,6 @@ type (
 			replicationTasks []*ReplicationTask,
 			timerTasks []*TimerTask,
 			shardCondition *ShardCondition,
-			ttlInSeconds int,
 		) error
 
 		// current_workflow table

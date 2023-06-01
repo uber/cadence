@@ -332,7 +332,7 @@ func (d *nosqlExecutionStore) UpdateWorkflowExecution(
 		ctx, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, nil, // no workflow to reset here
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
-		shardCondition, request.TTLInSeconds)
+		shardCondition)
 
 	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
@@ -467,12 +467,11 @@ func (d *nosqlExecutionStore) ConflictResolveWorkflowExecution(
 		ShardID: d.shardID,
 		RangeID: request.RangeID,
 	}
-	//TODO: Set TTL for ConflictResolveWorkflowExecution.
 	err = d.db.UpdateWorkflowExecutionWithTasks(
 		ctx, currentWorkflowWriteReq,
 		mutateExecution, insertExecution, resetExecution,
 		nosqlTransferTasks, nosqlCrossClusterTasks, nosqlReplicationTasks, nosqlTimerTasks,
-		shardCondition, 0)
+		shardCondition)
 	return d.processUpdateWorkflowResult(err, request.RangeID)
 }
 

@@ -967,8 +967,6 @@ type (
 		Encoding common.EncodingType // optional binary encoding type
 
 		DomainName string
-
-		TTLInSeconds int
 	}
 
 	// ConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for a single run
@@ -1026,8 +1024,9 @@ type (
 		ReplicationTasks  []Task
 		TimerTasks        []Task
 
-		Condition int64
-		Checksum  checksum.Checksum
+		Condition    int64
+		TTLInSeconds int64
+		Checksum     checksum.Checksum
 	}
 
 	// WorkflowSnapshot is used as generic workflow execution state snapshot

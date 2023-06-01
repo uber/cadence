@@ -4065,7 +4065,8 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// currently, the updates done inside workflowExecutionContext.resetWorkflowExecution doesn't
 	// impact the checksum calculation
 	checksum := e.generateChecksum()
-	//TODO: Add TTL calculation here.
+
+	TTLInSeconds, _ := e.calculateTTL()
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,
@@ -4090,8 +4091,9 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 		ReplicationTasks:  e.insertReplicationTasks,
 		TimerTasks:        e.insertTimerTasks,
 
-		Condition: e.nextEventIDInDB,
-		Checksum:  checksum,
+		Condition:    e.nextEventIDInDB,
+		Checksum:     checksum,
+		TTLInSeconds: int64(TTLInSeconds),
 	}
 
 	e.checksum = checksum
@@ -4806,4 +4808,24 @@ func (e *mutableStateBuilder) logDataInconsistency() {
 		tag.WorkflowID(workflowID),
 		tag.WorkflowRunID(runID),
 	)
+}
+func (e *mutableStateBuilder) calculateTTL() (int, error) {
+	domainID := e.executionInfo.DomainID
+	//Calculating the TTL for workflow Execution.
+
+	domainObj, err := e.shard.GetDomainCache().GetDomainByID(domainID)
+	if err != nil {
+		return 0, err
+	}
+	config := domainObj.GetConfig()
+	retention := time.Duration(config.Retention)
+	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
+	//Default state of TTL, means there is no TTL attached.
+	TTLInSeconds := 0
+	startTime := e.executionInfo.StartTimestamp
+	if !time.Time.IsZero(startTime) {
+		TTLInSeconds = int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
+	}
+
+	return TTLInSeconds, nil
 }

@@ -1216,23 +1216,6 @@ func (c *contextImpl) updateWorkflowExecutionWithRetry(
 		resp, err = c.shard.UpdateWorkflowExecution(ctx, request)
 		return err
 	}
-
-	//Calculating the TTL for workflow Execution.
-	domainObj, _ := c.shard.GetDomainCache().GetDomainByID(c.domainID)
-	config := domainObj.GetConfig()
-	retention := time.Duration(config.Retention)
-	daysInSeconds := int((retention + ttlBufferDays) * dayToSecondMultiplier)
-
-	//TODO Move the ttl value to attach it to the workflow mutation.
-	startTime := request.UpdateWorkflowMutation.ExecutionInfo.StartTimestamp
-	if time.Time.IsZero(startTime) {
-		//Default state of TTL, means there is no TTL attached.
-		request.TTLInSeconds = 0
-	} else {
-		request.TTLInSeconds = int(request.UpdateWorkflowMutation.ExecutionInfo.DecisionStartToCloseTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
-		c.logger.SampleInfo("Calculated TTL", request.TTLInSeconds)
-	}
-
 	isRetryable := func(err error) bool {
 		if _, ok := err.(*persistence.TimeoutError); ok {
 			// timeout error is not retryable for update workflow execution

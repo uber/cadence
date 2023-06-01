@@ -690,9 +690,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
-		RangeID:      s.ShardInfo.RangeID,
-		TTLInSeconds: 10,
-		Mode:         p.UpdateWorkflowModeUpdateCurrent,
+		RangeID: s.ShardInfo.RangeID,
+		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.NoError(err)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -712,9 +711,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 				ExecutionStats: updatedStats,
 				Condition:      nextEventID,
 			},
-			RangeID:      s.ShardInfo.RangeID,
-			TTLInSeconds: 10,
-			Mode:         p.UpdateWorkflowModeUpdateCurrent,
+			RangeID: s.ShardInfo.RangeID,
+			Mode:    p.UpdateWorkflowModeUpdateCurrent,
 		})
 		s.IsType(&types.InternalServiceError{}, err)
 	}
@@ -729,9 +727,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			ExecutionStats: updatedStats,
 			Condition:      nextEventID,
 		},
-		RangeID:      s.ShardInfo.RangeID,
-		TTLInSeconds: 10,
-		Mode:         p.UpdateWorkflowModeUpdateCurrent,
+		RangeID: s.ShardInfo.RangeID,
+		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.IsType(&types.InternalServiceError{}, err)
 
@@ -744,9 +741,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 				Condition:        nextEventID,
 				VersionHistories: versionHistories,
 			},
-			RangeID:      s.ShardInfo.RangeID,
-			TTLInSeconds: 10,
-			Mode:         p.UpdateWorkflowModeUpdateCurrent,
+			RangeID: s.ShardInfo.RangeID,
+			Mode:    p.UpdateWorkflowModeUpdateCurrent,
 		})
 		s.Nil(err)
 		info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)

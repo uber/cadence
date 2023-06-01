@@ -416,8 +416,6 @@ type (
 		UpdateWorkflowMutation InternalWorkflowMutation
 
 		NewWorkflowSnapshot *InternalWorkflowSnapshot
-
-		TTLInSeconds int
 	}
 
 	// InternalConflictResolveWorkflowExecutionRequest is used to reset workflow execution state for Persistence Interface
@@ -462,8 +460,8 @@ type (
 		CrossClusterTasks []Task
 		TimerTasks        []Task
 		ReplicationTasks  []Task
-
-		Condition int64
+		TTLInSeconds      int64
+		Condition         int64
 
 		Checksum checksum.Checksum
 	}

@@ -1062,7 +1062,7 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
 ) error {
-	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution, 0)
+	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
@@ -1151,9 +1151,8 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
-	ttlInSeconds int,
 ) error {
-	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution, ttlInSeconds)
+	err := db.updateWorkflowExecution(batch, shardID, domainID, workflowID, execution)
 	if err != nil {
 		return err
 	}
@@ -1203,13 +1202,14 @@ func (db *cdb) updateWorkflowExecution(
 	domainID string,
 	workflowID string,
 	execution *nosqlplugin.WorkflowExecutionRequest,
-	ttlInSeconds int,
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
-	if !db.dc.EnableExecutionTTL(domainID) || ttlInSeconds < 0 {
+	//default TTL Value.
+	ttlInSeconds := 0
+	if db.dc.EnableExecutionTTL(domainID) && execution.TTLInSeconds >= 0 {
 		//0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
-		ttlInSeconds = 0
+		ttlInSeconds = int(execution.TTLInSeconds)
 		db.logger.Info("The TTL is not enabled on the Domain or a negative value was passed into it.")
 	}
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
