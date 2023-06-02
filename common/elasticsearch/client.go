@@ -340,7 +340,7 @@ func (c *ESClient) getSearchResult(
 	)
 
 	if ShouldSearchAfter(token) {
-		qb.SearchAfter([]interface{}{token.SortValue, token.TieBreaker})
+		qb.SearchAfter(token.SortValue, token.TieBreaker)
 	}
 
 	body, err := qb.String()
