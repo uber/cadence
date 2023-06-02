@@ -42,7 +42,7 @@ const (
 	cassandraDefaultSerialConsLevel = gocql.LocalSerial
 
 	// We use local quorum consistency level as the default consistency level
-	cassandraDefaultConsLevel = gocql.LocalQuorum
+	CassandraDefaultConsLevel = gocql.LocalQuorum
 
 	// Although Cadence core data models always require strong consistency, reading visibility is a special case that
 	// eventual consistency is sufficient.

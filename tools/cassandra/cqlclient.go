@@ -22,6 +22,7 @@ package cassandra
 
 import (
 	"fmt"
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra"
 	"log"
 	"time"
 
@@ -175,6 +176,10 @@ func (client *CqlClientImpl) CreateSchemaVersionTables() error {
 // ReadSchemaVersion returns the current schema version for the Keyspace
 func (client *CqlClientImpl) ReadSchemaVersion() (string, error) {
 	query := client.session.Query(readSchemaVersionCQL, client.cfg.Keyspace)
+	// Hardcode consistency level to be qorum here to be safe
+	// it seems it was being set as ALL somewhere, which breaks service on start
+	// during node repairs
+	query.Consistency(cassandra.CassandraDefaultConsLevel)
 	iter := query.Iter()
 	var version string
 	if !iter.Scan(&version) {

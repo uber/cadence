@@ -333,7 +333,7 @@ func (db *cdb) DeleteTaskList(ctx context.Context, filter *nosqlplugin.TaskListF
 			return err
 		}
 		db.logger.Warn("unable to complete the delete operation due to consistency issue", tag.Error(err))
-		applied, err = query.Consistency(cassandraDefaultConsLevel).MapScanCAS(previous)
+		applied, err = query.Consistency(CassandraDefaultConsLevel).MapScanCAS(previous)
 		if err != nil {
 			return err
 		}

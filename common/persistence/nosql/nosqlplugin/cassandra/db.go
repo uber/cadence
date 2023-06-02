@@ -86,7 +86,7 @@ func (db *cdb) executeWithConsistencyAll(q gocql.Query) error {
 		if err := q.Consistency(cassandraAllConslevel).Exec(); err != nil {
 			if db.isCassandraConsistencyError(err) {
 				db.logger.Warn("unable to complete the delete operation due to consistency issue", tag.Error(err))
-				return q.Consistency(cassandraDefaultConsLevel).Exec()
+				return q.Consistency(CassandraDefaultConsLevel).Exec()
 			}
 			return err
 		}
@@ -100,7 +100,7 @@ func (db *cdb) executeBatchWithConsistencyAll(b gocql.Batch) error {
 		if err := db.session.ExecuteBatch(b.Consistency(cassandraAllConslevel)); err != nil {
 			if db.isCassandraConsistencyError(err) {
 				db.logger.Warn("unable to complete the delete operation due to consistency issue", tag.Error(err))
-				return db.session.ExecuteBatch(b.Consistency(cassandraDefaultConsLevel))
+				return db.session.ExecuteBatch(b.Consistency(CassandraDefaultConsLevel))
 			}
 			return err
 		}
