@@ -1070,12 +1070,10 @@ func (s *PinotIntegrationSuite) testListResultForUpsertSearchAttributes(listRequ
 				s.Equal(123, searchVal2)
 
 				binaryChecksumsBytes := fields[definition.BinaryChecksums]
-				//var binaryChecksums []string
-				var binaryChecksums string
+				var binaryChecksums []string
 				err = json.Unmarshal(binaryChecksumsBytes, &binaryChecksums)
 				s.Nil(err)
-				//s.Equal([]string{"binary-v1", "binary-v2"}, binaryChecksums)
-				s.Equal("binary-v1", binaryChecksums)
+				s.Equal([]string{"binary-v1", "binary-v2"}, binaryChecksums)
 
 				verified = true
 				break
@@ -1089,8 +1087,7 @@ func (s *PinotIntegrationSuite) testListResultForUpsertSearchAttributes(listRequ
 func getUpsertSearchAttributes() *types.SearchAttributes {
 	attrValBytes1, _ := json.Marshal("another string")
 	attrValBytes2, _ := json.Marshal(123)
-	//binaryChecksums, _ := json.Marshal([]string{"binary-v1", "binary-v2"})
-	binaryChecksums, _ := json.Marshal("binary-v1")
+	binaryChecksums, _ := json.Marshal([]string{"binary-v1", "binary-v2"})
 	upsertSearchAttr := &types.SearchAttributes{
 		IndexedFields: map[string][]byte{
 			definition.CustomStringField: attrValBytes1,

@@ -112,7 +112,8 @@
     },
     {
       "name": "BinaryChecksums",
-      "dataType": "STRING"
+      "dataType": "STRING",
+      "singleValueField": false
     },
     {
       "name": "Passed",
