@@ -63,7 +63,7 @@ func (t *ForwarderTestSuite) SetupTest() {
 		ForwarderMaxOutstandingTasks: func() int { return 1 },
 	}
 	t.taskList = newTestTaskListID("fwdr", "tl0", persistence.TaskListTypeDecision)
-	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client)
+	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client, nil)
 }
 
 func (t *ForwarderTestSuite) TearDownTest() {
