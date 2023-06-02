@@ -57,6 +57,8 @@ type (
 		// todo: implement a rate limiter that automatically
 		// adjusts rate based on ServiceBusy errors from API calls
 		limiter *quotas.DynamicRateLimiter
+
+		isolationGroups []string
 	}
 	// ForwarderReqToken is the token that must be acquired before
 	// making forwarder API calls. This type contains the state
@@ -91,6 +93,7 @@ func newForwarder(
 	taskListID *taskListID,
 	kind types.TaskListKind,
 	client matching.Client,
+	isolationGroups []string,
 ) *Forwarder {
 	rpsFunc := func() float64 { return float64(cfg.ForwarderMaxRatePerSecond()) }
 	fwdr := &Forwarder{
@@ -98,12 +101,13 @@ func newForwarder(
 		client:                client,
 		taskListID:            taskListID,
 		taskListKind:          kind,
-		outstandingTasksLimit: int32(cfg.ForwarderMaxOutstandingTasks()),
-		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls()),
+		outstandingTasksLimit: int32(cfg.ForwarderMaxOutstandingTasks() * (len(isolationGroups) + 1)),
+		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls() * (len(isolationGroups) + 1)),
 		limiter:               quotas.NewDynamicRateLimiter(rpsFunc),
+		isolationGroups:       isolationGroups,
 	}
-	fwdr.addReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingTasks()))
-	fwdr.pollReqToken.Store(newForwarderReqToken(cfg.ForwarderMaxOutstandingPolls()))
+	fwdr.addReqToken.Store(newForwarderReqToken(int(fwdr.outstandingTasksLimit)))
+	fwdr.pollReqToken.Store(newForwarderReqToken(int(fwdr.outstandingPollsLimit)))
 	return fwdr
 }
 
@@ -250,15 +254,17 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 // that's necessary before making a ForwardTask or ForwardQueryTask API call.
 // After the API call is invoked, token.release() must be invoked
 func (fwdr *Forwarder) AddReqTokenC() <-chan *ForwarderReqToken {
-	fwdr.refreshTokenC(&fwdr.addReqToken, &fwdr.outstandingTasksLimit, int32(fwdr.cfg.ForwarderMaxOutstandingTasks()))
+	fwdr.refreshTokenC(&fwdr.addReqToken, &fwdr.outstandingTasksLimit, int32(fwdr.cfg.ForwarderMaxOutstandingTasks()*(len(fwdr.isolationGroups)+1)))
 	return fwdr.addReqToken.Load().(*ForwarderReqToken).ch
 }
 
 // PollReqTokenC returns a channel that can be used to wait for a token
 // that's necessary before making a ForwardPoll API call. After the API
 // call is invoked, token.release() must be invoked
+// For tasklists with isolation enabled, ideally we should have separate token pools for different isolation groups, but for now, only increase the number of tokens
+// TODO: consider having separate token pools for different isolation groups
 func (fwdr *Forwarder) PollReqTokenC() <-chan *ForwarderReqToken {
-	fwdr.refreshTokenC(&fwdr.pollReqToken, &fwdr.outstandingPollsLimit, int32(fwdr.cfg.ForwarderMaxOutstandingPolls()))
+	fwdr.refreshTokenC(&fwdr.pollReqToken, &fwdr.outstandingPollsLimit, int32(fwdr.cfg.ForwarderMaxOutstandingPolls()*(len(fwdr.isolationGroups)+1)))
 	return fwdr.pollReqToken.Load().(*ForwarderReqToken).ch
 }
 
