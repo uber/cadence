@@ -1078,7 +1078,6 @@ func (db *cdb) resetWorkflowExecutionAndMapsAndEventBuffer(
 	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeReset {
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeReset")
 	}
-
 	err = db.resetActivityInfos(batch, shardID, domainID, workflowID, execution.RunID, execution.ActivityInfos)
 	if err != nil {
 		return err
@@ -1168,7 +1167,6 @@ func (db *cdb) updateWorkflowExecutionAndEventBufferWithMergeAndDeleteMaps(
 			return err
 		}
 	}
-
 	if execution.MapsWriteMode != nosqlplugin.WorkflowExecutionMapsWriteModeUpdate {
 		return fmt.Errorf("should only support WorkflowExecutionMapsWriteModeUpdate")
 	}
@@ -1205,12 +1203,10 @@ func (db *cdb) updateWorkflowExecution(
 ) error {
 	execution.StartTimestamp = db.convertToCassandraTimestamp(execution.StartTimestamp)
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
-	//default TTL Value.
+	//default TTL Value. 0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
 	ttlInSeconds := 0
 	if db.dc.EnableExecutionTTL(domainID) && execution.TTLInSeconds >= 0 {
-		//0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
 		ttlInSeconds = int(execution.TTLInSeconds)
-		db.logger.Info("The TTL is not enabled on the Domain or a negative value was passed into it.")
 	}
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
 		ttlInSeconds,
