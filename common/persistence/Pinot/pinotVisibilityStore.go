@@ -800,11 +800,9 @@ func convertRawToPinotQuery(element string, validMap map[string]interface{}) str
 		if indexValType == types.IndexedValueTypeString {
 			val = removeQuote(val)
 			return getPartialFormatString(key, val)
-		} else {
-			return fmt.Sprintf("%s %s %s", key, op, val)
 		}
+		return fmt.Sprintf("%s %s %s", key, op, val)
 	}
-
 	return ""
 }
 
