@@ -6750,7 +6750,6 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
-	IsolationGroupConfiguration            *IsolationGroupConfiguration       `json:"isolationGroupConfiguration,omitempty"`
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {

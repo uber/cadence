@@ -71,6 +71,10 @@ type (
 			ctx context.Context,
 			updateRequest *types.UpdateDomainRequest,
 		) (*types.UpdateDomainResponse, error)
+		UpdateIsolationGroups(
+			ctx context.Context,
+			updateRequest types.UpdateDomainIsolationGroupsRequest,
+		) error
 	}
 
 	// handlerImpl is the domain operation handler implementation
@@ -400,24 +404,6 @@ func (d *handlerImpl) UpdateDomain(
 	visibilityArchivalConfigChanged := false
 	// whether active cluster is changed
 	activeClusterChanged := false
-
-	// Whether isolation-groups are changed. There's semantic API difference between the
-	// domain isolation-group update API which is a flat upsert and this handler API which
-	// relies on modifying specified values only, and leaving the rest as-is.
-	// for callers of the Domain API wishing to update isolation groups,
-	// To distinguish between the operation to remove all drains and
-	// take no action, the UpdateDomain handler uses the presence or nil-ness of the IsolationGroup
-	// field to indicate either drain removal (where the struct is present), and to take no action
-	// where the field is nil.
-	//
-	// ie, for the purposes of this handler:
-	// h.UpdateDomain(ctx, UpdateDomainRequest{
-	//   IsolationGroups: nil,                              // take no action for isolation groups
-	// })
-	// h.UpdateDomain(ctx, UpdateDomainRequest{
-	//   IsolationGroups: IsolationGroupConfiguration{},    // remove all isolation groups for domain
-	// })
-	config, isolationGroupConfigurationChanged, err := d.getIsolationGroupStatus(config, updateRequest)
 	// whether anything other than active cluster is changed
 	configurationChanged := false
 
@@ -502,7 +488,7 @@ func (d *handlerImpl) UpdateDomain(
 		previousFailoverVersion = failoverVersion
 	}
 
-	configurationChanged = historyArchivalConfigChanged || visibilityArchivalConfigChanged || domainInfoChanged || domainConfigChanged || deleteBinaryChanged || replicationConfigChanged || isolationGroupConfigurationChanged
+	configurationChanged = historyArchivalConfigChanged || visibilityArchivalConfigChanged || domainInfoChanged || domainConfigChanged || deleteBinaryChanged || replicationConfigChanged
 
 	if err := d.domainAttrValidator.validateDomainConfig(config); err != nil {
 		return nil, err
@@ -555,19 +541,21 @@ func (d *handlerImpl) UpdateDomain(
 			failoverNotificationVersion = notificationVersion
 		}
 		lastUpdatedTime = now
-		updateReq := &persistence.UpdateDomainRequest{
-			Info:                        info,
-			Config:                      config,
-			ReplicationConfig:           replicationConfig,
-			ConfigVersion:               configVersion,
-			FailoverVersion:             failoverVersion,
-			FailoverNotificationVersion: failoverNotificationVersion,
-			FailoverEndTime:             gracefulFailoverEndTime,
-			PreviousFailoverVersion:     previousFailoverVersion,
-			LastUpdatedTime:             lastUpdatedTime.UnixNano(),
-			NotificationVersion:         notificationVersion,
-		}
-		err = d.domainManager.UpdateDomain(ctx, updateReq)
+
+		updateReq := createUpdateRequest(
+			info,
+			config,
+			replicationConfig,
+			configVersion,
+			failoverVersion,
+			failoverNotificationVersion,
+			gracefulFailoverEndTime,
+			previousFailoverVersion,
+			lastUpdatedTime,
+			notificationVersion,
+		)
+
+		err = d.domainManager.UpdateDomain(ctx, &updateReq)
 		if err != nil {
 			return nil, err
 		}
@@ -629,19 +617,20 @@ func (d *handlerImpl) DeprecateDomain(
 	getResponse.ConfigVersion = getResponse.ConfigVersion + 1
 	getResponse.Info.Status = persistence.DomainStatusDeprecated
 
-	updateReq := &persistence.UpdateDomainRequest{
-		Info:                        getResponse.Info,
-		Config:                      getResponse.Config,
-		ReplicationConfig:           getResponse.ReplicationConfig,
-		ConfigVersion:               getResponse.ConfigVersion,
-		FailoverVersion:             getResponse.FailoverVersion,
-		FailoverNotificationVersion: getResponse.FailoverNotificationVersion,
-		FailoverEndTime:             getResponse.FailoverEndTime,
-		PreviousFailoverVersion:     getResponse.PreviousFailoverVersion,
-		LastUpdatedTime:             d.timeSource.Now().UnixNano(),
-		NotificationVersion:         notificationVersion,
-	}
-	err = d.domainManager.UpdateDomain(ctx, updateReq)
+	updateReq := createUpdateRequest(
+		getResponse.Info,
+		getResponse.Config,
+		getResponse.ReplicationConfig,
+		getResponse.ConfigVersion,
+		getResponse.FailoverVersion,
+		getResponse.FailoverNotificationVersion,
+		getResponse.FailoverEndTime,
+		getResponse.PreviousFailoverVersion,
+		d.timeSource.Now(),
+		notificationVersion,
+	)
+
+	err = d.domainManager.UpdateDomain(ctx, &updateReq)
 	if err != nil {
 		return err
 	}
@@ -665,6 +654,111 @@ func (d *handlerImpl) DeprecateDomain(
 	d.logger.Info("DeprecateDomain domain succeeded",
 		tag.WorkflowDomainName(getResponse.Info.Name),
 		tag.WorkflowDomainID(getResponse.Info.ID),
+	)
+	return nil
+}
+
+// UpdateIsolationGroups is used for draining and undraining of isolation-groups for a domain.
+// Like the isolation-group API, this controller expects Upsert semantics for
+// isolation-groups and does not modify any other domain information.
+//
+// Isolation-groups are regional in their configuration scope, so it's expected that this upsert
+// includes configuration for both clusters every time.
+//
+// The update is handled like other domain updates in that they expected to be replicated. So
+// unlike the global isolation-group API it shouldn't be necessary to call
+func (d *handlerImpl) UpdateIsolationGroups(
+	ctx context.Context,
+	updateRequest types.UpdateDomainIsolationGroupsRequest,
+) error {
+
+	// must get the metadata (notificationVersion) first
+	// this version can be regarded as the lock on the v2 domain table
+	// and since we do not know which table will return the domain afterwards
+	// this call has to be made
+	metadata, err := d.domainManager.GetMetadata(ctx)
+	if err != nil {
+		return err
+	}
+	notificationVersion := metadata.NotificationVersion
+
+	if updateRequest.IsolationGroups == nil {
+		return fmt.Errorf("invalid request, isolationGroup configuration must be set: Got: %v", updateRequest)
+	}
+
+	currentDomainConfig, err := d.domainManager.GetDomain(ctx, &persistence.GetDomainRequest{Name: updateRequest.Domain})
+	if err != nil {
+		return err
+	}
+	if currentDomainConfig.Config == nil {
+		return fmt.Errorf("unable to load config for domain as expected")
+	}
+
+	configVersion := currentDomainConfig.ConfigVersion
+	lastUpdatedTime := time.Unix(0, currentDomainConfig.LastUpdatedTime)
+
+	if lastUpdatedTime.Add(d.config.FailoverCoolDown(currentDomainConfig.Info.Name)).After(d.timeSource.Now()) {
+		return errDomainUpdateTooFrequent
+	}
+
+	// Check the failover cool down time
+	if lastUpdatedTime.Add(d.config.FailoverCoolDown(currentDomainConfig.Info.Name)).After(d.timeSource.Now()) {
+		return errDomainUpdateTooFrequent
+	}
+
+	configVersion++
+	lastUpdatedTime = d.timeSource.Now()
+
+	// Mutate the domain config to perform the isolation-group update
+	currentDomainConfig.Config.IsolationGroups = updateRequest.IsolationGroups
+
+	updateReq := createUpdateRequest(
+		currentDomainConfig.Info,
+		currentDomainConfig.Config,
+		currentDomainConfig.ReplicationConfig,
+		configVersion,
+		currentDomainConfig.FailoverVersion,
+		currentDomainConfig.FailoverNotificationVersion,
+		currentDomainConfig.FailoverEndTime,
+		currentDomainConfig.PreviousFailoverVersion,
+		lastUpdatedTime,
+		notificationVersion,
+	)
+
+	err = d.domainManager.UpdateDomain(ctx, &updateReq)
+	if err != nil {
+		return err
+	}
+
+	if currentDomainConfig.IsGlobalDomain {
+		// One might reasonably wonder what value there is in replication of isolation-group information - info which is
+		// regional and therefore of no value to the other region?
+		// Probably not a lot, in and of itself, however, the isolation-group information is stored
+		// in the domain configuration fields in the domain tables. Access and updates to those records is
+		// done through a replicated mechanism with explicit versioning and conflict resolution.
+		// Therefore, in order to avoid making an already complex mechanisim much more difficult to understand,
+		// the data is replicated in the same way so as to try and make things less confusing when both codepaths
+		// are updating the table:
+		// - versions like the confiugration version are updated in the same manner
+		// - the last-updated timestamps are updated in the same manner
+		if err := d.domainReplicator.HandleTransmissionTask(
+			ctx,
+			types.DomainOperationUpdate,
+			currentDomainConfig.Info,
+			currentDomainConfig.Config,
+			currentDomainConfig.ReplicationConfig,
+			configVersion,
+			currentDomainConfig.FailoverVersion,
+			currentDomainConfig.PreviousFailoverVersion,
+			currentDomainConfig.IsGlobalDomain,
+		); err != nil {
+			return err
+		}
+	}
+
+	d.logger.Info("isolation group update succeeded",
+		tag.WorkflowDomainName(currentDomainConfig.Info.Name),
+		tag.WorkflowDomainID(currentDomainConfig.Info.ID),
 	)
 	return nil
 }
@@ -956,26 +1050,6 @@ func (d *handlerImpl) updateReplicationConfig(
 	return config, clusterUpdated, activeClusterUpdated, nil
 }
 
-func (d *handlerImpl) getIsolationGroupStatus(
-	incomingCfg *persistence.DomainConfig,
-	updateRequest *types.UpdateDomainRequest,
-) (config *persistence.DomainConfig, isolationGroupsChanged bool, err error) {
-
-	if updateRequest == nil || updateRequest.IsolationGroupConfiguration == nil {
-		return incomingCfg, false, nil
-	}
-
-	if incomingCfg == nil {
-		return &persistence.DomainConfig{
-			IsolationGroups: *updateRequest.IsolationGroupConfiguration,
-		}, true, nil
-	}
-
-	// upsert with whatever is present in the request always
-	incomingCfg.IsolationGroups = *updateRequest.IsolationGroupConfiguration
-	return incomingCfg, true, nil
-}
-
 func getDomainStatus(info *persistence.DomainInfo) *types.DomainStatus {
 	switch info.Status {
 	case persistence.DomainStatusRegistered:
@@ -990,4 +1064,32 @@ func getDomainStatus(info *persistence.DomainInfo) *types.DomainStatus {
 	}
 
 	return nil
+}
+
+// Maps fields onto an updateDomain Request
+// it's really important that this explicitly calls out each field to ensure no fields get missed or dropped
+func createUpdateRequest(
+	info *persistence.DomainInfo,
+	config *persistence.DomainConfig,
+	replicationConfig *persistence.DomainReplicationConfig,
+	configVersion int64,
+	failoverVersion int64,
+	failoverNotificationVersion int64,
+	failoverEndTime *int64,
+	previousFailoverVersion int64,
+	lastUpdatedTime time.Time,
+	notificationVersion int64,
+) persistence.UpdateDomainRequest {
+	return persistence.UpdateDomainRequest{
+		Info:                        info,
+		Config:                      config,
+		ReplicationConfig:           replicationConfig,
+		ConfigVersion:               configVersion,
+		FailoverVersion:             failoverVersion,
+		FailoverNotificationVersion: failoverNotificationVersion,
+		FailoverEndTime:             failoverEndTime,
+		PreviousFailoverVersion:     previousFailoverVersion,
+		LastUpdatedTime:             lastUpdatedTime.UnixNano(),
+		NotificationVersion:         notificationVersion,
+	}
 }
