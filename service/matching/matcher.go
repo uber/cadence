@@ -141,10 +141,10 @@ func (tm *TaskMatcher) Offer(ctx context.Context, task *InternalTask) (bool, err
 		case token := <-tm.fwdrAddReqTokenC():
 			if err := tm.fwdr.ForwardTask(ctx, task); err == nil {
 				// task was remotely sync matched on the parent partition
-				token.release()
+				token.release("")
 				return true, nil
 			}
-			token.release()
+			token.release("")
 		default:
 			if !tm.isForwardingAllowed() && // we are the root partition and forwarding is not possible
 				task.source == types.TaskSourceDbBacklog && // task was from backlog (stored in db)
@@ -201,7 +201,7 @@ func (tm *TaskMatcher) OfferQuery(ctx context.Context, task *InternalTask) (*typ
 			return nil, nil
 		case token := <-fwdrTokenC:
 			resp, err := tm.fwdr.ForwardQueryTask(ctx, task)
-			token.release()
+			token.release("")
 			if err == nil {
 				return resp, nil
 			}
@@ -245,7 +245,7 @@ forLoop:
 		case token := <-tm.fwdrAddReqTokenC():
 			childCtx, cancel := context.WithDeadline(ctx, time.Now().Add(time.Second*2))
 			err := tm.fwdr.ForwardTask(childCtx, task)
-			token.release()
+			token.release("")
 			if err != nil {
 				// forwarder returns error only when the call is rate limited. To
 				// avoid a busy loop on such rate limiting events, we only attempt to make
@@ -290,7 +290,7 @@ func (tm *TaskMatcher) Poll(ctx context.Context, isolationGroup string) (*Intern
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, isolatedTaskC, tm.taskC, tm.queryTaskC)
+	return tm.pollOrForward(ctx, isolationGroup, isolatedTaskC, tm.taskC, tm.queryTaskC)
 }
 
 // PollForQuery blocks until a *query* task is found or context deadline is exceeded
@@ -303,7 +303,7 @@ func (tm *TaskMatcher) PollForQuery(ctx context.Context) (*InternalTask, error) 
 	// there is no local poller available to pickup this task. Now block waiting
 	// either for a local poller or a forwarding token to be available. When a
 	// forwarding token becomes available, send this poll to a parent partition
-	return tm.pollOrForward(ctx, nil, nil, tm.queryTaskC)
+	return tm.pollOrForward(ctx, "", nil, nil, tm.queryTaskC)
 }
 
 // UpdateRatelimit updates the task dispatch rate
@@ -327,6 +327,7 @@ func (tm *TaskMatcher) Rate() float64 {
 
 func (tm *TaskMatcher) pollOrForward(
 	ctx context.Context,
+	isolationGroup string,
 	isolatedTaskC <-chan *InternalTask,
 	taskC <-chan *InternalTask,
 	queryTaskC <-chan *InternalTask,
@@ -351,12 +352,12 @@ func (tm *TaskMatcher) pollOrForward(
 	case <-ctx.Done():
 		tm.scope.IncCounter(metrics.PollTimeoutPerTaskListCounter)
 		return nil, ErrNoTasks
-	case token := <-tm.fwdrPollReqTokenC():
+	case token := <-tm.fwdrPollReqTokenC(isolationGroup):
 		if task, err := tm.fwdr.ForwardPoll(ctx); err == nil {
-			token.release()
+			token.release(isolationGroup)
 			return task, nil
 		}
-		token.release()
+		token.release(isolationGroup)
 		return tm.poll(ctx, isolatedTaskC, taskC, queryTaskC)
 	}
 }
@@ -418,11 +419,11 @@ func (tm *TaskMatcher) pollNonBlocking(
 	}
 }
 
-func (tm *TaskMatcher) fwdrPollReqTokenC() <-chan *ForwarderReqToken {
+func (tm *TaskMatcher) fwdrPollReqTokenC(isolationGroup string) <-chan *ForwarderReqToken {
 	if tm.fwdr == nil {
 		return noopForwarderTokenC
 	}
-	return tm.fwdr.PollReqTokenC()
+	return tm.fwdr.PollReqTokenC(isolationGroup)
 }
 
 func (tm *TaskMatcher) fwdrAddReqTokenC() <-chan *ForwarderReqToken {
