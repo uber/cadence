@@ -191,14 +191,17 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 // handleDomainUpdateReplicationTask handles the domain update replication task
 func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ctx context.Context, task *types.DomainTaskAttributes) error {
 	// task already validated
+	h.logger.Info("Received replication task", tag.Dynamic("task", task))
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
+		h.logger.Info("Error handling replication task", tag.Dynamic("task", task), tag.Error(err))
 		return err
 	}
 
 	// first we need to get the current notification version since we need to it for conditional update
 	metadata, err := h.domainManager.GetMetadata(ctx)
 	if err != nil {
+		h.logger.Info("Error getting metadata while handling replication task", tag.Dynamic("task", task), tag.Error(err))
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
@@ -214,6 +217,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 			// e.g. new cluster which does not have anything
 			return h.handleDomainCreationReplicationTask(ctx, task)
 		}
+		h.logger.Error("Domain update failed, error in fetching domain", tag.Dynamic("replication-request", task), tag.Error(err))
 		return err
 	}
 
@@ -264,6 +268,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	}
 
 	if !recordUpdated {
+		h.logger.Warn("Domain update failed, record not updated", tag.Dynamic("replication-request", request))
 		return nil
 	}
 	h.logger.Info("updating domain via replication", tag.Dynamic("replication-request", request))
