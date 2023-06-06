@@ -196,8 +196,8 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		request.RunID,
 		request.WorkflowTypeName,
 		"",
-		0,
-		0,
+		-1,
+		-1,
 		0,
 		nil,
 		"",
@@ -785,15 +785,22 @@ func (v *pinotVisibilityStore) constructQueryWithCustomizedQuery(requestQuery st
 	return query
 }
 
+func convertMissingFields(key string, op string, val string, element string) string {
+	if val == "missing" {
+		if strings.ToLower(key) == "historylength" {
+			return fmt.Sprintf("%s %s %s", key, op, "0")
+		}
+		return fmt.Sprintf("%s %s %s", key, op, "-1")
+	}
+	return element
+}
+
 func (v *pinotVisibilityStore) convertRawToPinotQuery(element string, validMap map[string]interface{}) string {
 	key, val, op := splitElement(element)
 
 	// case 1: when key is a system key
 	if ok, _ := isSystemKey(key); ok {
-		if val == "missing" {
-			val = "-1"
-		}
-		return fmt.Sprintf("%s %s %s", key, op, val)
+		return convertMissingFields(key, op, val, element)
 	}
 
 	// case 2: when key is valid within validMap
@@ -803,9 +810,6 @@ func (v *pinotVisibilityStore) convertRawToPinotQuery(element string, validMap m
 		if indexValType == types.IndexedValueTypeString {
 			val = removeQuote(val)
 			return getPartialFormatString(key, val)
-		}
-		if val == "missing" {
-			val = "-1"
 		}
 		return fmt.Sprintf("%s %s %s", key, op, val)
 	}
@@ -847,9 +851,7 @@ func (v *pinotVisibilityStore) dealWithoutOrClause(element string, query PinotQu
 
 	// case 1: when key is a system key
 	if ok, _ := isSystemKey(key); ok {
-		if val == "missing" {
-			element = fmt.Sprintf("%s %s %s", key, op, "-1")
-		}
+		element = convertMissingFields(key, op, val, element)
 		query.filters.addQuery(element)
 		return query
 	}
@@ -862,9 +864,6 @@ func (v *pinotVisibilityStore) dealWithoutOrClause(element string, query PinotQu
 			val = removeQuote(val)
 			query.filters.addPartialMatch(key, val)
 		} else {
-			if val == "missing" {
-				val = "-1"
-			}
 			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
 		}
 	} else {
