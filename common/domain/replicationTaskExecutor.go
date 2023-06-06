@@ -191,7 +191,6 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainCreationReplicationTask(
 // handleDomainUpdateReplicationTask handles the domain update replication task
 func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ctx context.Context, task *types.DomainTaskAttributes) error {
 	// task already validated
-	h.logger.Info("Received replication task", tag.Dynamic("task", task))
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
 		h.logger.Info("Error handling replication task", tag.Dynamic("task", task), tag.Error(err))
