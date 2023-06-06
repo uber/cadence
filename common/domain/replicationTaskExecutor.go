@@ -194,7 +194,6 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	// task already validated
 	status, err := h.convertDomainStatusFromThrift(task.Info.Status)
 	if err != nil {
-		h.logger.Info("Error handling replication task", tag.Dynamic("task", task), tag.Error(err))
 		return err
 	}
 
@@ -271,7 +270,6 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 		h.logger.Warn("Domain update failed, record not updated", tag.Dynamic("replication-request", request))
 		return nil
 	}
-	h.logger.Info("updating domain via replication", tag.Dynamic("replication-request", request))
 
 	return h.domainManager.UpdateDomain(ctx, request)
 }
