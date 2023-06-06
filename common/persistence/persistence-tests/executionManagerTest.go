@@ -614,6 +614,10 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 	//TODO: Update the test when the TTLbuffer becomes configurable.
 	ctx, cancel := context.WithTimeout(context.Background(), testContextTimeout)
 	defer cancel()
+	if s.ExecutionManager.GetName() != "cassandra" {
+		// TTL API is only supported in cassandra"
+		return
+	}
 
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
@@ -687,6 +691,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			ExecutionInfo:    updatedInfo,
 			ExecutionStats:   updatedStats,
 			Condition:        nextEventID,
+			TTLInSeconds:     60,
 			Checksum:         csum,
 			VersionHistories: versionHistories,
 		},
@@ -709,6 +714,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			UpdateWorkflowMutation: p.WorkflowMutation{
 				ExecutionInfo:  updatedInfo,
 				ExecutionStats: updatedStats,
+				TTLInSeconds:   60,
 				Condition:      nextEventID,
 			},
 			RangeID: s.ShardInfo.RangeID,
@@ -725,6 +731,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		UpdateWorkflowMutation: p.WorkflowMutation{
 			ExecutionInfo:  updatedInfo,
 			ExecutionStats: updatedStats,
+			TTLInSeconds:   60,
 			Condition:      nextEventID,
 		},
 		RangeID: s.ShardInfo.RangeID,
@@ -739,6 +746,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 				ExecutionInfo:    updatedInfo,
 				ExecutionStats:   updatedStats,
 				Condition:        nextEventID,
+				TTLInSeconds:     60,
 				VersionHistories: versionHistories,
 			},
 			RangeID: s.ShardInfo.RangeID,
@@ -750,7 +758,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		s.Equal(p.WorkflowStateCompleted, info.ExecutionInfo.State)
 		s.Equal(closeStatus, info.ExecutionInfo.CloseStatus)
 
-		time.Sleep(15)
+		time.Sleep(65)
 
 		_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
 		s.Nil(err)

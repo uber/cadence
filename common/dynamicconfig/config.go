@@ -131,7 +131,7 @@ type DurationPropertyFn func(opts ...FilterOption) time.Duration
 // DurationPropertyFnWithDomainFilter is a wrapper to get duration property from dynamic config with domain as filter
 type DurationPropertyFnWithDomainFilter func(domain string) time.Duration
 
-// DurationPropertyFnWithDomainIDFilter is a wrapper to get duration property from dynamic config with domainID as filter
+// DurationPropertyFnWithDomainIDFilter is a wrapper to get duration property git statfrom dynamic config with domainID as filter
 type DurationPropertyFnWithDomainIDFilter func(domainID string) time.Duration
 
 // DurationPropertyFnWithTaskListInfoFilters is a wrapper to get duration property from dynamic config  with three filters: domain, taskList, taskType

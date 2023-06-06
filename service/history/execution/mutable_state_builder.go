@@ -4066,7 +4066,11 @@ func (e *mutableStateBuilder) CloseTransactionAsMutation(
 	// impact the checksum calculation
 	checksum := e.generateChecksum()
 
-	TTLInSeconds, _ := e.calculateTTL()
+	TTLInSeconds, err := e.calculateTTL()
+	if err != nil {
+		e.logError("TTL calculation failed")
+	}
+
 	workflowMutation := &persistence.WorkflowMutation{
 		ExecutionInfo:    e.executionInfo,
 		VersionHistories: e.versionHistories,

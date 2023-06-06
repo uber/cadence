@@ -85,7 +85,7 @@ func (d *nosqlExecutionStore) prepareResetWorkflowExecutionRequestWithMapsAndEve
 	versionHistories := resetWorkflow.VersionHistories
 	nowTimestamp := time.Now()
 
-	//TTLInSeconds in invalid in this case so passing a default value of 0.
+	//TTLInSeconds is invalid in this case so passing a default value of 0.
 	executionRequest, err := d.prepareUpdateWorkflowExecutionTxn(
 		executionInfo, versionHistories, checkSum,
 		nowTimestamp, lastWriteVersion, 0,
