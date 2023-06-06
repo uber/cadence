@@ -24,6 +24,7 @@ package domain
 
 import (
 	"context"
+	"github.com/uber/cadence/common/log/tag"
 	"time"
 
 	"github.com/uber/cadence/common/clock"
@@ -265,6 +266,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	if !recordUpdated {
 		return nil
 	}
+	h.logger.Info("updating domain via replication", tag.Dynamic("replication-request", request))
 
 	return h.domainManager.UpdateDomain(ctx, request)
 }
