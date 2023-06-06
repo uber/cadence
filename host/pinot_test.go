@@ -240,13 +240,12 @@ Retry:
 	s.Equal(runID, openExecution.GetExecution().GetRunID())
 	s.True(openExecution.GetExecutionTime() >= openExecution.GetStartTime())
 	if openExecution.SearchAttributes != nil && len(openExecution.SearchAttributes.GetIndexedFields()) > 0 {
-
-		//marshalRes, _ := json.Marshal(openExecution.SearchAttributes)
-		//panic(fmt.Sprintf("ABCDDDDBUG: %s", marshalRes))
-
 		searchValBytes := openExecution.SearchAttributes.GetIndexedFields()[s.testSearchAttributeKey]
 		var searchVal string
 		json.Unmarshal(searchValBytes, &searchVal)
+		// pinot sets default values for all the columns,
+		// this feature can break the test here when there is no actual search attributes upsert, it will still return something
+		// TODO: update this after finding a good solution
 		s.Equal(searchVal, searchVal)
 	}
 }
