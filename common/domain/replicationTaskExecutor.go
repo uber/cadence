@@ -24,8 +24,9 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/common/log/tag"
 	"time"
+
+	"github.com/uber/cadence/common/log/tag"
 
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"

@@ -22,11 +22,12 @@ package domain
 
 import (
 	"context"
-	"github.com/uber/cadence/testflags"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/uber/cadence/testflags"
 
 	"github.com/golang/mock/gomock"
 
