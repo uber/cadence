@@ -371,7 +371,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_SearchAttribute() {
 	listRequest := &types.ListWorkflowExecutionsRequest{
 		Domain:   s.domainName,
 		PageSize: int32(2),
-		Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = -1 and BinaryChecksums = 'binary-v1'`, wt),
+		Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing and BinaryChecksums = 'binary-v1'`, wt),
 	}
 	// verify upsert data is on ES
 	s.testListResultForUpsertSearchAttributes(listRequest)
@@ -499,7 +499,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_OrQuery() {
 	s.Equal(2, searchVal)
 
 	// query for open
-	query3 := fmt.Sprintf(`(CustomIntField = %d or CustomIntField = %d) and CloseTime = -1`, 2, 3)
+	query3 := fmt.Sprintf(`(CustomIntField = %d or CustomIntField = %d) and CloseTime = missing`, 2, 3)
 	listRequest.Query = query3
 	for i := 0; i < numOfRetry; i++ {
 		resp, err := s.engine.ListWorkflowExecutions(createContext(), listRequest)
@@ -543,7 +543,7 @@ func (s *PinotIntegrationSuite) TestListWorkflow_MaxWindowSize() {
 		Domain:        s.domainName,
 		PageSize:      int32(defaultTestValueOfESIndexMaxResultWindow),
 		NextPageToken: nextPageToken,
-		Query:         fmt.Sprintf(`WorkflowType = '%s' and CloseTime = -1`, wt),
+		Query:         fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
 	}
 	// get first page
 	for i := 0; i < numOfRetry; i++ {
@@ -719,7 +719,7 @@ func (s *PinotIntegrationSuite) testListWorkflowHelper(numOfWorkflows, pageSize 
 		Domain:        s.domainName,
 		PageSize:      int32(pageSize),
 		NextPageToken: nextPageToken,
-		Query:         fmt.Sprintf(`WorkflowType = '%s' and CloseTime = -1`, wType),
+		Query:         fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wType),
 	}
 	// test first page
 	for i := 0; i < numOfRetry; i++ {
@@ -996,7 +996,7 @@ func (s *PinotIntegrationSuite) TestUpsertWorkflowExecution() {
 		Domain:   s.domainName,
 		PageSize: int32(2),
 		//Query:    fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
-		Query: fmt.Sprintf(`WorkflowType = '%s' and CloseTime = -1`, wt),
+		Query: fmt.Sprintf(`WorkflowType = '%s' and CloseTime = missing`, wt),
 	}
 	verified := false
 	for i := 0; i < numOfRetry; i++ {

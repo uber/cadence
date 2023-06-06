@@ -214,12 +214,12 @@ LIMIT 0, 10
 				Domain:        testDomain,
 				PageSize:      testPageSize,
 				NextPageToken: nil,
-				Query:         "CloseStatus < 0 anD WorkflowType = some-test-workflow and CustomizedKeyword = 'keywordCustomized' AND CustomStringField = 'String field is for text' And unregistered <= 100 aNd Order by DomainId Desc",
+				Query:         "CloseTime = missing anD WorkflowType = some-test-workflow and CustomizedKeyword = 'keywordCustomized' AND CustomStringField = 'String field is for text' And unregistered <= 100 aNd Order by DomainId Desc",
 			},
 			expectedOutput: fmt.Sprintf(`SELECT *
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
-AND CloseStatus < 0
+AND CloseTime = -1
 AND WorkflowType = some-test-workflow
 AND CustomizedKeyword = 'keywordCustomized'
 AND CustomStringField LIKE '%%String field is for text%%'
