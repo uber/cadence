@@ -23,6 +23,8 @@
 
 // to run locally, make sure kafka and pinot is running,
 // then run cmd `go test -v ./host -run TestPinotIntegrationSuite -tags pinotintegration`
+// currently we have to manually add test table and delete the table for cleaning
+// waiting for the support to clean the data programmatically
 
 package host
 

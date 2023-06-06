@@ -34,6 +34,8 @@ import (
 
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
+
+	"github.com/uber/cadence/common/log"
 )
 
 var (
@@ -51,7 +53,7 @@ var (
 	visibilityStore = pinotVisibilityStore{
 		pinotClient: nil,
 		producer:    nil,
-		logger:      nil,
+		logger:      log.NewNoop(),
 		config:      nil,
 	}
 )
@@ -63,7 +65,7 @@ func TestGetCountWorkflowExecutionsQuery(t *testing.T) {
 		Query:      "WorkflowID = 'wfid'",
 	}
 
-	result := getCountWorkflowExecutionsQuery(testTableName, request, nil)
+	result := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, request, nil)
 	expectResult := fmt.Sprintf(`SELECT COUNT(*)
 FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
@@ -72,7 +74,7 @@ AND WorkflowID = 'wfid'
 
 	assert.Equal(t, result, expectResult)
 
-	nilResult := getCountWorkflowExecutionsQuery(testTableName, nil, nil)
+	nilResult := visibilityStore.getCountWorkflowExecutionsQuery(testTableName, nil, nil)
 	assert.Equal(t, nilResult, "")
 }
 
@@ -312,7 +314,7 @@ LIMIT 0, 0
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				output := getListWorkflowExecutionsByQueryQuery(testTableName, test.input, testValidMap)
+				output := visibilityStore.getListWorkflowExecutionsByQueryQuery(testTableName, test.input, testValidMap)
 				assert.Equal(t, test.expectedOutput, output)
 			})
 		})

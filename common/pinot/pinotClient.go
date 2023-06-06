@@ -183,27 +183,8 @@ func toWorkflowExecutionCloseStatus(status int) *types.WorkflowExecutionCloseSta
 	if status < 0 {
 		return nil
 	}
-	switch status {
-	case 0:
-		v := types.WorkflowExecutionCloseStatusCompleted
-		return &v
-	case 1:
-		v := types.WorkflowExecutionCloseStatusFailed
-		return &v
-	case 2:
-		v := types.WorkflowExecutionCloseStatusCanceled
-		return &v
-	case 3:
-		v := types.WorkflowExecutionCloseStatusTerminated
-		return &v
-	case 4:
-		v := types.WorkflowExecutionCloseStatusContinuedAsNew
-		return &v
-	case 5:
-		v := types.WorkflowExecutionCloseStatusTimedOut
-		return &v
-	}
-	panic("unexpected enum value")
+	closeStatus := types.WorkflowExecutionCloseStatus(status)
+	return &closeStatus
 }
 
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(

@@ -412,7 +412,7 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 	req := &pnt.SearchRequest{
 		Query:           query,
 		IsOpen:          true,
@@ -434,7 +434,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -455,7 +455,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
@@ -677,7 +677,7 @@ func getPartialFormatString(key string, val string) string {
 	return fmt.Sprintf(LikeStatement, key, val)
 }
 
-func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
@@ -700,13 +700,13 @@ func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowE
 	if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
 	} else { // check if it has a complete customized query
-		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+		query = v.constructQueryWithCustomizedQuery(requestQuery, validMap, query)
 	}
 
 	return query.String()
 }
 
-func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
@@ -735,7 +735,7 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 	if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
 	} else { // check if it has a complete customized query
-		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+		query = v.constructQueryWithCustomizedQuery(requestQuery, validMap, query)
 	}
 
 	// MUST HAVE! because pagination wouldn't work without order by clause!
@@ -755,7 +755,7 @@ func filterPrefix(query string) string {
 	return strings.ReplaceAll(query, postfix, "")
 }
 
-func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
+func (v *pinotVisibilityStore) constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
 	// checks every case of 'and'
 	reg := regexp.MustCompile("(?i)( and )")
 	queryList := reg.Split(requestQuery, -1)
@@ -772,9 +772,9 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 		}
 
 		if strings.Contains(strings.ToLower(element), " or ") {
-			query = dealWithOrClause(element, query, validMap)
+			query = v.dealWithOrClause(element, query, validMap)
 		} else {
-			query = dealWithoutOrClause(element, query, validMap)
+			query = v.dealWithoutOrClause(element, query, validMap)
 		}
 	}
 
@@ -785,7 +785,7 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 	return query
 }
 
-func convertRawToPinotQuery(element string, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) convertRawToPinotQuery(element string, validMap map[string]interface{}) string {
 	key, val, op := splitElement(element)
 
 	// case 1: when key is a system key
@@ -818,14 +818,14 @@ func trimElement(element string) string {
 	return element
 }
 
-func dealWithOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
+func (v *pinotVisibilityStore) dealWithOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
 	element = trimElement(element)
 
 	elementArray := strings.Split(element, " or ")
 
 	orQuery := "("
 	for index, value := range elementArray {
-		orQuery += convertRawToPinotQuery(value, validMap)
+		orQuery += v.convertRawToPinotQuery(value, validMap)
 		if index != len(elementArray)-1 {
 			orQuery += " or "
 		}
@@ -836,10 +836,7 @@ func dealWithOrClause(element string, query PinotQuery, validMap map[string]inte
 	return query
 }
 
-func dealWithoutOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
-	// TODO: switch to v.logger or something
-	queryQueryLogger := log.NewNoop()
-
+func (v *pinotVisibilityStore) dealWithoutOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
 	key, val, op := splitElement(element)
 
 	// case 1: when key is a system key
@@ -850,7 +847,7 @@ func dealWithoutOrClause(element string, query PinotQuery, validMap map[string]i
 
 	// case 2: when key is valid within validMap
 	if valType, ok := validMap[key]; ok {
-		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
+		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, v.logger)
 
 		if indexValType == types.IndexedValueTypeString {
 			val = removeQuote(val)
@@ -859,7 +856,7 @@ func dealWithoutOrClause(element string, query PinotQuery, validMap map[string]i
 			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
 		}
 	} else {
-		queryQueryLogger.Error("Unregistered field!!")
+		v.logger.Error("Unregistered field!!")
 	}
 
 	return query
