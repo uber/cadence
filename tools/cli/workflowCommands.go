@@ -1264,9 +1264,10 @@ func listWorkflows(c *cli.Context) getWorkflowPageFn {
 		},
 	)
 	if err != nil {
-		ErrorAndExit("Failed to count workflows.", err)
+		printError("Unable to count workflows. Proceeding with fetching list of workflows...", err)
+	} else {
+		fmt.Printf("Fetching %v workflows...\n", resp.GetCount())
 	}
-	fmt.Printf("Retrieving %v workflows...\n", resp.GetCount())
 
 	if c.IsSet(FlagListQuery) {
 		listQuery := c.String(FlagListQuery)
