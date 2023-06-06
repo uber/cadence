@@ -64,7 +64,8 @@ type (
 	// making forwarder API calls. This type contains the state
 	// for the token itself
 	ForwarderReqToken struct {
-		ch chan *ForwarderReqToken
+		ch         chan *ForwarderReqToken
+		isolatedCh map[string]chan *ForwarderReqToken
 	}
 )
 
@@ -102,12 +103,12 @@ func newForwarder(
 		taskListID:            taskListID,
 		taskListKind:          kind,
 		outstandingTasksLimit: int32(cfg.ForwarderMaxOutstandingTasks() * (len(isolationGroups) + 1)),
-		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls() * (len(isolationGroups) + 1)),
+		outstandingPollsLimit: int32(cfg.ForwarderMaxOutstandingPolls()),
 		limiter:               quotas.NewDynamicRateLimiter(rpsFunc),
 		isolationGroups:       isolationGroups,
 	}
-	fwdr.addReqToken.Store(newForwarderReqToken(int(fwdr.outstandingTasksLimit)))
-	fwdr.pollReqToken.Store(newForwarderReqToken(int(fwdr.outstandingPollsLimit)))
+	fwdr.addReqToken.Store(newForwarderReqToken(int(fwdr.outstandingTasksLimit), nil))
+	fwdr.pollReqToken.Store(newForwarderReqToken(int(fwdr.outstandingPollsLimit), isolationGroups))
 	return fwdr
 }
 
@@ -253,26 +254,29 @@ func (fwdr *Forwarder) ForwardPoll(ctx context.Context) (*InternalTask, error) {
 // AddReqTokenC returns a channel that can be used to wait for a token
 // that's necessary before making a ForwardTask or ForwardQueryTask API call.
 // After the API call is invoked, token.release() must be invoked
+// TODO: consider having separate token pools for different isolation groups
 func (fwdr *Forwarder) AddReqTokenC() <-chan *ForwarderReqToken {
-	fwdr.refreshTokenC(&fwdr.addReqToken, &fwdr.outstandingTasksLimit, int32(fwdr.cfg.ForwarderMaxOutstandingTasks()*(len(fwdr.isolationGroups)+1)))
+	fwdr.refreshTokenC(&fwdr.addReqToken, &fwdr.outstandingTasksLimit, int32(fwdr.cfg.ForwarderMaxOutstandingTasks()*(len(fwdr.isolationGroups)+1)), nil)
 	return fwdr.addReqToken.Load().(*ForwarderReqToken).ch
 }
 
 // PollReqTokenC returns a channel that can be used to wait for a token
 // that's necessary before making a ForwardPoll API call. After the API
 // call is invoked, token.release() must be invoked
-// For tasklists with isolation enabled, ideally we should have separate token pools for different isolation groups, but for now, only increase the number of tokens
-// TODO: consider having separate token pools for different isolation groups
-func (fwdr *Forwarder) PollReqTokenC() <-chan *ForwarderReqToken {
-	fwdr.refreshTokenC(&fwdr.pollReqToken, &fwdr.outstandingPollsLimit, int32(fwdr.cfg.ForwarderMaxOutstandingPolls()*(len(fwdr.isolationGroups)+1)))
-	return fwdr.pollReqToken.Load().(*ForwarderReqToken).ch
+// For tasklists with isolation enabled, we have separate token pools for different isolation groups
+func (fwdr *Forwarder) PollReqTokenC(isolationGroup string) <-chan *ForwarderReqToken {
+	fwdr.refreshTokenC(&fwdr.pollReqToken, &fwdr.outstandingPollsLimit, int32(fwdr.cfg.ForwarderMaxOutstandingPolls()), fwdr.isolationGroups)
+	if isolationGroup == "" {
+		return fwdr.pollReqToken.Load().(*ForwarderReqToken).ch
+	}
+	return fwdr.pollReqToken.Load().(*ForwarderReqToken).isolatedCh[isolationGroup]
 }
 
-func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit int32) {
+func (fwdr *Forwarder) refreshTokenC(value *atomic.Value, curr *int32, maxLimit int32, isolationGroups []string) {
 	currLimit := atomic.LoadInt32(curr)
 	if currLimit != maxLimit {
 		if atomic.CompareAndSwapInt32(curr, currLimit, maxLimit) {
-			value.Store(newForwarderReqToken(int(maxLimit)))
+			value.Store(newForwarderReqToken(int(maxLimit), isolationGroups))
 		}
 	}
 }
@@ -284,14 +288,25 @@ func (fwdr *Forwarder) handleErr(err error) error {
 	return err
 }
 
-func newForwarderReqToken(maxOutstanding int) *ForwarderReqToken {
-	reqToken := &ForwarderReqToken{ch: make(chan *ForwarderReqToken, maxOutstanding)}
+func newForwarderReqToken(maxOutstanding int, isolationGroups []string) *ForwarderReqToken {
+	isolatedCh := make(map[string]chan *ForwarderReqToken, len(isolationGroups))
+	for _, ig := range isolationGroups {
+		isolatedCh[ig] = make(chan *ForwarderReqToken, maxOutstanding)
+	}
+	reqToken := &ForwarderReqToken{ch: make(chan *ForwarderReqToken, maxOutstanding), isolatedCh: isolatedCh}
 	for i := 0; i < maxOutstanding; i++ {
 		reqToken.ch <- reqToken
+		for _, ch := range reqToken.isolatedCh {
+			ch <- reqToken
+		}
 	}
 	return reqToken
 }
 
-func (token *ForwarderReqToken) release() {
-	token.ch <- token
+func (token *ForwarderReqToken) release(isolationGroup string) {
+	if isolationGroup == "" {
+		token.ch <- token
+	} else {
+		token.isolatedCh[isolationGroup] <- token
+	}
 }
