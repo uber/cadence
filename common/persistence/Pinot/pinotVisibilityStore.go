@@ -64,7 +64,10 @@ const (
 	UpdateTime           = "UpdateTime"
 	ExecutionTime        = "ExecutionTime"
 	Encoding             = "Encoding"
-	LikeStatement        = "%s LIKE '%%%s%%'\n"
+	LikeStatement        = "%s LIKE '%%%s%%'"
+
+	// used to be micro second
+	oneMicroSecondInNano = int64(time.Microsecond / time.Nanosecond)
 )
 
 type (
@@ -193,8 +196,8 @@ func (v *pinotVisibilityStore) RecordWorkflowExecutionUninitialized(ctx context.
 		request.RunID,
 		request.WorkflowTypeName,
 		"",
-		0,
-		0,
+		-1,
+		-1,
 		0,
 		nil,
 		"",
@@ -250,7 +253,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 	request *p.InternalListWorkflowExecutionsRequest,
 ) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
 
@@ -287,7 +290,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutions(
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByType(ctx context.Context, request *p.InternalListWorkflowExecutionsByTypeRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	query := getListWorkflowExecutionsByTypeQuery(v.pinotClient.GetTableName(), request, false)
@@ -323,7 +326,7 @@ func (v *pinotVisibilityStore) ListClosedWorkflowExecutionsByType(ctx context.Co
 
 func (v *pinotVisibilityStore) ListOpenWorkflowExecutionsByWorkflowID(ctx context.Context, request *p.InternalListWorkflowExecutionsByWorkflowIDRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	isRecordValid := func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool {
-		return !request.EarliestTime.After(rec.CloseTime) && !rec.CloseTime.After(request.LatestTime)
+		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 
 	query := getListWorkflowExecutionsByWorkflowIDQuery(v.pinotClient.GetTableName(), request, false)
@@ -409,8 +412,7 @@ func (v *pinotVisibilityStore) GetClosedWorkflowExecution(ctx context.Context, r
 func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
-
+	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 	req := &pnt.SearchRequest{
 		Query:           query,
 		IsOpen:          true,
@@ -432,7 +434,7 @@ func (v *pinotVisibilityStore) ListWorkflowExecutions(ctx context.Context, reque
 func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, request *p.ListWorkflowExecutionsByQueryRequest) (*p.InternalListWorkflowExecutionsResponse, error) {
 	checkPageSize(request)
 
-	query := getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getListWorkflowExecutionsByQueryQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	req := &pnt.SearchRequest{
 		Query:           query,
@@ -453,7 +455,7 @@ func (v *pinotVisibilityStore) ScanWorkflowExecutions(ctx context.Context, reque
 }
 
 func (v *pinotVisibilityStore) CountWorkflowExecutions(ctx context.Context, request *p.CountWorkflowExecutionsRequest) (*p.CountWorkflowExecutionsResponse, error) {
-	query := getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
+	query := v.getCountWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, v.config.ValidSearchAttributes())
 
 	resp, err := v.pinotClient.CountByQuery(query)
 	if err != nil {
@@ -668,14 +670,14 @@ func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest
 
 func (f *PinotQueryFilter) addPartialMatch(key string, val string) {
 	f.checkFirstFilter()
-	f.string += getPartialFormatString(key, val)
+	f.string += fmt.Sprintf("%s\n", getPartialFormatString(key, val))
 }
 
 func getPartialFormatString(key string, val string) string {
 	return fmt.Sprintf(LikeStatement, key, val)
 }
 
-func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowExecutionsRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
@@ -698,13 +700,13 @@ func getCountWorkflowExecutionsQuery(tableName string, request *p.CountWorkflowE
 	if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
 	} else { // check if it has a complete customized query
-		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+		query = v.constructQueryWithCustomizedQuery(requestQuery, validMap, query)
 	}
 
 	return query.String()
 }
 
-func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest, validMap map[string]interface{}) string {
+func (v *pinotVisibilityStore) getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWorkflowExecutionsByQueryRequest, validMap map[string]interface{}) string {
 	if request == nil {
 		return ""
 	}
@@ -733,7 +735,12 @@ func getListWorkflowExecutionsByQueryQuery(tableName string, request *p.ListWork
 	if common.IsJustOrderByClause(requestQuery) {
 		query.concatSorter(requestQuery)
 	} else { // check if it has a complete customized query
-		query = constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+		query = v.constructQueryWithCustomizedQuery(requestQuery, validMap, query)
+	}
+
+	// MUST HAVE! because pagination wouldn't work without order by clause!
+	if query.sorters == "" {
+		query.addPinotSorter("CloseTime", "DESC")
 	}
 
 	query.addOffsetAndLimits(token.From, request.PageSize)
@@ -748,12 +755,9 @@ func filterPrefix(query string) string {
 	return strings.ReplaceAll(query, postfix, "")
 }
 
-func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
-	// TODO: switch to v.logger or something
-	queryQueryLogger := log.NewNoop()
-
+func (v *pinotVisibilityStore) constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]interface{}, query PinotQuery) PinotQuery {
 	// checks every case of 'and'
-	reg := regexp.MustCompile("(?i)(and)")
+	reg := regexp.MustCompile("(?i)( and )")
 	queryList := reg.Split(requestQuery, -1)
 	var orderBy string
 
@@ -767,31 +771,103 @@ func constructQueryWithCustomizedQuery(requestQuery string, validMap map[string]
 			continue
 		}
 
-		key, val, op := splitElement(element)
-
-		// case 2: when key is a system key
-		if ok, _ := isSystemKey(key); ok {
-			query.filters.addQuery(element)
-			continue
-		}
-
-		// case 3: when key is valid within validMap
-		if valType, ok := validMap[key]; ok {
-			indexValType := common.ConvertIndexedValueTypeToInternalType(valType, queryQueryLogger)
-
-			if indexValType == types.IndexedValueTypeString {
-				val = removeQuote(val)
-				query.filters.addPartialMatch(key, val)
-			} else {
-				query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
-			}
+		if strings.Contains(strings.ToLower(element), " or ") {
+			query = v.dealWithOrClause(element, query, validMap)
 		} else {
-			queryQueryLogger.Error("Unregistered field!!")
+			query = v.dealWithoutOrClause(element, query, validMap)
 		}
 	}
 
 	if orderBy != "" {
 		query.concatSorter(orderBy)
+	}
+
+	return query
+}
+
+func convertMissingFields(key string, op string, val string, element string) string {
+	if val == "missing" {
+		if strings.ToLower(key) == "historylength" {
+			return fmt.Sprintf("%s %s %s", key, op, "0")
+		}
+		return fmt.Sprintf("%s %s %s", key, op, "-1")
+	}
+	return element
+}
+
+func (v *pinotVisibilityStore) convertRawToPinotQuery(element string, validMap map[string]interface{}) string {
+	key, val, op := splitElement(element)
+
+	// case 1: when key is a system key
+	if ok, _ := isSystemKey(key); ok {
+		return convertMissingFields(key, op, val, element)
+	}
+
+	// case 2: when key is valid within validMap
+	if valType, ok := validMap[key]; ok {
+		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, log.NewNoop())
+
+		if indexValType == types.IndexedValueTypeString {
+			val = removeQuote(val)
+			return getPartialFormatString(key, val)
+		}
+		return fmt.Sprintf("%s %s %s", key, op, val)
+	}
+	return ""
+}
+
+func trimElement(element string) string {
+	if len(element) < 2 {
+		return ""
+	}
+
+	if element[0] == '(' && element[len(element)-1] == ')' {
+		element = element[1 : len(element)-1]
+	}
+
+	return element
+}
+
+func (v *pinotVisibilityStore) dealWithOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
+	element = trimElement(element)
+
+	elementArray := strings.Split(element, " or ")
+
+	orQuery := "("
+	for index, value := range elementArray {
+		orQuery += v.convertRawToPinotQuery(value, validMap)
+		if index != len(elementArray)-1 {
+			orQuery += " or "
+		}
+	}
+	orQuery += ")"
+
+	query.filters.addQuery(orQuery)
+	return query
+}
+
+func (v *pinotVisibilityStore) dealWithoutOrClause(element string, query PinotQuery, validMap map[string]interface{}) PinotQuery {
+	key, val, op := splitElement(element)
+
+	// case 1: when key is a system key
+	if ok, _ := isSystemKey(key); ok {
+		element = convertMissingFields(key, op, val, element)
+		query.filters.addQuery(element)
+		return query
+	}
+
+	// case 2: when key is valid within validMap
+	if valType, ok := validMap[key]; ok {
+		indexValType := common.ConvertIndexedValueTypeToInternalType(valType, v.logger)
+
+		if indexValType == types.IndexedValueTypeString {
+			val = removeQuote(val)
+			query.filters.addPartialMatch(key, val)
+		} else {
+			query.filters.addQuery(fmt.Sprintf("%s %s %s", key, op, val))
+		}
+	} else {
+		v.logger.Error("Unregistered field!!")
 	}
 
 	return query
@@ -923,13 +999,18 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	pageSize := request.PageSize
 
 	query := NewPinotQuery(tableName)
-
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+
+	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+
 	if isClosed {
+		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, "0")
 	} else {
+		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, "0")
+		query.filters.addEqual(CloseTime, "-1")
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -949,11 +1030,16 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(WorkflowType, request.WorkflowTypeName)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+
 	if isClosed {
+		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, "0")
 	} else {
+		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, "0")
+		query.filters.addEqual(CloseTime, "-1")
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -970,11 +1056,16 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
 	query.filters.addEqual(WorkflowID, request.WorkflowID)
-	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
+	earliest := request.EarliestTime.UnixMilli() - oneMicroSecondInNano
+	latest := request.LatestTime.UnixMilli() + oneMicroSecondInNano
+
 	if isClosed {
+		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, "0")
 	} else {
+		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, "0")
+		query.filters.addEqual(CloseTime, "-1")
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)

@@ -39,7 +39,7 @@
       "dataType": "BOOLEAN"
     },
     {
-      "name": "NumCluster",
+      "name": "NumClusters",
       "dataType": "INT"
     },
     {
@@ -112,7 +112,8 @@
     },
     {
       "name": "BinaryChecksums",
-      "dataType": "STRING"
+      "dataType": "STRING",
+      "singleValueField": false
     },
     {
       "name": "Passed",

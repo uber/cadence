@@ -30,12 +30,10 @@ import (
 
 	"github.com/startreedata/pinot-client-go/pinot"
 
-	workflow "github.com/uber/cadence/.gen/go/shared"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/tag"
 	p "github.com/uber/cadence/common/persistence"
 	"github.com/uber/cadence/common/types"
-	"github.com/uber/cadence/common/types/mapper/thrift"
 )
 
 type PinotClient struct {
@@ -96,18 +94,22 @@ func (c *PinotClient) GetTableName() string {
 
 /****************************** Response Translator ******************************/
 
-func buildMap(hit []interface{}, columnNames []string) map[string]interface{} {
-	resMap := make(map[string]interface{})
+func buildMap(hit []interface{}, columnNames []string) (map[string]interface{}, map[string]interface{}) {
+	systemKeyMap := make(map[string]interface{})
+	customKeyMap := make(map[string]interface{})
 
 	for i := 0; i < len(columnNames); i++ {
 		key := columnNames[i]
-		// checks if it is system key, if yes, put it into the map
-		if ok, _ := isSystemKey(key); ok {
-			resMap[key] = hit[i]
+		// checks if it is system key, if yes, put it into the system map; otherwise put it into custom map
+		ok, _ := isSystemKey(key)
+		if ok {
+			systemKeyMap[key] = hit[i]
+		} else {
+			customKeyMap[key] = hit[i]
 		}
 	}
 
-	return resMap
+	return systemKeyMap, customKeyMap
 }
 
 // VisibilityRecord is a struct of doc for deserialization
@@ -119,7 +121,7 @@ type VisibilityRecord struct {
 	StartTime     int64
 	ExecutionTime int64
 	CloseTime     int64
-	CloseStatus   workflow.WorkflowExecutionCloseStatus
+	CloseStatus   int
 	HistoryLength int64
 	Encoding      string
 	TaskList      string
@@ -134,35 +136,23 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 		return nil
 	}
 
-	columnNameToValue := buildMap(hit, columnNames)
-	jsonColumnNameToValue, err := json.Marshal(columnNameToValue)
+	systemKeyMap, customKeyMap := buildMap(hit, columnNames)
+	jsonSystemKeyMap, err := json.Marshal(systemKeyMap)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to marshal columnNameToValue",
+		c.logger.Error("unable to marshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
 	}
 
 	var source *VisibilityRecord
-	err = json.Unmarshal(jsonColumnNameToValue, &source)
+	err = json.Unmarshal(jsonSystemKeyMap, &source)
 	if err != nil { // log and skip error
-		c.logger.Error("unable to Unmarshal columnNameToValue",
+		c.logger.Error("unable to Unmarshal systemKeyMap",
 			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
 		)
 		return nil
 	}
-
-	attr := make(map[string]interface{})
-	//if source.Attr != "null" {
-	//	err = json.Unmarshal([]byte(source.Attr), &attr)
-	//
-	//	if err != nil { // log and skip error
-	//		c.logger.Error("unable to Unmarshal source.Attr",
-	//			tag.Error(err), //tag.ESDocID(fmt.Sprintf(columnNameToValue["DocID"]))
-	//		)
-	//		return nil
-	//	}
-	//}
 
 	record := &p.InternalVisibilityWorkflowExecutionInfo{
 		DomainID:         source.DomainID,
@@ -175,18 +165,26 @@ func (c *PinotClient) convertSearchResultToVisibilityRecord(hit []interface{}, c
 		TaskList:         source.TaskList,
 		IsCron:           source.IsCron,
 		NumClusters:      source.NumClusters,
-		SearchAttributes: attr,
+		SearchAttributes: customKeyMap,
 	}
 	if source.UpdateTime != 0 {
 		record.UpdateTime = time.UnixMilli(source.UpdateTime)
 	}
 	if source.CloseTime != 0 {
 		record.CloseTime = time.UnixMilli(source.CloseTime)
-		record.Status = thrift.ToWorkflowExecutionCloseStatus(&source.CloseStatus)
+		record.Status = toWorkflowExecutionCloseStatus(source.CloseStatus)
 		record.HistoryLength = source.HistoryLength
 	}
 
 	return record
+}
+
+func toWorkflowExecutionCloseStatus(status int) *types.WorkflowExecutionCloseStatus {
+	if status < 0 {
+		return nil
+	}
+	closeStatus := types.WorkflowExecutionCloseStatus(status)
+	return &closeStatus
 }
 
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
@@ -211,6 +209,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 
 	for i := 0; i < numOfActualHits; i++ {
 		workflowExecutionInfo := c.convertSearchResultToVisibilityRecord(actualHits[i], columnNames)
+
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {
 			response.Executions = append(response.Executions, workflowExecutionInfo)
 		}
@@ -223,9 +222,9 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		// ES Search API support pagination using From and PageSize, but has limit that From+PageSize cannot exceed a threshold
 		// TODO: need to confirm if pinot has similar settings
 		// don't need to retrieve deeper pages in pinot, and no functions like ES SearchAfter
-		if resp.NumDocsScanned <= int64(maxResultWindow-pageSize) { // use pinot Search From+Size
-			nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
-		}
+
+		nextPageToken, err = SerializePageToken(&PinotVisibilityPageToken{From: token.From + numOfActualHits})
+
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +232,8 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 		response.NextPageToken = make([]byte, len(nextPageToken))
 		copy(response.NextPageToken, nextPageToken)
 	}
-
+	//m, _ := json.Marshal(response.Executions)
+	//panic(fmt.Sprintf("ABCDDDBUG: %s", response.NextPageToken))
 	return response, nil
 }
 

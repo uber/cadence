@@ -52,36 +52,83 @@ var (
 )
 
 func TestBuildMap(t *testing.T) {
-	nilResult := buildMap(nil, nil)
-	expectNilResult := map[string]interface{}{}
-	assert.Equal(t, nilResult, expectNilResult)
+	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime", "CustomIntField", "CustomStringField"}
+	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime, 1, "some string"}
+
+	tests := map[string]struct {
+		inputColumnNames  []string
+		inputHit          []interface{}
+		expectedSystemMap map[string]interface{}
+		expectedCustomMap map[string]interface{}
+	}{
+		"Case1: with everything": {
+			inputColumnNames:  columnName,
+			inputHit:          hit,
+			expectedSystemMap: map[string]interface{}{"CloseStatus": 1, "CloseTime": int64(2547596872371000000), "DomainID": "domainid", "Encoding": "encode", "ExecutionTime": int64(1547596872371000000), "HistoryLength": 1, "IsCron": true, "NumClusters": 1, "RunID": "rid", "StartTime": int64(1547596872371000000), "TaskList": "tsklst", "UpdateTime": int64(1547596872371000000), "WorkflowID": "wfid", "WorkflowType": "wftype"},
+			expectedCustomMap: map[string]interface{}{"CustomIntField": 1, "CustomStringField": "some string"},
+		},
+		"Case2: nil result": {
+			inputColumnNames:  nil,
+			inputHit:          nil,
+			expectedSystemMap: map[string]interface{}{},
+			expectedCustomMap: map[string]interface{}{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				systemMap, customMap := buildMap(test.inputHit, test.inputColumnNames)
+				assert.Equal(t, test.expectedSystemMap, systemMap)
+				assert.Equal(t, test.expectedCustomMap, customMap)
+			})
+		})
+	}
 }
 
 func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
-	badHit := []interface{}{1, 2, 3}
-	badColumnName := []string{"testName1", "testName2"}
+	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime", "CustomIntField", "CustomStringField"}
+	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime, 1, "some string"}
+	closeStatus := types.WorkflowExecutionCloseStatusFailed
 
-	badResult := client.convertSearchResultToVisibilityRecord(badHit, badColumnName)
-	assert.Nil(t, badResult)
+	tests := map[string]struct {
+		inputColumnNames         []string
+		inputHit                 []interface{}
+		expectedVisibilityRecord *p.InternalVisibilityWorkflowExecutionInfo
+	}{
+		"Case1: with everything": {
+			inputColumnNames: columnName,
+			inputHit:         hit,
+			expectedVisibilityRecord: &p.InternalVisibilityWorkflowExecutionInfo{
+				DomainID:         "domainid",
+				WorkflowType:     "wftype",
+				WorkflowID:       "wfid",
+				RunID:            "rid",
+				TypeName:         "wftype",
+				StartTime:        time.UnixMilli(testEarliestTime),
+				ExecutionTime:    time.UnixMilli(testEarliestTime),
+				CloseTime:        time.UnixMilli(testLatestTime),
+				Status:           &closeStatus,
+				HistoryLength:    1,
+				Memo:             nil,
+				TaskList:         "tsklst",
+				IsCron:           true,
+				NumClusters:      1,
+				UpdateTime:       time.UnixMilli(testEarliestTime),
+				SearchAttributes: map[string]interface{}{"CustomIntField": 1, "CustomStringField": "some string"},
+				ShardID:          0,
+			},
+		},
+	}
 
-	columnName := []string{"WorkflowID", "RunID", "WorkflowType", "DomainID", "StartTime", "ExecutionTime", "CloseTime", "CloseStatus", "HistoryLength", "Encoding", "TaskList", "IsCron", "NumClusters", "UpdateTime", "Attr"}
-	hit := []interface{}{"wfid", "rid", "wftype", "domainid", testEarliestTime, testEarliestTime, testLatestTime, 1, 1, "encode", "tsklst", true, 1, testEarliestTime, "null"}
-
-	result := *client.convertSearchResultToVisibilityRecord(hit, columnName)
-
-	assert.Equal(t, "wfid", result.WorkflowID)
-	assert.Equal(t, "rid", result.RunID)
-	assert.Equal(t, "wftype", result.WorkflowType)
-	assert.Equal(t, "domainid", result.DomainID)
-	assert.Equal(t, time.UnixMilli(testEarliestTime), result.StartTime)
-	assert.Equal(t, time.UnixMilli(testEarliestTime), result.ExecutionTime)
-	assert.Equal(t, time.UnixMilli(testLatestTime), result.CloseTime)
-	assert.Equal(t, types.WorkflowExecutionCloseStatus(1), *result.Status)
-	assert.Equal(t, int64(1), result.HistoryLength)
-	assert.Equal(t, "tsklst", result.TaskList)
-	assert.Equal(t, true, result.IsCron)
-	assert.Equal(t, int16(1), result.NumClusters)
-	assert.Equal(t, time.UnixMilli(testEarliestTime), result.UpdateTime)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			assert.NotPanics(t, func() {
+				visibilityRecord := client.convertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames)
+				assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
+			})
+		})
+	}
 }
 
 func TestGetInternalListWorkflowExecutionsResponse(t *testing.T) {
