@@ -42,11 +42,12 @@ import (
 
 type ForwarderTestSuite struct {
 	suite.Suite
-	controller *gomock.Controller
-	client     *matching.MockClient
-	fwdr       *Forwarder
-	cfg        *forwarderConfig
-	taskList   *taskListID
+	controller      *gomock.Controller
+	client          *matching.MockClient
+	fwdr            *Forwarder
+	cfg             *forwarderConfig
+	taskList        *taskListID
+	isolationGroups []string
 }
 
 func TestForwarderSuite(t *testing.T) {
@@ -63,7 +64,8 @@ func (t *ForwarderTestSuite) SetupTest() {
 		ForwarderMaxOutstandingTasks: func() int { return 1 },
 	}
 	t.taskList = newTestTaskListID("fwdr", "tl0", persistence.TaskListTypeDecision)
-	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client)
+	t.isolationGroups = []string{"abc", "xyz"}
+	t.fwdr = newForwarder(t.cfg, t.taskList, types.TaskListKindNormal, t.client, t.isolationGroups)
 }
 
 func (t *ForwarderTestSuite) TearDownTest() {
@@ -274,31 +276,44 @@ func (t *ForwarderTestSuite) TestMaxOutstandingConcurrency() {
 			for i := 0; i < concurrency; i++ {
 				wg.Add(1)
 				go func() {
-					select {
-					case token := <-t.fwdr.AddReqTokenC():
-						if !tc.mustLeakToken {
-							token.release()
+					for i := 0; i < len(t.isolationGroups)+1; i++ {
+						select {
+						case token := <-t.fwdr.AddReqTokenC():
+							if !tc.mustLeakToken {
+								token.release("")
+							}
+							atomic.AddInt32(&adds, 1)
+						case <-time.After(time.Millisecond * 100):
+							break
 						}
-						atomic.AddInt32(&adds, 1)
-					case <-time.After(time.Millisecond * 200):
-						break
 					}
 
 					select {
-					case token := <-t.fwdr.PollReqTokenC():
+					case token := <-t.fwdr.PollReqTokenC(""):
 						if !tc.mustLeakToken {
-							token.release()
+							token.release("")
 						}
 						atomic.AddInt32(&polls, 1)
-					case <-time.After(time.Millisecond * 200):
+					case <-time.After(time.Millisecond * 100):
 						break
+					}
+					for _, ig := range t.isolationGroups {
+						select {
+						case token := <-t.fwdr.PollReqTokenC(ig):
+							if !tc.mustLeakToken {
+								token.release(ig)
+							}
+							atomic.AddInt32(&polls, 1)
+						case <-time.After(time.Millisecond * 100):
+							break
+						}
 					}
 					wg.Done()
 				}()
 			}
 			t.True(common.AwaitWaitGroup(&wg, time.Second))
-			t.Equal(tc.output, adds)
-			t.Equal(tc.output, polls)
+			t.Equal(tc.output*int32(len(t.isolationGroups)+1), adds)
+			t.Equal(tc.output*int32(len(t.isolationGroups)+1), polls)
 		})
 	}
 }
@@ -316,9 +331,9 @@ func (t *ForwarderTestSuite) TestMaxOutstandingConfigUpdate() {
 		go func() {
 			<-startC
 			token1 := <-t.fwdr.AddReqTokenC()
-			token1.release()
-			token2 := <-t.fwdr.PollReqTokenC()
-			token2.release()
+			token1.release("")
+			token2 := <-t.fwdr.PollReqTokenC("")
+			token2.release("")
 			doneWG.Done()
 		}()
 	}
@@ -328,7 +343,7 @@ func (t *ForwarderTestSuite) TestMaxOutstandingConfigUpdate() {
 	close(startC)
 	t.True(common.AwaitWaitGroup(&doneWG, time.Second))
 
-	t.Equal(10, cap(t.fwdr.addReqToken.Load().(*ForwarderReqToken).ch))
+	t.Equal(10*(len(t.isolationGroups)+1), cap(t.fwdr.addReqToken.Load().(*ForwarderReqToken).ch))
 	t.Equal(10, cap(t.fwdr.pollReqToken.Load().(*ForwarderReqToken).ch))
 }
 
