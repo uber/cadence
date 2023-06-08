@@ -1930,18 +1930,19 @@ func FromPendingActivityInfo(t *types.PendingActivityInfo) *apiv1.PendingActivit
 		return nil
 	}
 	return &apiv1.PendingActivityInfo{
-		ActivityId:         t.ActivityID,
-		ActivityType:       FromActivityType(t.ActivityType),
-		State:              FromPendingActivityState(t.State),
-		HeartbeatDetails:   FromPayload(t.HeartbeatDetails),
-		LastHeartbeatTime:  unixNanoToTime(t.LastHeartbeatTimestamp),
-		LastStartedTime:    unixNanoToTime(t.LastStartedTimestamp),
-		Attempt:            t.Attempt,
-		MaximumAttempts:    t.MaximumAttempts,
-		ScheduledTime:      unixNanoToTime(t.ScheduledTimestamp),
-		ExpirationTime:     unixNanoToTime(t.ExpirationTimestamp),
-		LastFailure:        FromFailure(t.LastFailureReason, t.LastFailureDetails),
-		LastWorkerIdentity: t.LastWorkerIdentity,
+		ActivityId:            t.ActivityID,
+		ActivityType:          FromActivityType(t.ActivityType),
+		State:                 FromPendingActivityState(t.State),
+		HeartbeatDetails:      FromPayload(t.HeartbeatDetails),
+		LastHeartbeatTime:     unixNanoToTime(t.LastHeartbeatTimestamp),
+		LastStartedTime:       unixNanoToTime(t.LastStartedTimestamp),
+		Attempt:               t.Attempt,
+		MaximumAttempts:       t.MaximumAttempts,
+		ScheduledTime:         unixNanoToTime(t.ScheduledTimestamp),
+		ExpirationTime:        unixNanoToTime(t.ExpirationTimestamp),
+		LastFailure:           FromFailure(t.LastFailureReason, t.LastFailureDetails),
+		LastWorkerIdentity:    t.LastWorkerIdentity,
+		StartedWorkerIdentity: t.StartedWorkerIdentity,
 	}
 }
 
@@ -1963,6 +1964,7 @@ func ToPendingActivityInfo(t *apiv1.PendingActivityInfo) *types.PendingActivityI
 		LastFailureReason:      ToFailureReason(t.LastFailure),
 		LastFailureDetails:     ToFailureDetails(t.LastFailure),
 		LastWorkerIdentity:     t.LastWorkerIdentity,
+		StartedWorkerIdentity:  t.StartedWorkerIdentity,
 	}
 }
 
