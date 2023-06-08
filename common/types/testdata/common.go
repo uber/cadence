@@ -383,6 +383,7 @@ var (
 		LastFailureReason:      &FailureReason,
 		LastWorkerIdentity:     Identity,
 		LastFailureDetails:     FailureDetails,
+		StartedWorkerIdentity:  Identity,
 	}
 	PendingActivityInfoArray = []*types.PendingActivityInfo{
 		&PendingActivityInfo,
