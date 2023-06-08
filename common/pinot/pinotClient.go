@@ -91,7 +91,6 @@ func (c *PinotClient) GetTableName() string {
 }
 
 /****************************** Response Translator ******************************/
-
 func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	resp *pinot.BrokerResponse,
 	isRecordValid func(rec *p.InternalVisibilityWorkflowExecutionInfo) bool,
@@ -113,6 +112,7 @@ func (c *PinotClient) getInternalListWorkflowExecutionsResponse(
 	response.Executions = make([]*p.InternalVisibilityWorkflowExecutionInfo, 0)
 
 	for i := 0; i < numOfActualHits; i++ {
+
 		workflowExecutionInfo := ConvertSearchResultToVisibilityRecord(actualHits[i], columnNames, c.logger, isSystemKey)
 
 		if isRecordValid == nil || isRecordValid(workflowExecutionInfo) {

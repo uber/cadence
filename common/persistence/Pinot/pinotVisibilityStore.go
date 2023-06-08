@@ -256,6 +256,7 @@ func (v *pinotVisibilityStore) ListOpenWorkflowExecutions(
 		return !request.EarliestTime.After(rec.StartTime) && !rec.StartTime.After(request.LatestTime)
 	}
 	query := getListWorkflowExecutionsQuery(v.pinotClient.GetTableName(), request, false)
+
 	req := &pnt.SearchRequest{
 		Query:           query,
 		IsOpen:          true,

@@ -3231,7 +3231,7 @@ var IntKeys = map[IntKey]DynamicInt{
 	ReplicatorCacheCapacity: DynamicInt{
 		KeyName:      "history.replicatorCacheCapacity",
 		Description:  "ReplicatorCacheCapacity is the capacity of replication cache in number of tasks",
-		DefaultValue: 10000,
+		DefaultValue: 0,
 	},
 	ExecutionMgrNumConns: DynamicInt{
 		KeyName:      "history.executionMgrNumConns",
