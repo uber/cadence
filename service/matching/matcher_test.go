@@ -42,13 +42,14 @@ import (
 
 type MatcherTestSuite struct {
 	suite.Suite
-	controller  *gomock.Controller
-	client      *matching.MockClient
-	fwdr        *Forwarder
-	cfg         *taskListConfig
-	taskList    *taskListID
-	matcher     *TaskMatcher // matcher for child partition
-	rootMatcher *TaskMatcher // matcher for parent partition
+	controller      *gomock.Controller
+	client          *matching.MockClient
+	fwdr            *Forwarder
+	cfg             *taskListConfig
+	taskList        *taskListID
+	matcher         *TaskMatcher // matcher for child partition
+	rootMatcher     *TaskMatcher // matcher for parent partition
+	isolationGroups []string
 }
 
 func TestMatcherSuite(t *testing.T) {
@@ -69,7 +70,8 @@ func (t *MatcherTestSuite) SetupTest() {
 		ForwarderMaxChildrenPerNode:  func() int { return 20 },
 	}
 	t.cfg = tlCfg
-	t.fwdr = newForwarder(&t.cfg.forwarderConfig, t.taskList, types.TaskListKindNormal, t.client)
+	t.isolationGroups = []string{"dca1", "dca2"}
+	t.fwdr = newForwarder(&t.cfg.forwarderConfig, t.taskList, types.TaskListKindNormal, t.client, []string{"dca1", "dca2"})
 	t.matcher = newTaskMatcher(tlCfg, t.fwdr, metrics.NoopScope(metrics.Matching), []string{"dca1", "dca2"})
 
 	rootTaskList := newTestTaskListID(t.taskList.domainID, t.taskList.Parent(20), persistence.TaskListTypeDecision)
@@ -84,8 +86,10 @@ func (t *MatcherTestSuite) TearDownTest() {
 
 func (t *MatcherTestSuite) TestLocalSyncMatch() {
 	// force disable remote forwarding
-	<-t.fwdr.AddReqTokenC()
-	<-t.fwdr.PollReqTokenC()
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC("")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "")
@@ -105,8 +109,10 @@ func (t *MatcherTestSuite) TestLocalSyncMatch() {
 
 func (t *MatcherTestSuite) TestIsolationLocalSyncMatch() {
 	// force disable remote forwarding
-	<-t.fwdr.AddReqTokenC()
-	<-t.fwdr.PollReqTokenC()
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC("dca1")
 
 	isolationGroup := "dca1"
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
@@ -224,8 +230,10 @@ func (t *MatcherTestSuite) TestSyncMatchFailure() {
 
 func (t *MatcherTestSuite) TestIsolationSyncMatchFailure() {
 	// force disable remote forwarding
-	<-t.fwdr.AddReqTokenC()
-	<-t.fwdr.PollReqTokenC()
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC("dca2")
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "dca2")
 		if err == nil {
@@ -243,8 +251,10 @@ func (t *MatcherTestSuite) TestIsolationSyncMatchFailure() {
 
 func (t *MatcherTestSuite) TestQueryLocalSyncMatch() {
 	// force disable remote forwarding
-	<-t.fwdr.AddReqTokenC()
-	<-t.fwdr.PollReqTokenC()
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC("")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.PollForQuery(ctx)
@@ -314,7 +324,7 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatch() {
 }
 
 func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
-	<-t.fwdr.PollReqTokenC()
+	<-t.fwdr.PollReqTokenC("")
 
 	matched := false
 	ready, wait := ensureAsyncAfterReady(time.Second, func(ctx context.Context) {
@@ -347,8 +357,10 @@ func (t *MatcherTestSuite) TestQueryRemoteSyncMatchError() {
 
 func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 	// force disable remote forwarding
-	<-t.fwdr.AddReqTokenC()
-	<-t.fwdr.PollReqTokenC()
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC("")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "")
@@ -367,8 +379,10 @@ func (t *MatcherTestSuite) TestMustOfferLocalMatch() {
 
 func (t *MatcherTestSuite) TestIsolationMustOfferLocalMatch() {
 	// force disable remote forwarding
-	<-t.fwdr.AddReqTokenC()
-	<-t.fwdr.PollReqTokenC()
+	for i := 0; i < len(t.isolationGroups)+1; i++ {
+		<-t.fwdr.AddReqTokenC()
+	}
+	<-t.fwdr.PollReqTokenC("dca1")
 
 	wait := ensureAsyncReady(time.Second, func(ctx context.Context) {
 		task, err := t.matcher.Poll(ctx, "dca1")
@@ -502,7 +516,7 @@ func (t *MatcherTestSuite) TestIsolationMustOfferRemoteMatch() {
 }
 
 func (t *MatcherTestSuite) TestRemotePoll() {
-	pollToken := <-t.fwdr.PollReqTokenC()
+	pollToken := <-t.fwdr.PollReqTokenC("")
 
 	var req *types.MatchingPollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -513,7 +527,7 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 	)
 
 	ready, wait := ensureAsyncAfterReady(0, func(_ context.Context) {
-		pollToken.release()
+		pollToken.release("")
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -528,7 +542,7 @@ func (t *MatcherTestSuite) TestRemotePoll() {
 }
 
 func (t *MatcherTestSuite) TestRemotePollForQuery() {
-	pollToken := <-t.fwdr.PollReqTokenC()
+	pollToken := <-t.fwdr.PollReqTokenC("")
 
 	var req *types.MatchingPollForDecisionTaskRequest
 	t.client.EXPECT().PollForDecisionTask(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -539,7 +553,7 @@ func (t *MatcherTestSuite) TestRemotePollForQuery() {
 	)
 
 	ready, wait := ensureAsyncAfterReady(0, func(_ context.Context) {
-		pollToken.release()
+		pollToken.release("")
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
