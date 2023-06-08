@@ -25,8 +25,9 @@ package pinot
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/startreedata/pinot-client-go/pinot"
 	"reflect"
+
+	"github.com/startreedata/pinot-client-go/pinot"
 
 	"github.com/uber/cadence/common/log"
 	p "github.com/uber/cadence/common/persistence"
