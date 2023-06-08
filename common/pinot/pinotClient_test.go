@@ -78,7 +78,7 @@ func TestBuildMap(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				systemMap, customMap := buildMap(test.inputHit, test.inputColumnNames)
+				systemMap, customMap := buildMap(test.inputHit, test.inputColumnNames, isSystemKey)
 				assert.Equal(t, test.expectedSystemMap, systemMap)
 				assert.Equal(t, test.expectedCustomMap, customMap)
 			})
@@ -124,7 +124,7 @@ func TestConvertSearchResultToVisibilityRecord(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			assert.NotPanics(t, func() {
-				visibilityRecord := client.convertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames)
+				visibilityRecord := ConvertSearchResultToVisibilityRecord(test.inputHit, test.inputColumnNames, nil, isSystemKey)
 				assert.Equal(t, test.expectedVisibilityRecord, visibilityRecord)
 			})
 		})

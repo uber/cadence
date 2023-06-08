@@ -348,7 +348,7 @@ FROM %s
 WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
-AND CloseTime = '-1'
+AND CloseTime = -1
 Order BY CloseTime DESC
 , RunID DESC
 LIMIT 0, 10
@@ -391,7 +391,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowType = 'test-wf-type'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
-AND CloseTime = '-1'
+AND CloseTime = -1
 Order BY CloseTime DESC
 , RunID DESC
 `, testTableName)
@@ -433,7 +433,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND WorkflowID = 'test-wid'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
-AND CloseTime = '-1'
+AND CloseTime = -1
 Order BY CloseTime DESC
 , RunID DESC
 `, testTableName)

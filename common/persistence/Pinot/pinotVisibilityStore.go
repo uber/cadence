@@ -641,7 +641,12 @@ func (f *PinotQueryFilter) checkFirstFilter() {
 
 func (f *PinotQueryFilter) addEqual(obj string, val interface{}) {
 	f.checkFirstFilter()
-	quotedVal := fmt.Sprintf("'%s'", val)
+	if _, ok := val.(string); ok {
+		val = fmt.Sprintf("'%s'", val)
+	} else {
+		val = fmt.Sprintf("%v", val)
+	}
+	quotedVal := fmt.Sprintf("%s", val)
 	f.string += fmt.Sprintf("%s = %s\n", obj, quotedVal)
 }
 
@@ -652,15 +657,15 @@ func (f *PinotQueryFilter) addQuery(query string) {
 }
 
 // addGte check object is greater than or equals to val
-func (f *PinotQueryFilter) addGte(obj string, val interface{}) {
+func (f *PinotQueryFilter) addGte(obj string, val int) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s >= %s\n", obj, val)
+	f.string += fmt.Sprintf("%s >= %s\n", obj, fmt.Sprintf("%v", val))
 }
 
 // addLte check object is less than val
 func (f *PinotQueryFilter) addLt(obj string, val interface{}) {
 	f.checkFirstFilter()
-	f.string += fmt.Sprintf("%s < %s\n", obj, val)
+	f.string += fmt.Sprintf("%s < %s\n", obj, fmt.Sprintf("%v", val))
 }
 
 func (f *PinotQueryFilter) addTimeRange(obj string, earliest interface{}, latest interface{}) {
@@ -1006,11 +1011,11 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 
 	if isClosed {
 		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
-		query.filters.addGte(CloseStatus, "0")
+		query.filters.addGte(CloseStatus, 0)
 	} else {
 		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
-		query.filters.addLt(CloseStatus, "0")
-		query.filters.addEqual(CloseTime, "-1")
+		query.filters.addLt(CloseStatus, 0)
+		query.filters.addEqual(CloseTime, -1)
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -1035,11 +1040,11 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 
 	if isClosed {
 		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
-		query.filters.addGte(CloseStatus, "0")
+		query.filters.addGte(CloseStatus, 0)
 	} else {
 		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
-		query.filters.addLt(CloseStatus, "0")
-		query.filters.addEqual(CloseTime, "-1")
+		query.filters.addLt(CloseStatus, 0)
+		query.filters.addEqual(CloseTime, -1)
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -1061,11 +1066,11 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 
 	if isClosed {
 		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
-		query.filters.addGte(CloseStatus, "0")
+		query.filters.addGte(CloseStatus, 0)
 	} else {
 		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
-		query.filters.addLt(CloseStatus, "0")
-		query.filters.addEqual(CloseTime, "-1")
+		query.filters.addLt(CloseStatus, 0)
+		query.filters.addEqual(CloseTime, -1)
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
@@ -1114,7 +1119,7 @@ func getGetClosedWorkflowExecutionQuery(tableName string, request *p.InternalGet
 	query := NewPinotQuery(tableName)
 
 	query.filters.addEqual(DomainID, request.DomainUUID)
-	query.filters.addGte(CloseStatus, "0")
+	query.filters.addGte(CloseStatus, 0)
 	query.filters.addEqual(WorkflowID, request.Execution.GetWorkflowID())
 
 	rid := request.Execution.GetRunID()
