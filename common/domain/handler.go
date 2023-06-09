@@ -706,6 +706,10 @@ func (d *handlerImpl) UpdateIsolationGroups(
 		return errDomainUpdateTooFrequent
 	}
 
+	if !d.clusterMetadata.IsPrimaryCluster() {
+		return errNotPrimaryCluster
+	}
+
 	configVersion++
 	lastUpdatedTime = d.timeSource.Now()
 
