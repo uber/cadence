@@ -2543,7 +2543,7 @@ const (
 	// AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match
 	// KeyName: matching.asyncTaskDispatchTimeout
 	// Value type: Duration
-	// Default value: 30 seconds
+	// Default value: 3 seconds
 	// Allowed filters: domainName, taskListName, taskListType
 	AsyncTaskDispatchTimeout
 
@@ -4512,7 +4512,7 @@ var DurationKeys = map[DurationKey]DynamicDuration{
 	AsyncTaskDispatchTimeout: DynamicDuration{
 		KeyName:      "matching.asyncTaskDispatchTimeout",
 		Description:  "AsyncTaskDispatchTimeout is the timeout of dispatching tasks for async match",
-		DefaultValue: time.Second * 30,
+		DefaultValue: time.Second * 3,
 	},
 }
 
