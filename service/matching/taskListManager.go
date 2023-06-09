@@ -571,7 +571,7 @@ func (c *taskListManagerImpl) shouldReload() bool {
 }
 
 func (c *taskListManagerImpl) getIsolationGroupForTask(ctx context.Context, taskInfo *persistence.TaskInfo) (string, error) {
-	if c.enableIsolation && len(taskInfo.PartitionConfig) > 0 {
+	if c.enableIsolation && len(taskInfo.PartitionConfig) > 0 && c.taskListKind != types.TaskListKindSticky {
 		partitionConfig := make(map[string]string)
 		for k, v := range taskInfo.PartitionConfig {
 			partitionConfig[k] = v
