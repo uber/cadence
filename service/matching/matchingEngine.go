@@ -37,6 +37,7 @@ import (
 	"github.com/uber/cadence/common/service"
 
 	"github.com/pborman/uuid"
+	"github.com/shirou/gopsutil/cpu"
 
 	"github.com/uber/cadence/client/history"
 	"github.com/uber/cadence/client/matching"
@@ -375,12 +376,17 @@ func (e *matchingEngineImpl) AddActivityTask(
 
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
+	cpuPercent, _ := cpu.Percent(0, false)
+	cpuCores, _ := cpu.Counts(false)
+
 	memstatArray := map[string]float64{
 		"NumGoRoutines":   float64(runtime.NumGoroutine()),
 		"MemoryAllocated": float64(memStats.Alloc),
 		"MemoryHeap":      float64(memStats.HeapAlloc),
 		"HeapInuse":       float64(memStats.HeapInuse),
 		"StackInuse":      float64(memStats.StackInuse),
+		"CpuPercent":      cpuPercent[0],
+		"CpuCores":        float64(cpuCores),
 	}
 	e.logger.Info("memstat stuff", tag.Dynamic("value from memstat", memstatArray))
 
