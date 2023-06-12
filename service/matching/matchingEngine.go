@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"runtime"
 	"sync"
 	"time"
 
@@ -369,6 +370,19 @@ func (e *matchingEngineImpl) AddActivityTask(
 		tag.WorkflowScheduleID(request.GetScheduleID()),
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
+
+	// add the memstat here as well
+
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+	memstatArray := map[string]float64{
+		"NumGoRoutines":   float64(runtime.NumGoroutine()),
+		"MemoryAllocated": float64(memStats.Alloc),
+		"MemoryHeap":      float64(memStats.HeapAlloc),
+		"HeapInuse":       float64(memStats.HeapInuse),
+		"StackInuse":      float64(memStats.StackInuse),
+	}
+	e.logger.Info("memstat stuff", tag.Dynamic("value from memstat", memstatArray))
 
 	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
