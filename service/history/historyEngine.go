@@ -1722,6 +1722,9 @@ func (e *historyEngineImpl) DescribeWorkflowExecution(
 				if ai.LastWorkerIdentity != "" {
 					p.LastWorkerIdentity = ai.LastWorkerIdentity
 				}
+				if ai.StartedIdentity != "" {
+					p.StartedWorkerIdentity = ai.StartedIdentity
+				}
 			}
 			result.PendingActivities = append(result.PendingActivities, p)
 		}
