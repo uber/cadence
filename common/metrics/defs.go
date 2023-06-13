@@ -2025,6 +2025,9 @@ const (
 
 	NumCPUCores
 	CPUPercentage
+	TotalMemory
+	MemoryHeap
+	MemoryStack
 
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
@@ -2644,6 +2647,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 
 		NumCPUCores:   {metricName: "num_cpu_cores", metricType: Gauge},
 		CPUPercentage: {metricName: "cpu_percentage", metricType: Gauge},
+		TotalMemory:   {metricName: "total_memory", metricType: Gauge},
+		MemoryHeap:    {metricName: "memory_heap", metricType: Gauge},
+		MemoryStack:   {metricName: "memory_stack", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},

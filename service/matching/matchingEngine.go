@@ -374,20 +374,20 @@ func (e *matchingEngineImpl) AddActivityTask(
 
 	// add the memstat here as well
 
-	var memStats runtime.MemStats
-	runtime.ReadMemStats(&memStats)
-	cpuPercent, _ := cpu.Percent(0, false)
-	cpuCores, _ := cpu.Counts(false)
-
-	memstatArray := map[string]float64{
-		"NumGoRoutines":   float64(runtime.NumGoroutine()),
-		"MemoryAllocated": float64(memStats.Alloc),
-		"MemoryHeap":      float64(memStats.HeapAlloc),
-		"HeapInuse":       float64(memStats.HeapInuse),
-		"StackInuse":      float64(memStats.StackInuse),
-		"CpuPercent":      cpuPercent[0],
-		"CpuCores":        float64(cpuCores),
-	}
+	//var memStats runtime.MemStats
+	//runtime.ReadMemStats(&memStats)
+	//cpuPercent, _ := cpu.Percent(0, false)
+	//cpuCores, _ := cpu.Counts(false)
+	//
+	//memstatArray := map[string]float64{
+	//	"NumGoRoutines":   float64(runtime.NumGoroutine()),
+	//	"MemoryAllocated": float64(memStats.Alloc),
+	//	"MemoryHeap":      float64(memStats.HeapAlloc),
+	//	"HeapInuse":       float64(memStats.HeapInuse),
+	//	"StackInuse":      float64(memStats.StackInuse),
+	//	"CpuPercent":      cpuPercent[0],
+	//	"CpuCores":        float64(cpuCores),
+	//}
 
 	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
@@ -400,8 +400,8 @@ func (e *matchingEngineImpl) AddActivityTask(
 		return false, err
 	}
 
-	e.logger.Info("memstat with domain Name", tag.Dynamic("value from memstat", memstatArray), tag.Dynamic("Domain", domainName))
-	e.emitCPUMetrics(domainName)
+	//e.logger.Info("memstat with domain Name", tag.Dynamic("value from memstat", memstatArray), tag.Dynamic("Domain", domainName))
+	//e.emitCPUMetrics(domainName)
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
@@ -451,6 +451,11 @@ func (e *matchingEngineImpl) PollForDecisionTask(
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
 	)
+	// get the domain name
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, err
+	}
 pollLoop:
 	for {
 		if err := common.IsValidContext(hCtx.Context); err != nil {
@@ -477,6 +482,8 @@ pollLoop:
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
+		e.emitCPUMetrics(domainName)
+		e.emitRAMMetrics(domainName)
 
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
@@ -556,6 +563,11 @@ func (e *matchingEngineImpl) PollForActivityTask(
 		tag.WorkflowTaskListName(taskListName),
 		tag.WorkflowDomainID(domainID),
 	)
+	// get the domain name
+	domainName, err := e.domainCache.GetDomainName(domainID)
+	if err != nil {
+		return nil, err
+	}
 
 pollLoop:
 	for {
@@ -589,6 +601,8 @@ pollLoop:
 		}
 
 		e.emitForwardedFromStats(hCtx.scope, task.isForwarded(), req.GetForwardedFrom())
+		e.emitCPUMetrics(domainName)
+		e.emitRAMMetrics(domainName)
 
 		if task.isStarted() {
 			// tasks received from remote are already started. So, simply forward the response
@@ -1114,6 +1128,19 @@ func (e *matchingEngineImpl) emitCPUMetrics(domainName string) {
 		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.NumCPUCores, float64(cpuCores))
 	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
 		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.CPUPercentage, cpuPercent[0])
+}
+
+func (e *matchingEngineImpl) emitRAMMetrics(domainName string) {
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.TotalMemory, float64(memStats.Sys))
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.MemoryHeap, float64(memStats.HeapInuse))
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.MemoryStack, float64(memStats.StackInuse))
+
 }
 
 func (m *lockableQueryTaskMap) put(key string, value chan *queryResult) {
