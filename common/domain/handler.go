@@ -706,7 +706,7 @@ func (d *handlerImpl) UpdateIsolationGroups(
 		return errDomainUpdateTooFrequent
 	}
 
-	if !d.clusterMetadata.IsPrimaryCluster() {
+	if !d.clusterMetadata.IsPrimaryCluster() && currentDomainConfig.IsGlobalDomain {
 		return errNotPrimaryCluster
 	}
 

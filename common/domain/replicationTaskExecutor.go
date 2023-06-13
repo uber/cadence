@@ -267,7 +267,6 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	}
 
 	if !recordUpdated {
-		h.logger.Warn("Domain update failed, record not updated")
 		return nil
 	}
 
