@@ -2023,6 +2023,9 @@ const (
 	IsolationGroupStateDrained
 	IsolationGroupStateHealthy
 
+	NumCPUCores
+	CPUPercentage
+
 	NumCommonMetrics // Needs to be last on this list for iota numbering
 )
 
@@ -2638,6 +2641,9 @@ var MetricDefs = map[ServiceIdx]map[int]metricDefinition{
 		IsolationGroupStatePollerUnavailable: {metricName: "isolation_group_poller_unavailable", metricType: Counter},
 		IsolationGroupStateDrained:           {metricName: "isolation_group_drained", metricType: Counter},
 		IsolationGroupStateHealthy:           {metricName: "isolation_group_healthy", metricType: Counter},
+
+		NumCPUCores:   {metricName: "num_cpu_cores", metricType: Gauge},
+		CPUPercentage: {metricName: "cpu_percentage", metricType: Gauge},
 	},
 	History: {
 		TaskRequests:             {metricName: "task_requests", metricType: Counter},

@@ -388,7 +388,6 @@ func (e *matchingEngineImpl) AddActivityTask(
 		"CpuPercent":      cpuPercent[0],
 		"CpuCores":        float64(cpuCores),
 	}
-	e.logger.Info("memstat stuff", tag.Dynamic("value from memstat", memstatArray))
 
 	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
@@ -400,6 +399,12 @@ func (e *matchingEngineImpl) AddActivityTask(
 	if err != nil {
 		return false, err
 	}
+
+	e.logger.Info("memstat with domain Name", tag.Dynamic("value from memstat", memstatArray), tag.Dynamic("Domain", domainName))
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.NumCPUCores, float64(cpuCores))
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.NumCPUCores, cpuPercent[0])
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
