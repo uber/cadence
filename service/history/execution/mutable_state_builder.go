@@ -4827,6 +4827,8 @@ func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	//Default state of TTL, means there is no TTL attached.
 	TTLInSeconds := 0
 	startTime := e.executionInfo.StartTimestamp
+	//Handles Cron and Delaystart. For Cron workflows the StartTimestamp does not show up until the wf has started.
+	//default value os TTL ie. 0 will be passed down in this case. The TTL is calculated only if the startTime is non zero.
 	if !time.Time.IsZero(startTime) {
 		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
 		if CalculateTTLInSeconds >= 0 {
