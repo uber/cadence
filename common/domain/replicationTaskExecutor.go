@@ -200,7 +200,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	// first we need to get the current notification version since we need to it for conditional update
 	metadata, err := h.domainManager.GetMetadata(ctx)
 	if err != nil {
-		h.logger.Info("Error getting metadata while handling replication task", tag.Error(err))
+		h.logger.Error("Error getting metadata while handling replication task", tag.Error(err))
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
