@@ -4828,8 +4828,10 @@ func (e *mutableStateBuilder) calculateTTL() (int, error) {
 	TTLInSeconds := 0
 	startTime := e.executionInfo.StartTimestamp
 	if !time.Time.IsZero(startTime) {
-		TTLInSeconds = int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
+		CalculateTTLInSeconds := int(e.executionInfo.WorkflowTimeout) - int(time.Now().Sub(startTime).Seconds()) + daysInSeconds
+		if CalculateTTLInSeconds >= 0 {
+			return CalculateTTLInSeconds, nil
+		}
 	}
-
 	return TTLInSeconds, nil
 }

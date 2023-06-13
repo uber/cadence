@@ -1205,7 +1205,7 @@ func (db *cdb) updateWorkflowExecution(
 	execution.LastUpdatedTimestamp = db.convertToCassandraTimestamp(execution.LastUpdatedTimestamp)
 	//default TTL Value. 0 TTL means no ttl is set, hence your records will persist forever unless explicitly deleted.
 	ttlInSeconds := 0
-	if db.dc.EnableExecutionTTL(domainID) && execution.TTLInSeconds >= 0 {
+	if db.dc.EnableExecutionTTL(domainID) {
 		ttlInSeconds = int(execution.TTLInSeconds)
 	}
 	batch.Query(templateUpdateWorkflowExecutionWithVersionHistoriesQuery,
