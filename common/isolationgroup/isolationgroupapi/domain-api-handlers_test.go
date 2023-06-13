@@ -72,13 +72,13 @@ func TestUpdateDomainState(t *testing.T) {
 					"zone-2": {Name: "zone-2", State: types.IsolationGroupStateDrained},
 				}},
 			domainHandlerAffordance: func(h *domain.MockHandler) {
-				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
-					Name: "domain",
-					IsolationGroupConfiguration: &types.IsolationGroupConfiguration{
+				h.EXPECT().UpdateIsolationGroups(gomock.Any(), types.UpdateDomainIsolationGroupsRequest{
+					Domain: "domain",
+					IsolationGroups: types.IsolationGroupConfiguration{
 						"zone-1": {Name: "zone-1", State: types.IsolationGroupStateHealthy},
 						"zone-2": {Name: "zone-2", State: types.IsolationGroupStateDrained},
 					},
-				}).Return(nil, nil)
+				}).Return(nil)
 			},
 		},
 		"empty value - ie removing isolation groups": {
@@ -87,10 +87,10 @@ func TestUpdateDomainState(t *testing.T) {
 				IsolationGroups: types.IsolationGroupConfiguration{},
 			},
 			domainHandlerAffordance: func(h *domain.MockHandler) {
-				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
-					Name:                        "domain",
-					IsolationGroupConfiguration: &types.IsolationGroupConfiguration{},
-				}).Return(nil, nil)
+				h.EXPECT().UpdateIsolationGroups(gomock.Any(), types.UpdateDomainIsolationGroupsRequest{
+					Domain:          "domain",
+					IsolationGroups: types.IsolationGroupConfiguration{},
+				}).Return(nil)
 			},
 		},
 		"error state - nil value - should not happen": {
@@ -100,10 +100,10 @@ func TestUpdateDomainState(t *testing.T) {
 			},
 			domainHandlerAffordance: func(h *domain.MockHandler) {
 				var ig types.IsolationGroupConfiguration
-				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
-					Name:                        "domain",
-					IsolationGroupConfiguration: &ig, // nil
-				}).Return(nil, nil)
+				h.EXPECT().UpdateIsolationGroups(gomock.Any(), types.UpdateDomainIsolationGroupsRequest{
+					Domain:          "domain",
+					IsolationGroups: ig, // nil
+				}).Return(nil)
 			},
 		},
 		"error returned": {
@@ -113,10 +113,10 @@ func TestUpdateDomainState(t *testing.T) {
 			},
 			domainHandlerAffordance: func(h *domain.MockHandler) {
 				var ig types.IsolationGroupConfiguration
-				h.EXPECT().UpdateDomain(gomock.Any(), &types.UpdateDomainRequest{
-					Name:                        "domain",
-					IsolationGroupConfiguration: &ig,
-				}).Return(nil, assert.AnError)
+				h.EXPECT().UpdateIsolationGroups(gomock.Any(), types.UpdateDomainIsolationGroupsRequest{
+					Domain:          "domain",
+					IsolationGroups: ig,
+				}).Return(assert.AnError)
 			},
 			expectedErr: assert.AnError,
 		},

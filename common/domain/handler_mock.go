@@ -130,3 +130,17 @@ func (mr *MockHandlerMockRecorder) UpdateDomain(ctx, updateRequest interface{}) 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDomain", reflect.TypeOf((*MockHandler)(nil).UpdateDomain), ctx, updateRequest)
 }
+
+// UpdateIsolationGroups mocks base method.
+func (m *MockHandler) UpdateIsolationGroups(ctx context.Context, updateRequest types.UpdateDomainIsolationGroupsRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateIsolationGroups", ctx, updateRequest)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateIsolationGroups indicates an expected call of UpdateIsolationGroups.
+func (mr *MockHandlerMockRecorder) UpdateIsolationGroups(ctx, updateRequest interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateIsolationGroups", reflect.TypeOf((*MockHandler)(nil).UpdateIsolationGroups), ctx, updateRequest)
+}

@@ -1851,6 +1851,14 @@ func (v *DomainConfiguration) GetVisibilityArchivalURI() (o string) {
 	return
 }
 
+// GetIsolationGroupsConfiguration is an internal getter (TBD...)
+func (v *DomainConfiguration) GetIsolationGroupsConfiguration() IsolationGroupConfiguration {
+	if v.IsolationGroups != nil {
+		return *v.IsolationGroups
+	}
+	return nil
+}
+
 // DomainInfo is an internal type (TBD...)
 type DomainInfo struct {
 	Name        string            `json:"name,omitempty"`
@@ -6750,7 +6758,6 @@ type UpdateDomainRequest struct {
 	SecurityToken                          string                             `json:"securityToken,omitempty"`
 	DeleteBadBinary                        *string                            `json:"deleteBadBinary,omitempty"`
 	FailoverTimeoutInSeconds               *int32                             `json:"failoverTimeoutInSeconds,omitempty"`
-	IsolationGroupConfiguration            *IsolationGroupConfiguration       `json:"isolationGroupConfiguration,omitempty"`
 }
 
 func (v *UpdateDomainRequest) SerializeForLogging() (string, error) {
