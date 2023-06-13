@@ -401,10 +401,7 @@ func (e *matchingEngineImpl) AddActivityTask(
 	}
 
 	e.logger.Info("memstat with domain Name", tag.Dynamic("value from memstat", memstatArray), tag.Dynamic("Domain", domainName))
-	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
-		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.NumCPUCores, float64(cpuCores))
-	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
-		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.NumCPUCores, cpuPercent[0])
+	e.emitCPUMetrics(domainName)
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
@@ -1107,6 +1104,16 @@ func (e *matchingEngineImpl) emitInfoOrDebugLog(
 	} else {
 		e.logger.Debug(msg, tags...)
 	}
+}
+
+func (e *matchingEngineImpl) emitCPUMetrics(domainName string) {
+	cpuPercent, _ := cpu.Percent(0, false)
+	cpuCores, _ := cpu.Counts(false)
+
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.NumCPUCores, float64(cpuCores))
+	e.metricsClient.Scope(metrics.MatchingAddTaskScope).Tagged(metrics.DomainTag(domainName),
+		metrics.MatchingHostTag(e.config.HostName)).UpdateGauge(metrics.CPUPercentage, cpuPercent[0])
 }
 
 func (m *lockableQueryTaskMap) put(key string, value chan *queryResult) {
