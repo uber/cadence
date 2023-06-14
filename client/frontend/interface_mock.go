@@ -265,6 +265,7 @@ func (m *MockClient) ListClosedWorkflowExecutions(arg0 context.Context, arg1 *ty
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
+	m.ctrl.Call(m, "CountWorkflowExecutions", varargs...)
 	ret := m.ctrl.Call(m, "ListClosedWorkflowExecutions", varargs...)
 	ret0, _ := ret[0].(*types.ListClosedWorkflowExecutionsResponse)
 	ret1, _ := ret[1].(error)
@@ -275,7 +276,6 @@ func (m *MockClient) ListClosedWorkflowExecutions(arg0 context.Context, arg1 *ty
 func (mr *MockClientMockRecorder) ListClosedWorkflowExecutions(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountWorkflowExecutions", reflect.TypeOf((*MockClient)(nil).CountWorkflowExecutions), varargs...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListClosedWorkflowExecutions", reflect.TypeOf((*MockClient)(nil).ListClosedWorkflowExecutions), varargs...)
 }
 
