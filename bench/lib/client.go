@@ -29,7 +29,7 @@ import (
 	"go.uber.org/cadence/.gen/go/shared"
 	"go.uber.org/cadence/client"
 	"go.uber.org/yarpc"
-	"go.uber.org/yarpc/transport/tchannel"
+	"go.uber.org/yarpc/transport/grpc"
 )
 
 const workflowRetentionDays = 1
@@ -92,17 +92,10 @@ func NewCadenceClientForDomain(
 	domain string,
 ) (CadenceClient, error) {
 
-	ch, err := tchannel.NewChannelTransport(
-		tchannel.ServiceName(runtime.Bench.Name),
-	)
-	if err != nil {
-		return CadenceClient{}, fmt.Errorf("failed to create transport channel: %v", err)
-	}
-
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: runtime.Bench.Name,
 		Outbounds: yarpc.Outbounds{
-			runtime.Cadence.ServiceName: {Unary: ch.NewSingleOutbound(runtime.Cadence.HostNameAndPort)},
+			runtime.Cadence.ServiceName: {Unary: grpc.NewTransport().NewSingleOutbound(runtime.Cadence.HostNameAndPort)},
 		},
 	})
 
