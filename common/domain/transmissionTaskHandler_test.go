@@ -111,6 +111,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
 		BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+		IsolationGroups:          types.IsolationGroupConfiguration{},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -138,6 +139,7 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_RegisterDomainTask_Is
 				VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
 				VisibilityArchivalURI:                  visibilityArchivalURI,
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups:                        &types.IsolationGroupConfiguration{},
 			},
 			ReplicationConfig: &types.DomainReplicationConfiguration{
 				ActiveClusterName: clusterActive,
@@ -272,6 +274,9 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 		VisibilityArchivalStatus: visibilityArchivalStatus,
 		VisibilityArchivalURI:    visibilityArchivalURI,
 		BadBinaries:              types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+		IsolationGroups: types.IsolationGroupConfiguration{
+			"zone-1": {Name: "zone-1", State: types.IsolationGroupStateDrained},
+		},
 	}
 	replicationConfig := &p.DomainReplicationConfig{
 		ActiveClusterName: clusterActive,
@@ -299,6 +304,9 @@ func (s *transmissionTaskSuite) TestHandleTransmissionTask_UpdateDomainTask_IsGl
 				VisibilityArchivalStatus:               visibilityArchivalStatus.Ptr(),
 				VisibilityArchivalURI:                  visibilityArchivalURI,
 				BadBinaries:                            &types.BadBinaries{Binaries: map[string]*types.BadBinaryInfo{}},
+				IsolationGroups: &types.IsolationGroupConfiguration{
+					"zone-1": {Name: "zone-1", State: types.IsolationGroupStateDrained},
+				},
 			},
 			ReplicationConfig: &types.DomainReplicationConfiguration{
 				ActiveClusterName: clusterActive,
