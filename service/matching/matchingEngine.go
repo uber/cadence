@@ -372,23 +372,6 @@ func (e *matchingEngineImpl) AddActivityTask(
 		tag.WorkflowTaskListKind(int32(request.GetTaskList().GetKind())),
 	)
 
-	// add the memstat here as well
-
-	//var memStats runtime.MemStats
-	//runtime.ReadMemStats(&memStats)
-	//cpuPercent, _ := cpu.Percent(0, false)
-	//cpuCores, _ := cpu.Counts(false)
-	//
-	//memstatArray := map[string]float64{
-	//	"NumGoRoutines":   float64(runtime.NumGoroutine()),
-	//	"MemoryAllocated": float64(memStats.Alloc),
-	//	"MemoryHeap":      float64(memStats.HeapAlloc),
-	//	"HeapInuse":       float64(memStats.HeapInuse),
-	//	"StackInuse":      float64(memStats.StackInuse),
-	//	"CpuPercent":      cpuPercent[0],
-	//	"CpuCores":        float64(cpuCores),
-	//}
-
 	taskList, err := newTaskListID(domainID, taskListName, taskListType)
 	if err != nil {
 		return false, err
@@ -399,9 +382,6 @@ func (e *matchingEngineImpl) AddActivityTask(
 	if err != nil {
 		return false, err
 	}
-
-	//e.logger.Info("memstat with domain Name", tag.Dynamic("value from memstat", memstatArray), tag.Dynamic("Domain", domainName))
-	//e.emitCPUMetrics(domainName)
 
 	// Only emit traffic metrics if the tasklist is not sticky and is not forwarded
 	if int32(request.GetTaskList().GetKind()) == 0 && request.ForwardedFrom == "" {
