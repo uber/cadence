@@ -265,7 +265,6 @@ func (m *MockClient) ListClosedWorkflowExecutions(arg0 context.Context, arg1 *ty
 	for _, a := range arg2 {
 		varargs = append(varargs, a)
 	}
-	m.ctrl.Call(m, "CountWorkflowExecutions", varargs...)
 	ret := m.ctrl.Call(m, "ListClosedWorkflowExecutions", varargs...)
 	ret0, _ := ret[0].(*types.ListClosedWorkflowExecutionsResponse)
 	ret1, _ := ret[1].(error)
