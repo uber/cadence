@@ -40,7 +40,7 @@ type BulkUpdateRequest struct {
 
 	routing         string
 	parent          string
-	version         int64  // default is MATCH_ANY
+	version         int64
 	versionType     string // default is "internal"
 	retryOnConflict *int
 	upsert          interface{}

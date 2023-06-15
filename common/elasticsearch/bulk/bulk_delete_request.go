@@ -41,7 +41,7 @@ type BulkDeleteRequest struct {
 	id            string
 	parent        string
 	routing       string
-	version       int64  // default is MATCH_ANY
+	version       int64
 	versionType   string // default is "internal"
 	ifSeqNo       *int64
 	ifPrimaryTerm *int64

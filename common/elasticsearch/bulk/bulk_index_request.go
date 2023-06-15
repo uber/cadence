@@ -36,7 +36,7 @@ type BulkIndexRequest struct {
 	opType          string
 	routing         string
 	parent          string
-	version         *int64 // default is MATCH_ANY
+	version         *int64
 	versionType     string // default is "internal"
 	doc             interface{}
 	pipeline        string
