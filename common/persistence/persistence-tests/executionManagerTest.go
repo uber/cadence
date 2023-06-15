@@ -683,16 +683,16 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			ExecutionInfo:    updatedInfo,
 			ExecutionStats:   updateStats,
 			Condition:        nextEventID,
-			TTLInSeconds:     60,
+			TTLInSeconds:     10,
 			VersionHistories: versionHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.NoError(err)
-	//time.Sleep(70)
-	//_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-	//s.NotNil(err)
+	time.Sleep(20)
+	_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	s.NotNil(err)
 }
 
 // TestUpdateWorkflowExecutionWithZombieState test
