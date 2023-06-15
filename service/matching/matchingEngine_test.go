@@ -124,7 +124,7 @@ func (s *matchingEngineSuite) SetupTest() {
 	dcClient.UpdateValue(dynamicconfig.EnableTasklistIsolation, true)
 	dcClient.UpdateValue(dynamicconfig.AllIsolationGroups, []interface{}{"datacenterA", "datacenterB"})
 	dc := dynamicconfig.NewCollection(dcClient, s.logger)
-	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore)
+	isolationGroupState, _ := defaultisolationgroupstate.NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(s.logger, dc, s.mockDomainCache, s.mockIsolationStore, metrics.NewNoopMetricsClient())
 	s.partitioner = partition.NewDefaultPartitioner(s.logger, isolationGroupState)
 	s.handlerContext = newHandlerContext(
 		context.Background(),
@@ -1359,6 +1359,7 @@ func (s *matchingEngineSuite) DrainBacklogNoPollersIsolationGroup(taskType int) 
 }
 
 func (s *matchingEngineSuite) TestAddStickyDecisionNoPollerIsolation() {
+	s.T().Skip("skip test until we re-enable isolation for sticky tasklist")
 	taskType := persistence.TaskListTypeDecision
 	s.matchingEngine.config.LongPollExpirationInterval = dynamicconfig.GetDurationPropertyFnFilteredByTaskListInfo(10 * time.Millisecond)
 	s.matchingEngine.config.EnableTasklistIsolation = dynamicconfig.GetBoolPropertyFnFilteredByDomainID(true)

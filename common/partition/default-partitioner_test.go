@@ -95,7 +95,11 @@ func TestPickingAZone(t *testing.T) {
 
 	for name, td := range tests {
 		t.Run(name, func(t *testing.T) {
-			res := pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
+			partitioner := defaultPartitioner{
+				log:                 loggerimpl.NewNopLogger(),
+				isolationGroupState: nil,
+			}
+			res := partitioner.pickIsolationGroup(td.wfPartitionCfg, td.availablePartitionGroups)
 			assert.Equal(t, td.expected, res)
 		})
 	}

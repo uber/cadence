@@ -26,6 +26,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/uber/cadence/common/log/tag"
+
 	"github.com/uber/cadence/common/clock"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/persistence"
@@ -198,6 +200,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 	// first we need to get the current notification version since we need to it for conditional update
 	metadata, err := h.domainManager.GetMetadata(ctx)
 	if err != nil {
+		h.logger.Error("Error getting metadata while handling replication task", tag.Error(err))
 		return err
 	}
 	notificationVersion := metadata.NotificationVersion
@@ -213,6 +216,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 			// e.g. new cluster which does not have anything
 			return h.handleDomainCreationReplicationTask(ctx, task)
 		}
+		h.logger.Error("Domain update failed, error in fetching domain", tag.Error(err))
 		return err
 	}
 
@@ -246,6 +250,7 @@ func (h *domainReplicationTaskExecutorImpl) handleDomainUpdateReplicationTask(ct
 			HistoryArchivalURI:       task.Config.GetHistoryArchivalURI(),
 			VisibilityArchivalStatus: task.Config.GetVisibilityArchivalStatus(),
 			VisibilityArchivalURI:    task.Config.GetVisibilityArchivalURI(),
+			IsolationGroups:          task.Config.GetIsolationGroupsConfiguration(),
 		}
 		if task.Config.GetBadBinaries() != nil {
 			request.Config.BadBinaries = *task.Config.GetBadBinaries()
