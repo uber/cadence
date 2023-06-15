@@ -23,16 +23,14 @@ package rpc
 import (
 	"crypto/tls"
 	"net"
-	nethttp "net/http"
-
-	"github.com/uber/cadence/common/log"
-	"github.com/uber/cadence/common/log/tag"
 
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/transport/grpc"
-	yarpchttp "go.uber.org/yarpc/transport/http"
 	"go.uber.org/yarpc/transport/tchannel"
 	"google.golang.org/grpc/credentials"
+
+	"github.com/uber/cadence/common/log"
+	"github.com/uber/cadence/common/log/tag"
 )
 
 const defaultGRPCSizeLimit = 4 * 1024 * 1024
@@ -85,26 +83,7 @@ func NewFactory(logger log.Logger, p Params) *Factory {
 		inbounds = append(inbounds, grpcTransport.NewInbound(listener, inboundOptions...))
 		logger.Info("Listening for GRPC requests", tag.Address(p.GRPCAddress))
 	}
-	// Create http inbound if configured
-	if p.HTTP != nil {
-		interceptor := func(handler nethttp.Handler) nethttp.Handler {
-			return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
-				procedure := r.Header.Get(yarpchttp.ProcedureHeader)
-				if _, found := p.HTTP.Procedures[procedure]; found {
-					handler.ServeHTTP(w, r)
-					return
-				}
-				nethttp.NotFound(w, r)
-				return
-			})
-		}
 
-		httpinbound := yarpchttp.NewTransport().
-			NewInbound(p.HTTP.Address, yarpchttp.Interceptor(interceptor))
-
-		inbounds = append(inbounds, httpinbound)
-		logger.Info("Listening for HTTP requests", tag.Address(p.HTTP.Address))
-	}
 	// Create outbounds
 	outbounds := yarpc.Outbounds{}
 	if p.OutboundsBuilder != nil {

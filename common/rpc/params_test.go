@@ -68,13 +68,6 @@ func TestNewParams(t *testing.T) {
 	assert.Equal(t, 3333, params.GRPCMaxMsgSize)
 	assert.Nil(t, params.InboundTLS)
 
-	params, err = NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnLocalHost: true, HTTP: &config.HTTP{Port: 8800}}}), dc)
-	assert.NoError(t, err)
-	assert.Equal(t, "127.0.0.1:8800", params.HTTP.Address)
-
-	params, err = NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnLocalHost: true, HTTP: &config.HTTP{}}}), dc)
-	assert.Error(t, err)
-
 	params, err = NewParams(serviceName, makeConfig(config.Service{RPC: config.RPC{BindOnIP: "1.2.3.4", GRPCPort: 2222}}), dc)
 	assert.NoError(t, err)
 	assert.Equal(t, "1.2.3.4:2222", params.GRPCAddress)

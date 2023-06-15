@@ -22,7 +22,6 @@ package rpc
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net"
 	"regexp"
@@ -41,7 +40,6 @@ type Params struct {
 	TChannelAddress string
 	GRPCAddress     string
 	GRPCMaxMsgSize  int
-	HTTP            *HTTP
 
 	InboundTLS  *tls.Config
 	OutboundTLS map[string]*tls.Config
@@ -50,11 +48,6 @@ type Params struct {
 	OutboundMiddleware yarpc.OutboundMiddleware
 
 	OutboundsBuilder OutboundsBuilder
-}
-
-type HTTP struct {
-	Address    string
-	Procedures map[string]struct{}
 }
 
 // NewParams creates parameters for rpc.Factory from the given config
@@ -100,27 +93,9 @@ func NewParams(serviceName string, config *config.Config, dc *dynamicconfig.Coll
 		// not set, load from static config
 		forwardingRules = config.HeaderForwardingRules
 	}
-	var httpParams *HTTP
-
-	if serviceConfig.RPC.HTTP != nil {
-		if serviceConfig.RPC.HTTP.Port <= 0 {
-			return Params{}, errors.New("HTTP port is not set")
-		}
-		procedureMap := map[string]struct{}{}
-
-		for _, v := range serviceConfig.RPC.HTTP.Procedures {
-			procedureMap[v] = struct{}{}
-		}
-
-		httpParams = &HTTP{
-			Address:    net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.HTTP.Port))),
-			Procedures: procedureMap,
-		}
-	}
 
 	return Params{
 		ServiceName:     serviceName,
-		HTTP:            httpParams,
 		TChannelAddress: net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.Port))),
 		GRPCAddress:     net.JoinHostPort(listenIP.String(), strconv.Itoa(int(serviceConfig.RPC.GRPCPort))),
 		GRPCMaxMsgSize:  serviceConfig.RPC.GRPCMaxMsgSize,
