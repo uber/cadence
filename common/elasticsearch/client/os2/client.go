@@ -22,6 +22,7 @@ package os2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -129,9 +130,9 @@ func NewClient(
 }
 
 func (c *OS2) IsNotFoundError(err error) bool {
-	switch e := err.(type) {
-	case *Error:
-		return e.Status == http.StatusNotFound
+	var clientErr *Error
+	if errors.As(err, &clientErr) {
+		return clientErr.Status == http.StatusNotFound
 	}
 
 	return false
