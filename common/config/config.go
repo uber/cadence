@@ -148,6 +148,16 @@ type (
 		GRPCMaxMsgSize int `yaml:"grpcMaxMsgSize"`
 		// TLS allows configuring optional TLS/SSL authentication on the server (only on gRPC port)
 		TLS TLS `yaml:"tls"`
+		// HTTP keeps configuration for exposed HTTP API
+		HTTP *HTTP `yaml:"http"`
+	}
+
+	// HTTP API configuration
+	HTTP struct {
+		// Port for listening HTTP requests
+		Port uint16 `yaml:"port"`
+		// List of RPC procedures available to call using HTTP
+		Procedures []string `yaml:"procedures"`
 	}
 
 	// Blobstore contains the config for blobstore
