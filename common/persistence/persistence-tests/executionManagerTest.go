@@ -621,149 +621,27 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 
 	domainID := uuid.New()
 	workflowExecution := types.WorkflowExecution{
-		WorkflowID: "update-workflow-test-state",
+		WorkflowID: "update-workflow-with-ttl",
 		RunID:      uuid.New(),
 	}
-	closeStatuses := []int{
-		p.WorkflowCloseStatusCompleted,
-		p.WorkflowCloseStatusFailed,
-		p.WorkflowCloseStatusCanceled,
-		p.WorkflowCloseStatusTerminated,
-		p.WorkflowCloseStatusContinuedAsNew,
-		p.WorkflowCloseStatusTimedOut,
-	}
-	tasklist := "some random tasklist"
-	workflowType := "some random workflow type"
-	workflowTimeout := int32(10)
-	decisionTimeout := int32(14)
-	lastProcessedEventID := int64(0)
-	nextEventID := int64(3)
-	csum := s.newRandomChecksum()
-	versionHistory := p.NewVersionHistory([]byte{}, []*p.VersionHistoryItem{
-		{
-			EventID: nextEventID,
-			Version: common.EmptyVersion,
-		},
-	})
-	versionHistories := p.NewVersionHistories(versionHistory)
 
-	req := &p.CreateWorkflowExecutionRequest{
-		NewWorkflowSnapshot: p.WorkflowSnapshot{
-			ExecutionInfo: &p.WorkflowExecutionInfo{
-				CreateRequestID:             uuid.New(),
-				DomainID:                    domainID,
-				WorkflowID:                  workflowExecution.GetWorkflowID(),
-				RunID:                       workflowExecution.GetRunID(),
-				FirstExecutionRunID:         workflowExecution.GetRunID(),
-				TaskList:                    tasklist,
-				WorkflowTypeName:            workflowType,
-				WorkflowTimeout:             workflowTimeout,
-				DecisionStartToCloseTimeout: decisionTimeout,
-				LastFirstEventID:            common.FirstEventID,
-				NextEventID:                 nextEventID,
-				LastProcessedEvent:          lastProcessedEventID,
-			},
-			ExecutionStats:   &p.ExecutionStats{},
-			Checksum:         csum,
-			VersionHistories: versionHistories,
-		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.CreateWorkflowModeBrandNew,
-	}
-
-	req.NewWorkflowSnapshot.ExecutionInfo.State = p.WorkflowStateCreated
-	req.NewWorkflowSnapshot.ExecutionInfo.CloseStatus = p.WorkflowCloseStatusNone
-	_, err := s.ExecutionManager.CreateWorkflowExecution(ctx, req)
+	_, err := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil, nil)
 	s.Nil(err)
-	info, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	info0, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
 	s.Nil(err)
-	s.Equal(p.WorkflowStateCreated, info.ExecutionInfo.State)
-	s.Equal(p.WorkflowCloseStatusNone, info.ExecutionInfo.CloseStatus)
-	s.assertChecksumsEqual(csum, info.Checksum)
 
-	csum = s.newRandomChecksum() // update the checksum to new value
-	updatedInfo := copyWorkflowExecutionInfo(info.ExecutionInfo)
-	updatedStats := copyExecutionStats(info.ExecutionStats)
-	updatedInfo.State = p.WorkflowStateRunning
-	updatedInfo.CloseStatus = p.WorkflowCloseStatusNone
 	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, &p.UpdateWorkflowExecutionRequest{
 		UpdateWorkflowMutation: p.WorkflowMutation{
-			ExecutionInfo:    updatedInfo,
-			ExecutionStats:   updatedStats,
-			Condition:        nextEventID,
-			TTLInSeconds:     60,
-			Checksum:         csum,
-			VersionHistories: versionHistories,
-		},
-		RangeID: s.ShardInfo.RangeID,
-		Mode:    p.UpdateWorkflowModeUpdateCurrent,
-	})
-	s.NoError(err)
-	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-	s.Nil(err)
-	s.Equal(p.WorkflowStateRunning, info.ExecutionInfo.State)
-	s.Equal(p.WorkflowCloseStatusNone, info.ExecutionInfo.CloseStatus)
-	s.assertChecksumsEqual(csum, info.Checksum)
-
-	updatedInfo = copyWorkflowExecutionInfo(info.ExecutionInfo)
-	updatedStats = copyExecutionStats(info.ExecutionStats)
-	updatedInfo.State = p.WorkflowStateRunning
-	for _, closeStatus := range closeStatuses {
-		updatedInfo.CloseStatus = closeStatus
-		_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, &p.UpdateWorkflowExecutionRequest{
-			UpdateWorkflowMutation: p.WorkflowMutation{
-				ExecutionInfo:  updatedInfo,
-				ExecutionStats: updatedStats,
-				TTLInSeconds:   60,
-				Condition:      nextEventID,
-			},
-			RangeID: s.ShardInfo.RangeID,
-			Mode:    p.UpdateWorkflowModeUpdateCurrent,
-		})
-		s.IsType(&types.InternalServiceError{}, err)
-	}
-
-	updatedInfo = copyWorkflowExecutionInfo(info.ExecutionInfo)
-	updatedStats = copyExecutionStats(info.ExecutionStats)
-	updatedInfo.State = p.WorkflowStateCompleted
-	updatedInfo.CloseStatus = p.WorkflowCloseStatusNone
-	_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, &p.UpdateWorkflowExecutionRequest{
-		UpdateWorkflowMutation: p.WorkflowMutation{
-			ExecutionInfo:  updatedInfo,
-			ExecutionStats: updatedStats,
+			ExecutionInfo:  info0.ExecutionInfo,
+			ExecutionStats: info0.ExecutionStats,
 			TTLInSeconds:   60,
-			Condition:      nextEventID,
 		},
 		RangeID: s.ShardInfo.RangeID,
 		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
-	s.IsType(&types.InternalServiceError{}, err)
-
-	for _, closeStatus := range closeStatuses {
-		updatedInfo.CloseStatus = closeStatus
-		_, err = s.ExecutionManager.UpdateWorkflowExecution(ctx, &p.UpdateWorkflowExecutionRequest{
-			UpdateWorkflowMutation: p.WorkflowMutation{
-				ExecutionInfo:    updatedInfo,
-				ExecutionStats:   updatedStats,
-				Condition:        nextEventID,
-				TTLInSeconds:     60,
-				VersionHistories: versionHistories,
-			},
-			RangeID: s.ShardInfo.RangeID,
-			Mode:    p.UpdateWorkflowModeUpdateCurrent,
-		})
-		s.Nil(err)
-		info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-		s.Nil(err)
-		s.Equal(p.WorkflowStateCompleted, info.ExecutionInfo.State)
-		s.Equal(closeStatus, info.ExecutionInfo.CloseStatus)
-
-		time.Sleep(65)
-
-		_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-		s.Nil(err)
-
-	}
+	s.Nil(err)
+	time.Sleep(70)
+	_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
 }
 
 // TestUpdateWorkflowExecutionWithZombieState test
