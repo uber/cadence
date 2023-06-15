@@ -683,6 +683,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			ExecutionInfo:    updatedInfo,
 			ExecutionStats:   updateStats,
 			Condition:        nextEventID,
+			TTLInSeconds:     60,
 			VersionHistories: versionHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
