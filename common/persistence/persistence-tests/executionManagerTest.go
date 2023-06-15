@@ -624,7 +624,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		WorkflowID: "update-workflow-with-ttl",
 		RunID:      uuid.New(),
 	}
-
+	nextEventID := int64(3)
+	csum := s.newRandomChecksum()
 	_, err := s.CreateWorkflowExecution(ctx, domainID, workflowExecution, "queue1", "wType", 20, 13, nil, 3, 0, 2, nil, nil)
 	s.Nil(err)
 	info0, err := s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
@@ -634,6 +635,8 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		UpdateWorkflowMutation: p.WorkflowMutation{
 			ExecutionInfo:  info0.ExecutionInfo,
 			ExecutionStats: info0.ExecutionStats,
+			Condition:      nextEventID,
+			Checksum:       csum,
 			TTLInSeconds:   60,
 		},
 		RangeID: s.ShardInfo.RangeID,
@@ -642,6 +645,7 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 	s.Nil(err)
 	time.Sleep(70)
 	_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	s.NotNil(err)
 }
 
 // TestUpdateWorkflowExecutionWithZombieState test
