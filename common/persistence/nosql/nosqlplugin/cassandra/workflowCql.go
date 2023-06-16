@@ -315,7 +315,17 @@ workflow_state = ? ` +
 		`WHERE shard_id = ? ` +
 		`and type = ?`
 
-	templateUpdateWorkflowExecutionWithVersionHistoriesQuery = `UPDATE executions ` +
+	templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart1 = `INSERT INTO executions (` +
+		`domain_id, ` +
+		`run_id, ` +
+		`shard_id, ` +
+		`task_id, ` +
+		`type ` +
+		`visibility_ts ` +
+		`workflow_id ` +
+		`) VALUES (?, ?, ?, ?, ?,?,?) USING TTL ?`
+
+	templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart2 = `UPDATE executions ` +
 		`USING TTL ? SET execution = ` + templateWorkflowExecutionType +
 		`, next_event_id = ? ` +
 		`, version_histories = ? ` +

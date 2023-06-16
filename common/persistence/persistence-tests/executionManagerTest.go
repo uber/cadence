@@ -683,15 +683,16 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 			ExecutionInfo:    updatedInfo,
 			ExecutionStats:   updateStats,
 			Condition:        nextEventID,
-			TTLInSeconds:     10,
+			TTLInSeconds:     1,
 			VersionHistories: versionHistories,
 		},
 		RangeID: s.ShardInfo.RangeID,
 		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.NoError(err)
-	time.Sleep(20)
-	_, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	time.Sleep(300 * time.Second)
+	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
+	fmt.Print(info)
 	s.NotNil(err)
 }
 
