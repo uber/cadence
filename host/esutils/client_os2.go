@@ -140,6 +140,9 @@ func (os2 *os2Client) GetMaxResultWindow(indexName string) (string, error) {
 	}
 
 	res, err := req.Do(createContext(), os2.client)
+	if err != nil {
+		return "", fmt.Errorf("OpenSearch error %w", err)
+	}
 
 	defer res.Body.Close()
 
