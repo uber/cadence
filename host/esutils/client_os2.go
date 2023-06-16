@@ -24,14 +24,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"os"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/opensearch-project/opensearch-go/v2"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
-	"github.com/stretchr/testify/suite"
 )
 
 type (
@@ -55,65 +56,61 @@ func newOS2Client(url string) (*os2Client, error) {
 	}, err
 }
 
-func (os2 *os2Client) PutIndexTemplate(s suite.Suite, templateConfigFile, templateName string) {
+func (os2 *os2Client) PutIndexTemplate(t *testing.T, templateConfigFile, templateName string) {
 	// This function is used exclusively in tests. Excluding it from security checks.
 	// #nosec
 	template, err := os.Open(templateConfigFile)
-	s.Require().NoError(err)
+	require.NoError(t, err)
+
 	req := opensearchapi.IndicesPutIndexTemplateRequest{
 		Body: template,
 		Name: templateName,
 	}
 
 	resp, err := req.Do(createContext(), os2.client)
-	s.Require().NoError(err)
-	s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
+	require.NoError(t, err)
+	require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+	resp.Body.Close()
+
 }
 
-func (os2 *os2Client) CreateIndex(s suite.Suite, indexName string) {
+func (os2 *os2Client) CreateIndex(t *testing.T, indexName string) {
 	existsReq := opensearchapi.IndicesExistsRequest{
 		Index: []string{indexName},
 	}
 	resp, err := existsReq.Do(createContext(), os2.client)
-	s.Require().NoError(err)
+	require.NoError(t, err)
 
 	if resp.StatusCode == http.StatusOK {
 		deleteReq := opensearchapi.IndicesDeleteRequest{
 			Index: []string{indexName},
 		}
 		resp, err := deleteReq.Do(createContext(), os2.client)
-		s.Require().Nil(err)
-		s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+		require.Nil(t, err)
+		require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+	}
 
-	}
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
+	resp.Body.Close()
 
 	createReq := opensearchapi.IndicesCreateRequest{
 		Index: indexName,
 	}
 
 	resp, err = createReq.Do(createContext(), os2.client)
-
-	s.Require().NoError(err)
-	s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+	require.NoError(t, err)
+	require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+	resp.Body.Close()
 }
 
-func (os2 *os2Client) DeleteIndex(s suite.Suite, indexName string) {
+func (os2 *os2Client) DeleteIndex(t *testing.T, indexName string) {
 	deleteReq := opensearchapi.IndicesDeleteRequest{
 		Index: []string{indexName},
 	}
 	resp, err := deleteReq.Do(createContext(), os2.client)
-	s.Require().Nil(err)
-	s.Require().False(resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+	require.NoError(t, err)
+	require.False(t, resp.IsError(), fmt.Sprintf("OS2 error: %s", resp.String()))
+	resp.Body.Close()
 
-	if resp.Body != nil {
-		resp.Body.Close()
-	}
 }
 
 func (os2 *os2Client) PutMaxResultWindow(indexName string, maxResultWindow int) error {

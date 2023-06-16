@@ -18,9 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//go:build esintegration
-// +build esintegration
-
 // to run locally, make sure kafka and es is running,
 // then run cmd `go test -v ./host -run TestElasticsearchIntegrationSuite -tags esintegration`
 package host
@@ -85,16 +82,16 @@ func TestElasticsearchIntegrationSuite(t *testing.T) {
 // This cluster use customized threshold for history config
 func (s *ElasticSearchIntegrationSuite) SetupSuite() {
 	s.setupSuite()
-	s.esClient = esutils.CreateESClient(s.Suite, s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
-	s.esClient.PutIndexTemplate(s.Suite, "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
+	s.esClient = esutils.CreateESClient(s.Suite.T(), s.testClusterConfig.ESConfig.URL.String(), environment.GetESVersion())
+	s.esClient.PutIndexTemplate(s.Suite.T(), "testdata/es_"+environment.GetESVersion()+"_index_template.json", "test-visibility-template")
 	indexName := s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName]
-	s.esClient.CreateIndex(s.Suite, indexName)
+	s.esClient.CreateIndex(s.Suite.T(), indexName)
 	s.putIndexSettings(indexName, defaultTestValueOfESIndexMaxResultWindow)
 }
 
 func (s *ElasticSearchIntegrationSuite) TearDownSuite() {
 	s.tearDownSuite()
-	s.esClient.DeleteIndex(s.Suite, s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
+	s.esClient.DeleteIndex(s.Suite.T(), s.testClusterConfig.ESConfig.Indices[common.VisibilityAppName])
 }
 
 func (s *ElasticSearchIntegrationSuite) SetupTest() {
