@@ -112,12 +112,16 @@ const (
 var _ schema.SchemaClient = (*CqlClientImpl)(nil)
 
 // NewCQLClient returns a new instance of CQLClient
-func NewCQLClient(cfg *CQLClientConfig) (CqlClient, error) {
+func NewCQLClient(cfg *CQLClientConfig, expectedConsistency gocql.Consistency) (CqlClient, error) {
 	var err error
 
 	cqlClient := new(CqlClientImpl)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
+	consistency := gocql.All
+	if expectedConsistency == gocql.Quorum {
+		consistency = gocql.Quorum
+	}
 	cqlClient.session, err = gocql.GetRegisteredClient().CreateSession(gocql.ClusterConfig{
 		Hosts:                 cfg.Hosts,
 		Port:                  cfg.Port,
@@ -129,7 +133,7 @@ func NewCQLClient(cfg *CQLClientConfig) (CqlClient, error) {
 		Timeout:               time.Duration(cfg.Timeout) * time.Second,
 		ConnectTimeout:        time.Duration(cfg.ConnectTimeout) * time.Second,
 		ProtoVersion:          cfg.ProtoVersion,
-		Consistency:           gocql.All,
+		Consistency:           consistency,
 	})
 	if err != nil {
 		return nil, err

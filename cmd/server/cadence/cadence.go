@@ -29,6 +29,8 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common"
@@ -69,7 +71,7 @@ func startHandler(c *cli.Context) {
 		log.Fatalf("config validation failed: %v", err)
 	}
 	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence); err != nil {
+	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, gocql.All); err != nil {
 		log.Fatal("cassandra schema version compatibility check failed: ", err)
 	}
 	// sql schema version validation
