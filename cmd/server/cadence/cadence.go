@@ -71,7 +71,7 @@ func startHandler(c *cli.Context) {
 		log.Fatalf("config validation failed: %v", err)
 	}
 	// cassandra schema version validation
-	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, gocql.All); err != nil {
+	if err := cassandra.VerifyCompatibleVersion(cfg.Persistence, gocql.Quorum); err != nil {
 		log.Fatal("cassandra schema version compatibility check failed: ", err)
 	}
 	// sql schema version validation
