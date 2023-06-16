@@ -123,9 +123,14 @@ func (os2 *os2Client) PutMaxResultWindow(indexName string, maxResultWindow int) 
 		Index: []string{indexName},
 	}
 
-	_, err := req.Do(createContext(), os2.client)
+	res, err := req.Do(createContext(), os2.client)
+	if err != nil {
+		return err
+	}
 
-	return err
+	res.Body.Close()
+
+	return nil
 }
 
 func (os2 *os2Client) GetMaxResultWindow(indexName string) (string, error) {
