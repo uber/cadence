@@ -288,135 +288,49 @@ func breakLongWords(input string, maxWordLength int) string {
 //	Started - blue
 //	Others - default (white/black)
 func ColorEvent(e *types.HistoryEvent) string {
-	var data string
-	switch e.GetEventType() {
-	case types.EventTypeWorkflowExecutionStarted:
-		data = color.BlueString(e.EventType.String())
+	f := EventColorFunction(*e.EventType)
+	return f(e.EventType.String())
+}
 
-	case types.EventTypeWorkflowExecutionCompleted:
-		data = color.GreenString(e.EventType.String())
+func EventColorFunction(eventType types.EventType) func(format string, a ...interface{}) string {
+	var colorFunc func(format string, a ...interface{}) string
+	noColorFunc := func(format string, a ...interface{}) string {
+		return format
+	}
+	switch eventType {
+	case types.EventTypeWorkflowExecutionStarted,
+		types.EventTypeChildWorkflowExecutionStarted:
+		colorFunc = color.BlueString
 
-	case types.EventTypeWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
+	case types.EventTypeWorkflowExecutionCompleted,
+		types.EventTypeChildWorkflowExecutionCompleted:
+		colorFunc = color.GreenString
 
-	case types.EventTypeWorkflowExecutionTimedOut:
-		data = color.YellowString(e.EventType.String())
+	case types.EventTypeWorkflowExecutionFailed,
+		types.EventTypeRequestCancelActivityTaskFailed,
+		types.EventTypeCancelTimerFailed,
+		types.EventTypeStartChildWorkflowExecutionFailed,
+		types.EventTypeChildWorkflowExecutionFailed,
+		types.EventTypeRequestCancelExternalWorkflowExecutionFailed,
+		types.EventTypeSignalExternalWorkflowExecutionFailed,
+		types.EventTypeActivityTaskFailed:
+		colorFunc = color.RedString
 
-	case types.EventTypeDecisionTaskScheduled:
-		data = e.EventType.String()
-
-	case types.EventTypeDecisionTaskStarted:
-		data = e.EventType.String()
-
-	case types.EventTypeDecisionTaskCompleted:
-		data = e.EventType.String()
-
-	case types.EventTypeDecisionTaskTimedOut:
-		data = color.YellowString(e.EventType.String())
-
-	case types.EventTypeActivityTaskScheduled:
-		data = e.EventType.String()
-
-	case types.EventTypeActivityTaskStarted:
-		data = e.EventType.String()
-
-	case types.EventTypeActivityTaskCompleted:
-		data = e.EventType.String()
-
-	case types.EventTypeActivityTaskFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeActivityTaskTimedOut:
-		data = color.YellowString(e.EventType.String())
-
-	case types.EventTypeActivityTaskCancelRequested:
-		data = e.EventType.String()
-
-	case types.EventTypeRequestCancelActivityTaskFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeActivityTaskCanceled:
-		data = e.EventType.String()
-
-	case types.EventTypeTimerStarted:
-		data = e.EventType.String()
-
-	case types.EventTypeTimerFired:
-		data = e.EventType.String()
-
-	case types.EventTypeCancelTimerFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeTimerCanceled:
-		data = color.MagentaString(e.EventType.String())
-
-	case types.EventTypeWorkflowExecutionCancelRequested:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionCanceled:
-		data = color.MagentaString(e.EventType.String())
-
-	case types.EventTypeRequestCancelExternalWorkflowExecutionInitiated:
-		data = e.EventType.String()
-
-	case types.EventTypeRequestCancelExternalWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeExternalWorkflowExecutionCancelRequested:
-		data = e.EventType.String()
-
-	case types.EventTypeMarkerRecorded:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionSignaled:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionTerminated:
-		data = e.EventType.String()
-
-	case types.EventTypeWorkflowExecutionContinuedAsNew:
-		data = e.EventType.String()
-
-	case types.EventTypeStartChildWorkflowExecutionInitiated:
-		data = e.EventType.String()
-
-	case types.EventTypeStartChildWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionStarted:
-		data = color.BlueString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionCompleted:
-		data = color.GreenString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
+	case types.EventTypeWorkflowExecutionTimedOut,
+		types.EventTypeActivityTaskTimedOut,
+		types.EventTypeWorkflowExecutionCanceled,
+		types.EventTypeChildWorkflowExecutionTimedOut,
+		types.EventTypeDecisionTaskTimedOut:
+		colorFunc = color.YellowString
 
 	case types.EventTypeChildWorkflowExecutionCanceled:
-		data = color.MagentaString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionTimedOut:
-		data = color.YellowString(e.EventType.String())
-
-	case types.EventTypeChildWorkflowExecutionTerminated:
-		data = e.EventType.String()
-
-	case types.EventTypeSignalExternalWorkflowExecutionInitiated:
-		data = e.EventType.String()
-
-	case types.EventTypeSignalExternalWorkflowExecutionFailed:
-		data = color.RedString(e.EventType.String())
-
-	case types.EventTypeExternalWorkflowExecutionSignaled:
-		data = e.EventType.String()
-
-	case types.EventTypeUpsertWorkflowSearchAttributes:
-		data = e.EventType.String()
+		colorFunc = color.MagentaString
 
 	default:
-		data = e.EventType.String()
+		colorFunc = noColorFunc
 	}
-	return data
+
+	return colorFunc
 }
 
 func getEventAttributes(e *types.HistoryEvent) interface{} {
