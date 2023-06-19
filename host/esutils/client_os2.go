@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"os"
 	"strings"
@@ -33,6 +32,7 @@ import (
 
 	"github.com/opensearch-project/opensearch-go/v2"
 	"github.com/opensearch-project/opensearch-go/v2/opensearchapi"
+	"github.com/stretchr/testify/require"
 )
 
 type (

@@ -22,12 +22,12 @@ package esutils
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/olivere/elastic"
+	"github.com/stretchr/testify/require"
 )
 
 type (
