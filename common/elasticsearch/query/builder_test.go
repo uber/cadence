@@ -57,7 +57,7 @@ func TestBuilderAgainsESv7(t *testing.T) {
 	qb.Query(NewExistsQuery("user"))
 	qb.Size(10)
 	qb.Sortby(NewFieldSort("runid").Desc())
-	qb.Query(NewBoolQuery().Must(NewMatchQuery("domainID", "uuid"))).SearchAfter([]interface{}{"sortval", "tiebraker"})
+	qb.Query(NewBoolQuery().Must(NewMatchQuery("domainID", "uuid"))).SearchAfter("sortval", "tiebraker")
 	qbs, err := qb.Source()
 	assert.NoError(t, err)
 
@@ -65,7 +65,7 @@ func TestBuilderAgainsESv7(t *testing.T) {
 		Query(elastic.NewExistsQuery("user")).
 		Size(10).
 		SortBy(elastic.NewFieldSort("runid").Desc()).
-		Query(elastic.NewBoolQuery().Must(elastic.NewMatchQuery("domainID", "uuid"))).SearchAfter([]interface{}{"sortval", "tiebraker"})
+		Query(elastic.NewBoolQuery().Must(elastic.NewMatchQuery("domainID", "uuid"))).SearchAfter("sortval", "tiebraker")
 
 	sss, err := searchSource.Source()
 	assert.NoError(t, err)

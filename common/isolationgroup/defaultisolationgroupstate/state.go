@@ -81,12 +81,12 @@ func NewDefaultIsolationGroupStateWatcherWithConfigStoreClient(
 	}, nil
 }
 
-func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string, availableIsolationGroups []string) (types.IsolationGroupConfiguration, error) {
+func (z *defaultIsolationGroupStateHandler) AvailableIsolationGroupsByDomainID(ctx context.Context, domainID string, availablePollerIsolationGroups []string) (types.IsolationGroupConfiguration, error) {
 	state, err := z.getByDomainID(ctx, domainID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get isolation group state: %w", err)
 	}
-	availableIsolationGroupsCfg := isolationGroupHealthyListToConfig(availableIsolationGroups)
+	availableIsolationGroupsCfg := isolationGroupHealthyListToConfig(availablePollerIsolationGroups)
 	scope := z.createAvailableisolationGroupMetricsScope(domainID)
 	return availableIG(z.config.AllIsolationGroups, availableIsolationGroupsCfg, state.Global, state.Domain, scope), nil
 }
@@ -136,11 +136,11 @@ func (z *defaultIsolationGroupStateHandler) getByDomainID(ctx context.Context, d
 // will return nil, nil when it is not enabled
 func (z *defaultIsolationGroupStateHandler) get(ctx context.Context, domain string) (*isolationGroups, error) {
 	if !z.config.IsolationGroupEnabled(domain) {
-		return nil, nil
+		return &isolationGroups{}, nil
 	}
 
 	domainData, err := z.domainCache.GetDomain(domain)
-	if err != nil {
+	if err != nil || domainData == nil {
 		return nil, fmt.Errorf("could not resolve domain in isolationGroup handler: %w", err)
 	}
 
