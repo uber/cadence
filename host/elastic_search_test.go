@@ -159,13 +159,13 @@ func (s *ElasticSearchIntegrationSuite) TestListWorkflow() {
 
 func (s *ElasticSearchIntegrationSuite) startWorkflow(
 	prefix string,
-	is_cron bool,
+	isCron bool,
 ) *types.StartWorkflowExecutionResponse {
 	id := "es-integration-list-workflow-" + prefix + "-test"
 	wt := "es-integration-list-workflow-" + prefix + "test-type"
 	tl := "es-integration-list-workflow-" + prefix + "test-tasklist"
 	request := s.createStartWorkflowExecutionRequest(id, wt, tl)
-	if is_cron {
+	if isCron {
 		request.CronSchedule = "*/5 * * * *" // every 5 minutes
 	}
 
