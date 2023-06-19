@@ -108,15 +108,12 @@ type (
 
 	// GenericBulkResponseItem is the result of a single bulk request.
 	GenericBulkResponseItem struct {
-		Index         string `json:"_index,omitempty"`
-		Type          string `json:"_type,omitempty"`
-		ID            string `json:"_id,omitempty"`
-		Version       int64  `json:"_version,omitempty"`
-		Result        string `json:"result,omitempty"`
-		SeqNo         int64  `json:"_seq_no,omitempty"`
-		PrimaryTerm   int64  `json:"_primary_term,omitempty"`
-		Status        int    `json:"status,omitempty"`
-		ForcedRefresh bool   `json:"forced_refresh,omitempty"`
+		Index   string `json:"_index,omitempty"`
+		Type    string `json:"_type,omitempty"`
+		ID      string `json:"_id,omitempty"`
+		Version int64  `json:"_version,omitempty"`
+		Result  string `json:"result,omitempty"`
+		Status  int    `json:"status,omitempty"`
 		// the error details
 		Error interface{}
 	}

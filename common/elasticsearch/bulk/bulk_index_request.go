@@ -50,18 +50,10 @@ type BulkIndexRequest struct {
 type bulkIndexRequestCommand map[string]bulkIndexRequestCommandOp
 
 type bulkIndexRequestCommandOp struct {
-	Index  string `json:"_index,omitempty"`
-	ID     string `json:"_id,omitempty"`
-	Type   string `json:"_type,omitempty"`
-	Parent string `json:"parent,omitempty"`
-	// RetryOnConflict is "_retry_on_conflict" for 6.0 and "retry_on_conflict" for 6.1+.
-	RetryOnConflict *int   `json:"retry_on_conflict,omitempty"`
-	Routing         string `json:"routing,omitempty"`
-	Version         *int64 `json:"version,omitempty"`
-	VersionType     string `json:"version_type,omitempty"`
-	Pipeline        string `json:"pipeline,omitempty"`
-	IfSeqNo         *int64 `json:"if_seq_no,omitempty"`
-	IfPrimaryTerm   *int64 `json:"if_primary_term,omitempty"`
+	Index       string `json:"_index,omitempty"`
+	ID          string `json:"_id,omitempty"`
+	Version     *int64 `json:"version,omitempty"`
+	VersionType string `json:"version_type,omitempty"`
 }
 
 // NewBulkIndexRequest returns a new BulkIndexRequest.
@@ -146,34 +138,6 @@ func (r *BulkIndexRequest) Doc(doc interface{}) *BulkIndexRequest {
 	return r
 }
 
-// RetryOnConflict specifies how often to retry in case of a version conflict.
-func (r *BulkIndexRequest) RetryOnConflict(retryOnConflict int) *BulkIndexRequest {
-	r.retryOnConflict = &retryOnConflict
-	r.source = nil
-	return r
-}
-
-// Pipeline to use while processing the request.
-func (r *BulkIndexRequest) Pipeline(pipeline string) *BulkIndexRequest {
-	r.pipeline = pipeline
-	r.source = nil
-	return r
-}
-
-// IfSeqNo indicates to only perform the index operation if the last
-// operation that has changed the document has the specified sequence number.
-func (r *BulkIndexRequest) IfSeqNo(ifSeqNo int64) *BulkIndexRequest {
-	r.ifSeqNo = &ifSeqNo
-	return r
-}
-
-// IfPrimaryTerm indicates to only perform the index operation if the
-// last operation that has changed the document has the specified primary term.
-func (r *BulkIndexRequest) IfPrimaryTerm(ifPrimaryTerm int64) *BulkIndexRequest {
-	r.ifPrimaryTerm = &ifPrimaryTerm
-	return r
-}
-
 // String returns the on-wire representation of the index request,
 // concatenated as a single string.
 func (r *BulkIndexRequest) String() string {
@@ -200,17 +164,10 @@ func (r *BulkIndexRequest) Source() ([]string, error) {
 
 	// "index" ...
 	indexCommand := bulkIndexRequestCommandOp{
-		Index:           r.index,
-		Type:            r.typ,
-		ID:              r.id,
-		Routing:         r.routing,
-		Parent:          r.parent,
-		Version:         r.version,
-		VersionType:     r.versionType,
-		RetryOnConflict: r.retryOnConflict,
-		Pipeline:        r.pipeline,
-		IfSeqNo:         r.ifSeqNo,
-		IfPrimaryTerm:   r.ifPrimaryTerm,
+		Index:       r.index,
+		ID:          r.id,
+		Version:     r.version,
+		VersionType: r.versionType,
 	}
 	command := bulkIndexRequestCommand{
 		r.opType: indexCommand,

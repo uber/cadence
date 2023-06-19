@@ -36,15 +36,12 @@ import (
 // for details.
 type BulkDeleteRequest struct {
 	GenericBulkableRequest
-	index         string
-	typ           string
-	id            string
-	parent        string
-	routing       string
-	version       int64
-	versionType   string // default is "internal"
-	ifSeqNo       *int64
-	ifPrimaryTerm *int64
+	index       string
+	typ         string
+	id          string
+	routing     string
+	version     int64
+	versionType string // default is "internal"
 
 	source []string
 }
@@ -52,15 +49,10 @@ type BulkDeleteRequest struct {
 type bulkDeleteRequestCommand map[string]bulkDeleteRequestCommandOp
 
 type bulkDeleteRequestCommandOp struct {
-	Index         string `json:"_index,omitempty"`
-	Type          string `json:"_type,omitempty"`
-	ID            string `json:"_id,omitempty"`
-	Parent        string `json:"parent,omitempty"`
-	Routing       string `json:"routing,omitempty"`
-	Version       int64  `json:"version,omitempty"`
-	VersionType   string `json:"version_type,omitempty"`
-	IfSeqNo       *int64 `json:"if_seq_no,omitempty"`
-	IfPrimaryTerm *int64 `json:"if_primary_term,omitempty"`
+	Index       string `json:"_index,omitempty"`
+	ID          string `json:"_id,omitempty"`
+	Version     int64  `json:"version,omitempty"`
+	VersionType string `json:"version_type,omitempty"`
 }
 
 // NewBulkDeleteRequest returns a new BulkDeleteRequest.
@@ -91,21 +83,6 @@ func (r *BulkDeleteRequest) ID(id string) *BulkDeleteRequest {
 	return r
 }
 
-// Parent specifies the parent of the request, which is used in parent/child
-// mappings.
-func (r *BulkDeleteRequest) Parent(parent string) *BulkDeleteRequest {
-	r.parent = parent
-	r.source = nil
-	return r
-}
-
-// Routing specifies a routing value for the request.
-func (r *BulkDeleteRequest) Routing(routing string) *BulkDeleteRequest {
-	r.routing = routing
-	r.source = nil
-	return r
-}
-
 // Version indicates the version to be deleted as part of an optimistic
 // concurrency model.
 func (r *BulkDeleteRequest) Version(version int64) *BulkDeleteRequest {
@@ -119,20 +96,6 @@ func (r *BulkDeleteRequest) Version(version int64) *BulkDeleteRequest {
 func (r *BulkDeleteRequest) VersionType(versionType string) *BulkDeleteRequest {
 	r.versionType = versionType
 	r.source = nil
-	return r
-}
-
-// IfSeqNo indicates to only perform the delete operation if the last
-// operation that has changed the document has the specified sequence number.
-func (r *BulkDeleteRequest) IfSeqNo(ifSeqNo int64) *BulkDeleteRequest {
-	r.ifSeqNo = &ifSeqNo
-	return r
-}
-
-// IfPrimaryTerm indicates to only perform the delete operation if the
-// last operation that has changed the document has the specified primary term.
-func (r *BulkDeleteRequest) IfPrimaryTerm(ifPrimaryTerm int64) *BulkDeleteRequest {
-	r.ifPrimaryTerm = &ifPrimaryTerm
 	return r
 }
 
@@ -156,15 +119,10 @@ func (r *BulkDeleteRequest) Source() ([]string, error) {
 	}
 	command := bulkDeleteRequestCommand{
 		"delete": bulkDeleteRequestCommandOp{
-			Index:         r.index,
-			Type:          r.typ,
-			ID:            r.id,
-			Routing:       r.routing,
-			Parent:        r.parent,
-			Version:       r.version,
-			VersionType:   r.versionType,
-			IfSeqNo:       r.ifSeqNo,
-			IfPrimaryTerm: r.ifPrimaryTerm,
+			Index:       r.index,
+			ID:          r.id,
+			Version:     r.version,
+			VersionType: r.versionType,
 		},
 	}
 

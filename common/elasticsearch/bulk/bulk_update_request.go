@@ -35,21 +35,11 @@ import (
 type BulkUpdateRequest struct {
 	GenericBulkableRequest
 	index string
-	typ   string
 	id    string
 
-	routing         string
-	parent          string
-	version         int64
-	versionType     string // default is "internal"
-	retryOnConflict *int
-	upsert          interface{}
-	docAsUpsert     *bool
-	detectNoop      *bool
-	doc             interface{}
-	returnSource    *bool
-	ifSeqNo         *int64
-	ifPrimaryTerm   *int64
+	version     int64
+	versionType string // default is "internal"
+	doc         interface{}
 
 	source []string
 }
@@ -57,27 +47,16 @@ type BulkUpdateRequest struct {
 type bulkUpdateRequestCommand map[string]bulkUpdateRequestCommandOp
 
 type bulkUpdateRequestCommandOp struct {
-	Index  string `json:"_index,omitempty"`
-	Type   string `json:"_type,omitempty"`
-	ID     string `json:"_id,omitempty"`
-	Parent string `json:"parent,omitempty"`
-	// RetryOnConflict is "_retry_on_conflict" for 6.0 and "retry_on_conflict" for 6.1+.
-	RetryOnConflict *int   `json:"retry_on_conflict,omitempty"`
-	Routing         string `json:"routing,omitempty"`
-	Version         int64  `json:"version,omitempty"`
-	VersionType     string `json:"version_type,omitempty"`
-	IfSeqNo         *int64 `json:"if_seq_no,omitempty"`
-	IfPrimaryTerm   *int64 `json:"if_primary_term,omitempty"`
+	Index       string `json:"_index,omitempty"`
+	ID          string `json:"_id,omitempty"`
+	Version     int64  `json:"version,omitempty"`
+	VersionType string `json:"version_type,omitempty"`
 }
 
 type bulkUpdateRequestCommandData struct {
-	DetectNoop     *bool       `json:"detect_noop,omitempty"`
-	Doc            interface{} `json:"doc,omitempty"`
-	DocAsUpsert    *bool       `json:"doc_as_upsert,omitempty"`
-	Script         interface{} `json:"script,omitempty"`
-	ScriptedUpsert *bool       `json:"scripted_upsert,omitempty"`
-	Upsert         interface{} `json:"upsert,omitempty"`
-	Source         *bool       `json:"_source,omitempty"`
+	Doc    interface{} `json:"doc,omitempty"`
+	Upsert interface{} `json:"upsert,omitempty"`
+	Source *bool       `json:"_source,omitempty"`
 }
 
 // NewBulkUpdateRequest returns a new BulkUpdateRequest.
@@ -93,38 +72,9 @@ func (r *BulkUpdateRequest) Index(index string) *BulkUpdateRequest {
 	return r
 }
 
-// Type specifies the Elasticsearch type to use for this update request.
-// If unspecified, the type set on the BulkService will be used.
-func (r *BulkUpdateRequest) Type(typ string) *BulkUpdateRequest {
-	r.typ = typ
-	r.source = nil
-	return r
-}
-
 // ID specifies the identifier of the document to update.
 func (r *BulkUpdateRequest) ID(id string) *BulkUpdateRequest {
 	r.id = id
-	r.source = nil
-	return r
-}
-
-// Routing specifies a routing value for the request.
-func (r *BulkUpdateRequest) Routing(routing string) *BulkUpdateRequest {
-	r.routing = routing
-	r.source = nil
-	return r
-}
-
-// Parent specifies the identifier of the parent document (if available).
-func (r *BulkUpdateRequest) Parent(parent string) *BulkUpdateRequest {
-	r.parent = parent
-	r.source = nil
-	return r
-}
-
-// RetryOnConflict specifies how often to retry in case of a version conflict.
-func (r *BulkUpdateRequest) RetryOnConflict(retryOnConflict int) *BulkUpdateRequest {
-	r.retryOnConflict = &retryOnConflict
 	r.source = nil
 	return r
 }
@@ -145,60 +95,9 @@ func (r *BulkUpdateRequest) VersionType(versionType string) *BulkUpdateRequest {
 	return r
 }
 
-// IfSeqNo indicates to only perform the index operation if the last
-// operation that has changed the document has the specified sequence number.
-func (r *BulkUpdateRequest) IfSeqNo(ifSeqNo int64) *BulkUpdateRequest {
-	r.ifSeqNo = &ifSeqNo
-	return r
-}
-
-// IfPrimaryTerm indicates to only perform the index operation if the
-// last operation that has changed the document has the specified primary term.
-func (r *BulkUpdateRequest) IfPrimaryTerm(ifPrimaryTerm int64) *BulkUpdateRequest {
-	r.ifPrimaryTerm = &ifPrimaryTerm
-	return r
-}
-
 // Doc specifies the updated document.
 func (r *BulkUpdateRequest) Doc(doc interface{}) *BulkUpdateRequest {
 	r.doc = doc
-	r.source = nil
-	return r
-}
-
-// DocAsUpsert indicates whether the contents of Doc should be used as
-// the Upsert value.
-//
-// See https://www.elastic.co/guide/en/elasticsearch/reference/7.0/docs-update.html#_literal_doc_as_upsert_literal
-// for details.
-func (r *BulkUpdateRequest) DocAsUpsert(docAsUpsert bool) *BulkUpdateRequest {
-	r.docAsUpsert = &docAsUpsert
-	r.source = nil
-	return r
-}
-
-// DetectNoop specifies whether changes that don't affect the document
-// should be ignored (true) or unignored (false). This is enabled by default
-// in Elasticsearch.
-func (r *BulkUpdateRequest) DetectNoop(detectNoop bool) *BulkUpdateRequest {
-	r.detectNoop = &detectNoop
-	r.source = nil
-	return r
-}
-
-// Upsert specifies the document to use for upserts. It will be used for
-// create if the original document does not exist.
-func (r *BulkUpdateRequest) Upsert(doc interface{}) *BulkUpdateRequest {
-	r.upsert = doc
-	r.source = nil
-	return r
-}
-
-// ReturnSource specifies whether Elasticsearch should return the source
-// after the update. In the request, this responds to the `_source` field.
-// It is false by default.
-func (r *BulkUpdateRequest) ReturnSource(source bool) *BulkUpdateRequest {
-	r.returnSource = &source
 	r.source = nil
 	return r
 }
@@ -232,16 +131,10 @@ func (r *BulkUpdateRequest) Source() ([]string, error) {
 
 	// "update" ...
 	updateCommand := bulkUpdateRequestCommandOp{
-		Index:           r.index,
-		Type:            r.typ,
-		ID:              r.id,
-		Routing:         r.routing,
-		Parent:          r.parent,
-		Version:         r.version,
-		VersionType:     r.versionType,
-		RetryOnConflict: r.retryOnConflict,
-		IfSeqNo:         r.ifSeqNo,
-		IfPrimaryTerm:   r.ifPrimaryTerm,
+		Index:       r.index,
+		ID:          r.id,
+		Version:     r.version,
+		VersionType: r.versionType,
 	}
 	command := bulkUpdateRequestCommand{
 		"update": updateCommand,
@@ -276,11 +169,7 @@ func (r *BulkUpdateRequest) Source() ([]string, error) {
 		}
 	}
 	data := bulkUpdateRequestCommandData{
-		DocAsUpsert: r.docAsUpsert,
-		DetectNoop:  r.detectNoop,
-		Upsert:      r.upsert,
-		Doc:         doc,
-		Source:      r.returnSource,
+		Doc: doc,
 	}
 
 	// encoding/json

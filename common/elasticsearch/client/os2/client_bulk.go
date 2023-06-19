@@ -106,13 +106,11 @@ func (v *bulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 	req.OnFailure = func(ctx context.Context, item opensearchutil.BulkIndexerItem, res opensearchutil.BulkIndexerResponseItem, err error) {
 		v.before(0, metricsRequest)
 		it := bulk.GenericBulkResponseItem{
-			Index:       res.Index,
-			ID:          res.DocumentID,
-			Version:     res.Version,
-			SeqNo:       res.SeqNo,
-			PrimaryTerm: res.PrimTerm,
-			Status:      res.Status,
-			Error:       res.Error,
+			Index:   res.Index,
+			ID:      res.DocumentID,
+			Version: res.Version,
+			Status:  res.Status,
+			Error:   res.Error,
 		}
 
 		gr := []bulk.GenericBulkableRequest{callBackRequest}
@@ -139,13 +137,11 @@ func (v *bulkProcessor) Add(request *bulk.GenericBulkableAddRequest) {
 		gr := []bulk.GenericBulkableRequest{callBackRequest}
 
 		it := bulk.GenericBulkResponseItem{
-			Index:       res.Index,
-			ID:          res.DocumentID,
-			Version:     res.Version,
-			SeqNo:       res.SeqNo,
-			PrimaryTerm: res.PrimTerm,
-			Status:      res.Status,
-			Error:       res.Error,
+			Index:   res.Index,
+			ID:      res.DocumentID,
+			Version: res.Version,
+			Status:  res.Status,
+			Error:   res.Error,
 		}
 
 		gbr := bulk.GenericBulkResponse{
