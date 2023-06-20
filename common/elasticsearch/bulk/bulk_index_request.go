@@ -30,19 +30,13 @@ import (
 
 type BulkIndexRequest struct {
 	GenericBulkableRequest
-	index           string
-	typ             string
-	id              string
-	opType          string
-	routing         string
-	parent          string
-	version         *int64
-	versionType     string // default is "internal"
-	doc             interface{}
-	pipeline        string
-	retryOnConflict *int
-	ifSeqNo         *int64
-	ifPrimaryTerm   *int64
+	index       string
+	typ         string
+	id          string
+	opType      string
+	version     *int64
+	versionType string // default is "internal"
+	doc         interface{}
 
 	source []string
 }
@@ -93,20 +87,6 @@ func (r *BulkIndexRequest) ID(id string) *BulkIndexRequest {
 // for details.
 func (r *BulkIndexRequest) OpType(opType string) *BulkIndexRequest {
 	r.opType = opType
-	r.source = nil
-	return r
-}
-
-// Routing specifies a routing value for the request.
-func (r *BulkIndexRequest) Routing(routing string) *BulkIndexRequest {
-	r.routing = routing
-	r.source = nil
-	return r
-}
-
-// Parent specifies the identifier of the parent document (if available).
-func (r *BulkIndexRequest) Parent(parent string) *BulkIndexRequest {
-	r.parent = parent
 	r.source = nil
 	return r
 }

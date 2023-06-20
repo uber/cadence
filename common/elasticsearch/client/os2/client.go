@@ -22,6 +22,7 @@ package os2
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -58,6 +59,35 @@ type (
 		Type   string `json:"type"`
 		Reason string `json:"reason"`
 		Index  string `json:"index,omitempty"`
+	}
+
+	// Response holds data retrieved from OpenSearch
+	Response struct {
+		TookInMillis int64 `json:"took,omitempty"`
+		TotalHits    int64
+		Hits         *SearchHits
+		Aggregations map[string]json.RawMessage `json:"aggregations,omitempty"`
+		Sort         []interface{}              `json:"sort,omitempty"` // sort information
+		ScrollID     string                     `json:"_scroll_id,omitempty"`
+	}
+
+	// SearchHits specifies the list of search hits.
+	SearchHits struct {
+		TotalHits *TotalHits   `json:"total,omitempty"` // total number of hits found
+		Hits      []*SearchHit `json:"hits,omitempty"`  // the actual hits returned
+	}
+
+	// TotalHits specifies total number of hits and its relation
+	TotalHits struct {
+		Value int64 `json:"value"` // value of the total hit count
+	}
+
+	// SearchHit is a single hit.
+	SearchHit struct {
+		Index  string          `json:"_index,omitempty"`  // index name
+		ID     string          `json:"_id,omitempty"`     // external or internal
+		Sort   []interface{}   `json:"sort,omitempty"`    // sort information
+		Source json.RawMessage `json:"_source,omitempty"` // stored document source
 	}
 )
 
@@ -251,20 +281,36 @@ func (c *OS2) Scroll(ctx context.Context, index, body, scrollID string) (*client
 		return nil, c.parseError(resp)
 	}
 
-	cr := client.Response{}
-	if err := c.decoder.Decode(resp.Body, &cr); err != nil {
-		return nil, fmt.Errorf("decoding OpenSearch result to client.Response: %w", err)
+	var osResponse Response
+	var totalHits int64
+
+	if err := c.decoder.Decode(resp.Body, &osResponse); err != nil {
+		return nil, fmt.Errorf("decoding OpenSearch result to Response: %w", err)
 	}
 
-	if cr.Hits == nil || len(cr.Hits.Hits) == 0 {
-		return &cr, io.EOF
+	// no more hits
+	if osResponse.Hits == nil || len(osResponse.Hits.Hits) == 0 {
+		return &client.Response{}, io.EOF
 	}
 
-	if cr.Hits.TotalHits != nil {
-		cr.TotalHits = cr.Hits.TotalHits.Value
+	var hits []*client.SearchHit
+
+	for _, h := range osResponse.Hits.Hits {
+		hits = append(hits, &client.SearchHit{Source: h.Source})
 	}
 
-	return &cr, nil
+	if osResponse.Hits.TotalHits != nil {
+		totalHits = osResponse.Hits.TotalHits.Value
+	}
+
+	return &client.Response{
+		TookInMillis: osResponse.TookInMillis,
+		TotalHits:    totalHits,
+		Hits:         &client.SearchHits{Hits: hits},
+		Aggregations: osResponse.Aggregations,
+		ScrollID:     osResponse.ScrollID,
+	}, nil
+
 }
 
 func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response, error) {
@@ -277,28 +323,38 @@ func (c *OS2) Search(ctx context.Context, index, body string) (*client.Response,
 	if err != nil {
 		return nil, fmt.Errorf("OpenSearch Search: %w", err)
 	}
+
 	defer closeBody(resp)
 	if resp.IsError() {
 		return nil, types.InternalServiceError{
-			Message: fmt.Sprintf("OpenSearch Error: %v", c.parseError(resp)),
+			Message: fmt.Sprintf("OpenSearch Search Error: %v", c.parseError(resp)),
 		}
 	}
 
-	var cr client.Response
-	if err := c.decoder.Decode(resp.Body, &cr); err != nil {
-		return nil, fmt.Errorf("decoding Opensearch result to client.Response: %w", err)
+	var osResponse Response
+	if err := c.decoder.Decode(resp.Body, &osResponse); err != nil {
+		return nil, fmt.Errorf("decoding Opensearch result to Response: %w", err)
 	}
 
+	var hits []*client.SearchHit
 	var sort []interface{}
-	if cr.Hits != nil && cr.Hits.TotalHits != nil {
-		for _, h := range cr.Hits.Hits {
+	var totalHits int64
+
+	if osResponse.Hits != nil && osResponse.Hits.TotalHits != nil {
+		totalHits = osResponse.Hits.TotalHits.Value
+		for _, h := range osResponse.Hits.Hits {
 			sort = h.Sort
+			hits = append(hits, &client.SearchHit{Source: h.Source})
 		}
-		cr.TotalHits = cr.Hits.TotalHits.Value
-		cr.Sort = sort
 	}
 
-	return &cr, nil
+	return &client.Response{
+		TookInMillis: osResponse.TookInMillis,
+		TotalHits:    totalHits,
+		Hits:         &client.SearchHits{Hits: hits},
+		Aggregations: osResponse.Aggregations,
+		Sort:         sort,
+	}, nil
 }
 
 func (e *Error) Error() string {
