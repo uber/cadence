@@ -149,11 +149,8 @@ func (c *ESClient) ScanByQuery(ctx context.Context, request *ScanByQueryRequest)
 
 	response := &p.InternalListWorkflowExecutionsResponse{}
 	if searchResult == nil {
-		fmt.Println("Response is nil")
 		return response, nil
 	}
-
-	fmt.Printf("RESULT: %+v", searchResult)
 
 	actualHits := searchResult.Hits.Hits
 	numOfActualHits := len(actualHits)
