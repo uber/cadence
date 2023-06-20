@@ -499,6 +499,8 @@ var (
 
 func (s *cliAppSuite) TestListWorkflow() {
 	resp := listClosedWorkflowExecutionsResponse
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list"})
 	s.Nil(err)
@@ -506,6 +508,8 @@ func (s *cliAppSuite) TestListWorkflow() {
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowID() {
 	resp := &types.ListClosedWorkflowExecutionsResponse{}
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-wid", "nothing"})
 	s.Nil(err)
@@ -513,6 +517,8 @@ func (s *cliAppSuite) TestListWorkflow_WithWorkflowID() {
 
 func (s *cliAppSuite) TestListWorkflow_WithWorkflowType() {
 	resp := &types.ListClosedWorkflowExecutionsResponse{}
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-wt", "no-type"})
 	s.Nil(err)
@@ -520,6 +526,8 @@ func (s *cliAppSuite) TestListWorkflow_WithWorkflowType() {
 
 func (s *cliAppSuite) TestListWorkflow_PrintDateTime() {
 	resp := listClosedWorkflowExecutionsResponse
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-pdt"})
 	s.Nil(err)
@@ -527,6 +535,8 @@ func (s *cliAppSuite) TestListWorkflow_PrintDateTime() {
 
 func (s *cliAppSuite) TestListWorkflow_PrintRawTime() {
 	resp := listClosedWorkflowExecutionsResponse
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListClosedWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-prt"})
 	s.Nil(err)
@@ -534,6 +544,8 @@ func (s *cliAppSuite) TestListWorkflow_PrintRawTime() {
 
 func (s *cliAppSuite) TestListWorkflow_Open() {
 	resp := listOpenWorkflowExecutionsResponse
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op"})
 	s.Nil(err)
@@ -541,6 +553,8 @@ func (s *cliAppSuite) TestListWorkflow_Open() {
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowID() {
 	resp := &types.ListOpenWorkflowExecutionsResponse{}
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op", "-wid", "nothing"})
 	s.Nil(err)
@@ -548,6 +562,8 @@ func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowID() {
 
 func (s *cliAppSuite) TestListWorkflow_Open_WithWorkflowType() {
 	resp := &types.ListOpenWorkflowExecutionsResponse{}
+	countWorkflowResp := &types.CountWorkflowExecutionsResponse{}
+	s.serverFrontendClient.EXPECT().CountWorkflowExecutions(gomock.Any(), gomock.Any()).Return(countWorkflowResp, nil)
 	s.serverFrontendClient.EXPECT().ListOpenWorkflowExecutions(gomock.Any(), gomock.Any()).Return(resp, nil)
 	err := s.app.Run([]string{"", "--do", domainName, "workflow", "list", "-op", "-wt", "no-type"})
 	s.Nil(err)
