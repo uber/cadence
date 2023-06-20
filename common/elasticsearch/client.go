@@ -152,11 +152,9 @@ func (c *ESClient) ScanByQuery(ctx context.Context, request *ScanByQueryRequest)
 		return response, nil
 	}
 
-	actualHits := searchResult.Hits.Hits
-	numOfActualHits := len(actualHits)
 	response.Executions = c.esHitsToExecutions(searchResult.Hits, nil /* no filter */)
 
-	if numOfActualHits == request.PageSize && !isLastPage {
+	if len(searchResult.Hits.Hits) == request.PageSize && !isLastPage {
 		nextPageToken, err := SerializePageToken(&ElasticVisibilityPageToken{ScrollID: searchResult.ScrollID})
 		if err != nil {
 			return nil, err

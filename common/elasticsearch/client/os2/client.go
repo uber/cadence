@@ -64,7 +64,6 @@ type (
 	// Response holds data retrieved from OpenSearch
 	Response struct {
 		TookInMillis int64 `json:"took,omitempty"`
-		TotalHits    int64
 		Hits         *SearchHits
 		Aggregations map[string]json.RawMessage `json:"aggregations,omitempty"`
 		Sort         []interface{}              `json:"sort,omitempty"` // sort information
@@ -287,13 +286,15 @@ func (c *OS2) Scroll(ctx context.Context, index, body, scrollID string) (*client
 	if err := c.decoder.Decode(resp.Body, &osResponse); err != nil {
 		return nil, fmt.Errorf("decoding OpenSearch result to Response: %w", err)
 	}
-
+	var hits []*client.SearchHit
 	// no more hits
 	if osResponse.Hits == nil || len(osResponse.Hits.Hits) == 0 {
-		return &client.Response{}, io.EOF
+		return &client.Response{
+			ScrollID:     osResponse.ScrollID,
+			TookInMillis: osResponse.TookInMillis,
+			Hits:         &client.SearchHits{Hits: hits},
+		}, io.EOF
 	}
-
-	var hits []*client.SearchHit
 
 	for _, h := range osResponse.Hits.Hits {
 		hits = append(hits, &client.SearchHit{Source: h.Source})
