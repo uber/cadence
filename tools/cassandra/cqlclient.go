@@ -118,10 +118,6 @@ func NewCQLClient(cfg *CQLClientConfig, expectedConsistency gocql.Consistency) (
 	cqlClient := new(CqlClientImpl)
 	cqlClient.cfg = cfg
 	cqlClient.nReplicas = cfg.NumReplicas
-	consistency := gocql.All
-	if expectedConsistency == gocql.Quorum {
-		consistency = gocql.Quorum
-	}
 	cqlClient.session, err = gocql.GetRegisteredClient().CreateSession(gocql.ClusterConfig{
 		Hosts:                 cfg.Hosts,
 		Port:                  cfg.Port,
@@ -133,7 +129,7 @@ func NewCQLClient(cfg *CQLClientConfig, expectedConsistency gocql.Consistency) (
 		Timeout:               time.Duration(cfg.Timeout) * time.Second,
 		ConnectTimeout:        time.Duration(cfg.ConnectTimeout) * time.Second,
 		ProtoVersion:          cfg.ProtoVersion,
-		Consistency:           consistency,
+		Consistency:           expectedConsistency,
 	})
 	if err != nil {
 		return nil, err
