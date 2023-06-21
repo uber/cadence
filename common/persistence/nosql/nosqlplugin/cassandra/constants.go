@@ -48,7 +48,7 @@ const (
 	// eventual consistency is sufficient.
 	// That's because the engine layer writes into visibility with eventual consistency anyway(using transfer tasks)
 	// Do NOT use it in other places, unless you are sure it's the same special cases like reading visibility
-	cassandraLowConslevel = gocql.One
+	cassandraLowConslevel = gocql.LocalOne
 
 	// We use all consistency level for delete operations to prevent the data resurrection issue
 	cassandraAllConslevel = gocql.All
