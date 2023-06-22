@@ -23,6 +23,8 @@ package cassandra
 import (
 	"os"
 
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/tools/common/schema"
@@ -39,7 +41,7 @@ func SetupSchema(config *SetupSchemaConfig) error {
 	if err := validateCQLClientConfig(&config.CQLClientConfig); err != nil {
 		return err
 	}
-	db, err := NewCQLClient(&config.CQLClientConfig)
+	db, err := NewCQLClient(&config.CQLClientConfig, gocql.All)
 	if err != nil {
 		return err
 	}
