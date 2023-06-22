@@ -24,8 +24,6 @@ import (
 	"github.com/startreedata/pinot-client-go/pinot"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/uber/cadence/common/config"
-
 	"github.com/uber/cadence/common/log"
 	pnt "github.com/uber/cadence/common/pinot"
 )
@@ -34,9 +32,9 @@ import (
 	client pnt.GenericClient
 }*/
 
-func CreatePinotClient(s suite.Suite, url string, pinotConfig *config.PinotVisibilityConfig, logger log.Logger) pnt.GenericClient {
+func CreatePinotClient(s suite.Suite, url string, tableName string, logger log.Logger) pnt.GenericClient {
 	pinotRawClient, err := pinot.NewFromBrokerList([]string{url})
 	s.Require().NoError(err)
-	pinotClient := pnt.NewPinotClient(pinotRawClient, logger, pinotConfig)
+	pinotClient := pnt.NewPinotClient(pinotRawClient, logger, tableName)
 	return pinotClient
 }
