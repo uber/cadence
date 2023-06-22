@@ -1012,14 +1012,13 @@ func getListWorkflowExecutionsQuery(tableName string, request *p.InternalListWor
 	if isClosed {
 		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
+		query.addPinotSorter(CloseTime, DescendingOrder)
 	} else {
 		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
+		query.addPinotSorter(RunID, DescendingOrder)
 	}
-
-	query.addPinotSorter(CloseTime, DescendingOrder)
-	query.addPinotSorter(RunID, DescendingOrder)
 
 	query.addOffsetAndLimits(from, pageSize)
 
@@ -1041,14 +1040,16 @@ func getListWorkflowExecutionsByTypeQuery(tableName string, request *p.InternalL
 	if isClosed {
 		query.filters.addTimeRange(CloseTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addGte(CloseStatus, 0)
+		query.addPinotSorter(CloseTime, DescendingOrder)
 	} else {
 		query.filters.addTimeRange(StartTime, earliest, latest) //convert Unix Time to miliseconds
 		query.filters.addLt(CloseStatus, 0)
 		query.filters.addEqual(CloseTime, -1)
+		query.addPinotSorter(RunID, DescendingOrder)
 	}
 
-	query.addPinotSorter(CloseTime, DescendingOrder)
-	query.addPinotSorter(RunID, DescendingOrder)
+	//query.addPinotSorter(CloseTime, DescendingOrder)
+	//query.addPinotSorter(RunID, DescendingOrder)
 	return query.String()
 }
 
@@ -1074,7 +1075,7 @@ func getListWorkflowExecutionsByWorkflowIDQuery(tableName string, request *p.Int
 	}
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
-	query.addPinotSorter(RunID, DescendingOrder)
+	//query.addPinotSorter(RunID, DescendingOrder)
 	return query.String()
 }
 
@@ -1107,7 +1108,7 @@ func getListWorkflowExecutionsByStatusQuery(tableName string, request *p.Interna
 	query.filters.addTimeRange(CloseTime, request.EarliestTime.UnixMilli(), request.LatestTime.UnixMilli()) //convert Unix Time to miliseconds
 
 	query.addPinotSorter(CloseTime, DescendingOrder)
-	query.addPinotSorter(RunID, DescendingOrder)
+	//query.addPinotSorter(RunID, DescendingOrder)
 	return query.String()
 }
 
