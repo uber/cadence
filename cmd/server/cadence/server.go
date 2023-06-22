@@ -247,7 +247,7 @@ func (s *server) startService() common.Daemon {
 			if err != nil || pinotRawClient == nil {
 				log.Fatalf("Creating Pinot visibility client failed: %v", err)
 			}
-			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig)
+			pinotClient := pnt.NewPinotClient(pinotRawClient, params.Logger, params.PinotConfig.Table)
 			params.PinotClient = pinotClient
 		} else {
 			params.ESConfig = advancedVisStore.ElasticSearch

@@ -42,7 +42,6 @@ import (
 
 	"testing"
 
-	"github.com/uber/cadence/common/config"
 	"github.com/uber/cadence/common/log"
 	"github.com/uber/cadence/common/log/loggerimpl"
 	"github.com/uber/cadence/common/log/tag"
@@ -100,14 +99,8 @@ func (s *PinotIntegrationSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.logger = loggerimpl.NewLogger(zapLogger)
 	tableName := "cadence_visibility_pinot" //cadence_visibility_pinot_integration_test
-	pinotConfig := &config.PinotVisibilityConfig{
-		Cluster:     "",
-		Broker:      "",
-		Table:       tableName,
-		ServiceName: "",
-	}
 	url := "localhost:8099"
-	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, url, pinotConfig, s.logger)
+	s.pinotClient = pinotutils.CreatePinotClient(s.Suite, url, tableName, s.logger)
 }
 
 func (s *PinotIntegrationSuite) SetupTest() {

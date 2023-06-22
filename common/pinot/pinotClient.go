@@ -27,8 +27,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/uber/cadence/common/config"
-
 	"github.com/startreedata/pinot-client-go/pinot"
 
 	"github.com/uber/cadence/common/log"
@@ -37,18 +35,16 @@ import (
 )
 
 type PinotClient struct {
-	client      *pinot.Connection
-	logger      log.Logger
-	tableName   string
-	serviceName string
+	client    *pinot.Connection
+	logger    log.Logger
+	tableName string
 }
 
-func NewPinotClient(client *pinot.Connection, logger log.Logger, pinotConfig *config.PinotVisibilityConfig) GenericClient {
+func NewPinotClient(client *pinot.Connection, logger log.Logger, tableName string) GenericClient {
 	return &PinotClient{
-		client:      client,
-		logger:      logger,
-		tableName:   pinotConfig.Table,
-		serviceName: pinotConfig.ServiceName,
+		client:    client,
+		logger:    logger,
+		tableName: tableName,
 	}
 }
 
