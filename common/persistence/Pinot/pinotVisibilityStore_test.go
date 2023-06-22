@@ -340,7 +340,6 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY CloseTime DESC
-, RunID DESC
 LIMIT 0, 10
 `, testTableName)
 	expectOpenResult := fmt.Sprintf(`SELECT *
@@ -349,8 +348,7 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
-Order BY CloseTime DESC
-, RunID DESC
+Order BY RunID DESC
 LIMIT 0, 10
 `, testTableName)
 	expectNilResult := ""
@@ -383,7 +381,6 @@ AND WorkflowType = 'test-wf-type'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY CloseTime DESC
-, RunID DESC
 `, testTableName)
 	expectOpenResult := fmt.Sprintf(`SELECT *
 FROM %s
@@ -392,8 +389,7 @@ AND WorkflowType = 'test-wf-type'
 AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
-Order BY CloseTime DESC
-, RunID DESC
+Order BY RunID DESC
 `, testTableName)
 	expectNilResult := ""
 
@@ -425,7 +421,6 @@ AND WorkflowID = 'test-wid'
 AND CloseTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus >= 0
 Order BY CloseTime DESC
-, RunID DESC
 `, testTableName)
 	expectOpenResult := fmt.Sprintf(`SELECT *
 FROM %s
@@ -435,7 +430,6 @@ AND StartTime BETWEEN 1547596871371 AND 2547596873371
 AND CloseStatus < 0
 AND CloseTime = -1
 Order BY CloseTime DESC
-, RunID DESC
 `, testTableName)
 	expectNilResult := ""
 
@@ -465,7 +459,6 @@ WHERE DomainID = 'bfd5c907-f899-4baf-a7b2-2ab85e623ebd'
 AND CloseStatus = '0'
 AND CloseTime BETWEEN 1547596872371 AND 2547596872371
 Order BY CloseTime DESC
-, RunID DESC
 `, testTableName)
 	expectNilResult := ""
 
