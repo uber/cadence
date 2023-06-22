@@ -193,7 +193,7 @@ func NewPinotTestCluster(options *TestClusterConfig, logger log.Logger, params p
 		if err != nil || pinotRawClient == nil {
 			return nil, err
 		}
-		pinotClient = pnt.NewPinotClient(pinotRawClient, logger, options.PinotConfig.Table)
+		pinotClient = pnt.NewPinotClient(pinotRawClient, logger, options.PinotConfig)
 	}
 
 	scope := tally.NewTestScope("integration-test", nil)
