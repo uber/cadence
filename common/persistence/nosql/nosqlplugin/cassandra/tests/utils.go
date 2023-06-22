@@ -21,6 +21,7 @@
 package tests
 
 import (
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
 	"github.com/uber/cadence/environment"
 	"github.com/uber/cadence/tools/cassandra"
 )
@@ -39,7 +40,7 @@ func NewTestCQLClient(keyspace string) (cassandra.CqlClient, error) {
 		AllowedAuthenticators: environment.GetCassandraAllowedAuthenticators(),
 		NumReplicas:           1,
 		ProtoVersion:          environment.GetCassandraProtoVersion(),
-	})
+	}, gocql.All)
 }
 
 func CreateTestCQLFileContent() string {
