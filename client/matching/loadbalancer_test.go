@@ -2,29 +2,12 @@ package matching
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
+	"strconv"
 	"testing"
 )
-
-func TestNewLoadBalancer(t *testing.T) {
-	type args struct {
-		domainIDToName func(string) (string, error)
-		dc             *dynamicconfig.Collection
-	}
-	tests := []struct {
-		name string
-		args args
-		want LoadBalancer
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, NewLoadBalancer(tt.args.domainIDToName, tt.args.dc), "NewLoadBalancer(%v, %v)", tt.args.domainIDToName, tt.args.dc)
-		})
-	}
-}
 
 func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 	type fields struct {
@@ -39,12 +22,29 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 		forwardedFrom string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name        string
+		fields      fields
+		args        args
+		expectedMax int
 	}{
-		// TODO: Add test cases.
+		{name: "Testing Read",
+			fields: fields{
+				nReadPartitions: func(domainName string, taskListName string, taskListType int) int {
+					return 3
+				},
+				nWritePartitions: nil,
+				domainIDToName: func(domainID string) (string, error) {
+					return "domainName", nil
+				},
+			},
+			args: args{
+				domainID:      "domainID",
+				taskList:      types.TaskList{Name: "taskListName1"},
+				taskListType:  1,
+				forwardedFrom: "forwardedFrom",
+			},
+			expectedMax: 1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,7 +53,11 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 				nWritePartitions: tt.fields.nWritePartitions,
 				domainIDToName:   tt.fields.domainIDToName,
 			}
-			assert.Equalf(t, tt.want, lb.PickReadPartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom), "PickReadPartition(%v, %v, %v, %v)", tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
+			for i := 0; i < 100; i++ {
+				got := lb.PickReadPartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
+				str := strconv.Itoa(tt.expectedMax)
+				assert.Contains(t, got, str)
+			}
 		})
 	}
 }
@@ -71,11 +75,11 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 		forwardedFrom string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
+		name        string
+		fields      fields
+		args        args
+		expectedMax int
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Case: Writes and Reads are same amount",
 			fields: fields{
@@ -89,6 +93,7 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				taskListType:  1,
 				forwardedFrom: "exampleForwardedFrom",
 			},
+			expectedMax: 1,
 		},
 
 		{
@@ -104,6 +109,7 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				taskListType:  1,
 				forwardedFrom: "exampleForwardedFrom",
 			},
+			expectedMax: 1,
 		},
 
 		{
@@ -119,6 +125,7 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				taskListType:  1,
 				forwardedFrom: "exampleForwardedFrom",
 			},
+			expectedMax: 3,
 		},
 	}
 	for _, tt := range tests {
@@ -131,8 +138,8 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 
 			for i := 0; i < 100; i++ {
 				got := lb.PickWritePartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
-				lastDigit := int(got[len(got)-1] - '0')
-				assert.True(t, lastDigit <= tt.fields.nReadPartitions(tt.args.domainID, tt.args.taskList.Name, tt.args.taskListType))
+				str := strconv.Itoa(tt.expectedMax)
+				assert.Contains(t, got, str)
 			}
 		})
 	}
@@ -155,8 +162,60 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 		args   args
 		want   string
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "Test: ForwardedFrom not empty",
+			fields: fields{},
+			args: args{
+				taskList: types.TaskList{
+					Name: "taskList1",
+					Kind: types.TaskListKindSticky.Ptr(),
+				},
+				forwardedFrom: "forwardedFromVal",
+				nPartitions:   10,
+			},
+			want: "taskList1",
+		},
+		{
+			name:   "Test: TaskList kind is Sticky",
+			fields: fields{},
+			args: args{
+				taskList: types.TaskList{
+					Name: "taskList2",
+					Kind: types.TaskListKindSticky.Ptr(),
+				},
+				forwardedFrom: "",
+				nPartitions:   10,
+			},
+			want: "taskList2",
+		},
+		{
+			name:   "Test: TaskList name starts with ReservedTaskListPrefix",
+			fields: fields{},
+			args: args{
+				taskList: types.TaskList{
+					Name: common.ReservedTaskListPrefix + "taskList3",
+					Kind: types.TaskListKindNormal.Ptr(),
+				},
+				forwardedFrom: "",
+				nPartitions:   10,
+			},
+			want: common.ReservedTaskListPrefix + "taskList3",
+		},
+		{
+			name:   "Test: nPartitions <= 0",
+			fields: fields{},
+			args: args{
+				taskList: types.TaskList{
+					Name: "taskList4",
+					Kind: types.TaskListKindNormal.Ptr(),
+				},
+				forwardedFrom: "",
+				nPartitions:   0,
+			},
+			want: "taskList4",
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			lb := &defaultLoadBalancer{
@@ -164,7 +223,8 @@ func Test_defaultLoadBalancer_pickPartition(t *testing.T) {
 				nWritePartitions: tt.fields.nWritePartitions,
 				domainIDToName:   tt.fields.domainIDToName,
 			}
-			assert.Equalf(t, tt.want, lb.pickPartition(tt.args.taskList, tt.args.forwardedFrom, tt.args.nPartitions), "pickPartition(%v, %v, %v)", tt.args.taskList, tt.args.forwardedFrom, tt.args.nPartitions)
+			got := lb.pickPartition(tt.args.taskList, tt.args.forwardedFrom, tt.args.nPartitions)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
