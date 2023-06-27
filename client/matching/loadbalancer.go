@@ -115,9 +115,7 @@ func (lb *defaultLoadBalancer) PickReadPartition(
 }
 
 func (lb *defaultLoadBalancer) pickPartition(
-	// domainID string,
 	taskList types.TaskList,
-	// taskListType int,
 	forwardedFrom string,
 	nPartitions int,
 ) string {

@@ -5,7 +5,6 @@ import (
 	"github.com/uber/cadence/common"
 	"github.com/uber/cadence/common/dynamicconfig"
 	"github.com/uber/cadence/common/types"
-	"strings"
 	"testing"
 )
 
@@ -41,9 +40,9 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 				domainID:      "domainID",
 				taskList:      types.TaskList{Name: "taskListName1"},
 				taskListType:  1,
-				forwardedFrom: "forwardedFrom",
+				forwardedFrom: "",
 			},
-			expectedVal: []string{"/__cadence_sys/taskListName1/0", "/__cadence_sys/taskListName1/1", "/__cadence_sys/taskListName1/2"},
+			expectedVal: []string{"taskListName1", "/__cadence_sys/taskListName1/1", "/__cadence_sys/taskListName1/2"},
 		},
 	}
 	for _, tt := range tests {
@@ -55,16 +54,9 @@ func Test_defaultLoadBalancer_PickReadPartition(t *testing.T) {
 			}
 			for i := 0; i < 100; i++ {
 				got := lb.PickReadPartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
-				found := false
-				for _, val := range tt.expectedVal {
-					if strings.Contains(val, got) {
-						found = true
-						break
-					}
-				}
-				assert.True(t, found)
-
+				assert.Contains(t, tt.expectedVal, got)
 			}
+
 		})
 	}
 }
@@ -98,9 +90,9 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				domainID:      "exampleDomainID",
 				taskList:      types.TaskList{Name: "taskListName1"},
 				taskListType:  1,
-				forwardedFrom: "exampleForwardedFrom",
+				forwardedFrom: "",
 			},
-			expectedVal: []string{"/__cadence_sys/taskListName1/0", "/__cadence_sys/taskListName1/1"},
+			expectedVal: []string{"taskListName1", "/__cadence_sys/taskListName1/1"},
 		},
 
 		{
@@ -114,9 +106,9 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				domainID:      "exampleDomainID",
 				taskList:      types.TaskList{Name: "taskListName1"},
 				taskListType:  1,
-				forwardedFrom: "exampleForwardedFrom",
+				forwardedFrom: "",
 			},
-			expectedVal: []string{"/__cadence_sys/taskListName1/0", "/__cadence_sys/taskListName1/1"},
+			expectedVal: []string{"taskListName1", "/__cadence_sys/taskListName1/1"},
 		},
 
 		{
@@ -130,9 +122,9 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				domainID:      "exampleDomainID",
 				taskList:      types.TaskList{Name: "taskListName3"},
 				taskListType:  1,
-				forwardedFrom: "exampleForwardedFrom",
+				forwardedFrom: "",
 			},
-			expectedVal: []string{"/__cadence_sys/taskListName3/0", "/__cadence_sys/taskListName3/1", "/__cadence_sys/taskListName3/2", "/__cadence_sys/taskListName3/3"},
+			expectedVal: []string{"taskListName3", "/__cadence_sys/taskListName3/1"},
 		},
 	}
 	for _, tt := range tests {
@@ -142,18 +134,12 @@ func Test_defaultLoadBalancer_PickWritePartition(t *testing.T) {
 				nWritePartitions: tt.fields.nWritePartitions,
 				domainIDToName:   tt.fields.domainIDToName,
 			}
-
 			for i := 0; i < 100; i++ {
 				got := lb.PickWritePartition(tt.args.domainID, tt.args.taskList, tt.args.taskListType, tt.args.forwardedFrom)
-				found := false
-				for _, val := range tt.expectedVal {
-					if strings.Contains(val, got) {
-						found = true
-						break
-					}
-				}
-				assert.True(t, found)
+				assert.Contains(t, tt.expectedVal, got)
+
 			}
+
 		})
 	}
 }
