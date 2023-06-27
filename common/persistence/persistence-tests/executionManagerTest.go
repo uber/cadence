@@ -690,10 +690,9 @@ func (s *ExecutionManagerSuite) TestUpdateWorkflowExecutionTTL() {
 		Mode:    p.UpdateWorkflowModeUpdateCurrent,
 	})
 	s.NoError(err)
-	time.Sleep(300 * time.Second)
+	time.Sleep(2 * time.Second)
 	info, err = s.GetWorkflowExecutionInfo(ctx, domainID, workflowExecution)
-	fmt.Print(info)
-	s.NotNil(err)
+	s.IsType(&types.EntityNotExistsError{}, err)
 }
 
 // TestUpdateWorkflowExecutionWithZombieState test

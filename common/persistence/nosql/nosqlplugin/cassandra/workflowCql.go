@@ -320,10 +320,10 @@ workflow_state = ? ` +
 		`run_id, ` +
 		`shard_id, ` +
 		`task_id, ` +
-		`type ` +
-		`visibility_ts ` +
+		`type, ` +
+		`visibility_ts, ` +
 		`workflow_id ` +
-		`) VALUES (?, ?, ?, ?, ?,?,?) USING TTL ?`
+		`) VALUES (?, ?, ?, ?, ?, ?, ?) USING TTL ?`
 
 	templateUpdateWorkflowExecutionWithVersionHistoriesQueryPart2 = `UPDATE executions ` +
 		`USING TTL ? SET execution = ` + templateWorkflowExecutionType +
