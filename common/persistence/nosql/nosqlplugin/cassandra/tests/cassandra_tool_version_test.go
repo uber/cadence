@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -92,7 +94,7 @@ func (s *VersionTestSuite) TestVerifyCompatibleVersion() {
 		TransactionSizeLimit: dynamicconfig.GetIntPropertyFn(common.DefaultTransactionSizeLimit),
 		ErrorInjectionRate:   dynamicconfig.GetFloatPropertyFn(0),
 	}
-	s.NoError(cassandra.VerifyCompatibleVersion(cfg))
+	s.NoError(cassandra.VerifyCompatibleVersion(cfg, gocql.All))
 }
 
 func (s *VersionTestSuite) TestCheckCompatibleVersion() {
@@ -121,7 +123,7 @@ func (s *VersionTestSuite) createKeyspace(keyspace string) func() {
 		NumReplicas:  1,
 		ProtoVersion: environment.GetCassandraProtoVersion(),
 	}
-	client, err := cassandra.NewCQLClient(cfg)
+	client, err := cassandra.NewCQLClient(cfg, gocql.All)
 	s.NoError(err)
 
 	err = client.CreateKeyspace(keyspace)
@@ -167,7 +169,7 @@ func (s *VersionTestSuite) runCheckCompatibleVersion(
 		Password:   environment.GetCassandraPassword(),
 		Keyspace:   keyspace,
 	}
-	err := cassandra.CheckCompatibleVersion(cfg, expected)
+	err := cassandra.CheckCompatibleVersion(cfg, expected, gocql.All)
 	if len(errStr) > 0 {
 		s.Error(err)
 		s.Contains(err.Error(), errStr)

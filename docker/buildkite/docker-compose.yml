@@ -18,7 +18,7 @@ services:
           - mysql
 
   postgres:
-    image: postgres:12
+    image: postgres:12.4
     environment:
       POSTGRES_PASSWORD: cadence
     ports:

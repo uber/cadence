@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/uber/cadence/common/persistence/nosql/nosqlplugin/cassandra/gocql"
+
 	"github.com/urfave/cli"
 
 	"github.com/uber/cadence/common/config"
@@ -45,16 +47,17 @@ type SetupSchemaConfig struct {
 // rollback, the code version (expected version) would fall lower than the actual version in
 // cassandra.
 func VerifyCompatibleVersion(
-	cfg config.Persistence,
+	cfg config.Persistence, expectedConsistency gocql.Consistency,
 ) error {
+
 	if ds, ok := cfg.DataStores[cfg.DefaultStore]; ok {
-		if err := verifyCompatibleVersion(ds, cassandra.Version); err != nil {
+		if err := verifyCompatibleVersion(ds, cassandra.Version, expectedConsistency); err != nil {
 			return err
 		}
 	}
 
 	if ds, ok := cfg.DataStores[cfg.VisibilityStore]; ok {
-		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion); err != nil {
+		if err := verifyCompatibleVersion(ds, cassandra.VisibilityVersion, expectedConsistency); err != nil {
 			return err
 		}
 	}
@@ -64,14 +67,14 @@ func VerifyCompatibleVersion(
 
 func verifyCompatibleVersion(
 	ds config.DataStore,
-	expectedCassandraVersion string,
+	expectedCassandraVersion string, expectedConsistency gocql.Consistency,
 ) error {
 	if ds.NoSQL != nil {
-		return verifyPluginVersion(ds.NoSQL, expectedCassandraVersion)
+		return verifyPluginVersion(ds.NoSQL, expectedCassandraVersion, expectedConsistency)
 	}
 	if ds.ShardedNoSQL != nil {
 		for shardName, connection := range ds.ShardedNoSQL.Connections {
-			err := verifyPluginVersion(connection.NoSQLPlugin, expectedCassandraVersion)
+			err := verifyPluginVersion(connection.NoSQLPlugin, expectedCassandraVersion, expectedConsistency)
 			if err != nil {
 				return fmt.Errorf("Failed to verify version for DB shard: %v. Error: %v", shardName, err.Error())
 			}
@@ -82,7 +85,7 @@ func verifyCompatibleVersion(
 	return nil
 }
 
-func verifyPluginVersion(plugin *config.NoSQL, expectedCassandraVersion string) error {
+func verifyPluginVersion(plugin *config.NoSQL, expectedCassandraVersion string, expectedConsistency gocql.Consistency) error {
 	// Use hardcoded instead of constant because of cycle dependency issue.
 	// However, this file will be refactor to support NoSQL soon. After the refactoring, cycle dependency issue
 	// should be gone and we can use constant at that time
@@ -90,13 +93,14 @@ func verifyPluginVersion(plugin *config.NoSQL, expectedCassandraVersion string) 
 		return fmt.Errorf("unknown NoSQL plugin name: %q", plugin.PluginName)
 	}
 
-	return CheckCompatibleVersion(*plugin, expectedCassandraVersion)
+	return CheckCompatibleVersion(*plugin, expectedCassandraVersion, expectedConsistency)
 }
 
 // CheckCompatibleVersion check the version compatibility
 func CheckCompatibleVersion(
 	cfg config.Cassandra,
 	expectedVersion string,
+	expectedConsistency gocql.Consistency,
 ) error {
 
 	client, err := NewCQLClient(&CQLClientConfig{
@@ -110,7 +114,7 @@ func CheckCompatibleVersion(
 		ConnectTimeout:        DefaultConnectTimeout,
 		TLS:                   cfg.TLS,
 		ProtoVersion:          cfg.ProtoVersion,
-	})
+	}, expectedConsistency)
 	if err != nil {
 		return fmt.Errorf("creating CQL client: %w", err)
 	}
@@ -127,7 +131,7 @@ func setupSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	client, err := NewCQLClient(config)
+	client, err := NewCQLClient(config, gocql.All)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -145,7 +149,7 @@ func updateSchema(cli *cli.Context) error {
 	if err != nil {
 		return handleErr(schema.NewConfigError(err.Error()))
 	}
-	client, err := NewCQLClient(config)
+	client, err := NewCQLClient(config, gocql.All)
 	if err != nil {
 		return handleErr(err)
 	}
@@ -176,7 +180,7 @@ func createKeyspace(cli *cli.Context) error {
 
 func doCreateKeyspace(cfg CQLClientConfig, name string, datacenter string) error {
 	cfg.Keyspace = SystemKeyspace
-	client, err := NewCQLClient(&cfg)
+	client, err := NewCQLClient(&cfg, gocql.All)
 	if err != nil {
 		return err
 	}
